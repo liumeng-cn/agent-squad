@@ -11,7 +11,7 @@
 | Agent | AgentScope HarnessAgent / 受控 Worker 工厂 | 推理、工具循环、上下文、Skill 与状态；生产跨Worker委派走受控工具，见 ADR-003 |
 | 版本 | v2.0.4 作稳定比较基线，v2.1.0-BETA1 作恢复评估候选 | 新 Session API 不在 v2.0.4 中，不能混用文档与稳定制品；不依赖 main |
 | 平台数据 | MyBatis、MySQL 8.4、Flyway | 用户、连接、权限、操作账本、读模型等业务数据 |
-| 框架存储 | AgentScope JDBC / 共享存储适配 | 框架状态和日志由单一机制管理；与平台表分开，禁止双写两套可裁决运行状态 |
+| 框架存储 | AgentScope 原生日志适配 | 与业务表共用 Spring `DataSource`，表和状态权威分开；不增加第二套数据库连接配置 |
 | 模型 | AgentScope 模型扩展，先接 DeepSeek | 配置化端点、模型、凭据与能力；避免再造一套模型客户端 |
 | 执行 | 框架 Sandbox 接口与隔离执行环境 | 不预设 Python Runner；隔离部署、网络、资源和凭据仍需设计 |
 | 大对象 | ArtifactStore 与对象存储适配 | 归属和下载鉴权在平台；快照、工作文件和交付产物区分管理 |
