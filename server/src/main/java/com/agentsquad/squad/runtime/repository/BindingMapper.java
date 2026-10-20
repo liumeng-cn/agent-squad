@@ -3,6 +3,7 @@ package com.agentsquad.squad.runtime.repository;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 
 /**
  * AgentScope 会话发现目录 SQL 边界；固定标识由后续 Bridge 使用。
@@ -18,4 +19,10 @@ public interface BindingMapper {
     int insertMaster(@Param("bindingId") String bindingId, @Param("userId") String userId,
                      @Param("taskId") String taskId, @Param("agentId") String agentId,
                      @Param("sessionId") String sessionId);
+
+    @Select("""
+            SELECT binding_id FROM sq_runtime_binding
+            WHERE user_id = #{userId} AND task_id = #{taskId} AND role = 'MASTER'
+            """)
+    String findMasterBindingId(@Param("userId") String userId, @Param("taskId") String taskId);
 }

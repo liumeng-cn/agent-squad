@@ -9,6 +9,8 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
+import java.util.List;
+
 /**
  * 对话 SQL 边界；任务受理时用行锁串行化同一会话。
  */
@@ -23,18 +25,57 @@ public interface ConversationMapper {
                @Param("title") String title);
 
     @ConstructorArgs({
+            @Arg(column = "id", javaType = long.class),
             @Arg(column = "conversation_id", javaType = String.class),
             @Arg(column = "user_id", javaType = String.class),
             @Arg(column = "title", javaType = String.class),
             @Arg(column = "status", javaType = String.class),
-            @Arg(column = "active_task_id", javaType = String.class)
+            @Arg(column = "active_task_id", javaType = String.class),
+            @Arg(column = "generation", javaType = long.class),
+            @Arg(column = "version", javaType = long.class)
     })
     @Select("""
-            SELECT conversation_id, user_id, title, status, active_task_id
+            SELECT id, conversation_id, user_id, title, status, active_task_id, generation, version
             FROM sq_conversation WHERE user_id = #{userId} AND conversation_id = #{conversationId}
             FOR UPDATE
             """)
     ConversationRow lockOwned(@Param("userId") String userId, @Param("conversationId") String conversationId);
+
+    @ConstructorArgs({
+            @Arg(column = "id", javaType = long.class),
+            @Arg(column = "conversation_id", javaType = String.class),
+            @Arg(column = "user_id", javaType = String.class),
+            @Arg(column = "title", javaType = String.class),
+            @Arg(column = "status", javaType = String.class),
+            @Arg(column = "active_task_id", javaType = String.class),
+            @Arg(column = "generation", javaType = long.class),
+            @Arg(column = "version", javaType = long.class)
+    })
+    @Select("""
+            SELECT id, conversation_id, user_id, title, status, active_task_id, generation, version
+            FROM sq_conversation WHERE user_id = #{userId} AND conversation_id = #{conversationId}
+            """)
+    ConversationRow findOwned(@Param("userId") String userId, @Param("conversationId") String conversationId);
+
+    @ConstructorArgs({
+            @Arg(column = "id", javaType = long.class),
+            @Arg(column = "conversation_id", javaType = String.class),
+            @Arg(column = "user_id", javaType = String.class),
+            @Arg(column = "title", javaType = String.class),
+            @Arg(column = "status", javaType = String.class),
+            @Arg(column = "active_task_id", javaType = String.class),
+            @Arg(column = "generation", javaType = long.class),
+            @Arg(column = "version", javaType = long.class)
+    })
+    @Select("""
+            SELECT id, conversation_id, user_id, title, status, active_task_id, generation, version
+            FROM sq_conversation WHERE user_id = #{userId}
+              AND (#{cursorId} IS NULL OR id < #{cursorId})
+              AND status != 'DELETED'
+            ORDER BY id DESC LIMIT #{limit}
+            """)
+    List<ConversationRow> listByOwner(@Param("userId") String userId, @Param("cursorId") Long cursorId,
+                                      @Param("limit") int limit);
 
     @Update("""
             UPDATE sq_conversation SET active_task_id = #{taskId}, version = version + 1

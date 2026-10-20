@@ -3,10 +3,16 @@ package com.agentsquad.squad.runtime.controller;
 import com.agentsquad.squad.identity.AuthService;
 import com.agentsquad.squad.runtime.dto.*;
 import com.agentsquad.squad.runtime.service.GoalTaskService;
+import com.agentsquad.squad.runtime.service.RuntimeBusinessException;
+import com.agentsquad.squad.runtime.service.RuntimeExceptionCode;
+import com.agentsquad.squad.runtime.service.TaskControlService;
+import com.agentsquad.squad.runtime.service.TaskEventStreamer;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
@@ -25,6 +31,12 @@ public class RuntimeController {
     @Resource
     private GoalTaskService goalTaskService;
 
+    @Resource
+    private TaskControlService taskControlService;
+
+    @Resource
+    private TaskEventStreamer taskEventStreamer;
+
     /**
      * 创建当前用户的对话。
      */
@@ -35,6 +47,39 @@ public class RuntimeController {
             @RequestHeader(value = "X-CSRF-Token", required = false) String csrfToken,
             @Valid @RequestBody ConversationCreateRequest request) {
         return goalTaskService.createConversation(authService.authenticateWrite(token, csrfToken), request.title());
+    }
+
+    /**
+     * 列出当前用户的会话，cursor 为存储主键 id。
+     */
+    @GetMapping("/conversations")
+    public ConversationPage listConversations(
+            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(defaultValue = "20") int limit) {
+        return goalTaskService.listConversations(userId(token), cursor, limit);
+    }
+
+    /**
+     * 读取当前用户单个会话快照。
+     */
+    @GetMapping("/conversations/{conversationId}")
+    public ConversationResponse getConversation(
+            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
+            @PathVariable String conversationId) {
+        return goalTaskService.getConversation(userId(token), conversationId);
+    }
+
+    /**
+     * 列出一个会话下的目标。
+     */
+    @GetMapping("/conversations/{conversationId}/tasks")
+    public GoalTaskPage listConversationTasks(
+            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
+            @PathVariable String conversationId,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(defaultValue = "20") int limit) {
+        return goalTaskService.listConversationTasks(userId(token), conversationId, cursor, limit);
     }
 
     /**
@@ -62,14 +107,72 @@ public class RuntimeController {
     }
 
     /**
-     * 按事件序号回放当前用户的公开事件。
+     * 取消当前用户的未结束目标。
      */
-    @GetMapping("/tasks/{taskId}/events")
-    public List<TaskEventResponse> getEvents(
+    @PostMapping("/tasks/{taskId}/cancel")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public CommandReceipt cancelTask(
+            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
+            @RequestHeader(value = "X-CSRF-Token", required = false) String csrfToken,
+            @PathVariable String taskId,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @Valid @RequestBody ControlRequest request) {
+        return taskControlService.cancel(authService.authenticateWrite(token, csrfToken),
+                taskId, idempotencyKey, request.expectedVersion());
+    }
+
+    /**
+     * 恢复当前用户的可恢复目标。
+     */
+    @PostMapping("/tasks/{taskId}/resume")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public CommandReceipt resumeTask(
+            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
+            @RequestHeader(value = "X-CSRF-Token", required = false) String csrfToken,
+            @PathVariable String taskId,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @Valid @RequestBody ControlRequest request) {
+        return taskControlService.resume(authService.authenticateWrite(token, csrfToken),
+                taskId, idempotencyKey, request.expectedVersion());
+    }
+
+    /**
+     * 以 SSE 方式订阅当前用户的任务公开事件；首次可传 after，重连以 Last-Event-ID 为准。
+     */
+    @GetMapping(value = "/tasks/{taskId}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter observeEvents(
             @CookieValue(value = "SQUAD_SESSION", required = false) String token,
             @PathVariable String taskId,
-            @RequestParam(defaultValue = "0") long after) {
-        return goalTaskService.listEvents(userId(token), taskId, after);
+            @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId,
+            @RequestParam(required = false) String after) {
+        return taskEventStreamer.stream(userId(token), taskId, resolveEventCursor(taskId, lastEventId, after));
+    }
+
+    private long resolveEventCursor(String taskId, String lastEventId, String after) {
+        if (lastEventId != null && !lastEventId.isBlank()) {
+            int separator = lastEventId.lastIndexOf(':');
+            if (separator <= 0 || separator == lastEventId.length() - 1) {
+                throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "Last-Event-ID 格式无效");
+            }
+            String cursorTaskId = lastEventId.substring(0, separator);
+            String seqPart = lastEventId.substring(separator + 1);
+            if (!taskId.equals(cursorTaskId)) {
+                throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "事件游标不属于当前目标");
+            }
+            try {
+                return Long.parseLong(seqPart);
+            } catch (NumberFormatException exception) {
+                throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "事件游标格式无效");
+            }
+        }
+        if (after != null && !after.isBlank()) {
+            try {
+                return Long.parseLong(after);
+            } catch (NumberFormatException exception) {
+                throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "after 游标无效");
+            }
+        }
+        return 0L;
     }
 
     /**

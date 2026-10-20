@@ -48,4 +48,10 @@ public interface TaskEventMapper {
             """)
     List<EventRow> listAfter(@Param("userId") String userId, @Param("taskId") String taskId,
                              @Param("after") long after);
+
+    @Select("""
+            SELECT COALESCE(MAX(event_seq), 0) FROM sq_task_event
+            WHERE user_id = #{userId} AND task_id = #{taskId}
+            """)
+    long maxSeq(@Param("userId") String userId, @Param("taskId") String taskId);
 }

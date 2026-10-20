@@ -25,6 +25,27 @@ public interface CommandMapper {
                      @Param("bindingId") String bindingId, @Param("payloadJson") String payloadJson,
                      @Param("dueAt") LocalDateTime dueAt);
 
+    @Insert("""
+            INSERT INTO sq_command
+                (command_id, user_id, scope_key, idempotency_key, payload_hash,
+                 task_id, binding_id, action, payload_json, status, due_at)
+            VALUES
+                (#{commandId}, #{userId}, #{scopeKey}, #{idempotencyKey}, #{payloadHash},
+                 #{taskId}, #{bindingId}, #{action}, #{payloadJson}, 'PENDING', #{dueAt})
+            """)
+    int insertControl(@Param("commandId") String commandId, @Param("userId") String userId,
+                      @Param("scopeKey") String scopeKey, @Param("idempotencyKey") String idempotencyKey,
+                      @Param("payloadHash") String payloadHash, @Param("taskId") String taskId,
+                      @Param("bindingId") String bindingId, @Param("action") String action,
+                      @Param("payloadJson") String payloadJson, @Param("dueAt") LocalDateTime dueAt);
+
+    @Update("""
+            UPDATE sq_command SET status = 'CANCELLED'
+            WHERE user_id = #{userId} AND task_id = #{taskId}
+              AND status IN ('PENDING', 'DELIVERING')
+            """)
+    int cancelPendingByTask(@Param("userId") String userId, @Param("taskId") String taskId);
+
     @ConstructorArgs({
             @Arg(column = "command_id", javaType = String.class),
             @Arg(column = "user_id", javaType = String.class),
