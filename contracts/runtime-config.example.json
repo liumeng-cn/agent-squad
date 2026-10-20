@@ -1,0 +1,88 @@
+{
+  "app": {
+    "mode": "OFFLINE",
+    "instanceId": "design-fixture-01",
+    "publicOrigin": "http://127.0.0.1:18080",
+    "port": 18080
+  },
+  "database": {
+    "jdbcUrl": "jdbc:mysql://127.0.0.1:13306/agent_squad",
+    "username": "squad",
+    "passwordRef": "env:SQUAD_DB_PASSWORD",
+    "connectionBudget": 32,
+    "reserveConnections": 4,
+    "platformPool": 12,
+    "sdkPool": 10,
+    "sandboxLockPool": 2,
+    "autoCreateTables": false
+  },
+  "runtime": {
+    "sdkVersion": "2.1.0-BETA1",
+    "sdkCommit": "5451c73abe47053340683a1cc6d67b290b056648",
+    "historyMode": "EVENT_LOG",
+    "guardTtlSeconds": 60,
+    "guardRenewSeconds": 20,
+    "maxOwnedBindings": 12,
+    "globalModelConcurrency": 8,
+    "bridgeWorkers": 4,
+    "scanIntervalMs": 1000,
+    "modelRequestTimeoutSeconds": 90,
+    "toolTimeoutSeconds": 30,
+    "maxRecoveryAttempts": 3,
+    "freeBackgroundSpawn": false,
+    "automaticMemoryWrites": false
+  },
+  "model": {
+    "provider": "MOCK",
+    "modelName": "deterministic-fixture",
+    "pricing": {
+      "currency": "TEST_UNIT",
+      "version": "offline-fixture-v1",
+      "inputMicrounitsPerMillionTokens": 1000000,
+      "outputMicrounitsPerMillionTokens": 1000000
+    }
+  },
+  "security": {
+    "sessionSigningKeyRef": "env:SQUAD_SESSION_SIGNING_KEY",
+    "csrfKeyRef": "env:SQUAD_CSRF_KEY",
+    "credentialEncryptionKeyRef": "env:SQUAD_CREDENTIAL_KEY",
+    "idempotencyHmacKeyRef": "env:SQUAD_IDEMPOTENCY_KEY",
+    "cookieSecure": false
+  },
+  "storage": {
+    "backend": "LOCAL",
+    "rootOrBucket": "${SQUAD_DATA_DIR}/artifacts",
+    "maxUploadBytes": 10485760,
+    "maxSkillPackageBytes": 1048576
+  },
+  "sandbox": {
+    "enabled": false,
+    "driver": "DISABLED",
+    "imageDigest": "disabled",
+    "cpuLimit": 1,
+    "memoryMiB": 512,
+    "pidLimit": 64,
+    "executionTimeoutSeconds": 60,
+    "networkPolicy": "DENY_ALL",
+    "credentialMounts": false
+  },
+  "web": {
+    "sseConnectionLimit": 100,
+    "sseHeartbeatSeconds": 15,
+    "retryCapSeconds": 15,
+    "cookieSameOrigin": true
+  },
+  "profile": {
+    "key": "STANDARD",
+    "maxParallelJobs": 4,
+    "maxJobs": 16,
+    "maxModelCalls": 40,
+    "maxToolCalls": 80,
+    "maxReplans": 3,
+    "maxInputTokens": 200000,
+    "maxOutputTokens": 30000,
+    "maxCostMicrounits": 1000000,
+    "absoluteDeadlineSeconds": 86400,
+    "interactionTtlSeconds": 3600
+  }
+}

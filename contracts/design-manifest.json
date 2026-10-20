@@ -1,0 +1,62 @@
+{
+  "version": "0.2.1",
+  "sdkEvaluationVersion": "2.1.0-BETA1",
+  "sdkCommit": "5451c73abe47053340683a1cc6d67b290b056648",
+  "status": "design-only-not-runtime-validated",
+  "requirements": [
+    "R01",
+    "R02",
+    "R03",
+    "R04",
+    "R05",
+    "R06",
+    "R07",
+    "R08",
+    "R09",
+    "R10",
+    "R11",
+    "R12"
+  ],
+  "modules": {
+    "M01": [
+      "sq_account",
+      "sq_auth_session",
+      "sq_conversation"
+    ],
+    "M02": [
+      "sq_goal_task",
+      "sq_runtime_binding",
+      "sq_command"
+    ],
+    "M03": [
+      "sq_plan"
+    ],
+    "M04": [
+      "sq_worker_job",
+      "sq_worker_definition"
+    ],
+    "M05": [
+      "sq_context_snapshot",
+      "sq_memory"
+    ],
+    "M06": [
+      "sq_skill_version",
+      "sq_skill_grant"
+    ],
+    "M07": [
+      "sq_connection",
+      "sq_operation",
+      "sq_interaction"
+    ],
+    "M08": [
+      "sq_artifact",
+      "sq_task_event",
+      "sq_projection_receipt",
+      "sq_budget_reservation",
+      "sq_audit"
+    ]
+  },
+  "plannedOperationCount": 38,
+  "plannedSchemaCount": 59,
+  "plannedBusinessTableCount": 21
+}

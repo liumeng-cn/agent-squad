@@ -1,0 +1,100 @@
+{
+  "examples": [
+    {
+      "schema": "TaskCreate",
+      "value": {
+        "message": "",
+        "artifactIds": [],
+        "profileKey": "STANDARD"
+      },
+      "reason": "空目标拒绝"
+    },
+    {
+      "schema": "InteractionResponse",
+      "value": {
+        "expectedVersion": 1,
+        "answer": {
+          "kind": "APPROVAL",
+          "approve": true
+        }
+      },
+      "reason": "审批必须绑定原参数hash"
+    },
+    {
+      "schema": "PlanPublish",
+      "value": {
+        "logicalKey": "p",
+        "expectedPlanVersion": 0,
+        "nodes": [],
+        "joinPolicy": "ALL_REQUIRED",
+        "acceptanceCriteria": [
+          "a"
+        ]
+      },
+      "reason": "空DAG拒绝"
+    },
+    {
+      "schema": "ConnectionCreate",
+      "value": {
+        "name": "a",
+        "provider": "test",
+        "environment": "test",
+        "resourcePolicy": {}
+      },
+      "reason": "首次连接必须有安全输入凭据"
+    },
+    {
+      "schema": "JobResult",
+      "value": {
+        "outcome": "UNKNOWN",
+        "findings": [],
+        "evidenceRefs": [],
+        "unresolved": [],
+        "verification": "n/a"
+      },
+      "reason": "未知操作不允许伪装Job结果"
+    },
+    {
+      "schema": "TaskReceipt",
+      "value": {
+        "taskId": "not-uuid",
+        "commandId": "bad",
+        "status": "RUNNING"
+      },
+      "reason": "无效回执拒绝"
+    },
+    {
+      "schema": "TaskEvent",
+      "value": {
+        "taskId": "11111111-1111-4111-8111-111111111111",
+        "seq": 1,
+        "type": "answer.delta",
+        "answerRevision": 1,
+        "occurredAt": "2026-10-20T08:00:00Z",
+        "payload": {
+          "secret": "forbidden"
+        }
+      },
+      "reason": "事件载荷不得随意透传字段"
+    },
+    {
+      "schema": "Interaction",
+      "value": {
+        "interactionId": "11111111-1111-4111-8111-111111111111",
+        "taskId": "22222222-2222-4222-8222-222222222222",
+        "kind": "APPROVAL",
+        "origin": "FRAMEWORK",
+        "question": "是否允许此测试操作？",
+        "answerSchema": {
+          "type": "boolean"
+        },
+        "requestHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "planVersion": 1,
+        "expiresAt": "2026-10-20T12:00:00Z",
+        "status": "OPEN",
+        "version": 1
+      },
+      "reason": "审批展示不能缺少操作影响详情"
+    }
+  ]
+}

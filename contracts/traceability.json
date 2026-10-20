@@ -1,0 +1,191 @@
+{
+  "R01": {
+    "modules": [
+      "M01"
+    ],
+    "schemas": [
+      "AuthView",
+      "Conversation"
+    ],
+    "operations": [
+      "login",
+      "getConversation"
+    ],
+    "cases": [
+      "A14"
+    ]
+  },
+  "R02": {
+    "modules": [
+      "M02"
+    ],
+    "schemas": [
+      "TaskReceipt",
+      "CommandReceipt"
+    ],
+    "operations": [
+      "createTask"
+    ],
+    "cases": [
+      "A01",
+      "A02",
+      "A03"
+    ]
+  },
+  "R03": {
+    "modules": [
+      "M03"
+    ],
+    "schemas": [
+      "PlanPublish",
+      "CompletionProposal"
+    ],
+    "operations": [],
+    "cases": [
+      "A04",
+      "A09",
+      "A12"
+    ]
+  },
+  "R04": {
+    "modules": [
+      "M05"
+    ],
+    "schemas": [
+      "ContextSnapshot"
+    ],
+    "operations": [],
+    "cases": [
+      "A14",
+      "A15"
+    ]
+  },
+  "R05": {
+    "modules": [
+      "M06"
+    ],
+    "schemas": [
+      "SkillImport",
+      "SkillVersion"
+    ],
+    "operations": [
+      "importSkill"
+    ],
+    "cases": [
+      "A14",
+      "A17"
+    ]
+  },
+  "R06": {
+    "modules": [
+      "M03",
+      "M04"
+    ],
+    "schemas": [
+      "PlanPublish",
+      "WorkerJob"
+    ],
+    "operations": [],
+    "cases": [
+      "A04",
+      "A06",
+      "A10"
+    ]
+  },
+  "R07": {
+    "modules": [
+      "M07"
+    ],
+    "schemas": [
+      "InteractionResponse"
+    ],
+    "operations": [
+      "respondInteraction"
+    ],
+    "cases": [
+      "A07"
+    ]
+  },
+  "R08": {
+    "modules": [
+      "M02",
+      "M04",
+      "M07"
+    ],
+    "schemas": [
+      "RuntimeBinding",
+      "Operation"
+    ],
+    "operations": [],
+    "cases": [
+      "A02",
+      "A03",
+      "A05",
+      "A06",
+      "A08",
+      "A18"
+    ]
+  },
+  "R09": {
+    "modules": [
+      "M05"
+    ],
+    "schemas": [
+      "Memory"
+    ],
+    "operations": [
+      "createMemory",
+      "updateMemory",
+      "deleteMemory"
+    ],
+    "cases": [
+      "A15"
+    ]
+  },
+  "R10": {
+    "modules": [
+      "M08"
+    ],
+    "schemas": [
+      "TaskSnapshot",
+      "TaskEvent"
+    ],
+    "operations": [
+      "getTaskSnapshot",
+      "observeTaskEvents"
+    ],
+    "cases": [
+      "A12",
+      "A13"
+    ]
+  },
+  "R11": {
+    "modules": [
+      "M02",
+      "M07"
+    ],
+    "schemas": [
+      "ControlRequest"
+    ],
+    "operations": [
+      "cancelTask"
+    ],
+    "cases": [
+      "A11"
+    ]
+  },
+  "R12": {
+    "modules": [
+      "M04"
+    ],
+    "schemas": [
+      "WorkerDefinition"
+    ],
+    "operations": [
+      "publishWorkerDefinition"
+    ],
+    "cases": [
+      "A17"
+    ]
+  }
+}

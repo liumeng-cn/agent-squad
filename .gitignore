@@ -1,0 +1,12 @@
+.DS_Store
+.idea/
+*.iml
+.env
+.env.*
+!.env.example
+.run/
+.venv/
+__pycache__/
+*.pyc
+target/
+node_modules/

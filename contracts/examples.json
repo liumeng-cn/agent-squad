@@ -1,0 +1,163 @@
+{
+  "examples": [
+    {
+      "schema": "TaskCreate",
+      "value": {
+        "message": "分析上传日志并检查配置",
+        "artifactIds": [
+          "11111111-1111-4111-8111-111111111111"
+        ],
+        "profileKey": "STANDARD"
+      }
+    },
+    {
+      "schema": "PlanPublish",
+      "value": {
+        "logicalKey": "initial-plan",
+        "expectedPlanVersion": 0,
+        "nodes": [
+          {
+            "nodeKey": "logs",
+            "workerKey": "log-reader",
+            "workerVersion": "1",
+            "goal": "检查错误日志",
+            "contextSnapshotId": "11111111-1111-4111-8111-111111111111",
+            "dependsOn": [],
+            "required": true,
+            "maxRecoveryAttempts": 3
+          }
+        ],
+        "joinPolicy": "ALL_REQUIRED",
+        "acceptanceCriteria": [
+          "结论有日志证据"
+        ]
+      }
+    },
+    {
+      "schema": "JobResult",
+      "value": {
+        "outcome": "SUCCEEDED",
+        "findings": [
+          "配置引用不存在"
+        ],
+        "evidenceRefs": [
+          "11111111-1111-4111-8111-111111111111"
+        ],
+        "unresolved": [],
+        "verification": "已比对测试配置"
+      }
+    },
+    {
+      "schema": "InteractionResponse",
+      "value": {
+        "expectedVersion": 1,
+        "answer": {
+          "kind": "APPROVAL",
+          "approve": true,
+          "confirmedRequestHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      }
+    },
+    {
+      "schema": "InteractionResponse",
+      "value": {
+        "expectedVersion": 1,
+        "answer": {
+          "kind": "INPUT",
+          "value": {
+            "environment": "test"
+          }
+        }
+      }
+    },
+    {
+      "schema": "ReconcileRequest",
+      "value": {
+        "expectedVersion": 2,
+        "disposition": "CONFIRMED_SUCCEEDED",
+        "evidenceRefs": [
+          "11111111-1111-4111-8111-111111111111"
+        ],
+        "note": "连接器已查到同一外部幂等键对应的记录"
+      }
+    },
+    {
+      "schema": "MemoryCreate",
+      "value": {
+        "key": "report-language",
+        "content": "报告使用中文",
+        "sourceTaskId": "11111111-1111-4111-8111-111111111111"
+      }
+    },
+    {
+      "schema": "SkillImport",
+      "value": {
+        "files": [
+          {
+            "path": "SKILL.md",
+            "content": "---\nname: logs\ndescription: 分析测试日志\n---\n按证据说明问题。"
+          }
+        ]
+      }
+    },
+    {
+      "schema": "TaskReceipt",
+      "value": {
+        "taskId": "11111111-1111-4111-8111-111111111111",
+        "commandId": "22222222-2222-4222-8222-222222222222",
+        "status": "QUEUED"
+      }
+    },
+    {
+      "schema": "CommandPayload",
+      "value": {
+        "kind": "SUBMIT",
+        "bindingId": "11111111-1111-4111-8111-111111111111",
+        "input": {
+          "goal": "分析测试日志"
+        }
+      }
+    },
+    {
+      "schema": "TaskEvent",
+      "value": {
+        "taskId": "11111111-1111-4111-8111-111111111111",
+        "seq": 1,
+        "type": "task.accepted",
+        "answerRevision": 0,
+        "occurredAt": "2026-10-20T08:00:00Z",
+        "payload": {
+          "commandId": "22222222-2222-4222-8222-222222222222"
+        }
+      }
+    },
+    {
+      "schema": "Interaction",
+      "value": {
+        "interactionId": "11111111-1111-4111-8111-111111111111",
+        "taskId": "22222222-2222-4222-8222-222222222222",
+        "kind": "APPROVAL",
+        "origin": "FRAMEWORK",
+        "question": "是否允许此测试操作？",
+        "answerSchema": {
+          "type": "boolean"
+        },
+        "requestHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "planVersion": 1,
+        "expiresAt": "2026-10-20T12:00:00Z",
+        "status": "OPEN",
+        "version": 1,
+        "approvalContext": {
+          "operationId": "33333333-3333-4333-8333-333333333333",
+          "toolKey": "example.submit",
+          "effect": "WRITE",
+          "resourceSummary": "测试环境中的模拟资源",
+          "argumentsPreview": {
+            "resource": "demo"
+          },
+          "requestHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      }
+    }
+  ]
+}

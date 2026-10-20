@@ -1,0 +1,14 @@
+spring:
+    application:
+        name: agent-squad-server
+    main:
+        web-application-type: servlet
+
+server:
+    port: 18080
+
+agentsquad:
+    runtime:
+        mode: OFFLINE
+        automatic-memory-writes: false
+        free-background-spawn: false

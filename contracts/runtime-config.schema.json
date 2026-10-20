@@ -1,0 +1,496 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/squad/runtime-config.schema.json",
+  "title": "Agent Squad configuration design, not a runnable Spring application.yml",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "app": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "OFFLINE",
+            "DEVELOPMENT",
+            "PRODUCTION"
+          ]
+        },
+        "instanceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "publicOrigin": {
+          "type": "string",
+          "format": "uri"
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 65535
+        }
+      },
+      "required": [
+        "mode",
+        "instanceId",
+        "publicOrigin",
+        "port"
+      ]
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "jdbcUrl": {
+          "type": "string",
+          "pattern": "^jdbc:mysql://[^\\s]+$"
+        },
+        "username": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "passwordRef": {
+          "type": "string",
+          "pattern": "^env:[A-Z][A-Z0-9_]{1,79}$",
+          "description": "仅密钥引用，禁止实际密钥值。"
+        },
+        "connectionBudget": {
+          "type": "integer",
+          "minimum": 8,
+          "maximum": 256
+        },
+        "reserveConnections": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 32
+        },
+        "platformPool": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 64
+        },
+        "sdkPool": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 64
+        },
+        "sandboxLockPool": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "autoCreateTables": {
+          "const": false
+        }
+      },
+      "required": [
+        "jdbcUrl",
+        "username",
+        "passwordRef",
+        "connectionBudget",
+        "reserveConnections",
+        "platformPool",
+        "sdkPool",
+        "sandboxLockPool",
+        "autoCreateTables"
+      ]
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sdkVersion": {
+          "const": "2.1.0-BETA1"
+        },
+        "sdkCommit": {
+          "const": "5451c73abe47053340683a1cc6d67b290b056648"
+        },
+        "historyMode": {
+          "const": "EVENT_LOG"
+        },
+        "guardTtlSeconds": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 300
+        },
+        "guardRenewSeconds": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 60
+        },
+        "maxOwnedBindings": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "globalModelConcurrency": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "bridgeWorkers": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "scanIntervalMs": {
+          "type": "integer",
+          "minimum": 250,
+          "maximum": 10000
+        },
+        "modelRequestTimeoutSeconds": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 180
+        },
+        "toolTimeoutSeconds": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 120
+        },
+        "maxRecoveryAttempts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "freeBackgroundSpawn": {
+          "const": false
+        },
+        "automaticMemoryWrites": {
+          "const": false
+        }
+      },
+      "required": [
+        "sdkVersion",
+        "sdkCommit",
+        "historyMode",
+        "guardTtlSeconds",
+        "guardRenewSeconds",
+        "maxOwnedBindings",
+        "globalModelConcurrency",
+        "bridgeWorkers",
+        "scanIntervalMs",
+        "modelRequestTimeoutSeconds",
+        "toolTimeoutSeconds",
+        "maxRecoveryAttempts",
+        "freeBackgroundSpawn",
+        "automaticMemoryWrites"
+      ]
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": [
+            "MOCK",
+            "DEEPSEEK_COMPATIBLE"
+          ]
+        },
+        "modelName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "baseUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "apiKeyRef": {
+          "type": "string",
+          "pattern": "^env:[A-Z][A-Z0-9_]{1,79}$",
+          "description": "仅密钥引用，禁止实际密钥值。"
+        },
+        "pricing": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "currency",
+            "version",
+            "inputMicrounitsPerMillionTokens",
+            "outputMicrounitsPerMillionTokens"
+          ],
+          "properties": {
+            "currency": {
+              "type": "string",
+              "enum": [
+                "CNY",
+                "USD",
+                "TEST_UNIT"
+              ]
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "inputMicrounitsPerMillionTokens": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000000000
+            },
+            "outputMicrounitsPerMillionTokens": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000000000
+            }
+          }
+        }
+      },
+      "required": [
+        "provider",
+        "modelName",
+        "pricing"
+      ]
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sessionSigningKeyRef": {
+          "type": "string",
+          "pattern": "^env:[A-Z][A-Z0-9_]{1,79}$",
+          "description": "仅密钥引用，禁止实际密钥值。"
+        },
+        "csrfKeyRef": {
+          "type": "string",
+          "pattern": "^env:[A-Z][A-Z0-9_]{1,79}$",
+          "description": "仅密钥引用，禁止实际密钥值。"
+        },
+        "credentialEncryptionKeyRef": {
+          "type": "string",
+          "pattern": "^env:[A-Z][A-Z0-9_]{1,79}$",
+          "description": "仅密钥引用，禁止实际密钥值。"
+        },
+        "idempotencyHmacKeyRef": {
+          "type": "string",
+          "pattern": "^env:[A-Z][A-Z0-9_]{1,79}$",
+          "description": "仅密钥引用，禁止实际密钥值。"
+        },
+        "cookieSecure": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "sessionSigningKeyRef",
+        "csrfKeyRef",
+        "credentialEncryptionKeyRef",
+        "idempotencyHmacKeyRef",
+        "cookieSecure"
+      ]
+    },
+    "storage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "backend": {
+          "type": "string",
+          "enum": [
+            "LOCAL",
+            "S3_COMPATIBLE"
+          ]
+        },
+        "rootOrBucket": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "maxUploadBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10485760
+        },
+        "maxSkillPackageBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        }
+      },
+      "required": [
+        "backend",
+        "rootOrBucket",
+        "maxUploadBytes",
+        "maxSkillPackageBytes"
+      ]
+    },
+    "sandbox": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "driver": {
+          "type": "string",
+          "enum": [
+            "DISABLED",
+            "DOCKER_ISOLATED"
+          ]
+        },
+        "imageDigest": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "cpuLimit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4
+        },
+        "memoryMiB": {
+          "type": "integer",
+          "minimum": 128,
+          "maximum": 2048
+        },
+        "pidLimit": {
+          "type": "integer",
+          "minimum": 16,
+          "maximum": 256
+        },
+        "executionTimeoutSeconds": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 120
+        },
+        "networkPolicy": {
+          "type": "string",
+          "enum": [
+            "DENY_ALL",
+            "ALLOWLIST"
+          ]
+        },
+        "credentialMounts": {
+          "const": false
+        }
+      },
+      "required": [
+        "enabled",
+        "driver",
+        "imageDigest",
+        "cpuLimit",
+        "memoryMiB",
+        "pidLimit",
+        "executionTimeoutSeconds",
+        "networkPolicy",
+        "credentialMounts"
+      ]
+    },
+    "web": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sseConnectionLimit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000
+        },
+        "sseHeartbeatSeconds": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 60
+        },
+        "retryCapSeconds": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 30
+        },
+        "cookieSameOrigin": {
+          "const": true
+        }
+      },
+      "required": [
+        "sseConnectionLimit",
+        "sseHeartbeatSeconds",
+        "retryCapSeconds",
+        "cookieSameOrigin"
+      ]
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "const": "STANDARD"
+        },
+        "maxParallelJobs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4
+        },
+        "maxJobs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "maxModelCalls": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 40
+        },
+        "maxToolCalls": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 80
+        },
+        "maxReplans": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "maxInputTokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "maxOutputTokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200000
+        },
+        "maxCostMicrounits": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000000
+        },
+        "absoluteDeadlineSeconds": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 86400
+        },
+        "interactionTtlSeconds": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 86400
+        }
+      },
+      "required": [
+        "key",
+        "maxParallelJobs",
+        "maxJobs",
+        "maxModelCalls",
+        "maxToolCalls",
+        "maxReplans",
+        "maxInputTokens",
+        "maxOutputTokens",
+        "maxCostMicrounits",
+        "absoluteDeadlineSeconds",
+        "interactionTtlSeconds"
+      ]
+    }
+  },
+  "required": [
+    "app",
+    "database",
+    "runtime",
+    "model",
+    "security",
+    "storage",
+    "sandbox",
+    "web",
+    "profile"
+  ]
+}

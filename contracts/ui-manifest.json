@@ -1,0 +1,145 @@
+{
+  "version": "0.2.1",
+  "status": "design-only",
+  "routes": [
+    {
+      "page": "login",
+      "route": "/login",
+      "roles": [
+        "ANONYMOUS"
+      ],
+      "operations": [
+        "login",
+        "currentUser"
+      ],
+      "cases": [
+        "B01"
+      ]
+    },
+    {
+      "page": "workspace",
+      "route": "/app/conversations/:conversationId?",
+      "roles": [
+        "USER"
+      ],
+      "operations": [
+        "listConversations",
+        "createConversation",
+        "getConversation",
+        "listConversationTasks",
+        "createTask",
+        "uploadArtifact",
+        "getTaskSnapshot",
+        "observeTaskEvents",
+        "cancelTask",
+        "resumeTask",
+        "respondInteraction",
+        "getCommandReceipt",
+        "deleteConversation"
+      ],
+      "cases": [
+        "B02",
+        "B03",
+        "B04",
+        "B05",
+        "B06",
+        "B07",
+        "B08",
+        "B15"
+      ]
+    },
+    {
+      "page": "task",
+      "route": "/app/tasks/:taskId",
+      "roles": [
+        "USER"
+      ],
+      "operations": [
+        "getTask",
+        "getTaskSnapshot",
+        "observeTaskEvents",
+        "listTaskJobs",
+        "listTaskOperations",
+        "listTaskInteractions",
+        "getOperationDetail",
+        "getArtifact",
+        "downloadArtifact",
+        "reconcileOperation"
+      ],
+      "cases": [
+        "B04",
+        "B05",
+        "B09",
+        "B10"
+      ]
+    },
+    {
+      "page": "skills",
+      "route": "/app/skills",
+      "roles": [
+        "USER"
+      ],
+      "operations": [
+        "listSkills",
+        "getSkillDetail",
+        "importSkill",
+        "setSkillGrant"
+      ],
+      "cases": [
+        "B11"
+      ]
+    },
+    {
+      "page": "connections",
+      "route": "/app/settings/connections",
+      "roles": [
+        "USER"
+      ],
+      "operations": [
+        "listConnections",
+        "createConnection",
+        "updateConnection"
+      ],
+      "cases": [
+        "B12"
+      ]
+    },
+    {
+      "page": "memory",
+      "route": "/app/settings/memory",
+      "roles": [
+        "USER"
+      ],
+      "operations": [
+        "listMemories",
+        "createMemory",
+        "updateMemory",
+        "deleteMemory"
+      ],
+      "cases": [
+        "B13"
+      ]
+    },
+    {
+      "page": "workers",
+      "route": "/app/admin/workers",
+      "roles": [
+        "ADMIN"
+      ],
+      "operations": [
+        "listWorkerDefinitions",
+        "publishWorkerDefinition",
+        "changeWorkerStatus"
+      ],
+      "cases": [
+        "B14"
+      ]
+    }
+  ],
+  "conditionalPermissions": {
+    "reconcileOperation": "OPERATOR_WITH_RESOURCE_SCOPE"
+  },
+  "nonPageActions": [
+    "logout"
+  ]
+}
