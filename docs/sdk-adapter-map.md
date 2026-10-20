@@ -5,7 +5,7 @@
 | 平台责任 | 固定标签源码入口 | 适配/实验重点 |
 | --- | --- | --- |
 | Agent构建与关闭 | HarnessAgent.builder/build/session/close | 共享配置、按Binding持有；HTTP返回不close后台Agent |
-| 原生日志模式 | Builder默认EVENT_LOG、sessionLogStore | 显式共享日志后端；不开legacy，不认为stateStore等于journal |
+| 原生日志模式 | Builder 默认 EVENT_LOG；`distributedStore(JdbcDistributedStore.create(dataSource, dialect))` + `filesystem(RemoteFilesystemSpec)` | 复用 Spring `DataSource` 与 SDK 原生 Journal；不开 legacy，不再维护自写的 `SessionLogStore` |
 | 持久输入 | AgentSession.submit(key,input)、start | commandId稳定，同key同内容；收据丢失可补 |
 | 中断/继续 | interrupt(runId)、resume(turnId)、inspect/pending | resume无应用key；先查inbox待处理命令与Turn.started，再检查Run，不能只看latestRunId |
 | 原生ASK | pending、respond(requestId,SessionAnswer) | 用户回复→真实request映射；重复请求按平台Command幂等，原生答复使用原request |

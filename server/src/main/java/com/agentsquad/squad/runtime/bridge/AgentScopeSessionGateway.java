@@ -5,29 +5,36 @@ import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
 import com.agentsquad.squad.runtime.domain.ProjectionTarget;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.session.SessionEvent;
+import io.agentscope.extensions.jdbc.JdbcDistributedStore;
+import io.agentscope.extensions.jdbc.dialect.AbstractJdbcDialect;
 import io.agentscope.extensions.model.openai.OpenAIChatModel;
 import io.agentscope.harness.agent.HarnessAgent;
+import io.agentscope.harness.agent.IsolationScope;
+import io.agentscope.harness.agent.filesystem.spec.RemoteFilesystemSpec;
 import io.agentscope.harness.agent.session.AgentSession;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitialization;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import javax.sql.DataSource;
 
 /**
  * 当前 Master 的 AgentScope 原生会话适配器。
  *
- * <p>只在显式启用且模型配置完整时创建长生命周期 Agent；固定 Binding 标识决定恢复哪段日志。</p>
+ * <p>复用 Spring DataSource 创建官方 JDBC DistributedStore；固定 Binding 标识决定恢复哪段原生日志。</p>
  */
 @Component
+@DependsOnDatabaseInitialization
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class AgentScopeSessionGateway implements NativeSessionGateway {
 
     @Resource
-    private JdbcSessionLogStore sessionLogStore;
+    private DataSource dataSource;
 
     @Value("${agentsquad.model.api-key:}")
     private String apiKey;
@@ -40,21 +47,23 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
 
     private HarnessAgent master;
 
-    /**
-     * 启用投递前先检查模型配置，避免命令被领取后才发现没有模型。
-     */
+    /** 启用投递前检查模型配置和 Flyway 表结构，再创建长生命周期 Master。 */
     @PostConstruct
     public void initialize() {
         if (apiKey.isBlank() || baseUrl.isBlank() || modelName.isBlank()) {
             throw new IllegalStateException("已启用命令投递，但模型 API Key、地址或名称未配置");
         }
+        AbstractJdbcDialect dialect = AbstractJdbcDialect.from(dataSource)
+                .autoCreateTable(false)
+                .build();
         master = HarnessAgent.builder()
                 .agentId(MasterAgentIdentity.AGENT_ID)
                 .name("Squad Master")
                 .sysPrompt("你是多智能体平台的 Master。当前阶段只回答用户问题，不调用工具或执行外部操作。")
                 .model(OpenAIChatModel.builder().apiKey(apiKey).baseUrl(baseUrl)
                         .modelName(modelName).build())
-                .sessionLogStore(sessionLogStore)
+                .distributedStore(JdbcDistributedStore.create(dataSource, dialect))
+                .filesystem(new RemoteFilesystemSpec().isolationScope(IsolationScope.USER))
                 .disableSubagents()
                 .disableFilesystemTools()
                 .disableShellTool()

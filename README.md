@@ -4,7 +4,7 @@
 
 Master 负责目标理解、全局上下文、规划、Worker 委派与结果聚合。Worker 负责任务局部执行，自动识别使用 Skill，通过受控工具访问外部能力。计算实例无状态，任务与恢复状态外置持久化。
 
-当前方向：Java + AgentScope Harness SDK，固定依赖版本为 2.1.0-BETA1。MyBatis 受理事务曾在 H2 文件库重启和项目专用 MySQL 8.4 验证。原生 Journal MySQL CAS 存储、命令领取、`AgentSession.submit` 桥接及运行生命周期投影代码已写，**本阶段按要求未运行测试或服务验证**。业务表和原生日志表共用 `spring.datasource`，无需为原生日志另配连接；`SQUAD_DELIVERY_ENABLED` 只是投递功能开关。桥接默认关闭；启用时还需配置 `SQUAD_MODEL_API_KEY`、`SQUAD_MODEL_BASE_URL`、`SQUAD_MODEL_NAME`。原生提交收据和单次 Run 结束都不代表用户目标完成；最终答案及任务终态裁决尚未实现。详见[框架适配调研](docs/research/agentscope-java.md)、[D0 验证记录](docs/d0-evidence.md)与[D1 验证记录](docs/d1-evidence.md)。
+当前方向：Java + AgentScope Harness SDK，固定依赖版本为 2.1.0-BETA1。MyBatis 受理事务曾在 H2 文件库重启和项目专用 MySQL 8.4 验证。命令领取、`AgentSession.submit` 桥接及运行生命周期投影代码已写，**本阶段按要求未运行测试或服务验证**。Harness 使用官方 `agentscope-extensions-jdbc`，直接接入 Spring 的 `DataSource`；原生日志通过 SDK 的共享 Workspace 存储，不再使用自写的 `JdbcSessionLogStore`。框架基础表由 Flyway 创建，SDK 启动时只校验。`SQUAD_DELIVERY_ENABLED` 是投递功能开关；桥接默认关闭，启用时还需配置 `SQUAD_MODEL_API_KEY`、`SQUAD_MODEL_BASE_URL`、`SQUAD_MODEL_NAME`。原生提交收据和单次 Run 结束都不代表用户目标完成；最终答案及任务终态裁决尚未实现。详见[框架适配调研](docs/research/agentscope-java.md)、[D0 验证记录](docs/d0-evidence.md)与[D1 验证记录](docs/d1-evidence.md)。
 
 ## 设计入口
 
