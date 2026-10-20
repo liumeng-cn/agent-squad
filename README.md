@@ -6,6 +6,8 @@ Master 负责目标理解、全局上下文、规划、Worker 委派与结果聚
 
 当前方向：Java + AgentScope Harness SDK，固定依赖版本为 2.1.0-BETA1。MyBatis 受理事务曾在 H2 文件库重启和项目专用 MySQL 8.4 验证。命令领取、`AgentSession.submit` 桥接及运行生命周期投影代码已写，**本阶段按要求未运行测试或服务验证**。Harness 使用官方 `agentscope-extensions-jdbc`，直接接入 Spring 的 `DataSource`；原生日志通过 SDK 的共享 Workspace 存储，不再使用自写的 `JdbcSessionLogStore`。框架基础表由 Flyway 创建，SDK 启动时只校验。`SQUAD_DELIVERY_ENABLED` 是投递功能开关；桥接默认关闭，启用时还需配置 `SQUAD_MODEL_API_KEY`、`SQUAD_MODEL_BASE_URL`、`SQUAD_MODEL_NAME`。原生提交收据和单次 Run 结束都不代表用户目标完成；最终答案及任务终态裁决尚未实现。详见[框架适配调研](docs/research/agentscope-java.md)、[D0 验证记录](docs/d0-evidence.md)与[D1 验证记录](docs/d1-evidence.md)。
 
+Java 模块统一使用 Lombok；需要日志的类使用 `@Slf4j`，请求、响应和持久投影等不可变数据保留 Java `record`。
+
 ## 设计入口
 
 1. [整体技术架构与选型](docs/architecture.md)、[项目结构与依赖规则](docs/project-structure.md)。

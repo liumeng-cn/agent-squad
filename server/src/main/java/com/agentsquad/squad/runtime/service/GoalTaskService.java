@@ -6,8 +6,7 @@ import com.agentsquad.squad.runtime.repository.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,9 +26,8 @@ import java.util.UUID;
  * <p>模型或外部工具调用不在本事务内；后续 Bridge 从持久命令领取并调用 AgentScope。</p>
  */
 @Service
+@Slf4j
 public class GoalTaskService {
-
-    private static final Logger LOG = LoggerFactory.getLogger(GoalTaskService.class);
 
     @Resource
     private ConversationMapper conversationMapper;
@@ -56,7 +54,7 @@ public class GoalTaskService {
     public ConversationResponse createConversation(String userId, String title) {
         String conversationId = UUID.randomUUID().toString();
         conversationMapper.insert(conversationId, userId, title);
-        LOG.info("对话创建成功 conversationId={} userId={}", conversationId, userId);
+        log.info("对话创建成功 conversationId={} userId={}", conversationId, userId);
         return new ConversationResponse(conversationId, title, 0, "ACTIVE", 0);
     }
 
@@ -104,7 +102,7 @@ public class GoalTaskService {
         if (conversationMapper.activateTask(userId, conversationId, taskId) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "会话状态已变化");
         }
-        LOG.info("目标受理成功 taskId={} commandId={} conversationId={}", taskId, commandId, conversationId);
+        log.info("目标受理成功 taskId={} commandId={} conversationId={}", taskId, commandId, conversationId);
         return new TaskReceipt(taskId, commandId, "QUEUED");
     }
 

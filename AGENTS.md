@@ -21,6 +21,7 @@
 
 - Spring类不声明内部类，包括内部DTO、嵌套record、配置辅助类；拆成职责明确的独立文件。
 - 不使用构造方法注入，也不通过Lombok的@RequiredArgsConstructor/@AllArgsConstructor隐式生成注入构造器。依赖统一采用jakarta.annotation.Resource字段注入；业务对象自身的正常构造不受这条注入规则限制。
+- Java 模块统一引入 Lombok；需要日志的类使用 `@Slf4j` 和 `log`，不手写 `LoggerFactory` 字段。简单不可变请求、响应和持久投影继续使用 Java `record`，不为使用 Lombok 而改写数据语义。
 - 功能类注释说明职责、所属模块与关键边界；核心方法注释说明业务步骤、事务/副作用、幂等及失败恢复要点。避免只翻译方法名，不为机械访问器堆注释。
 - 关键日志说明操作、阶段、结果及原因，按需带traceId/taskId/jobId/operationId/commandId；异常保留必要堆栈，避免各层重复记录同一异常。
 - 不输出密钥、Cookie、密码、完整Prompt/上下文、模型内部推理；入参和工具结果只记录允许字段、摘要及大小。正常等待/取消不是ERROR，恢复重试要有次数和原因，避免轮询/续租刷屏。
