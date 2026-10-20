@@ -1,0 +1,85 @@
+package com.agentsquad.squad.runtime.bridge;
+
+import com.agentsquad.squad.runtime.domain.DeliveryRow;
+import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
+import io.agentscope.core.agent.RuntimeContext;
+import io.agentscope.extensions.model.openai.OpenAIChatModel;
+import io.agentscope.harness.agent.HarnessAgent;
+import io.agentscope.harness.agent.session.AgentSession;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
+
+/**
+ * 当前 Master 的 AgentScope 原生会话适配器。
+ *
+ * <p>只在显式启用且模型配置完整时创建长生命周期 Agent；固定 Binding 标识决定恢复哪段日志。</p>
+ */
+@Component
+@ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
+public class AgentScopeSessionGateway implements NativeSessionGateway {
+
+    @Resource
+    private JdbcSessionLogStore sessionLogStore;
+
+    @Value("${agentsquad.model.api-key:}")
+    private String apiKey;
+
+    @Value("${agentsquad.model.base-url:}")
+    private String baseUrl;
+
+    @Value("${agentsquad.model.name:}")
+    private String modelName;
+
+    private HarnessAgent master;
+
+    /** 启用投递前先检查模型配置，避免命令被领取后才发现没有模型。 */
+    @PostConstruct
+    public void initialize() {
+        if (apiKey.isBlank() || baseUrl.isBlank() || modelName.isBlank()) {
+            throw new IllegalStateException("已启用命令投递，但模型 API Key、地址或名称未配置");
+        }
+        master = HarnessAgent.builder()
+                .agentId(MasterAgentIdentity.AGENT_ID)
+                .name("Squad Master")
+                .sysPrompt("你是多智能体平台的 Master。当前阶段只回答用户问题，不调用工具或执行外部操作。")
+                .model(OpenAIChatModel.builder().apiKey(apiKey).baseUrl(baseUrl)
+                        .modelName(modelName).build())
+                .sessionLogStore(sessionLogStore)
+                .disableSubagents()
+                .disableFilesystemTools()
+                .disableShellTool()
+                .disableWebTools()
+                .disableMemoryTools()
+                .disableMemoryHooks()
+                .disableDynamicSkills()
+                .disableDefaultWorkspaceSkills()
+                .build();
+    }
+
+    /** 用绑定的用户/会话身份和原命令 ID 提交，重复投递不会产生第二个原生回合。 */
+    @Override
+    public NativeSubmissionReceipt submit(DeliveryRow delivery, String message) {
+        if (!MasterAgentIdentity.AGENT_ID.equals(delivery.agentId())) {
+            throw new IllegalStateException("未注册的 Master 能力版本");
+        }
+        RuntimeContext context = RuntimeContext.builder()
+                .userId(delivery.userId())
+                .sessionId(delivery.sessionId())
+                .build();
+        AgentSession.Task receipt = master.session(context).submit(delivery.commandId(), message);
+        return new NativeSubmissionReceipt(receipt.commandId(), receipt.turnId(),
+                receipt.runId(), receipt.status());
+    }
+
+    /** 关闭本进程持有的原生会话调度器；日志保留在 MySQL。 */
+    @PreDestroy
+    public void close() {
+        if (master != null) {
+            master.close();
+        }
+    }
+}

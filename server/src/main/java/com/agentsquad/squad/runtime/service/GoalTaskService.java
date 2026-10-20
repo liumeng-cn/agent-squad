@@ -3,6 +3,7 @@ package com.agentsquad.squad.runtime.service;
 import com.agentsquad.squad.runtime.domain.CommandRow;
 import com.agentsquad.squad.runtime.domain.ConversationRow;
 import com.agentsquad.squad.runtime.domain.EventRow;
+import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
 import com.agentsquad.squad.runtime.domain.TaskRow;
 import com.agentsquad.squad.runtime.dto.CommandResponse;
 import com.agentsquad.squad.runtime.dto.ConversationResponse;
@@ -41,7 +42,6 @@ import java.util.UUID;
 public class GoalTaskService {
 
     private static final Logger LOG = LoggerFactory.getLogger(GoalTaskService.class);
-    private static final String MASTER_AGENT_ID = "00000000000000000000000000000001";
 
     @Resource
     private ConversationMapper conversationMapper;
@@ -105,7 +105,8 @@ public class GoalTaskService {
         String commandId = UUID.randomUUID().toString();
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         taskMapper.insert(taskId, userId, conversationId, payloadJson);
-        bindingMapper.insertMaster(bindingId, userId, taskId, MASTER_AGENT_ID, UUID.randomUUID().toString());
+        bindingMapper.insertMaster(bindingId, userId, taskId, MasterAgentIdentity.AGENT_ID,
+                UUID.randomUUID().toString());
         commandMapper.insertSubmit(commandId, userId, scopeKey, idempotencyKey, payloadHash,
                 taskId, bindingId, payloadJson, now);
         taskEventMapper.insertAccepted(userId, taskId, "command:" + commandId,
@@ -132,7 +133,8 @@ public class GoalTaskService {
         if (command == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "命令不存在");
         }
-        return new CommandResponse(command.commandId(), command.taskId(), command.status());
+        return new CommandResponse(command.commandId(), command.taskId(), command.status(),
+                command.nativeTurnId(), command.nativeRunId(), command.nativeStatus());
     }
 
     /** 从已提交事件按序号回放，客户端重连可从最后水位继续。 */

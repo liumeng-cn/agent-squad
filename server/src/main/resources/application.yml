@@ -15,6 +15,13 @@ server:
     port: 18080
 
 agentsquad:
+    delivery:
+        enabled: ${SQUAD_DELIVERY_ENABLED:false}
+        poll-delay-ms: ${SQUAD_DELIVERY_POLL_DELAY_MS:1000}
+    model:
+        api-key: ${SQUAD_MODEL_API_KEY:}
+        base-url: ${SQUAD_MODEL_BASE_URL:}
+        name: ${SQUAD_MODEL_NAME:}
     auth:
         username: ${SQUAD_LOCAL_USER:}
         password: ${SQUAD_LOCAL_PASSWORD:}
