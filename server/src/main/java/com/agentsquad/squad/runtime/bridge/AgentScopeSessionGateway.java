@@ -2,11 +2,12 @@ package com.agentsquad.squad.runtime.bridge;
 
 import com.agentsquad.squad.runtime.domain.DeliveryRow;
 import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
+import com.agentsquad.squad.runtime.domain.ProjectionTarget;
 import io.agentscope.core.agent.RuntimeContext;
+import io.agentscope.core.session.SessionEvent;
 import io.agentscope.extensions.model.openai.OpenAIChatModel;
 import io.agentscope.harness.agent.HarnessAgent;
 import io.agentscope.harness.agent.session.AgentSession;
-import io.agentscope.core.session.SessionEvent;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
@@ -39,7 +40,9 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
 
     private HarnessAgent master;
 
-    /** 启用投递前先检查模型配置，避免命令被领取后才发现没有模型。 */
+    /**
+     * 启用投递前先检查模型配置，避免命令被领取后才发现没有模型。
+     */
     @PostConstruct
     public void initialize() {
         if (apiKey.isBlank() || baseUrl.isBlank() || modelName.isBlank()) {
@@ -63,7 +66,9 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
                 .build();
     }
 
-    /** 用绑定的用户/会话身份和原命令 ID 提交，重复投递不会产生第二个原生回合。 */
+    /**
+     * 用绑定的用户/会话身份和原命令 ID 提交，重复投递不会产生第二个原生回合。
+     */
     @Override
     public NativeSubmissionReceipt submit(DeliveryRow delivery, String message) {
         if (!MasterAgentIdentity.AGENT_ID.equals(delivery.agentId())) {
@@ -78,7 +83,9 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
                 receipt.runId(), receipt.status());
     }
 
-    /** 读取固定会话的已提交原生前缀，并在重启后重新启动其待执行命令调度。 */
+    /**
+     * 读取固定会话的已提交原生前缀，并在重启后重新启动其待执行命令调度。
+     */
     @Override
     public List<NativeEventView> readEvents(ProjectionTarget target, long after, int limit) {
         if (!MasterAgentIdentity.AGENT_ID.equals(target.agentId())) {
@@ -102,7 +109,9 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
                 event.occurredAt());
     }
 
-    /** 关闭本进程持有的原生会话调度器；日志保留在 MySQL。 */
+    /**
+     * 关闭本进程持有的原生会话调度器；日志保留在 MySQL。
+     */
     @PreDestroy
     public void close() {
         if (master != null) {

@@ -1,10 +1,10 @@
 package com.agentsquad.squad.identity;
 
-import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -28,7 +28,9 @@ public class AuthService {
 
     private final Map<String, AuthSession> sessions = new ConcurrentHashMap<>();
 
-    /** 登录成功后生成不可预测的临时会话令牌，不记录密码。 */
+    /**
+     * 登录成功后生成不可预测的临时会话令牌，不记录密码。
+     */
     public String login(String username, String password) {
         if (configuredUsername.isBlank() || configuredPassword.isBlank()
                 || !configuredUsername.equals(username) || !configuredPassword.equals(password)) {
@@ -40,7 +42,9 @@ public class AuthService {
         return token;
     }
 
-    /** 校验会话令牌并返回当前主体，失败时不泄露账号是否存在。 */
+    /**
+     * 校验会话令牌并返回当前主体，失败时不泄露账号是否存在。
+     */
     public AuthView authenticate(String token) {
         if (token == null || token.isBlank()) {
             throw new AuthenticationRequiredException();
@@ -52,7 +56,9 @@ public class AuthService {
         return new AuthView(session.userId(), session.username(), List.of(session.role()), session.csrfToken());
     }
 
-    /** 写请求须同时持有 Cookie 和登录时签发的 CSRF 值。 */
+    /**
+     * 写请求须同时持有 Cookie 和登录时签发的 CSRF 值。
+     */
     public String authenticateWrite(String token, String csrfToken) {
         AuthView view = authenticate(token);
         if (csrfToken == null || !view.csrfToken().equals(csrfToken)) {
@@ -61,7 +67,9 @@ public class AuthService {
         return view.userId();
     }
 
-    /** 注销当前会话，使后续请求立即失效。 */
+    /**
+     * 注销当前会话，使后续请求立即失效。
+     */
     public void logout(String token) {
         if (token != null) {
             sessions.remove(token);

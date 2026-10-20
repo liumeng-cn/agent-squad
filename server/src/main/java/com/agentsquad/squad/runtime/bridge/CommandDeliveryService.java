@@ -37,7 +37,9 @@ public class CommandDeliveryService {
     @Resource
     private ObjectMapper objectMapper;
 
-    /** 周期性寻找到期命令；多实例可并发扫描，只有一个能原子领取。 */
+    /**
+     * 周期性寻找到期命令；多实例可并发扫描，只有一个能原子领取。
+     */
     @Scheduled(fixedDelayString = "${agentsquad.delivery.poll-delay-ms:1000}")
     public void deliverDue() {
         List<String> commandIds = deliveryMapper.findDueIds(now());
@@ -46,7 +48,9 @@ public class CommandDeliveryService {
         }
     }
 
-    /** 单条投递不跨数据库事务等待模型；失败按有界退避重新排队。 */
+    /**
+     * 单条投递不跨数据库事务等待模型；失败按有界退避重新排队。
+     */
     public void deliver(String commandId) {
         String token = UUID.randomUUID().toString();
         LocalDateTime claimedAt = now();

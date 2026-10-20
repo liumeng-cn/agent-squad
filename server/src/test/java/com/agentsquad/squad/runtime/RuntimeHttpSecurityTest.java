@@ -19,7 +19,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** HTTP 边界测试：验证伪造身份头无效，Cookie 与 CSRF 缺一不可。 */
+/**
+ * HTTP 边界测试：验证伪造身份头无效，Cookie 与 CSRF 缺一不可。
+ */
 class RuntimeHttpSecurityTest {
 
     @Test

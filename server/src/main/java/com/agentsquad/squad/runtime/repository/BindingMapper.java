@@ -4,7 +4,9 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-/** AgentScope 会话发现目录 SQL 边界；固定标识由后续 Bridge 使用。 */
+/**
+ * AgentScope 会话发现目录 SQL 边界；固定标识由后续 Bridge 使用。
+ */
 @Mapper
 public interface BindingMapper {
 

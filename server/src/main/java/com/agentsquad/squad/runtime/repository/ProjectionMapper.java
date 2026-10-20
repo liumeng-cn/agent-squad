@@ -1,17 +1,14 @@
 package com.agentsquad.squad.runtime.repository;
 
 import com.agentsquad.squad.runtime.domain.ProjectionTarget;
-import org.apache.ibatis.annotations.Arg;
-import org.apache.ibatis.annotations.ConstructorArgs;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
+import org.apache.ibatis.annotations.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-/** 原生会话投影水位与任务进度的数据库访问边界。 */
+/**
+ * 原生会话投影水位与任务进度的数据库访问边界。
+ */
 @Mapper
 public interface ProjectionMapper {
 

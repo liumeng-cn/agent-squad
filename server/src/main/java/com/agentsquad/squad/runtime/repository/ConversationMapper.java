@@ -1,15 +1,11 @@
 package com.agentsquad.squad.runtime.repository;
 
 import com.agentsquad.squad.runtime.domain.ConversationRow;
-import org.apache.ibatis.annotations.Arg;
-import org.apache.ibatis.annotations.ConstructorArgs;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
+import org.apache.ibatis.annotations.*;
 
-/** 对话 SQL 边界；任务受理时用行锁串行化同一会话。 */
+/**
+ * 对话 SQL 边界；任务受理时用行锁串行化同一会话。
+ */
 @Mapper
 public interface ConversationMapper {
 

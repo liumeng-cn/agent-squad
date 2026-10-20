@@ -1,17 +1,14 @@
 package com.agentsquad.squad.runtime.repository;
 
 import com.agentsquad.squad.runtime.domain.DeliveryRow;
-import org.apache.ibatis.annotations.Arg;
-import org.apache.ibatis.annotations.ConstructorArgs;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
+import org.apache.ibatis.annotations.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-/** 持久命令的领取、固定 Binding 读取与原生提交收据写入。 */
+/**
+ * 持久命令的领取、固定 Binding 读取与原生提交收据写入。
+ */
 @Mapper
 public interface DeliveryMapper {
 

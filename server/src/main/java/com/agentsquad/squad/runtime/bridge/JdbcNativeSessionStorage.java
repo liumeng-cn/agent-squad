@@ -17,7 +17,9 @@ public class JdbcNativeSessionStorage implements AtomicSessionStorage {
     @Resource
     private JdbcTemplate jdbcTemplate;
 
-    /** 读取对象版本与完整字节；不存在返回 null。 */
+    /**
+     * 读取对象版本与完整字节；不存在返回 null。
+     */
     @Override
     public Value read(String path) {
         return jdbcTemplate.query("SELECT object_version, object_bytes FROM sq_native_session_object WHERE object_path = ?",
@@ -25,7 +27,9 @@ public class JdbcNativeSessionStorage implements AtomicSessionStorage {
                 path);
     }
 
-    /** 只有期望版本仍为当前版本时才持久化；0 表示首次创建。 */
+    /**
+     * 只有期望版本仍为当前版本时才持久化；0 表示首次创建。
+     */
     @Override
     public boolean compareAndSet(String path, long expectedVersion, byte[] bytes) {
         if (expectedVersion == 0) {

@@ -13,7 +13,9 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** 项目专用 MySQL 实例联调；普通离线测试未配置地址时跳过。 */
+/**
+ * 项目专用 MySQL 实例联调；普通离线测试未配置地址时跳过。
+ */
 @EnabledIfEnvironmentVariable(named = "SQUAD_DB_URL", matches = "jdbc:mysql:.*")
 class MySqlGoalTaskIntegrationTest {
 

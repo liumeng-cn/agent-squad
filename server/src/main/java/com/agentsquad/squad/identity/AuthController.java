@@ -4,16 +4,10 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 本地开发登录协议入口。
@@ -30,7 +24,9 @@ public class AuthController {
     @Resource
     private AuthService authService;
 
-    /** 登录成功后写入 HttpOnly 会话 Cookie。 */
+    /**
+     * 登录成功后写入 HttpOnly 会话 Cookie。
+     */
     @PostMapping("/login")
     public AuthView login(@RequestBody LoginRequest request, HttpServletResponse response) {
         String token = authService.login(request.username(), request.password());
@@ -39,13 +35,17 @@ public class AuthController {
         return authService.authenticate(token);
     }
 
-    /** 返回当前会话主体。 */
+    /**
+     * 返回当前会话主体。
+     */
     @GetMapping("/me")
     public AuthView me(HttpServletRequest request) {
         return authService.authenticate(readToken(request));
     }
 
-    /** 注销会话并清理客户端 Cookie。 */
+    /**
+     * 注销会话并清理客户端 Cookie。
+     */
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void logout(HttpServletRequest request, HttpServletResponse response,

@@ -1,16 +1,13 @@
 package com.agentsquad.squad.runtime.repository;
 
 import com.agentsquad.squad.runtime.domain.CommandRow;
-import org.apache.ibatis.annotations.Arg;
-import org.apache.ibatis.annotations.ConstructorArgs;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.*;
 
 import java.time.LocalDateTime;
 
-/** 持久命令和幂等收据 SQL 边界；按归属、作用域与调用键定位原命令。 */
+/**
+ * 持久命令和幂等收据 SQL 边界；按归属、作用域与调用键定位原命令。
+ */
 @Mapper
 public interface CommandMapper {
 

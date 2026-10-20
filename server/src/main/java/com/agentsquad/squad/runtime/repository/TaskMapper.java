@@ -1,14 +1,11 @@
 package com.agentsquad.squad.runtime.repository;
 
 import com.agentsquad.squad.runtime.domain.TaskRow;
-import org.apache.ibatis.annotations.Arg;
-import org.apache.ibatis.annotations.ConstructorArgs;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.*;
 
-/** 用户目标 SQL 边界，不将框架执行记录伪装成任务状态。 */
+/**
+ * 用户目标 SQL 边界，不将框架执行记录伪装成任务状态。
+ */
 @Mapper
 public interface TaskMapper {
 

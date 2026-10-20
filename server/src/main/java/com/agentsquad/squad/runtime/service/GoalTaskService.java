@@ -1,20 +1,8 @@
 package com.agentsquad.squad.runtime.service;
 
-import com.agentsquad.squad.runtime.domain.CommandRow;
-import com.agentsquad.squad.runtime.domain.ConversationRow;
-import com.agentsquad.squad.runtime.domain.EventRow;
-import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
-import com.agentsquad.squad.runtime.domain.TaskRow;
-import com.agentsquad.squad.runtime.dto.CommandResponse;
-import com.agentsquad.squad.runtime.dto.ConversationResponse;
-import com.agentsquad.squad.runtime.dto.TaskEventResponse;
-import com.agentsquad.squad.runtime.dto.TaskReceipt;
-import com.agentsquad.squad.runtime.dto.TaskResponse;
-import com.agentsquad.squad.runtime.repository.BindingMapper;
-import com.agentsquad.squad.runtime.repository.CommandMapper;
-import com.agentsquad.squad.runtime.repository.ConversationMapper;
-import com.agentsquad.squad.runtime.repository.TaskEventMapper;
-import com.agentsquad.squad.runtime.repository.TaskMapper;
+import com.agentsquad.squad.runtime.domain.*;
+import com.agentsquad.squad.runtime.dto.*;
+import com.agentsquad.squad.runtime.repository.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -61,7 +49,9 @@ public class GoalTaskService {
     @Resource
     private ObjectMapper objectMapper;
 
-    /** 创建归属明确的对话，后续提交必须再锁该对话。 */
+    /**
+     * 创建归属明确的对话，后续提交必须再锁该对话。
+     */
     @Transactional
     public ConversationResponse createConversation(String userId, String title) {
         String conversationId = UUID.randomUUID().toString();
@@ -118,7 +108,9 @@ public class GoalTaskService {
         return new TaskReceipt(taskId, commandId, "QUEUED");
     }
 
-    /** 按登录主体读取目标，不暴露其他用户的存在性。 */
+    /**
+     * 按登录主体读取目标，不暴露其他用户的存在性。
+     */
     public TaskResponse findTask(String userId, String taskId) {
         TaskRow task = taskMapper.findOwned(userId, taskId);
         if (task == null) {
@@ -127,7 +119,9 @@ public class GoalTaskService {
         return new TaskResponse(task.taskId(), task.conversationId(), task.status(), task.version());
     }
 
-    /** 仅返回当前用户的命令收据。 */
+    /**
+     * 仅返回当前用户的命令收据。
+     */
     public CommandResponse findCommand(String userId, String commandId) {
         CommandRow command = commandMapper.findOwned(userId, commandId);
         if (command == null) {
@@ -137,7 +131,9 @@ public class GoalTaskService {
                 command.nativeTurnId(), command.nativeRunId(), command.nativeStatus());
     }
 
-    /** 从已提交事件按序号回放，客户端重连可从最后水位继续。 */
+    /**
+     * 从已提交事件按序号回放，客户端重连可从最后水位继续。
+     */
     public List<TaskEventResponse> listEvents(String userId, String taskId, long after) {
         findTask(userId, taskId);
         return taskEventMapper.listAfter(userId, taskId, after).stream()

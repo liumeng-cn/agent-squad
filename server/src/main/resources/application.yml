@@ -1,28 +1,28 @@
 spring:
-    application:
-        name: agent-squad-server
-    main:
-        web-application-type: servlet
-    datasource:
-        url: ${SQUAD_DB_URL:jdbc:mysql://127.0.0.1:13306/agent_squad}
-        username: ${SQUAD_DB_USER:squad}
-        password: ${SQUAD_DB_PASSWORD:}
-    flyway:
-        enabled: true
+  application:
+    name: agent-squad-server
+  main:
+    web-application-type: servlet
+  datasource:
+    url: ${SQUAD_DB_URL:jdbc:mysql://127.0.0.1:13306/agent_squad}
+    username: ${SQUAD_DB_USER:squad}
+    password: ${SQUAD_DB_PASSWORD:}
+  flyway:
+    enabled: true
 
 server:
-    address: 127.0.0.1
-    port: 18080
+  address: 127.0.0.1
+  port: 18080
 
 agentsquad:
-    delivery:
-        enabled: ${SQUAD_DELIVERY_ENABLED:false}
-        poll-delay-ms: ${SQUAD_DELIVERY_POLL_DELAY_MS:1000}
-    model:
-        api-key: ${SQUAD_MODEL_API_KEY:}
-        base-url: ${SQUAD_MODEL_BASE_URL:}
-        name: ${SQUAD_MODEL_NAME:}
-    auth:
-        username: ${SQUAD_LOCAL_USER:}
-        password: ${SQUAD_LOCAL_PASSWORD:}
-        user-id: ${SQUAD_LOCAL_USER_ID:00000000-0000-0000-0000-000000000001}
+  delivery:
+    enabled: ${SQUAD_DELIVERY_ENABLED:false}
+    poll-delay-ms: ${SQUAD_DELIVERY_POLL_DELAY_MS:1000}
+  model:
+    api-key: ${SQUAD_MODEL_API_KEY:}
+    base-url: ${SQUAD_MODEL_BASE_URL:}
+    name: ${SQUAD_MODEL_NAME:}
+  auth:
+    username: ${SQUAD_LOCAL_USER:}
+    password: ${SQUAD_LOCAL_PASSWORD:}
+    user-id: ${SQUAD_LOCAL_USER_ID:00000000-0000-0000-0000-000000000001}

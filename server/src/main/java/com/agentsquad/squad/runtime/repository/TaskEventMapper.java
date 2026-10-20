@@ -1,17 +1,14 @@
 package com.agentsquad.squad.runtime.repository;
 
 import com.agentsquad.squad.runtime.domain.EventRow;
-import org.apache.ibatis.annotations.Arg;
-import org.apache.ibatis.annotations.ConstructorArgs;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-/** 公开事件 SQL 边界；事件与受理命令在同一业务事务中提交。 */
+/**
+ * 公开事件 SQL 边界；事件与受理命令在同一业务事务中提交。
+ */
 @Mapper
 public interface TaskEventMapper {
 

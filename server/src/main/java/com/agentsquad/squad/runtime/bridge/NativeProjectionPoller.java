@@ -13,7 +13,9 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 
-/** 按持久水位从原生 Journal 读取稳定前缀，逐条交给事务投影器。 */
+/**
+ * 按持久水位从原生 Journal 读取稳定前缀，逐条交给事务投影器。
+ */
 @Component
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class NativeProjectionPoller {
@@ -29,7 +31,9 @@ public class NativeProjectionPoller {
     @Resource
     private NativeProjectionService projectionService;
 
-    /** 每个 Binding 独立失败与退避，不阻塞其他原生会话。 */
+    /**
+     * 每个 Binding 独立失败与退避，不阻塞其他原生会话。
+     */
     @Scheduled(fixedDelayString = "${agentsquad.projection.poll-delay-ms:1000}")
     public void projectDue() {
         for (ProjectionTarget target : projectionMapper.findDueTargets(now())) {

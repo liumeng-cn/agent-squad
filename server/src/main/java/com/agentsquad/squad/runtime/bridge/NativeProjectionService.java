@@ -37,7 +37,9 @@ public class NativeProjectionService {
     @Resource
     private ObjectMapper objectMapper;
 
-    /** 重复事件只跳过；缺少前序事件则回滚并等待重新读取完整前缀。 */
+    /**
+     * 重复事件只跳过；缺少前序事件则回滚并等待重新读取完整前缀。
+     */
     @Transactional
     public void accept(ProjectionTarget target, NativeEventView event) {
         Long cursor = projectionMapper.lockCursor(target.userId(), target.bindingId());
