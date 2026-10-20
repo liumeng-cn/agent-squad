@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.List;
 
 /**
  * D1 运行入口，仅负责 HTTP 协议和身份头解析，不编排模型循环。
@@ -60,6 +61,15 @@ public class D1RuntimeController {
             @CookieValue(value = "SQUAD_SESSION", required = false) String sessionToken,
             @PathVariable String taskId) {
         return runtimeStore.requireTask(resolveUserId(headerUserId, sessionToken), taskId);
+    }
+
+    /** 返回任务事件快照，前端可用最后序号建立后续增量游标。 */
+    @GetMapping("/tasks/{taskId}/events")
+    public List<D1TaskEvent> getEvents(
+            @RequestHeader(value = "X-D1-User", required = false) String headerUserId,
+            @CookieValue(value = "SQUAD_SESSION", required = false) String sessionToken,
+            @PathVariable String taskId) {
+        return runtimeStore.events(resolveUserId(headerUserId, sessionToken), taskId);
     }
 
     /** 查询命令收据，供断线重连和重复提交方确认受理结果。 */

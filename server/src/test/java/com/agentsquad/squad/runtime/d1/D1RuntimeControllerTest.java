@@ -22,5 +22,8 @@ class D1RuntimeControllerTest {
         assertThat(task.status()).isEqualTo("QUEUED");
         assertThat(task.commandId()).isNotBlank();
         assertThat(store.requireTask("user-a", task.id())).isEqualTo(task);
+        assertThat(store.events("user-a", task.id()))
+                .extracting(D1TaskEvent::type)
+                .containsExactly("TASK_ACCEPTED");
     }
 }

@@ -8,6 +8,9 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
+import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -22,6 +25,7 @@ public class D1RuntimeStore {
 
     private final Map<String, D1Conversation> conversations = new ConcurrentHashMap<>();
     private final Map<String, D1Task> tasks = new ConcurrentHashMap<>();
+    private final Map<String, List<D1TaskEvent>> events = new ConcurrentHashMap<>();
     private final FileCommandStore commandStore;
 
     public D1RuntimeStore() {
@@ -51,6 +55,9 @@ public class D1RuntimeStore {
         D1Task task = new D1Task(taskId, conversationId, userId, message, command.commandId(), "QUEUED");
         tasks.put(taskId, task);
         conversation.setActiveTaskId(taskId);
+        events.put(taskId, new ArrayList<>(List.of(
+                new D1TaskEvent(1, taskId, "TASK_ACCEPTED", "目标已持久受理", Instant.now())
+        )));
         return task;
     }
 
@@ -61,6 +68,12 @@ public class D1RuntimeStore {
             throw new IllegalArgumentException("任务不存在");
         }
         return task;
+    }
+
+    /** 按任务归属返回稳定顺序的公开事件快照。 */
+    public List<D1TaskEvent> events(String userId, String taskId) {
+        requireTask(userId, taskId);
+        return List.copyOf(events.getOrDefault(taskId, List.of()));
     }
 
     /** 返回命令收据，D1 中会改为查询 sq_command。 */
