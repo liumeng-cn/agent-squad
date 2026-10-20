@@ -34,4 +34,6 @@ Master 发布计划后本轮 Turn 可以正常结束；系统发现待 Job 则�
 
 直接回答也调用 propose_completion；如果模型只输出文本没提交候选，最多一次系统纠正，仍无候选则进入明确可诊断失败。Finalizer 必须等该 Turn 持久成功后发布最终答案。Master 不会因某个 Worker 返回 success 就跳过未完成必需节点或 UNKNOWN 操作。
 
+当前 D1 只实现直接回答：`propose_completion(outcome, finalAnswer)` 从 AgentScope RuntimeContext 读取用户、会话和原生 Turn，按 Master Binding 锁定目标并幂等保存候选。原生 `run/end(completed)` 投影时，只有候选的 Binding/Turn 与事件相同，且目标仍为 RUNNING、未取消，才在同一事务发布 `answer.completed`、`task.completed`，更新任务终态并释放对话。无候选纠正、Worker 汇合屏障及失败 Turn 的业务终结仍待后续阶段实现。
+
 验收：直接回答、单 Worker、双并行、串行、冲突核验、替代计划都遵循相同工具契约；新增 Worker 不新增 Master 业务 if/else；计划重放与重复完成通知不能多次派发。

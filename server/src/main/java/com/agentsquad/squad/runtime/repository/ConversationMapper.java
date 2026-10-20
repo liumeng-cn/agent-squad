@@ -1,7 +1,13 @@
 package com.agentsquad.squad.runtime.repository;
 
 import com.agentsquad.squad.runtime.domain.ConversationRow;
-import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Arg;
+import org.apache.ibatis.annotations.ConstructorArgs;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 /**
  * 对话 SQL 边界；任务受理时用行锁串行化同一会话。
@@ -37,4 +43,12 @@ public interface ConversationMapper {
             """)
     int activateTask(@Param("userId") String userId, @Param("conversationId") String conversationId,
                      @Param("taskId") String taskId);
+
+    @Update("""
+            UPDATE sq_conversation SET active_task_id = NULL, version = version + 1
+            WHERE user_id = #{userId} AND conversation_id = #{conversationId}
+              AND status = 'ACTIVE' AND active_task_id = #{taskId}
+            """)
+    int clearActiveTask(@Param("userId") String userId, @Param("conversationId") String conversationId,
+                        @Param("taskId") String taskId);
 }

@@ -3,6 +3,7 @@ package com.agentsquad.squad.runtime.bridge;
 import com.agentsquad.squad.runtime.domain.ProjectionTarget;
 import com.agentsquad.squad.runtime.repository.ProjectionMapper;
 import com.agentsquad.squad.runtime.repository.TaskEventMapper;
+import com.agentsquad.squad.runtime.service.TaskFinalizerService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -35,6 +36,9 @@ public class NativeProjectionService {
     private TaskEventMapper taskEventMapper;
 
     @Resource
+    private TaskFinalizerService taskFinalizerService;
+
+    @Resource
     private ObjectMapper objectMapper;
 
     /**
@@ -59,6 +63,9 @@ public class NativeProjectionService {
             String outcome = event.outcome() != null && OUTCOMES.contains(event.outcome())
                     ? event.outcome() : "unknown";
             publish(target, event, "task.run_ended", outcome);
+            if ("completed".equals(outcome)) {
+                taskFinalizerService.tryComplete(target, event);
+            }
         }
         if (projectionMapper.advanceCursor(target.userId(), target.bindingId(), cursor, event.sequence()) != 1) {
             throw new IllegalStateException("原生日志投影水位竞争");

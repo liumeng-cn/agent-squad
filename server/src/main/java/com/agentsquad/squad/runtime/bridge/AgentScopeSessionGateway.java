@@ -5,6 +5,7 @@ import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
 import com.agentsquad.squad.runtime.domain.ProjectionTarget;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.session.SessionEvent;
+import io.agentscope.core.tool.Toolkit;
 import io.agentscope.extensions.jdbc.JdbcDistributedStore;
 import io.agentscope.extensions.jdbc.dialect.AbstractJdbcDialect;
 import io.agentscope.extensions.model.openai.OpenAIChatModel;
@@ -36,6 +37,9 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
     @Resource
     private DataSource dataSource;
 
+    @Resource
+    private ProposeCompletionTool proposeCompletionTool;
+
     @Value("${agentsquad.model.api-key:}")
     private String apiKey;
 
@@ -56,12 +60,17 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
         AbstractJdbcDialect dialect = AbstractJdbcDialect.from(dataSource)
                 .autoCreateTable(false)
                 .build();
+        Toolkit toolkit = new Toolkit();
+        toolkit.registerAgentTool(proposeCompletionTool);
         master = HarnessAgent.builder()
                 .agentId(MasterAgentIdentity.AGENT_ID)
                 .name("Squad Master")
-                .sysPrompt("你是多智能体平台的 Master。当前阶段只回答用户问题，不调用工具或执行外部操作。")
+                .sysPrompt("你是多智能体平台的 Master。当前只处理无需外部工具的直接回答。"
+                        + "在回答目标之前，必须调用 propose_completion 提交 outcome 和完整 finalAnswer。"
+                        + "工具只保存候选；不要把回执当作用户答案。无法回答时明确说明缺少的信息。")
                 .model(OpenAIChatModel.builder().apiKey(apiKey).baseUrl(baseUrl)
                         .modelName(modelName).build())
+                .toolkit(toolkit)
                 .distributedStore(JdbcDistributedStore.create(dataSource, dialect))
                 .filesystem(new RemoteFilesystemSpec().isolationScope(IsolationScope.USER))
                 .disableSubagents()
