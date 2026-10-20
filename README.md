@@ -1,10 +1,10 @@
 # 小队 · Agent Squad
 
-通用多智能体运行底座。2026-10-20 独立重建；当前已完成 D0 最小运行骨架与离线恢复探针，后续切片仍按设计逐步实现。
+通用多智能体运行底座。2026-10-20 独立重建；当前已完成 D0 最小运行骨架与 D1 离线 HTTP 纵向切片，后续切片仍按设计逐步实现。
 
 Master 负责目标理解、全局上下文、规划、Worker 委派与结果聚合。Worker 负责任务局部执行，自动识别使用 Skill，通过受控工具访问外部能力。计算实例无状态，任务与恢复状态外置持久化。
 
-当前方向：Java + AgentScope Harness SDK，固定依赖版本为 2.1.0-BETA1。D0 已验证依赖编译、SessionKey 标识边界，以及离线命令持久受理/重启恢复/重复提交幂等；这不等同于生产数据库、真实模型或完整 Agent 运行链路已验证。详见[框架适配调研](docs/research/agentscope-java.md)、[ADR-002](decisions/002-agentscope-java.md)与[D0 验证记录](docs/d0-evidence.md)。
+当前方向：Java + AgentScope Harness SDK，固定依赖版本为 2.1.0-BETA1。D0 已验证依赖编译、SessionKey 标识边界，以及离线命令持久受理/重启恢复/重复提交幂等；D1 已补齐离线会话、任务、命令收据 HTTP 链路。这不等同于生产数据库、真实模型或完整 Agent 运行链路已验证。详见[框架适配调研](docs/research/agentscope-java.md)、[ADR-002](decisions/002-agentscope-java.md)、[D0 验证记录](docs/d0-evidence.md)与[D1 验证记录](docs/d1-evidence.md)。
 
 ## 设计入口
 
