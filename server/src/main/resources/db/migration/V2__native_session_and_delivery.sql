@@ -11,11 +11,10 @@ CREATE TABLE sq_native_session_object
     UNIQUE KEY uk_native_object_path (object_path)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='AgentScope 原生会话日志对象';
 
-ALTER TABLE sq_command
-    ADD COLUMN delivery_token CHAR(36) NULL COMMENT '当前投递领取令牌',
-    ADD COLUMN delivery_lease_until DATETIME(3) NULL COMMENT '投递令牌过期时间',
-    ADD COLUMN delivery_attempts INT NOT NULL DEFAULT 0 COMMENT '投递尝试次数',
-    ADD COLUMN native_turn_id VARCHAR(64) NULL COMMENT 'AgentScope 原生回合ID',
-    ADD COLUMN native_run_id VARCHAR(64) NULL COMMENT 'AgentScope 原生运行ID',
-    ADD COLUMN native_status VARCHAR(24) NULL COMMENT 'AgentScope 提交时状态',
-    ADD COLUMN last_error_code VARCHAR(64) NULL COMMENT '投递错误分类，不存异常详情';
+ALTER TABLE sq_command ADD COLUMN delivery_token CHAR(36) NULL COMMENT '当前投递领取令牌';
+ALTER TABLE sq_command ADD COLUMN delivery_lease_until DATETIME(3) NULL COMMENT '投递令牌过期时间';
+ALTER TABLE sq_command ADD COLUMN delivery_attempts INT NOT NULL DEFAULT 0 COMMENT '投递尝试次数';
+ALTER TABLE sq_command ADD COLUMN native_turn_id VARCHAR(64) NULL COMMENT 'AgentScope 原生回合ID';
+ALTER TABLE sq_command ADD COLUMN native_run_id VARCHAR(64) NULL COMMENT 'AgentScope 原生运行ID';
+ALTER TABLE sq_command ADD COLUMN native_status VARCHAR(24) NULL COMMENT 'AgentScope 提交时状态';
+ALTER TABLE sq_command ADD COLUMN last_error_code VARCHAR(64) NULL COMMENT '投递错误分类，不存异常详情';

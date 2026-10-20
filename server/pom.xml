@@ -20,6 +20,7 @@
     <properties>
         <java.version>21</java.version>
         <agentscope.version>2.1.0-BETA1</agentscope.version>
+        <lombok.version>1.18.48</lombok.version>
     </properties>
 
     <dependencies>
