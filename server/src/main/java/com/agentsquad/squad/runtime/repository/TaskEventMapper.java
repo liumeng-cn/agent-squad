@@ -25,6 +25,17 @@ public interface TaskEventMapper {
                        @Param("producerKey") String producerKey, @Param("payloadJson") String payloadJson,
                        @Param("occurredAt") LocalDateTime occurredAt);
 
+    @Insert("""
+            INSERT INTO sq_task_event
+                (user_id, task_id, event_seq, producer_key, event_type, payload_json, occurred_at)
+            VALUES (#{userId}, #{taskId}, #{sequence}, #{producerKey}, #{eventType},
+                    #{payloadJson}, #{occurredAt})
+            """)
+    int insertProjected(@Param("userId") String userId, @Param("taskId") String taskId,
+                        @Param("sequence") long sequence, @Param("producerKey") String producerKey,
+                        @Param("eventType") String eventType, @Param("payloadJson") String payloadJson,
+                        @Param("occurredAt") LocalDateTime occurredAt);
+
     @ConstructorArgs({
             @Arg(column = "event_seq", javaType = long.class),
             @Arg(column = "task_id", javaType = String.class),

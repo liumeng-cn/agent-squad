@@ -6,12 +6,15 @@ import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.extensions.model.openai.OpenAIChatModel;
 import io.agentscope.harness.agent.HarnessAgent;
 import io.agentscope.harness.agent.session.AgentSession;
+import io.agentscope.core.session.SessionEvent;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 /**
  * 当前 Master 的 AgentScope 原生会话适配器。
@@ -73,6 +76,30 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
         AgentSession.Task receipt = master.session(context).submit(delivery.commandId(), message);
         return new NativeSubmissionReceipt(receipt.commandId(), receipt.turnId(),
                 receipt.runId(), receipt.status());
+    }
+
+    /** 读取固定会话的已提交原生前缀，并在重启后重新启动其待执行命令调度。 */
+    @Override
+    public List<NativeEventView> readEvents(ProjectionTarget target, long after, int limit) {
+        if (!MasterAgentIdentity.AGENT_ID.equals(target.agentId())) {
+            throw new IllegalStateException("未注册的 Master 能力版本");
+        }
+        RuntimeContext context = RuntimeContext.builder()
+                .userId(target.userId())
+                .sessionId(target.sessionId())
+                .build();
+        AgentSession session = master.session(context);
+        session.start();
+        return session.log().readAfter(after, limit).stream()
+                .map(this::toEventView)
+                .toList();
+    }
+
+    private NativeEventView toEventView(SessionEvent event) {
+        Object status = "run/end".equals(event.type()) ? event.data().get("status") : null;
+        return new NativeEventView(event.seq(), event.eventId(), event.type(),
+                event.executionRunId(), event.turnId(), status == null ? null : status.toString(),
+                event.occurredAt());
     }
 
     /** 关闭本进程持有的原生会话调度器；日志保留在 MySQL。 */
