@@ -3,6 +3,7 @@
 *.iml
 .env
 .env.*
+.mysql-container.env
 !.env.example
 .run/
 .venv/

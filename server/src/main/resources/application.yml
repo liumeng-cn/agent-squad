@@ -3,12 +3,19 @@ spring:
         name: agent-squad-server
     main:
         web-application-type: servlet
+    datasource:
+        url: ${SQUAD_DB_URL:jdbc:mysql://127.0.0.1:13306/agent_squad}
+        username: ${SQUAD_DB_USER:squad}
+        password: ${SQUAD_DB_PASSWORD:}
+    flyway:
+        enabled: true
 
 server:
+    address: 127.0.0.1
     port: 18080
 
 agentsquad:
-    runtime:
-        mode: OFFLINE
-        automatic-memory-writes: false
-        free-background-spawn: false
+    auth:
+        username: ${SQUAD_LOCAL_USER:}
+        password: ${SQUAD_LOCAL_PASSWORD:}
+        user-id: ${SQUAD_LOCAL_USER_ID:00000000-0000-0000-0000-000000000001}

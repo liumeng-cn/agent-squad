@@ -8,11 +8,11 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * D0 依赖探针：验证固定版本 AgentScope 的核心标识 API 可以被应用编译和调用。
+ * 固定版本 AgentScope 核心标识兼容性测试。
  *
  * <p>该测试不访问模型、数据库或外部系统，只验证依赖树和基础标识编码边界。</p>
  */
-class D0DependencyProbeTest {
+class SessionKeyCompatibilityTest {
 
     @Test
     void shouldBuildSessionKeyWithStableIdentifiers() {
