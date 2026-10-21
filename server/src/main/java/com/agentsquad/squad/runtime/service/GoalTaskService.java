@@ -133,7 +133,7 @@ public class GoalTaskService {
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         taskMapper.insert(taskId, userId, conversationId, payloadJson);
         bindingMapper.insertMaster(bindingId, userId, taskId, MasterAgentIdentity.AGENT_ID,
-                UUID.randomUUID().toString());
+                UUID.randomUUID().toString(), now);
         commandMapper.insertSubmit(commandId, userId, scopeKey, idempotencyKey, payloadHash,
                 taskId, bindingId, payloadJson, now);
         taskEventMapper.insertAccepted(userId, taskId, "command:" + commandId,

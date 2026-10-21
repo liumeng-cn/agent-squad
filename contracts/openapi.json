@@ -7949,6 +7949,11 @@
           "task": {
             "$ref": "#/components/schemas/GoalTask"
           },
+          "goalMessage": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000
+          },
           "jobs": {
             "type": "array",
             "items": {
@@ -7974,6 +7979,7 @@
         },
         "required": [
           "task",
+          "goalMessage",
           "jobs",
           "pending",
           "answer",

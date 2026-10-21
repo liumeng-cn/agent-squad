@@ -5,6 +5,8 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
+import java.time.LocalDateTime;
+
 /**
  * AgentScope 会话发现目录 SQL 边界；固定标识由后续 Bridge 使用。
  */
@@ -13,12 +15,15 @@ public interface BindingMapper {
 
     @Insert("""
             INSERT INTO sq_runtime_binding
-                (binding_id, user_id, task_id, role, agent_id, framework_session_id, status)
-            VALUES (#{bindingId}, #{userId}, #{taskId}, 'MASTER', #{agentId}, #{sessionId}, 'IDLE')
+                (binding_id, user_id, task_id, role, agent_id, framework_session_id, status,
+                 next_projection_at)
+            VALUES (#{bindingId}, #{userId}, #{taskId}, 'MASTER', #{agentId}, #{sessionId}, 'IDLE',
+                    #{nextProjectionAt})
             """)
     int insertMaster(@Param("bindingId") String bindingId, @Param("userId") String userId,
                      @Param("taskId") String taskId, @Param("agentId") String agentId,
-                     @Param("sessionId") String sessionId);
+                     @Param("sessionId") String sessionId,
+                     @Param("nextProjectionAt") LocalDateTime nextProjectionAt);
 
     @Select("""
             SELECT binding_id FROM sq_runtime_binding

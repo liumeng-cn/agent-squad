@@ -62,6 +62,11 @@ public interface TaskMapper {
             """)
     TaskRow findOwned(@Param("userId") String userId, @Param("taskId") String taskId);
 
+    @Select("""
+            SELECT input_json FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}
+            """)
+    String findInputJson(@Param("userId") String userId, @Param("taskId") String taskId);
+
     @Update("""
             UPDATE sq_goal_task
             SET status = 'CANCELLING', version = version + 1, cancel_requested_at = #{cancelledAt}

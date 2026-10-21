@@ -38,7 +38,8 @@ public class TaskSnapshotService {
     /**
      * 读取当前用户单个任务快照；任务不存在时统一按 NOT_FOUND 处理。
      *
-     * <p>答案文本取最新的 answer.completed 公开事件；无该事件时返回未完成的占位视图。</p>
+     * <p>答案文本取最新的 answer.completed 公开事件；无该事件时返回未完成的占位视图。
+     * 用户目标原文从规范化输入投影，供刷新后只读恢复聊天正文。</p>
      */
     public TaskSnapshot snapshot(String userId, String taskId) {
         TaskRow task = taskMapper.findOwned(userId, taskId);
@@ -54,7 +55,24 @@ public class TaskSnapshotService {
         String cursor = taskId + ":" + maxSeq;
         log.debug("任务快照生成 userId={} taskId={} seq={} answerCompleted={}",
                 userId, taskId, maxSeq, answer.completed());
-        return new TaskSnapshot(taskResponse, Collections.emptyList(), Collections.emptyList(), answer, cursor);
+        return new TaskSnapshot(taskResponse, goalMessage(userId, taskId),
+                Collections.emptyList(), Collections.emptyList(), answer, cursor);
+    }
+
+    /**
+     * 从规范化输入投影用户目标原文；历史数据缺失 message 时返回空串，不抛错。
+     */
+    private String goalMessage(String userId, String taskId) {
+        String inputJson = taskMapper.findInputJson(userId, taskId);
+        if (inputJson == null || inputJson.isBlank()) {
+            return "";
+        }
+        try {
+            return parseJsonValue(inputJson).path("message").asText("");
+        } catch (JsonProcessingException exception) {
+            log.warn("目标输入载荷无法解析 userId={} taskId={}", userId, taskId, exception);
+            return "";
+        }
     }
 
     private AnswerView buildAnswer(String userId, String taskId, long answerRevision) {

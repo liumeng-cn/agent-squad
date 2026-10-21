@@ -70,7 +70,7 @@ class StopDeliveryIntegrationTest {
             conversationMapper.insert(conversationId, userId, "停止投递");
             taskMapper.insert(taskId, userId, conversationId, "{\"message\":\"停止我\"}");
             bindingMapper.insertMaster(bindingId, userId, taskId, MasterAgentIdentity.AGENT_ID,
-                    UUID.randomUUID().toString());
+                    UUID.randomUUID().toString(), now);
             assertThat(conversationMapper.activateTask(userId, conversationId, taskId)).isEqualTo(1);
             taskEventMapper.insertAccepted(userId, taskId, "command:" + UUID.randomUUID(),
                     "{\"taskId\":\"" + taskId + "\"}", now);

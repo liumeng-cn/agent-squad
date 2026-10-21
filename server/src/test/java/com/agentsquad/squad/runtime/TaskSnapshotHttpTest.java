@@ -80,6 +80,7 @@ class TaskSnapshotHttpTest {
             assertThat(task.get("createdAt")).isNotNull();
             assertThat(task.get("updatedAt")).isNotNull();
 
+            assertThat(snapshot.get("goalMessage").asText()).isEqualTo("检查快照字段");
             assertThat(snapshot.get("jobs")).isEmpty();
             assertThat(snapshot.get("pending")).isEmpty();
             assertThat(snapshot.get("answer").get("revision").asLong()).isEqualTo(0L);

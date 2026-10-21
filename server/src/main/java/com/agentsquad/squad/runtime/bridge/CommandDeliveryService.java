@@ -83,7 +83,7 @@ public class CommandDeliveryService {
     }
 
     private void deliverSubmit(String commandId, String token, DeliveryRow delivery) throws Exception {
-        JsonNode payload = objectMapper.readTree(delivery.payloadJson());
+        JsonNode payload = parseJsonValue(delivery.payloadJson());
         String message = payload.path("message").textValue();
         if (message == null || message.isBlank()) {
             retry(commandId, token, delivery.attempts(), "INVALID_PAYLOAD");
@@ -129,6 +129,17 @@ public class CommandDeliveryService {
             return;
         }
         saveReceipt(commandId, token, delivery, turnId, null, "resumed");
+    }
+
+    /**
+     * 兼容 MySQL 与 H2 对 JSON 列的读取差异：H2 可能把 JSON 对象存成 JSON 字符串返回。
+     */
+    private JsonNode parseJsonValue(String raw) throws Exception {
+        JsonNode first = objectMapper.readTree(raw);
+        if (first.isTextual()) {
+            return objectMapper.readTree(first.asText());
+        }
+        return first;
     }
 
     private void saveReceipt(String commandId, String token, DeliveryRow delivery,
