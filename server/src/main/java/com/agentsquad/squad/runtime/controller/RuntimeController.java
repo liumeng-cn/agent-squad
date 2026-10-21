@@ -2,11 +2,13 @@ package com.agentsquad.squad.runtime.controller;
 
 import com.agentsquad.squad.identity.AuthService;
 import com.agentsquad.squad.runtime.dto.*;
+import com.agentsquad.squad.runtime.service.ConversationDeletionService;
 import com.agentsquad.squad.runtime.service.GoalTaskService;
 import com.agentsquad.squad.runtime.service.RuntimeBusinessException;
 import com.agentsquad.squad.runtime.service.RuntimeExceptionCode;
 import com.agentsquad.squad.runtime.service.TaskControlService;
 import com.agentsquad.squad.runtime.service.TaskEventStreamer;
+import com.agentsquad.squad.runtime.service.TaskSnapshotService;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -32,10 +34,16 @@ public class RuntimeController {
     private GoalTaskService goalTaskService;
 
     @Resource
+    private ConversationDeletionService conversationDeletionService;
+
+    @Resource
     private TaskControlService taskControlService;
 
     @Resource
     private TaskEventStreamer taskEventStreamer;
+
+    @Resource
+    private TaskSnapshotService taskSnapshotService;
 
     /**
      * 创建当前用户的对话。
@@ -68,6 +76,32 @@ public class RuntimeController {
             @CookieValue(value = "SQUAD_SESSION", required = false) String token,
             @PathVariable String conversationId) {
         return goalTaskService.getConversation(userId(token), conversationId);
+    }
+
+    /**
+     * 受理删除当前用户会话；202 仅表示删除已持久受理，清理异步完成。
+     */
+    @DeleteMapping("/conversations/{conversationId}")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public void deleteConversation(
+            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
+            @RequestHeader(value = "X-CSRF-Token", required = false) String csrfToken,
+            @PathVariable String conversationId,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @RequestHeader("If-Match") String ifMatch) {
+        conversationDeletionService.delete(authService.authenticateWrite(token, csrfToken),
+                conversationId, idempotencyKey, parseVersion(ifMatch));
+    }
+
+    private long parseVersion(String ifMatch) {
+        if (ifMatch == null || !ifMatch.matches("[0-9]+")) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "If-Match 必须是十进制资源版本");
+        }
+        try {
+            return Long.parseLong(ifMatch);
+        } catch (NumberFormatException exception) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "If-Match 版本超出范围");
+        }
     }
 
     /**
@@ -104,6 +138,15 @@ public class RuntimeController {
     public TaskResponse getTask(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
                                 @PathVariable String taskId) {
         return goalTaskService.findTask(userId(token), taskId);
+    }
+
+    /**
+     * 查询当前用户的目标详情快照。
+     */
+    @GetMapping("/tasks/{taskId}/snapshot")
+    public TaskSnapshot getTaskSnapshot(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
+                                        @PathVariable String taskId) {
+        return taskSnapshotService.snapshot(userId(token), taskId);
     }
 
     /**

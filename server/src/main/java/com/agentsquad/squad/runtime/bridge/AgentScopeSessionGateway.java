@@ -89,6 +89,32 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
      */
     @Override
     public NativeSubmissionReceipt submit(DeliveryRow delivery, String message) {
+        AgentSession.Task receipt = sessionFor(delivery).submit(delivery.commandId(), message);
+        return new NativeSubmissionReceipt(receipt.commandId(), receipt.turnId(),
+                receipt.runId(), receipt.status());
+    }
+
+    /**
+     * 提交中断意图；false 表示原生会话当前没有活跃运行，平台须就地收尾。
+     */
+    @Override
+    public boolean stop(DeliveryRow delivery) {
+        AgentSession session = sessionFor(delivery);
+        session.start();
+        return session.interrupt(null);
+    }
+
+    /**
+     * 恢复指定原生回合；SDK 拒绝时抛出 IllegalStateException，由投递器分类处理。
+     */
+    @Override
+    public void resume(DeliveryRow delivery, String turnId) {
+        AgentSession session = sessionFor(delivery);
+        session.start();
+        session.resume(turnId);
+    }
+
+    private AgentSession sessionFor(DeliveryRow delivery) {
         if (!MasterAgentIdentity.AGENT_ID.equals(delivery.agentId())) {
             throw new IllegalStateException("未注册的 Master 能力版本");
         }
@@ -96,9 +122,7 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
                 .userId(delivery.userId())
                 .sessionId(delivery.sessionId())
                 .build();
-        AgentSession.Task receipt = master.session(context).submit(delivery.commandId(), message);
-        return new NativeSubmissionReceipt(receipt.commandId(), receipt.turnId(),
-                receipt.runId(), receipt.status());
+        return master.session(context);
     }
 
     /**

@@ -13,8 +13,8 @@ import java.util.List;
 public interface TaskMapper {
 
     @Insert("""
-            INSERT INTO sq_goal_task (task_id, user_id, conversation_id, status, input_json)
-            VALUES (#{taskId}, #{userId}, #{conversationId}, 'QUEUED', #{inputJson})
+            INSERT INTO sq_goal_task (task_id, user_id, conversation_id, status, input_json, event_seq)
+            VALUES (#{taskId}, #{userId}, #{conversationId}, 'QUEUED', #{inputJson}, 1)
             """)
     int insert(@Param("taskId") String taskId, @Param("userId") String userId,
                @Param("conversationId") String conversationId, @Param("inputJson") String inputJson);
@@ -26,11 +26,16 @@ public interface TaskMapper {
             @Arg(column = "conversation_id", javaType = String.class),
             @Arg(column = "status", javaType = String.class),
             @Arg(column = "version", javaType = long.class),
+            @Arg(column = "plan_version", javaType = long.class),
+            @Arg(column = "answer_revision", javaType = long.class),
+            @Arg(column = "cancel_requested_at", javaType = LocalDateTime.class),
             @Arg(column = "create_time", javaType = LocalDateTime.class),
             @Arg(column = "last_update_time", javaType = LocalDateTime.class)
     })
     @Select("""
-            SELECT id, task_id, user_id, conversation_id, status, version, create_time, last_update_time
+            SELECT id, task_id, user_id, conversation_id, status, version,
+                   plan_version, answer_revision, cancel_requested_at,
+                   create_time, last_update_time
             FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}
             FOR UPDATE
             """)
@@ -43,11 +48,16 @@ public interface TaskMapper {
             @Arg(column = "conversation_id", javaType = String.class),
             @Arg(column = "status", javaType = String.class),
             @Arg(column = "version", javaType = long.class),
+            @Arg(column = "plan_version", javaType = long.class),
+            @Arg(column = "answer_revision", javaType = long.class),
+            @Arg(column = "cancel_requested_at", javaType = LocalDateTime.class),
             @Arg(column = "create_time", javaType = LocalDateTime.class),
             @Arg(column = "last_update_time", javaType = LocalDateTime.class)
     })
     @Select("""
-            SELECT id, task_id, user_id, conversation_id, status, version, create_time, last_update_time
+            SELECT id, task_id, user_id, conversation_id, status, version,
+                   plan_version, answer_revision, cancel_requested_at,
+                   create_time, last_update_time
             FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}
             """)
     TaskRow findOwned(@Param("userId") String userId, @Param("taskId") String taskId);
@@ -56,10 +66,20 @@ public interface TaskMapper {
             UPDATE sq_goal_task
             SET status = 'CANCELLING', version = version + 1, cancel_requested_at = #{cancelledAt}
             WHERE user_id = #{userId} AND task_id = #{taskId} AND version = #{expectedVersion}
+              AND status NOT IN ('CANCELLING', 'SUCCEEDED', 'PARTIAL', 'FAILED', 'CANCELLED')
             """)
     int updateCancelling(@Param("userId") String userId, @Param("taskId") String taskId,
                          @Param("expectedVersion") long expectedVersion,
                          @Param("cancelledAt") LocalDateTime cancelledAt);
+
+    @Update("""
+            UPDATE sq_goal_task
+            SET status = 'CANCELLED', version = version + 1, cancel_requested_at = #{cancelledAt}
+            WHERE user_id = #{userId} AND task_id = #{taskId}
+              AND status = 'QUEUED'
+            """)
+    int updateCancelled(@Param("userId") String userId, @Param("taskId") String taskId,
+                        @Param("cancelledAt") LocalDateTime cancelledAt);
 
     @Update("""
             UPDATE sq_goal_task
@@ -76,11 +96,16 @@ public interface TaskMapper {
             @Arg(column = "conversation_id", javaType = String.class),
             @Arg(column = "status", javaType = String.class),
             @Arg(column = "version", javaType = long.class),
+            @Arg(column = "plan_version", javaType = long.class),
+            @Arg(column = "answer_revision", javaType = long.class),
+            @Arg(column = "cancel_requested_at", javaType = LocalDateTime.class),
             @Arg(column = "create_time", javaType = LocalDateTime.class),
             @Arg(column = "last_update_time", javaType = LocalDateTime.class)
     })
     @Select("""
-            SELECT id, task_id, user_id, conversation_id, status, version, create_time, last_update_time
+            SELECT id, task_id, user_id, conversation_id, status, version,
+                   plan_version, answer_revision, cancel_requested_at,
+                   create_time, last_update_time
             FROM sq_goal_task
             WHERE user_id = #{userId} AND conversation_id = #{conversationId}
               AND (#{cursorId} IS NULL OR id < #{cursorId})

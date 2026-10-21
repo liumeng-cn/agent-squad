@@ -14,7 +14,7 @@ public interface DeliveryMapper {
 
     @Select("""
             SELECT command_id FROM sq_command
-            WHERE action = 'SUBMIT'
+            WHERE action IN ('SUBMIT', 'STOP', 'RESUME')
               AND ((status = 'PENDING' AND due_at <= #{now})
                    OR (status = 'DELIVERING' AND delivery_lease_until < #{now}))
             ORDER BY due_at, id LIMIT 20
@@ -26,7 +26,7 @@ public interface DeliveryMapper {
             SET status = 'DELIVERING', delivery_token = #{token},
                 delivery_lease_until = #{leaseUntil}, delivery_attempts = delivery_attempts + 1,
                 last_error_code = NULL
-            WHERE command_id = #{commandId} AND action = 'SUBMIT'
+            WHERE command_id = #{commandId} AND action IN ('SUBMIT', 'STOP', 'RESUME')
               AND ((status = 'PENDING' AND due_at <= #{now})
                    OR (status = 'DELIVERING' AND delivery_lease_until < #{now}))
             """)
@@ -38,21 +38,29 @@ public interface DeliveryMapper {
             @Arg(column = "user_id", javaType = String.class),
             @Arg(column = "task_id", javaType = String.class),
             @Arg(column = "binding_id", javaType = String.class),
+            @Arg(column = "action", javaType = String.class),
             @Arg(column = "payload_json", javaType = String.class),
             @Arg(column = "delivery_attempts", javaType = int.class),
             @Arg(column = "agent_id", javaType = String.class),
             @Arg(column = "framework_session_id", javaType = String.class)
     })
     @Select("""
-            SELECT c.command_id, c.user_id, c.task_id, c.binding_id, c.payload_json,
+            SELECT c.command_id, c.user_id, c.task_id, c.binding_id, c.action, c.payload_json,
                    c.delivery_attempts, b.agent_id, b.framework_session_id
             FROM sq_command c
             JOIN sq_runtime_binding b ON b.user_id = c.user_id
                 AND b.binding_id = c.binding_id AND b.task_id = c.task_id
             WHERE c.command_id = #{commandId} AND c.delivery_token = #{token}
-              AND c.status = 'DELIVERING' AND c.action = 'SUBMIT'
+              AND c.status = 'DELIVERING'
             """)
     DeliveryRow findClaimed(@Param("commandId") String commandId, @Param("token") String token);
+
+    @Select("""
+            SELECT native_turn_id FROM sq_command
+            WHERE user_id = #{userId} AND task_id = #{taskId} AND action = 'SUBMIT'
+            ORDER BY id DESC LIMIT 1
+            """)
+    String findSubmitTurnId(@Param("userId") String userId, @Param("taskId") String taskId);
 
     @Update("""
             UPDATE sq_command SET status = CASE WHEN #{nativeStatus} = 'rejected' THEN 'BLOCKED'

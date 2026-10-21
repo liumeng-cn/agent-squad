@@ -71,11 +71,11 @@ public class GoalTaskService {
     }
 
     /**
-     * 读取当前用户单个对话快照。
+     * 读取当前用户单个对话快照；删除中与已删除会话立即拒绝读取。
      */
     public ConversationResponse getConversation(String userId, String conversationId) {
         ConversationRow row = conversationMapper.findOwned(userId, conversationId);
-        if (row == null || "DELETED".equals(row.status())) {
+        if (row == null || !"ACTIVE".equals(row.status())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "会话不存在");
         }
         return toResponse(row);
@@ -170,6 +170,8 @@ public class GoalTaskService {
 
     private TaskResponse toResponse(TaskRow task) {
         return new TaskResponse(task.taskId(), task.conversationId(), task.status(), task.version(),
+                task.planVersion(), task.answerRevision(),
+                formatTime(task.cancelRequestedAt()), null,
                 formatTime(task.createTime()), formatTime(task.lastUpdateTime()));
     }
 

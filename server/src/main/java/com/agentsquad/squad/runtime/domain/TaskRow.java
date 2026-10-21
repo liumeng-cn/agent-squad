@@ -1,9 +1,12 @@
 package com.agentsquad.squad.runtime.domain;
 
+import java.time.LocalDateTime;
+
 /**
  * 用户目标持久层投影；原生 Turn 和 Run 不属于此对象。
  */
 public record TaskRow(long id, String taskId, String userId, String conversationId,
-                      String status, long version,
-                      java.time.LocalDateTime createTime, java.time.LocalDateTime lastUpdateTime) {
+                      String status, long version, long planVersion, long answerRevision,
+                      LocalDateTime cancelRequestedAt,
+                      LocalDateTime createTime, LocalDateTime lastUpdateTime) {
 }

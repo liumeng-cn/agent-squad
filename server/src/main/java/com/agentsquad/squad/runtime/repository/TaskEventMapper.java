@@ -54,4 +54,19 @@ public interface TaskEventMapper {
             WHERE user_id = #{userId} AND task_id = #{taskId}
             """)
     long maxSeq(@Param("userId") String userId, @Param("taskId") String taskId);
+
+    @ConstructorArgs({
+            @Arg(column = "event_seq", javaType = long.class),
+            @Arg(column = "task_id", javaType = String.class),
+            @Arg(column = "event_type", javaType = String.class),
+            @Arg(column = "payload_json", javaType = String.class),
+            @Arg(column = "occurred_at", javaType = LocalDateTime.class)
+    })
+    @Select("""
+            SELECT event_seq, task_id, event_type, payload_json, occurred_at
+            FROM sq_task_event
+            WHERE user_id = #{userId} AND task_id = #{taskId} AND event_type = 'answer.completed'
+            ORDER BY event_seq DESC LIMIT 1
+            """)
+    EventRow findLatestAnswerEvent(@Param("userId") String userId, @Param("taskId") String taskId);
 }

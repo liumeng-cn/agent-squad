@@ -14,6 +14,7 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -71,14 +72,50 @@ public class TaskFinalizerService {
         if (conversationMapper.clearActiveTask(row.userId(), row.conversationId(), row.taskId()) != 1) {
             throw new IllegalStateException("对话目标占用与终态不一致");
         }
-        publish(row, event, "answer.completed", Map.of("text", answer, "evidenceRefs", List.of()));
-        publish(row, event, "task.completed", Map.of("status", outcome, "version", row.version() + 1));
+        String producerPrefix = "completion:" + row.taskId() + ":" + event.turnId();
+        publish(row, producerPrefix + ":answer.completed", "answer.completed",
+                Map.of("text", answer, "evidenceRefs", List.of()));
+        publish(row, producerPrefix + ":task.completed", "task.completed",
+                Map.of("status", outcome, "version", row.version() + 1));
         log.info("目标已终结 taskId={} bindingId={} turnId={} outcome={}",
                 row.taskId(), target.bindingId(), event.turnId(), outcome);
         return true;
     }
 
-    private void publish(FinalizationRow row, NativeEventView event, String type, Object payload) {
+    /**
+     * 停止意图存在且原生回合已结束时收尾为 CANCELLED；无取消意图的任务保持原状等待正常完成。
+     */
+    public boolean tryCancelAfterStop(ProjectionTarget target, NativeEventView event) {
+        return finalizeCancelled(target.userId(), target.taskId(),
+                "native:" + target.bindingId() + ":" + event.turnId() + ":task.completed");
+    }
+
+    /**
+     * 停止投递时发现原生会话已无活跃运行，就地取消目标并释放会话占用。
+     */
+    @Transactional
+    public void finalizeCancelledTask(String userId, String taskId) {
+        finalizeCancelled(userId, taskId, "stop-delivery:" + taskId + ":task.completed");
+    }
+
+    private boolean finalizeCancelled(String userId, String taskId, String producerKey) {
+        FinalizationRow row = completionMapper.lockTask(userId, taskId);
+        if (row == null || !row.cancellationRequested()
+                || !"RUNNING".equals(row.status()) && !"CANCELLING".equals(row.status())) {
+            return false;
+        }
+        if (completionMapper.cancelTask(row.userId(), row.taskId()) != 1) {
+            return false;
+        }
+        if (conversationMapper.clearActiveTask(row.userId(), row.conversationId(), row.taskId()) != 1) {
+            throw new IllegalStateException("对话目标占用与取消终态不一致");
+        }
+        publish(row, producerKey, "task.completed", Map.of("status", "CANCELLED", "version", row.version() + 1));
+        log.info("目标已随停止意图取消 taskId={} userId={}", row.taskId(), userId);
+        return true;
+    }
+
+    private void publish(FinalizationRow row, String producerKey, String type, Object payload) {
         if (projectionMapper.reserveEventSequence(row.userId(), row.taskId()) != 1) {
             throw new IllegalStateException("最终事件序号保留失败");
         }
@@ -87,8 +124,7 @@ public class TaskFinalizerService {
             throw new IllegalStateException("最终事件序号读取失败");
         }
         taskEventMapper.insertProjected(row.userId(), row.taskId(), sequence,
-                "completion:" + row.taskId() + ":" + event.turnId() + ":" + type, type,
-                toJson(payload), LocalDateTime.now(ZoneOffset.UTC));
+                producerKey, type, toJson(payload), LocalDateTime.now(ZoneOffset.UTC));
     }
 
     private JsonNode parseProposal(String value) {

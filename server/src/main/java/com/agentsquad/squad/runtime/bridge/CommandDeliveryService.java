@@ -2,6 +2,7 @@ package com.agentsquad.squad.runtime.bridge;
 
 import com.agentsquad.squad.runtime.domain.DeliveryRow;
 import com.agentsquad.squad.runtime.repository.DeliveryMapper;
+import com.agentsquad.squad.runtime.service.TaskFinalizerService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -18,7 +19,8 @@ import java.util.UUID;
 /**
  * 持久命令投递器。领取和提交分属两个持久系统，故任何失败都用相同命令 ID 与输入重试。
  *
- * <p>投递租约只控制平台记录更新；AgentScope 原生日志自己负责 writer lease 和原生幂等。</p>
+ * <p>投递租约只控制平台记录更新；AgentScope 原生日志自己负责 writer lease 和原生幂等。
+ * SUBMIT 投递新回合，STOP 投递中断意图，RESUME 投递恢复意图。</p>
  */
 @Service
 @Slf4j
@@ -26,12 +28,16 @@ import java.util.UUID;
 public class CommandDeliveryService {
 
     private static final int LEASE_SECONDS = 60;
+    private static final String ALREADY_SETTLED = "Only the latest unfinished task can continue";
 
     @Resource
     private DeliveryMapper deliveryMapper;
 
     @Resource
     private NativeSessionGateway nativeSessionGateway;
+
+    @Resource
+    private TaskFinalizerService taskFinalizerService;
 
     @Resource
     private ObjectMapper objectMapper;
@@ -63,23 +69,11 @@ public class CommandDeliveryService {
             return;
         }
         try {
-            JsonNode payload = objectMapper.readTree(delivery.payloadJson());
-            String message = payload.path("message").textValue();
-            if (message == null || message.isBlank()) {
-                retry(commandId, token, delivery.attempts(), "INVALID_PAYLOAD");
-                return;
-            }
-            NativeSubmissionReceipt receipt = nativeSessionGateway.submit(delivery, message);
-            if (!commandId.equals(receipt.commandId())) {
-                throw new IllegalStateException("原生命令收据 ID 不一致");
-            }
-            int saved = deliveryMapper.saveReceipt(commandId, token, receipt.turnId(), receipt.runId(),
-                    receipt.status(), now());
-            if (saved == 1) {
-                log.info("原生命令已提交 commandId={} taskId={} nativeStatus={}",
-                        commandId, delivery.taskId(), receipt.status());
-            } else {
-                log.warn("命令收据写入时投递租约已失效 commandId={} taskId={}", commandId, delivery.taskId());
+            switch (delivery.action()) {
+                case "SUBMIT" -> deliverSubmit(commandId, token, delivery);
+                case "STOP" -> deliverStop(commandId, token, delivery);
+                case "RESUME" -> deliverResume(commandId, token, delivery);
+                default -> fail(commandId, token, delivery.attempts(), "UNKNOWN_ACTION");
             }
         } catch (Exception exception) {
             retry(commandId, token, delivery.attempts(), "NATIVE_SUBMIT_FAILED");
@@ -88,11 +82,75 @@ public class CommandDeliveryService {
         }
     }
 
+    private void deliverSubmit(String commandId, String token, DeliveryRow delivery) throws Exception {
+        JsonNode payload = objectMapper.readTree(delivery.payloadJson());
+        String message = payload.path("message").textValue();
+        if (message == null || message.isBlank()) {
+            retry(commandId, token, delivery.attempts(), "INVALID_PAYLOAD");
+            return;
+        }
+        NativeSubmissionReceipt receipt = nativeSessionGateway.submit(delivery, message);
+        if (!commandId.equals(receipt.commandId())) {
+            throw new IllegalStateException("原生命令收据 ID 不一致");
+        }
+        saveReceipt(commandId, token, delivery, receipt.turnId(), receipt.runId(), receipt.status());
+    }
+
+    /**
+     * 投递中断意图；原生会话已无活跃运行时就地取消目标，不伪造等待停止。
+     */
+    private void deliverStop(String commandId, String token, DeliveryRow delivery) {
+        boolean interrupted = nativeSessionGateway.stop(delivery);
+        if (!interrupted) {
+            taskFinalizerService.finalizeCancelledTask(delivery.userId(), delivery.taskId());
+        }
+        saveReceipt(commandId, token, delivery, null, null,
+                interrupted ? "interrupted" : "no-active-run");
+    }
+
+    /**
+     * 投递恢复意图；恢复前必须已存在原生回合，未受理目标先等 SUBMIT 投递成功。
+     */
+    private void deliverResume(String commandId, String token, DeliveryRow delivery) {
+        String turnId = deliveryMapper.findSubmitTurnId(delivery.userId(), delivery.taskId());
+        if (turnId == null) {
+            retry(commandId, token, delivery.attempts(), "NATIVE_TURN_MISSING");
+            return;
+        }
+        try {
+            nativeSessionGateway.resume(delivery, turnId);
+        } catch (IllegalStateException exception) {
+            String message = exception.getMessage() == null ? "" : exception.getMessage();
+            if (message.contains(ALREADY_SETTLED) || message.contains("Continuation already queued")) {
+                saveReceipt(commandId, token, delivery, turnId, null, "resumed");
+                return;
+            }
+            retry(commandId, token, delivery.attempts(), "NATIVE_RESUME_REJECTED");
+            return;
+        }
+        saveReceipt(commandId, token, delivery, turnId, null, "resumed");
+    }
+
+    private void saveReceipt(String commandId, String token, DeliveryRow delivery,
+                             String turnId, String runId, String nativeStatus) {
+        int saved = deliveryMapper.saveReceipt(commandId, token, turnId, runId, nativeStatus, now());
+        if (saved == 1) {
+            log.info("原生命令已投递 commandId={} taskId={} action={} nativeStatus={}",
+                    commandId, delivery.taskId(), delivery.action(), nativeStatus);
+        } else {
+            log.warn("命令收据写入时投递租约已失效 commandId={} taskId={}", commandId, delivery.taskId());
+        }
+    }
+
     private void retry(String commandId, String token, int attempts, String errorCode) {
         long delaySeconds = Math.min(300, 1L << Math.min(Math.max(attempts, 1), 8));
         deliveryMapper.retry(commandId, token, now().plusSeconds(delaySeconds), errorCode);
         log.warn("命令投递待重试 commandId={} errorCode={} delaySeconds={}",
                 commandId, errorCode, delaySeconds);
+    }
+
+    private void fail(String commandId, String token, int attempts, String errorCode) {
+        retry(commandId, token, Math.max(attempts, 8), errorCode);
     }
 
     private LocalDateTime now() {

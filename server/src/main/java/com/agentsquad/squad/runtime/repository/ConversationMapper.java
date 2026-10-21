@@ -71,7 +71,7 @@ public interface ConversationMapper {
             SELECT id, conversation_id, user_id, title, status, active_task_id, generation, version
             FROM sq_conversation WHERE user_id = #{userId}
               AND (#{cursorId} IS NULL OR id < #{cursorId})
-              AND status != 'DELETED'
+              AND status = 'ACTIVE'
             ORDER BY id DESC LIMIT #{limit}
             """)
     List<ConversationRow> listByOwner(@Param("userId") String userId, @Param("cursorId") Long cursorId,
@@ -88,8 +88,42 @@ public interface ConversationMapper {
     @Update("""
             UPDATE sq_conversation SET active_task_id = NULL, version = version + 1
             WHERE user_id = #{userId} AND conversation_id = #{conversationId}
-              AND status = 'ACTIVE' AND active_task_id = #{taskId}
+              AND active_task_id = #{taskId}
             """)
     int clearActiveTask(@Param("userId") String userId, @Param("conversationId") String conversationId,
                         @Param("taskId") String taskId);
+
+    @Update("""
+            UPDATE sq_conversation
+            SET status = 'DELETING', generation = generation + 1, version = version + 1
+            WHERE user_id = #{userId} AND conversation_id = #{conversationId}
+              AND status = 'ACTIVE' AND version = #{expectedVersion}
+            """)
+    int markDeleting(@Param("userId") String userId, @Param("conversationId") String conversationId,
+                     @Param("expectedVersion") long expectedVersion);
+
+    @Update("""
+            UPDATE sq_conversation SET status = 'DELETED', version = version + 1
+            WHERE user_id = #{userId} AND conversation_id = #{conversationId}
+              AND status = 'DELETING'
+            """)
+    int markDeleted(@Param("userId") String userId, @Param("conversationId") String conversationId);
+
+    @ConstructorArgs({
+            @Arg(column = "id", javaType = long.class),
+            @Arg(column = "conversation_id", javaType = String.class),
+            @Arg(column = "user_id", javaType = String.class),
+            @Arg(column = "title", javaType = String.class),
+            @Arg(column = "status", javaType = String.class),
+            @Arg(column = "active_task_id", javaType = String.class),
+            @Arg(column = "generation", javaType = long.class),
+            @Arg(column = "version", javaType = long.class)
+    })
+    @Select("""
+            SELECT id, conversation_id, user_id, title, status, active_task_id, generation, version
+            FROM sq_conversation
+            WHERE status = 'DELETING' AND active_task_id IS NULL
+            ORDER BY id LIMIT #{limit}
+            """)
+    List<ConversationRow> findDeletable(@Param("limit") int limit);
 }

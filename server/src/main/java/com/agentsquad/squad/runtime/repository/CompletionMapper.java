@@ -82,4 +82,12 @@ public interface CompletionMapper {
     int completeTask(@Param("userId") String userId, @Param("taskId") String taskId,
                      @Param("bindingId") String bindingId, @Param("turnId") String turnId,
                      @Param("outcome") String outcome);
+
+    @Update("""
+            UPDATE sq_goal_task SET status = 'CANCELLED', version = version + 1
+            WHERE user_id = #{userId} AND task_id = #{taskId}
+              AND cancel_requested_at IS NOT NULL
+              AND status NOT IN ('SUCCEEDED', 'PARTIAL', 'FAILED', 'CANCELLED')
+            """)
+    int cancelTask(@Param("userId") String userId, @Param("taskId") String taskId);
 }

@@ -65,6 +65,8 @@ public class NativeProjectionService {
             publish(target, event, "task.run_ended", outcome);
             if ("completed".equals(outcome)) {
                 taskFinalizerService.tryComplete(target, event);
+            } else {
+                taskFinalizerService.tryCancelAfterStop(target, event);
             }
         }
         if (projectionMapper.advanceCursor(target.userId(), target.bindingId(), cursor, event.sequence()) != 1) {
