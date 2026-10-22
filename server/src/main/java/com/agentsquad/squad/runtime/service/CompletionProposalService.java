@@ -1,9 +1,11 @@
 package com.agentsquad.squad.runtime.service;
 
 import com.agentsquad.squad.runtime.domain.CompletionContextRow;
+import com.agentsquad.squad.runtime.domain.GoalTaskStatus;
 import com.agentsquad.squad.runtime.dto.CompletionProposalReceipt;
 import com.agentsquad.squad.runtime.repository.CompletionMapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.agentsquad.squad.runtime.util.ContentDigests;
+import com.agentsquad.squad.runtime.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -11,11 +13,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -29,7 +28,8 @@ import java.util.Set;
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class CompletionProposalService {
 
-    private static final Set<String> ALLOWED_OUTCOMES = Set.of("SUCCEEDED", "PARTIAL");
+    private static final Set<String> ALLOWED_OUTCOMES = Set.of(
+            GoalTaskStatus.SUCCEEDED.name(), GoalTaskStatus.PARTIAL.name());
 
     @Resource
     private CompletionMapper completionMapper;
@@ -58,15 +58,21 @@ public class CompletionProposalService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "Master 会话未绑定目标");
         }
         if (context.cancellationRequested()
-                || !("QUEUED".equals(context.taskStatus()) || "RUNNING".equals(context.taskStatus()))) {
+                || !(GoalTaskStatus.QUEUED.name().equals(context.taskStatus())
+                || GoalTaskStatus.RUNNING.name().equals(context.taskStatus()))) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已不能提交完成候选");
         }
 
-        Map<String, String> proposal = new LinkedHashMap<>();
+        Map<String, Object> proposal = new LinkedHashMap<>();
         proposal.put("outcome", outcome);
         proposal.put("finalAnswer", finalAnswer);
-        String proposalJson = toJson(proposal);
-        String proposalHash = sha256(proposalJson);
+        proposal.put("evidenceRefs", List.of());
+        proposal.put("planVersion", context.planVersion());
+        proposal.put("answerRevision", context.answerRevision());
+        proposal.put("sourceBindingId", context.bindingId());
+        proposal.put("sourceTurnId", turnId);
+        String proposalJson = RuntimePayloads.toJson(objectMapper, proposal);
+        String proposalHash = ContentDigests.sha256(proposalJson);
         if (context.proposalJson() != null) {
             if (turnId.equals(context.proposalTurnId()) && proposalHash.equals(context.proposalHash())) {
                 return new CompletionProposalReceipt(context.taskId(), context.bindingId(), turnId,
@@ -88,21 +94,4 @@ public class CompletionProposalService {
         return value == null || value.isBlank();
     }
 
-    private String toJson(Object value) {
-        try {
-            return objectMapper.writeValueAsString(value);
-        } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("完成候选无法序列化", exception);
-        }
-    }
-
-    private String sha256(String value) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256")
-                    .digest(value.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("JVM 不支持 SHA-256", exception);
-        }
-    }
 }

@@ -7,6 +7,7 @@ import com.agentsquad.squad.runtime.dto.TaskResponse;
 import com.agentsquad.squad.runtime.dto.TaskSnapshot;
 import com.agentsquad.squad.runtime.repository.TaskEventMapper;
 import com.agentsquad.squad.runtime.repository.TaskMapper;
+import com.agentsquad.squad.runtime.util.RuntimePayloads;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -68,7 +69,7 @@ public class TaskSnapshotService {
             return "";
         }
         try {
-            return parseJsonValue(inputJson).path("message").asText("");
+            return RuntimePayloads.readJson(objectMapper, inputJson).path("message").asText("");
         } catch (JsonProcessingException exception) {
             log.warn("目标输入载荷无法解析 userId={} taskId={}", userId, taskId, exception);
             return "";
@@ -81,24 +82,13 @@ public class TaskSnapshotService {
             return new AnswerView(answerRevision, "", false);
         }
         try {
-            JsonNode payload = parseJsonValue(event.payloadJson());
+            JsonNode payload = RuntimePayloads.readJson(objectMapper, event.payloadJson());
             String text = payload.path("text").asText("");
             return new AnswerView(answerRevision, text, true);
         } catch (JsonProcessingException exception) {
             log.warn("答案事件载荷无法解析 userId={} taskId={}", userId, taskId, exception);
             return new AnswerView(answerRevision, "", false);
         }
-    }
-
-    /**
-     * 兼容 MySQL 与 H2 对 JSON 列的读取差异：H2 可能把 JSON 对象存成 JSON 字符串返回。
-     */
-    private JsonNode parseJsonValue(String raw) throws JsonProcessingException {
-        JsonNode first = objectMapper.readTree(raw);
-        if (first.isTextual()) {
-            return objectMapper.readTree(first.asText());
-        }
-        return first;
     }
 
     private String formatTime(LocalDateTime time) {

@@ -1,10 +1,11 @@
 package com.agentsquad.squad.runtime.bridge;
 
+import com.agentsquad.squad.runtime.domain.NativeRunOutcome;
 import com.agentsquad.squad.runtime.domain.ProjectionTarget;
 import com.agentsquad.squad.runtime.repository.ProjectionMapper;
 import com.agentsquad.squad.runtime.repository.TaskEventMapper;
 import com.agentsquad.squad.runtime.service.TaskFinalizerService;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.agentsquad.squad.runtime.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -16,7 +17,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * 原生事件到业务进度的事务投影。按 Binding 行锁串行化水位和公开事件序号。
@@ -26,8 +26,6 @@ import java.util.Set;
 @Service
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class NativeProjectionService {
-
-    private static final Set<String> OUTCOMES = Set.of("completed", "failed", "suspended", "interrupted");
 
     @Resource
     private ProjectionMapper projectionMapper;
@@ -60,11 +58,13 @@ public class NativeProjectionService {
             projectionMapper.markRunning(target.userId(), target.taskId());
             publish(target, event, "task.run_started", null);
         } else if ("run/end".equals(event.type())) {
-            String outcome = event.outcome() != null && OUTCOMES.contains(event.outcome())
-                    ? event.outcome() : "unknown";
-            publish(target, event, "task.run_ended", outcome);
-            if ("completed".equals(outcome)) {
-                taskFinalizerService.tryComplete(target, event);
+            NativeRunOutcome outcome = NativeRunOutcome.fromCode(event.outcome());
+            publish(target, event, "task.run_ended", outcome.code());
+            if (outcome == NativeRunOutcome.COMPLETED) {
+                if (!taskFinalizerService.tryComplete(target, event)
+                        && !taskFinalizerService.tryCancelAfterStop(target, event)) {
+                    taskFinalizerService.recoverMissingProposal(target, event);
+                }
             } else {
                 taskFinalizerService.tryCancelAfterStop(target, event);
             }
@@ -93,14 +93,6 @@ public class NativeProjectionService {
                 Instant.ofEpochMilli(event.occurredAtMillis()), ZoneOffset.UTC);
         taskEventMapper.insertProjected(target.userId(), target.taskId(), sequence,
                 "native:" + target.bindingId() + ":" + event.eventId(), eventType,
-                toJson(payload), occurredAt);
-    }
-
-    private String toJson(Object value) {
-        try {
-            return objectMapper.writeValueAsString(value);
-        } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("公开事件无法序列化", exception);
-        }
+                RuntimePayloads.toJson(objectMapper, payload), occurredAt);
     }
 }

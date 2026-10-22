@@ -11,4 +11,5 @@ __pycache__/
 *.pyc
 target/
 node_modules/
+web/console/dist/
 .agentscope/

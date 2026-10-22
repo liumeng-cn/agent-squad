@@ -2,6 +2,9 @@ package com.agentsquad.squad.runtime.service;
 
 import com.agentsquad.squad.runtime.domain.CommandRow;
 import com.agentsquad.squad.runtime.domain.ConversationRow;
+import com.agentsquad.squad.runtime.domain.ConversationStatus;
+import com.agentsquad.squad.runtime.domain.GoalTaskStatus;
+import com.agentsquad.squad.runtime.domain.RuntimeCommandAction;
 import com.agentsquad.squad.runtime.domain.TaskRow;
 import com.agentsquad.squad.runtime.repository.BindingMapper;
 import com.agentsquad.squad.runtime.repository.CommandMapper;
@@ -9,21 +12,17 @@ import com.agentsquad.squad.runtime.repository.ConversationMapper;
 import com.agentsquad.squad.runtime.repository.ProjectionMapper;
 import com.agentsquad.squad.runtime.repository.TaskEventMapper;
 import com.agentsquad.squad.runtime.repository.TaskMapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.agentsquad.squad.runtime.util.ContentDigests;
+import com.agentsquad.squad.runtime.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.HexFormat;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -36,9 +35,6 @@ import java.util.UUID;
 @Service
 @Slf4j
 public class ConversationDeletionService {
-
-    private static final Set<String> TERMINAL_STATUSES = Set.of(
-            "SUCCEEDED", "PARTIAL", "FAILED", "CANCELLED");
 
     @Resource
     private ConversationMapper conversationMapper;
@@ -73,13 +69,13 @@ public class ConversationDeletionService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "幂等键长度必须为 1 到 160");
         }
         ConversationRow conversation = conversationMapper.lockOwned(userId, conversationId);
-        if (conversation == null || "DELETED".equals(conversation.status())) {
+        if (conversation == null || ConversationStatus.DELETED.name().equals(conversation.status())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "会话不存在");
         }
         String scopeKey = "conversation.delete:" + conversationId;
-        String payloadJson = toJson(Map.of(
-                "action", "DELETE_CONVERSATION", "expectedVersion", expectedVersion));
-        String payloadHash = sha256(payloadJson);
+        String payloadJson = RuntimePayloads.toJson(objectMapper, Map.of(
+                "action", RuntimeCommandAction.DELETE_CONVERSATION.name(), "expectedVersion", expectedVersion));
+        String payloadHash = ContentDigests.sha256(payloadJson);
         CommandRow prior = commandMapper.findByKey(userId, scopeKey, idempotencyKey);
         if (prior != null) {
             if (!prior.payloadHash().equals(payloadHash)) {
@@ -87,7 +83,7 @@ public class ConversationDeletionService {
             }
             return;
         }
-        if (!"ACTIVE".equals(conversation.status())) {
+        if (!ConversationStatus.ACTIVE.name().equals(conversation.status())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "会话正在删除");
         }
         if (conversation.version() != expectedVersion) {
@@ -102,34 +98,37 @@ public class ConversationDeletionService {
             settleActiveTask(userId, conversationId, activeTaskId, now);
         }
         commandMapper.insertControl(UUID.randomUUID().toString(), userId, scopeKey,
-                idempotencyKey, payloadHash, null, null, "DELETE_CONVERSATION", payloadJson, now);
+                idempotencyKey, payloadHash, null, null,
+                RuntimeCommandAction.DELETE_CONVERSATION.name(), payloadJson, now);
         log.info("会话删除受理成功 conversationId={} userId={} activeTaskId={}",
                 conversationId, userId, activeTaskId);
     }
 
     private void settleActiveTask(String userId, String conversationId, String taskId, LocalDateTime now) {
         TaskRow task = taskMapper.lockOwned(userId, taskId);
-        if (task == null || TERMINAL_STATUSES.contains(task.status())) {
+        if (task == null || GoalTaskStatus.valueOf(task.status()).isTerminal()) {
             conversationMapper.clearActiveTask(userId, conversationId, taskId);
             return;
         }
         commandMapper.cancelPendingByTask(userId, taskId);
-        if ("QUEUED".equals(task.status())) {
+        if (GoalTaskStatus.QUEUED.name().equals(task.status())) {
             if (taskMapper.updateCancelled(userId, taskId, now) != 1) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标状态已变化");
             }
             conversationMapper.clearActiveTask(userId, conversationId, taskId);
-            publishTaskCompleted(userId, taskId, "CANCELLED", now);
+            publishTaskCompleted(userId, taskId, GoalTaskStatus.CANCELLED.name(), now);
             log.info("未受理目标随删除就地取消 taskId={} conversationId={}", taskId, conversationId);
             return;
         }
         if (taskMapper.updateCancelling(userId, taskId, task.version(), now) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标状态已变化");
         }
-        String stopPayload = toJson(Map.of("action", "STOP"));
+        String stopPayload = RuntimePayloads.toJson(objectMapper,
+                Map.of("action", RuntimeCommandAction.STOP.name()));
         commandMapper.insertControl(UUID.randomUUID().toString(), userId, "task.cancel:" + taskId,
-                "conversation-delete", sha256(stopPayload), taskId,
-                bindingMapper.findMasterBindingId(userId, taskId), "STOP", stopPayload, now);
+                "conversation-delete", ContentDigests.sha256(stopPayload), taskId,
+                bindingMapper.findMasterBindingId(userId, taskId), RuntimeCommandAction.STOP.name(),
+                stopPayload, now);
     }
 
     private void publishTaskCompleted(String userId, String taskId, String status, LocalDateTime now) {
@@ -142,24 +141,6 @@ public class ConversationDeletionService {
         }
         taskEventMapper.insertProjected(userId, taskId, sequence,
                 "conversation-delete:" + taskId + ":task.completed", "task.completed",
-                toJson(Map.of("status", status)), now);
-    }
-
-    private String toJson(Object value) {
-        try {
-            return objectMapper.writeValueAsString(value);
-        } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("删除请求无法序列化", exception);
-        }
-    }
-
-    private String sha256(String value) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256")
-                    .digest(value.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("JVM 不支持 SHA-256", exception);
-        }
+                RuntimePayloads.toJson(objectMapper, Map.of("status", status)), now);
     }
 }

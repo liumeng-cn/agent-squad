@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime.bridge;
 
+import com.agentsquad.squad.runtime.domain.GoalTaskStatus;
 import com.agentsquad.squad.runtime.dto.CompletionProposalReceipt;
 import com.agentsquad.squad.runtime.service.CompletionProposalService;
 import com.agentsquad.squad.runtime.service.RuntimeBusinessException;
@@ -43,7 +44,8 @@ public class ProposeCompletionTool implements AgentTool {
         return Map.of(
                 "type", "object",
                 "properties", Map.of(
-                        "outcome", Map.of("type", "string", "enum", List.of("SUCCEEDED", "PARTIAL")),
+                        "outcome", Map.of("type", "string", "enum",
+                                List.of(GoalTaskStatus.SUCCEEDED.name(), GoalTaskStatus.PARTIAL.name())),
                         "finalAnswer", Map.of("type", "string", "minLength", 1, "maxLength", 200000)),
                 "required", List.of("outcome", "finalAnswer"),
                 "additionalProperties", false);

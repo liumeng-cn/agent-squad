@@ -26,4 +26,4 @@
 
 当前本地认证会话仍在进程内，正式账号表、密码散列、会话持久化、授权版本和完整同源校验未实现。数据库迁移覆盖受理链路 5 张业务表、命令投递字段、投影水位、AgentScope JDBC 基础表和直接回答的完成候选字段。旧 `sq_native_session_object` 表仍留在已编号 V2 迁移中，但新代码不再读取或写入它；是否清理需先核对已有数据库数据及 Flyway 历史，不能直接改已发布迁移。
 
-原生 `AgentSession.submit`、领取租约、官方共享存储、运行生命周期投影以及直接回答的完成候选裁决代码已经接入，但默认关闭（`agentsquad.delivery.enabled=false`）。服务启动验证覆盖了受理、控制命令与持久化链路；原生投递链路需要配置 `SQUAD_MODEL_API_KEY`、`SQUAD_MODEL_BASE_URL`、`SQUAD_MODEL_NAME` 并显式开启 `SQUAD_DELIVERY_ENABLED=true` 后，才能与真实模型/端点联调。无候选纠正、异常 Turn 的业务终结和页面尚未实现，不能把 `DELIVERED` 或单次 Run 结束说成 Agent 已完成。
+原生 `AgentSession.submit`、领取租约、官方共享存储、运行生命周期投影以及直接回答的完成候选裁决已接入，但默认关闭（`agentsquad.delivery.enabled=false`）。2026-10-22 在全新隔离 H2 库启用投递，通过真实 DeepSeek 模型完成登录、创建对话、提交“2+2”、Master 调用完成工具、任务 `SUCCEEDED`、答案事件与快照读取，最终答案为“2+2 的结果是 4。”。`mvn -B -ntp test` 结果为 13 项中 12 项通过、1 项跳过；无候选纠正、取消优先级的三条新增集成用例全部通过。现有 MySQL 库未启用真实投递验证，浏览器端页面仍待人工验收。异常 Turn 的业务终结仍未实现。不能把 `DELIVERED` 或单次 Run 结束说成 Agent 已完成。

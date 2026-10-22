@@ -1,26 +1,25 @@
 package com.agentsquad.squad.runtime.service;
 
 import com.agentsquad.squad.runtime.domain.CommandRow;
+import com.agentsquad.squad.runtime.domain.GoalTaskStatus;
+import com.agentsquad.squad.runtime.domain.RuntimeCommandAction;
+import com.agentsquad.squad.runtime.domain.RuntimeCommandStatus;
 import com.agentsquad.squad.runtime.domain.TaskRow;
 import com.agentsquad.squad.runtime.dto.CommandReceipt;
 import com.agentsquad.squad.runtime.repository.BindingMapper;
 import com.agentsquad.squad.runtime.repository.CommandMapper;
 import com.agentsquad.squad.runtime.repository.TaskMapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.agentsquad.squad.runtime.util.ContentDigests;
+import com.agentsquad.squad.runtime.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.HexFormat;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -31,11 +30,6 @@ import java.util.UUID;
 @Service
 @Slf4j
 public class TaskControlService {
-
-    private static final Set<String> TERMINAL_STATUSES = Set.of(
-            "SUCCEEDED", "PARTIAL", "FAILED", "CANCELLED");
-    private static final Set<String> RESUMABLE_STATUSES = Set.of(
-            "WAITING_INPUT", "WAITING_APPROVAL", "RECOVERY_BLOCKED", "RECONCILING");
 
     @Resource
     private TaskMapper taskMapper;
@@ -60,8 +54,9 @@ public class TaskControlService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
         }
         String scopeKey = "task.cancel:" + taskId;
-        String payloadJson = toJson(Map.of("action", "STOP", "expectedVersion", expectedVersion));
-        String payloadHash = sha256(payloadJson);
+        String payloadJson = RuntimePayloads.toJson(objectMapper,
+                Map.of("action", RuntimeCommandAction.STOP.name(), "expectedVersion", expectedVersion));
+        String payloadHash = ContentDigests.sha256(payloadJson);
         CommandRow prior = commandMapper.findByKey(userId, scopeKey, idempotencyKey);
         if (prior != null) {
             if (!prior.payloadHash().equals(payloadHash)) {
@@ -69,7 +64,7 @@ public class TaskControlService {
             }
             return toReceipt(prior);
         }
-        if (TERMINAL_STATUSES.contains(task.status())) {
+        if (GoalTaskStatus.valueOf(task.status()).isTerminal()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已结束，不可取消");
         }
         if (task.version() != expectedVersion) {
@@ -83,9 +78,9 @@ public class TaskControlService {
         String commandId = UUID.randomUUID().toString();
         String bindingId = requireMasterBinding(userId, taskId);
         commandMapper.insertControl(commandId, userId, scopeKey, idempotencyKey, payloadHash,
-                taskId, bindingId, "STOP", payloadJson, now);
+                taskId, bindingId, RuntimeCommandAction.STOP.name(), payloadJson, now);
         log.info("取消命令受理成功 taskId={} commandId={} userId={}", taskId, commandId, userId);
-        return new CommandReceipt(commandId, taskId, "PENDING", null, null);
+        return new CommandReceipt(commandId, taskId, RuntimeCommandStatus.PENDING.name(), null, null);
     }
 
     /**
@@ -99,8 +94,9 @@ public class TaskControlService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
         }
         String scopeKey = "task.resume:" + taskId;
-        String payloadJson = toJson(Map.of("action", "RESUME", "expectedVersion", expectedVersion));
-        String payloadHash = sha256(payloadJson);
+        String payloadJson = RuntimePayloads.toJson(objectMapper,
+                Map.of("action", RuntimeCommandAction.RESUME.name(), "expectedVersion", expectedVersion));
+        String payloadHash = ContentDigests.sha256(payloadJson);
         CommandRow prior = commandMapper.findByKey(userId, scopeKey, idempotencyKey);
         if (prior != null) {
             if (!prior.payloadHash().equals(payloadHash)) {
@@ -108,10 +104,11 @@ public class TaskControlService {
             }
             return toReceipt(prior);
         }
-        if (TERMINAL_STATUSES.contains(task.status())) {
+        GoalTaskStatus status = GoalTaskStatus.valueOf(task.status());
+        if (status.isTerminal()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已结束，不可恢复");
         }
-        if (!RESUMABLE_STATUSES.contains(task.status())) {
+        if (!status.isResumable()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "当前状态不可恢复");
         }
         if (task.version() != expectedVersion) {
@@ -124,9 +121,9 @@ public class TaskControlService {
         String commandId = UUID.randomUUID().toString();
         String bindingId = requireMasterBinding(userId, taskId);
         commandMapper.insertControl(commandId, userId, scopeKey, idempotencyKey, payloadHash,
-                taskId, bindingId, "RESUME", payloadJson, now);
+                taskId, bindingId, RuntimeCommandAction.RESUME.name(), payloadJson, now);
         log.info("恢复命令受理成功 taskId={} commandId={} userId={}", taskId, commandId, userId);
-        return new CommandReceipt(commandId, taskId, "PENDING", null, null);
+        return new CommandReceipt(commandId, taskId, RuntimeCommandStatus.PENDING.name(), null, null);
     }
 
     private CommandReceipt toReceipt(CommandRow command) {
@@ -148,21 +145,4 @@ public class TaskControlService {
         }
     }
 
-    private String toJson(Object value) {
-        try {
-            return objectMapper.writeValueAsString(value);
-        } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("控制请求无法序列化", exception);
-        }
-    }
-
-    private String sha256(String value) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256")
-                    .digest(value.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("JVM 不支持 SHA-256", exception);
-        }
-    }
 }

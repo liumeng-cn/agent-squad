@@ -1,8 +1,13 @@
 package com.agentsquad.squad.runtime.domain;
 
-/** Master 会话与目标的受控关联，以及已持久化的完成候选摘要。 */
+/**
+ * Master 完成候选提交上下文。
+ *
+ * 由受控会话绑定和目标当前版本构成，模型不能自行指定归属、计划版本或答案版本。
+ */
 public record CompletionContextRow(String userId, String taskId, String bindingId,
-                                   String taskStatus, String proposalTurnId, String proposalHash,
+                                   String taskStatus, long planVersion, long answerRevision,
+                                   String proposalTurnId, String proposalHash,
                                    String proposalToolCallId, String proposalJson,
                                    boolean cancellationRequested) {
 }

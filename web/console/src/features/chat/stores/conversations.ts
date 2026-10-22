@@ -8,7 +8,8 @@ import {
 } from '../../../shared/api/conversationsApi'
 import { errorMessage } from '../../../shared/api/http'
 import { newIdempotencyKey } from '../../../shared/lib/idempotency'
-import type { ConversationResponse, TaskResponse } from '../../../shared/api/types'
+import { getTaskSnapshotApi } from '../../../shared/api/tasksApi'
+import type { ConversationResponse, TaskResponse, TaskSnapshot } from '../../../shared/api/types'
 
 interface ConversationsState {
   items: ConversationResponse[]
@@ -19,6 +20,7 @@ interface ConversationsState {
   conversation: ConversationResponse | null
   conversationError: string | null
   taskHistory: TaskResponse[]
+  historySnapshots: TaskSnapshot[]
 }
 
 export const useConversationsStore = defineStore('conversations', {
@@ -31,6 +33,7 @@ export const useConversationsStore = defineStore('conversations', {
     conversation: null,
     conversationError: null,
     taskHistory: [],
+    historySnapshots: [],
   }),
 
   actions: {
@@ -61,12 +64,20 @@ export const useConversationsStore = defineStore('conversations', {
       this.conversation = null
       this.conversationError = null
       this.taskHistory = []
+      this.historySnapshots = []
       try {
-        this.conversation = await getConversationApi(conversationId)
+        const conversation = await getConversationApi(conversationId)
         const page = await listConversationTasksApi(conversationId)
+        if (this.activeConversationId !== conversationId) {
+          return
+        }
+        this.conversation = conversation
         this.taskHistory = page.items
+        await this.loadMissingSnapshots(conversationId, page.items)
       } catch (error) {
-        this.conversationError = errorMessage(error)
+        if (this.activeConversationId === conversationId) {
+          this.conversationError = errorMessage(error)
+        }
       }
     },
 
@@ -75,13 +86,38 @@ export const useConversationsStore = defineStore('conversations', {
       if (!this.activeConversationId) {
         return
       }
+      const conversationId = this.activeConversationId
       try {
-        this.conversation = await getConversationApi(this.activeConversationId)
-        const page = await listConversationTasksApi(this.activeConversationId)
+        const conversation = await getConversationApi(conversationId)
+        const page = await listConversationTasksApi(conversationId)
+        if (this.activeConversationId !== conversationId) {
+          return
+        }
+        this.conversation = conversation
         this.taskHistory = page.items
+        await this.loadMissingSnapshots(conversationId, page.items)
       } catch {
         // 会话可能刚被删除，保持现有视图
       }
+    },
+
+    /** 只补读缺失的目标快照，避免每次状态刷新都重复请求整段历史。 */
+    async loadMissingSnapshots(conversationId: string, tasks: TaskResponse[]): Promise<void> {
+      const knownIds = new Set(this.historySnapshots.map((snapshot) => snapshot.task.taskId))
+      const missing = tasks.filter((task) => !knownIds.has(task.taskId))
+      if (missing.length === 0) {
+        return
+      }
+      const loaded = await Promise.allSettled(
+        missing.map((task) => getTaskSnapshotApi(task.taskId)),
+      )
+      if (this.activeConversationId !== conversationId) {
+        return
+      }
+      this.historySnapshots = [
+        ...this.historySnapshots,
+        ...loaded.flatMap((result) => result.status === 'fulfilled' ? [result.value] : []),
+      ]
     },
 
     async createAndSelect(): Promise<string | null> {
@@ -112,6 +148,7 @@ export const useConversationsStore = defineStore('conversations', {
         this.activeConversationId = null
         this.conversation = null
         this.taskHistory = []
+        this.historySnapshots = []
       }
       return true
     },

@@ -1,21 +1,34 @@
 package com.agentsquad.squad.runtime.service;
 
-import com.agentsquad.squad.runtime.domain.*;
-import com.agentsquad.squad.runtime.dto.*;
-import com.agentsquad.squad.runtime.repository.*;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.agentsquad.squad.runtime.domain.CommandRow;
+import com.agentsquad.squad.runtime.domain.ConversationStatus;
+import com.agentsquad.squad.runtime.domain.ConversationRow;
+import com.agentsquad.squad.runtime.domain.EventRow;
+import com.agentsquad.squad.runtime.domain.GoalTaskStatus;
+import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
+import com.agentsquad.squad.runtime.domain.TaskRow;
+import com.agentsquad.squad.runtime.dto.CommandResponse;
+import com.agentsquad.squad.runtime.dto.ConversationPage;
+import com.agentsquad.squad.runtime.dto.ConversationResponse;
+import com.agentsquad.squad.runtime.dto.GoalTaskPage;
+import com.agentsquad.squad.runtime.dto.TaskEventResponse;
+import com.agentsquad.squad.runtime.dto.TaskReceipt;
+import com.agentsquad.squad.runtime.dto.TaskResponse;
+import com.agentsquad.squad.runtime.repository.BindingMapper;
+import com.agentsquad.squad.runtime.repository.CommandMapper;
+import com.agentsquad.squad.runtime.repository.ConversationMapper;
+import com.agentsquad.squad.runtime.repository.TaskEventMapper;
+import com.agentsquad.squad.runtime.repository.TaskMapper;
+import com.agentsquad.squad.runtime.util.ContentDigests;
+import com.agentsquad.squad.runtime.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -55,7 +68,7 @@ public class GoalTaskService {
         String conversationId = UUID.randomUUID().toString();
         conversationMapper.insert(conversationId, userId, title);
         log.info("对话创建成功 conversationId={} userId={}", conversationId, userId);
-        return new ConversationResponse(conversationId, title, 0, "ACTIVE", 0, null);
+        return new ConversationResponse(conversationId, title, 0, ConversationStatus.ACTIVE.name(), 0, null);
     }
 
     /**
@@ -75,7 +88,7 @@ public class GoalTaskService {
      */
     public ConversationResponse getConversation(String userId, String conversationId) {
         ConversationRow row = conversationMapper.findOwned(userId, conversationId);
-        if (row == null || !"ACTIVE".equals(row.status())) {
+        if (row == null || !ConversationStatus.ACTIVE.name().equals(row.status())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "会话不存在");
         }
         return toResponse(row);
@@ -111,18 +124,18 @@ public class GoalTaskService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "目标内容长度必须为 1 到 20000");
         }
         ConversationRow conversation = conversationMapper.lockOwned(userId, conversationId);
-        if (conversation == null || !"ACTIVE".equals(conversation.status())) {
+        if (conversation == null || !ConversationStatus.ACTIVE.name().equals(conversation.status())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "会话不存在");
         }
         String scopeKey = "task.create:" + conversationId;
-        String payloadJson = toJson(Map.of("message", message));
-        String payloadHash = sha256(payloadJson);
+        String payloadJson = RuntimePayloads.toJson(objectMapper, Map.of("message", message));
+        String payloadHash = ContentDigests.sha256(payloadJson);
         CommandRow prior = commandMapper.findByKey(userId, scopeKey, idempotencyKey);
         if (prior != null) {
             if (!prior.payloadHash().equals(payloadHash)) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同幂等键的输入不一致");
             }
-            return new TaskReceipt(prior.taskId(), prior.commandId(), "QUEUED");
+            return new TaskReceipt(prior.taskId(), prior.commandId(), GoalTaskStatus.QUEUED.name());
         }
         if (conversation.activeTaskId() != null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "会话已有未完成目标");
@@ -137,12 +150,12 @@ public class GoalTaskService {
         commandMapper.insertSubmit(commandId, userId, scopeKey, idempotencyKey, payloadHash,
                 taskId, bindingId, payloadJson, now);
         taskEventMapper.insertAccepted(userId, taskId, "command:" + commandId,
-                toJson(Map.of("taskId", taskId, "commandId", commandId)), now);
+                RuntimePayloads.toJson(objectMapper, Map.of("taskId", taskId, "commandId", commandId)), now);
         if (conversationMapper.activateTask(userId, conversationId, taskId) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "会话状态已变化");
         }
         log.info("目标受理成功 taskId={} commandId={} conversationId={}", taskId, commandId, conversationId);
-        return new TaskReceipt(taskId, commandId, "QUEUED");
+        return new TaskReceipt(taskId, commandId, GoalTaskStatus.QUEUED.name());
     }
 
     /**
@@ -206,21 +219,4 @@ public class GoalTaskService {
                 row.payloadJson(), row.occurredAt());
     }
 
-    private String toJson(Object value) {
-        try {
-            return objectMapper.writeValueAsString(value);
-        } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("运行输入无法序列化", exception);
-        }
-    }
-
-    private String sha256(String value) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256")
-                    .digest(value.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("JVM 不支持 SHA-256", exception);
-        }
-    }
 }

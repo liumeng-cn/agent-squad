@@ -1,8 +1,10 @@
 package com.agentsquad.squad.runtime.bridge;
 
 import com.agentsquad.squad.runtime.domain.DeliveryRow;
+import com.agentsquad.squad.runtime.domain.RuntimeCommandAction;
 import com.agentsquad.squad.runtime.repository.DeliveryMapper;
 import com.agentsquad.squad.runtime.service.TaskFinalizerService;
+import com.agentsquad.squad.runtime.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -69,11 +71,18 @@ public class CommandDeliveryService {
             return;
         }
         try {
-            switch (delivery.action()) {
-                case "SUBMIT" -> deliverSubmit(commandId, token, delivery);
-                case "STOP" -> deliverStop(commandId, token, delivery);
-                case "RESUME" -> deliverResume(commandId, token, delivery);
-                default -> fail(commandId, token, delivery.attempts(), "UNKNOWN_ACTION");
+            RuntimeCommandAction action;
+            try {
+                action = RuntimeCommandAction.valueOf(delivery.action());
+            } catch (IllegalArgumentException exception) {
+                fail(commandId, token, delivery.attempts(), "UNKNOWN_ACTION");
+                return;
+            }
+            switch (action) {
+                case SUBMIT -> deliverSubmit(commandId, token, delivery);
+                case STOP -> deliverStop(commandId, token, delivery);
+                case RESUME -> deliverResume(commandId, token, delivery);
+                case DELETE_CONVERSATION -> fail(commandId, token, delivery.attempts(), "UNDELIVERABLE_ACTION");
             }
         } catch (Exception exception) {
             retry(commandId, token, delivery.attempts(), "NATIVE_SUBMIT_FAILED");
@@ -83,7 +92,7 @@ public class CommandDeliveryService {
     }
 
     private void deliverSubmit(String commandId, String token, DeliveryRow delivery) throws Exception {
-        JsonNode payload = parseJsonValue(delivery.payloadJson());
+        JsonNode payload = RuntimePayloads.readJson(objectMapper, delivery.payloadJson());
         String message = payload.path("message").textValue();
         if (message == null || message.isBlank()) {
             retry(commandId, token, delivery.attempts(), "INVALID_PAYLOAD");
@@ -129,17 +138,6 @@ public class CommandDeliveryService {
             return;
         }
         saveReceipt(commandId, token, delivery, turnId, null, "resumed");
-    }
-
-    /**
-     * 兼容 MySQL 与 H2 对 JSON 列的读取差异：H2 可能把 JSON 对象存成 JSON 字符串返回。
-     */
-    private JsonNode parseJsonValue(String raw) throws Exception {
-        JsonNode first = objectMapper.readTree(raw);
-        if (first.isTextual()) {
-            return objectMapper.readTree(first.asText());
-        }
-        return first;
     }
 
     private void saveReceipt(String commandId, String token, DeliveryRow delivery,
