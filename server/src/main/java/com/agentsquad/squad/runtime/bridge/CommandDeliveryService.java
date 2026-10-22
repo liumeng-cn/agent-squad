@@ -4,6 +4,7 @@ import com.agentsquad.squad.runtime.domain.DeliveryRow;
 import com.agentsquad.squad.runtime.domain.RuntimeCommandAction;
 import com.agentsquad.squad.runtime.repository.DeliveryMapper;
 import com.agentsquad.squad.runtime.service.TaskFinalizerService;
+import com.agentsquad.squad.runtime.service.TaskControlService;
 import com.agentsquad.squad.runtime.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,6 +32,8 @@ public class CommandDeliveryService {
 
     private static final int LEASE_SECONDS = 60;
     private static final String ALREADY_SETTLED = "Only the latest unfinished task can continue";
+    private static final String CONTINUATION_QUEUED = "Continuation already queued";
+    private static final int MAX_RESUME_ATTEMPTS = 5;
 
     @Resource
     private DeliveryMapper deliveryMapper;
@@ -40,6 +43,9 @@ public class CommandDeliveryService {
 
     @Resource
     private TaskFinalizerService taskFinalizerService;
+
+    @Resource
+    private TaskControlService taskControlService;
 
     @Resource
     private ObjectMapper objectMapper;
@@ -130,8 +136,14 @@ public class CommandDeliveryService {
             nativeSessionGateway.resume(delivery, turnId);
         } catch (IllegalStateException exception) {
             String message = exception.getMessage() == null ? "" : exception.getMessage();
-            if (message.contains(ALREADY_SETTLED) || message.contains("Continuation already queued")) {
+            if (message.contains(CONTINUATION_QUEUED)) {
                 saveReceipt(commandId, token, delivery, turnId, null, "resumed");
+                return;
+            }
+            if (message.contains(ALREADY_SETTLED) || delivery.attempts() >= MAX_RESUME_ATTEMPTS) {
+                taskControlService.blockRejectedResume(delivery.userId(), delivery.taskId(),
+                        commandId, token, message.contains(ALREADY_SETTLED)
+                                ? "NATIVE_TURN_SETTLED" : "NATIVE_RESUME_REJECTED");
                 return;
             }
             retry(commandId, token, delivery.attempts(), "NATIVE_RESUME_REJECTED");

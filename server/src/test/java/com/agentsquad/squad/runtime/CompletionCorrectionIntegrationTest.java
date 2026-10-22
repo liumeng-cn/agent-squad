@@ -10,12 +10,15 @@ import com.agentsquad.squad.runtime.domain.ProjectionTarget;
 import com.agentsquad.squad.runtime.domain.RuntimeCommandStatus;
 import com.agentsquad.squad.runtime.repository.BindingMapper;
 import com.agentsquad.squad.runtime.repository.CommandMapper;
+import com.agentsquad.squad.runtime.repository.CompletionMapper;
 import com.agentsquad.squad.runtime.repository.ConversationMapper;
+import com.agentsquad.squad.runtime.repository.DeliveryMapper;
 import com.agentsquad.squad.runtime.repository.ProjectionMapper;
 import com.agentsquad.squad.runtime.repository.TaskEventMapper;
 import com.agentsquad.squad.runtime.repository.TaskMapper;
-import com.agentsquad.squad.runtime.service.GoalTaskService;
 import com.agentsquad.squad.runtime.service.CompletionProposalService;
+import com.agentsquad.squad.runtime.service.TaskControlService;
+import com.agentsquad.squad.runtime.service.GoalTaskService;
 import com.agentsquad.squad.runtime.service.TaskSnapshotService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -134,6 +137,87 @@ class CompletionCorrectionIntegrationTest {
             assertThat(tasks.listEvents(USER_ID, target.taskId(), 0))
                     .extracting(item -> item.type())
                     .containsExactly("task.accepted", "task.run_started", "task.run_ended", "task.completed");
+        }
+    }
+
+    /**
+     * 原生失败不会把用户目标误判为失败终态；旧候选失效后可显式受理恢复。
+     */
+    @Test
+    void shouldBlockFailedRunAndKeepTaskRecoverable(@TempDir Path tempDirectory) {
+        try (ConfigurableApplicationContext context = start(tempDirectory)) {
+            ProjectionTarget target = createTask(context);
+            NativeProjectionService projection = context.getBean(NativeProjectionService.class);
+            CompletionProposalService proposals = context.getBean(CompletionProposalService.class);
+            CompletionMapper completions = context.getBean(CompletionMapper.class);
+            TaskControlService controls = context.getBean(TaskControlService.class);
+            GoalTaskService tasks = context.getBean(GoalTaskService.class);
+            ConversationMapper conversations = context.getBean(ConversationMapper.class);
+            String conversationId = tasks.findTask(USER_ID, target.taskId()).conversationId();
+            String turnId = UUID.randomUUID().toString();
+
+            projection.accept(target, event(1, "run/start", turnId, null));
+            proposals.propose(USER_ID, target.sessionId(), turnId,
+                    "tool-call-before-failure", GoalTaskStatus.SUCCEEDED.name(), "旧候选");
+            NativeEventView failed = event(2, "run/end", turnId, NativeRunOutcome.FAILED.code());
+            projection.accept(target, failed);
+            projection.accept(target, failed);
+
+            var blocked = tasks.findTask(USER_ID, target.taskId());
+            assertThat(blocked.status()).isEqualTo(GoalTaskStatus.RECOVERY_BLOCKED.name());
+            assertThat(blocked.blockedReason()).contains("原生回合执行失败");
+            assertThat(completions.lockTask(USER_ID, target.taskId()).proposalJson()).isNull();
+            assertThat(conversations.findOwned(USER_ID, conversationId).activeTaskId()).isEqualTo(target.taskId());
+            assertThat(tasks.listEvents(USER_ID, target.taskId(), 0))
+                    .extracting(item -> item.type())
+                    .containsExactly("task.accepted", "task.run_started", "task.run_ended",
+                            "task.recovery_blocked");
+
+            var resume = controls.resume(USER_ID, target.taskId(), UUID.randomUUID().toString(), blocked.version());
+            assertThat(resume.status()).isEqualTo(RuntimeCommandStatus.PENDING.name());
+            assertThat(tasks.findTask(USER_ID, target.taskId()).status()).isEqualTo(GoalTaskStatus.QUEUED.name());
+            assertThat(tasks.findTask(USER_ID, target.taskId()).blockedReason()).isNull();
+
+            DeliveryMapper delivery = context.getBean(DeliveryMapper.class);
+            String token = UUID.randomUUID().toString();
+            LocalDateTime claimedAt = LocalDateTime.now(ZoneOffset.UTC).plusSeconds(1);
+            assertThat(delivery.claim(resume.commandId(), token, claimedAt,
+                    claimedAt.plusSeconds(60))).isEqualTo(1);
+            controls.blockRejectedResume(USER_ID, target.taskId(), resume.commandId(),
+                    token, "NATIVE_TURN_SETTLED");
+            controls.blockRejectedResume(USER_ID, target.taskId(), resume.commandId(),
+                    token, "NATIVE_TURN_SETTLED");
+
+            assertThat(tasks.findCommand(USER_ID, resume.commandId()).status())
+                    .isEqualTo(RuntimeCommandStatus.BLOCKED.name());
+            assertThat(tasks.findTask(USER_ID, target.taskId()).status())
+                    .isEqualTo(GoalTaskStatus.RECOVERY_BLOCKED.name());
+            assertThat(tasks.listEvents(USER_ID, target.taskId(), 0))
+                    .extracting(item -> item.type())
+                    .containsExactly("task.accepted", "task.run_started", "task.run_ended",
+                            "task.recovery_blocked", "task.recovery_blocked");
+        }
+    }
+
+    /** 取消意图先于原生失败时，不能覆盖为恢复阻塞。 */
+    @Test
+    void shouldCancelInsteadOfBlockingFailedRun(@TempDir Path tempDirectory) {
+        try (ConfigurableApplicationContext context = start(tempDirectory)) {
+            ProjectionTarget target = createTask(context);
+            NativeProjectionService projection = context.getBean(NativeProjectionService.class);
+            TaskMapper taskMapper = context.getBean(TaskMapper.class);
+            GoalTaskService tasks = context.getBean(GoalTaskService.class);
+            String turnId = UUID.randomUUID().toString();
+
+            projection.accept(target, event(1, "run/start", turnId, null));
+            assertThat(taskMapper.updateCancelling(USER_ID, target.taskId(), 1,
+                    LocalDateTime.now(ZoneOffset.UTC))).isEqualTo(1);
+            projection.accept(target, event(2, "run/end", turnId, NativeRunOutcome.FAILED.code()));
+
+            assertThat(tasks.findTask(USER_ID, target.taskId()).status()).isEqualTo(GoalTaskStatus.CANCELLED.name());
+            assertThat(tasks.listEvents(USER_ID, target.taskId(), 0))
+                    .extracting(item -> item.type())
+                    .doesNotContain("task.recovery_blocked");
         }
     }
 

@@ -1,7 +1,13 @@
 package com.agentsquad.squad.runtime.repository;
 
 import com.agentsquad.squad.runtime.domain.TaskRow;
-import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Arg;
+import org.apache.ibatis.annotations.ConstructorArgs;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,12 +35,13 @@ public interface TaskMapper {
             @Arg(column = "plan_version", javaType = long.class),
             @Arg(column = "answer_revision", javaType = long.class),
             @Arg(column = "cancel_requested_at", javaType = LocalDateTime.class),
+            @Arg(column = "blocked_reason", javaType = String.class),
             @Arg(column = "create_time", javaType = LocalDateTime.class),
             @Arg(column = "last_update_time", javaType = LocalDateTime.class)
     })
     @Select("""
             SELECT id, task_id, user_id, conversation_id, status, version,
-                   plan_version, answer_revision, cancel_requested_at,
+                   plan_version, answer_revision, cancel_requested_at, blocked_reason,
                    create_time, last_update_time
             FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}
             FOR UPDATE
@@ -51,12 +58,13 @@ public interface TaskMapper {
             @Arg(column = "plan_version", javaType = long.class),
             @Arg(column = "answer_revision", javaType = long.class),
             @Arg(column = "cancel_requested_at", javaType = LocalDateTime.class),
+            @Arg(column = "blocked_reason", javaType = String.class),
             @Arg(column = "create_time", javaType = LocalDateTime.class),
             @Arg(column = "last_update_time", javaType = LocalDateTime.class)
     })
     @Select("""
             SELECT id, task_id, user_id, conversation_id, status, version,
-                   plan_version, answer_revision, cancel_requested_at,
+                   plan_version, answer_revision, cancel_requested_at, blocked_reason,
                    create_time, last_update_time
             FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}
             """)
@@ -88,11 +96,20 @@ public interface TaskMapper {
 
     @Update("""
             UPDATE sq_goal_task
-            SET status = 'QUEUED', version = version + 1
+            SET status = 'QUEUED', blocked_reason = NULL, version = version + 1
             WHERE user_id = #{userId} AND task_id = #{taskId} AND version = #{expectedVersion}
             """)
     int updateResuming(@Param("userId") String userId, @Param("taskId") String taskId,
                        @Param("expectedVersion") long expectedVersion);
+
+    @Update("""
+            UPDATE sq_goal_task
+            SET status = 'RECOVERY_BLOCKED', blocked_reason = #{reason}, version = version + 1
+            WHERE user_id = #{userId} AND task_id = #{taskId} AND status = 'QUEUED'
+              AND cancel_requested_at IS NULL
+            """)
+    int blockRejectedResume(@Param("userId") String userId, @Param("taskId") String taskId,
+                            @Param("reason") String reason);
 
     @ConstructorArgs({
             @Arg(column = "id", javaType = long.class),
@@ -104,12 +121,13 @@ public interface TaskMapper {
             @Arg(column = "plan_version", javaType = long.class),
             @Arg(column = "answer_revision", javaType = long.class),
             @Arg(column = "cancel_requested_at", javaType = LocalDateTime.class),
+            @Arg(column = "blocked_reason", javaType = String.class),
             @Arg(column = "create_time", javaType = LocalDateTime.class),
             @Arg(column = "last_update_time", javaType = LocalDateTime.class)
     })
     @Select("""
             SELECT id, task_id, user_id, conversation_id, status, version,
-                   plan_version, answer_revision, cancel_requested_at,
+                   plan_version, answer_revision, cancel_requested_at, blocked_reason,
                    create_time, last_update_time
             FROM sq_goal_task
             WHERE user_id = #{userId} AND conversation_id = #{conversationId}

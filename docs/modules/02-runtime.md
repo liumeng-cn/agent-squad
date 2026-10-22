@@ -23,6 +23,8 @@ TaskCreate 为 message、artifactIds、profileKey；权限、能力、Skill、�
 
 cancelRequestedAt 独立保存，进入 RECONCILING 不清除。状态由平台业务事实决定，framework Run 状态仅是其中一项证据。框架 Turn 失败允许进入恢复而不是立即把 GoalTask 失败。
 
+当前 D1 的原生 `run/end` 若为 failed、suspended、interrupted 或未知状态，且没有取消意图，平台把目标置为 `RECOVERY_BLOCKED`，保存不含异常原文的阻塞原因，清除该回合的完成候选，保留会话占用；用户可先查看任务和命令事实。显式恢复先受理为 `QUEUED`，SDK 若明确拒绝或连续五次拒绝，则恢复命令标记 `BLOCKED`，目标重新进入 `RECOVERY_BLOCKED`。这只证明状态与回执不会伪装成功；原生失败回合是否具备可恢复检查点，还需固定 SDK 的故障注入验证。
+
 ## 事务、命令与生命周期
 
 受理锁 Conversation，按 userId/scope/idempotencyKey 查 Command 摘要；相同请求返回原 receipt，不同内容 409。创建 Task、Binding、Command 和事件，设置 activeTaskId 后提交。一个会话最多一个未终结目标，忙时 409，不偷偷排第二个目标混上下文。

@@ -184,7 +184,7 @@ public class GoalTaskService {
     private TaskResponse toResponse(TaskRow task) {
         return new TaskResponse(task.taskId(), task.conversationId(), task.status(), task.version(),
                 task.planVersion(), task.answerRevision(),
-                formatTime(task.cancelRequestedAt()), null,
+                formatTime(task.cancelRequestedAt()), task.blockedReason(),
                 formatTime(task.createTime()), formatTime(task.lastUpdateTime()));
     }
 

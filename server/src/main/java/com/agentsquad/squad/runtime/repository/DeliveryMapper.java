@@ -1,7 +1,12 @@
 package com.agentsquad.squad.runtime.repository;
 
 import com.agentsquad.squad.runtime.domain.DeliveryRow;
-import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Arg;
+import org.apache.ibatis.annotations.ConstructorArgs;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -83,4 +88,13 @@ public interface DeliveryMapper {
             """)
     int retry(@Param("commandId") String commandId, @Param("token") String token,
               @Param("dueAt") LocalDateTime dueAt, @Param("errorCode") String errorCode);
+
+    @Update("""
+            UPDATE sq_command SET status = 'BLOCKED', delivery_token = NULL,
+                delivery_lease_until = NULL, last_error_code = #{errorCode}
+            WHERE command_id = #{commandId} AND delivery_token = #{token}
+              AND status = 'DELIVERING' AND action = 'RESUME'
+            """)
+    int blockRejectedResume(@Param("commandId") String commandId, @Param("token") String token,
+                            @Param("errorCode") String errorCode);
 }

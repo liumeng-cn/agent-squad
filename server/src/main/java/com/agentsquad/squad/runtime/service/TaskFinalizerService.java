@@ -3,6 +3,7 @@ package com.agentsquad.squad.runtime.service;
 import com.agentsquad.squad.runtime.bridge.NativeEventView;
 import com.agentsquad.squad.runtime.domain.FinalizationRow;
 import com.agentsquad.squad.runtime.domain.GoalTaskStatus;
+import com.agentsquad.squad.runtime.domain.NativeRunOutcome;
 import com.agentsquad.squad.runtime.domain.ProjectionTarget;
 import com.agentsquad.squad.runtime.domain.RuntimeCommandAction;
 import com.agentsquad.squad.runtime.repository.CompletionMapper;
@@ -156,6 +157,36 @@ public class TaskFinalizerService {
                 Map.of("status", GoalTaskStatus.FAILED.name(), "version", row.version() + 1));
         log.warn("纠正后仍无完成候选，目标已失败 taskId={} bindingId={} turnId={}",
                 row.taskId(), target.bindingId(), event.turnId());
+        return true;
+    }
+
+    /**
+     * 原生回合未成功且用户未取消时阻塞原任务，清除该失败回合的完成候选。
+     * 原因只记录平台归一化文案，避免把模型或框架异常原文暴露给页面。
+     */
+    @Transactional
+    public boolean blockAfterNativeRun(ProjectionTarget target, NativeEventView event,
+                                       NativeRunOutcome outcome) {
+        FinalizationRow row = completionMapper.lockTask(target.userId(), target.taskId());
+        if (row == null || row.cancellationRequested()
+                || !GoalTaskStatus.RUNNING.name().equals(row.status())
+                && !GoalTaskStatus.QUEUED.name().equals(row.status())) {
+            return false;
+        }
+        String reason = switch (outcome) {
+            case FAILED -> "原生回合执行失败，需核对后恢复";
+            case SUSPENDED -> "原生回合已挂起，当前版本无法继续此类交互";
+            case INTERRUPTED -> "原生回合意外中断，需核对后恢复";
+            case UNKNOWN -> "原生回合状态未知，需核对后恢复";
+            case COMPLETED -> throw new IllegalArgumentException("成功回合不得进入恢复阻塞");
+        };
+        if (completionMapper.blockForRecovery(row.userId(), row.taskId(), reason) != 1) {
+            throw new IllegalStateException("恢复阻塞状态写入竞争");
+        }
+        publish(row, "recovery:" + target.bindingId() + ":" + event.eventId(),
+                "task.recovery_blocked", Map.of("reason", reason, "nativeOutcome", outcome.code()));
+        log.warn("原生回合未成功，目标等待恢复核对 taskId={} bindingId={} turnId={} outcome={}",
+                row.taskId(), target.bindingId(), event.turnId(), outcome.code());
         return true;
     }
 

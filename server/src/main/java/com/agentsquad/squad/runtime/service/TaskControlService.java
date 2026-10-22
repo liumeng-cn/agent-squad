@@ -8,6 +8,9 @@ import com.agentsquad.squad.runtime.domain.TaskRow;
 import com.agentsquad.squad.runtime.dto.CommandReceipt;
 import com.agentsquad.squad.runtime.repository.BindingMapper;
 import com.agentsquad.squad.runtime.repository.CommandMapper;
+import com.agentsquad.squad.runtime.repository.DeliveryMapper;
+import com.agentsquad.squad.runtime.repository.ProjectionMapper;
+import com.agentsquad.squad.runtime.repository.TaskEventMapper;
 import com.agentsquad.squad.runtime.repository.TaskMapper;
 import com.agentsquad.squad.runtime.util.ContentDigests;
 import com.agentsquad.squad.runtime.util.RuntimePayloads;
@@ -36,6 +39,15 @@ public class TaskControlService {
 
     @Resource
     private CommandMapper commandMapper;
+
+    @Resource
+    private DeliveryMapper deliveryMapper;
+
+    @Resource
+    private ProjectionMapper projectionMapper;
+
+    @Resource
+    private TaskEventMapper taskEventMapper;
 
     @Resource
     private BindingMapper bindingMapper;
@@ -124,6 +136,30 @@ public class TaskControlService {
                 taskId, bindingId, RuntimeCommandAction.RESUME.name(), payloadJson, now);
         log.info("恢复命令受理成功 taskId={} commandId={} userId={}", taskId, commandId, userId);
         return new CommandReceipt(commandId, taskId, RuntimeCommandStatus.PENDING.name(), null, null);
+    }
+
+    /**
+     * 原生恢复明确拒绝或多次失败时，命令回执与任务状态在一个事务中阻塞。
+     * 若取消已抢先受理，只阻塞失效的恢复命令，不覆盖取消状态。
+     */
+    @Transactional
+    public void blockRejectedResume(String userId, String taskId, String commandId,
+                                    String deliveryToken, String errorCode) {
+        if (deliveryMapper.blockRejectedResume(commandId, deliveryToken, errorCode) != 1) {
+            return;
+        }
+        String reason = "原生会话拒绝恢复，请核对运行记录后重新处理";
+        if (taskMapper.blockRejectedResume(userId, taskId, reason) == 1) {
+            if (projectionMapper.reserveEventSequence(userId, taskId) != 1) {
+                throw new IllegalStateException("恢复阻塞事件序号保留失败");
+            }
+            Long sequence = projectionMapper.eventSequence(userId, taskId);
+            taskEventMapper.insertProjected(userId, taskId, sequence,
+                    "resume:" + commandId + ":blocked", "task.recovery_blocked",
+                    RuntimePayloads.toJson(objectMapper, Map.of("reason", reason, "errorCode", errorCode)),
+                    LocalDateTime.now(ZoneOffset.UTC));
+        }
+        log.warn("原生恢复命令被阻塞 taskId={} commandId={} errorCode={}", taskId, commandId, errorCode);
     }
 
     private CommandReceipt toReceipt(CommandRow command) {

@@ -8,6 +8,8 @@ Master 负责目标理解、全局上下文、规划、Worker 委派与结果聚
 
 Java 模块统一使用 Lombok；需要日志的类使用 `@Slf4j`，请求、响应和持久投影等不可变数据保留 Java `record`。
 
+异常回合的 D1 状态收口已补齐：非成功原生回合进入可诊断的 `RECOVERY_BLOCKED`，取消优先；恢复命令明确拒绝或多次失败时不能伪装成功。该异常分支目前由隔离持久库测试验证，真实 SDK 故障注入和多 Worker 恢复仍是后续工作。
+
 ## 设计入口
 
 1. [整体技术架构与选型](docs/architecture.md)、[项目结构与依赖规则](docs/project-structure.md)。

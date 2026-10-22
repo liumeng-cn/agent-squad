@@ -7,6 +7,6 @@ import java.time.LocalDateTime;
  */
 public record TaskRow(long id, String taskId, String userId, String conversationId,
                       String status, long version, long planVersion, long answerRevision,
-                      LocalDateTime cancelRequestedAt,
+                      LocalDateTime cancelRequestedAt, String blockedReason,
                       LocalDateTime createTime, LocalDateTime lastUpdateTime) {
 }

@@ -117,4 +117,16 @@ public interface CompletionMapper {
               AND cancel_requested_at IS NULL
             """)
     int failWithoutProposal(@Param("userId") String userId, @Param("taskId") String taskId);
+
+    @Update("""
+            UPDATE sq_goal_task
+            SET status = 'RECOVERY_BLOCKED', blocked_reason = #{reason},
+                completion_proposal_json = NULL, proposal_binding_id = NULL,
+                proposal_turn_id = NULL, proposal_tool_call_id = NULL, proposal_hash = NULL,
+                version = version + 1
+            WHERE user_id = #{userId} AND task_id = #{taskId}
+              AND status IN ('QUEUED', 'RUNNING') AND cancel_requested_at IS NULL
+            """)
+    int blockForRecovery(@Param("userId") String userId, @Param("taskId") String taskId,
+                         @Param("reason") String reason);
 }

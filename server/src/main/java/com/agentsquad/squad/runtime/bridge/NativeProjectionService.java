@@ -66,7 +66,9 @@ public class NativeProjectionService {
                     taskFinalizerService.recoverMissingProposal(target, event);
                 }
             } else {
-                taskFinalizerService.tryCancelAfterStop(target, event);
+                if (!taskFinalizerService.tryCancelAfterStop(target, event)) {
+                    taskFinalizerService.blockAfterNativeRun(target, event, outcome);
+                }
             }
         }
         if (projectionMapper.advanceCursor(target.userId(), target.bindingId(), cursor, event.sequence()) != 1) {

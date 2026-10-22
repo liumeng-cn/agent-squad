@@ -50,7 +50,7 @@ public class TaskSnapshotService {
         long maxSeq = taskEventMapper.maxSeq(userId, taskId);
         TaskResponse taskResponse = new TaskResponse(task.taskId(), task.conversationId(), task.status(),
                 task.version(), task.planVersion(), task.answerRevision(),
-                formatTime(task.cancelRequestedAt()), null,
+                formatTime(task.cancelRequestedAt()), task.blockedReason(),
                 formatTime(task.createTime()), formatTime(task.lastUpdateTime()));
         AnswerView answer = buildAnswer(userId, taskId, task.answerRevision());
         String cursor = taskId + ":" + maxSeq;
