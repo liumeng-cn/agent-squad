@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -71,6 +72,39 @@ class CompletionCorrectionIntegrationTest {
                     .extracting(item -> item.type())
                     .containsExactly("task.accepted", "task.run_started", "task.run_ended",
                             "answer.completed", "task.completed");
+        }
+    }
+
+    /**
+     * 完成候选写入后计划版本变化时，不得发布旧答案；原生结束事件仍须推进水位。
+     */
+    @Test
+    void shouldBlockStaleCompletionCandidate(@TempDir Path tempDirectory) {
+        try (ConfigurableApplicationContext context = start(tempDirectory)) {
+            ProjectionTarget target = createTask(context);
+            NativeProjectionService projection = context.getBean(NativeProjectionService.class);
+            CompletionProposalService proposals = context.getBean(CompletionProposalService.class);
+            GoalTaskService tasks = context.getBean(GoalTaskService.class);
+            ProjectionMapper cursors = context.getBean(ProjectionMapper.class);
+            JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
+            String turnId = UUID.randomUUID().toString();
+
+            projection.accept(target, event(1, "run/start", turnId, null));
+            proposals.propose(USER_ID, target.sessionId(), turnId,
+                    "tool-call-stale", GoalTaskStatus.SUCCEEDED.name(), "旧计划答案");
+            jdbc.update("UPDATE sq_goal_task SET plan_version = plan_version + 1 WHERE task_id = ?", target.taskId());
+
+            NativeEventView completed = event(2, "run/end", turnId, NativeRunOutcome.COMPLETED.code());
+            projection.accept(target, completed);
+            projection.accept(target, completed);
+
+            assertThat(tasks.findTask(USER_ID, target.taskId()).status())
+                    .isEqualTo(GoalTaskStatus.RECOVERY_BLOCKED.name());
+            assertThat(cursors.lockCursor(USER_ID, target.bindingId())).isEqualTo(2L);
+            assertThat(tasks.listEvents(USER_ID, target.taskId(), 0))
+                    .extracting(item -> item.type())
+                    .containsExactly("task.accepted", "task.run_started", "task.run_ended",
+                            "task.recovery_blocked");
         }
     }
 

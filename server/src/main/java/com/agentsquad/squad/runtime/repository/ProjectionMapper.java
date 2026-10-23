@@ -24,7 +24,9 @@ public interface ProjectionMapper {
             SELECT b.user_id, b.task_id, b.binding_id, b.agent_id,
                    b.framework_session_id, b.native_event_cursor
             FROM sq_runtime_binding b
+            JOIN sq_goal_task t ON t.user_id = b.user_id AND t.task_id = b.task_id
             WHERE b.next_projection_at <= #{now}
+              AND t.status NOT IN ('SUCCEEDED', 'PARTIAL', 'FAILED', 'CANCELLED', 'RECOVERY_BLOCKED')
               AND EXISTS (SELECT 1 FROM sq_command c
                           WHERE c.user_id = b.user_id AND c.binding_id = b.binding_id
                             AND c.status IN ('DELIVERED', 'APPLIED'))

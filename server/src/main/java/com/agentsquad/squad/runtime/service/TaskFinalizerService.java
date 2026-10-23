@@ -64,28 +64,37 @@ public class TaskFinalizerService {
     private ObjectMapper objectMapper;
 
     /**
-     * 没有候选、来源不符或取消中时保持任务原状；写入失败则抛异常回滚投影水位，等待重试。
+     * 原生成功回合只接受当前 Binding、Turn 和版本的候选；失效候选阻塞恢复并推进投影水位。
      */
     @Transactional
     public boolean tryComplete(ProjectionTarget target, NativeEventView event) {
         FinalizationRow row = completionMapper.lockTask(target.userId(), target.taskId());
         if (row == null || !GoalTaskStatus.RUNNING.name().equals(row.status()) || row.cancellationRequested()
-                || row.proposalJson() == null || !target.bindingId().equals(row.proposalBindingId())
-                || event.turnId() == null || !event.turnId().equals(row.proposalTurnId())) {
+                || row.proposalJson() == null) {
             return false;
         }
-        JsonNode proposal = parseProposal(row.proposalJson());
+        if (!target.bindingId().equals(row.proposalBindingId())
+                || event.turnId() == null || !event.turnId().equals(row.proposalTurnId())) {
+            blockInvalidProposal(row, target);
+            return true;
+        }
+        JsonNode proposal;
+        try {
+            proposal = parseProposal(row.proposalJson());
+        } catch (IllegalStateException exception) {
+            blockInvalidProposal(row, target);
+            return true;
+        }
         String outcome = proposal.path("outcome").asText();
         String answer = proposal.path("finalAnswer").asText();
-        if (!ALLOWED_OUTCOMES.contains(outcome) || answer.isBlank()) {
-            throw new IllegalStateException("持久完成候选不满足终态契约");
-        }
-        if (!proposal.path("evidenceRefs").isArray()
+        if (!ALLOWED_OUTCOMES.contains(outcome) || answer.isBlank()
+                || !proposal.path("evidenceRefs").isArray()
                 || proposal.path("planVersion").asLong(-1) != row.planVersion()
                 || proposal.path("answerRevision").asLong(-1) != row.answerRevision()
                 || !target.bindingId().equals(proposal.path("sourceBindingId").asText())
                 || !event.turnId().equals(proposal.path("sourceTurnId").asText())) {
-            throw new IllegalStateException("完成候选的来源或版本已失效");
+            blockInvalidProposal(row, target);
+            return true;
         }
         if (completionMapper.completeTask(row.userId(), row.taskId(), target.bindingId(),
                 event.turnId(), outcome, row.planVersion(), row.answerRevision()) != 1) {
@@ -102,6 +111,19 @@ public class TaskFinalizerService {
         log.info("目标已终结 taskId={} bindingId={} turnId={} outcome={}",
                 row.taskId(), target.bindingId(), event.turnId(), outcome);
         return true;
+    }
+
+    /**
+     * 候选已持久化但无法安全发布时显式阻塞，防止同一原生结束事件无限回放。
+     */
+    private void blockInvalidProposal(FinalizationRow row, ProjectionTarget target) {
+        String reason = "完成候选校验未通过，需核对后恢复";
+        if (completionMapper.blockForRecovery(row.userId(), row.taskId(), reason) != 1) {
+            throw new IllegalStateException("失效完成候选阻塞状态写入竞争");
+        }
+        publish(row, "recovery:invalid-proposal:" + target.bindingId() + ":" + row.proposalTurnId(),
+                "task.recovery_blocked", Map.of("reason", reason));
+        log.warn("完成候选失效，目标等待恢复核对 taskId={} bindingId={}", row.taskId(), target.bindingId());
     }
 
     /**

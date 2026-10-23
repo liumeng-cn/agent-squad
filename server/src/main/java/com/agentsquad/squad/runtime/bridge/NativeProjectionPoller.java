@@ -45,7 +45,7 @@ public class NativeProjectionPoller {
             } catch (Exception exception) {
                 projectionMapper.defer(target.userId(), target.bindingId(), now().plusSeconds(10));
                 log.warn("原生日志投影待重试 bindingId={} taskId={} errorType={}",
-                        target.bindingId(), target.taskId(), exception.getClass().getSimpleName());
+                        target.bindingId(), target.taskId(), exception.getClass().getSimpleName(), exception);
             }
         }
     }
