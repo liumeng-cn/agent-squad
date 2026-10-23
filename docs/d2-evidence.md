@@ -376,10 +376,10 @@ WHERE task_id='8818dec1-cdcb-4970-ab6c-63388e5ee8bf'
 
 ### 执行器事务隔离
 
-**现状**：连接器执行在审批事务内同步调用（`InteractionService.respond()` @Transactional），崩溃回滚到 WAITING_APPROVAL。  
+**验收时现状**：连接器执行在审批事务内同步调用（`InteractionService.respond()` @Transactional），崩溃回滚到 WAITING_APPROVAL。
 **设计要求**：数据库事务不包外部网络（docs/modules/07-tools-interactions.md 第 15 行）。  
 **影响**：单 JVM 架构下不会产生孤儿 IN_FLIGHT（崩溃回滚安全），但违反设计约束。  
-**后续**：多实例执行器隔离属后续阶段，需重构审批流程（审批决定 → 独立执行事务 → 结果注入）。
+**2026-10-23 后续修正**：`OperationExecutor.execute()` 改为 `NOT_SUPPORTED`，从审批入口调用时暂停事务，使 `IN_FLIGHT` 写入在外部调用前独立提交；审批重放会补结幂等预算。新增事务边界与过期版本拒绝测试，全量 Maven 测试 18 项中 17 项通过、1 项 MySQL 环境测试跳过。此改动尚未重新执行真实 MySQL 进程崩溃实验；多实例执行器隔离与完整审批编排仍属后续工作。
 
 ### 任务状态与操作核对联动
 

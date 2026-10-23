@@ -13,4 +13,4 @@ Java + AgentScope 路线。R01–R12 不变；[运行协议](../runtime-contract
 | [M07](07-tools-interactions.md) 受控执行 | 连接、操作账本、追问、审批和核对 | 承诺外部事务恰好一次 |
 | [M08](08-events-artifacts.md) 交付治理 | 快照/SSE、产物、预算、审计 | 原生实时事件直接当持久结果 |
 
-当前是可评审设计，尚未完成 SDK/数据库实验；详见[评审与验收](../review.md)。
+这些文档定义目标行为，不等于所有模块均已实现。D1 单 Master 链路和 D2 受控工具后端已完成部分真实 SDK、模型及数据库实验，验收范围与限制分别见 [D1 证据](../d1-evidence.md) 和 [D2 证据](../d2-evidence.md)；D3–D6 仍待开发。

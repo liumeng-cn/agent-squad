@@ -38,7 +38,7 @@ def check():
     assert len(operations) == len(set(operations))
 
     for path in ROOT.rglob("*.md"):
-        if ".git" in path.parts:
+        if any(part in path.parts for part in (".git", "node_modules", "target", "dist")):
             continue
         text = path.read_text()
         assert text.count("```") % 2 == 0, path
