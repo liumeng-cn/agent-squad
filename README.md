@@ -1,30 +1,58 @@
 # Agent Squad
 
-通用多智能体运行底座。2026-10-20 独立重建；当前正在打通单 Master 正向链路，后续沿设计实现受控工具与多 Worker 协作。
+Agent Squad 是一个面向 Web 的多智能体运行底座。用户提交目标后，平台负责持久受理、运行、展示进度与恢复；Master 可以直接回答，也可以在后续版本中委派具备独立能力的 Worker。Skill 由执行中的 Agent 按需识别和使用，不与 Worker 一一对应。
 
-Master 负责目标理解、全局上下文、规划、Worker 委派与结果聚合。Worker 负责任务局部执行，自动识别使用 Skill，通过受控工具访问外部能力。计算实例无状态，任务与恢复状态外置持久化。
+项目采用 Java 21、Spring Boot、MyBatis、MySQL 和 AgentScope Harness。Java 服务与 Web 页面在本机运行，Docker 只提供 MySQL 等依赖；当前不需要 Python 服务。
 
-当前方向：Java + AgentScope Harness SDK，固定依赖版本为 2.1.0-BETA1。MyBatis 受理事务已在 H2 文件库重启和项目专用 Docker MySQL 8.4 验证。命令领取、`AgentSession.submit` 桥接、运行生命周期投影和直接回答的完成候选裁决已接入。Harness 使用官方 `agentscope-extensions-jdbc`，直接接入 Spring 的 `DataSource`；原生日志通过 SDK 的共享 Workspace 存储。`SQUAD_DELIVERY_ENABLED` 是投递功能开关；桥接默认关闭，启用时还需配置 `SQUAD_MODEL_API_KEY`、`SQUAD_MODEL_BASE_URL`、`SQUAD_MODEL_NAME`。Master 调用 `propose_completion` 仅保存候选；同一原生 Turn 成功结束并被持久投影后，平台才在一个事务中写最终答案事件、任务终态并释放对话。缺少候选时持久排入一次纠正，仍缺失则明确失败。2026-10-22 本机 Java 服务连接 Docker MySQL 和 DeepSeek，完成登录、提交目标、模型回答、终态投影及快照读取的正向验证。2026-10-23 全量测试 16 项中 15 项通过、1 项 MySQL 测试因未设置测试环境变量跳过；真实进程重启恢复实验尚未通过。现有工作台已展示目标历史与最终答案，浏览器端仍待人工验收。详见[框架适配调研](docs/research/agentscope-java.md)、[D0 验证记录](docs/d0-evidence.md)与[D1 验证记录](docs/d1-evidence.md)。
+## 当前进度
 
-Java 模块统一使用 Lombok；需要日志的类使用 `@Slf4j`，请求、响应和持久投影等不可变数据保留 Java `record`。
+目前处于 **D1：单 Master 运行链路**。已实现本地登录、会话、目标持久受理、命令投递、Master 直接回答、任务快照与 SSE 事件、取消及异常状态收口。普通问答由 Master 处理，不委派 Worker。一次提问当前仍以任务形式受理：接口先返回任务 ID，后台执行，页面订阅结果。
 
-异常回合的 D1 状态收口已补齐：非成功原生回合进入可诊断的 `RECOVERY_BLOCKED`，取消优先；恢复命令明确拒绝或多次失败时不能伪装成功。该异常分支目前由隔离持久库测试验证，真实 SDK 故障注入和多 Worker 恢复仍是后续工作。
+尚未实现 Worker 协作、Skill 接入、受控业务工具、审批、长期记忆和沙箱。真实模型的正向回答已在本机 Java + Docker MySQL 上跑通；进程崩溃后的完整恢复、A02/A03 故障注入和浏览器端人工验收仍待完成。不要把当前版本当作生产可用平台。[详细证据与限制](docs/d1-evidence.md)
 
-## 设计入口
+## 本地运行
 
-1. [整体技术架构与选型](docs/architecture.md)、[项目结构与依赖规则](docs/project-structure.md)。
-2. [需求、场景与模块边界](docs/overview.md)、[对象与恢复协议](docs/runtime-contract.md)。
-3. [模块详细设计](docs/modules/README.md)：逐模块定义用例、接口、数据、事务、异常和验收。
-4. [HTTP 契约](contracts/openapi.json)：请求、响应、必填字段、限制及错误码。
-5. [数据字典与关系](data/README.md)、[MySQL 设计 DDL](data/schema.sql)：仅设计，不是迁移或已创建数据库。
-6. [选型与复用决策](decisions/001-rebuild.md)：旧项目中可参考的资产与必须重写的部分。
-7. [页面与交互设计](docs/web-console.md)、[静态视觉稿](docs/ui/README.md)、[开发准备及交付顺序](docs/predevelopment.md)、[配置基线](docs/configuration-baseline.md)。
-8. [设计评审清单](docs/review.md)、[主线验收场景](docs/acceptance-cases.md)：未验证项与实现前门槛。
+准备 JDK 21、Maven、Docker MySQL 8.4，以及 Node.js 20.19+ 或 22.12+。MySQL 需监听 `127.0.0.1:13306`，预建 `agent_squad` 数据库和可访问该库的账号；应用启动时由 Flyway 执行表结构迁移。已有同名容器和数据库时直接复用，不要为启动服务清空数据。
 
-旧项目 the previous project 不作为本项目依赖。未复制业务代码、环境文件、密钥、数据库迁移、前端或 Git 历史。
+1. 在仓库根目录复制 [环境变量示例](.env.example) 为 `.env.local`，填写 MySQL 账号、本地登录账号及模型配置。`.env.local` 已被 Git 忽略。若希望提问得到模型回答，设置 `SQUAD_DELIVERY_ENABLED=true` 并填写 `SQUAD_MODEL_API_KEY`、`SQUAD_MODEL_BASE_URL`、`SQUAD_MODEL_NAME`；保持 `false` 时只会受理任务，不会投递执行。
+2. 在一个终端启动 Java 服务：
 
-本项目不继承旧接口、旧表和旧行为兼容义务。文档、接口和 DDL 必须同步评审；一份旧代码只有符合这里的职责与验收规则，才允许迁入。
+   ```bash
+   set -a
+   source ./.env.local
+   set +a
+   mvn -f server/pom.xml -B -ntp spring-boot:run
+   ```
 
-## 设计自检
+3. 在另一个终端启动页面：
 
-在具备 jsonschema 的 Python 3.10+ 工具环境运行 `python tools/check_design.py`。仅检查文档与契约，不启动服务、不访问数据库。具体检查范围与待评审项见设计评审清单。
+   ```bash
+   cd web/console
+   npm ci
+   npm run dev
+   ```
+
+默认打开 [http://127.0.0.1:5173/login](http://127.0.0.1:5173/login)，后端监听 `127.0.0.1:18080`。使用 `.env.local` 中的 `SQUAD_LOCAL_USER` 和 `SQUAD_LOCAL_PASSWORD` 登录。若后端改用 `SERVER_PORT=18081`，启动页面前设置 `VITE_API_TARGET=http://127.0.0.1:18081`；页面端口可用 `npm run dev -- --port 5174` 调整。
+
+运行测试时使用**未加载 `.env.local` 的独立终端**，避免测试任务进入正在使用的 MySQL：
+
+```bash
+mvn -f server/pom.xml -B -ntp test
+npm --prefix web/console run build
+```
+
+常规后端测试使用临时 H2；专用 MySQL 集成测试需显式配置测试数据库，默认跳过。另可在装有 Python 3.10+ 和 `jsonschema` 的设计工具环境运行 `python3 tools/check_design.py`；Python 不参与服务运行。
+
+## 运行链路与目录
+
+```text
+Web 页面 → Spring HTTP API → GoalTask / Command（MySQL）
+                            ↓
+                     AgentScope Master → 模型
+                            ↓
+                 原生日志投影 → 任务事件 / 快照 / SSE
+```
+
+`server/` 是 Java 服务，`web/console/` 是 Vue 工作台，`contracts/` 放公共 API 契约，`data/` 放数据设计，`docs/` 放架构、模块方案和验证记录。`data/schema.sql` 是设计快照；实际数据库结构以 `server/src/main/resources/db/migration/` 的 Flyway 迁移为准。
+
+继续阅读：[范围与需求](docs/overview.md) · [架构与选型](docs/architecture.md) · [运行与恢复协议](docs/runtime-contract.md) · [模块设计](docs/modules/README.md) · [HTTP 契约](contracts/openapi.json) · [阶段验收](docs/acceptance-cases.md)。
