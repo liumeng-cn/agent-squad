@@ -26,10 +26,19 @@
 
 当前本地认证会话仍在进程内，正式账号表、密码散列、会话持久化、授权版本和完整同源校验未实现。数据库迁移覆盖受理链路 5 张业务表、命令投递字段、投影水位、AgentScope JDBC 基础表和直接回答的完成候选字段。旧 `sq_native_session_object` 表仍留在已编号 V2 迁移中，但新代码不再读取或写入它；是否清理需先核对已有数据库数据及 Flyway 历史，不能直接改已发布迁移。
 
-原生 `AgentSession.submit`、领取租约、官方共享存储、运行生命周期投影以及直接回答的完成候选裁决已接入，但默认关闭（`agentsquad.delivery.enabled=false`）。2026-10-22 本机 Java 服务连接项目专用 Docker MySQL 并启用真实 DeepSeek 模型，完成登录、创建对话、提交“2+2”、Master 调用完成工具、任务 `SUCCEEDED`、答案事件与快照读取，最终答案为“2 加 2 等于 4。”。浏览器端页面仍待人工验收。异常 Turn 的自动恢复仍未实现。不能把 `DELIVERED` 或单次 Run 结束说成 Agent 已完成。
+原生 `AgentSession.submit`、领取租约、官方共享存储、运行生命周期投影以及直接回答的完成候选裁决已接入，但默认关闭（`agentsquad.delivery.enabled=false`）。2026-10-22 本机 Java 服务连接项目专用 Docker MySQL 并启用真实 DeepSeek 模型，完成登录、创建对话、提交“2+2”、Master 调用完成工具、任务 `SUCCEEDED`、答案事件与快照读取，最终答案为“2 加 2 等于 4。”。浏览器端页面验收见下文 2026-10-23 记录。异常 Turn 的自动恢复仍未实现。不能把 `DELIVERED` 或单次 Run 结束说成 Agent 已完成。
 
 随后补充了 V9 `blocked_reason`：非成功原生回合不再把目标留在 `RUNNING`，而是事务性写入 `RECOVERY_BLOCKED`、公开事件并使旧完成候选失效；取消意图仍优先。恢复命令被 SDK 拒绝时，命令 `BLOCKED` 与目标阻塞状态同事务提交。隔离 H2 集成测试覆盖失败回合、重复投影、显式恢复受理、拒绝收口及取消竞争；这不等同于固定 SDK 的真实失败恢复实验。完整多 Worker 协作、权限/操作核对和生产级恢复仍未实现。
 
 2026-10-23 的完整测试结果：16 项中 15 项通过、1 项 MySQL 测试因未配置测试环境变量跳过。新增测试覆盖完成候选写入后计划版本变化时阻塞旧答案并推进投影水位。真实模型验证只覆盖成功路径；失败路径由持久库事件测试覆盖。
 
-真实 MySQL 重启实验发现旧打包产物与当前源码不一致，旧产物写入的测试任务事件水位和完成候选字段不符合当前约束。该测试任务已进入 `RECOVERY_BLOCKED`，不能作为 A02 验收成功证据。当前代码对失效候选显式阻塞，并停止轮询已终结或已阻塞目标；A02/A03 仍需用同一版本产物重新做进程故障注入。
+真实 MySQL 重启实验发现旧打包产物与当前源码不一致，旧产物写入的测试任务事件水位和完成候选字段不符合当前约束。该测试任务已进入 `RECOVERY_BLOCKED`，不能作为 A02 验收成功证据。当前代码对失效候选显式阻塞，并停止轮询已终结或已阻塞目标。
+
+## 2026-10-23 故障注入与页面验收
+
+用当前源码重新打包产物（16 项测试 15 过 1 跳过，MySQL 集成测试按设计跳过）后，连接项目专用 Docker MySQL 与真实 DeepSeek 模型完成进程故障注入，不再引用旧产物结果。
+
+- A02（平台受理后、SDK submit 前杀 JVM）：首轮实例以 `SQUAD_DELIVERY_POLL_DELAY_MS=15000` 拉宽轮询窗口，`curl` 收到 202 受理回执后立即 `kill -9`。崩溃时点命令 `PENDING` 未领取、无原生日志、目标 `QUEUED`。重启后同一 commandId 重投原 Binding（`delivery_attempts=1`），唯一原生回合完成，事件序列 accepted→run_started→run_ended→answer.completed→completed，任务 `SUCCEEDED`，答案中文编码正常。
+- A03（SDK 接受后、平台收据前杀 JVM）：JVM 以 JDWP 启动、jdb 附加，在 `CommandDeliveryService.deliverSubmit` 内单步至 `saveReceipt` 调用前冻结；此刻 `native_turn_id` 仍为 NULL，而原生日志已出现含该 commandId 的回合提交文件。冻结态直接 `kill -9`，未修改任何产品代码。重启后租约到期重投（`delivery_attempts=2`），SDK 幂等返回崩溃前 journal 里的同一 turn（`5feb494b-84d6-33d4-a8d8-ac202b42340f`），收据补回，任务 `SUCCEEDED`；SUBMIT 命令仅一条，`answer.completed` 仅一条。
+- 意外佐证：验收前发现今早会话遗留的 18081 服务实例（投递开启）与新实例共享 MySQL，把一次 A02 试投的命令抢走并完整执行（任务 `SUCCEEDED`）。该实例经确认后已停止；多实例并发领取未产生重复执行。
+- 浏览器端 D1 人工验收（本机 Java 服务 + Vite 页面，浏览器实测）：登录、新建对话、发送、事件时间线（受理→执行→结束→答案→收尾）、答案渲染、运行中停止（STOP 命令 `interrupted`、目标 `CANCELLED`、时间线无答案里程碑）、受限态详情页（状态徽标、受限原因、事件含 `task.recovery_blocked`）均通过。补齐了设计要求的恢复入口：工作台与详情页在 `WAITING_INPUT`/`WAITING_APPROVAL`/`RECOVERY_BLOCKED`/`RECONCILING` 显示"恢复执行"；对旧受限任务实际点击后 RESUME 命令被 SDK 拒绝（`NATIVE_TURN_SETTLED`），命令 `BLOCKED`、目标保持受限，页面实时更新受限原因并追加事件，未卡在恢复中。已知小瑕疵：实时会话中历史任务条目短暂显示"已接收，等待执行"占位，刷新后按终态正确渲染。

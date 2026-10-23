@@ -27,6 +27,17 @@ onBeforeUnmount(() => {
         任务
         <StatusBadge v-if="runtime.status" :status="runtime.status" />
       </h2>
+      <p v-if="runtime.task?.blockedReason" class="banner-warning" role="alert">
+        受限原因：{{ runtime.task.blockedReason }}
+      </p>
+      <button
+        v-if="runtime.resumable"
+        class="btn btn-primary"
+        :disabled="runtime.resuming"
+        @click="runtime.resume()"
+      >
+        {{ runtime.resuming ? '恢复中…' : '恢复执行' }}
+      </button>
       <dl v-if="runtime.task" class="meta-grid">
         <div>
           <dt>任务 ID</dt>

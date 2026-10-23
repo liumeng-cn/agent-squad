@@ -50,6 +50,14 @@ function onEnter(event: KeyboardEvent): void {
       ></textarea>
       <div class="composer-actions">
         <button
+          v-if="runtime.resumable"
+          class="btn btn-primary"
+          :disabled="runtime.resuming"
+          @click="runtime.resume()"
+        >
+          {{ runtime.resuming ? '恢复中…' : '恢复执行' }}
+        </button>
+        <button
           v-if="runtime.stoppable"
           class="btn btn-danger"
           :disabled="runtime.stopping"

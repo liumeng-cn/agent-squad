@@ -1,11 +1,11 @@
 import { defineStore } from 'pinia'
 import { createTaskApi } from '../../../shared/api/conversationsApi'
 import { ApiError, errorMessage } from '../../../shared/api/http'
-import { cancelTaskApi, getTaskSnapshotApi } from '../../../shared/api/tasksApi'
+import { cancelTaskApi, getTaskSnapshotApi, resumeTaskApi } from '../../../shared/api/tasksApi'
 import type { TaskEvent, TaskSnapshot } from '../../../shared/api/types'
 import { backoffDelayMs } from '../../../shared/lib/backoff'
 import { newIdempotencyKey } from '../../../shared/lib/idempotency'
-import { canStop, isTerminal } from '../../../shared/lib/taskStatus'
+import { canResume, canStop, isTerminal } from '../../../shared/lib/taskStatus'
 import { TaskEventStream } from '../../../shared/sse/TaskEventStream'
 
 /**
@@ -32,6 +32,7 @@ interface RuntimeState {
   streaming: boolean
   submitting: boolean
   stopping: boolean
+  resuming: boolean
   submitError: string | null
   streamError: string | null
   /** 202 后快照尚未返回前的本地目标回显。 */
@@ -55,6 +56,7 @@ export const useRuntimeStore = defineStore('runtime', {
     streaming: false,
     submitting: false,
     stopping: false,
+    resuming: false,
     submitError: null,
     streamError: null,
     goalEcho: null,
@@ -71,6 +73,8 @@ export const useRuntimeStore = defineStore('runtime', {
       state.snapshot?.goalMessage || state.goalEcho || '',
     stoppable: (state) =>
       state.snapshot !== null && canStop(state.snapshot.task.status),
+    resumable: (state) =>
+      state.snapshot !== null && canResume(state.snapshot.task.status),
   },
 
   actions: {
@@ -173,6 +177,28 @@ export const useRuntimeStore = defineStore('runtime', {
       }
     },
 
+    /** 恢复受限/待交互的目标；202 只代表受理，运行推进由快照与事件呈现。 */
+    async resume(): Promise<void> {
+      const task = this.task
+      if (!task || this.resuming || !canResume(task.status)) {
+        return
+      }
+      this.resuming = true
+      this.streamError = null
+      try {
+        await resumeTaskApi(task.taskId, task.version, newIdempotencyKey())
+        await this.refreshSnapshot()
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 409) {
+          await this.refreshSnapshot().catch(() => undefined)
+        } else {
+          this.streamError = errorMessage(error)
+        }
+      } finally {
+        this.resuming = false
+      }
+    },
+
     /** 释放订阅与计时器；切会话/离开页面时调用，不取消任务本身。 */
     dispose(): void {
       disposed = true
@@ -189,6 +215,7 @@ export const useRuntimeStore = defineStore('runtime', {
       this.streaming = false
       this.submitting = false
       this.stopping = false
+      this.resuming = false
       this.submitError = null
       this.streamError = null
       this.goalEcho = null

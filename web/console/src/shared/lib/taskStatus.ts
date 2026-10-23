@@ -16,12 +16,23 @@ const STOPPABLE_STATUSES: ReadonlySet<string> = new Set([
   'WAITING_APPROVAL',
 ])
 
+const RESUMABLE_STATUSES: ReadonlySet<string> = new Set([
+  'WAITING_INPUT',
+  'WAITING_APPROVAL',
+  'RECOVERY_BLOCKED',
+  'RECONCILING',
+])
+
 export function isTerminal(status: string): boolean {
   return TERMINAL_STATUSES.has(status)
 }
 
 export function canStop(status: string): boolean {
   return STOPPABLE_STATUSES.has(status)
+}
+
+export function canResume(status: string): boolean {
+  return RESUMABLE_STATUSES.has(status)
 }
 
 export const TASK_STATUS_TEXT: Record<string, string> = {
