@@ -4,7 +4,7 @@
 
 Master 负责目标理解、全局上下文、规划、Worker 委派与结果聚合。Worker 负责任务局部执行，自动识别使用 Skill，通过受控工具访问外部能力。计算实例无状态，任务与恢复状态外置持久化。
 
-当前方向：Java + AgentScope Harness SDK，固定依赖版本为 2.1.0-BETA1。MyBatis 受理事务曾在 H2 文件库重启和项目专用 MySQL 8.4 验证。命令领取、`AgentSession.submit` 桥接、运行生命周期投影和直接回答的完成候选裁决已接入。Harness 使用官方 `agentscope-extensions-jdbc`，直接接入 Spring 的 `DataSource`；原生日志通过 SDK 的共享 Workspace 存储。`SQUAD_DELIVERY_ENABLED` 是投递功能开关；桥接默认关闭，启用时还需配置 `SQUAD_MODEL_API_KEY`、`SQUAD_MODEL_BASE_URL`、`SQUAD_MODEL_NAME`。Master 调用 `propose_completion` 仅保存候选；同一原生 Turn 成功结束并被持久投影后，平台才在一个事务中写最终答案事件、任务终态并释放对话。缺少候选时持久排入一次纠正，仍缺失则明确失败。2026-10-22 使用全新隔离 H2 库和 DeepSeek 完成了一次登录、提交目标、模型回答、终态投影及快照读取的正向验证；全量测试 13 项中 12 项通过、1 项跳过。现有工作台已展示目标历史与最终答案，尚未做浏览器端人工验收。详见[框架适配调研](docs/research/agentscope-java.md)、[D0 验证记录](docs/d0-evidence.md)与[D1 验证记录](docs/d1-evidence.md)。
+当前方向：Java + AgentScope Harness SDK，固定依赖版本为 2.1.0-BETA1。MyBatis 受理事务已在 H2 文件库重启和项目专用 Docker MySQL 8.4 验证。命令领取、`AgentSession.submit` 桥接、运行生命周期投影和直接回答的完成候选裁决已接入。Harness 使用官方 `agentscope-extensions-jdbc`，直接接入 Spring 的 `DataSource`；原生日志通过 SDK 的共享 Workspace 存储。`SQUAD_DELIVERY_ENABLED` 是投递功能开关；桥接默认关闭，启用时还需配置 `SQUAD_MODEL_API_KEY`、`SQUAD_MODEL_BASE_URL`、`SQUAD_MODEL_NAME`。Master 调用 `propose_completion` 仅保存候选；同一原生 Turn 成功结束并被持久投影后，平台才在一个事务中写最终答案事件、任务终态并释放对话。缺少候选时持久排入一次纠正，仍缺失则明确失败。2026-10-22 本机 Java 服务连接 Docker MySQL 和 DeepSeek，完成登录、提交目标、模型回答、终态投影及快照读取的正向验证。2026-10-23 全量测试 16 项中 15 项通过、1 项 MySQL 测试因未设置测试环境变量跳过；真实进程重启恢复实验尚未通过。现有工作台已展示目标历史与最终答案，浏览器端仍待人工验收。详见[框架适配调研](docs/research/agentscope-java.md)、[D0 验证记录](docs/d0-evidence.md)与[D1 验证记录](docs/d1-evidence.md)。
 
 Java 模块统一使用 Lombok；需要日志的类使用 `@Slf4j`，请求、响应和持久投影等不可变数据保留 Java `record`。
 
