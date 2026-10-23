@@ -3,6 +3,7 @@ package com.agentsquad.squad.tools.mock;
 import com.agentsquad.squad.runtime.service.RuntimeBusinessException;
 import com.agentsquad.squad.tools.operation.OperationExecutor;
 import com.agentsquad.squad.tools.operation.OperationService;
+import com.agentsquad.squad.tools.operation.PrepareRequest;
 import com.agentsquad.squad.tools.operation.domain.OperationRow;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.tool.AgentTool;
@@ -73,7 +74,7 @@ public class MockLookupTool implements AgentTool {
         }
         String turnId = context.get(TURN_ID_KEY, String.class);
         try {
-            OperationRow operation = operationService.prepare(new OperationService.PrepareRequest(
+            OperationRow operation = operationService.prepare(new PrepareRequest(
                     context.getUserId(), context.getSessionId(), turnId,
                     param.getToolUseBlock().getId(), getName(), "v1", "READ",
                     Map.of("resource", resourceName, "key", keyValue),

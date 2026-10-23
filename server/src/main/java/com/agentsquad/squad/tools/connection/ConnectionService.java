@@ -10,7 +10,6 @@ import com.agentsquad.squad.tools.dto.ConnectionPage;
 import com.agentsquad.squad.tools.dto.ConnectionResponse;
 import com.agentsquad.squad.tools.dto.ConnectionUpdateRequest;
 import com.agentsquad.squad.tools.repository.ConnectionMapper;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -39,9 +38,6 @@ public class ConnectionService {
     private static final Pattern CODE_PATTERN = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._-]*");
     private static final int MAX_POLICY_JSON_BYTES = 8192;
     private static final int MAX_POLICY_DEPTH = 8;
-    private static final TypeReference<Map<String, Object>> POLICY_TYPE =
-            new TypeReference<>() {
-            };
 
     @Resource
     private ConnectionMapper connectionMapper;
@@ -205,7 +201,8 @@ public class ConnectionService {
         Map<String, Object> policy;
         try {
             JsonNode node = RuntimePayloads.readJson(objectMapper, row.resourcePolicyJson());
-            policy = objectMapper.convertValue(node, POLICY_TYPE);
+            policy = objectMapper.convertValue(node, objectMapper.getTypeFactory()
+                    .constructMapType(Map.class, String.class, Object.class));
         } catch (Exception exception) {
             throw new IllegalStateException("连接资源策略无法解析", exception);
         }

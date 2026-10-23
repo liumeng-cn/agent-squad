@@ -17,7 +17,6 @@ import com.agentsquad.squad.tools.operation.OperationService;
 import com.agentsquad.squad.tools.operation.domain.OperationRow;
 import com.agentsquad.squad.tools.operation.domain.OperationStatus;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -53,8 +52,6 @@ public class InteractionService {
     private static final String KIND_APPROVAL = "APPROVAL";
     private static final String TOOL_MOCK_TICKET = "mock_ticket_create";
     private static final long TICKET_RESERVED_UNITS = 1000000L;
-    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {
-    };
 
     @Resource
     private InteractionMapper interactionMapper;
@@ -171,7 +168,7 @@ public class InteractionService {
         String scopeKey = "interaction:" + interactionId;
         Map<String, Object> answerJson = new LinkedHashMap<>();
         answerJson.put("kind", answerKind);
-        String answerText;
+        String answerText = null;
         if (KIND_APPROVAL.equals(row.kind())) {
             if (!KIND_APPROVAL.equals(answerKind) || approve == null) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "审批交互必须提交 APPROVAL 答复");
@@ -182,7 +179,6 @@ public class InteractionService {
             }
             answerJson.put("approve", approve);
             answerJson.put("confirmedRequestHash", confirmedRequestHash);
-            answerText = resolveApproval(actor, row, approve);
         } else if (KIND_INPUT.equals(row.kind())) {
             if (!KIND_INPUT.equals(answerKind) || inputValue == null || inputValue.isEmpty()) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "追问交互必须提交 INPUT 内容");
@@ -215,6 +211,11 @@ public class InteractionService {
         }
         if (row.expiresAt() != null && row.expiresAt().isBefore(LocalDateTime.now())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "交互答复已过期");
+        }
+
+        // 审批可能触发外部写入，必须先确认交互仍开放且版本有效。
+        if (KIND_APPROVAL.equals(row.kind())) {
+            answerText = resolveApproval(actor, row, approve);
         }
 
         String commandId = UUID.randomUUID().toString();
@@ -337,15 +338,10 @@ public class InteractionService {
     private Map<String, Object> readArguments(String argumentsJson) {
         try {
             JsonNode node = RuntimePayloads.readJson(objectMapper, argumentsJson);
-            return objectMapper.convertValue(node, MAP_TYPE);
+            return objectMapper.convertValue(node, objectMapper.getTypeFactory()
+                    .constructMapType(Map.class, String.class, Object.class));
         } catch (Exception exception) {
             throw new IllegalStateException("操作参数无法解析", exception);
         }
-    }
-
-    /**
-     * 绑定结果：交互 ID 与类型；null 表示该挂起不属于受控交互。
-     */
-    public record BindingResult(String interactionId, String kind) {
     }
 }

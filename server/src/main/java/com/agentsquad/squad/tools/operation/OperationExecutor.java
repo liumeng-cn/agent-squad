@@ -119,12 +119,4 @@ public class OperationExecutor {
                 operation.version() + 1, instanceId);
         log.warn("操作转入 UNKNOWN，等待人工或连接器核对 operationId={}", operation.operationId());
     }
-
-    /**
-     * 连接器 SPI：入参是账本分配的外部幂等键，返回可持久化的结果 JSON。
-     */
-    @FunctionalInterface
-    public interface ExternalCall {
-        String call(String externalKey);
-    }
 }

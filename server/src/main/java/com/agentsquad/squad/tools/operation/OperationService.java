@@ -201,15 +201,4 @@ public class OperationService {
                 .forEach(entry -> ordered.put(entry.getKey(), entry.getValue()));
         return ordered;
     }
-
-    /**
-     * 预检入参；工具包装层从可信 RuntimeContext 构建，绝不从模型 JSON 反序列化执行身份。
-     */
-    public record PrepareRequest(String userId, String sessionId, String frameworkTurnId,
-                                 String toolCallId, String toolKey, String toolVersion,
-                                 String effect, Map<String, Object> arguments,
-                                 String businessIntentKey, boolean requiresApproval,
-                                 String connectionId, long connectionRevision,
-                                 long reservedUnits, String creatorName) {
-    }
 }

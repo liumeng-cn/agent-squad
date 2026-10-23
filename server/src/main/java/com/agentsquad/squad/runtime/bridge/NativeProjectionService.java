@@ -7,6 +7,7 @@ import com.agentsquad.squad.runtime.repository.ProjectionMapper;
 import com.agentsquad.squad.runtime.repository.TaskEventMapper;
 import com.agentsquad.squad.runtime.service.TaskFinalizerService;
 import com.agentsquad.squad.runtime.util.RuntimePayloads;
+import com.agentsquad.squad.tools.interaction.BindingResult;
 import com.agentsquad.squad.tools.interaction.InteractionService;
 import com.agentsquad.squad.tools.interaction.domain.InteractionRow;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -118,7 +119,7 @@ public class NativeProjectionService {
         }
         Map<String, Object> call = data.get("call") instanceof Map<?, ?> rawCall
                 ? (Map<String, Object>) rawCall : Map.of();
-        InteractionService.BindingResult binding = interactionService.bindFrameworkRequest(
+        BindingResult binding = interactionService.bindFrameworkRequest(
                 target.userId(), target.taskId(), target.bindingId(), null, event.turnId(),
                 requestId, call);
         if (binding == null) {
