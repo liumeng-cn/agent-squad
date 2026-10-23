@@ -294,6 +294,7 @@ class CompletionCorrectionIntegrationTest {
 
     private NativeEventView event(long sequence, String type, String turnId, String outcome) {
         return new NativeEventView(sequence, UUID.randomUUID().toString(), type,
-                UUID.randomUUID().toString(), turnId, outcome, System.currentTimeMillis());
+                UUID.randomUUID().toString(), turnId, outcome, System.currentTimeMillis(),
+                java.util.Map.of());
     }
 }

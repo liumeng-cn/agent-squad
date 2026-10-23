@@ -129,4 +129,22 @@ public interface CompletionMapper {
             """)
     int blockForRecovery(@Param("userId") String userId, @Param("taskId") String taskId,
                          @Param("reason") String reason);
+
+    @Update("""
+            UPDATE sq_goal_task
+            SET status = #{status}, blocked_reason = #{reason}, version = version + 1
+            WHERE user_id = #{userId} AND task_id = #{taskId}
+              AND status IN ('QUEUED', 'RUNNING') AND cancel_requested_at IS NULL
+            """)
+    int waitForInteraction(@Param("userId") String userId, @Param("taskId") String taskId,
+                           @Param("status") String status, @Param("reason") String reason);
+
+    @Update("""
+            UPDATE sq_goal_task
+            SET status = 'RUNNING', blocked_reason = NULL, version = version + 1
+            WHERE user_id = #{userId} AND task_id = #{taskId}
+              AND status IN ('WAITING_APPROVAL', 'WAITING_INPUT')
+              AND cancel_requested_at IS NULL
+            """)
+    int resumeFromInteraction(@Param("userId") String userId, @Param("taskId") String taskId);
 }

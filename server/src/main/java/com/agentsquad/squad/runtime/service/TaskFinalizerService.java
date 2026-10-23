@@ -213,6 +213,45 @@ public class TaskFinalizerService {
     }
 
     /**
+     * 原生回合因受控交互挂起且已有开放交互时，任务进入对应等待态；
+     * 页面答复经 RESPOND 命令回填后由新一轮原生事件继续裁决。
+     */
+    @Transactional
+    public boolean waitForInteraction(ProjectionTarget target, NativeEventView event,
+                                      String status, String reason) {
+        FinalizationRow row = completionMapper.lockTask(target.userId(), target.taskId());
+        if (row == null || row.cancellationRequested()
+                || !GoalTaskStatus.RUNNING.name().equals(row.status())
+                && !GoalTaskStatus.QUEUED.name().equals(row.status())) {
+            return false;
+        }
+        if (completionMapper.waitForInteraction(row.userId(), row.taskId(), status, reason) != 1) {
+            throw new IllegalStateException("交互等待状态写入竞争");
+        }
+        publish(row, "recovery:interaction:" + target.bindingId() + ":" + event.eventId(),
+                "task.state_changed", Map.of("status", status, "version", row.version() + 1));
+        log.info("目标等待用户交互 taskId={} bindingId={} status={} interactionEvent={}",
+                row.taskId(), target.bindingId(), status, event.eventId());
+        return true;
+    }
+
+    /**
+     * 交互答复投递前把等待态目标转回 RUNNING，让恢复回合可以重新提交完成候选。
+     * 单条 CAS 自动提交；已不处于等待态时静默跳过，由回合结束裁决兜底。
+     */
+    public void resumeFromInteraction(String userId, String taskId) {
+        if (completionMapper.resumeFromInteraction(userId, taskId) == 1) {
+            FinalizationRow row = completionMapper.lockTask(userId, taskId);
+            if (row != null) {
+                publish(row, "control:interaction-resume:" + taskId + ":" + row.version(),
+                        "task.state_changed", Map.of("status", GoalTaskStatus.RUNNING.name(),
+                                "version", row.version()));
+                log.info("交互答复后目标恢复运行 taskId={}", taskId);
+            }
+        }
+    }
+
+    /**
      * 停止投递时发现原生会话已无活跃运行，就地取消目标并释放会话占用。
      */
     @Transactional

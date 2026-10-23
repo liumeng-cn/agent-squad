@@ -3,6 +3,8 @@ package com.agentsquad.squad.runtime.bridge;
 import com.agentsquad.squad.runtime.domain.DeliveryRow;
 import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
 import com.agentsquad.squad.runtime.domain.ProjectionTarget;
+import com.agentsquad.squad.tools.mock.MockLookupTool;
+import com.agentsquad.squad.tools.mock.MockTicketCreateTool;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.session.SessionEvent;
 import io.agentscope.core.tool.Toolkit;
@@ -40,6 +42,15 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
     @Resource
     private ProposeCompletionTool proposeCompletionTool;
 
+    @Resource
+    private MockLookupTool mockLookupTool;
+
+    @Resource
+    private MockTicketCreateTool mockTicketCreateTool;
+
+    @Resource
+    private RequestInputTool requestInputTool;
+
     @Value("${agentsquad.model.api-key:}")
     private String apiKey;
 
@@ -62,12 +73,19 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
                 .build();
         Toolkit toolkit = new Toolkit();
         toolkit.registerAgentTool(proposeCompletionTool);
+        toolkit.registerAgentTool(mockLookupTool);
+        toolkit.registerAgentTool(mockTicketCreateTool);
+        toolkit.registerAgentTool(requestInputTool);
         master = HarnessAgent.builder()
                 .agentId(MasterAgentIdentity.AGENT_ID)
                 .name("Squad Master")
-                .sysPrompt("你是多智能体平台的 Master。当前只处理无需外部工具的直接回答。"
-                        + "在回答目标之前，必须调用 propose_completion 提交 outcome 和完整 finalAnswer。"
-                        + "工具只保存候选；不要把回执当作用户答案。无法回答时明确说明缺少的信息。")
+                .sysPrompt("你是多智能体平台的 Master。当前可用的平台工具："
+                        + "mock_lookup 用于只读查询；mock_ticket_create 用于创建工单，"
+                        + "它需要用户在页面审批，调用后回合会挂起等待，不要重复提交，也不要伪造审批结果；"
+                        + "request_input 用于向用户追问补充信息，一次只提一个问题，不要假设用户已经回答。"
+                        + "所有写入必须带稳定的 intentKey，同业务重试复用同一 intentKey。"
+                        + "在回答目标之前，必须调用 propose_completion 提交 outcome 和完整 finalAnswer；"
+                        + "工具回执不是用户答案。无法回答时明确说明缺少的信息。")
                 .model(OpenAIChatModel.builder().apiKey(apiKey).baseUrl(baseUrl)
                         .modelName(modelName).build())
                 .toolkit(toolkit)
@@ -114,6 +132,25 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
         session.resume(turnId);
     }
 
+    /**
+     * 把用户答复注入挂起的外部执行请求；请求已消失按终局受理处理，会话非空闲则重试。
+     */
+    @Override
+    public String respond(DeliveryRow delivery, String requestId, String answerText) {
+        AgentSession session = sessionFor(delivery);
+        session.start();
+        try {
+            session.respond(requestId, answerText);
+        } catch (IllegalArgumentException exception) {
+            String message = exception.getMessage() == null ? "" : exception.getMessage();
+            if (message.contains("No pending interaction")) {
+                return "no-pending-request";
+            }
+            throw new IllegalStateException("原生答复请求无效: " + message, exception);
+        }
+        return "responded";
+    }
+
     private AgentSession sessionFor(DeliveryRow delivery) {
         if (!MasterAgentIdentity.AGENT_ID.equals(delivery.agentId())) {
             throw new IllegalStateException("未注册的 Master 能力版本");
@@ -148,7 +185,7 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
         Object status = "run/end".equals(event.type()) ? event.data().get("status") : null;
         return new NativeEventView(event.seq(), event.eventId(), event.type(),
                 event.executionRunId(), event.turnId(), status == null ? null : status.toString(),
-                event.occurredAt());
+                event.occurredAt(), event.data());
     }
 
     /**

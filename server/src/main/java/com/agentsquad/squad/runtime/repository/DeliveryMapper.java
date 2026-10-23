@@ -19,7 +19,7 @@ public interface DeliveryMapper {
 
     @Select("""
             SELECT command_id FROM sq_command
-            WHERE action IN ('SUBMIT', 'STOP', 'RESUME')
+            WHERE action IN ('SUBMIT', 'STOP', 'RESUME', 'RESPOND')
               AND ((status = 'PENDING' AND due_at <= #{now})
                    OR (status = 'DELIVERING' AND delivery_lease_until < #{now}))
             ORDER BY due_at, id LIMIT 20
@@ -31,7 +31,7 @@ public interface DeliveryMapper {
             SET status = 'DELIVERING', delivery_token = #{token},
                 delivery_lease_until = #{leaseUntil}, delivery_attempts = delivery_attempts + 1,
                 last_error_code = NULL
-            WHERE command_id = #{commandId} AND action IN ('SUBMIT', 'STOP', 'RESUME')
+            WHERE command_id = #{commandId} AND action IN ('SUBMIT', 'STOP', 'RESUME', 'RESPOND')
               AND ((status = 'PENDING' AND due_at <= #{now})
                    OR (status = 'DELIVERING' AND delivery_lease_until < #{now}))
             """)

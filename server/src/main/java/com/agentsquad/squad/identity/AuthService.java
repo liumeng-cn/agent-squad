@@ -57,14 +57,14 @@ public class AuthService {
     }
 
     /**
-     * 写请求须同时持有 Cookie 和登录时签发的 CSRF 值。
+     * 写请求须同时持有 Cookie 和登录时签发的 CSRF 值；返回完整主体供服务层取归属与角色。
      */
-    public String authenticateWrite(String token, String csrfToken) {
+    public AuthView authenticateWrite(String token, String csrfToken) {
         AuthView view = authenticate(token);
         if (csrfToken == null || !view.csrfToken().equals(csrfToken)) {
             throw new AuthenticationRequiredException();
         }
-        return view.userId();
+        return view;
     }
 
     /**

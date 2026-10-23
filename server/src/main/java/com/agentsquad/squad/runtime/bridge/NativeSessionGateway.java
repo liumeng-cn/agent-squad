@@ -22,5 +22,11 @@ public interface NativeSessionGateway {
      */
     void resume(DeliveryRow delivery, String turnId);
 
+    /**
+     * 把用户答复注入挂起的原生外部执行请求；返回原生受理状态，
+     * 请求已不存在等终局拒绝由实现以 IllegalStateException 之外的方式表达。
+     */
+    String respond(DeliveryRow delivery, String requestId, String answerText);
+
     List<NativeEventView> readEvents(ProjectionTarget target, long after, int limit);
 }

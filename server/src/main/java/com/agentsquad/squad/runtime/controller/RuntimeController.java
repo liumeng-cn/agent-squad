@@ -54,7 +54,7 @@ public class RuntimeController {
             @CookieValue(value = "SQUAD_SESSION", required = false) String token,
             @RequestHeader(value = "X-CSRF-Token", required = false) String csrfToken,
             @Valid @RequestBody ConversationCreateRequest request) {
-        return goalTaskService.createConversation(authService.authenticateWrite(token, csrfToken), request.title());
+        return goalTaskService.createConversation(authService.authenticateWrite(token, csrfToken).userId(), request.title());
     }
 
     /**
@@ -89,7 +89,7 @@ public class RuntimeController {
             @PathVariable String conversationId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @RequestHeader("If-Match") String ifMatch) {
-        conversationDeletionService.delete(authService.authenticateWrite(token, csrfToken),
+        conversationDeletionService.delete(authService.authenticateWrite(token, csrfToken).userId(),
                 conversationId, idempotencyKey, parseVersion(ifMatch));
     }
 
@@ -127,7 +127,7 @@ public class RuntimeController {
             @PathVariable String conversationId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody TaskCreateRequest request) {
-        return goalTaskService.submit(authService.authenticateWrite(token, csrfToken),
+        return goalTaskService.submit(authService.authenticateWrite(token, csrfToken).userId(),
                 conversationId, idempotencyKey, request.message());
     }
 
@@ -160,7 +160,7 @@ public class RuntimeController {
             @PathVariable String taskId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody ControlRequest request) {
-        return taskControlService.cancel(authService.authenticateWrite(token, csrfToken),
+        return taskControlService.cancel(authService.authenticateWrite(token, csrfToken).userId(),
                 taskId, idempotencyKey, request.expectedVersion());
     }
 
@@ -175,7 +175,7 @@ public class RuntimeController {
             @PathVariable String taskId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody ControlRequest request) {
-        return taskControlService.resume(authService.authenticateWrite(token, csrfToken),
+        return taskControlService.resume(authService.authenticateWrite(token, csrfToken).userId(),
                 taskId, idempotencyKey, request.expectedVersion());
     }
 

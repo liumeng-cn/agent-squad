@@ -3,11 +3,13 @@ package com.agentsquad.squad.runtime.service;
 import com.agentsquad.squad.runtime.domain.EventRow;
 import com.agentsquad.squad.runtime.domain.TaskRow;
 import com.agentsquad.squad.runtime.dto.AnswerView;
+import com.agentsquad.squad.runtime.dto.Interaction;
 import com.agentsquad.squad.runtime.dto.TaskResponse;
 import com.agentsquad.squad.runtime.dto.TaskSnapshot;
 import com.agentsquad.squad.runtime.repository.TaskEventMapper;
 import com.agentsquad.squad.runtime.repository.TaskMapper;
 import com.agentsquad.squad.runtime.util.RuntimePayloads;
+import com.agentsquad.squad.tools.interaction.InteractionQueryService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.List;
 
 /**
  * 任务快照服务；为详情页聚合目标状态、事件游标及当前答案占位。
@@ -34,13 +37,16 @@ public class TaskSnapshotService {
     private TaskEventMapper taskEventMapper;
 
     @Resource
+    private InteractionQueryService interactionQueryService;
+
+    @Resource
     private ObjectMapper objectMapper;
 
     /**
      * 读取当前用户单个任务快照；任务不存在时统一按 NOT_FOUND 处理。
      *
      * <p>答案文本取最新的 answer.completed 公开事件；无该事件时返回未完成的占位视图。
-     * 用户目标原文从规范化输入投影，供刷新后只读恢复聊天正文。</p>
+     * pending 取开放的持久交互，供详情页渲染追问卡与审批卡。</p>
      */
     public TaskSnapshot snapshot(String userId, String taskId) {
         TaskRow task = taskMapper.findOwned(userId, taskId);
@@ -53,11 +59,14 @@ public class TaskSnapshotService {
                 formatTime(task.cancelRequestedAt()), task.blockedReason(),
                 formatTime(task.createTime()), formatTime(task.lastUpdateTime()));
         AnswerView answer = buildAnswer(userId, taskId, task.answerRevision());
+        List<Interaction> pending = interactionQueryService.listOpenByTask(userId, taskId).stream()
+                .map(row -> interactionQueryService.viewOf(userId, row))
+                .toList();
         String cursor = taskId + ":" + maxSeq;
-        log.debug("任务快照生成 userId={} taskId={} seq={} answerCompleted={}",
-                userId, taskId, maxSeq, answer.completed());
+        log.debug("任务快照生成 userId={} taskId={} seq={} answerCompleted={} pending={}",
+                userId, taskId, maxSeq, answer.completed(), pending.size());
         return new TaskSnapshot(taskResponse, goalMessage(userId, taskId),
-                Collections.emptyList(), Collections.emptyList(), answer, cursor);
+                Collections.emptyList(), pending, answer, cursor);
     }
 
     /**

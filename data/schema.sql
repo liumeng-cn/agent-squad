@@ -159,7 +159,6 @@ CREATE TABLE `sq_runtime_binding` (
     `binding_id` CHAR(36) NOT NULL COMMENT '绑定业务ID',
     `user_id` CHAR(36) NOT NULL COMMENT '资源归属用户ID',
     `task_id` CHAR(36) NOT NULL COMMENT '所属目标ID',
-    `job_id` CHAR(36) NULL COMMENT 'Worker节点ID；Master为空',
     `role` VARCHAR(16) NOT NULL COMMENT '角色[MASTER/WORKER]',
     `namespace` VARCHAR(160) NOT NULL COMMENT '框架存储命名空间',
     `agent_id` VARCHAR(160) NOT NULL COMMENT '固定Agent能力版本标识',
@@ -312,6 +311,7 @@ CREATE TABLE `sq_connection` (
     `environment` VARCHAR(80) NOT NULL COMMENT '环境标识',
     `resource_policy_json` JSON NOT NULL COMMENT '受控资源范围',
     `secret_ref` VARCHAR(240) NOT NULL COMMENT '密钥管理引用；不含明文',
+    `create_idempotency_key` VARCHAR(160) NULL COMMENT '创建幂等键；同键同用户复用原连接',
     `revision` BIGINT NOT NULL DEFAULT 0 COMMENT '配置授权版本',
     `enabled` TINYINT NOT NULL DEFAULT 1 COMMENT '是否启用[0/1]',
     `creator_id` VARCHAR(36) NOT NULL DEFAULT '' COMMENT '创建人ID',
@@ -323,8 +323,19 @@ CREATE TABLE `sq_connection` (
     `del_flag` CHAR(1) NOT NULL DEFAULT '0' COMMENT '删除标志[0-否,1-是]',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_owner_connection` (`user_id`, `connection_id`),
+    UNIQUE KEY `uk_owner_create_idem` (`user_id`, `create_idempotency_key`),
     CONSTRAINT `ck_connection_del` CHECK (`del_flag` IN ('0', '1'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='用户外部连接凭据引用';
+
+CREATE TABLE `sq_secret_vault` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
+    `secret_ref` VARCHAR(240) NOT NULL COMMENT '密钥引用；格式 local-vault:keyId:uuid',
+    `key_id` VARCHAR(64) NOT NULL COMMENT '加密密钥版本ID；轮换期间新旧并存',
+    `cipher_bytes` VARBINARY(2048) NOT NULL COMMENT 'AES-GCM 密文；IV 前置',
+    `create_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_secret_ref` (`secret_ref`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='本地密钥保险库密文；不保存明文';
 
 CREATE TABLE `sq_operation` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
@@ -517,6 +528,19 @@ CREATE TABLE `sq_budget_reservation` (
     UNIQUE KEY `uk_usage` (`user_id`, `task_id`, `usage_key`),
     CONSTRAINT `ck_budget_reservation_del` CHECK (`del_flag` IN ('0', '1'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='全局预算预留及可信结算';
+
+-- 仅本地开发与 D2 验收使用的模拟外部系统；生产由真实连接器替换，不属于平台权威数据。
+CREATE TABLE `sq_mock_ticket` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
+    `user_id` CHAR(36) NOT NULL COMMENT '资源归属用户ID',
+    `external_key` VARCHAR(200) NOT NULL COMMENT '外部幂等键；同键同内容复用原单',
+    `request_hash` VARCHAR(64) NOT NULL COMMENT '请求参数摘要',
+    `title` VARCHAR(200) NOT NULL COMMENT '工单标题',
+    `detail` VARCHAR(2000) NOT NULL COMMENT '工单描述',
+    `create_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_mock_ticket_key` (`user_id`, `external_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='本地模拟外部工单系统';
 
 CREATE TABLE `sq_audit` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',

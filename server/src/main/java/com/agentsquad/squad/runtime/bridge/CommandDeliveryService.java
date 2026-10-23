@@ -88,6 +88,7 @@ public class CommandDeliveryService {
                 case SUBMIT -> deliverSubmit(commandId, token, delivery);
                 case STOP -> deliverStop(commandId, token, delivery);
                 case RESUME -> deliverResume(commandId, token, delivery);
+                case RESPOND -> deliverRespond(commandId, token, delivery);
                 case DELETE_CONVERSATION -> fail(commandId, token, delivery.attempts(), "UNDELIVERABLE_ACTION");
             }
         } catch (Exception exception) {
@@ -150,6 +151,23 @@ public class CommandDeliveryService {
             return;
         }
         saveReceipt(commandId, token, delivery, turnId, null, "resumed");
+    }
+
+    /**
+     * 投递交互答复；先让目标离开等待态，再注入答案驱动原生回合恢复。
+     * 原生请求已消失说明交互已被框架侧解析，按终局受理不再重试。
+     */
+    private void deliverRespond(String commandId, String token, DeliveryRow delivery) throws Exception {
+        JsonNode payload = RuntimePayloads.readJson(objectMapper, delivery.payloadJson());
+        String requestId = payload.path("requestId").textValue();
+        String answerText = payload.path("answerText").textValue();
+        if (requestId == null || requestId.isBlank() || answerText == null) {
+            retry(commandId, token, delivery.attempts(), "INVALID_PAYLOAD");
+            return;
+        }
+        taskFinalizerService.resumeFromInteraction(delivery.userId(), delivery.taskId());
+        String nativeStatus = nativeSessionGateway.respond(delivery, requestId, answerText);
+        saveReceipt(commandId, token, delivery, null, null, nativeStatus);
     }
 
     private void saveReceipt(String commandId, String token, DeliveryRow delivery,
