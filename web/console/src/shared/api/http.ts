@@ -38,6 +38,8 @@ export function apiDelete<T>(path: string, options: RequestOptions = {}): Promis
   return request<T>('DELETE', path, options)
 }
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
+
 async function request<T>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = {}
   if (options.body !== undefined) {
@@ -56,12 +58,14 @@ async function request<T>(method: string, path: string, options: RequestOptions 
     }
   }
 
+  const url = API_BASE ? `${API_BASE}${path}` : path
+
   let response: Response
   try {
-    response = await fetch(path, {
+    response = await fetch(url, {
       method,
       headers,
-      credentials: 'same-origin',
+      credentials: API_BASE ? 'include' : 'same-origin',
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
     })
   } catch {

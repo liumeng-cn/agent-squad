@@ -3,6 +3,10 @@ import { useAuthStore } from '../features/auth/stores/auth'
 
 const routes: RouteRecordRaw[] = [
   {
+    path: '/',
+    redirect: { name: 'workspace' },
+  },
+  {
     path: '/login',
     name: 'login',
     component: () => import('../features/auth/views/LoginView.vue'),
@@ -20,6 +24,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/:pathMatch(.*)*',
+    name: 'catchAll',
     redirect: { name: 'workspace' },
   },
 ]
@@ -31,7 +36,11 @@ export const router = createRouter({
 
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
-  const loggedIn = await auth.ensureSession()
+  // 给 ensureSession 加超时，避免 API 挂起阻塞导航
+  const loggedIn = await Promise.race([
+    auth.ensureSession(),
+    new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
+  ])
   if (!loggedIn && !(to.meta as { public?: boolean }).public) {
     return {
       name: 'login',

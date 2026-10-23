@@ -10,6 +10,7 @@ const app = createApp(App)
 const pinia = createPinia()
 app.use(pinia)
 app.use(router)
+app.mount('#app')
 
 // 会话中途失效（非路由守卫首次探测）时回登录页并保留回跳地址。
 onUnauthorized(() => {
@@ -25,5 +26,3 @@ onUnauthorized(() => {
     })
   }
 })
-
-app.mount('#app')
