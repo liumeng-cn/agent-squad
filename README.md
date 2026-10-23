@@ -1,4 +1,4 @@
-# 小队 · Agent Squad
+# Agent Squad
 
 通用多智能体运行底座。2026-10-20 独立重建；当前正在打通单 Master 正向链路，后续沿设计实现受控工具与多 Worker 协作。
 

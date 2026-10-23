@@ -48,7 +48,7 @@ const progressText = computed(() => {
         <div class="bubble bubble-user">{{ snapshot.goalMessage }}</div>
       </div>
       <div class="message-row message-row-assistant">
-        <span class="message-label">小队 <StatusBadge :status="snapshot.task.status" /></span>
+        <span class="message-label">Agent Squad <StatusBadge :status="snapshot.task.status" /></span>
         <div v-if="snapshot.answer.completed" class="bubble bubble-assistant">
           {{ snapshot.answer.text }}
         </div>
@@ -71,7 +71,7 @@ const progressText = computed(() => {
         <li v-for="item in milestones" :key="item.sequence">{{ item.text }}</li>
       </ul>
       <div v-if="runtime.answer?.completed && runtime.answer.text" class="message-row message-row-assistant">
-        <span class="message-label">小队 <StatusBadge :status="runtime.status ?? ''" /></span>
+        <span class="message-label">Agent Squad <StatusBadge :status="runtime.status ?? ''" /></span>
         <div class="bubble bubble-assistant">{{ runtime.answer.text }}</div>
       </div>
       <p v-if="runtime.streamError" class="banner-warning" role="alert">{{ runtime.streamError }}</p>

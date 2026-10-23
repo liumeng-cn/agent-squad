@@ -45,7 +45,7 @@ defineExpose({ openSidebar: () => (sidebarHidden.value = false) })
 <template>
   <aside class="sidebar" :class="{ 'hidden-narrow': sidebarHidden }">
     <div class="sidebar-header">
-      <p class="sidebar-brand">小队</p>
+      <p class="sidebar-brand">Agent Squad</p>
       <button class="btn btn-primary btn-block" :disabled="creating" @click="createConversation">
         {{ creating ? '创建中…' : '新建对话' }}
       </button>

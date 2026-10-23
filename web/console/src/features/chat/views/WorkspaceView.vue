@@ -127,7 +127,7 @@ onBeforeUnmount(() => {
       <TaskThread :history="conversations.historySnapshots">
         <div class="thread-empty">
           <span class="thread-empty-icon">✦</span>
-          <h2>把目标交给小队</h2>
+          <h2>让 Agent Squad 处理目标</h2>
           <p>写下你要解决的问题。任务进度与最终结果会保存在这个对话中。</p>
         </div>
       </TaskThread>

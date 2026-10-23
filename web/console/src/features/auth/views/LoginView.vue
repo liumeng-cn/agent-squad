@@ -34,7 +34,7 @@ async function submit(): Promise<void> {
 <template>
   <main class="login-page">
     <form class="login-card" @submit.prevent="submit">
-      <h1>小队工作台</h1>
+      <h1>Agent Squad 工作台</h1>
       <p class="login-subtitle">登录后继续你的任务</p>
       <label class="field">
         <span>账号</span>
