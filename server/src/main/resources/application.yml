@@ -25,6 +25,9 @@ agentsquad:
   delivery:
     enabled: ${SQUAD_DELIVERY_ENABLED:false}
     poll-delay-ms: ${SQUAD_DELIVERY_POLL_DELAY_MS:1000}
+  events:
+    poll-threads: ${SQUAD_EVENT_POLL_THREADS:4}
+    max-connections: ${SQUAD_EVENT_MAX_CONNECTIONS:100}
   model:
     api-key: ${SQUAD_MODEL_API_KEY:}
     base-url: ${SQUAD_MODEL_BASE_URL:}
