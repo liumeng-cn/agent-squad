@@ -258,6 +258,8 @@ public class InteractionService {
             return "用户拒绝执行该写入操作，未产生外部变更。请向用户确认后续安排。";
         }
         if (OperationStatus.SUCCEEDED.name().equals(operation.status())) {
+            // 外部调用成功后若答复事务回滚，重放时仍需补结预算；结算按预留状态幂等。
+            operationService.settle(operation, TICKET_RESERVED_UNITS);
             return "用户已批准，写入执行成功: " + operationExecutor.resultOf(operation);
         }
         if (!OperationStatus.WAITING_APPROVAL.name().equals(operation.status())) {

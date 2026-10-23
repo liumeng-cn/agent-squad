@@ -11,6 +11,8 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -41,8 +43,9 @@ public class OperationExecutor {
     private boolean faultAfterInflightExit;
 
     /**
-     * 执行账本操作并返回连接器结果 JSON；调用方决定连接器行为。
+     * 执行账本操作并返回连接器结果 JSON；暂停调用方事务，确保 IN_FLIGHT 在外部调用前独立提交。
      */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public String execute(OperationRow operation, ExternalCall externalCall) {
         String externalKey = "mock:" + operation.operationId();
         markInFlight(operation, externalKey);
