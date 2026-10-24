@@ -70,57 +70,19 @@ Web 页面 → Spring HTTP API → GoalTask / Command（MySQL）
 
 ```text
 com.agentsquad.squad
-├── identity/              认证、会话主体、登录
-│   └── controller/        AuthController
-├── conversation/          会话、任务、命令、投递
-│   ├── controller/        RuntimeController, ApiExceptionHandler
-│   ├── service/           GoalTask, TaskControl, ConversationDeletion, CleanupScheduler
-│   ├── domain/            ConversationRow, TaskRow, CommandRow, DeliveryRow 及状态枚举
-│   ├── dto/               请求/响应/回执 record
-│   └── repository/        ConversationMapper, TaskMapper, CommandMapper, BindingMapper, DeliveryMapper, TaskEventMapper
+├── identity/              认证、登录、会话主体
+├── conversation/          会话、任务、命令、投递的受理与控制
 ├── runtime/               运行协调：完成提案、终结、投影映射
-│   ├── service/           TaskFinalizer, CompletionProposal
-│   ├── domain/            CompletionContext, Event, Finalization, MasterAgentIdentity, NativeRunOutcome, ProjectionTarget
-│   └── repository/        CompletionMapper, ProjectionMapper
-├── presentation/          读投影：快照、事件流、交互视图
-│   ├── service/           TaskSnapshot, TaskEventStreamer (SSE)
-│   └── dto/               TaskSnapshot, TaskEventResponse, AnswerView, Interaction, WorkerJob 等
-├── interaction/           追问/审批交互（投递启用时生效）
-│   ├── controller/        InteractionController
-│   ├── service/           InteractionService, InteractionQueryService, BindingResult
-│   ├── domain/            InteractionRow
-│   ├── dto/               InteractionAnswerRequest
-│   └── repository/        InteractionMapper
-├── integration/agentscope/ AgentScope 框架适配
-│   ├── AgentScopeSessionGateway, NativeSessionGateway
-│   ├── CommandDeliveryService, NativeProjectionService, NativeProjectionPoller
-│   ├── ProposeCompletionTool, RequestInputTool
-│   └── NativeEventView, NativeSubmissionReceipt
-├── tools/                 业务工具
-│   ├── connection/        ConnectionService, LocalSecretVault (AES-256-GCM)
-│   ├── operation/         OperationService, OperationExecutor, OperationReconcileService
-│   │   ├── domain/        OperationRow, OperationLedgerRow, BudgetReservationRow
-│   │   ├── dto/           操作请求/响应 record
-│   │   └── repository/    OperationMapper, BudgetMapper
-│   ├── mock/              MockLookupTool, MockTicketConnector, MockTicketCreateTool
-│   ├── domain/            ToolDefinitionRow
-│   ├── dto/               工具定义 record
-│   └── repository/        ToolDefinitionMapper, ToolConnectionMapper
+├── presentation/          读投影：任务快照、事件流、SSE
+├── interaction/           追问与审批交互（投递启用时生效）
+├── integration/agentscope/ AgentScope 框架适配与会话网关
+├── tools/                 业务工具：连接管理、操作账本、预算、示例工具
 ├── worker/                Worker 能力定义与状态管理
-│   ├── controller/        WorkerDefinitionController
-│   ├── service/           WorkerDefinitionService
-│   ├── domain/            WorkerDefinitionRow, WorkerStatus
-│   ├── dto/               定义请求/响应 record
-│   └── repository/        WorkerDefinitionMapper
-├── governance/            配额与预算
-│   ├── BudgetService
-│   └── repository/        GovernanceMapper
-├── config/                WebConfig 等 Spring 配置
-└── common/                共享类型
-    ├── exception/         AuthenticationRequiredException, RuntimeBusinessException, RuntimeExceptionCode
-    └── util/              RuntimePayloads, ContentDigests
+├── governance/            配额与预算治理
+├── config/                Spring 配置
+└── common/                共享异常与工具类
 ```
 
-每个能力包内部按 controller → service → repository 分层；domain 放持久行对象，dto 放请求/响应 record，与持久对象分离。注入统一使用 `@Resource` 字段注入，不使用构造方法注入或 Lombok 生成注入构造器。
+每个能力包内部按 controller → service → repository 分层；domain 放持久行对象，dto 放请求/响应 record，与持久对象分离。注入统一使用 `@Resource` 字段注入，不使用构造方法注入。
 
 继续阅读：[范围与需求](docs/overview.md) · [架构与选型](docs/architecture.md) · [运行与恢复协议](docs/runtime-contract.md) · [模块设计](docs/modules/README.md) · [HTTP 契约](contracts/openapi.json) · [阶段验收](docs/acceptance-cases.md)。
