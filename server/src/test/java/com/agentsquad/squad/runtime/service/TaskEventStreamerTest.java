@@ -1,8 +1,10 @@
 package com.agentsquad.squad.runtime.service;
 
-import com.agentsquad.squad.runtime.domain.TaskRow;
-import com.agentsquad.squad.runtime.repository.TaskEventMapper;
-import com.agentsquad.squad.runtime.repository.TaskMapper;
+import com.agentsquad.squad.presentation.service.TaskEventStreamer;
+import com.agentsquad.squad.common.exception.RuntimeBusinessException;
+import com.agentsquad.squad.conversation.domain.TaskRow;
+import com.agentsquad.squad.conversation.repository.TaskEventMapper;
+import com.agentsquad.squad.conversation.repository.TaskMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;

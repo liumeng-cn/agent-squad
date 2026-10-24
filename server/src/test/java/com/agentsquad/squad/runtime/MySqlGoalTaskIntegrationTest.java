@@ -1,9 +1,9 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.runtime.dto.ConversationResponse;
-import com.agentsquad.squad.runtime.dto.TaskReceipt;
-import com.agentsquad.squad.runtime.service.GoalTaskService;
+import com.agentsquad.squad.conversation.dto.ConversationResponse;
+import com.agentsquad.squad.conversation.dto.TaskReceipt;
+import com.agentsquad.squad.conversation.service.GoalTaskService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.boot.SpringApplication;

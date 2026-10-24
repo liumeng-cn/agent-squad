@@ -1,6 +1,6 @@
 package com.agentsquad.squad.tools.mock;
 
-import com.agentsquad.squad.runtime.service.RuntimeBusinessException;
+import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.tools.operation.OperationService;
 import com.agentsquad.squad.tools.operation.PrepareRequest;
 import com.agentsquad.squad.tools.operation.domain.OperationRow;

@@ -1,14 +1,16 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.runtime.bridge.NativeEventView;
-import com.agentsquad.squad.runtime.bridge.NativeProjectionService;
+import com.agentsquad.squad.integration.agentscope.NativeEventView;
+import com.agentsquad.squad.integration.agentscope.NativeProjectionService;
+import com.agentsquad.squad.conversation.domain.*;
 import com.agentsquad.squad.runtime.domain.*;
+import com.agentsquad.squad.conversation.repository.*;
 import com.agentsquad.squad.runtime.repository.*;
 import com.agentsquad.squad.runtime.service.CompletionProposalService;
-import com.agentsquad.squad.runtime.service.GoalTaskService;
-import com.agentsquad.squad.runtime.service.TaskControlService;
-import com.agentsquad.squad.runtime.service.TaskSnapshotService;
+import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.conversation.service.TaskControlService;
+import com.agentsquad.squad.presentation.service.TaskSnapshotService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;

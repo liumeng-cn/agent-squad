@@ -1,9 +1,9 @@
 package com.agentsquad.squad.tools.mock;
 
-import com.agentsquad.squad.runtime.service.RuntimeBusinessException;
-import com.agentsquad.squad.runtime.service.RuntimeExceptionCode;
-import com.agentsquad.squad.runtime.util.ContentDigests;
-import com.agentsquad.squad.runtime.util.RuntimePayloads;
+import com.agentsquad.squad.common.exception.RuntimeBusinessException;
+import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.common.util.ContentDigests;
+import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.tools.operation.repository.MockTicketMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;

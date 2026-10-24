@@ -1,11 +1,14 @@
 package com.agentsquad.squad.runtime.service;
 
+import com.agentsquad.squad.common.exception.RuntimeBusinessException;
+import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+
 import com.agentsquad.squad.runtime.domain.CompletionContextRow;
-import com.agentsquad.squad.runtime.domain.GoalTaskStatus;
-import com.agentsquad.squad.runtime.dto.CompletionProposalReceipt;
+import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
+import com.agentsquad.squad.presentation.dto.CompletionProposalReceipt;
 import com.agentsquad.squad.runtime.repository.CompletionMapper;
-import com.agentsquad.squad.runtime.util.ContentDigests;
-import com.agentsquad.squad.runtime.util.RuntimePayloads;
+import com.agentsquad.squad.common.util.ContentDigests;
+import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

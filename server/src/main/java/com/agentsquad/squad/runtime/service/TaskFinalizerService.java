@@ -1,10 +1,12 @@
 package com.agentsquad.squad.runtime.service;
 
-import com.agentsquad.squad.runtime.bridge.NativeEventView;
+import com.agentsquad.squad.integration.agentscope.NativeEventView;
+import com.agentsquad.squad.conversation.domain.*;
 import com.agentsquad.squad.runtime.domain.*;
+import com.agentsquad.squad.conversation.repository.*;
 import com.agentsquad.squad.runtime.repository.*;
-import com.agentsquad.squad.runtime.util.ContentDigests;
-import com.agentsquad.squad.runtime.util.RuntimePayloads;
+import com.agentsquad.squad.common.util.ContentDigests;
+import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

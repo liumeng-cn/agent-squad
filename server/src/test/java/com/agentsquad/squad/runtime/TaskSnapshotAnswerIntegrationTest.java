@@ -1,10 +1,10 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.runtime.dto.TaskSnapshot;
-import com.agentsquad.squad.runtime.repository.TaskEventMapper;
-import com.agentsquad.squad.runtime.service.GoalTaskService;
-import com.agentsquad.squad.runtime.service.TaskSnapshotService;
+import com.agentsquad.squad.presentation.dto.TaskSnapshot;
+import com.agentsquad.squad.conversation.repository.TaskEventMapper;
+import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.presentation.service.TaskSnapshotService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
