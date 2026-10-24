@@ -2,7 +2,7 @@ package com.agentsquad.squad.runtime.domain;
 
 /**
  * 目标终态裁决快照。
- *
+ * <p>
  * 包含候选、取消屏障和纠正次数，供同一事务判断是否完成、取消或纠正。
  */
 public record FinalizationRow(String userId, String taskId, String conversationId,

@@ -57,7 +57,9 @@ public class MockTicketCreateTool implements AgentTool {
                 "additionalProperties", false);
     }
 
-    /** 写操作只做预检；挂起交给原生 external_execution，执行不在工具内。 */
+    /**
+     * 写操作只做预检；挂起交给原生 external_execution，执行不在工具内。
+     */
     @Override
     public Mono<ToolResultBlock> callAsync(ToolCallParam param) {
         return Mono.fromCallable(() -> prepare(param))

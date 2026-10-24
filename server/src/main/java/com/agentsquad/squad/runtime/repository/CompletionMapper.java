@@ -2,14 +2,11 @@ package com.agentsquad.squad.runtime.repository;
 
 import com.agentsquad.squad.runtime.domain.CompletionContextRow;
 import com.agentsquad.squad.runtime.domain.FinalizationRow;
-import org.apache.ibatis.annotations.Arg;
-import org.apache.ibatis.annotations.ConstructorArgs;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
+import org.apache.ibatis.annotations.*;
 
-/** Master 完成候选和最终状态裁决的 SQL 边界。 */
+/**
+ * Master 完成候选和最终状态裁决的 SQL 边界。
+ */
 @Mapper
 public interface CompletionMapper {
 

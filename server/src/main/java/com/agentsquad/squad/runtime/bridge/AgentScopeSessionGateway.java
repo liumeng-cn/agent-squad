@@ -23,8 +23,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitialization;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import javax.sql.DataSource;
+import java.util.List;
 
 /**
  * 当前 Master 的 AgentScope 原生会话适配器。
@@ -62,7 +62,9 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
 
     private HarnessAgent master;
 
-    /** 启用投递前检查模型配置和 Flyway 表结构，再创建长生命周期 Master。 */
+    /**
+     * 启用投递前检查模型配置和 Flyway 表结构，再创建长生命周期 Master。
+     */
     @PostConstruct
     public void initialize() {
         if (apiKey.isBlank() || baseUrl.isBlank() || modelName.isBlank()) {

@@ -2,6 +2,8 @@
 
 WorkerDefinition 描述能力版本，不等于实例或 Skill。发布包含 workerKey/version、description、inputSchema/outputSchema、toolAllowlist、modelProfileKey、runtimeProfileKey；只有管理员可发布不可变版本，停用只改状态，安全撤销阻止在途新调用。
 
+当前 D3 第一切片已实现定义发布、分页查询和状态更新：发布键按管理员主体幂等，同一 workerKey/version 不可重复，状态用 expectedVersion 乐观更新，REVOKED 不可恢复。服务端限制定义大小、Schema 深度及工具名格式。当前本地账号可通过 `SQUAD_LOCAL_ROLE` 配置管理员角色；这一步只管理能力元数据，尚未接入 Plan、WorkerFactory 或实际派发，不能把 ENABLED 解读为 Worker 已能执行。
+
 ## 接口与执行端口
 
 GET/POST /api/v1/worker-definitions；PATCH /worker-definitions/{definitionId} 更新状态。GET /tasks/{taskId}/jobs 查询脱敏 Job 列表。没有公共或内部远程 steps/checkpoints API；SDK 自己保存局部执行过程。

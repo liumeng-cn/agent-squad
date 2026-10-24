@@ -1,16 +1,8 @@
 package com.agentsquad.squad.runtime.service;
 
 import com.agentsquad.squad.runtime.bridge.NativeEventView;
-import com.agentsquad.squad.runtime.domain.FinalizationRow;
-import com.agentsquad.squad.runtime.domain.GoalTaskStatus;
-import com.agentsquad.squad.runtime.domain.NativeRunOutcome;
-import com.agentsquad.squad.runtime.domain.ProjectionTarget;
-import com.agentsquad.squad.runtime.domain.RuntimeCommandAction;
-import com.agentsquad.squad.runtime.repository.CompletionMapper;
-import com.agentsquad.squad.runtime.repository.CommandMapper;
-import com.agentsquad.squad.runtime.repository.ConversationMapper;
-import com.agentsquad.squad.runtime.repository.ProjectionMapper;
-import com.agentsquad.squad.runtime.repository.TaskEventMapper;
+import com.agentsquad.squad.runtime.domain.*;
+import com.agentsquad.squad.runtime.repository.*;
 import com.agentsquad.squad.runtime.util.ContentDigests;
 import com.agentsquad.squad.runtime.util.RuntimePayloads;
 import com.fasterxml.jackson.core.JsonProcessingException;

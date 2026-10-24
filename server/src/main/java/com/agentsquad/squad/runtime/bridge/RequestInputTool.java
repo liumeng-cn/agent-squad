@@ -43,7 +43,9 @@ public class RequestInputTool implements AgentTool {
                 "additionalProperties", false);
     }
 
-    /** 只负责把追问挂起；账本与绑定发生在平台投影层。 */
+    /**
+     * 只负责把追问挂起；账本与绑定发生在平台投影层。
+     */
     @Override
     public Mono<ToolResultBlock> callAsync(ToolCallParam param) {
         return Mono.fromCallable(() -> suspend(param))

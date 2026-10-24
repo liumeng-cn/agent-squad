@@ -36,3 +36,4 @@ agentsquad:
     username: ${SQUAD_LOCAL_USER:}
     password: ${SQUAD_LOCAL_PASSWORD:}
     user-id: ${SQUAD_LOCAL_USER_ID:00000000-0000-0000-0000-000000000001}
+    role: ${SQUAD_LOCAL_ROLE:ADMIN}

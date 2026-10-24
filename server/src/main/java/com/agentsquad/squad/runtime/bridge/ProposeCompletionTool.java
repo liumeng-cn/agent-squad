@@ -51,7 +51,9 @@ public class ProposeCompletionTool implements AgentTool {
                 "additionalProperties", false);
     }
 
-    /** 数据库调用放在 boundedElastic；业务拒绝作为工具错误反馈模型，不泄露答案正文。 */
+    /**
+     * 数据库调用放在 boundedElastic；业务拒绝作为工具错误反馈模型，不泄露答案正文。
+     */
     @Override
     public Mono<ToolResultBlock> callAsync(ToolCallParam param) {
         return Mono.fromCallable(() -> submit(param))

@@ -248,6 +248,11 @@ CREATE TABLE `sq_worker_definition` (
     `status` VARCHAR(16) NOT NULL COMMENT 'ENABLED/DISABLED/REVOKED',
     `version` BIGINT NOT NULL DEFAULT 0 COMMENT '状态乐观版本',
     `definition_json` JSON NOT NULL COMMENT 'WorkerDefinitionCreate完整结构',
+    `publish_key` VARCHAR(160) NOT NULL COMMENT '发布幂等键',
+    `payload_hash` CHAR(64) NOT NULL COMMENT '发布内容SHA256摘要',
+    `last_status_key` VARCHAR(160) NULL COMMENT '最近一次状态修改幂等键',
+    `last_status_actor` VARCHAR(36) NULL COMMENT '最近一次状态修改主体ID',
+    `last_status_hash` CHAR(64) NULL COMMENT '最近一次状态修改内容摘要',
     `creator_id` VARCHAR(36) NOT NULL DEFAULT '' COMMENT '创建人ID',
     `creator_name` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '创建人姓名',
     `create_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
@@ -258,6 +263,9 @@ CREATE TABLE `sq_worker_definition` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_definition` (`definition_id`),
     UNIQUE KEY `uk_worker_version` (`worker_key`, `worker_version`),
+    UNIQUE KEY `uk_worker_publish` (`creator_id`, `publish_key`),
+    KEY `idx_worker_status` (`status`, `id`),
+    CONSTRAINT `ck_worker_definition_status` CHECK (`status` IN ('ENABLED', 'DISABLED', 'REVOKED')),
     CONSTRAINT `ck_worker_definition_del` CHECK (`del_flag` IN ('0', '1'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='不可变Worker能力定义';
 

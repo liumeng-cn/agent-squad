@@ -1,24 +1,8 @@
 package com.agentsquad.squad.runtime.service;
 
-import com.agentsquad.squad.runtime.domain.CommandRow;
-import com.agentsquad.squad.runtime.domain.ConversationStatus;
-import com.agentsquad.squad.runtime.domain.ConversationRow;
-import com.agentsquad.squad.runtime.domain.EventRow;
-import com.agentsquad.squad.runtime.domain.GoalTaskStatus;
-import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
-import com.agentsquad.squad.runtime.domain.TaskRow;
-import com.agentsquad.squad.runtime.dto.CommandResponse;
-import com.agentsquad.squad.runtime.dto.ConversationPage;
-import com.agentsquad.squad.runtime.dto.ConversationResponse;
-import com.agentsquad.squad.runtime.dto.GoalTaskPage;
-import com.agentsquad.squad.runtime.dto.TaskEventResponse;
-import com.agentsquad.squad.runtime.dto.TaskReceipt;
-import com.agentsquad.squad.runtime.dto.TaskResponse;
-import com.agentsquad.squad.runtime.repository.BindingMapper;
-import com.agentsquad.squad.runtime.repository.CommandMapper;
-import com.agentsquad.squad.runtime.repository.ConversationMapper;
-import com.agentsquad.squad.runtime.repository.TaskEventMapper;
-import com.agentsquad.squad.runtime.repository.TaskMapper;
+import com.agentsquad.squad.runtime.domain.*;
+import com.agentsquad.squad.runtime.dto.*;
+import com.agentsquad.squad.runtime.repository.*;
 import com.agentsquad.squad.runtime.util.ContentDigests;
 import com.agentsquad.squad.runtime.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;

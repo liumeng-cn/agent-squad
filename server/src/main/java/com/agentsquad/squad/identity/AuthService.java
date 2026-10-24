@@ -26,6 +26,9 @@ public class AuthService {
     @Value("${agentsquad.auth.user-id}")
     private String configuredUserId;
 
+    @Value("${agentsquad.auth.role:ADMIN}")
+    private String configuredRole;
+
     private final Map<String, AuthSession> sessions = new ConcurrentHashMap<>();
 
     /**
@@ -37,7 +40,7 @@ public class AuthService {
             throw new AuthenticationRequiredException();
         }
         String token = UUID.randomUUID().toString();
-        sessions.put(token, new AuthSession(configuredUserId, username, "USER",
+        sessions.put(token, new AuthSession(configuredUserId, username, configuredRole,
                 UUID.randomUUID().toString()));
         return token;
     }

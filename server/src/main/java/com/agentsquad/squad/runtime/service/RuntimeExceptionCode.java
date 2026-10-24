@@ -5,6 +5,7 @@ package com.agentsquad.squad.runtime.service;
  */
 public enum RuntimeExceptionCode {
     NOT_FOUND,
+    FORBIDDEN,
     CONFLICT,
     VALIDATION
 }

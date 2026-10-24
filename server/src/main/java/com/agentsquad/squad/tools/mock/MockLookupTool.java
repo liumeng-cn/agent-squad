@@ -57,7 +57,9 @@ public class MockLookupTool implements AgentTool {
                 "additionalProperties", false);
     }
 
-    /** 读操作直接执行并出账；账本异常作为工具错误反馈模型。 */
+    /**
+     * 读操作直接执行并出账；账本异常作为工具错误反馈模型。
+     */
     @Override
     public Mono<ToolResultBlock> callAsync(ToolCallParam param) {
         return Mono.fromCallable(() -> lookup(param))

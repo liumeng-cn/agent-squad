@@ -2,21 +2,13 @@ package com.agentsquad.squad.runtime.controller;
 
 import com.agentsquad.squad.identity.AuthService;
 import com.agentsquad.squad.runtime.dto.*;
-import com.agentsquad.squad.runtime.service.ConversationDeletionService;
-import com.agentsquad.squad.runtime.service.GoalTaskService;
-import com.agentsquad.squad.runtime.service.RuntimeBusinessException;
-import com.agentsquad.squad.runtime.service.RuntimeExceptionCode;
-import com.agentsquad.squad.runtime.service.TaskControlService;
-import com.agentsquad.squad.runtime.service.TaskEventStreamer;
-import com.agentsquad.squad.runtime.service.TaskSnapshotService;
+import com.agentsquad.squad.runtime.service.*;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-
-import java.util.List;
 
 /**
  * 目标受理和查询 HTTP 边界。用户归属只取认证会话，不接受可伪造的身份请求头。

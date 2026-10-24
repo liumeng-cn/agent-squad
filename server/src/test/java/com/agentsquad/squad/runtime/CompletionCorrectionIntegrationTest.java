@@ -3,22 +3,11 @@ package com.agentsquad.squad.runtime;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.runtime.bridge.NativeEventView;
 import com.agentsquad.squad.runtime.bridge.NativeProjectionService;
-import com.agentsquad.squad.runtime.domain.GoalTaskStatus;
-import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
-import com.agentsquad.squad.runtime.domain.NativeRunOutcome;
-import com.agentsquad.squad.runtime.domain.ProjectionTarget;
-import com.agentsquad.squad.runtime.domain.RuntimeCommandStatus;
-import com.agentsquad.squad.runtime.repository.BindingMapper;
-import com.agentsquad.squad.runtime.repository.CommandMapper;
-import com.agentsquad.squad.runtime.repository.CompletionMapper;
-import com.agentsquad.squad.runtime.repository.ConversationMapper;
-import com.agentsquad.squad.runtime.repository.DeliveryMapper;
-import com.agentsquad.squad.runtime.repository.ProjectionMapper;
-import com.agentsquad.squad.runtime.repository.TaskEventMapper;
-import com.agentsquad.squad.runtime.repository.TaskMapper;
+import com.agentsquad.squad.runtime.domain.*;
+import com.agentsquad.squad.runtime.repository.*;
 import com.agentsquad.squad.runtime.service.CompletionProposalService;
-import com.agentsquad.squad.runtime.service.TaskControlService;
 import com.agentsquad.squad.runtime.service.GoalTaskService;
+import com.agentsquad.squad.runtime.service.TaskControlService;
 import com.agentsquad.squad.runtime.service.TaskSnapshotService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -233,7 +222,9 @@ class CompletionCorrectionIntegrationTest {
         }
     }
 
-    /** 取消意图先于原生失败时，不能覆盖为恢复阻塞。 */
+    /**
+     * 取消意图先于原生失败时，不能覆盖为恢复阻塞。
+     */
     @Test
     void shouldCancelInsteadOfBlockingFailedRun(@TempDir Path tempDirectory) {
         try (ConfigurableApplicationContext context = start(tempDirectory)) {

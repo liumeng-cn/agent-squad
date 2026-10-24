@@ -1,6 +1,9 @@
 package com.agentsquad.squad.tools.operation.repository;
 
-import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 
 /**
  * 本地模拟外部工单系统 SQL 边界；只用于 D2 受控写入与故障注入验证。
