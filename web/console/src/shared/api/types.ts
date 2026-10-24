@@ -1,5 +1,5 @@
 /**
- * 后端公开 DTO 的 TypeScript 镜像；字段名与 contracts/openapi.json 保持一致。
+ * 后端公开 DTO 的 TypeScript 镜像；字段名与 api/openapi.json 保持一致。
  */
 
 export interface AuthView {

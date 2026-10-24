@@ -5,19 +5,19 @@
 - 设计阶段已结束，用户授权按 D0–D6 分阶段实现；每个阶段验证后提交。尚未实现的能力如实标记，不以测试探针冒充正式运行链路。
 - 项目定位为多智能体运行技术底座；不得再次将云效、车辆、Skill 页面或普通聊天工作台作为架构中心。
 - 设计细化到用例步骤、请求响应字段、数据结构、状态转换、事务与故障恢复；不能只列组件名。
-- docs/overview.md 定义范围，docs/modules/ 定义行为，contracts/openapi.json 定义传输结构，data/schema.sql 定义拟议存储。变更时同步检查，不复制多套现行方案。
+- openspec/specs/ 定义能力与行为（R01–R12），api/openapi.json 定义传输结构，server/src/main/resources/db/migration/ 定义实际存储。变更时同步检查，不复制多套现行方案。
 - 旧项目只读参考；没有兼容义务。不自动迁入其服务、迁移、界面、私有配置或未提交改动。
 - Java 采用可读的 Controller → Service → Repository/Mapper 分层，DTO 与持久对象分离；功能类和关键方法写中文职责注释，四空格缩进，控制语句有花括号，不用通配符导入。
 - 表与字段有中文注释，业务 ID 与存储主键分离，公共审计字段统一；不因当前为开发期就自动清理任何实际数据库。
 - 本地实现与验证已获授权；真实模型、外部发布和生产系统操作仍按对应任务范围执行。
 
-- 整体技术基线以 docs/architecture.md 为准，目标源码与部署结构以 docs/project-structure.md 为准；目前均为待验证的设计，不提前创建应用。
+- 整体技术基线、目标源码与部署结构以 openspec/config.yaml 的 context 约束与 openspec/specs/ 为准；目前均为待验证的设计，不提前创建应用。
 
-- Java + AgentScope 路线以 decisions/002-agentscope-java.md 和 docs/research/agentscope-java.md 为依据；模块、OpenAPI、DDL 已按v0.2重映射，仍不得因设计文件齐全自动生成应用。保持 R01–R12，不混用稳定版与预发布 API。
+- Java + AgentScope 路线以 openspec/config.yaml 的 AgentScope 固定版本约束为依据；模块、OpenAPI、DDL 已按v0.2重映射，仍不得因设计文件齐全自动生成应用。保持 R01–R12，不混用稳定版与预发布 API。
 
-- 运行权威、对象映射与故障窗口以 docs/runtime-contract.md 和 ADR-003 为准；设计检查覆盖不等于行为/生产验证。
+- 运行权威、对象映射与故障窗口以 openspec/specs/runtime 与 openspec/config.yaml 的运行权威约束为准；设计检查覆盖不等于行为/生产验证。
 
-- Web工作台是一期交付，路由/交互/API对应以docs/web-console.md和contracts/ui-manifest.json为准；不与暂缓的Skill生成页面混淆。开发顺序见docs/predevelopment.md。
+- Web工作台是一期交付，路由/交互/API对应以 openspec/specs/web-console 和 api/ui-manifest.json 为准；不与暂缓的Skill生成页面混淆。开发顺序见 openspec/changes/（d3–d6）。
 
 ## Spring代码约定（用户明确要求）
 

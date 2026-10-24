@@ -1,0 +1,50 @@
+{
+  "version": "0.2.1",
+  "sdkEvaluationVersion": "2.1.0-BETA1",
+  "sdkCommit": "5451c73abe47053340683a1cc6d67b290b056648",
+  "status": "design-only-not-runtime-validated",
+  "requirements": [
+    "R01",
+    "R02",
+    "R03",
+    "R04",
+    "R05",
+    "R06",
+    "R07",
+    "R08",
+    "R09",
+    "R10",
+    "R11",
+    "R12"
+  ],
+  "modules": {
+    "M01": [
+      "sq_conversation"
+    ],
+    "M02": [
+      "sq_goal_task",
+      "sq_runtime_binding",
+      "sq_command"
+    ],
+    "M03": [],
+    "M04": [
+      "sq_worker_definition"
+    ],
+    "M05": [],
+    "M06": [],
+    "M07": [
+      "sq_connection",
+      "sq_secret_vault",
+      "sq_operation",
+      "sq_mock_ticket",
+      "sq_interaction"
+    ],
+    "M08": [
+      "sq_task_event",
+      "sq_budget_reservation"
+    ]
+  },
+  "plannedOperationCount": 38,
+  "plannedSchemaCount": 59,
+  "plannedBusinessTableCount": 12
+}

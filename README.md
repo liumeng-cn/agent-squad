@@ -16,7 +16,7 @@ Agent Squad 是一个面向 Web 的多智能体运行底座。用户提交目标
 | D5 沙箱与交付 | 未开发 | 隔离执行、产物与完整预算 |
 | D6 集成发布 | 未开发 | 多副本、备份恢复、负载与安全回归 |
 
-普通问答由 Master 直接处理，不委派 Worker；每次提问仍先作为任务受理，再由后台执行。D1 的真实模型回答、A02/A03 进程故障注入和页面人工验收，以及 D2 的 A07/A08/B05/B06/B09 端到端链路，均有本地 Java + Docker MySQL 证据。现有 Web 页面仍以 D1 聊天和任务详情为主，缺少连接设置、追问/审批卡及操作核对入口。当前版本是开发中的底座，不作为生产平台使用。[D1 证据](docs/d1-evidence.md) · [D2 证据与限制](docs/d2-evidence.md)
+普通问答由 Master 直接处理，不委派 Worker；每次提问仍先作为任务受理，再由后台执行。D1 的真实模型回答、A02/A03 进程故障注入和页面人工验收，以及 D2 的 A07/A08/B05/B06/B09 端到端链路，均有本地 Java + Docker MySQL 证据。现有 Web 页面仍以 D1 聊天和任务详情为主，缺少连接设置、追问/审批卡及操作核对入口。当前版本是开发中的底座，不作为生产平台使用。
 
 当前设计静态检查还指出两张 D2 表（`sq_secret_vault`、`sq_mock_ticket`）缺少统一审计字段；设计快照和已编号迁移均存在此问题。修正时需新增迁移并核对已有数据，不能直接改写历史迁移。
 
@@ -64,7 +64,7 @@ Web 页面 → Spring HTTP API → GoalTask / Command（MySQL）
                  原生日志投影 → 任务事件 / 快照 / SSE
 ```
 
-`server/` 是 Java 服务，`web/console/` 是 Vue 工作台，`contracts/` 放公共 API 契约，`data/` 放数据设计，`docs/` 放架构、模块方案和验证记录。`data/schema.sql` 是设计快照；实际数据库结构以 `server/src/main/resources/db/migration/` 的 Flyway 迁移为准。
+`server/` 是 Java 服务，`web/console/` 是 Vue 工作台，`api/` 放接口契约（OpenAPI 与配置 Schema），`openspec/` 放能力 spec、变更计划与稳定约束。数据库结构以 `server/src/main/resources/db/migration/` 的 Flyway 迁移为唯一权威。
 
 ### Java 服务包结构
 
@@ -85,4 +85,4 @@ com.agentsquad.squad
 
 每个能力包内部按 controller → service → repository 分层；domain 放持久行对象，dto 放请求/响应 record，与持久对象分离。注入统一使用 `@Resource` 字段注入，不使用构造方法注入。
 
-继续阅读：[范围与需求](docs/overview.md) · [架构与选型](docs/architecture.md) · [运行与恢复协议](docs/runtime-contract.md) · [模块设计](docs/modules/README.md) · [HTTP 契约](contracts/openapi.json) · [阶段验收](docs/acceptance-cases.md)。
+继续阅读：[规划与设计](openspec/README.md) · [接口契约](api/openapi.json)。

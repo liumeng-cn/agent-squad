@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def check():
-    spec = json.loads((ROOT / "contracts/openapi.json").read_text())
+    spec = json.loads((ROOT / "api/openapi.json").read_text())
     assert spec["openapi"] == "3.0.3"
     operations = []
 
@@ -47,14 +47,25 @@ def check():
                 continue
             assert (path.parent / target.split("#")[0]).exists(), (path, target)
 
-    sql = (ROOT / "data/schema.sql").read_text()
-    definitions = re.findall(r"CREATE TABLE `(\w+)` \((.*?)\n\) ENGINE", sql, re.S)
-    columns = {
-        name: set(re.findall(r"^    `(\w+)` ", body, re.M))
-        for name, body in definitions
+    sql = (ROOT / "server/src/main/resources/db/migration/V1__baseline.sql").read_text()
+    definitions = re.findall(r"CREATE TABLE (\w+)\s*\((.*?)\n\) ENGINE", sql, re.S)
+    business = [(name, body) for name, body in definitions if name.startswith("sq_")]
+    non_column_tokens = {
+        "PRIMARY", "UNIQUE", "KEY", "CONSTRAINT", "CHECK", "FOREIGN", "INDEX",
+        "REFERENCES", "ON", "ADD", "DROP", "ALTER",
     }
-    assert len(definitions) == len(columns)
-    for name, body in definitions:
+
+    def column_names(body):
+        names = set()
+        for line in body.splitlines():
+            match = re.match(r"    (\w+)\s+", line)
+            if match and match.group(1).upper() not in non_column_tokens:
+                names.add(match.group(1))
+        return names
+
+    columns = {name: column_names(body) for name, body in business}
+    assert len(business) == len(columns)
+    for name, body in business:
         assert {
             "id",
             "creator_id",
@@ -64,28 +75,30 @@ def check():
             "last_updater_name",
             "last_update_time",
             "del_flag",
-        } <= columns[name]
-        for line in body.splitlines():
-            if re.match(r"    `\w+` ", line):
-                assert "COMMENT " in line, (name, line)
-    foreign_keys = re.findall(
-        r"ALTER TABLE `(\w+)` ADD CONSTRAINT `([^`]+)` FOREIGN KEY \(([^)]+)\) REFERENCES `(\w+)` \(([^)]+)\)",
-        sql,
-    )
+        } <= columns[name], (name, "缺少统一审计字段")
+        for column in columns[name]:
+            assert re.search(rf"^    {column}\s+.*COMMENT", body, re.M), (name, column)
+
+    bodies = dict(business)
+    foreign_keys = []
+    for name, body in business:
+        for match in re.finditer(
+            r"CONSTRAINT (\w+)\s+FOREIGN KEY\s*\(([^)]*)\)\s*REFERENCES\s+(\w+)\s*\(([^)]*)\)",
+            body,
+        ):
+            foreign_keys.append(
+                (name, match.group(1), match.group(2), match.group(3), match.group(4))
+            )
     assert len({row[1] for row in foreign_keys}) == len(foreign_keys)
     for source, _, source_columns, target, target_columns in foreign_keys:
-        assert set(re.findall(r"`(\w+)`", source_columns)) <= columns[source]
-        assert set(re.findall(r"`(\w+)`", target_columns)) <= columns[target]
-        assert len(re.findall(r"`(\w+)`", source_columns)) == len(
-            re.findall(r"`(\w+)`", target_columns)
-        )
-        target_keys = dict(definitions)[target]
+        source_cols = set(re.findall(r"\w+", source_columns))
+        target_cols = set(re.findall(r"\w+", target_columns))
+        assert source_cols <= columns[source], (source, source_columns)
+        assert target_cols <= columns[target], (target, target_columns)
+        assert len(source_cols) == len(target_cols)
         assert any(
-            re.findall(r"`(\w+)`", key_columns)
-            == re.findall(r"`(\w+)`", target_columns)
-            for key_columns in re.findall(
-                r"UNIQUE KEY `[^`]+` \(([^)]+)\)", target_keys
-            )
+            set(re.findall(r"\w+", key_columns)) == target_cols
+            for key_columns in re.findall(r"UNIQUE KEY \w+ \(([^)]*)\)", bodies[target])
         ), (source, target, target_columns)
     assert not re.search(r"^\s*(DROP|TRUNCATE|CREATE DATABASE)\b", sql, re.M | re.I)
 
@@ -96,7 +109,7 @@ def check():
         raise SystemExit(
             "Install jsonschema in a design tooling environment to validate examples"
         ) from error
-    examples = json.loads((ROOT / "contracts/examples.json").read_text())["examples"]
+    examples = json.loads((ROOT / "api/examples.json").read_text())["examples"]
     for example in examples:
         schema = {
             "$ref": "#/components/schemas/" + example["schema"],
@@ -106,7 +119,7 @@ def check():
             example["value"]
         )
     invalid_examples = json.loads(
-        (ROOT / "contracts/invalid-examples.json").read_text()
+        (ROOT / "api/invalid-examples.json").read_text()
     )["examples"]
     for example in invalid_examples:
         schema = {
@@ -117,7 +130,7 @@ def check():
             example["value"]
         ), example["reason"]
 
-    manifest = json.loads((ROOT / "contracts/design-manifest.json").read_text())
+    manifest = json.loads((ROOT / "api/design-manifest.json").read_text())
     assert manifest["plannedOperationCount"] == len(operations)
     assert manifest["plannedSchemaCount"] == len(spec["components"]["schemas"])
     assert manifest["plannedBusinessTableCount"] == len(columns)
@@ -126,10 +139,12 @@ def check():
     ]
     assert len(owned_tables) == len(set(owned_tables))
     assert set(owned_tables) == set(columns)
-    traceability = json.loads((ROOT / "contracts/traceability.json").read_text())
+    traceability = json.loads((ROOT / "api/traceability.json").read_text())
     assert set(traceability) == set(manifest["requirements"])
-    cases = (ROOT / "docs/acceptance-cases.md").read_text()
-    overview = (ROOT / "docs/overview.md").read_text()
+    spec_files = sorted((ROOT / "openspec" / "specs").glob("*/spec.md"))
+    specs_text = "\n".join(p.read_text() for p in spec_files)
+    cases = specs_text
+    overview = specs_text
     for requirement, trace in traceability.items():
         assert requirement in overview
         assert trace["modules"] and trace["cases"] and trace["schemas"]
@@ -140,8 +155,8 @@ def check():
     assert not any(path.startswith("/internal/") for path in spec["paths"])
     assert not {"sq_run", "sq_step", "sq_checkpoint"} & set(columns)
 
-    ui_manifest = json.loads((ROOT / "contracts/ui-manifest.json").read_text())
-    web_design = (ROOT / "docs/web-console.md").read_text()
+    ui_manifest = json.loads((ROOT / "api/ui-manifest.json").read_text())
+    web_design = (ROOT / "openspec" / "specs" / "web-console" / "spec.md").read_text()
     pages = ui_manifest["routes"]
     assert len({page["page"] for page in pages}) == len(pages)
     assert len({page["route"] for page in pages}) == len(pages)
@@ -158,7 +173,7 @@ def check():
         (parameter["in"], parameter["name"]) for parameter in sse["parameters"]
     }
 
-    identities = json.loads((ROOT / "contracts/runtime-identifiers.json").read_text())
+    identities = json.loads((ROOT / "api/runtime-identifiers.json").read_text())
 
     def encode_identity(value):
         return "s_" + base64.urlsafe_b64encode(value.encode()).decode().rstrip("=")
@@ -181,9 +196,9 @@ def check():
         len("/".join(identities["namespace"])) <= identities["maxNamespaceCharacters"]
     )
     config_schema = json.loads(
-        (ROOT / "contracts/runtime-config.schema.json").read_text()
+        (ROOT / "api/runtime-config.schema.json").read_text()
     )
-    config = json.loads((ROOT / "contracts/runtime-config.example.json").read_text())
+    config = json.loads((ROOT / "api/runtime-config.example.json").read_text())
     Draft202012Validator.check_schema(config_schema)
     Draft202012Validator(config_schema, format_checker=FormatChecker()).validate(config)
     database = config["database"]
