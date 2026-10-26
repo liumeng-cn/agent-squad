@@ -34,6 +34,10 @@ export function apiPost<T>(path: string, body?: unknown, options: RequestOptions
   return request<T>('POST', path, { ...options, body })
 }
 
+export function apiPatch<T>(path: string, body: unknown, options: RequestOptions = {}): Promise<T> {
+  return request<T>('PATCH', path, { ...options, body })
+}
+
 export function apiDelete<T>(path: string, options: RequestOptions = {}): Promise<T> {
   return request<T>('DELETE', path, options)
 }

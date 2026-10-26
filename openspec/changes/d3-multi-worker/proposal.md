@@ -9,6 +9,7 @@ D0–D2 已交付骨架、单 Master 正向链路与受控工具（Connection/Op
 - 实现 WorkerDefinition 发布、版本不可变、停用与撤销（R12）。
 - 实现 Plan/Job 持久化与 publish_plan 一次性校验（无环、版本、节点数、依赖、Schema、权限、上下文）。
 - 实现 WorkerDispatcher：能力工厂构建叶子 HarnessAgent、guard 领取、固定输入与 SDK submit key、崩溃恢复原 Session/Turn。
+- 提前建立配置型模型/运行 Profile 注册表及父 Task 共享的模型预算预留，使 WorkerDefinition 中的 profileKey 可解析且并行执行不绕过预算；D5 继续扩展摘要、工具与沙箱的完整治理实验。
 - 实现汇合信号（MASTER_SIGNAL，taskId+signalVersion 唯一）与重规划/结果复用（SUPERSEDED、reusedFromJobId）。
 - 工作台交付任务详情、子任务列表、管理员能力页（R10）。
 
@@ -26,5 +27,5 @@ D0–D2 已交付骨架、单 Master 正向链路与受控工具（Connection/Op
 
 - `server`：M03/M04/M02 的 Service/Repository/DTO 与 WorkerDispatcher、Plan/Job 状态机。
 - `web/console`：任务详情、子任务列表、管理员能力页。
-- 数据：沿用已收敛的 `sq_plan`/`sq_worker_job`/`sq_worker_definition` 表（见 `V1__baseline.sql`）。
+- 数据：`sq_worker_definition` 在 `V1__baseline.sql`，Plan/Job 在 `V2__plan_worker_job.sql`；D3 还需为局部 ContextSnapshot 建立权威存储，并以新增迁移承载，不改写已编号迁移。
 - 验收：A04–A06、A09、A10、A17。

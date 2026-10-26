@@ -12,6 +12,7 @@ import com.agentsquad.squad.worker.dto.WorkerDefinitionPage;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionResponse;
 import com.agentsquad.squad.worker.dto.WorkerStatusUpdateRequest;
 import com.agentsquad.squad.worker.repository.WorkerDefinitionMapper;
+import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,6 +48,9 @@ public class WorkerDefinitionService {
 
     @Resource
     private ObjectMapper objectMapper;
+
+    @Resource
+    private WorkerProfileRegistry profileRegistry;
 
     /**
      * 管理员按幂等键发布不可变版本；相同键换内容和同版本重复发布均拒绝。
@@ -92,6 +96,40 @@ public class WorkerDefinitionService {
         List<WorkerDefinitionRow> rows = definitionMapper.listAfter(afterId, pageSize);
         String nextCursor = rows.size() == pageSize ? String.valueOf(rows.get(rows.size() - 1).id()) : null;
         return new WorkerDefinitionPage(rows.stream().map(this::toResponse).toList(), nextCursor);
+    }
+
+    /**
+     * Master 按持久版本发现当前可调度能力；页游标只用于遍历，不成为执行授权。
+     */
+    public WorkerDefinitionPage listEnabled(String cursor, int limit) {
+        long afterId = parseCursor(cursor);
+        int pageSize = Math.min(Math.max(limit, 1), 20);
+        List<WorkerDefinitionRow> rows = definitionMapper.listEnabledAfter(afterId, pageSize);
+        String nextCursor = rows.size() == pageSize ? String.valueOf(rows.get(rows.size() - 1).id()) : null;
+        return new WorkerDefinitionPage(rows.stream().map(this::toResponse).toList(), nextCursor);
+    }
+
+    /**
+     * 派发前重新解析已启用的不可变能力版本；停用与撤销立即阻止新启动。
+     */
+    public WorkerDefinitionResponse requireEnabled(String workerKey, String workerVersion) {
+        WorkerDefinitionRow row = definitionMapper.findEnabled(workerKey, workerVersion);
+        if (row == null) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "Worker 能力版本不可用");
+        }
+        return toResponse(row);
+    }
+
+    /**
+     * 已启动 Job 恢复时读取不可变版本正文；停用只阻止新启动，不改变在途节点契约。
+     */
+    public WorkerDefinitionResponse requirePublished(String workerKey, String workerVersion) {
+        WorkerDefinitionRow row = definitionMapper.findPublished(workerKey, workerVersion);
+        if (row == null) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND,
+                    "Worker 能力版本不存在");
+        }
+        return toResponse(row);
     }
 
     /**
@@ -162,6 +200,7 @@ public class WorkerDefinitionService {
         validateCode(request.workerVersion(), VERSION, 40, "workerVersion");
         validateCode(request.modelProfileKey(), REFERENCE_KEY, 80, "modelProfileKey");
         validateCode(request.runtimeProfileKey(), REFERENCE_KEY, 80, "runtimeProfileKey");
+        profileRegistry.requireRegistered(request.modelProfileKey(), request.runtimeProfileKey());
         if (request.description() == null || request.description().isBlank()
                 || request.description().length() > 4000) {
             throw invalid("description 长度无效");

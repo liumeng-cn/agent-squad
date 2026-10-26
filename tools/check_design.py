@@ -47,7 +47,10 @@ def check():
                 continue
             assert (path.parent / target.split("#")[0]).exists(), (path, target)
 
-    sql = (ROOT / "server/src/main/resources/db/migration/V1__baseline.sql").read_text()
+    migration_files = sorted(
+        (ROOT / "server" / "src" / "main" / "resources" / "db" / "migration").glob("V*.sql")
+    )
+    sql = "\n".join(path.read_text() for path in migration_files)
     definitions = re.findall(r"CREATE TABLE (\w+)\s*\((.*?)\n\) ENGINE", sql, re.S)
     business = [(name, body) for name, body in definitions if name.startswith("sq_")]
     non_column_tokens = {

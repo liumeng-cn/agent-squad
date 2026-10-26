@@ -30,6 +30,11 @@ public interface ProjectionMapper {
               AND EXISTS (SELECT 1 FROM sq_command c
                           WHERE c.user_id = b.user_id AND c.binding_id = b.binding_id
                             AND c.status IN ('DELIVERED', 'APPLIED'))
+              AND (b.role = 'MASTER' OR EXISTS (
+                  SELECT 1 FROM sq_worker_job j
+                  WHERE j.user_id = b.user_id AND j.binding_id = b.binding_id
+                    AND j.status IN ('READY', 'RUNNING', 'WAITING_INPUT', 'WAITING_APPROVAL',
+                                     'RECONCILING', 'CANCELLING')))
             ORDER BY b.next_projection_at, b.id LIMIT 20
             """)
     List<ProjectionTarget> findDueTargets(@Param("now") LocalDateTime now);

@@ -14,12 +14,16 @@ server:
   address: 127.0.0.1
   port: 18080
 
+logging:
+  level:
+    io.agentscope.harness.agent.middleware.AgentTraceMiddleware: OFF
+
 agentsquad:
   vault:
     master-key: ${SQUAD_CONNECTION_SECRET_KEY:}
     master-key-id: ${SQUAD_CONNECTION_KEY_ID:local-v1}
   budget:
-    max-tool-units-per-task: ${SQUAD_BUDGET_MAX_TOOL_UNITS:5000000}
+    max-microunits-per-task: ${SQUAD_BUDGET_MAX_MICROUNITS:5000000}
   fault:
     after-inflight-exit: ${SQUAD_FAULT_AFTER_INFLIGHT_EXIT:false}
   delivery:
@@ -32,6 +36,25 @@ agentsquad:
     api-key: ${SQUAD_MODEL_API_KEY:}
     base-url: ${SQUAD_MODEL_BASE_URL:}
     name: ${SQUAD_MODEL_NAME:}
+  worker:
+    model-profiles:
+      default:
+        provider: OPENAI_COMPATIBLE
+        model-name: ${SQUAD_MODEL_NAME:}
+        base-url: ${SQUAD_MODEL_BASE_URL:}
+        api-key: ${SQUAD_MODEL_API_KEY:}
+        pricing-version: ${SQUAD_MODEL_PRICING_VERSION:local-v1}
+        input-microunits-per-million-tokens: ${SQUAD_MODEL_INPUT_MICROUNITS:1000000}
+        output-microunits-per-million-tokens: ${SQUAD_MODEL_OUTPUT_MICROUNITS:1000000}
+        max-input-tokens: 8192
+        max-output-tokens: 2048
+    runtime-profiles:
+      default:
+        max-model-calls: 20
+        max-tool-calls: 40
+        max-recovery-attempts: 3
+        model-request-timeout-seconds: 90
+        tool-timeout-seconds: 30
   auth:
     username: ${SQUAD_LOCAL_USER:}
     password: ${SQUAD_LOCAL_PASSWORD:}

@@ -25,6 +25,18 @@ public interface BindingMapper {
                      @Param("sessionId") String sessionId,
                      @Param("nextProjectionAt") LocalDateTime nextProjectionAt);
 
+    @Insert("""
+            INSERT INTO sq_runtime_binding
+                (binding_id, user_id, task_id, role, agent_id, framework_session_id, status,
+                 next_projection_at)
+            VALUES (#{bindingId}, #{userId}, #{taskId}, 'WORKER', #{agentId}, #{sessionId}, 'IDLE',
+                    #{nextProjectionAt})
+            """)
+    int insertWorker(@Param("bindingId") String bindingId, @Param("userId") String userId,
+                     @Param("taskId") String taskId, @Param("agentId") String agentId,
+                     @Param("sessionId") String sessionId,
+                     @Param("nextProjectionAt") LocalDateTime nextProjectionAt);
+
     @Select("""
             SELECT binding_id FROM sq_runtime_binding
             WHERE user_id = #{userId} AND task_id = #{taskId} AND role = 'MASTER'

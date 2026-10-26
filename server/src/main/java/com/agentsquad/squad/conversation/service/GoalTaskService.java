@@ -13,6 +13,7 @@ import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,6 +49,9 @@ public class GoalTaskService {
 
     @Resource
     private ObjectMapper objectMapper;
+
+    @Value("${agentsquad.budget.max-microunits-per-task:5000000}")
+    private long budgetLimitMicrounits;
 
     /**
      * 创建归属明确的对话，后续提交必须再锁该对话。
@@ -133,7 +137,10 @@ public class GoalTaskService {
         String bindingId = UUID.randomUUID().toString();
         String commandId = UUID.randomUUID().toString();
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
-        taskMapper.insert(taskId, userId, conversationId, payloadJson);
+        if (budgetLimitMicrounits <= 0) {
+            throw new IllegalStateException("目标预算上限必须大于 0");
+        }
+        taskMapper.insert(taskId, userId, conversationId, payloadJson, budgetLimitMicrounits);
         bindingMapper.insertMaster(bindingId, userId, taskId, MasterAgentIdentity.AGENT_ID,
                 UUID.randomUUID().toString(), now);
         commandMapper.insertSubmit(commandId, userId, scopeKey, idempotencyKey, payloadHash,

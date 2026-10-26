@@ -11,6 +11,7 @@ import io.agentscope.core.tool.Toolkit;
 import io.agentscope.extensions.jdbc.JdbcDistributedStore;
 import io.agentscope.extensions.jdbc.dialect.AbstractJdbcDialect;
 import io.agentscope.extensions.model.openai.OpenAIChatModel;
+import io.agentscope.core.model.ExecutionConfig;
 import io.agentscope.harness.agent.HarnessAgent;
 import io.agentscope.harness.agent.IsolationScope;
 import io.agentscope.harness.agent.filesystem.spec.RemoteFilesystemSpec;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
 import java.util.List;
+import java.time.Duration;
 
 /**
  * 当前 Master 的 AgentScope 原生会话适配器。
@@ -50,6 +52,21 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
 
     @Resource
     private RequestInputTool requestInputTool;
+
+    @Resource
+    private PublishPlanTool publishPlanTool;
+
+    @Resource
+    private PrepareContextTool prepareContextTool;
+
+    @Resource
+    private ListWorkerCapabilitiesTool listWorkerCapabilitiesTool;
+
+    @Resource
+    private ModelBudgetMiddleware modelBudgetMiddleware;
+
+    @Resource
+    private WorkerFactory workerFactory;
 
     @Value("${agentsquad.model.api-key:}")
     private String apiKey;
@@ -78,6 +95,9 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
         toolkit.registerAgentTool(mockLookupTool);
         toolkit.registerAgentTool(mockTicketCreateTool);
         toolkit.registerAgentTool(requestInputTool);
+        toolkit.registerAgentTool(publishPlanTool);
+        toolkit.registerAgentTool(prepareContextTool);
+        toolkit.registerAgentTool(listWorkerCapabilitiesTool);
         master = HarnessAgent.builder()
                 .agentId(MasterAgentIdentity.AGENT_ID)
                 .name("Squad Master")
@@ -85,11 +105,17 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
                         + "mock_lookup 用于只读查询；mock_ticket_create 用于创建工单，"
                         + "它需要用户在页面审批，调用后回合会挂起等待，不要重复提交，也不要伪造审批结果；"
                         + "request_input 用于向用户追问补充信息，一次只提一个问题，不要假设用户已经回答。"
+                        + "list_worker_capabilities 用于查询当前已启用的 Worker 能力及其契约；"
+                        + "prepare_context 为每个计划节点冻结当前目标的局部材料；"
+                        + "publish_plan 用于需要多个 Worker 协作时发布不可变计划，节点之间用 dependsOn 表达依赖。"
                         + "所有写入必须带稳定的 intentKey，同业务重试复用同一 intentKey。"
                         + "在回答目标之前，必须调用 propose_completion 提交 outcome 和完整 finalAnswer；"
                         + "工具回执不是用户答案。无法回答时明确说明缺少的信息。")
                 .model(OpenAIChatModel.builder().apiKey(apiKey).baseUrl(baseUrl)
                         .modelName(modelName).build())
+                .modelExecutionConfig(ExecutionConfig.builder()
+                        .timeout(Duration.ofSeconds(90)).maxAttempts(1).build())
+                .middleware(modelBudgetMiddleware)
                 .toolkit(toolkit)
                 .distributedStore(JdbcDistributedStore.create(dataSource, dialect))
                 .filesystem(new RemoteFilesystemSpec().isolationScope(IsolationScope.USER))
@@ -155,7 +181,8 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
 
     private AgentSession sessionFor(DeliveryRow delivery) {
         if (!MasterAgentIdentity.AGENT_ID.equals(delivery.agentId())) {
-            throw new IllegalStateException("未注册的 Master 能力版本");
+            return workerFactory.sessionFor(delivery.userId(), delivery.bindingId(),
+                    delivery.sessionId(), delivery.agentId());
         }
         RuntimeContext context = RuntimeContext.builder()
                 .userId(delivery.userId())
@@ -169,14 +196,17 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
      */
     @Override
     public List<NativeEventView> readEvents(ProjectionTarget target, long after, int limit) {
-        if (!MasterAgentIdentity.AGENT_ID.equals(target.agentId())) {
-            throw new IllegalStateException("未注册的 Master 能力版本");
+        AgentSession session;
+        if (MasterAgentIdentity.AGENT_ID.equals(target.agentId())) {
+            RuntimeContext context = RuntimeContext.builder()
+                    .userId(target.userId())
+                    .sessionId(target.sessionId())
+                    .build();
+            session = master.session(context);
+        } else {
+            session = workerFactory.sessionFor(target.userId(), target.bindingId(),
+                    target.sessionId(), target.agentId());
         }
-        RuntimeContext context = RuntimeContext.builder()
-                .userId(target.userId())
-                .sessionId(target.sessionId())
-                .build();
-        AgentSession session = master.session(context);
         session.start();
         return session.log().readAfter(after, limit).stream()
                 .map(this::toEventView)

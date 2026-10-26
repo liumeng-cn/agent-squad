@@ -23,6 +23,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../features/tasks/views/TaskDetailView.vue'),
   },
   {
+    path: '/app/admin/workers',
+    name: 'workers',
+    component: () => import('../features/workers/views/WorkerDefinitionsView.vue'),
+    meta: { role: 'ADMIN' },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'catchAll',
     redirect: { name: 'workspace' },
@@ -48,6 +54,9 @@ router.beforeEach(async (to) => {
     }
   }
   if (loggedIn && to.name === 'login') {
+    return { name: 'workspace' }
+  }
+  if (loggedIn && to.meta.role && !auth.user?.roles.includes(String(to.meta.role))) {
     return { name: 'workspace' }
   }
   return true

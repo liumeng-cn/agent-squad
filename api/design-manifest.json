@@ -26,11 +26,16 @@
       "sq_runtime_binding",
       "sq_command"
     ],
-    "M03": [],
-    "M04": [
-      "sq_worker_definition"
+    "M03": [
+      "sq_plan"
     ],
-    "M05": [],
+    "M04": [
+      "sq_worker_definition",
+      "sq_worker_job"
+    ],
+    "M05": [
+      "sq_context_snapshot"
+    ],
     "M06": [],
     "M07": [
       "sq_connection",
@@ -46,5 +51,5 @@
   },
   "plannedOperationCount": 38,
   "plannedSchemaCount": 59,
-  "plannedBusinessTableCount": 12
+  "plannedBusinessTableCount": 15
 }

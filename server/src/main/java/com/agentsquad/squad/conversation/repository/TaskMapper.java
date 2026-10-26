@@ -13,11 +13,16 @@ import java.util.List;
 public interface TaskMapper {
 
     @Insert("""
-            INSERT INTO sq_goal_task (task_id, user_id, conversation_id, status, input_json, event_seq)
-            VALUES (#{taskId}, #{userId}, #{conversationId}, 'QUEUED', #{inputJson}, 1)
+            INSERT INTO sq_goal_task
+                (task_id, user_id, conversation_id, status, input_json, event_seq,
+                 budget_profile_key, budget_limit_microunits)
+            VALUES
+                (#{taskId}, #{userId}, #{conversationId}, 'QUEUED', #{inputJson}, 1,
+                 'STANDARD', #{budgetLimitMicrounits})
             """)
     int insert(@Param("taskId") String taskId, @Param("userId") String userId,
-               @Param("conversationId") String conversationId, @Param("inputJson") String inputJson);
+               @Param("conversationId") String conversationId, @Param("inputJson") String inputJson,
+               @Param("budgetLimitMicrounits") long budgetLimitMicrounits);
 
     @ConstructorArgs({
             @Arg(column = "id", javaType = long.class),

@@ -63,7 +63,7 @@ class StopDeliveryIntegrationTest {
             LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
 
             conversationMapper.insert(conversationId, userId, "停止投递");
-            taskMapper.insert(taskId, userId, conversationId, "{\"message\":\"停止我\"}");
+            taskMapper.insert(taskId, userId, conversationId, "{\"message\":\"停止我\"}", 5000000L);
             bindingMapper.insertMaster(bindingId, userId, taskId, MasterAgentIdentity.AGENT_ID,
                     UUID.randomUUID().toString(), now);
             assertThat(conversationMapper.activateTask(userId, conversationId, taskId)).isEqualTo(1);

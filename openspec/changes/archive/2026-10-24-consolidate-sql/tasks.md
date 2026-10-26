@@ -13,8 +13,8 @@
 
 ## 3. 重建开发库并验证
 
-- [ ] 3.1 drop 并重建开发库 `agent_squad`（agent-squad-mysql 容器），启动服务让 Flyway 应用 `V1__baseline.sql`。验证：Flyway 成功、无校验和错误，`sq_operation`/`sq_connection`/`sq_mock_ticket`/`sq_secret_vault` 存在且含新增审计字段。
-- [ ] 3.2 运行 `mvn -f server/pom.xml -B -ntp test` 确认 H2 测试库由 baseline 重建通过。验证：测试通过（除按设计跳过的 MySQL 集成测试）。
+- [x] 3.1 drop 并重建开发库 `agent_squad`（agent-squad-mysql 容器），启动服务让 Flyway 应用 `V1__baseline.sql`。验证：Flyway 成功、无校验和错误，`sq_operation`/`sq_connection`/`sq_mock_ticket`/`sq_secret_vault` 存在且含新增审计字段。
+- [x] 3.2 运行 `mvn -f server/pom.xml -B -ntp test` 确认 H2 测试库由 baseline 重建通过。验证：测试通过（除按设计跳过的 MySQL 集成测试）。
 
 ## Workflow follow-up
 

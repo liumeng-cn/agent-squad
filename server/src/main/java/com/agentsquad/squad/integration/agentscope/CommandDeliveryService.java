@@ -128,7 +128,8 @@ public class CommandDeliveryService {
      * 投递恢复意图；恢复前必须已存在原生回合，未受理目标先等 SUBMIT 投递成功。
      */
     private void deliverResume(String commandId, String token, DeliveryRow delivery) {
-        String turnId = deliveryMapper.findSubmitTurnId(delivery.userId(), delivery.taskId());
+        String turnId = deliveryMapper.findSubmitTurnId(delivery.userId(), delivery.taskId(),
+                delivery.bindingId());
         if (turnId == null) {
             retry(commandId, token, delivery.attempts(), "NATIVE_TURN_MISSING");
             return;

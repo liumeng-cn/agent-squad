@@ -2,8 +2,12 @@ package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
 import com.agentsquad.squad.runtime.domain.NativeRunOutcome;
+import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
+import com.agentsquad.squad.runtime.domain.WorkerLaunchRow;
 import com.agentsquad.squad.runtime.domain.ProjectionTarget;
 import com.agentsquad.squad.runtime.repository.ProjectionMapper;
+import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
+import com.agentsquad.squad.runtime.service.WorkerResultService;
 import com.agentsquad.squad.conversation.repository.TaskEventMapper;
 import com.agentsquad.squad.runtime.service.TaskFinalizerService;
 import com.agentsquad.squad.common.util.RuntimePayloads;
@@ -38,6 +42,12 @@ public class NativeProjectionService {
     private ProjectionMapper projectionMapper;
 
     @Resource
+    private WorkerDispatchMapper workerDispatchMapper;
+
+    @Resource
+    private WorkerResultService workerResultService;
+
+    @Resource
     private TaskEventMapper taskEventMapper;
 
     @Resource
@@ -64,7 +74,9 @@ public class NativeProjectionService {
         if (event.sequence() != cursor + 1) {
             throw new IllegalStateException("原生日志事件序号不连续");
         }
-        if ("run/start".equals(event.type())) {
+        if (!MasterAgentIdentity.AGENT_ID.equals(target.agentId())) {
+            acceptWorker(target, event);
+        } else if ("run/start".equals(event.type())) {
             projectionMapper.markRunning(target.userId(), target.taskId());
             publish(target, event, "task.run_started", null);
         } else if ("run/end".equals(event.type())) {
@@ -89,6 +101,34 @@ public class NativeProjectionService {
         }
         if (projectionMapper.advanceCursor(target.userId(), target.bindingId(), cursor, event.sequence()) != 1) {
             throw new IllegalStateException("原生日志投影水位竞争");
+        }
+    }
+
+    /**
+     * Worker 原生回合只裁决对应 Job；不能触发父目标完成流程。
+     */
+    private void acceptWorker(ProjectionTarget target, NativeEventView event) {
+        WorkerLaunchRow job = workerDispatchMapper.findByBinding(target.userId(), target.bindingId());
+        if (job == null || !target.agentId().equals(job.agentId())) {
+            throw new IllegalStateException("Worker 原生日志与固定 Binding 不匹配");
+        }
+        if ("run/start".equals(event.type())) {
+            publish(target, event, "job.run_started", Map.of("jobId", job.jobId()));
+        } else if ("run/end".equals(event.type())) {
+            if (!"ACTIVE".equals(job.planStatus()) || job.cancelRequestedAt() != null) {
+                workerResultService.supersedeInFlight(target.userId(), target.bindingId());
+                publish(target, event, "job.run_ended", Map.of("jobId", job.jobId(),
+                        "status", "SUPERSEDED"));
+            } else {
+                NativeRunOutcome outcome = NativeRunOutcome.fromCode(event.outcome());
+                boolean completed = outcome == NativeRunOutcome.COMPLETED
+                        && workerResultService.finalizeSuccess(target.userId(), target.bindingId(), event.turnId());
+                if (!completed) {
+                    workerResultService.markRecoveryBlocked(target.userId(), target.bindingId());
+                }
+                publish(target, event, "job.run_ended", Map.of("jobId", job.jobId(),
+                        "status", completed ? "SUCCEEDED" : "RECOVERY_BLOCKED"));
+            }
         }
     }
 

@@ -277,7 +277,7 @@ class CompletionCorrectionIntegrationTest {
         String sessionId = UUID.randomUUID().toString();
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         conversations.insert(conversationId, USER_ID, "候选纠正");
-        tasks.insert(taskId, USER_ID, conversationId, "{\"message\":\"请回答\"}");
+        tasks.insert(taskId, USER_ID, conversationId, "{\"message\":\"请回答\"}", 5000000L);
         bindings.insertMaster(bindingId, USER_ID, taskId, MasterAgentIdentity.AGENT_ID, sessionId, now);
         conversations.activateTask(USER_ID, conversationId, taskId);
         events.insertAccepted(USER_ID, taskId, "command:" + UUID.randomUUID(),

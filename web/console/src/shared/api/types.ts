@@ -77,6 +77,25 @@ export interface WorkerJob {
   result: unknown
 }
 
+export interface WorkerDefinition {
+  definitionId: string
+  workerKey: string
+  workerVersion: string
+  description: string
+  inputSchema: unknown
+  outputSchema: unknown
+  toolAllowlist: string[]
+  modelProfileKey: string
+  runtimeProfileKey: string
+  status: 'ENABLED' | 'DISABLED' | 'REVOKED'
+  version: number
+}
+
+export interface WorkerDefinitionPage {
+  items: WorkerDefinition[]
+  nextCursor: string | null
+}
+
 export interface Interaction {
   interactionId: string
   taskId: string

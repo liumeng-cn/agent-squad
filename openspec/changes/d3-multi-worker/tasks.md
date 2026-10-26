@@ -2,13 +2,18 @@
 
 ## 1. WorkerDefinition 契约与生命周期
 
-- [ ] 1.1 实现 WorkerDefinition 发布/查询，同一 workerKey/version 不可重复发布、版本内容不可变、停用只改状态且 REVOKED 不可恢复。验证：A17，新能力注册后 Master 无业务分支改动即可发现使用。
-- [ ] 1.2 实现管理员能力页与普通用户访问隔离。验证：B14，无权限直达被后端拒绝。
+- [x] 1.1 实现 WorkerDefinition 发布/查询，同一 workerKey/version 不可重复发布、版本内容不可变、停用只改状态且 REVOKED 不可恢复。验证：发布、幂等与状态接口测试。
+- [x] 1.2 实现管理员能力页与普通用户访问隔离。验证：B14，无权限直达被前端守卫转回工作台，发布/状态变更由后端 ADMIN 校验拒绝。
+- [x] 1.3 将已发布 Definition 接入 WorkerFactory 的运行时发现，不修改 Master 业务分支。验证：A17，本地 OpenAI 兼容桩上新能力从计划选择、持久派发、原生调用到 Job SUCCEEDED。
+- [x] 1.4 建立配置型 modelProfileKey/runtimeProfileKey 注册表；发布与启动时拒绝未知引用，密钥不进入 Definition 或日志。验证：新增 review Profile 原生执行与定价结算，未知引用拒绝。
 
 ## 2. Plan/Job 持久化与发布校验
 
-- [ ] 2.1 实现 Plan/Job 持久化与 publish_plan 事务：校验无环、expectedPlanVersion、节点数≤16、并行≤4、依赖完整、Schema、权限与上下文，一次创建 Plan/Jobs/Command/事件。验证：A04 依赖未满足不启动下游。
-- [ ] 2.2 实现 Plan 版本化与旧 Job 处理：新 Plan 取代旧版，未开始 Job 置 SUPERSEDED，执行中写取消屏障。验证：A10 旧结果不推进新依赖、旧副作用证据不删除。
+- [x] 2.1 实现 Plan/Job 持久化与基础 DAG 校验：无环、版本、节点数、并行宽度与依赖；根节点 READY，其余 BLOCKED，按 logicalKey 重放。验证：H2 落库与重放测试。
+- [x] 2.2 实现 Plan 版本化及旧 Job 的数据库状态更新：未开始置 SUPERSEDED，运行中写取消屏障。验证：旧版未开始节点的数据库状态测试。
+- [ ] 2.3 实现最小 `prepare_context` 权威快照，并在 `publish_plan` 校验 Schema、权限、上下文和总预算；同事务创建 Plan/Jobs、根节点 Binding/Command/事件。验证：A04、A09；无快照/越权/无预算拒绝，受理后崩溃可由原 Command 恢复。
+- [ ] 2.4 完成在途旧 Job 的取消屏障及迟到结果拒绝，保留已发生副作用证据。验证：A10，新计划不被旧结果推进。
+- [x] 2.5 将模型请求前 Reservation 预留、可信用量结算、未知收费保留和工具预留统一到父 Task 微单位上限；`publish_plan` 做总预算准入。验证：A16/B12 Master/Worker/工具竞争同一上限、同键重试拒绝再次调用、预算不足拒绝计划，本地桩完成两次结算。
 
 ## 3. WorkerDispatcher 与恢复
 

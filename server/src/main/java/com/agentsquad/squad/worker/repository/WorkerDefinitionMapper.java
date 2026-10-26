@@ -94,4 +94,70 @@ public interface WorkerDefinitionMapper {
                      @Param("status") String status, @Param("idempotencyKey") String idempotencyKey,
                      @Param("payloadHash") String payloadHash, @Param("actorId") String actorId,
                      @Param("actorName") String actorName);
+
+    @Select("""
+            SELECT COUNT(*) FROM sq_worker_definition
+            WHERE worker_key = #{workerKey} AND worker_version = #{workerVersion}
+              AND status = 'ENABLED'
+            """)
+    int countEnabled(@Param("workerKey") String workerKey,
+                     @Param("workerVersion") String workerVersion);
+
+    @ConstructorArgs({
+            @Arg(column = "id", javaType = long.class),
+            @Arg(column = "definition_id", javaType = String.class),
+            @Arg(column = "worker_key", javaType = String.class),
+            @Arg(column = "worker_version", javaType = String.class),
+            @Arg(column = "status", javaType = String.class),
+            @Arg(column = "version", javaType = long.class),
+            @Arg(column = "definition_json", javaType = String.class),
+            @Arg(column = "publish_key", javaType = String.class),
+            @Arg(column = "payload_hash", javaType = String.class),
+            @Arg(column = "last_status_key", javaType = String.class),
+            @Arg(column = "last_status_actor", javaType = String.class),
+            @Arg(column = "last_status_hash", javaType = String.class)
+    })
+    @Select("SELECT " + COLUMNS + " FROM sq_worker_definition "
+            + "WHERE status = 'ENABLED' AND id > #{afterId} ORDER BY id LIMIT #{limit}")
+    List<WorkerDefinitionRow> listEnabledAfter(@Param("afterId") long afterId,
+                                                @Param("limit") int limit);
+
+    @ConstructorArgs({
+            @Arg(column = "id", javaType = long.class),
+            @Arg(column = "definition_id", javaType = String.class),
+            @Arg(column = "worker_key", javaType = String.class),
+            @Arg(column = "worker_version", javaType = String.class),
+            @Arg(column = "status", javaType = String.class),
+            @Arg(column = "version", javaType = long.class),
+            @Arg(column = "definition_json", javaType = String.class),
+            @Arg(column = "publish_key", javaType = String.class),
+            @Arg(column = "payload_hash", javaType = String.class),
+            @Arg(column = "last_status_key", javaType = String.class),
+            @Arg(column = "last_status_actor", javaType = String.class),
+            @Arg(column = "last_status_hash", javaType = String.class)
+    })
+    @Select("SELECT " + COLUMNS + " FROM sq_worker_definition "
+            + "WHERE worker_key = #{workerKey} AND worker_version = #{workerVersion} "
+            + "AND status = 'ENABLED'")
+    WorkerDefinitionRow findEnabled(@Param("workerKey") String workerKey,
+                                    @Param("workerVersion") String workerVersion);
+
+    @ConstructorArgs({
+            @Arg(column = "id", javaType = long.class),
+            @Arg(column = "definition_id", javaType = String.class),
+            @Arg(column = "worker_key", javaType = String.class),
+            @Arg(column = "worker_version", javaType = String.class),
+            @Arg(column = "status", javaType = String.class),
+            @Arg(column = "version", javaType = long.class),
+            @Arg(column = "definition_json", javaType = String.class),
+            @Arg(column = "publish_key", javaType = String.class),
+            @Arg(column = "payload_hash", javaType = String.class),
+            @Arg(column = "last_status_key", javaType = String.class),
+            @Arg(column = "last_status_actor", javaType = String.class),
+            @Arg(column = "last_status_hash", javaType = String.class)
+    })
+    @Select("SELECT " + COLUMNS + " FROM sq_worker_definition "
+            + "WHERE worker_key = #{workerKey} AND worker_version = #{workerVersion}")
+    WorkerDefinitionRow findPublished(@Param("workerKey") String workerKey,
+                                      @Param("workerVersion") String workerVersion);
 }

@@ -57,10 +57,12 @@ public interface DeliveryMapper {
 
     @Select("""
             SELECT native_turn_id FROM sq_command
-            WHERE user_id = #{userId} AND task_id = #{taskId} AND action = 'SUBMIT'
+            WHERE user_id = #{userId} AND task_id = #{taskId}
+              AND binding_id = #{bindingId} AND action = 'SUBMIT'
             ORDER BY id DESC LIMIT 1
             """)
-    String findSubmitTurnId(@Param("userId") String userId, @Param("taskId") String taskId);
+    String findSubmitTurnId(@Param("userId") String userId, @Param("taskId") String taskId,
+                            @Param("bindingId") String bindingId);
 
     @Update("""
             UPDATE sq_command SET status = CASE WHEN #{nativeStatus} = 'rejected' THEN 'BLOCKED'
