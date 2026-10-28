@@ -2,6 +2,8 @@ package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.runtime.domain.ProjectionTarget;
 import com.agentsquad.squad.runtime.repository.ProjectionMapper;
+import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
+import com.agentsquad.squad.runtime.service.WorkerRecoveryService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -29,6 +31,9 @@ public class NativeProjectionPoller {
     @Resource
     private NativeProjectionService projectionService;
 
+    @Resource
+    private WorkerRecoveryService workerRecoveryService;
+
     /**
      * 每个 Binding 独立失败与退避，不阻塞其他原生会话。
      */
@@ -39,6 +44,15 @@ public class NativeProjectionPoller {
                 List<NativeEventView> events = nativeSessionGateway.readEvents(target, target.cursor(), 100);
                 for (NativeEventView event : events) {
                     projectionService.accept(target, event);
+                }
+                if (!MasterAgentIdentity.AGENT_ID.equals(target.agentId())) {
+                    String commandId = workerRecoveryService.originalSubmitCommandId(target);
+                    if (commandId != null) {
+                        NativeSubmissionReceipt receipt = nativeSessionGateway.inspectTask(target, commandId);
+                        if (commandId.equals(receipt.commandId())) {
+                            workerRecoveryService.queueInterrupted(target, receipt);
+                        }
+                    }
                 }
                 projectionMapper.defer(target.userId(), target.bindingId(),
                         now().plusSeconds(events.isEmpty() ? 5 : 1));

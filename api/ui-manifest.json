@@ -64,7 +64,9 @@
         "getOperationDetail",
         "getArtifact",
         "downloadArtifact",
-        "reconcileOperation"
+        "reconcileOperation",
+        "listTaskArtifacts",
+        "respondInteraction"
       ],
       "cases": [
         "B04",

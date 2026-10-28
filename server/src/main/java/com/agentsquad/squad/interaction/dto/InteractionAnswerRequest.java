@@ -1,16 +1,12 @@
 package com.agentsquad.squad.interaction.dto;
 
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 
-import java.util.Map;
-
 /**
- * 交互答复请求体；kind 区分 APPROVAL（approve + confirmedRequestHash）与 INPUT（value 对象）。
+ * 交互答复的传输结构。
+ *
+ * expectedVersion 对应交互版本，answer 的类型由服务端持久交互决定。
  */
-public record InteractionAnswerRequest(@NotNull Long expectedVersion,
-                                       @NotBlank String kind,
-                                       Boolean approve,
-                                       String confirmedRequestHash,
-                                       Map<String, Object> value) {
+public record InteractionAnswerRequest(@NotNull Long expectedVersion, @NotNull @Valid InteractionAnswer answer) {
 }

@@ -9,6 +9,8 @@ import com.agentsquad.squad.tools.operation.domain.OperationStatus;
 import com.agentsquad.squad.tools.operation.domain.ToolExecutionContextRow;
 import com.agentsquad.squad.tools.operation.dto.OperationPage;
 import com.agentsquad.squad.tools.operation.dto.OperationView;
+import com.agentsquad.squad.tools.operation.dto.OperationDetail;
+import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -16,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +37,12 @@ import static com.agentsquad.squad.common.util.RuntimePayloads.toJson;
 @Service
 @Slf4j
 public class OperationService {
+
+    @Resource
+    private OperationAccessService operationAccessService;
+
+    @Resource
+    private OperationPreview operationPreview;
 
     private static final String EFFECT_WRITE = "WRITE";
 
@@ -139,27 +148,44 @@ public class OperationService {
     }
 
     /**
-     * 账本行映射为对外视图；arguments/result 解析为 JSON 供核对，敏感连接凭据不出现在视图中。
+     * 按资源归属读取脱敏详情，核对动作仅由服务端显式授权计算。
      */
-    public OperationView viewOf(OperationRow row) {
-        return new OperationView(row.operationId(), row.taskId(), row.bindingId(),
-                row.frameworkTurnId(), row.toolCallId(), row.toolKey(), row.toolVersion(),
-                row.businessIntentKey(), row.effect(), row.connectionId(),
-                row.connectionRevision(), row.requestHash(),
-                parseJsonOrNull(row.argumentsJson()), row.status(), row.version(),
-                row.externalKey(), parseJsonOrNull(row.resultJson()));
+    public OperationDetail detail(AuthView actor, String operationId) {
+        OperationRow row = operationMapper.findOwned(actor.userId(), operationId);
+        if (row == null) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "操作不存在");
+        }
+        List<String> evidenceRefs = evidenceRefs(row.resultJson());
+        return new OperationDetail(viewOf(row), operationPreview.arguments(row.argumentsJson()),
+                "操作状态：" + row.status() + "；已记录核对证据 " + evidenceRefs.size() + " 项", evidenceRefs,
+                operationAccessService.canReconcile(actor, row.taskId(), row.status()));
     }
 
-    private Object parseJsonOrNull(String json) {
-        if (json == null || json.isBlank()) {
-            return null;
+    private List<String> evidenceRefs(String resultJson) {
+        if (resultJson == null) {
+            return List.of();
         }
         try {
-            return RuntimePayloads.readJson(objectMapper, json);
+            var refs = RuntimePayloads.readJson(objectMapper, resultJson).path("evidenceRefs");
+            List<String> result = new ArrayList<>();
+            for (var ref : refs) {
+                if (ref.isTextual() && ref.asText().matches("[0-9a-fA-F-]{36}")) {
+                    result.add(ref.asText());
+                }
+            }
+            return List.copyOf(result);
         } catch (Exception exception) {
-            log.warn("操作载荷无法解析，按空视图返回");
-            return null;
+            return List.of();
         }
+    }
+
+    /**
+     * 账本行映射为公开摘要；参数与结果正文不进入列表。
+     */
+    public OperationView viewOf(OperationRow row) {
+        return new OperationView(row.operationId(), row.taskId(), row.jobId(), row.toolKey(),
+                row.effect(), row.status(), row.requestHash(), row.version(),
+                row.toolKey() + " · " + row.effect() + " · " + row.status());
     }
 
     private Long parseCursor(String cursor) {

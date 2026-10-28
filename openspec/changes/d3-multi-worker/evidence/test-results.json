@@ -1,0 +1,211 @@
+{
+  "cleanSuite": {
+    "command": "mvn -o -Dmaven.repo.local=/private/tmp/agentsquad-m2 -f server/pom.xml -B -ntp clean test",
+    "tests": 37,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1
+  },
+  "mysqlSupplement": {
+    "test": "MySqlGoalTaskIntegrationTest",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "database": "isolated disposable MySQL 8.4; six Flyway migrations and artifact bytes verified"
+  },
+  "classes": [
+    {
+      "name": "com.agentsquad.squad.SessionKeyCompatibilityTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.019"
+    },
+    {
+      "name": "com.agentsquad.squad.governance.BudgetReservationConcurrencyTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.154"
+    },
+    {
+      "name": "com.agentsquad.squad.integration.agentscope.ModelBudgetMiddlewareTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "1.143"
+    },
+    {
+      "name": "com.agentsquad.squad.interaction.service.InteractionServiceTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.044"
+    },
+    {
+      "name": "com.agentsquad.squad.presentation.TaskDetailsHttpTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.134"
+    },
+    {
+      "name": "com.agentsquad.squad.runtime.AutonomousWritingFlowIntegrationTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "7.471"
+    },
+    {
+      "name": "com.agentsquad.squad.runtime.CompletionCorrectionIntegrationTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "1.648"
+    },
+    {
+      "name": "com.agentsquad.squad.runtime.ConversationDeletionHttpTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.73"
+    },
+    {
+      "name": "com.agentsquad.squad.runtime.ConversationDeletionTaskSettleTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.087"
+    },
+    {
+      "name": "com.agentsquad.squad.runtime.GoalTaskPersistenceTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.141"
+    },
+    {
+      "name": "com.agentsquad.squad.runtime.MultiWorkerExecutionIntegrationTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "42.209"
+    },
+    {
+      "name": "com.agentsquad.squad.runtime.MySqlGoalTaskIntegrationTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "1",
+      "time": "0.0"
+    },
+    {
+      "name": "com.agentsquad.squad.runtime.NativeWriterFencingTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.556"
+    },
+    {
+      "name": "com.agentsquad.squad.runtime.PlanPublishIntegrationTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.212"
+    },
+    {
+      "name": "com.agentsquad.squad.runtime.RuntimeHttpSecurityTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.135"
+    },
+    {
+      "name": "com.agentsquad.squad.runtime.StopDeliveryIntegrationTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.138"
+    },
+    {
+      "name": "com.agentsquad.squad.runtime.TaskSnapshotAnswerIntegrationTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.07"
+    },
+    {
+      "name": "com.agentsquad.squad.runtime.TaskSnapshotHttpTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.108"
+    },
+    {
+      "name": "com.agentsquad.squad.runtime.WorkerCrashRecoveryIntegrationTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "2.343"
+    },
+    {
+      "name": "com.agentsquad.squad.runtime.WorkerGuardIntegrationTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.191"
+    },
+    {
+      "name": "com.agentsquad.squad.runtime.WorkerNativeExecutionIntegrationTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "10.627"
+    },
+    {
+      "name": "com.agentsquad.squad.runtime.service.TaskEventStreamerTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.13"
+    },
+    {
+      "name": "com.agentsquad.squad.tools.operation.OperationExecutorTransactionTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.667"
+    },
+    {
+      "name": "com.agentsquad.squad.worker.WorkerDefinitionHttpTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.356"
+    }
+  ]
+}

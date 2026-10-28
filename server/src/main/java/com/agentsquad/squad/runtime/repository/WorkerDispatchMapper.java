@@ -53,6 +53,8 @@ public interface WorkerDispatchMapper {
     @Update("""
             UPDATE sq_worker_job j
             SET j.status = 'RUNNING', j.guard_token = #{guardToken},
+                j.candidate_guard_token = CASE WHEN j.result_candidate_json IS NOT NULL
+                    THEN #{guardToken} ELSE j.candidate_guard_token END,
                 j.guard_lease_until = #{leaseUntil}, j.version = j.version + 1
             WHERE j.user_id = #{userId} AND j.binding_id = #{bindingId}
               AND j.cancel_requested_at IS NULL

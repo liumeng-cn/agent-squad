@@ -17,8 +17,6 @@ const STOPPABLE_STATUSES: ReadonlySet<string> = new Set([
 ])
 
 const RESUMABLE_STATUSES: ReadonlySet<string> = new Set([
-  'WAITING_INPUT',
-  'WAITING_APPROVAL',
   'RECOVERY_BLOCKED',
   'RECONCILING',
 ])
@@ -38,6 +36,9 @@ export function canResume(status: string): boolean {
 export const TASK_STATUS_TEXT: Record<string, string> = {
   QUEUED: '已接收，等待执行',
   RUNNING: '正在处理',
+  BLOCKED: '等待前置任务',
+  READY: '等待派发',
+  SUPERSEDED: '已被新计划替代',
   WAITING_WORKERS: '正在并行处理',
   WAITING_INPUT: '等待补充信息',
   WAITING_APPROVAL: '等待操作确认',

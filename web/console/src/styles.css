@@ -505,6 +505,42 @@ textarea.input {
   font-size: 16px;
 }
 
+.detail-muted {
+  color: var(--text-secondary);
+  margin: 6px 0;
+}
+
+.job-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: grid;
+  gap: 10px;
+}
+
+.job-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.job-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.job-result {
+  margin: 10px 0 0;
+  padding: 10px;
+  border-radius: 6px;
+  background: var(--bg);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
 .meta-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -546,3 +582,36 @@ textarea.input {
     padding: 8px 12px 12px;
   }
 }
+
+.detail-actions, .operation-list li, .attachment-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0;
+}
+.detail-field input, .detail-field select, .detail-field textarea {
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-primary, white);
+  color: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+.interaction-card, .operation-detail {
+  border: 1px solid var(--border);
+  padding: 16px;
+  border-radius: 8px;
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.operation-list, .attachment-list { list-style: none; padding: 0; }
+.operation-list li, .attachment-list li { padding: 8px 0; }
+.preserve-text { white-space: pre-wrap; }

@@ -24,6 +24,11 @@ export interface RequestOptions {
   body?: unknown
   idempotencyKey?: string
   ifMatch?: string
+  blob?: boolean
+}
+
+export function apiDownload(path: string): Promise<Blob> {
+  return request<Blob>('GET', path, { blob: true })
 }
 
 export function apiGet<T>(path: string): Promise<T> {
@@ -46,7 +51,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
 
 async function request<T>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = {}
-  if (options.body !== undefined) {
+  if (options.body !== undefined && !(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json'
   }
   if (options.idempotencyKey) {
@@ -70,7 +75,7 @@ async function request<T>(method: string, path: string, options: RequestOptions 
       method,
       headers,
       credentials: API_BASE ? 'include' : 'same-origin',
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: options.body instanceof FormData ? options.body : options.body === undefined ? undefined : JSON.stringify(options.body),
     })
   } catch {
     throw new ApiError(0, '网络异常，请检查连接后重试')
@@ -86,6 +91,7 @@ async function request<T>(method: string, path: string, options: RequestOptions 
   if (response.status === 204) {
     return undefined as T
   }
+  if (options.blob) return (await response.blob()) as T
   return (await response.json()) as T
 }
 

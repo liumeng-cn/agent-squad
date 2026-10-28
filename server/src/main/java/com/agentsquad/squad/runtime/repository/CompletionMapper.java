@@ -2,13 +2,25 @@ package com.agentsquad.squad.runtime.repository;
 
 import com.agentsquad.squad.runtime.domain.CompletionContextRow;
 import com.agentsquad.squad.runtime.domain.FinalizationRow;
-import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Arg;
+import org.apache.ibatis.annotations.ConstructorArgs;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 /**
  * Master 完成候选和最终状态裁决的 SQL 边界。
  */
 @Mapper
 public interface CompletionMapper {
+
+    @Select("""
+            SELECT (SELECT COUNT(*) FROM sq_operation WHERE user_id = #{userId} AND task_id = #{taskId}
+                AND status IN ('PREPARED', 'WAITING_APPROVAL', 'IN_FLIGHT', 'UNKNOWN', 'RECONCILING'))
+                + (SELECT COUNT(*) FROM sq_interaction WHERE user_id = #{userId} AND task_id = #{taskId} AND status = 'OPEN')
+            """)
+    int countPendingEffects(@Param("userId") String userId, @Param("taskId") String taskId);
 
     @ConstructorArgs({
             @Arg(column = "user_id", javaType = String.class),
@@ -83,6 +95,10 @@ public interface CompletionMapper {
               AND cancel_requested_at IS NULL AND proposal_binding_id = #{bindingId}
               AND proposal_turn_id = #{turnId} AND completion_proposal_json IS NOT NULL
               AND plan_version = #{planVersion} AND answer_revision = #{answerRevision}
+              AND NOT EXISTS (SELECT 1 FROM sq_operation o WHERE o.user_id = #{userId}
+                  AND o.task_id = #{taskId} AND o.status IN ('PREPARED', 'WAITING_APPROVAL', 'IN_FLIGHT', 'UNKNOWN', 'RECONCILING'))
+              AND NOT EXISTS (SELECT 1 FROM sq_interaction i WHERE i.user_id = #{userId}
+                  AND i.task_id = #{taskId} AND i.status = 'OPEN')
             """)
     int completeTask(@Param("userId") String userId, @Param("taskId") String taskId,
                      @Param("bindingId") String bindingId, @Param("turnId") String turnId,

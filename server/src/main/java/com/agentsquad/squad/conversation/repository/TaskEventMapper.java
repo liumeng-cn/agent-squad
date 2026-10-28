@@ -1,7 +1,12 @@
 package com.agentsquad.squad.conversation.repository;
 
 import com.agentsquad.squad.runtime.domain.EventRow;
-import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Arg;
+import org.apache.ibatis.annotations.ConstructorArgs;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -65,7 +70,7 @@ public interface TaskEventMapper {
     @Select("""
             SELECT event_seq, task_id, event_type, payload_json, occurred_at
             FROM sq_task_event
-            WHERE user_id = #{userId} AND task_id = #{taskId} AND event_type = 'answer.completed'
+            WHERE user_id = #{userId} AND task_id = #{taskId} AND event_type IN ('answer.completed', 'answer.replaced')
             ORDER BY event_seq DESC LIMIT 1
             """)
     EventRow findLatestAnswerEvent(@Param("userId") String userId, @Param("taskId") String taskId);

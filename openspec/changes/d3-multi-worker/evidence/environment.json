@@ -1,0 +1,22 @@
+{
+  "recordedAt": "2026-10-28",
+  "compilerRelease": 21,
+  "testRuntime": "java version \"27\" 2026-09-15",
+  "agentscopeVersion": "2.1.0-BETA1",
+  "specPinnedCommit": "5451c73abe47053340683a1cc6d67b290b056648",
+  "database": "H2 2.3.232 MODE=MySQL; isolated per test",
+  "model": "local HTTP OpenAI-compatible stub; no remote inference",
+  "migrationFiles": {
+    "V3__context_snapshot.sql": "675f08cb0c08cef47c306a5724b83c3750cd27ee2b91f0c5a74ad5fc69d935b9",
+    "V4__task_budget_profiles.sql": "f2088e2868d6ccb3c95cf843b5e52daa88402b90d3b3bd5a6963377730527a31",
+    "V2__plan_worker_job.sql": "5aa99c8fcf1fd8c6431bf630a8a8cddbb0830d9e245f8dfd8437d0c605deaa0d",
+    "V6__artifact_storage.sql": "3e47d48f8d4b0dd4b138c9bb1d244e4be5308faa9532b52a3508aa646e25197d",
+    "V5__worker_guard.sql": "2b621c8570d3db706c13d2e69b1cfd5ab8f6255482ca709810053d39b4e3ac5f",
+    "V1__baseline.sql": "2f0b74024a232eea0725db7f6cc64adcfab25095912f7018ea9225b28b8c5f56"
+  },
+  "sdkArtifacts": {
+    "agentscope-core-2.1.0-BETA1.jar": "33588d1a12eff7380ea4a4234e56c39e97597f403fdf8363c4c45644535a63d7",
+    "agentscope-harness-2.1.0-BETA1.jar": "422e6b5e4c437fee6ee30b92a31cb3e334b6a2539a93639f01152901c37cf3f7",
+    "agentscope-extensions-jdbc-2.1.0-BETA1.jar": "a413b3083cbd2df9a1b205e739575601753f65c2f7a8fe483dab05a8644f3fcb"
+  }
+}

@@ -4,15 +4,38 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
 import com.agentsquad.squad.identity.AuthService;
-import com.agentsquad.squad.conversation.dto.*;
-import com.agentsquad.squad.presentation.dto.*;
-import com.agentsquad.squad.conversation.service.*;
-import com.agentsquad.squad.presentation.service.*;
+import com.agentsquad.squad.conversation.dto.CommandReceipt;
+import com.agentsquad.squad.conversation.dto.CommandResponse;
+import com.agentsquad.squad.conversation.dto.ControlRequest;
+import com.agentsquad.squad.conversation.dto.ConversationCreateRequest;
+import com.agentsquad.squad.conversation.dto.ConversationPage;
+import com.agentsquad.squad.conversation.dto.ConversationResponse;
+import com.agentsquad.squad.conversation.dto.GoalTaskPage;
+import com.agentsquad.squad.conversation.dto.TaskCreateRequest;
+import com.agentsquad.squad.conversation.dto.TaskReceipt;
+import com.agentsquad.squad.conversation.dto.TaskResponse;
+import com.agentsquad.squad.presentation.dto.TaskSnapshot;
+import com.agentsquad.squad.presentation.dto.WorkerJobPage;
+import com.agentsquad.squad.conversation.service.ConversationDeletionService;
+import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.conversation.service.TaskControlService;
+import com.agentsquad.squad.presentation.service.TaskEventStreamer;
+import com.agentsquad.squad.presentation.service.TaskSnapshotService;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
@@ -41,6 +64,15 @@ public class RuntimeController {
 
     @Resource
     private TaskSnapshotService taskSnapshotService;
+
+    /**
+     * 查询当前计划的归属子任务；不把 Worker 当作可由用户独立启动的目标。
+     */
+    @GetMapping("/tasks/{taskId}/jobs")
+    public WorkerJobPage listJobs(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
+                                  @PathVariable String taskId) {
+        return taskSnapshotService.listJobs(userId(token), taskId);
+    }
 
     /**
      * 创建当前用户的对话。
@@ -125,7 +157,7 @@ public class RuntimeController {
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody TaskCreateRequest request) {
         return goalTaskService.submit(authService.authenticateWrite(token, csrfToken).userId(),
-                conversationId, idempotencyKey, request.message());
+                conversationId, idempotencyKey, request.message(), request.artifactIds());
     }
 
     /**

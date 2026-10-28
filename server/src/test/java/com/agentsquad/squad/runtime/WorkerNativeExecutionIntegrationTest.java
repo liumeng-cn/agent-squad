@@ -41,7 +41,13 @@ class WorkerNativeExecutionIntegrationTest {
         HttpServer model = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         model.createContext("/v1/chat/completions", exchange -> {
             int sequence = modelCalls.incrementAndGet();
-            byte[] response = (sequence == 1 ? toolCallResponse() : finalResponse())
+            String answer = switch (sequence) {
+                case 1 -> toolCallResponse();
+                case 2 -> finalResponse();
+                case 3 -> completionToolCallResponse();
+                default -> completionFinalResponse();
+            };
+            byte[] response = answer
                     .getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().set("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, response.length);
@@ -84,6 +90,7 @@ class WorkerNativeExecutionIntegrationTest {
             };
             String userId = "00000000-0000-0000-0000-000000000001";
             String jobId;
+            String taskId;
             try (ConfigurableApplicationContext spring = SpringApplication.run(
                     AgentSquadApplication.class, base)) {
                 GoalTaskService tasks = spring.getBean(GoalTaskService.class);
@@ -95,6 +102,7 @@ class WorkerNativeExecutionIntegrationTest {
                 ConversationResponse conversation = tasks.createConversation(userId, "写作任务");
                 TaskReceipt task = tasks.submit(userId, conversation.conversationId(),
                         "native-worker", "写一段摘要");
+                taskId = task.taskId();
                 definitions.publish(new AuthView(userId, "admin", List.of("ADMIN"), "csrf"),
                         "new-writer", new WorkerDefinitionCreateRequest(
                                 "new-writer", "1.0.0", "写简短摘要",
@@ -133,7 +141,17 @@ class WorkerNativeExecutionIntegrationTest {
                     Thread.sleep(100);
                 }
                 assertThat(status).isEqualTo("SUCCEEDED");
-                assertThat(modelCalls.get()).isEqualTo(2);
+                String taskStatus = null;
+                for (int attempt = 0; attempt < 100; attempt++) {
+                    taskStatus = jdbc.queryForObject(
+                            "SELECT status FROM sq_goal_task WHERE task_id = ?", String.class, taskId);
+                    if ("SUCCEEDED".equals(taskStatus) || "RECOVERY_BLOCKED".equals(taskStatus)) {
+                        break;
+                    }
+                    Thread.sleep(100);
+                }
+                assertThat(taskStatus).isEqualTo("SUCCEEDED");
+                assertThat(modelCalls.get()).isEqualTo(4);
                 assertThat(jdbc.queryForObject("""
                         SELECT COUNT(*) FROM sq_budget_reservation
                         WHERE task_id = (SELECT task_id FROM sq_worker_job WHERE job_id = ?)
@@ -143,6 +161,10 @@ class WorkerNativeExecutionIntegrationTest {
                 assertThat(jdbc.queryForObject(
                         "SELECT result_json FROM sq_worker_job WHERE job_id = ?",
                         String.class, jobId)).contains("hello");
+                assertThat(jdbc.queryForObject("""
+                        SELECT payload_json FROM sq_task_event
+                        WHERE task_id = ? AND event_type = 'answer.completed'
+                        """, String.class, taskId)).contains("摘要已完成：hello");
             }
         } finally {
             model.stop(0);
@@ -166,6 +188,28 @@ class WorkerNativeExecutionIntegrationTest {
         return """
                 {"id":"chatcmpl-worker-2","object":"chat.completion","created":2,"model":"test-model",
                  "choices":[{"index":0,"message":{"role":"assistant","content":"已提交结果。"},
+                   "finish_reason":"stop"}],
+                 "usage":{"prompt_tokens":5,"completion_tokens":5,"total_tokens":10}}
+                """;
+    }
+
+    private String completionToolCallResponse() {
+        String arguments = new ObjectMapper().valueToTree(
+                "{\"outcome\":\"SUCCEEDED\",\"finalAnswer\":\"摘要已完成：hello\"}").toString();
+        return """
+                {"id":"chatcmpl-master-1","object":"chat.completion","created":3,"model":"test-model",
+                 "choices":[{"index":0,"message":{"role":"assistant","content":null,
+                   "tool_calls":[{"id":"call-completion-1","type":"function",
+                     "function":{"name":"propose_completion","arguments":%s}}]},
+                   "finish_reason":"tool_calls"}],
+                 "usage":{"prompt_tokens":5,"completion_tokens":5,"total_tokens":10}}
+                """.formatted(arguments);
+    }
+
+    private String completionFinalResponse() {
+        return """
+                {"id":"chatcmpl-master-2","object":"chat.completion","created":4,"model":"test-model",
+                 "choices":[{"index":0,"message":{"role":"assistant","content":"等待平台发布最终回答。"},
                    "finish_reason":"stop"}],
                  "usage":{"prompt_tokens":5,"completion_tokens":5,"total_tokens":10}}
                 """;

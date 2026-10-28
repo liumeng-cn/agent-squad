@@ -1,10 +1,17 @@
 package com.agentsquad.squad.runtime.service;
 
 import com.agentsquad.squad.integration.agentscope.NativeEventView;
-import com.agentsquad.squad.conversation.domain.*;
-import com.agentsquad.squad.runtime.domain.*;
-import com.agentsquad.squad.conversation.repository.*;
-import com.agentsquad.squad.runtime.repository.*;
+import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
+import com.agentsquad.squad.conversation.domain.RuntimeCommandAction;
+import com.agentsquad.squad.runtime.domain.FinalizationRow;
+import com.agentsquad.squad.runtime.domain.NativeRunOutcome;
+import com.agentsquad.squad.runtime.domain.ProjectionTarget;
+import com.agentsquad.squad.conversation.repository.CommandMapper;
+import com.agentsquad.squad.conversation.repository.ConversationMapper;
+import com.agentsquad.squad.conversation.repository.TaskEventMapper;
+import com.agentsquad.squad.runtime.repository.CompletionMapper;
+import com.agentsquad.squad.runtime.repository.PlanMapper;
+import com.agentsquad.squad.runtime.repository.ProjectionMapper;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -41,6 +48,9 @@ public class TaskFinalizerService {
 
     @Resource
     private CompletionMapper completionMapper;
+
+    @Resource
+    private PlanMapper planMapper;
 
     @Resource
     private CommandMapper commandMapper;
@@ -139,6 +149,13 @@ public class TaskFinalizerService {
         if (row == null || !GoalTaskStatus.RUNNING.name().equals(row.status()) || row.cancellationRequested()
                 || row.proposalJson() != null || event.turnId() == null) {
             return false;
+        }
+        if (row.planVersion() > 0
+                && planMapper.countActivePlan(row.userId(), row.taskId(), row.planVersion()) > 0
+                && commandMapper.countSignalTurn(row.userId(), row.taskId(), event.turnId()) == 0) {
+            log.info("Master 规划回合已结束，等待 Worker 汇合 taskId={} planVersion={} turnId={}",
+                    row.taskId(), row.planVersion(), event.turnId());
+            return true;
         }
         if (row.correctionCount() == 0) {
             if (completionMapper.markCorrectionRequested(row.userId(), row.taskId()) != 1) {

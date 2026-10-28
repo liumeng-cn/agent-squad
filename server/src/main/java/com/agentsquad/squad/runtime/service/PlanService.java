@@ -23,6 +23,7 @@ import com.agentsquad.squad.runtime.repository.ProjectionMapper;
 import com.agentsquad.squad.runtime.repository.ContextSnapshotMapper;
 import com.agentsquad.squad.worker.repository.WorkerDefinitionMapper;
 import com.agentsquad.squad.worker.WorkerDefinitionService;
+import com.agentsquad.squad.common.util.JsonSchemaValidator;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionResponse;
 import com.agentsquad.squad.worker.profile.WorkerModelProfile;
 import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;
@@ -71,6 +72,18 @@ public class PlanService {
 
     @Resource
     private WorkerDefinitionService workerDefinitionService;
+
+    @Resource
+    private JsonSchemaValidator schemaValidator;
+
+    @Resource
+    private WorkerResultReuseService reuseService;
+
+    @Resource
+    private WorkerDependencyService dependencyService;
+
+    @Resource
+    private MasterSignalService masterSignalService;
 
     @Resource
     private WorkerProfileRegistry profileRegistry;
@@ -130,15 +143,43 @@ public class PlanService {
 
         validateDag(publish.nodes());
         validateContexts(context, publish.nodes());
-        requirePlanBudget(context, publish.nodes());
+        List<WorkerJobRow> previousJobs = context.planVersion() == 0
+                ? List.of() : planMapper.listJobs(context.taskId(), context.planVersion());
+        Map<String, WorkerJobRow> reusable = new LinkedHashMap<>();
+        boolean foundReusable;
+        do {
+            foundReusable = false;
+            for (PlanNode node : publish.nodes()) {
+                if (reusable.containsKey(node.nodeKey())) {
+                    continue;
+                }
+                WorkerJobRow source = reuseService.reusableNode(
+                        context.userId(), context.taskId(), node, previousJobs, reusable);
+                if (source != null) {
+                    reusable.put(node.nodeKey(), source);
+                    foundReusable = true;
+                }
+            }
+        } while (foundReusable);
+        requirePlanBudget(context, publish.nodes(), reusable.keySet());
 
         long newVersion = context.planVersion() + 1;
+        long priorSignalVersion = 0;
+        if (context.planVersion() > 0) {
+            PlanRow previous = planMapper.lockPlan(context.userId(), context.taskId(),
+                    context.planVersion());
+            if (previous == null) {
+                throw new IllegalStateException("当前计划头已消失");
+            }
+            priorSignalVersion = previous.signalVersion();
+        }
         String planId = UUID.randomUUID().toString();
         String definitionJson = RuntimePayloads.toJson(objectMapper, publish);
         planMapper.insertPlan(planId, context.userId(), context.taskId(), newVersion,
-                publish.logicalKey(), definitionJson);
+                publish.logicalKey(), definitionJson, priorSignalVersion);
 
         List<String> jobIds = new ArrayList<>(publish.nodes().size());
+        Map<String, String> reusedJobIds = new LinkedHashMap<>();
         for (PlanNode node : publish.nodes()) {
             String jobId = UUID.randomUUID().toString();
             boolean root = node.dependsOn() == null || node.dependsOn().isEmpty();
@@ -150,7 +191,14 @@ public class PlanService {
             planMapper.insertJob(jobId, context.userId(), context.taskId(), newVersion,
                     node.nodeKey(), node.workerKey(), node.workerVersion(), status,
                     dependsJson, RuntimePayloads.toJson(objectMapper, input));
-            if (root) {
+            WorkerJobRow source = reusable.get(node.nodeKey());
+            if (source != null) {
+                if (planMapper.reuseResult(context.userId(), jobId,
+                        source.jobId(), source.resultJson()) != 1) {
+                    throw new IllegalStateException("复用节点结果写入失败");
+                }
+                reusedJobIds.put(jobId, source.jobId());
+            } else if (root) {
                 createRootDelivery(context, node, jobId, newVersion);
             }
             jobIds.add(jobId);
@@ -163,8 +211,16 @@ public class PlanService {
 
         planMapper.supersedePlans(context.taskId(), newVersion);
         planMapper.supersedeUnstartedJobs(context.taskId(), newVersion);
-        planMapper.cancelSupersededCommands(context.taskId(), newVersion);
         planMapper.barrierInFlightJobs(context.taskId(), newVersion);
+        planMapper.cancelSupersededCommands(context.taskId(), newVersion);
+        planMapper.cancelSupersededSignals(context.taskId());
+        if (!reusedJobIds.isEmpty()) {
+            dependencyService.activateReadyDependents(context.userId(), context.taskId(), newVersion);
+            PlanRow activePlan = planMapper.lockPlan(context.userId(), context.taskId(), newVersion);
+            for (String ignored : reusedJobIds.keySet()) {
+                masterSignalService.onJobStateChanged(activePlan);
+            }
+        }
 
         Map<String, Object> eventPayload = new LinkedHashMap<>();
         eventPayload.put("planVersion", newVersion);
@@ -176,6 +232,17 @@ public class PlanService {
                 projectionMapper.eventSequence(context.userId(), context.taskId()),
                 "plan:" + planId, "plan.published", RuntimePayloads.toJson(objectMapper, eventPayload),
                 LocalDateTime.now());
+        for (Map.Entry<String, String> reuse : reusedJobIds.entrySet()) {
+            if (projectionMapper.reserveEventSequence(context.userId(), context.taskId()) != 1) {
+                throw new IllegalStateException("结果复用事件序号预留失败");
+            }
+            taskEventMapper.insertProjected(context.userId(), context.taskId(),
+                    projectionMapper.eventSequence(context.userId(), context.taskId()),
+                    "job:reused:" + reuse.getKey(), "job.reused",
+                    RuntimePayloads.toJson(objectMapper, Map.of(
+                            "jobId", reuse.getKey(), "reusedFromJobId", reuse.getValue(),
+                            "planVersion", newVersion)), LocalDateTime.now());
+        }
 
         log.info("计划已发布 taskId={} planVersion={} planId={} jobCount={}",
                 context.taskId(), newVersion, planId, jobIds.size());
@@ -185,7 +252,8 @@ public class PlanService {
     /**
      * 发布前按每个节点的一次最大模型调用估算最低启动额；余额不足时整个发布事务回滚。
      */
-    private void requirePlanBudget(PlanContextRow context, List<PlanNode> nodes) {
+    private void requirePlanBudget(PlanContextRow context, List<PlanNode> nodes,
+                                   Set<String> reusedNodeKeys) {
         TaskBudgetRow taskBudget = budgetMapper.lockTask(context.userId(), context.taskId());
         if (taskBudget == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标预算不存在");
@@ -193,6 +261,9 @@ public class PlanService {
         BigInteger required = BigInteger.valueOf(budgetMapper.sumConsumedUnits(
                 context.userId(), context.taskId()));
         for (PlanNode node : nodes) {
+            if (reusedNodeKeys.contains(node.nodeKey())) {
+                continue;
+            }
             WorkerDefinitionResponse definition = workerDefinitionService.requireEnabled(
                     node.workerKey(), node.workerVersion());
             WorkerModelProfile profile = profileRegistry.requirePricedModel(definition.modelProfileKey());
@@ -272,6 +343,11 @@ public class PlanService {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION,
                         "计划节点的局部上下文未准备或已失效");
             }
+            WorkerDefinitionResponse definition = workerDefinitionService.requireEnabled(
+                    node.workerKey(), node.workerVersion());
+            schemaValidator.requireMatches(objectMapper.valueToTree(Map.of(
+                    "goal", node.goal(), "contextSnapshotId", node.contextSnapshotId())),
+                    definition.inputSchema(), "Worker 输入");
         }
     }
 

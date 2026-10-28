@@ -1,7 +1,12 @@
 package com.agentsquad.squad.conversation.repository;
 
 import com.agentsquad.squad.conversation.domain.DeliveryRow;
-import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Arg;
+import org.apache.ibatis.annotations.ConstructorArgs;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,7 +19,7 @@ public interface DeliveryMapper {
 
     @Select("""
             SELECT command_id FROM sq_command
-            WHERE action IN ('SUBMIT', 'STOP', 'RESUME', 'RESPOND')
+            WHERE action IN ('SUBMIT', 'MASTER_SIGNAL', 'STOP', 'RESUME', 'RESPOND')
               AND ((status = 'PENDING' AND due_at <= #{now})
                    OR (status = 'DELIVERING' AND delivery_lease_until < #{now}))
             ORDER BY due_at, id LIMIT 20
@@ -26,7 +31,8 @@ public interface DeliveryMapper {
             SET status = 'DELIVERING', delivery_token = #{token},
                 delivery_lease_until = #{leaseUntil}, delivery_attempts = delivery_attempts + 1,
                 last_error_code = NULL
-            WHERE command_id = #{commandId} AND action IN ('SUBMIT', 'STOP', 'RESUME', 'RESPOND')
+            WHERE command_id = #{commandId}
+              AND action IN ('SUBMIT', 'MASTER_SIGNAL', 'STOP', 'RESUME', 'RESPOND')
               AND ((status = 'PENDING' AND due_at <= #{now})
                    OR (status = 'DELIVERING' AND delivery_lease_until < #{now}))
             """)

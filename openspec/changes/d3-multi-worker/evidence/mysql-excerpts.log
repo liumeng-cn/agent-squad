@@ -1,0 +1,11 @@
+2026-10-28T09:38:43.066+08:00  INFO 74147 --- [agent-squad-server] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema `agent_squad_d3_test` to version "1 - baseline"
+2026-10-28T09:38:43.230+08:00  INFO 74147 --- [agent-squad-server] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema `agent_squad_d3_test` to version "2 - plan worker job"
+2026-10-28T09:38:43.274+08:00  INFO 74147 --- [agent-squad-server] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema `agent_squad_d3_test` to version "3 - context snapshot"
+2026-10-28T09:38:43.304+08:00  INFO 74147 --- [agent-squad-server] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema `agent_squad_d3_test` to version "4 - task budget profiles"
+2026-10-28T09:38:43.387+08:00  INFO 74147 --- [agent-squad-server] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema `agent_squad_d3_test` to version "5 - worker guard"
+2026-10-28T09:38:43.460+08:00  INFO 74147 --- [agent-squad-server] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema `agent_squad_d3_test` to version "6 - artifact storage"
+2026-10-28T09:38:43.500+08:00  INFO 74147 --- [agent-squad-server] [           main] o.f.core.internal.command.DbMigrate      : Successfully applied 6 migrations to schema `agent_squad_d3_test`, now at version v6 (execution time 00:00.346s)
+2026-10-28T09:38:43.866+08:00  INFO 74147 --- [agent-squad-server] [           main] c.a.squad.artifact.ArtifactService       : 产物内容与元数据写入完成 userId=ef59c9ef-1f62-44bf-a8de-1cdcea774482 artifactId=e4e8c4e8-4ed0-4eed-a6d9-9fa091415935 sizeBytes=27 mediaType=text/plain
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.932 s -- in com.agentsquad.squad.runtime.MySqlGoalTaskIntegrationTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS

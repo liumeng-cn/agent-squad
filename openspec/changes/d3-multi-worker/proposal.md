@@ -12,6 +12,7 @@ D0–D2 已交付骨架、单 Master 正向链路与受控工具（Connection/Op
 - 提前建立配置型模型/运行 Profile 注册表及父 Task 共享的模型预算预留，使 WorkerDefinition 中的 profileKey 可解析且并行执行不绕过预算；D5 继续扩展摘要、工具与沙箱的完整治理实验。
 - 实现汇合信号（MASTER_SIGNAL，taskId+signalVersion 唯一）与重规划/结果复用（SUPERSEDED、reusedFromJobId）。
 - 工作台交付任务详情、子任务列表、管理员能力页（R10）。
+- 最小文本产物上传、目标引用、归属鉴权和下载提前纳入 D3，以完成任务详情验收；D5 继续负责 Worker/Sandbox stage/commit、保留清理与备份。
 
 ## Capabilities
 

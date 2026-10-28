@@ -73,8 +73,9 @@ export interface WorkerJob {
   workerVersion: string
   status: string
   version: number
-  bindingId: string
-  result: unknown
+  bindingId?: string
+  reusedFromJobId?: string
+  result?: unknown
 }
 
 export interface WorkerDefinition {

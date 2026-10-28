@@ -8,6 +8,7 @@ import com.agentsquad.squad.runtime.domain.ProjectionTarget;
 import com.agentsquad.squad.runtime.repository.ProjectionMapper;
 import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
 import com.agentsquad.squad.runtime.service.WorkerResultService;
+import com.agentsquad.squad.runtime.service.MasterSignalService;
 import com.agentsquad.squad.conversation.repository.TaskEventMapper;
 import com.agentsquad.squad.runtime.service.TaskFinalizerService;
 import com.agentsquad.squad.common.util.RuntimePayloads;
@@ -46,6 +47,9 @@ public class NativeProjectionService {
 
     @Resource
     private WorkerResultService workerResultService;
+
+    @Resource
+    private MasterSignalService masterSignalService;
 
     @Resource
     private TaskEventMapper taskEventMapper;
@@ -94,6 +98,7 @@ public class NativeProjectionService {
                     taskFinalizerService.blockAfterNativeRun(target, event, outcome);
                 }
             }
+            masterSignalService.onMasterTurnEnded(target.userId(), target.taskId(), event.turnId());
         } else if ("interaction/requested".equals(event.type())) {
             bindInteraction(target, event);
         } else if ("interaction/resolved".equals(event.type())) {
@@ -101,6 +106,11 @@ public class NativeProjectionService {
         }
         if (projectionMapper.advanceCursor(target.userId(), target.bindingId(), cursor, event.sequence()) != 1) {
             throw new IllegalStateException("原生日志投影水位竞争");
+        }
+        if ("run/start".equals(event.type()) || "run/end".equals(event.type())) {
+            log.info("原生持久事件投影完成 taskId={} bindingId={} sourceSeq={} nativeEventId={} type={} turnId={} outcome={}",
+                    target.taskId(), target.bindingId(), event.sequence(), event.eventId(),
+                    event.type(), event.turnId(), event.outcome());
         }
     }
 

@@ -49,10 +49,18 @@ D0–D2 已完成骨架、单 Master 正向链路与受控工具后端。D3 把�
 
 ### 汇合与重规划
 - 选择：Job 结果持久完成时递增 signalVersion；汇合器在依赖/等待满足且无未处理 Master 轮次时创建唯一 MASTER_SIGNAL Command（key=taskId+signalVersion）。新 Plan 取代旧版：未开始 Job 置 SUPERSEDED，执行中写取消屏障，成功结果仅在输入摘要/能力版本/Skill 版本/权限/证据时效全匹配时复用。
+- D3 复用收敛到同一 Task 紧邻前一版的成功节点：节点目标、Worker 不可变版本、授权快照摘要/对话代际/记忆授权代际及依赖来源均一致，且材料仅有不可变用户约束、工具与 Skill 授权为空、结果无外部证据引用时才复用；其余情况重新派发。复用记录 `reusedFromJobId`，不产生新的 Worker Command，并以同一 Plan 发布事务激活剩余依赖。
+- 不可恢复的分支也推进信号版本：当前已无活动节点且存在 FAILED/RECOVERY_BLOCKED/PARTIAL 时，固定各节点状态与成功结果通知 Master 重规划，或明确以 PARTIAL 收尾；候选不作为成功结果发送，存在活动节点、待处理交互或未知操作时不得结束目标。
 - 理由：保证确定性汇合与结果复用，避免每条日志唤醒 Master 或产生重复节点。
 - 替代：每次 Job 完成即唤醒 Master（刷屏、非确定性）。未采用。
 
 ## Risks / Trade-offs
+
+### 任务详情与最小产物链路
+
+- D3 提前提供 UTF-8 txt/md/json/csv 小文件的上传、READY 元数据与字节原子存储、目标附件引用和下载。最大 10 MiB，内容计算 SHA-256，同用户同上传键同文件重放，不同文件拒绝。元数据与内容保存在同一数据库事务，避免文件与元数据提交窗口；读取重验归属、有效期和会话删除屏障，下载验证内容摘要，以附件响应和 nosniff 返回。D5 继续实现 Worker/Sandbox 的 stage/commit、运行空间校验、保留清理和备份。
+- Operation 列表返回摘要；详情仅公开固定字段的脱敏类型/长度，隐藏原生会话、连接凭据和完整工具结果。核对同时要求 OPERATOR 角色及 `sq_operation_reconciler` 的目标授权，ADMIN 不自动获得该能力。请求携带 expectedVersion、明确结论和归属证据引用，CAS 失败返回冲突，UNKNOWN 不存在“忽略”入口。
+- INPUT 页面仅支持最多 16 个平铺标量字段、长度/数值范围及有界枚举，服务端和页面消费同一受限 Schema；APPROVAL 确认持久 requestHash，超时重试沿用同一幂等键。正文按回答版本替换，Worker 结果和工具内容不进入主正文。
 
 - [框架 BETA1 后台子任务接管缺口] → 以平台 Dispatcher + 持久 Command/guard 承担归属，恢复实验覆盖同 Job 两实例与迟到提交（A05）。
 - [publish_plan 校验遗漏] → 按 spec 逐项校验并在任务中补契约测试（A04）。

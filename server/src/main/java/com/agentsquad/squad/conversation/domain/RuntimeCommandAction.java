@@ -9,6 +9,7 @@ package com.agentsquad.squad.conversation.domain;
  */
 public enum RuntimeCommandAction {
     SUBMIT,
+    MASTER_SIGNAL,
     STOP,
     RESUME,
     RESPOND,

@@ -4,6 +4,7 @@ import type { TaskSnapshot } from '../../../shared/api/types'
 import StatusBadge from '../../../shared/ui/StatusBadge.vue'
 import { useRuntimeStore } from '../stores/runtime'
 import { statusText } from '../../../shared/lib/taskStatus'
+import InteractionCard from '../../tasks/components/InteractionCard.vue'
 
 const runtime = useRuntimeStore()
 const props = defineProps<{ history: TaskSnapshot[] }>()
@@ -70,7 +71,9 @@ const progressText = computed(() => {
       <ul v-if="milestones.length" class="event-log">
         <li v-for="item in milestones" :key="item.sequence">{{ item.text }}</li>
       </ul>
-      <div v-if="runtime.answer?.completed && runtime.answer.text" class="message-row message-row-assistant">
+      <InteractionCard v-for="interaction in runtime.snapshot?.pending ?? []" :key="interaction.interactionId"
+        :interaction="interaction" @refresh="runtime.refreshSnapshot()" />
+      <div v-if="runtime.answer?.text" class="message-row message-row-assistant">
         <span class="message-label">Agent Squad <StatusBadge :status="runtime.status ?? ''" /></span>
         <div class="bubble bubble-assistant">{{ runtime.answer.text }}</div>
       </div>

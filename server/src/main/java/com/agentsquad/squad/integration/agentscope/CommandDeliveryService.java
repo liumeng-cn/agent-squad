@@ -5,6 +5,8 @@ import com.agentsquad.squad.conversation.domain.RuntimeCommandAction;
 import com.agentsquad.squad.conversation.repository.DeliveryMapper;
 import com.agentsquad.squad.conversation.service.TaskControlService;
 import com.agentsquad.squad.runtime.service.TaskFinalizerService;
+import com.agentsquad.squad.runtime.service.WorkerRecoveryService;
+import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -48,6 +50,9 @@ public class CommandDeliveryService {
     private TaskControlService taskControlService;
 
     @Resource
+    private WorkerRecoveryService workerRecoveryService;
+
+    @Resource
     private ObjectMapper objectMapper;
 
     /**
@@ -85,7 +90,7 @@ public class CommandDeliveryService {
                 return;
             }
             switch (action) {
-                case SUBMIT -> deliverSubmit(commandId, token, delivery);
+                case SUBMIT, MASTER_SIGNAL -> deliverSubmit(commandId, token, delivery);
                 case STOP -> deliverStop(commandId, token, delivery);
                 case RESUME -> deliverResume(commandId, token, delivery);
                 case RESPOND -> deliverRespond(commandId, token, delivery);
@@ -143,9 +148,17 @@ public class CommandDeliveryService {
                 return;
             }
             if (message.contains(ALREADY_SETTLED) || delivery.attempts() >= MAX_RESUME_ATTEMPTS) {
-                taskControlService.blockRejectedResume(delivery.userId(), delivery.taskId(),
-                        commandId, token, message.contains(ALREADY_SETTLED)
-                                ? "NATIVE_TURN_SETTLED" : "NATIVE_RESUME_REJECTED");
+                String errorCode = message.contains(ALREADY_SETTLED)
+                        ? "NATIVE_TURN_SETTLED" : "NATIVE_RESUME_REJECTED";
+                if (MasterAgentIdentity.AGENT_ID.equals(delivery.agentId())) {
+                    taskControlService.blockRejectedResume(delivery.userId(), delivery.taskId(),
+                            commandId, token, errorCode);
+                } else if (message.contains(ALREADY_SETTLED)) {
+                    workerRecoveryService.discardSettledResume(commandId, token);
+                } else {
+                    workerRecoveryService.blockRejectedResume(delivery.userId(), delivery.taskId(),
+                            delivery.bindingId(), commandId, token, errorCode);
+                }
                 return;
             }
             retry(commandId, token, delivery.attempts(), "NATIVE_RESUME_REJECTED");

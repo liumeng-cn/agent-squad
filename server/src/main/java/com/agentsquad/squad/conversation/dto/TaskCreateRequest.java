@@ -2,9 +2,13 @@ package com.agentsquad.squad.conversation.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
+import java.util.List;
 
 /**
  * 提交目标请求；用户输入不会作为身份或框架 Session ID 使用。
  */
-public record TaskCreateRequest(@NotBlank @Size(max = 20000) String message) {
+public record TaskCreateRequest(@NotBlank @Size(max = 20000) String message,
+                                @Size(max = 20) List<String> artifactIds,
+                                @Pattern(regexp = "STANDARD") String profileKey) {
 }

@@ -19,6 +19,8 @@ import com.agentsquad.squad.tools.operation.domain.OperationStatus;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.agentsquad.squad.common.util.JsonSchemaValidator;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,6 +49,12 @@ import java.util.UUID;
 @Slf4j
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class InteractionService {
+
+    @Resource
+    private JsonSchemaValidator jsonSchemaValidator;
+
+    @Resource
+    private InputFormSchema inputFormSchema;
 
     private static final String KIND_INPUT = "INPUT";
     private static final String KIND_APPROVAL = "APPROVAL";
@@ -187,6 +195,12 @@ public class InteractionService {
             if (valueJson.getBytes(StandardCharsets.UTF_8).length > 8192) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "答复内容超过 8KB");
             }
+            try {
+                jsonSchemaValidator.requireMatches(objectMapper.valueToTree(inputValue),
+                        RuntimePayloads.readJson(objectMapper, row.answerSchemaJson()), "追问答复");
+            } catch (JsonProcessingException exception) {
+                throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "追问表单定义不可用");
+            }
             answerJson.put("value", inputValue);
             answerText = valueJson;
         } else {
@@ -295,13 +309,7 @@ public class InteractionService {
     }
 
     private String buildApprovalQuestion(String toolName, OperationRow operation) {
-        Map<String, Object> args = readArguments(operation.argumentsJson());
-        StringBuilder question = new StringBuilder("请求审批：").append(toolName);
-        if (operation.businessIntentKey() != null) {
-            question.append("（意图 ").append(operation.businessIntentKey()).append("）");
-        }
-        question.append("。参数：").append(args);
-        return question.length() > 4000 ? question.substring(0, 4000) : question.toString();
+        return "请求审批：" + toolName + "（" + operation.effect() + "），请核对脱敏参数及操作摘要";
     }
 
     private String fixedApprovalSchema() {
@@ -332,9 +340,9 @@ public class InteractionService {
                 && inputMap.get("answerSchema") instanceof Map<?, ?> schemaMap) {
             @SuppressWarnings("unchecked")
             Map<String, Object> schema = (Map<String, Object>) schemaMap;
-            return RuntimePayloads.toJson(objectMapper, schema);
+            return inputFormSchema.normalize(objectMapper.valueToTree(schema)).toString();
         }
-        return RuntimePayloads.toJson(objectMapper, Map.of("type", "object"));
+        return inputFormSchema.normalize(null).toString();
     }
 
     private Map<String, Object> readArguments(String argumentsJson) {

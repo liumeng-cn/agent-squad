@@ -7,6 +7,7 @@ import com.agentsquad.squad.runtime.domain.CompletionContextRow;
 import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
 import com.agentsquad.squad.presentation.dto.CompletionProposalReceipt;
 import com.agentsquad.squad.runtime.repository.CompletionMapper;
+import com.agentsquad.squad.runtime.repository.PlanMapper;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,6 +39,9 @@ public class CompletionProposalService {
     private CompletionMapper completionMapper;
 
     @Resource
+    private PlanMapper planMapper;
+
+    @Resource
     private ObjectMapper objectMapper;
 
     /**
@@ -65,7 +69,17 @@ public class CompletionProposalService {
                 || GoalTaskStatus.RUNNING.name().equals(context.taskStatus()))) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已不能提交完成候选");
         }
+        if (context.planVersion() > 0
+                && (planMapper.countActiveJobs(userId, context.taskId(), context.planVersion()) > 0
+                || (GoalTaskStatus.SUCCEEDED.name().equals(outcome)
+                && planMapper.countUnfinishedJobs(userId, context.taskId(), context.planVersion()) > 0))) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
+                    "Worker 尚未全部完成，当前不能提交最终回答");
+        }
 
+        if (completionMapper.countPendingEffects(userId, context.taskId()) > 0) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "仍有待处理交互或未知操作，不能结束目标");
+        }
         Map<String, Object> proposal = new LinkedHashMap<>();
         proposal.put("outcome", outcome);
         proposal.put("finalAnswer", finalAnswer);

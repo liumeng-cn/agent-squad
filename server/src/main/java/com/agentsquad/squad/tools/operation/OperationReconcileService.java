@@ -7,6 +7,9 @@ import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.tools.operation.domain.OperationRow;
 import com.agentsquad.squad.tools.operation.domain.OperationStatus;
 import com.agentsquad.squad.tools.operation.dto.OperationView;
+import com.agentsquad.squad.tools.operation.dto.OperationReconcileRequest;
+import com.agentsquad.squad.identity.AuthView;
+import com.agentsquad.squad.artifact.ArtifactService;
 import com.agentsquad.squad.tools.operation.repository.MockTicketMapper;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -49,23 +52,43 @@ public class OperationReconcileService {
     @Resource
     private ObjectMapper objectMapper;
 
+    @Resource
+    private OperationAccessService operationAccessService;
+
+    @Resource
+    private ArtifactService artifactService;
+
     /**
      * 核对 UNKNOWN 操作并出账；确认成功按预留额结算，确认未执行释放预留。
      */
     @Transactional
-    public OperationView reconcile(String userId, String operationId, String outcome, String note) {
+    public OperationView reconcile(AuthView actor, String operationId, OperationReconcileRequest request) {
+        String userId = actor.userId();
         OperationRow row = operationMapper.findOwned(userId, operationId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "操作不存在");
         }
+        if (!operationAccessService.canReconcile(actor, row.taskId(), "UNKNOWN")) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "没有当前目标的操作核对权限");
+        }
+        if (request.expectedVersion() == null || row.version() != request.expectedVersion()) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "操作版本已变化，请刷新后重试");
+        }
+        if (request.evidenceRefs() == null || request.evidenceRefs().isEmpty()
+                || request.evidenceRefs().size() > 20 || request.note() == null || request.note().isBlank()
+                || request.note().length() > 2000) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "核对必须提供证据和说明");
+        }
+        request.evidenceRefs().forEach(id -> artifactService.get(userId, id));
         if (!OperationStatus.UNKNOWN.name().equals(row.status())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
                     "只有 UNKNOWN 操作可以核对（当前 " + row.status() + "）");
         }
         Map<String, Object> evidence = new LinkedHashMap<>();
         evidence.put("reconciledBy", userId);
-        evidence.put("note", note);
-        switch (outcome) {
+        evidence.put("note", request.note());
+        evidence.put("evidenceRefs", request.evidenceRefs());
+        switch (request.disposition()) {
             case OUTCOME_SUCCEEDED -> reconcileSucceeded(userId, row, evidence);
             case OUTCOME_NOT_EXECUTED -> reconcileNotExecuted(userId, row, evidence);
             case OUTCOME_UNRESOLVED -> recordUnresolved(userId, row, evidence);

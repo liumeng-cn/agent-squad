@@ -1,7 +1,13 @@
 package com.agentsquad.squad.conversation.repository;
 
 import com.agentsquad.squad.conversation.domain.CommandRow;
-import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Arg;
+import org.apache.ibatis.annotations.ConstructorArgs;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.time.LocalDateTime;
 
@@ -84,4 +90,55 @@ public interface CommandMapper {
             FROM sq_command WHERE user_id = #{userId} AND command_id = #{commandId}
             """)
     CommandRow findOwned(@Param("userId") String userId, @Param("commandId") String commandId);
+
+    @Select("""
+            SELECT COUNT(*) FROM sq_command
+            WHERE user_id = #{userId} AND task_id = #{taskId}
+              AND action = 'MASTER_SIGNAL' AND native_turn_id = #{turnId}
+            """)
+    int countSignalTurn(@Param("userId") String userId, @Param("taskId") String taskId,
+                        @Param("turnId") String turnId);
+
+    @Update("""
+            UPDATE sq_command SET status = 'APPLIED'
+            WHERE user_id = #{userId} AND task_id = #{taskId}
+              AND native_turn_id = #{turnId} AND status = 'DELIVERED'
+              AND action IN ('SUBMIT', 'MASTER_SIGNAL')
+            """)
+    int markMasterTurnApplied(@Param("userId") String userId, @Param("taskId") String taskId,
+                              @Param("turnId") String turnId);
+
+    @Select("""
+            SELECT COUNT(*) FROM sq_command c
+            JOIN sq_runtime_binding b ON b.user_id = c.user_id
+                AND b.binding_id = c.binding_id AND b.role = 'MASTER'
+            WHERE c.user_id = #{userId} AND c.task_id = #{taskId}
+              AND c.action IN ('SUBMIT', 'MASTER_SIGNAL')
+              AND c.status IN ('PENDING', 'DELIVERING', 'DELIVERED')
+            """)
+    int countUnprocessedMasterCommands(@Param("userId") String userId,
+                                        @Param("taskId") String taskId);
+
+    @Select("""
+            SELECT command_id FROM sq_command
+            WHERE user_id = #{userId} AND binding_id = #{bindingId}
+              AND action = 'SUBMIT' AND status IN ('DELIVERED', 'APPLIED')
+              AND native_turn_id IS NOT NULL
+            ORDER BY id DESC LIMIT 1
+            """)
+    String findWorkerSubmitCommandId(@Param("userId") String userId,
+                                      @Param("bindingId") String bindingId);
+
+    @Select("""
+            SELECT COUNT(*) FROM sq_command
+            WHERE user_id = #{userId} AND binding_id = #{bindingId} AND action = 'RESUME'
+            """)
+    int countWorkerResumes(@Param("userId") String userId, @Param("bindingId") String bindingId);
+
+    @Select("""
+            SELECT COUNT(*) FROM sq_command
+            WHERE user_id = #{userId} AND binding_id = #{bindingId} AND action = 'RESUME'
+              AND status IN ('PENDING', 'DELIVERING')
+            """)
+    int countPendingWorkerResumes(@Param("userId") String userId, @Param("bindingId") String bindingId);
 }

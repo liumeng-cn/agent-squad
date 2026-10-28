@@ -5,8 +5,11 @@ import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.CanonicalJson;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.runtime.domain.WorkerLaunchRow;
+import com.agentsquad.squad.runtime.domain.PlanRow;
+import com.agentsquad.squad.runtime.repository.PlanMapper;
 import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
 import com.agentsquad.squad.worker.WorkerDefinitionService;
+import com.agentsquad.squad.common.util.JsonSchemaValidator;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,8 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.Iterator;
-import java.util.Map;
 
 /**
  * Worker 结构化结果候选与终态裁决。
@@ -31,7 +32,19 @@ public class WorkerResultService {
     private WorkerDispatchMapper dispatchMapper;
 
     @Resource
+    private PlanMapper planMapper;
+
+    @Resource
+    private WorkerDependencyService dependencyService;
+
+    @Resource
+    private MasterSignalService masterSignalService;
+
+    @Resource
     private WorkerDefinitionService definitionService;
+
+    @Resource
+    private JsonSchemaValidator schemaValidator;
 
     @Resource
     private ObjectMapper objectMapper;
@@ -55,7 +68,7 @@ public class WorkerResultService {
         }
         WorkerDefinitionResponse definition = definitionService.requirePublished(
                 job.workerKey(), job.workerVersion());
-        validate(result, definition.outputSchema());
+        schemaValidator.requireMatches(result, definition.outputSchema(), "Worker 输出");
         String resultJson = RuntimePayloads.toJson(objectMapper, result);
         if (job.resultCandidateJson() != null) {
             if (guardToken.equals(job.candidateGuardToken()) && turnId.equals(job.candidateTurnId())
@@ -79,8 +92,25 @@ public class WorkerResultService {
      */
     @Transactional
     public boolean finalizeSuccess(String userId, String bindingId, String turnId) {
-        return dispatchMapper.finalizeSuccess(userId, bindingId, turnId,
-                LocalDateTime.now(ZoneOffset.UTC)) == 1;
+        WorkerLaunchRow job = dispatchMapper.findByBinding(userId, bindingId);
+        if (job == null) {
+            return false;
+        }
+        Long currentVersion = planMapper.lockTaskPlanVersion(userId, job.taskId());
+        if (currentVersion == null || currentVersion != job.planVersion()) {
+            return false;
+        }
+        PlanRow plan = planMapper.lockPlan(userId, job.taskId(), job.planVersion());
+        if (plan == null || !"ACTIVE".equals(plan.status())) {
+            return false;
+        }
+        if (dispatchMapper.finalizeSuccess(userId, bindingId, turnId,
+                LocalDateTime.now(ZoneOffset.UTC)) != 1) {
+            return false;
+        }
+        dependencyService.activateReadyDependents(userId, job.taskId(), job.planVersion());
+        masterSignalService.onJobStateChanged(plan);
+        return true;
     }
 
     /**
@@ -104,80 +134,19 @@ public class WorkerResultService {
      */
     @Transactional
     public void markRecoveryBlocked(String userId, String bindingId) {
-        dispatchMapper.markRecoveryBlocked(userId, bindingId);
-    }
-
-    private void validate(JsonNode value, JsonNode schema) {
-        if (schema == null || schema.isEmpty()) {
+        WorkerLaunchRow job = dispatchMapper.findByBinding(userId, bindingId);
+        if (job == null) {
             return;
         }
-        if (!schema.isObject()) {
-            throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "Worker 输出 Schema 无效");
+        Long currentVersion = planMapper.lockTaskPlanVersion(userId, job.taskId());
+        if (currentVersion == null || currentVersion != job.planVersion()) {
+            return;
         }
-        Iterator<Map.Entry<String, JsonNode>> fields = schema.fields();
-        while (fields.hasNext()) {
-            String key = fields.next().getKey();
-            if (!java.util.Set.of("type", "properties", "required", "items", "enum",
-                    "additionalProperties", "description").contains(key)) {
-                throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION,
-                        "Worker 输出 Schema 含不支持的约束: " + key);
-            }
-        }
-        String type = schema.path("type").asText("");
-        boolean matches = switch (type) {
-            case "" -> true;
-            case "object" -> value.isObject();
-            case "array" -> value.isArray();
-            case "string" -> value.isTextual();
-            case "integer" -> value.isIntegralNumber();
-            case "number" -> value.isNumber();
-            case "boolean" -> value.isBoolean();
-            case "null" -> value.isNull();
-            default -> false;
-        };
-        if (!matches || (schema.has("enum") && !contains(schema.path("enum"), value))) {
-            throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION,
-                    "Worker 输出与 Schema 不匹配");
-        }
-        if (value.isObject()) {
-            JsonNode required = schema.path("required");
-            if (required.isArray()) {
-                for (JsonNode name : required) {
-                    if (!name.isTextual() || !value.has(name.asText())) {
-                        throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION,
-                                "Worker 输出缺少必填字段");
-                    }
-                }
-            }
-            JsonNode properties = schema.path("properties");
-            Iterator<Map.Entry<String, JsonNode>> members = value.fields();
-            while (members.hasNext()) {
-                Map.Entry<String, JsonNode> member = members.next();
-                if (properties.has(member.getKey())) {
-                    validate(member.getValue(), properties.get(member.getKey()));
-                } else if (schema.path("additionalProperties").isBoolean()
-                        && !schema.path("additionalProperties").booleanValue()) {
-                    throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION,
-                            "Worker 输出包含未定义字段");
-                }
-            }
-        }
-        if (value.isArray() && schema.has("items")) {
-            for (JsonNode item : value) {
-                validate(item, schema.get("items"));
-            }
+        PlanRow plan = planMapper.lockPlan(userId, job.taskId(), job.planVersion());
+        if (plan != null && "ACTIVE".equals(plan.status())
+                && dispatchMapper.markRecoveryBlocked(userId, bindingId) == 1) {
+            masterSignalService.onJobStateChanged(plan);
         }
     }
 
-    private boolean contains(JsonNode allowed, JsonNode value) {
-        if (!allowed.isArray()) {
-            return false;
-        }
-        for (JsonNode candidate : allowed) {
-            if (candidate.equals(value)) {
-                return true;
-            }
-        }
-        return false;
-    }
 }

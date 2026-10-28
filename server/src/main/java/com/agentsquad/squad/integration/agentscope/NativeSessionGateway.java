@@ -29,4 +29,9 @@ public interface NativeSessionGateway {
     String respond(DeliveryRow delivery, String requestId, String answerText);
 
     List<NativeEventView> readEvents(ProjectionTarget target, long after, int limit);
+
+    /**
+     * 读取原命令的 SDK 持久收据，用于区分仍在运行与 writer 租约失效的未完成回合。
+     */
+    NativeSubmissionReceipt inspectTask(ProjectionTarget target, String commandId);
 }

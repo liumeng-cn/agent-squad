@@ -44,6 +44,7 @@ export function createTaskApi(
   conversationId: string,
   message: string,
   idempotencyKey: string,
+  artifactIds: string[] = [],
 ): Promise<TaskReceipt> {
-  return apiPost(`/api/v1/conversations/${conversationId}/tasks`, { message }, { idempotencyKey })
+  return apiPost(`/api/v1/conversations/${conversationId}/tasks`, { message, artifactIds, profileKey: 'STANDARD' }, { idempotencyKey })
 }

@@ -1,5 +1,6 @@
 package com.agentsquad.squad.worker;
 
+import com.agentsquad.squad.common.util.JsonSchemaValidator;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
@@ -51,6 +52,9 @@ public class WorkerDefinitionService {
 
     @Resource
     private WorkerProfileRegistry profileRegistry;
+
+    @Resource
+    private JsonSchemaValidator schemaValidator;
 
     /**
      * 管理员按幂等键发布不可变版本；相同键换内容和同版本重复发布均拒绝。
@@ -223,6 +227,7 @@ public class WorkerDefinitionService {
         if (schema == null || !schema.isObject() || depth(schema, 1) > MAX_SCHEMA_DEPTH) {
             throw invalid(field + " 必须是深度不超过 8 的 JSON 对象");
         }
+        schemaValidator.requireValidSchema(schema, field);
     }
 
     private int depth(JsonNode node, int currentDepth) {

@@ -9,6 +9,7 @@ import com.agentsquad.squad.interaction.domain.InteractionRow;
 import com.agentsquad.squad.interaction.repository.InteractionMapper;
 import com.agentsquad.squad.tools.operation.domain.OperationRow;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
+import com.agentsquad.squad.tools.operation.OperationPreview;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +39,9 @@ public class InteractionQueryService {
     @Resource
     private ObjectMapper objectMapper;
 
+    @Resource
+    private OperationPreview operationPreview;
+
     /**
      * 列出目标的交互存储行；游标为存储主键。
      */
@@ -50,8 +54,9 @@ public class InteractionQueryService {
      * 分页读取目标的交互视图；游标取最后一条交互的存储主键。
      */
     public InteractionPage listPage(String userId, String taskId, String cursor, int limit) {
-        List<InteractionRow> rows = listByTask(userId, taskId, cursor, limit + 1);
-        boolean hasMore = rows.size() > Math.min(Math.max(limit, 1), 100);
+        int pageSize = Math.min(Math.max(limit, 1), 100);
+        List<InteractionRow> rows = interactionMapper.listByTask(userId, taskId, parseCursor(cursor), pageSize + 1);
+        boolean hasMore = rows.size() > pageSize;
         List<Interaction> items = rows.stream()
                 .limit(Math.min(Math.max(limit, 1), 100))
                 .map(row -> viewOf(userId, row))
@@ -98,16 +103,15 @@ public class InteractionQueryService {
                 context.put("operationId", operation.operationId());
                 context.put("toolKey", operation.toolKey());
                 context.put("effect", operation.effect());
-                context.put("arguments", parseJsonOrNull(operation.argumentsJson()));
-                context.put("businessIntentKey", operation.businessIntentKey());
-                context.put("connectionId", operation.connectionId());
-                context.put("connectionRevision", operation.connectionRevision());
-                context.put("operationStatus", operation.status());
+                context.put("argumentsPreview", operationPreview.arguments(operation.argumentsJson()));
+                context.put("resourceSummary", operation.toolKey() + " · " + operation.effect());
+                context.put("requestHash", operation.requestHash());
                 approvalContext = context;
             }
         }
         return new Interaction(row.interactionId(), row.taskId(), row.jobId(), row.kind(),
-                row.origin(), row.question(), parseJsonOrNull(row.answerSchemaJson()),
+                row.origin(), KIND_APPROVAL.equals(row.kind()) ? "请确认此操作的影响后决定是否执行" : row.question(),
+                parseJsonOrNull(row.answerSchemaJson()),
                 row.requestHash(), row.planVersion(),
                 row.expiresAt() == null ? null : row.expiresAt().toString(),
                 row.status(), row.version(), approvalContext);

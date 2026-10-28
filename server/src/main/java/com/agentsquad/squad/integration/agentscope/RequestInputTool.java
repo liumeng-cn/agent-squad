@@ -4,6 +4,10 @@ import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.tool.AgentTool;
 import io.agentscope.core.tool.ToolCallParam;
 import io.agentscope.core.tool.ToolSuspendException;
+import jakarta.annotation.Resource;
+import com.agentsquad.squad.interaction.service.InputFormSchema;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
@@ -19,6 +23,12 @@ import java.util.Map;
 @Component
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class RequestInputTool implements AgentTool {
+
+    @Resource
+    private InputFormSchema inputFormSchema;
+
+    @Resource
+    private ObjectMapper objectMapper;
 
     @Override
     public String getName() {
@@ -58,6 +68,11 @@ public class RequestInputTool implements AgentTool {
                 || !(question instanceof String questionText) || questionText.isBlank()
                 || questionText.length() > 4000) {
             return ToolResultBlock.error("追问缺少有效问题文本");
+        }
+        try {
+            inputFormSchema.normalize(objectMapper.valueToTree(param.getInput().get("answerSchema")));
+        } catch (RuntimeBusinessException exception) {
+            return ToolResultBlock.error(exception.getMessage());
         }
         throw new ToolSuspendException(questionText);
     }

@@ -108,11 +108,12 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
                         + "list_worker_capabilities 用于查询当前已启用的 Worker 能力及其契约；"
                         + "prepare_context 为每个计划节点冻结当前目标的局部材料；"
                         + "publish_plan 用于需要多个 Worker 协作时发布不可变计划，节点之间用 dependsOn 表达依赖。"
+                        + "计划发布后不要立即提交完成候选；结束当前协调回合，等待内部汇合结果再核对并回答。"
                         + "所有写入必须带稳定的 intentKey，同业务重试复用同一 intentKey。"
                         + "在回答目标之前，必须调用 propose_completion 提交 outcome 和完整 finalAnswer；"
                         + "工具回执不是用户答案。无法回答时明确说明缺少的信息。")
                 .model(OpenAIChatModel.builder().apiKey(apiKey).baseUrl(baseUrl)
-                        .modelName(modelName).build())
+                        .modelName(modelName).stream(false).build())
                 .modelExecutionConfig(ExecutionConfig.builder()
                         .timeout(Duration.ofSeconds(90)).maxAttempts(1).build())
                 .middleware(modelBudgetMiddleware)
@@ -211,6 +212,22 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
         return session.log().readAfter(after, limit).stream()
                 .map(this::toEventView)
                 .toList();
+    }
+
+    @Override
+    public NativeSubmissionReceipt inspectTask(ProjectionTarget target, String commandId) {
+        AgentSession session;
+        if (MasterAgentIdentity.AGENT_ID.equals(target.agentId())) {
+            RuntimeContext context = RuntimeContext.builder()
+                    .userId(target.userId()).sessionId(target.sessionId()).build();
+            session = master.session(context);
+        } else {
+            session = workerFactory.sessionFor(target.userId(), target.bindingId(),
+                    target.sessionId(), target.agentId());
+        }
+        AgentSession.Task task = session.task(commandId);
+        return new NativeSubmissionReceipt(task.commandId(), task.turnId(),
+                task.runId(), task.status());
     }
 
     private NativeEventView toEventView(SessionEvent event) {

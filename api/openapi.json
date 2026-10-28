@@ -3,7 +3,7 @@
   "info": {
     "title": "Agent Squad platform design",
     "version": "0.2.1",
-    "description": "Java + AgentScope 详细设计草稿；公共 HTTP 与内部应用 DTO，未实现。SDK BETA1 是固定评估候选，不是生产已验证依赖。"
+    "description": "Java + AgentScope 的公共 HTTP 与内部应用 DTO 契约；能力按 D0–D6 分阶段实现。SDK BETA1 是固定评估候选，不是生产已验证依赖。"
   },
   "servers": [
     {
@@ -5105,6 +5105,128 @@
           }
         }
       }
+    },
+    "/api/v1/tasks/{taskId}/artifacts": {
+      "get": {
+        "operationId": "listTaskArtifacts",
+        "tags": [
+          "public"
+        ],
+        "summary": "列出归属目标的已提交文件",
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "x-design-status": "planned-v0.2",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "maxItems": 20,
+                  "items": {
+                    "$ref": "#/components/schemas/Artifact"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5315,19 +5437,19 @@
               "type": "string",
               "format": "uuid"
             },
-            "maxItems": 20
+            "maxItems": 20,
+            "description": "可省略，缺省为空附件列表；服务端只接受当前用户已 READY 且未过期的引用。"
           },
           "profileKey": {
             "type": "string",
             "enum": [
               "STANDARD"
-            ]
+            ],
+            "description": "可省略，缺省为 STANDARD。"
           }
         },
         "required": [
-          "message",
-          "artifactIds",
-          "profileKey"
+          "message"
         ]
       },
       "TaskReceipt": {
@@ -5983,8 +6105,13 @@
             "type": "string",
             "format": "uuid"
           },
+          "reusedFromJobId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "当前计划结果复用的来源 Job；仅安全复用时返回"
+          },
           "result": {
-            "$ref": "#/components/schemas/JobResult"
+            "description": "已成功节点的最终结果；结构由对应 WorkerDefinition.outputSchema 约束，其他状态不返回"
           }
         },
         "required": [
@@ -6012,7 +6139,8 @@
           "nextCursor": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 2048
+            "maxLength": 2048,
+            "nullable": true
           }
         },
         "required": [
@@ -6673,7 +6801,8 @@
           "sizeBytes",
           "sha256",
           "status"
-        ]
+        ],
+        "description": "最小实现允许 UTF-8 txt/md/json/csv，最大10 MiB；READY 元数据与内容原子提交，下载重新鉴权和核验摘要。"
       },
       "Interaction": {
         "type": "object",
@@ -6713,7 +6842,7 @@
           "answerSchema": {
             "type": "object",
             "additionalProperties": true,
-            "description": "受服务端业务 Schema、深度及字节限制校验的 JSON 对象，不能传入可执行对象。"
+            "description": "受限 JSON Schema：object、最多16个平铺 string/number/integer/boolean 字段，有界enum、长度和数值范围，禁止外部引用及嵌套字段。"
           },
           "requestHash": {
             "type": "string",
@@ -6813,7 +6942,8 @@
           "nextCursor": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 2048
+            "maxLength": 2048,
+            "nullable": true
           }
         },
         "required": [
@@ -6985,7 +7115,8 @@
           "nextCursor": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 2048
+            "maxLength": 2048,
+            "nullable": true
           }
         },
         "required": [

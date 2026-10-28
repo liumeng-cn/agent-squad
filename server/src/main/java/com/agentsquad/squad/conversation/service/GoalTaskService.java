@@ -3,13 +3,28 @@ package com.agentsquad.squad.conversation.service;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
-import com.agentsquad.squad.conversation.domain.*;
-import com.agentsquad.squad.runtime.domain.*;
-import com.agentsquad.squad.conversation.dto.*;
-import com.agentsquad.squad.presentation.dto.*;
-import com.agentsquad.squad.conversation.repository.*;
+import com.agentsquad.squad.conversation.domain.CommandRow;
+import com.agentsquad.squad.conversation.domain.ConversationRow;
+import com.agentsquad.squad.conversation.domain.ConversationStatus;
+import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
+import com.agentsquad.squad.conversation.domain.TaskRow;
+import com.agentsquad.squad.runtime.domain.EventRow;
+import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
+import com.agentsquad.squad.conversation.dto.CommandResponse;
+import com.agentsquad.squad.conversation.dto.ConversationPage;
+import com.agentsquad.squad.conversation.dto.ConversationResponse;
+import com.agentsquad.squad.conversation.dto.GoalTaskPage;
+import com.agentsquad.squad.conversation.dto.TaskReceipt;
+import com.agentsquad.squad.conversation.dto.TaskResponse;
+import com.agentsquad.squad.presentation.dto.TaskEventResponse;
+import com.agentsquad.squad.conversation.repository.BindingMapper;
+import com.agentsquad.squad.conversation.repository.CommandMapper;
+import com.agentsquad.squad.conversation.repository.ConversationMapper;
+import com.agentsquad.squad.conversation.repository.TaskEventMapper;
+import com.agentsquad.squad.conversation.repository.TaskMapper;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
+import com.agentsquad.squad.artifact.ArtifactService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +64,9 @@ public class GoalTaskService {
 
     @Resource
     private ObjectMapper objectMapper;
+
+    @Resource
+    private ArtifactService artifactService;
 
     @Value("${agentsquad.budget.max-microunits-per-task:5000000}")
     private long budgetLimitMicrounits;
@@ -110,6 +128,19 @@ public class GoalTaskService {
      */
     @Transactional
     public TaskReceipt submit(String userId, String conversationId, String idempotencyKey, String message) {
+        return submit(userId, conversationId, idempotencyKey, message, List.of());
+    }
+
+    /**
+     * 将附件引用与目标、命令在同一事务提交；不接收未 READY 或其他用户的引用。
+     */
+    @Transactional
+    public TaskReceipt submit(String userId, String conversationId, String idempotencyKey, String message,
+                               List<String> artifactIds) {
+        if (artifactIds != null && artifactIds.stream().anyMatch(id -> id == null || id.isBlank())) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "附件引用不能为空");
+        }
+        List<String> attachments = artifactIds == null ? List.of() : List.copyOf(artifactIds);
         if (idempotencyKey == null || idempotencyKey.isBlank() || idempotencyKey.length() > 160) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "幂等键长度必须为 1 到 160");
         }
@@ -121,7 +152,8 @@ public class GoalTaskService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "会话不存在");
         }
         String scopeKey = "task.create:" + conversationId;
-        String payloadJson = RuntimePayloads.toJson(objectMapper, Map.of("message", message));
+        String payloadJson = RuntimePayloads.toJson(objectMapper, attachments.isEmpty()
+                ? Map.of("message", message) : Map.of("message", message, "artifactIds", attachments));
         String payloadHash = ContentDigests.sha256(payloadJson);
         CommandRow prior = commandMapper.findByKey(userId, scopeKey, idempotencyKey);
         if (prior != null) {
@@ -141,6 +173,7 @@ public class GoalTaskService {
             throw new IllegalStateException("目标预算上限必须大于 0");
         }
         taskMapper.insert(taskId, userId, conversationId, payloadJson, budgetLimitMicrounits);
+        artifactService.attach(userId, taskId, attachments);
         bindingMapper.insertMaster(bindingId, userId, taskId, MasterAgentIdentity.AGENT_ID,
                 UUID.randomUUID().toString(), now);
         commandMapper.insertSubmit(commandId, userId, scopeKey, idempotencyKey, payloadHash,

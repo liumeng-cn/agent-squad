@@ -11,7 +11,16 @@ import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 持久交互 HTTP 边界。用户归属只取认证会话；答复受理返回命令回执，不代表模型已收到。
@@ -67,7 +76,7 @@ public class InteractionController {
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody InteractionAnswerRequest request) {
         return interactionService.respond(authService.authenticateWrite(token, csrfToken),
-                interactionId, idempotencyKey, request.expectedVersion(), request.kind(),
-                request.approve(), request.confirmedRequestHash(), request.value());
+                interactionId, idempotencyKey, request.expectedVersion(), request.answer().kind(),
+                request.answer().approve(), request.answer().confirmedRequestHash(), request.answer().value());
     }
 }

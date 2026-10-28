@@ -16,6 +16,7 @@ let stream: TaskEventStream | null = null
 let reconnectTimer: number | null = null
 let reconnectAttempt = 0
 let disposed = false
+let snapshotRequest = 0
 
 function seqOf(cursor: string): number {
   const separator = cursor.lastIndexOf(':')
@@ -118,7 +119,7 @@ export const useRuntimeStore = defineStore('runtime', {
     },
 
     /** 发送目标；同一次尝试超时/失败重试沿用原幂等键，输入变更后换新键。 */
-    async send(conversationId: string, message: string): Promise<boolean> {
+    async send(conversationId: string, message: string, artifactIds: string[] = []): Promise<boolean> {
       if (this.submitting) {
         return false
       }
@@ -132,7 +133,7 @@ export const useRuntimeStore = defineStore('runtime', {
       this.submitting = true
       this.submitError = null
       try {
-        const receipt = await createTaskApi(conversationId, trimmed, this.inflightKey)
+        const receipt = await createTaskApi(conversationId, trimmed, this.inflightKey, artifactIds)
         this.inflightKey = null
         this.goalEcho = trimmed
         await this.observe(receipt.taskId, { replayFromStart: true })
@@ -235,9 +236,11 @@ export const useRuntimeStore = defineStore('runtime', {
       if (this.taskId === null) {
         return
       }
+      const taskId = this.taskId
+      const request = ++snapshotRequest
       let snapshot: TaskSnapshot
       try {
-        snapshot = await getTaskSnapshotApi(this.taskId)
+        snapshot = await getTaskSnapshotApi(taskId)
       } catch (error) {
         if (error instanceof ApiError && (error.status === 401 || error.status === 404)) {
           this.streamError = error.status === 404 ? '任务不存在或已被删除' : '登录已失效'
@@ -246,6 +249,7 @@ export const useRuntimeStore = defineStore('runtime', {
         }
         throw error
       }
+      if (this.taskId !== taskId || request !== snapshotRequest) return
       this.snapshot = snapshot
       const cursorSeq = seqOf(snapshot.cursor)
       if (!this.replay) {
