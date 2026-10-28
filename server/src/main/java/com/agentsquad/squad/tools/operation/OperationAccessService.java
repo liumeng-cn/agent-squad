@@ -8,15 +8,15 @@ import org.springframework.stereotype.Service;
 /**
  * 运维核对的显式授权判定。
  * <p>
- * 同时要求 OPERATOR 角色及当前目标的单独授权；ADMIN 不隐含运维权限，授权不扩大资源归属。
+ * 同时要求 OPERATOR 角色及当前执行作用域的单独授权；ADMIN 不隐含运维权限，授权不扩大资源归属。
  */
 @Service
 public class OperationAccessService {
     @Resource
     private OperationAccessMapper mapper;
 
-    public boolean canReconcile(AuthView actor, String taskId, String status) {
+    public boolean canReconcile(AuthView actor, String scopeId, String status) {
         return "UNKNOWN".equals(status) && actor.roles().contains("OPERATOR")
-                && mapper.countGrant(actor.userId(), taskId) > 0;
+                && mapper.countGrant(actor.userId(), scopeId) > 0;
     }
 }

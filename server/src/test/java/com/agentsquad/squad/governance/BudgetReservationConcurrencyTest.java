@@ -56,13 +56,13 @@ class BudgetReservationConcurrencyTest {
             CountDownLatch start = new CountDownLatch(1);
             try {
                 Future<Boolean> first = executor.submit(() -> reserveModel(budget, userId,
-                        task.taskId(), "model:master", "default", "a".repeat(64),
+                        scopeId(jdbc, task.taskId()), "model:master", "default", "a".repeat(64),
                         profile, ready, start));
                 Future<Boolean> second = executor.submit(() -> reserveModel(budget, userId,
-                        task.taskId(), "model:worker", "review", "b".repeat(64),
+                        scopeId(jdbc, task.taskId()), "model:worker", "review", "b".repeat(64),
                         profile, ready, start));
                 Future<Boolean> third = executor.submit(() -> reserveTool(budget, userId,
-                        task.taskId(), ready, start));
+                        scopeId(jdbc, task.taskId()), ready, start));
                 ready.await();
                 start.countDown();
 
@@ -103,12 +103,12 @@ class BudgetReservationConcurrencyTest {
             TaskReceipt firstTask = tasks.submit(userId, firstConversation.conversationId(),
                     "model-task", "预算结算");
             String hash = "a".repeat(64);
-            budget.reserveModel(userId, firstTask.taskId(), "model:first", hash, "default", profile);
-            assertThatThrownBy(() -> budget.reserveModel(userId, firstTask.taskId(),
+            budget.reserveModel(userId, scopeId(jdbc, firstTask.taskId()), "model:first", hash, "default", profile);
+            assertThatThrownBy(() -> budget.reserveModel(userId, scopeId(jdbc, firstTask.taskId()),
                     "model:first", hash, "default", profile))
                     .isInstanceOf(RuntimeBusinessException.class);
-            budget.settleModel(userId, firstTask.taskId(), "model:first", profile, 10, 5);
-            budget.reserve(userId, firstTask.taskId(), "tool:after-model", "TOOL", 85, "test");
+            budget.settleModel(userId, scopeId(jdbc, firstTask.taskId()), "model:first", profile, 10, 5);
+            budget.reserve(userId, scopeId(jdbc, firstTask.taskId()), "tool:after-model", "TOOL", 85, "test");
             Long consumed = jdbc.queryForObject("SELECT COALESCE(SUM(CASE WHEN status = 'SETTLED' "
                     + "THEN settled_units ELSE reserved_units END), 0) "
                     + "FROM sq_budget_reservation WHERE task_id = ?", Long.class, firstTask.taskId());
@@ -117,9 +117,9 @@ class BudgetReservationConcurrencyTest {
             ConversationResponse secondConversation = tasks.createConversation(userId, "未知计费");
             TaskReceipt secondTask = tasks.submit(userId, secondConversation.conversationId(),
                     "unknown-task", "未知计费");
-            budget.reserveModel(userId, secondTask.taskId(), "model:unknown", hash, "default", profile);
-            budget.markModelUnknown(userId, secondTask.taskId(), "model:unknown");
-            assertThatThrownBy(() -> budget.reserve(userId, secondTask.taskId(),
+            budget.reserveModel(userId, scopeId(jdbc, secondTask.taskId()), "model:unknown", hash, "default", profile);
+            budget.markModelUnknown(userId, scopeId(jdbc, secondTask.taskId()), "model:unknown");
+            assertThatThrownBy(() -> budget.reserve(userId, scopeId(jdbc, secondTask.taskId()),
                     "tool:over-limit", "TOOL", 40, "test"))
                     .isInstanceOf(RuntimeBusinessException.class);
         }
@@ -149,5 +149,8 @@ class BudgetReservationConcurrencyTest {
         } catch (RuntimeBusinessException exception) {
             return false;
         }
+    }
+    private String scopeId(JdbcTemplate jdbc, String taskId) {
+        return jdbc.queryForObject("SELECT scope_id FROM sq_goal_task WHERE task_id = ?", String.class, taskId);
     }
 }

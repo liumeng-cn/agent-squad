@@ -48,6 +48,9 @@ import java.util.UUID;
 public class GoalTaskService {
 
     @Resource
+    private ExecutionScopeService executionScopeService;
+
+    @Resource
     private ConversationMapper conversationMapper;
 
     @Resource
@@ -173,6 +176,8 @@ public class GoalTaskService {
             throw new IllegalStateException("目标预算上限必须大于 0");
         }
         taskMapper.insert(taskId, userId, conversationId, payloadJson, budgetLimitMicrounits);
+        executionScopeService.createTaskScope(userId, taskId, conversationId, conversation.generation(),
+                "STANDARD", budgetLimitMicrounits);
         artifactService.attach(userId, taskId, attachments);
         bindingMapper.insertMaster(bindingId, userId, taskId, MasterAgentIdentity.AGENT_ID,
                 UUID.randomUUID().toString(), now);
@@ -195,6 +200,7 @@ public class GoalTaskService {
         if (task == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
         }
+        executionScopeService.requireReadable(userId, executionScopeService.scopeForTask(userId, taskId));
         return toResponse(task);
     }
 
@@ -202,6 +208,7 @@ public class GoalTaskService {
      * 列出某一会话下的目标，按创建时间倒序。
      */
     public GoalTaskPage listConversationTasks(String userId, String conversationId, String cursor, int limit) {
+        getConversation(userId, conversationId);
         Long cursorId = parseCursor(cursor);
         List<TaskRow> rows = taskMapper.listByConversation(userId, conversationId, cursorId,
                 Math.min(Math.max(limit, 1), 100));
@@ -228,6 +235,10 @@ public class GoalTaskService {
         CommandRow command = commandMapper.findOwned(userId, commandId);
         if (command == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "命令不存在");
+        }
+        String executionScopeId = commandMapper.findScopeId(userId, commandId);
+        if (executionScopeId != null) {
+            executionScopeService.requireReadable(userId, executionScopeId);
         }
         return new CommandResponse(command.commandId(), command.taskId(), command.status(),
                 command.nativeTurnId(), command.nativeRunId(), command.nativeStatus());

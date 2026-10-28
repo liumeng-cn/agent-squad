@@ -1,6 +1,7 @@
 package com.agentsquad.squad.presentation.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
+import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
 import com.agentsquad.squad.runtime.domain.EventRow;
@@ -39,6 +40,9 @@ import java.util.List;
 public class TaskSnapshotService {
 
     @Resource
+    private ExecutionScopeService scopeService;
+
+    @Resource
     private TaskMapper taskMapper;
 
     @Resource
@@ -65,6 +69,7 @@ public class TaskSnapshotService {
         if (task == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
         }
+        scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         long maxSeq = taskEventMapper.maxSeq(userId, taskId);
         TaskResponse taskResponse = new TaskResponse(task.taskId(), task.conversationId(), task.status(),
                 task.version(), task.planVersion(), task.answerRevision(),
@@ -89,6 +94,7 @@ public class TaskSnapshotService {
         if (task == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
         }
+        scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         return new WorkerJobPage(currentJobs(task), null);
     }
 

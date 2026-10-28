@@ -3,6 +3,8 @@ package com.agentsquad.squad.artifact;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
+import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
+import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -40,6 +42,12 @@ public class ArtifactService {
 
     @Resource
     private TaskMapper taskMapper;
+
+    @Resource
+    private ExecutionScopeMapper scopeMapper;
+
+    @Resource
+    private ExecutionScopeService scopeService;
 
     /**
      * 内容校验与摘要完成后原子提交 READY；并发同键重放只返回同一产物。
@@ -107,6 +115,7 @@ public class ArtifactService {
         for (String id : ids) {
             requireOwned(userId, id);
             mapper.attach(userId, taskId, id);
+            mapper.attachScope(userId, scopeMapper.findScopeByTask(userId, taskId), id);
         }
     }
 
@@ -115,6 +124,27 @@ public class ArtifactService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
         }
         return mapper.listTaskIds(userId, taskId).stream().map(id -> get(userId, id)).toList();
+    }
+
+    /**
+     * 关联普通回复或目标的就绪附件，归属与删除屏障仍由服务端重验。
+     */
+    @Transactional
+    public void attachScope(String userId, String scopeId, List<String> ids) {
+        scopeService.lockOwned(userId, scopeId, false);
+        scopeService.requireReadable(userId, scopeId);
+        if (ids.size() > 20 || ids.stream().distinct().count() != ids.size()) {
+            throw invalid("附件最多20个且不能重复");
+        }
+        for (String id : ids) {
+            requireOwned(userId, id);
+            mapper.attachScope(userId, scopeId, id);
+        }
+    }
+
+    public List<ArtifactView> listScope(String userId, String scopeId) {
+        scopeService.requireReadable(userId, scopeId);
+        return mapper.listScopeIds(userId, scopeId).stream().map(id -> get(userId, id)).toList();
     }
 
     private ArtifactView sameUpload(String userId, ArtifactRow row, String name, String hash) {

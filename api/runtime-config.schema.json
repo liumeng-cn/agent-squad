@@ -465,6 +465,11 @@
           "type": "integer",
           "minimum": 60,
           "maximum": 86400
+        },
+        "maxUserCostMicrounits": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "同一用户所有执行的累计预算上限；对应SQUAD_BUDGET_MAX_MICROUNITS_PER_USER，不随新会话重置"
         }
       },
       "required": [
@@ -478,7 +483,8 @@
         "maxOutputTokens",
         "maxCostMicrounits",
         "absoluteDeadlineSeconds",
-        "interactionTtlSeconds"
+        "interactionTtlSeconds",
+        "maxUserCostMicrounits"
       ]
     }
   },

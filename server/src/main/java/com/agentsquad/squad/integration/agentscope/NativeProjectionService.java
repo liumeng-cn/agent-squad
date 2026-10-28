@@ -1,6 +1,8 @@
 package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
+import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
+import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.runtime.domain.NativeRunOutcome;
 import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
 import com.agentsquad.squad.runtime.domain.WorkerLaunchRow;
@@ -40,6 +42,12 @@ import java.util.Map;
 public class NativeProjectionService {
 
     @Resource
+    private ExecutionScopeMapper scopeMapper;
+
+    @Resource
+    private ExecutionScopeService scopeService;
+
+    @Resource
     private ProjectionMapper projectionMapper;
 
     @Resource
@@ -68,6 +76,7 @@ public class NativeProjectionService {
      */
     @Transactional
     public void accept(ProjectionTarget target, NativeEventView event) {
+        scopeService.lockOwned(target.userId(), scopeMapper.findScopeByBinding(target.userId(), target.bindingId()), false);
         Long cursor = projectionMapper.lockCursor(target.userId(), target.bindingId());
         if (cursor == null) {
             throw new IllegalStateException("原生会话绑定已消失");

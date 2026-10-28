@@ -27,6 +27,7 @@ agentsquad:
     master-key: ${SQUAD_CONNECTION_SECRET_KEY:}
     master-key-id: ${SQUAD_CONNECTION_KEY_ID:local-v1}
   budget:
+    max-microunits-per-user: ${SQUAD_BUDGET_MAX_MICROUNITS_PER_USER:50000000}
     max-microunits-per-task: ${SQUAD_BUDGET_MAX_MICROUNITS:5000000}
   fault:
     after-inflight-exit: ${SQUAD_FAULT_AFTER_INFLIGHT_EXIT:false}

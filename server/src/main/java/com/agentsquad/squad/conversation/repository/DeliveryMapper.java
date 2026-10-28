@@ -55,7 +55,7 @@ public interface DeliveryMapper {
                    c.delivery_attempts, b.agent_id, b.framework_session_id
             FROM sq_command c
             JOIN sq_runtime_binding b ON b.user_id = c.user_id
-                AND b.binding_id = c.binding_id AND b.task_id = c.task_id
+                AND b.binding_id = c.binding_id AND b.scope_id = c.scope_id
             WHERE c.command_id = #{commandId} AND c.delivery_token = #{token}
               AND c.status = 'DELIVERING'
             """)

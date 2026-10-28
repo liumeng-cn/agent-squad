@@ -61,7 +61,7 @@ Operation/Interaction、Reservation、ContextSnapshot、Binding、Command 统一
 | POST /api/v1/executions/{id}/cancel | expectedVersion、幂等键 | 202 持久停止回答；任务取消沿用独立 Task 控制入口，界面明确区分 |
 | POST /api/v1/executions/{id}/retry | expectedVersion、幂等键 | 仅服务端 allowedActions 提供时可用，返回关联的后继执行/原恢复收据，不修改终态历史 |
 
-受理锁序固定 Conversation → 用户预算汇总行 → BudgetAccount → Scope/Execution → Command/Event，涉及既有 Task 的事务统一遵循该顺序，避免受理与结算反向取锁。单个事务不调用 SDK 或外部模型。
+共享运行锁序固定 Conversation → 已存在的 Task/ResponseExecution 所有者 → 用户预算汇总行 → BudgetAccount → Binding/Command/Event/Operation/Interaction；新对象受理在同一会话锁下创建。原生投影与核对也先锁会话和所有者，避免反向取锁。预算占用采用锁后当前读，不能依赖 MySQL 可重复读的旧快照。单个事务不调用 SDK 或外部模型；审批外部派发继续独立提交 IN_FLIGHT，调用方不得持有该操作行锁。
 
 1. 校验消息 1–20000 字符、≤20 个 READY 附件与归属；计算规范化 payloadHash。
 2. 查幂等记录，同键异输入 409；首发原子创建会话，避免失败产生孤立空会话。

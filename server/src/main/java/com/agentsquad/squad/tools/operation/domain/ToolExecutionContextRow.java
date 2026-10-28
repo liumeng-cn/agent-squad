@@ -5,5 +5,5 @@ package com.agentsquad.squad.tools.operation.domain;
  * Master 直连流程无 Worker 节点，操作账本中的节点 ID 记为空。
  */
 public record ToolExecutionContextRow(String taskId, String bindingId,
-                                      String taskStatus, boolean cancellationRequested) {
+                                      String taskStatus, boolean cancellationRequested, String scopeId) {
 }

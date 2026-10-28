@@ -39,3 +39,13 @@ SSE 发送 TaskEvent，event名为message，事件 ID=taskId:seq；首次after�
 - 账户只保存固定额度，实际占用继续由 Reservation 的 SETTLED/RESERVED/UNKNOWN 事实计算，避免复制汇总余额导致漂移。
 - 新 Scope 查询同时验证用户、会话代际、逻辑删除和真实 owner；跨用户、删除资源或失效代际不可读取。
 - 迁移新增表与列保持旧链路可运行；在运行层切换前，新建旧式 Task 尚不走新消息链路。实际开发库升级与页面验收应在主链路接入后进行，不能据此宣称聊天体验已完成。
+
+## 共享执行边界
+
+`conversation-first-experience` 的 1.2 将运行归属扩展为 ExecutionScope：任务绑定、普通回复绑定、命令、工具操作、交互与附件可引用同一用户范围内的执行，taskId 只是可选业务上下文。旧任务入口已经创建固定 Scope/Account，Worker 局部快照也记录 Scope；普通回复的正式消息入口与 SDK 收尾仍由 1.3/1.4 接入。
+
+预算在同一会话/实际所有者、用户总账和账户锁下预留；MySQL 的占用查询使用当前读，不能沿用等待锁前的旧快照。默认同用户累计上限为 50000000 微单位，可通过 `SQUAD_BUDGET_MAX_MICROUNITS_PER_USER` 配置，不随新会话或转任务重置；未知收费继续占用。
+
+工具计费键固定在 Operation：V10 保留旧操作原稳定键，新 READ 请求按原生会话/Turn/工具调用身份摘要分开预留，WRITE 仍按业务意图去重。连接器写入异常不证明未执行，记录 UNKNOWN；核清前同会话既不准备新外部操作，也不派发先前 PREPARED 的操作。派发校验与 IN_FLIGHT 在独立事务中提交，外部 I/O 在事务外执行。
+
+用户答复在最后一个开放交互解决后把相应执行置 QUEUED，避免 SDK 立即继续时仍被等待态误拦截；这不代表模型已经运行。停止/删除/代际变化拦截新派发，已发生的结算和核对仍保留事实。Operation/Interaction 的 taskId 可省略，CommandReceipt 的 taskId 可为 null。

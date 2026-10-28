@@ -55,10 +55,12 @@
       "sq_artifact",
       "sq_task_artifact",
       "sq_budget_account",
-      "sq_conversation_event"
+      "sq_conversation_event",
+      "sq_user_budget",
+      "sq_scope_artifact"
     ]
   },
   "plannedOperationCount": 39,
   "plannedSchemaCount": 67,
-  "plannedBusinessTableCount": 24
+  "plannedBusinessTableCount": 26
 }

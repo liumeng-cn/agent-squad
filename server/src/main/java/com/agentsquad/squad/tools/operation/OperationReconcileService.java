@@ -1,6 +1,7 @@
 package com.agentsquad.squad.tools.operation;
 
 import com.agentsquad.squad.governance.BudgetService;
+import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.RuntimePayloads;
@@ -38,6 +39,9 @@ public class OperationReconcileService {
     private static final String OUTCOME_UNRESOLVED = "UNRESOLVED";
 
     @Resource
+    private ExecutionScopeService scopeService;
+
+    @Resource
     private OperationMapper operationMapper;
 
     @Resource
@@ -68,7 +72,9 @@ public class OperationReconcileService {
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "操作不存在");
         }
-        if (!operationAccessService.canReconcile(actor, row.taskId(), "UNKNOWN")) {
+        scopeService.lockOwned(userId, row.scopeId(), false);
+        scopeService.requireReadable(userId, row.scopeId());
+        if (!operationAccessService.canReconcile(actor, row.scopeId(), "UNKNOWN")) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "没有当前目标的操作核对权限");
         }
         if (request.expectedVersion() == null || row.version() != request.expectedVersion()) {
@@ -114,7 +120,7 @@ public class OperationReconcileService {
                 userId) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "核对并发冲突，请刷新后重试");
         }
-        budgetService.settleReserved(row.userId(), row.taskId(),
+        budgetService.settleReserved(row.userId(), row.scopeId(),
                 operationService.usageKeyOf(row));
         log.info("操作核对为已成功 operationId={} source={}", row.operationId(), evidence.get("source"));
     }
@@ -129,7 +135,7 @@ public class OperationReconcileService {
                 userId) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "核对并发冲突，请刷新后重试");
         }
-        budgetService.settle(row.userId(), row.taskId(), operationService.usageKeyOf(row), 0L);
+        budgetService.settle(row.userId(), row.scopeId(), operationService.usageKeyOf(row), 0L);
         log.info("操作核对为未执行 operationId={}", row.operationId());
     }
 

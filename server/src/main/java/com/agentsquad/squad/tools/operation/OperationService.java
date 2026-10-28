@@ -1,6 +1,7 @@
 package com.agentsquad.squad.tools.operation;
 
 import com.agentsquad.squad.governance.BudgetService;
+import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.RuntimePayloads;
@@ -30,7 +31,7 @@ import static com.agentsquad.squad.common.util.RuntimePayloads.toJson;
 /**
  * 外部操作账本预检服务（M07 事务 A）。
  *
- * <p>锁定目标上下文、规范化参数并计算摘要、预留预算、落 PREPARED/WAITING_APPROVAL；
+ * <p>锁定执行归属、规范化参数并计算摘要、预留预算、落 PREPARED/WAITING_APPROVAL；
  * 本事务提交前绝不发送外部请求，实际派发由 OperationExecutor 分步独立持久。
  * 原生调用键与业务意图键双路幂等；同意图不同参数直接拒绝。</p>
  */
@@ -47,6 +48,9 @@ public class OperationService {
     private static final String EFFECT_WRITE = "WRITE";
 
     @Resource
+    private ExecutionScopeService scopeService;
+
+    @Resource
     private OperationMapper operationMapper;
 
     @Resource
@@ -60,6 +64,8 @@ public class OperationService {
      */
     @Transactional
     public OperationRow prepare(PrepareRequest request) {
+        String scopeId = scopeService.scopeForSession(request.userId(), request.sessionId());
+        scopeService.lockOwned(request.userId(), scopeId, true);
         ToolExecutionContextRow context = operationMapper.lockToolContext(request.userId(),
                 request.sessionId());
         if (context == null) {
@@ -85,19 +91,22 @@ public class OperationService {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "写入操作缺少业务幂等键");
             }
             OperationRow intent = operationMapper.findByBusinessIntent(request.userId(),
-                    context.taskId(), request.toolKey(), request.businessIntentKey());
+                    context.scopeId(), request.toolKey(), request.businessIntentKey());
             if (intent != null) {
                 if (!intent.requestHash().equals(requestHash)) {
                     throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
                             "同业务意图已用不同参数提交，拒绝重复写入");
                 }
-                log.info("业务意图幂等复用原操作 operationId={} intentKey={}",
-                        intent.operationId(), request.businessIntentKey());
+                log.info("业务意图幂等复用原操作 operationId={} intentHash={}",
+                        intent.operationId(), sha256(request.businessIntentKey()).substring(0, 8));
                 return intent;
             }
         }
 
-        budgetService.reserve(request.userId(), context.taskId(),
+        if (!operationMapper.findUncertainInConversation(request.userId(), context.scopeId()).isEmpty()) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "已有外部操作结果待核对，暂停新的外部执行");
+        }
+        budgetService.reserve(request.userId(), context.scopeId(),
                 usageKey(request), "TOOL", request.reservedUnits(), request.creatorName());
 
         String operationId = UUID.randomUUID().toString();
@@ -108,9 +117,9 @@ public class OperationService {
                 request.toolKey(), request.toolVersion(), request.businessIntentKey(),
                 request.effect(), request.connectionId(), request.connectionRevision(),
                 0L, requestHash, toJson(objectMapper, canonicalArguments(request.arguments())),
-                status, request.creatorName());
-        log.info("操作预检完成 operationId={} taskId={} toolKey={} effect={} status={} hash={}",
-                operationId, context.taskId(), request.toolKey(), request.effect(), status,
+                status, request.creatorName(), usageKey(request));
+        log.info("操作预检完成 operationId={} taskId={} scopeId={} toolKey={} effect={} status={} hash={}",
+                operationId, context.taskId(), context.scopeId(), request.toolKey(), request.effect(), status,
                 requestHash.substring(0, 8));
         return operationMapper.findOwned(request.userId(), operationId);
     }
@@ -119,6 +128,7 @@ public class OperationService {
      * 分页读取目标的操作视图；游标取最后一条操作的存储主键。
      */
     public OperationPage listPage(String userId, String taskId, String cursor, int limit) {
+        scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         Long cursorId = parseCursor(cursor);
         List<OperationRow> rows = operationMapper.listByTask(userId, taskId, cursorId,
                 Math.min(Math.max(limit, 1), 100) + 1);
@@ -144,6 +154,7 @@ public class OperationService {
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "操作不存在");
         }
+        scopeService.requireReadable(userId, row.scopeId());
         return viewOf(row);
     }
 
@@ -155,10 +166,11 @@ public class OperationService {
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "操作不存在");
         }
+        scopeService.requireReadable(actor.userId(), row.scopeId());
         List<String> evidenceRefs = evidenceRefs(row.resultJson());
         return new OperationDetail(viewOf(row), operationPreview.arguments(row.argumentsJson()),
                 "操作状态：" + row.status() + "；已记录核对证据 " + evidenceRefs.size() + " 项", evidenceRefs,
-                operationAccessService.canReconcile(actor, row.taskId(), row.status()));
+                operationAccessService.canReconcile(actor, row.scopeId(), row.status()));
     }
 
     private List<String> evidenceRefs(String resultJson) {
@@ -203,7 +215,7 @@ public class OperationService {
      * 结算该操作的预算预留；金额由调用方按工具声明传入。
      */
     public void settle(OperationRow operation, long settledUnits) {
-        budgetService.settle(operation.userId(), operation.taskId(), usageKeyOf(operation),
+        budgetService.settle(operation.userId(), operation.scopeId(), usageKeyOf(operation),
                 settledUnits);
     }
 
@@ -211,13 +223,14 @@ public class OperationService {
      * 操作的预算稳定键；核对流程复用同一派生规则，避免两处口径漂移。
      */
     public String usageKeyOf(OperationRow operation) {
-        return operation.toolKey() + ":" + (operation.businessIntentKey() == null
-                ? operation.toolCallId() : operation.businessIntentKey());
+        return operation.budgetUsageKey();
     }
 
     private String usageKey(PrepareRequest request) {
-        return request.toolKey() + ":" + (request.businessIntentKey() == null
-                ? request.toolCallId() : request.businessIntentKey());
+        String identity = EFFECT_WRITE.equals(request.effect())
+                ? "intent:" + sha256(request.businessIntentKey())
+                : "call:" + sha256(request.sessionId() + "\n" + request.frameworkTurnId() + "\n" + request.toolCallId());
+        return request.toolKey() + ":" + identity;
     }
 
     private Map<String, Object> canonicalArguments(Map<String, Object> arguments) {

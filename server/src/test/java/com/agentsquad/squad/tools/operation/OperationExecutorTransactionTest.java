@@ -37,6 +37,9 @@ class OperationExecutorTransactionTest {
 
         OperationExecutor target = new OperationExecutor();
         ReflectionTestUtils.setField(target, "operationMapper", operationMapper);
+        OperationDispatchService dispatch = mock(OperationDispatchService.class);
+        when(dispatch.begin(any(), anyString(), anyLong(), any(), anyString())).thenReturn(1);
+        ReflectionTestUtils.setField(target, "dispatchService", dispatch);
         ReflectionTestUtils.setField(target, "objectMapper", new ObjectMapper());
         DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(
                 new DriverManagerDataSource("jdbc:h2:mem:operation-boundary", "sa", ""));

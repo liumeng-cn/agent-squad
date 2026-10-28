@@ -70,6 +70,35 @@ class ConversationExecutionMigrationTest {
                 Integer.class)).isEqualTo(1);
     }
 
+    @Test
+    void legacyToolReservationKeepsItsOriginalIdentity(@TempDir Path directory) {
+        String url = "jdbc:h2:file:" + directory.resolve("legacy-budget") + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE";
+        DriverManagerDataSource dataSource = new DriverManagerDataSource(url, "sa", "");
+        Flyway.configure().dataSource(dataSource).target(MigrationVersion.fromVersion("6")).load().migrate();
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        seedLegacyFacts(jdbc);
+        String reservationId = UUID.randomUUID().toString();
+        jdbc.update("""
+                INSERT INTO sq_budget_reservation (reservation_id, user_id, task_id, usage_key, kind,
+                                                    reserved_units, status)
+                VALUES (?, ?, ?, 'read:call-1', 'TOOL', 7, 'RESERVED')
+                """, reservationId, USER, TASK);
+        Flyway.configure().dataSource(dataSource).load().migrate();
+        try (var context = org.springframework.boot.SpringApplication.run(com.agentsquad.squad.AgentSquadApplication.class,
+                "--spring.main.web-application-type=none", "--spring.datasource.url=" + url,
+                "--spring.datasource.username=sa", "--spring.datasource.password=",
+                "--spring.datasource.driver-class-name=org.h2.Driver")) {
+            var operation = context.getBean(com.agentsquad.squad.tools.operation.repository.OperationMapper.class)
+                    .listByTask(USER, TASK, null, 20).getFirst();
+            assertThat(operation.budgetUsageKey()).isEqualTo("read:call-1");
+            context.getBean(com.agentsquad.squad.tools.operation.OperationService.class).settle(operation, 7);
+            assertThat(jdbc.queryForObject("SELECT status FROM sq_budget_reservation WHERE reservation_id = ?",
+                    String.class, reservationId)).isEqualTo("SETTLED");
+            assertThat(jdbc.queryForObject("SELECT usage_key FROM sq_budget_reservation WHERE reservation_id = ?",
+                    String.class, reservationId)).isEqualTo("read:call-1");
+        }
+    }
+
     /**
      * 可由专用 MySQL 测试复用同一验收；调用方必须提供全新隔离库，不得指向实际开发数据。
      */
@@ -91,7 +120,7 @@ class ConversationExecutionMigrationTest {
                 + "ELSE reserved_units END) FROM sq_budget_reservation", Long.class);
 
         Flyway flyway = Flyway.configure().dataSource(dataSource).load();
-        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(2);
+        assertThat(flyway.migrate().migrationsExecuted).isGreaterThanOrEqualTo(2);
         assertThat(jdbc.queryForList("SELECT user_id, binding_id, framework_session_id, native_event_cursor "
                 + "FROM sq_runtime_binding ORDER BY id")).isEqualTo(bindings);
         assertThat(jdbc.queryForList("SELECT command_id, idempotency_key, task_id, binding_id, status, "

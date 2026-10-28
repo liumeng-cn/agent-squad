@@ -10,5 +10,5 @@ public record InteractionRow(String interactionId, String userId, String taskId,
                              String frameworkRequestId, String kind, String question,
                              String answerSchemaJson, long planVersion, String requestHash,
                              long connectionRevision, LocalDateTime expiresAt, String status,
-                             long version, String responseJson) {
+                             long version, String responseJson, String scopeId) {
 }

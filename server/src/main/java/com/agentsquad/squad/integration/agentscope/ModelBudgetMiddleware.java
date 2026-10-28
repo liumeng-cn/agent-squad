@@ -29,9 +29,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 /**
- * 原生模型调用的父目标预算闸门。
+ * 原生模型调用的执行预算闸门。
  *
- * <p>请求发出前按会话归属锁定 GoalTask 并预留最坏成本；只有可信用量才能结算。
+ * <p>请求发出前按会话归属锁定执行所有者与共享账户 并预留最坏成本；只有可信用量才能结算。
  * 错误、缺失用量和取消保留原预留，避免恢复时把可能收费的调用重新计为免费。</p>
  */
 @Component
@@ -83,16 +83,16 @@ public class ModelBudgetMiddleware implements MiddlewareBase {
             String usageKey = "model:" + turnId + ":" + requestHash;
             AtomicBoolean settled = new AtomicBoolean(false);
             return Mono.fromCallable(() -> {
-                        String taskId = budgetMapper.findTaskBySession(userId, sessionId);
-                        if (taskId == null) {
-                            throw new IllegalStateException("模型会话未绑定目标");
+                        String scopeId = budgetMapper.findScopeBySession(userId, sessionId);
+                        if (scopeId == null) {
+                            throw new IllegalStateException("模型会话未绑定执行作用域");
                         }
-                        budgetService.reserveModel(userId, taskId, usageKey, requestHash,
+                        budgetService.reserveModel(userId, scopeId, usageKey, requestHash,
                                 profileKey, profile);
-                        return taskId;
+                        return scopeId;
                     })
                     .subscribeOn(Schedulers.boundedElastic())
-                    .flatMapMany(taskId -> next.apply(input)
+                    .flatMapMany(scopeId -> next.apply(input)
                             .concatMap(event -> {
                                 if (!(event instanceof ModelCallEndEvent endEvent)) {
                                     return Mono.just(event);
@@ -102,21 +102,21 @@ public class ModelBudgetMiddleware implements MiddlewareBase {
                                     return Mono.error(new IllegalStateException("模型响应缺少可信用量"));
                                 }
                                 return Mono.fromCallable(() -> {
-                                            budgetService.settleModel(userId, taskId, usageKey,
+                                            budgetService.settleModel(userId, scopeId, usageKey,
                                                     profile, usage.getInputTokens(), usage.getOutputTokens());
                                             settled.set(true);
                                             return event;
                                         })
                                         .subscribeOn(Schedulers.boundedElastic());
                             })
-                            .onErrorResume(error -> markUnknown(userId, taskId, usageKey)
+                            .onErrorResume(error -> markUnknown(userId, scopeId, usageKey)
                                     .thenMany(Flux.error(error)))
                             .concatWith(Flux.defer(() -> settled.get() ? Flux.empty()
-                                    : markUnknown(userId, taskId, usageKey).thenMany(Flux.error(
+                                    : markUnknown(userId, scopeId, usageKey).thenMany(Flux.error(
                                     new IllegalStateException("模型调用结束但没有用量终结事件")))))
                             .doOnCancel(() -> {
                                 if (!settled.get()) {
-                                    markUnknown(userId, taskId, usageKey).subscribe();
+                                    markUnknown(userId, scopeId, usageKey).subscribe();
                                 }
                             }));
         });
@@ -133,10 +133,10 @@ public class ModelBudgetMiddleware implements MiddlewareBase {
         }
     }
 
-    private Mono<Void> markUnknown(String userId, String taskId, String usageKey) {
+    private Mono<Void> markUnknown(String userId, String scopeId, String usageKey) {
         return Mono.fromRunnable(() -> {
-                    budgetService.markModelUnknown(userId, taskId, usageKey);
-                    log.warn("模型收费待核对 taskId={} usageKey={}", taskId, usageKey);
+                    budgetService.markModelUnknown(userId, scopeId, usageKey);
+                    log.warn("模型收费待核对 scopeId={} usageKey={}", scopeId, usageKey);
                 })
                 .subscribeOn(Schedulers.boundedElastic())
                 .then();

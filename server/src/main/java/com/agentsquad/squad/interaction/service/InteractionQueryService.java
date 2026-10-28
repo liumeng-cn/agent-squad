@@ -1,6 +1,7 @@
 package com.agentsquad.squad.interaction.service;
 
 import com.agentsquad.squad.presentation.dto.Interaction;
+import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.presentation.dto.InteractionPage;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
@@ -31,6 +32,9 @@ public class InteractionQueryService {
     private static final String KIND_APPROVAL = "APPROVAL";
 
     @Resource
+    private ExecutionScopeService scopeService;
+
+    @Resource
     private InteractionMapper interactionMapper;
 
     @Resource
@@ -46,6 +50,7 @@ public class InteractionQueryService {
      * 列出目标的交互存储行；游标为存储主键。
      */
     public List<InteractionRow> listByTask(String userId, String taskId, String cursor, int limit) {
+        scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         Long cursorId = parseCursor(cursor);
         return interactionMapper.listByTask(userId, taskId, cursorId, Math.min(Math.max(limit, 1), 100));
     }
@@ -54,6 +59,7 @@ public class InteractionQueryService {
      * 分页读取目标的交互视图；游标取最后一条交互的存储主键。
      */
     public InteractionPage listPage(String userId, String taskId, String cursor, int limit) {
+        scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         int pageSize = Math.min(Math.max(limit, 1), 100);
         List<InteractionRow> rows = interactionMapper.listByTask(userId, taskId, parseCursor(cursor), pageSize + 1);
         boolean hasMore = rows.size() > pageSize;
@@ -78,6 +84,7 @@ public class InteractionQueryService {
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "交互不存在");
         }
+        scopeService.requireReadable(userId, row.scopeId());
         return viewOf(userId, row);
     }
 
@@ -85,7 +92,16 @@ public class InteractionQueryService {
      * 列出目标仍开放的交互存储行（快照 pending 来源）。
      */
     public List<InteractionRow> listOpenByTask(String userId, String taskId) {
+        scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         return interactionMapper.findOpenIds(userId, taskId).stream()
+                .map(id -> interactionMapper.findOwned(userId, id))
+                .filter(row -> row != null && "OPEN".equals(row.status()))
+                .toList();
+    }
+
+    public List<InteractionRow> listOpenByScope(String userId, String scopeId) {
+        scopeService.requireReadable(userId, scopeId);
+        return interactionMapper.findOpenByScope(userId, scopeId).stream()
                 .map(id -> interactionMapper.findOwned(userId, id))
                 .filter(row -> row != null && "OPEN".equals(row.status()))
                 .toList();

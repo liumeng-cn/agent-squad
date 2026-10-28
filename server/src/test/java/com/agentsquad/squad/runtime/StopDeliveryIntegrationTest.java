@@ -1,9 +1,14 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
+import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.integration.agentscope.CommandDeliveryService;
 import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
-import com.agentsquad.squad.conversation.repository.*;
+import com.agentsquad.squad.conversation.repository.BindingMapper;
+import com.agentsquad.squad.conversation.repository.CommandMapper;
+import com.agentsquad.squad.conversation.repository.ConversationMapper;
+import com.agentsquad.squad.conversation.repository.TaskEventMapper;
+import com.agentsquad.squad.conversation.repository.TaskMapper;
 import com.agentsquad.squad.conversation.service.ConversationCleanupScheduler;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
 import org.junit.jupiter.api.Test;
@@ -64,6 +69,7 @@ class StopDeliveryIntegrationTest {
 
             conversationMapper.insert(conversationId, userId, "停止投递");
             taskMapper.insert(taskId, userId, conversationId, "{\"message\":\"停止我\"}", 5000000L);
+            context.getBean(ExecutionScopeService.class).createTaskScope(userId, taskId, conversationId, 0, "STANDARD", 5000000L);
             bindingMapper.insertMaster(bindingId, userId, taskId, MasterAgentIdentity.AGENT_ID,
                     UUID.randomUUID().toString(), now);
             assertThat(conversationMapper.activateTask(userId, conversationId, taskId)).isEqualTo(1);

@@ -2,7 +2,13 @@ package com.agentsquad.squad.tools.operation.repository;
 
 import com.agentsquad.squad.tools.operation.domain.OperationRow;
 import com.agentsquad.squad.tools.operation.domain.ToolExecutionContextRow;
-import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Arg;
+import org.apache.ibatis.annotations.ConstructorArgs;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,31 +23,33 @@ public interface OperationMapper {
             @Arg(column = "task_id", javaType = String.class),
             @Arg(column = "binding_id", javaType = String.class),
             @Arg(column = "task_status", javaType = String.class),
-            @Arg(column = "cancellation_requested", javaType = boolean.class)
+            @Arg(column = "cancellation_requested", javaType = boolean.class),
+            @Arg(column = "scope_id", javaType = String.class)
     })
     @Select("""
-            SELECT b.task_id, b.binding_id, t.status AS task_status,
-                   (t.cancel_requested_at IS NOT NULL) AS cancellation_requested
-            FROM sq_runtime_binding b
-            JOIN sq_goal_task t ON t.user_id = b.user_id AND t.task_id = b.task_id
-            WHERE b.user_id = #{userId} AND b.framework_session_id = #{sessionId}
-              AND b.role = 'MASTER'
-            FOR UPDATE
+            SELECT CASE WHEN s.kind = 'TASK' THEN s.owner_id ELSE NULL END AS task_id, b.binding_id, COALESCE(t.status, r.status) AS task_status,
+                   (COALESCE(t.cancel_requested_at, r.cancel_requested_at) IS NOT NULL) AS cancellation_requested,
+                   b.scope_id FROM sq_runtime_binding b
+            JOIN sq_execution_scope s ON s.user_id = b.user_id AND s.scope_id = b.scope_id
+            LEFT JOIN sq_goal_task t ON s.kind = 'TASK' AND t.user_id = s.user_id AND t.task_id = s.owner_id
+            LEFT JOIN sq_response_execution r ON s.kind = 'RESPONSE' AND r.user_id = s.user_id AND r.execution_id = s.owner_id
+            WHERE b.user_id = #{userId} AND b.framework_session_id = #{sessionId} AND b.role = 'MASTER'
+              AND b.del_flag = '0'
             """)
-    ToolExecutionContextRow lockToolContext(@Param("userId") String userId,
-                                            @Param("sessionId") String sessionId);
+    ToolExecutionContextRow lockToolContext(@Param("userId") String userId, @Param("sessionId") String sessionId);
 
     @Insert("""
             INSERT INTO sq_operation
                 (operation_id, user_id, task_id, job_id, binding_id, framework_turn_id, tool_call_id,
                  tool_key, tool_version, business_intent_key, effect, connection_id, connection_revision,
-                 auth_version, request_hash, arguments_json, status, version,
+                 auth_version, request_hash, arguments_json, status, version, scope_id, budget_usage_key,
                  creator_id, creator_name, last_updater_id, last_updater_name)
             VALUES
                 (#{operationId}, #{userId}, #{taskId}, #{jobId}, #{bindingId}, #{frameworkTurnId},
                  #{toolCallId}, #{toolKey}, #{toolVersion}, #{businessIntentKey}, #{effect},
                  #{connectionId}, #{connectionRevision}, #{authVersion}, #{requestHash},
                  #{argumentsJson}, #{status}, 0,
+                 (SELECT scope_id FROM sq_runtime_binding WHERE user_id = #{userId} AND binding_id = #{bindingId}), #{budgetUsageKey},
                  #{userId}, #{creatorName}, #{userId}, #{creatorName})
             """)
     int insert(@Param("operationId") String operationId, @Param("userId") String userId,
@@ -54,7 +62,7 @@ public interface OperationMapper {
                @Param("connectionRevision") long connectionRevision,
                @Param("authVersion") long authVersion, @Param("requestHash") String requestHash,
                @Param("argumentsJson") String argumentsJson, @Param("status") String status,
-               @Param("creatorName") String creatorName);
+               @Param("creatorName") String creatorName, @Param("budgetUsageKey") String budgetUsageKey);
 
     @ConstructorArgs({
             @Arg(column = "operation_id", javaType = String.class),
@@ -78,17 +86,19 @@ public interface OperationMapper {
             @Arg(column = "executor_owner", javaType = String.class),
             @Arg(column = "executor_fence", javaType = long.class),
             @Arg(column = "external_key", javaType = String.class),
-            @Arg(column = "result_json", javaType = String.class)
+            @Arg(column = "result_json", javaType = String.class),
+            @Arg(column = "scope_id", javaType = String.class),
+            @Arg(column = "budget_usage_key", javaType = String.class)
     })
     @Select("""
             SELECT operation_id, user_id, task_id, job_id, binding_id, framework_turn_id,
                    tool_call_id, tool_key, tool_version, business_intent_key, effect,
                    connection_id, connection_revision, auth_version, request_hash,
                    arguments_json, status, version, executor_owner, executor_fence,
-                   external_key, result_json
+                   external_key, result_json, scope_id, budget_usage_key
             FROM sq_operation
             WHERE user_id = #{userId} AND binding_id = #{bindingId}
-              AND framework_turn_id = #{frameworkTurnId} AND tool_call_id = #{toolCallId}
+              AND framework_turn_id = #{frameworkTurnId} AND tool_call_id = #{toolCallId} FOR UPDATE
             """)
     OperationRow findByNativeCall(@Param("userId") String userId,
                                   @Param("bindingId") String bindingId,
@@ -117,20 +127,22 @@ public interface OperationMapper {
             @Arg(column = "executor_owner", javaType = String.class),
             @Arg(column = "executor_fence", javaType = long.class),
             @Arg(column = "external_key", javaType = String.class),
-            @Arg(column = "result_json", javaType = String.class)
+            @Arg(column = "result_json", javaType = String.class),
+            @Arg(column = "scope_id", javaType = String.class),
+            @Arg(column = "budget_usage_key", javaType = String.class)
     })
     @Select("""
             SELECT operation_id, user_id, task_id, job_id, binding_id, framework_turn_id,
                    tool_call_id, tool_key, tool_version, business_intent_key, effect,
                    connection_id, connection_revision, auth_version, request_hash,
                    arguments_json, status, version, executor_owner, executor_fence,
-                   external_key, result_json
+                   external_key, result_json, scope_id, budget_usage_key
             FROM sq_operation
-            WHERE user_id = #{userId} AND task_id = #{taskId} AND tool_key = #{toolKey}
-              AND business_intent_key = #{businessIntentKey}
+            WHERE user_id = #{userId} AND scope_id = #{scopeId} AND tool_key = #{toolKey}
+              AND business_intent_key = #{businessIntentKey} FOR UPDATE
             """)
     OperationRow findByBusinessIntent(@Param("userId") String userId,
-                                      @Param("taskId") String taskId,
+                                      @Param("scopeId") String scopeId,
                                       @Param("toolKey") String toolKey,
                                       @Param("businessIntentKey") String businessIntentKey);
 
@@ -156,14 +168,16 @@ public interface OperationMapper {
             @Arg(column = "executor_owner", javaType = String.class),
             @Arg(column = "executor_fence", javaType = long.class),
             @Arg(column = "external_key", javaType = String.class),
-            @Arg(column = "result_json", javaType = String.class)
+            @Arg(column = "result_json", javaType = String.class),
+            @Arg(column = "scope_id", javaType = String.class),
+            @Arg(column = "budget_usage_key", javaType = String.class)
     })
     @Select("""
             SELECT operation_id, user_id, task_id, job_id, binding_id, framework_turn_id,
                    tool_call_id, tool_key, tool_version, business_intent_key, effect,
                    connection_id, connection_revision, auth_version, request_hash,
                    arguments_json, status, version, executor_owner, executor_fence,
-                   external_key, result_json
+                   external_key, result_json, scope_id, budget_usage_key
             FROM sq_operation
             WHERE user_id = #{userId} AND operation_id = #{operationId}
             """)
@@ -192,14 +206,16 @@ public interface OperationMapper {
             @Arg(column = "executor_owner", javaType = String.class),
             @Arg(column = "executor_fence", javaType = long.class),
             @Arg(column = "external_key", javaType = String.class),
-            @Arg(column = "result_json", javaType = String.class)
+            @Arg(column = "result_json", javaType = String.class),
+            @Arg(column = "scope_id", javaType = String.class),
+            @Arg(column = "budget_usage_key", javaType = String.class)
     })
     @Select("""
             <script>SELECT operation_id, user_id, task_id, job_id, binding_id, framework_turn_id,
                    tool_call_id, tool_key, tool_version, business_intent_key, effect,
                    connection_id, connection_revision, auth_version, request_hash,
                    arguments_json, status, version, executor_owner, executor_fence,
-                   external_key, result_json
+                   external_key, result_json, scope_id, budget_usage_key
             FROM sq_operation
             WHERE user_id = #{userId} AND task_id = #{taskId} AND del_flag = '0'
               <if test="cursorId != null">AND id &lt; #{cursorId}</if>
@@ -233,6 +249,19 @@ public interface OperationMapper {
                 version = version + 1, last_updater_id = #{owner}
             WHERE user_id = #{userId} AND operation_id = #{operationId}
               AND status IN ('PREPARED', 'WAITING_APPROVAL') AND version = #{expectedVersion}
+              AND EXISTS (SELECT 1 FROM sq_execution_scope s JOIN sq_conversation c
+                  ON c.user_id = s.user_id AND c.conversation_id = s.conversation_id
+                  WHERE s.user_id = sq_operation.user_id AND s.scope_id = sq_operation.scope_id
+                    AND s.del_flag = '0' AND c.del_flag = '0' AND c.status = 'ACTIVE'
+                    AND c.generation = s.conversation_generation
+                    AND ((s.kind = 'TASK' AND EXISTS (SELECT 1 FROM sq_goal_task t
+                        WHERE t.user_id = s.user_id AND t.task_id = s.owner_id AND t.scope_id = s.scope_id
+                          AND t.cancel_requested_at IS NULL AND t.del_flag = '0'
+                          AND t.status IN ('QUEUED', 'RUNNING', 'WAITING_APPROVAL', 'WAITING_INPUT', 'WAITING_WORKERS')))
+                      OR (s.kind = 'RESPONSE' AND EXISTS (SELECT 1 FROM sq_response_execution r
+                        WHERE r.user_id = s.user_id AND r.execution_id = s.owner_id AND r.scope_id = s.scope_id
+                          AND r.cancel_requested_at IS NULL AND r.del_flag = '0'
+                          AND r.status IN ('QUEUED', 'RUNNING', 'WAITING_APPROVAL', 'WAITING_INPUT')))))
             """)
     int markInFlight(@Param("userId") String userId, @Param("operationId") String operationId,
                      @Param("expectedVersion") long expectedVersion, @Param("owner") String owner,
@@ -288,14 +317,16 @@ public interface OperationMapper {
             @Arg(column = "executor_owner", javaType = String.class),
             @Arg(column = "executor_fence", javaType = long.class),
             @Arg(column = "external_key", javaType = String.class),
-            @Arg(column = "result_json", javaType = String.class)
+            @Arg(column = "result_json", javaType = String.class),
+            @Arg(column = "scope_id", javaType = String.class),
+            @Arg(column = "budget_usage_key", javaType = String.class)
     })
     @Select("""
             SELECT operation_id, user_id, task_id, job_id, binding_id, framework_turn_id,
                    tool_call_id, tool_key, tool_version, business_intent_key, effect,
                    connection_id, connection_revision, auth_version, request_hash,
                    arguments_json, status, version, executor_owner, executor_fence,
-                   external_key, result_json
+                   external_key, result_json, scope_id, budget_usage_key
             FROM sq_operation
             WHERE status = 'IN_FLIGHT' AND executor_until < #{now} AND del_flag = '0'
             ORDER BY id
@@ -342,4 +373,14 @@ public interface OperationMapper {
                               @Param("expectedVersion") long expectedVersion,
                               @Param("resultJson") String resultJson,
                               @Param("updaterId") String updaterId);
+
+    @Select("""
+            SELECT o.operation_id FROM sq_operation o JOIN sq_execution_scope s
+                ON s.user_id = o.user_id AND s.scope_id = o.scope_id
+            WHERE o.user_id = #{userId} AND o.status IN ('UNKNOWN', 'RECONCILING') AND o.del_flag = '0'
+              AND s.conversation_id = (SELECT conversation_id FROM sq_execution_scope
+                  WHERE user_id = #{userId} AND scope_id = #{scopeId})
+            FOR UPDATE
+            """)
+    List<String> findUncertainInConversation(@Param("userId") String userId, @Param("scopeId") String scopeId);
 }

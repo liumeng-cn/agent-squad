@@ -9,5 +9,5 @@ public record OperationRow(String operationId, String userId, String taskId, Str
                            String effect, String connectionId, long connectionRevision,
                            long authVersion, String requestHash, String argumentsJson,
                            String status, long version, String executorOwner, long executorFence,
-                           String externalKey, String resultJson) {
+                           String externalKey, String resultJson, String scopeId, String budgetUsageKey) {
 }

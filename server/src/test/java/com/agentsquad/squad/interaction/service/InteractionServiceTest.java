@@ -30,12 +30,13 @@ class InteractionServiceTest {
         ReflectionTestUtils.setField(service, "interactionMapper", interactionMapper);
         ReflectionTestUtils.setField(service, "operationMapper", operationMapper);
         ReflectionTestUtils.setField(service, "objectMapper", new ObjectMapper());
+        ReflectionTestUtils.setField(service, "scopeService", mock(com.agentsquad.squad.conversation.service.ExecutionScopeService.class));
 
         AuthView actor = new AuthView("user-1", "tester", List.of("USER"), "csrf");
         InteractionRow row = new InteractionRow("interaction-1", actor.userId(), "task-1",
                 "job-1", "binding-1", "operation-1", "FRAMEWORK", "request-1",
                 "APPROVAL", "确认执行", "{}", 0L, "hash-1", 0L,
-                LocalDateTime.now().plusHours(1), "OPEN", 2L, null);
+                LocalDateTime.now().plusHours(1), "OPEN", 2L, null, "scope-1");
         when(interactionMapper.findOwned(actor.userId(), row.interactionId())).thenReturn(row);
 
         assertThrows(RuntimeBusinessException.class,

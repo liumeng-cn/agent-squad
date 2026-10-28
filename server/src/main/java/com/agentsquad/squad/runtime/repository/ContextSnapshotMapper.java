@@ -90,11 +90,12 @@ public interface ContextSnapshotMapper {
     @Insert("""
             INSERT INTO sq_context_snapshot
                 (snapshot_id, user_id, task_id, target_node_key, logical_key,
-                 conversation_generation, memory_revision, items_json, token_estimate, content_hash,
+                 conversation_generation, memory_revision, items_json, token_estimate, content_hash, scope_id,
                  creator_id, creator_name, last_updater_id, last_updater_name)
             VALUES
                 (#{snapshotId}, #{userId}, #{taskId}, #{targetNodeKey}, #{logicalKey},
                  #{conversationGeneration}, 0, #{itemsJson}, #{tokenEstimate}, #{contentHash},
+                 (SELECT scope_id FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}),
                  #{userId}, '', #{userId}, '')
             """)
     int insert(@Param("snapshotId") String snapshotId, @Param("userId") String userId,

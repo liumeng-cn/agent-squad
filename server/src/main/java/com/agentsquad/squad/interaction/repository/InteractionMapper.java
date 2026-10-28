@@ -1,7 +1,13 @@
 package com.agentsquad.squad.interaction.repository;
 
 import com.agentsquad.squad.interaction.domain.InteractionRow;
-import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Arg;
+import org.apache.ibatis.annotations.ConstructorArgs;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,12 +22,13 @@ public interface InteractionMapper {
             INSERT INTO sq_interaction
                 (interaction_id, user_id, task_id, job_id, binding_id, operation_id, origin,
                  framework_request_id, kind, question, answer_schema_json, plan_version,
-                 request_hash, connection_revision, expires_at, status, version,
+                 request_hash, connection_revision, expires_at, status, version, scope_id,
                  creator_id, creator_name, last_updater_id, last_updater_name)
             VALUES
                 (#{interactionId}, #{userId}, #{taskId}, #{jobId}, #{bindingId}, #{operationId},
                  #{origin}, #{frameworkRequestId}, #{kind}, #{question}, #{answerSchemaJson},
                  #{planVersion}, #{requestHash}, #{connectionRevision}, #{expiresAt}, 'OPEN', 0,
+                 (SELECT scope_id FROM sq_runtime_binding WHERE user_id = #{userId} AND binding_id = #{bindingId}),
                  #{creatorId}, #{creatorName}, #{creatorId}, #{creatorName})
             """)
     int insert(@Param("interactionId") String interactionId, @Param("userId") String userId,
@@ -53,12 +60,13 @@ public interface InteractionMapper {
             @Arg(column = "expires_at", javaType = LocalDateTime.class),
             @Arg(column = "status", javaType = String.class),
             @Arg(column = "version", javaType = long.class),
-            @Arg(column = "response_json", javaType = String.class)
+            @Arg(column = "response_json", javaType = String.class),
+            @Arg(column = "scope_id", javaType = String.class)
     })
     @Select("""
             SELECT interaction_id, user_id, task_id, job_id, binding_id, operation_id, origin,
                    framework_request_id, kind, question, answer_schema_json, plan_version,
-                   request_hash, connection_revision, expires_at, status, version, response_json
+                   request_hash, connection_revision, expires_at, status, version, scope_id, response_json
             FROM sq_interaction
             WHERE user_id = #{userId} AND binding_id = #{bindingId}
               AND framework_request_id = #{frameworkRequestId} AND del_flag = '0'
@@ -85,12 +93,13 @@ public interface InteractionMapper {
             @Arg(column = "expires_at", javaType = LocalDateTime.class),
             @Arg(column = "status", javaType = String.class),
             @Arg(column = "version", javaType = long.class),
-            @Arg(column = "response_json", javaType = String.class)
+            @Arg(column = "response_json", javaType = String.class),
+            @Arg(column = "scope_id", javaType = String.class)
     })
     @Select("""
             SELECT interaction_id, user_id, task_id, job_id, binding_id, operation_id, origin,
                    framework_request_id, kind, question, answer_schema_json, plan_version,
-                   request_hash, connection_revision, expires_at, status, version, response_json
+                   request_hash, connection_revision, expires_at, status, version, scope_id, response_json
             FROM sq_interaction
             WHERE user_id = #{userId} AND interaction_id = #{interactionId} AND del_flag = '0'
             """)
@@ -115,12 +124,13 @@ public interface InteractionMapper {
             @Arg(column = "expires_at", javaType = LocalDateTime.class),
             @Arg(column = "status", javaType = String.class),
             @Arg(column = "version", javaType = long.class),
-            @Arg(column = "response_json", javaType = String.class)
+            @Arg(column = "response_json", javaType = String.class),
+            @Arg(column = "scope_id", javaType = String.class)
     })
     @Select("""
             <script>SELECT interaction_id, user_id, task_id, job_id, binding_id, operation_id, origin,
                    framework_request_id, kind, question, answer_schema_json, plan_version,
-                   request_hash, connection_revision, expires_at, status, version, response_json
+                   request_hash, connection_revision, expires_at, status, version, scope_id, response_json
             FROM sq_interaction
             WHERE user_id = #{userId} AND task_id = #{taskId} AND del_flag = '0'
               <if test="cursorId != null">AND id &lt; #{cursorId}</if>
@@ -176,4 +186,18 @@ public interface InteractionMapper {
                                 @Param("bindingId") String bindingId,
                                 @Param("frameworkRequestId") String frameworkRequestId,
                                 @Param("responseJson") String responseJson);
+
+    @Select("""
+            SELECT interaction_id FROM sq_interaction
+            WHERE user_id = #{userId} AND scope_id = #{scopeId} AND status = 'OPEN' AND del_flag = '0'
+            ORDER BY id
+            """)
+    List<String> findOpenByScope(@Param("userId") String userId, @Param("scopeId") String scopeId);
+
+    @Select("""
+            SELECT COUNT(*) FROM sq_interaction WHERE user_id = #{userId} AND scope_id = #{scopeId}
+                AND kind = #{kind} AND status = 'OPEN' AND del_flag = '0'
+            """)
+    int countOpenByScopeKind(@Param("userId") String userId, @Param("scopeId") String scopeId,
+                            @Param("kind") String kind);
 }

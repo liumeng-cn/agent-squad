@@ -3,7 +3,7 @@
 ## 1. 运行归属与可靠消息受理
 
 - [x] 1.1 增加 Message/ResponseExecution/ExecutionScope/BudgetAccount 与会话顺序字段迁移，幂等回填旧 Task 的消息、scope、account。同步 OpenAPI 的 MessageReceipt/ConversationSnapshot/执行 DTO 与新增字段。验证：MySQL 8.4 从 V6 升级不丢旧记录，预算总额守恒、原 SDK session/submit key 不变；迁移与所有权测试进入本任务。
-- [ ] 1.2 将 Binding/Command/Operation/Interaction/Reservation/Artifact 共享边界改为 scope 归属，任务/节点是可选业务引用；统一用户、generation、guard 和锁顺序。验证：无 Task 的回复可预留结算/交互/附件，跨用户/失效代际拒绝；既有 D3 授权、未知写入、取消与预算用例回归通过。
+- [x] 1.2 将 Binding/Command/Operation/Interaction/Reservation/Artifact 共享边界改为 scope 归属，任务/节点是可选业务引用；统一用户、generation、guard 和锁顺序。验证：无 Task 的回复可预留结算/交互/附件，跨用户/失效代际拒绝；既有 D3 授权、未知写入、取消与预算用例回归通过。
 - [ ] 1.3 实现首发原子创建会话+消息，以及已有会话消息受理；同作用域同键同输入返回原收据，异输入/附件 409，附件 READY 验证在同事务。验证：首发超时、双击、并发、事务回滚不产生第二会话/消息/Command，不强制创建 Task；契约文档与接口测试随任务提交。
 - [ ] 1.4 普通回复接入持久 Bridge/SDK 投影/完成候选/取消与原 Turn 恢复，使用固定消息前缀上下文。验证：连续追问可引用前文，A02/A03/A12 崩溃窗口不重复推理、不丢回复；普通问答 GoalTask 数量保持不变，Worker 不获取整段会话。
 

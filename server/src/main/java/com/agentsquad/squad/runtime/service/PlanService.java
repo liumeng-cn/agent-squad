@@ -7,8 +7,9 @@ import com.agentsquad.squad.common.util.CanonicalJson;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
-import com.agentsquad.squad.governance.domain.TaskBudgetRow;
+import com.agentsquad.squad.governance.domain.BudgetAccountRow;
 import com.agentsquad.squad.governance.repository.BudgetMapper;
+import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
 import com.agentsquad.squad.conversation.repository.TaskEventMapper;
 import com.agentsquad.squad.runtime.domain.PlanContextRow;
@@ -87,6 +88,9 @@ public class PlanService {
 
     @Resource
     private WorkerProfileRegistry profileRegistry;
+
+    @Resource
+    private ExecutionScopeMapper scopeMapper;
 
     @Resource
     private BudgetMapper budgetMapper;
@@ -254,12 +258,13 @@ public class PlanService {
      */
     private void requirePlanBudget(PlanContextRow context, List<PlanNode> nodes,
                                    Set<String> reusedNodeKeys) {
-        TaskBudgetRow taskBudget = budgetMapper.lockTask(context.userId(), context.taskId());
+        String scopeId = scopeMapper.findScopeByTask(context.userId(), context.taskId());
+        BudgetAccountRow taskBudget = budgetMapper.lockAccount(context.userId(), scopeId);
         if (taskBudget == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标预算不存在");
         }
         BigInteger required = BigInteger.valueOf(budgetMapper.sumConsumedUnits(
-                context.userId(), context.taskId()));
+                context.userId(), scopeId));
         for (PlanNode node : nodes) {
             if (reusedNodeKeys.contains(node.nodeKey())) {
                 continue;

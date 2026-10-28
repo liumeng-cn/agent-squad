@@ -1,6 +1,9 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
+import com.agentsquad.squad.common.exception.RuntimeBusinessException;
+import com.agentsquad.squad.conversation.repository.TaskMapper;
+import com.agentsquad.squad.conversation.repository.TaskEventMapper;
 import com.agentsquad.squad.conversation.dto.ConversationResponse;
 import com.agentsquad.squad.conversation.dto.TaskReceipt;
 import com.agentsquad.squad.conversation.service.ConversationCleanupScheduler;
@@ -14,6 +17,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * 删除会话时在途目标的就地收尾：未受理目标直接 CANCELLED，
@@ -47,12 +51,15 @@ class ConversationDeletionTaskSettleTest {
 
             deletionService.delete(userId, conversation.conversationId(), "delete-key-1", currentVersion);
 
-            assertThat(goalTaskService.findTask(userId, receipt.taskId()).status()).isEqualTo("CANCELLED");
-            assertThat(goalTaskService.listConversationTasks(userId, conversation.conversationId(), null, 20)
-                    .items()).extracting(task -> task.taskId()).containsExactly(receipt.taskId());
-            assertThat(goalTaskService.listEvents(userId, receipt.taskId(), 0))
-                    .extracting(event -> event.type())
-                    .containsExactly("task.accepted", "task.completed");
+            assertThat(context.getBean(TaskMapper.class).findOwned(userId, receipt.taskId()).status()).isEqualTo("CANCELLED");
+            assertThatThrownBy(() -> goalTaskService.findTask(userId, receipt.taskId()))
+                    .isInstanceOf(RuntimeBusinessException.class);
+            assertThatThrownBy(() -> goalTaskService.listConversationTasks(userId, conversation.conversationId(), null, 20))
+                    .isInstanceOf(RuntimeBusinessException.class);
+            assertThatThrownBy(() -> goalTaskService.listEvents(userId, receipt.taskId(), 0))
+                    .isInstanceOf(RuntimeBusinessException.class);
+            assertThat(context.getBean(TaskEventMapper.class).listAfter(userId, receipt.taskId(), 0))
+                    .extracting(event -> event.eventType()).containsExactly("task.accepted", "task.completed");
 
             cleanupScheduler.cleanupDeletingConversations();
 

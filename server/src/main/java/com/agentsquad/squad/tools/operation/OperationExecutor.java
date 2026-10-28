@@ -35,6 +35,9 @@ public class OperationExecutor {
     private OperationMapper operationMapper;
 
     @Resource
+    private OperationDispatchService dispatchService;
+
+    @Resource
     private ObjectMapper objectMapper;
 
     private final String instanceId = "op-" + UUID.randomUUID().toString().substring(0, 8);
@@ -57,6 +60,11 @@ public class OperationExecutor {
         try {
             resultJson = externalCall.call(externalKey);
         } catch (Exception exception) {
+            if ("WRITE".equals(operation.effect())) {
+                // 发送后的异常不能证明外部没有执行，必须保留未知事实，禁止重放写入。
+                markUnknown(operation);
+                throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "外部写入结果待核对，不会自动重复执行");
+            }
             if (!completeAsFailed(operation, exception)) {
                 markUnknown(operation);
             }
@@ -86,8 +94,7 @@ public class OperationExecutor {
      */
     public void markInFlight(OperationRow operation, String externalKey) {
         LocalDateTime leaseUntil = LocalDateTime.now(ZoneOffset.UTC).plusSeconds(LEASE_SECONDS);
-        int inflight = operationMapper.markInFlight(operation.userId(), operation.operationId(),
-                operation.version(), instanceId, 1L, leaseUntil, externalKey);
+        int inflight = dispatchService.begin(operation, instanceId, 1L, leaseUntil, externalKey);
         if (inflight != 1) {
             OperationRow current = operationMapper.findOwned(operation.userId(), operation.operationId());
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
@@ -108,7 +115,7 @@ public class OperationExecutor {
      * 失败出账；连接器异常只留分类信息，不落原始异常正文。
      */
     public boolean completeAsFailed(OperationRow operation, Exception cause) {
-        String message = cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage();
+        String message = cause.getClass().getSimpleName();
         return operationMapper.completeInFlight(operation.userId(), operation.operationId(),
                 operation.version() + 1, instanceId, 1L, OperationStatus.FAILED.name(),
                 RuntimePayloads.toJson(objectMapper, Map.of("error", message)), instanceId) == 1;
@@ -118,8 +125,9 @@ public class OperationExecutor {
      * 结果不明出账；只能由核对流程再推进。
      */
     public void markUnknown(OperationRow operation) {
-        operationMapper.markUnknown(operation.userId(), operation.operationId(),
-                operation.version() + 1, instanceId);
-        log.warn("操作转入 UNKNOWN，等待人工或连接器核对 operationId={}", operation.operationId());
+        if (operationMapper.markUnknown(operation.userId(), operation.operationId(),
+                operation.version() + 1, instanceId) == 1) {
+            log.warn("操作转入 UNKNOWN，等待人工或连接器核对 operationId={}", operation.operationId());
+        }
     }
 }

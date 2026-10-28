@@ -238,7 +238,7 @@ class PlanPublishIntegrationTest {
                             reportContext, List.of("analyze"), true, 1)),
                     "ALL_REQUIRED", List.of("报告完成"));
 
-            jdbc.update("UPDATE sq_goal_task SET budget_limit_microunits = 100 WHERE task_id = ?",
+            jdbc.update("UPDATE sq_budget_account SET limit_microunits = 100 WHERE account_id = (SELECT s.account_id FROM sq_execution_scope s JOIN sq_goal_task t ON t.user_id = s.user_id AND t.scope_id = s.scope_id WHERE t.task_id = ?)",
                     task.taskId());
             assertThatThrownBy(() -> planService.publish(userId, sessionId, publish))
                     .isInstanceOf(RuntimeBusinessException.class)
@@ -246,7 +246,7 @@ class PlanPublishIntegrationTest {
             assertThat(jdbc.queryForObject(
                     "SELECT COUNT(*) FROM sq_plan WHERE task_id = ?", Integer.class,
                     task.taskId())).isZero();
-            jdbc.update("UPDATE sq_goal_task SET budget_limit_microunits = 5000000 WHERE task_id = ?",
+            jdbc.update("UPDATE sq_budget_account SET limit_microunits = 5000000 WHERE account_id = (SELECT s.account_id FROM sq_execution_scope s JOIN sq_goal_task t ON t.user_id = s.user_id AND t.scope_id = s.scope_id WHERE t.task_id = ?)",
                     task.taskId());
 
             PlanReceipt receipt = planService.publish(userId, sessionId, publish);

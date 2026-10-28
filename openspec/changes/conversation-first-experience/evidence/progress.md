@@ -42,3 +42,30 @@ git diff --check
 ### 下一切片
 
 1.2 将真实运行链路改为 Scope/Account 归属，使无 GoalTask 的回复也具有预算、授权、交互、附件和 guard；完成后再开放消息受理和普通回复执行。对话界面切换在 4.1–4.4，不能提前将这次迁移称为体验验收完成。
+
+## 2026-10-28：1.2 共享执行归属
+
+完成 1.2，整体 2/16；1.3 消息 HTTP 受理、1.4 普通回复 SDK 生命周期与新的对话界面尚未交付。
+
+### 实现
+
+- 旧 Task 的正式受理现在创建 Scope/Account，Master/Worker Binding、Command、Operation、Interaction、Reservation 和局部上下文记录 Scope。普通回复绑定不要求 taskId；账户取代父 Task 行作为计费权威。
+- 无 Task 的执行可以使用同一模型预算中间件、受控操作账本、审批/INPUT 和附件归属。共享账户不会按 Scope 发新额度，用户总账以持久锁串行约束累计上限；UNKNOWN 保守占额。
+- 预算占用、幂等预留查询采用锁后当前读；MySQL 测试先在两个事务建立读快照，再争用总预算，只有一笔 60/100 预留通过。
+- 统一会话→所有者→用户预算→账户→运行对象锁序；原生投影、核对也先锁会话与所有者。审批外部 I/O 不跨操作行锁，最后交互答复后排队执行而非直接宣称 RUNNING。
+- 独立派发事务重验归属、停止与代际和未知操作屏障，提交 IN_FLIGHT 后才调用连接器。WRITE 异常保留 UNKNOWN，同会话新预检和旧 PREPARED 派发均被阻断；取消不吞掉已发生的结算。
+- V9 新增用户预算互斥行和 Scope 产物关联，允许普通回复的 taskId 为空；V10 固定操作计费键，保留旧 Reservation 键，新回合重复工具 callId 不复用前一回合费用。
+- 公共任务/交互/操作/文件查询重验 Scope，删除资源与失效代际禁读；内部保留任务终态和审计事实。核对继续要求 OPERATOR 加具体 Scope 授权，ADMIN 不隐含权限。
+
+### 验证
+
+- 后端 `clean test`：47 项，0 失败/错误，1 跳过，耗时约 76 秒。46 项实际通过，包含 4 项专用 MySQL 验证；仅未配置 SQUAD_DB_URL 的原 MySqlGoalTaskIntegrationTest 跳过。
+- MySqlScopeRuntimeOwnershipTest 三个实际 MySQL 8.4 用例：无任务预算/审批/追问/附件与取消/未知屏障、建立旧快照后的并发用户预算、共享账户与未知计费；MySqlConversationExecutionMigrationTest 使用另一全新隔离库做 V6 → 最新迁移。
+- H2 增加相同无 Task 边界覆盖、工具跨 Turn 的独立计费键和旧工具预留在升级后按原键结算。D3 的派发、结果复用、崩溃恢复、候选纠正与 STOP 回归通过。
+- 修正旧测试中绕过受理服务的 Task 数据，让其具备真实 Scope；原完成/恢复/取消断言保留。删除后的用户查询改为拒绝，内部 Mapper 仍验证 CANCELLED 与审计事件存在。
+- 前端构建通过；仅调整可空 taskId 的类型，没有宣称新界面已可验收。
+- 静态设计检查：39 个操作、67 个 schema、26 张业务表；OpenSpec strict、git diff --check 通过。新 Java 文件 6 个经 IDEA 格式化；预算投影仅改名不做整文件格式化。
+
+日志：`/private/tmp/agentsquad-scope-full-verified.log`、`/private/tmp/agentsquad-scope-mysql-current-read.log`、`/private/tmp/agentsquad-scope-web-build.log`。SDK 固定版本、JDK 27 执行/Java 21 编译目标的限制与上一切片相同。
+
+无 Task 能力实验由测试建立受权执行数据并通过正式治理服务和 SDK 模型事件验证，不是新消息 API/原生回复端到端实验，也没有向真实模型供应商发请求。实际开发库与当前用户页面未切换。

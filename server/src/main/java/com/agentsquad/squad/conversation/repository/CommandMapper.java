@@ -20,10 +20,10 @@ public interface CommandMapper {
     @Insert("""
             INSERT INTO sq_command
                 (command_id, user_id, scope_key, idempotency_key, payload_hash,
-                 task_id, binding_id, action, payload_json, status, due_at)
+                 task_id, binding_id, scope_id, action, payload_json, status, due_at)
             VALUES
                 (#{commandId}, #{userId}, #{scopeKey}, #{idempotencyKey}, #{payloadHash},
-                 #{taskId}, #{bindingId}, 'SUBMIT', #{payloadJson}, 'PENDING', #{dueAt})
+                 #{taskId}, #{bindingId}, (SELECT scope_id FROM sq_runtime_binding WHERE user_id = #{userId} AND binding_id = #{bindingId}), 'SUBMIT', #{payloadJson}, 'PENDING', #{dueAt})
             """)
     int insertSubmit(@Param("commandId") String commandId, @Param("userId") String userId,
                      @Param("scopeKey") String scopeKey, @Param("idempotencyKey") String idempotencyKey,
@@ -34,10 +34,10 @@ public interface CommandMapper {
     @Insert("""
             INSERT INTO sq_command
                 (command_id, user_id, scope_key, idempotency_key, payload_hash,
-                 task_id, binding_id, action, payload_json, status, due_at)
+                 task_id, binding_id, scope_id, action, payload_json, status, due_at)
             VALUES
                 (#{commandId}, #{userId}, #{scopeKey}, #{idempotencyKey}, #{payloadHash},
-                 #{taskId}, #{bindingId}, #{action}, #{payloadJson}, 'PENDING', #{dueAt})
+                 #{taskId}, #{bindingId}, (SELECT scope_id FROM sq_runtime_binding WHERE user_id = #{userId} AND binding_id = #{bindingId}), #{action}, #{payloadJson}, 'PENDING', #{dueAt})
             """)
     int insertControl(@Param("commandId") String commandId, @Param("userId") String userId,
                       @Param("scopeKey") String scopeKey, @Param("idempotencyKey") String idempotencyKey,
@@ -141,4 +141,7 @@ public interface CommandMapper {
               AND status IN ('PENDING', 'DELIVERING')
             """)
     int countPendingWorkerResumes(@Param("userId") String userId, @Param("bindingId") String bindingId);
+
+    @Select("SELECT scope_id FROM sq_command WHERE user_id = #{userId} AND command_id = #{commandId}")
+    String findScopeId(@Param("userId") String userId, @Param("commandId") String commandId);
 }

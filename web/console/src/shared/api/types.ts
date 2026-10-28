@@ -49,7 +49,7 @@ export interface TaskReceipt {
 
 export interface CommandReceipt {
   commandId: string
-  taskId: string
+  taskId: string | null
   status: string
   targetFrameworkTurnId: string | null
   reason: string | null
@@ -57,7 +57,7 @@ export interface CommandReceipt {
 
 export interface CommandResponse {
   commandId: string
-  taskId: string
+  taskId: string | null
   status: string
   nativeTurnId: string | null
   nativeRunId: string | null
@@ -99,7 +99,7 @@ export interface WorkerDefinitionPage {
 
 export interface Interaction {
   interactionId: string
-  taskId: string
+  taskId?: string
   jobId: string
   kind: string
   origin: string

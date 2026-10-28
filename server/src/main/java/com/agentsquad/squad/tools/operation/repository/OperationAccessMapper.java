@@ -13,7 +13,7 @@ import org.apache.ibatis.annotations.Select;
 public interface OperationAccessMapper {
     @Select("""
             SELECT COUNT(*) FROM sq_operation_reconciler
-            WHERE user_id = #{userId} AND task_id = #{taskId} AND del_flag = '0'
+            WHERE user_id = #{userId} AND scope_id = #{scopeId} AND del_flag = '0'
             """)
-    int countGrant(@Param("userId") String userId, @Param("taskId") String taskId);
+    int countGrant(@Param("userId") String userId, @Param("scopeId") String scopeId);
 }

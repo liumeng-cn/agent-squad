@@ -115,10 +115,10 @@ class TaskDetailsHttpTest {
             String operationId = UUID.randomUUID().toString();
             jdbc.update("""
                             INSERT INTO sq_operation (operation_id, user_id, task_id, binding_id, framework_turn_id,
-                              tool_call_id, tool_key, tool_version, effect, request_hash, arguments_json, status)
-                            VALUES (?, ?, ?, ?, 'turn-1', 'call-1', 'mock_ticket_create', 'v1', 'WRITE', 'hash-1', ?, 'UNKNOWN')
+                              tool_call_id, tool_key, tool_version, effect, request_hash, arguments_json, status, scope_id)
+                            VALUES (?, ?, ?, ?, 'turn-1', 'call-1', 'mock_ticket_create', 'v1', 'WRITE', 'hash-1', ?, 'UNKNOWN', (SELECT scope_id FROM sq_runtime_binding WHERE binding_id = ?))
                             """, operationId, actor.userId(), taskId, binding,
-                    "{\"title\":\"private-title\",\"password\":\"must-not-leak\"}");
+                    "{\"title\":\"private-title\",\"password\":\"must-not-leak\"}", binding);
             String detail = mvc.perform(get("/api/v1/operations/{id}", operationId).cookie(cookie))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
             assertThat(detail).doesNotContain("private-title", "must-not-leak", "frameworkTurnId");
@@ -136,7 +136,7 @@ class TaskDetailsHttpTest {
             mvc.perform(post("/api/v1/operations/{id}/reconcile", operationId).cookie(operatorCookie)
                             .header("X-CSRF-Token", operator.csrfToken()).contentType(MediaType.APPLICATION_JSON).content(reconcile))
                     .andExpect(status().isForbidden());
-            jdbc.update("INSERT INTO sq_operation_reconciler (user_id, task_id) VALUES (?, ?)", actor.userId(), taskId);
+            jdbc.update("INSERT INTO sq_operation_reconciler (user_id, task_id, scope_id) SELECT user_id, task_id, scope_id FROM sq_goal_task WHERE user_id = ? AND task_id = ?", actor.userId(), taskId);
             mvc.perform(post("/api/v1/operations/{id}/reconcile", operationId).cookie(operatorCookie)
                             .header("X-CSRF-Token", operator.csrfToken()).contentType(MediaType.APPLICATION_JSON).content(reconcile))
                     .andExpect(status().isOk());

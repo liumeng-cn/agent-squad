@@ -73,10 +73,10 @@ public final class TaskPageReviewServer {
         String operationId = UUID.randomUUID().toString();
         jdbc.update("""
                 INSERT INTO sq_operation (operation_id, user_id, task_id, binding_id, framework_turn_id,
-                    tool_call_id, tool_key, tool_version, effect, request_hash, arguments_json, status)
-                VALUES (?, ?, ?, ?, 'review-turn', 'review-call', 'mock_ticket_create', 'v1', 'WRITE', 'review-hash', ?, 'UNKNOWN')
-                """, operationId, userId, task.taskId(), binding, "{\"title\":\"示例操作\",\"password\":\"hidden\"}");
-        jdbc.update("INSERT INTO sq_operation_reconciler (user_id, task_id) VALUES (?, ?)", userId, task.taskId());
+                    tool_call_id, tool_key, tool_version, effect, request_hash, arguments_json, status, scope_id)
+                VALUES (?, ?, ?, ?, 'review-turn', 'review-call', 'mock_ticket_create', 'v1', 'WRITE', 'review-hash', ?, 'UNKNOWN', (SELECT scope_id FROM sq_runtime_binding WHERE binding_id = ?))
+                """, operationId, userId, task.taskId(), binding, "{\"title\":\"示例操作\",\"password\":\"hidden\"}", binding);
+        jdbc.update("INSERT INTO sq_operation_reconciler (user_id, task_id, scope_id) SELECT user_id, task_id, scope_id FROM sq_goal_task WHERE user_id = ? AND task_id = ?", userId, task.taskId());
         Files.writeString(Path.of("/private/tmp/agentsquad-page-review-task"), task.taskId());
         Files.writeString(Path.of("/private/tmp/agentsquad-page-review-conversation"), conversation.conversationId());
     }

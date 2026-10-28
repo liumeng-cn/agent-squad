@@ -83,6 +83,7 @@
     "maxOutputTokens": 30000,
     "maxCostMicrounits": 1000000,
     "absoluteDeadlineSeconds": 86400,
-    "interactionTtlSeconds": 3600
+    "interactionTtlSeconds": 3600,
+    "maxUserCostMicrounits": 50000000
   }
 }

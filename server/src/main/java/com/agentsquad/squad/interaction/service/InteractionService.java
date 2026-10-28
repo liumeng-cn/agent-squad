@@ -1,6 +1,8 @@
 package com.agentsquad.squad.interaction.service;
 
 import com.agentsquad.squad.identity.AuthView;
+import com.agentsquad.squad.conversation.service.ExecutionScopeService;
+import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.domain.CommandRow;
 import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
 import com.agentsquad.squad.conversation.dto.CommandReceipt;
@@ -62,6 +64,12 @@ public class InteractionService {
     private static final long TICKET_RESERVED_UNITS = 1000000L;
 
     @Resource
+    private ExecutionScopeService scopeService;
+
+    @Resource
+    private ExecutionScopeMapper scopeMapper;
+
+    @Resource
     private InteractionMapper interactionMapper;
 
     @Resource
@@ -94,6 +102,10 @@ public class InteractionService {
                                               String jobId, String frameworkTurnId,
                                               String frameworkRequestId,
                                               Map<String, Object> call) {
+        String scopeId = scopeMapper.findScopeByBinding(userId, bindingId);
+        if (scopeId == null || scopeMapper.findActiveOwned(userId, scopeId) == null) {
+            return null;
+        }
         InteractionRow existing = interactionMapper.findByFrameworkRequest(userId, bindingId,
                 frameworkRequestId);
         if (existing != null) {
@@ -159,6 +171,16 @@ public class InteractionService {
     }
 
     /**
+     * 普通回复等待状态按自身Scope聚合，不读取同会话另一任务的交互。
+     */
+    public String waitingStatusOfScope(String userId, String scopeId) {
+        if (interactionMapper.countOpenByScopeKind(userId, scopeId, KIND_APPROVAL) > 0) {
+            return "WAITING_APPROVAL";
+        }
+        return interactionMapper.countOpenByScopeKind(userId, scopeId, KIND_INPUT) > 0 ? "WAITING_INPUT" : null;
+    }
+
+    /**
      * 用户答复：批准派发、拒绝取消、追问回填；全部先落账本再排队 RESPOND 命令。
      */
     @Transactional
@@ -173,6 +195,7 @@ public class InteractionService {
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "交互不存在");
         }
+        scopeService.requireReadable(actor.userId(), row.scopeId());
         String scopeKey = "interaction:" + interactionId;
         Map<String, Object> answerJson = new LinkedHashMap<>();
         answerJson.put("kind", answerKind);
@@ -232,6 +255,8 @@ public class InteractionService {
             answerText = resolveApproval(actor, row, approve);
         }
 
+        // 外部审批派发已独立出账；从此处起才锁会话和所有者，避免跨外部I/O持有操作行锁。
+        scopeService.lockOwned(actor.userId(), row.scopeId(), false);
         String commandId = UUID.randomUUID().toString();
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("interactionId", interactionId);
@@ -247,6 +272,8 @@ public class InteractionService {
                 answerJsonText, actor.username()) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "交互答复并发冲突，请刷新后重试");
         }
+        scopeMapper.queueTaskAfterInteraction(actor.userId(), row.scopeId());
+        scopeMapper.queueResponseAfterInteraction(actor.userId(), row.scopeId());
         log.info("交互答复已受理 interactionId={} kind={} commandId={} approve={}",
                 interactionId, row.kind(), commandId, approve);
         return new CommandReceipt(commandId, row.taskId(), "PENDING", null, null);

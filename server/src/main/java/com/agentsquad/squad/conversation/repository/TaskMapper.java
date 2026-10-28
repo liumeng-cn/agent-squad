@@ -1,7 +1,13 @@
 package com.agentsquad.squad.conversation.repository;
 
 import com.agentsquad.squad.conversation.domain.TaskRow;
-import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Arg;
+import org.apache.ibatis.annotations.ConstructorArgs;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -45,7 +51,25 @@ public interface TaskMapper {
             FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}
             FOR UPDATE
             """)
-    TaskRow lockOwned(@Param("userId") String userId, @Param("taskId") String taskId);
+    TaskRow lockOwnedRow(@Param("userId") String userId, @Param("taskId") String taskId);
+
+    @Select("SELECT conversation_id FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}")
+    String conversationIdOf(@Param("userId") String userId, @Param("taskId") String taskId);
+
+    @Select("SELECT conversation_id FROM sq_conversation WHERE user_id = #{userId} AND conversation_id = #{conversationId} FOR UPDATE")
+    String lockConversation(@Param("userId") String userId, @Param("conversationId") String conversationId);
+
+    /**
+     * 所有目标写入遵循会话→目标锁序，避免与按Scope预留预算的事务反向取锁。
+     */
+    default TaskRow lockOwned(String userId, String taskId) {
+        String conversationId = conversationIdOf(userId, taskId);
+        if (conversationId == null) {
+            return null;
+        }
+        lockConversation(userId, conversationId);
+        return lockOwnedRow(userId, taskId);
+    }
 
     @ConstructorArgs({
             @Arg(column = "id", javaType = long.class),

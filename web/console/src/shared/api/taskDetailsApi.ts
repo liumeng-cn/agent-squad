@@ -12,7 +12,7 @@ export interface Artifact {
 }
 export interface Operation {
   operationId: string
-  taskId: string
+  taskId?: string
   jobId?: string
   toolKey: string
   effect: string

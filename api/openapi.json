@@ -5634,7 +5634,9 @@
           },
           "taskId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "nullable": true,
+            "description": "可选目标上下文；普通回复不依赖目标任务。"
           },
           "status": {
             "type": "string",
@@ -6814,7 +6816,9 @@
           },
           "taskId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "nullable": true,
+            "description": "可选目标上下文；普通回复不依赖目标任务。"
           },
           "jobId": {
             "type": "string",
@@ -6881,7 +6885,6 @@
         },
         "required": [
           "interactionId",
-          "taskId",
           "kind",
           "origin",
           "question",
@@ -7042,7 +7045,9 @@
           },
           "taskId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "nullable": true,
+            "description": "可选目标上下文；普通回复不依赖目标任务。"
           },
           "jobId": {
             "type": "string",
@@ -7093,7 +7098,6 @@
         },
         "required": [
           "operationId",
-          "taskId",
           "toolKey",
           "effect",
           "status",
