@@ -92,3 +92,17 @@ git diff --check
 - 本切片 8 个新增 Java 文件经 IDEA 格式化，再编译测试；已有文件仅局部修改。
 
 日志：`/private/tmp/agentsquad-message-acceptance-test.log`、`/private/tmp/agentsquad-message-full-verified.log`。测试中的新消息均保持 QUEUED、nativeTurnId 为空、没有创建 GoalTask；这是持久受理事实，不是模型回答验收。
+
+## 2026-10-28：1.4 固定消息前缀子切片
+
+1.4 尚未完成，整体仍为 3/16；本切片只建立普通回复派发前的持久材料边界，没有开启 MESSAGE_SUBMIT 领取或宣称已生成模型回答。
+
+- V11 为 ResponseExecution 增加冻结前缀正文及摘要。首次在会话→回复所有者锁下选择截至来源消息的已完成公开消息，按角色、序号、revision 与附件引用保存；不读取未来消息、工具日志或 Worker 日志。
+- 重投、应用重启复用已冻结内容；每次读取仍验证会话代际、实际所有者和附件权限/有效期。Task/Worker 绑定不能使用整个会话前缀入口。
+- 初次冻结明确限制 200000 字符，先统计再读取，超限回滚且不静默截断；此处没有自动摘要或无预算模型调用。
+- MySQL 可重复读下，来源/冻结点和实际消息使用锁后当前读，避免等待会话锁后读取旧快照而错误重建材料。
+- ResponseContextIntegrationTest 3 项：前文引用与未来隔离、重启后稳定性、越权与失效代际、冻结后附件过期、超限不保存残缺材料。MySqlResponseContextTest 1 项：两路并发冻结返回同一内容，来源之后的消息不进入前缀；无 Task 和模型预留。
+- 最终后端 clean test：58 项，0 失败/错误，1 跳过，57 项实际通过，其中 8 项使用专用 MySQL 8.4；唯一跳过仍为未配置 SQUAD_DB_URL 的原 MySqlGoalTaskIntegrationTest。V6 → V11 实际升级通过，未迁移实际开发库。
+- 8 个新 Java 文件经 IDEA 格式化后编译测试。静态设计检查及差异检查通过；无需改变用户传输契约。实际 JDK 27/编译目标 Java 21，仍未验证真实 Java 21 运行。
+
+日志：`/private/tmp/agentsquad-response-context-verified.log`。后续继续接入独立回复 SDK Binding、完成候选、原生投影、取消与原 Turn 恢复；这些未完成项不勾选 1.4。
