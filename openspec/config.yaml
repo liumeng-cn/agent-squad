@@ -8,7 +8,7 @@ context: |
   运行权威：GoalTask 是用户目标，WorkerJob 是有界委派节点，AgentScope Session/Turn/Run 是执行事实；平台事务与 SDK journal 不原子，以持久 Command、稳定 SDK submit key、原生日志导出幂等与未知结果核对跨越崩溃窗口。
   数据约束：业务 ID CHAR(36) 与存储主键 BIGINT 分离；公共审计字段统一（creator_id/creator_name/create_time/last_updater_id/last_updater_name/last_update_time/del_flag）；del_flag 不参与业务幂等键；表与字段有中文注释。
   Java 代码约束：功能类与关键业务方法写中文职责/流程/生命周期注释，不写机械访问器注释；Spring 类不声明内部类或嵌套 DTO/record；统一 jakarta.annotation.Resource 字段注入，不使用构造方法注入或 Lombok 隐式注入构造器；关键日志说明操作/阶段/结果/原因并携带适用的 traceId/taskId/jobId/operationId/commandId。
-  当前进度：D0–D2 已完成，D3–D6 以 openspec/changes/ 下的 d3-multi-worker、d4-skills-memory、d5-sandbox-delivery、d6-integration-release 承载。
+  当前进度：D0–D3 已完成既有切片验证；优先实施 openspec/changes/conversation-first-experience，再推进 d4-skills-memory、d5-sandbox-delivery、d6-integration-release。优先变更的 delta 与 design 定义待实现的新消息/任务边界；在实现并同步主 specs 前，不把规划对象视为已运行能力。
 
 rules:
   proposal:

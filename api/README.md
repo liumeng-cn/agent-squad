@@ -1,6 +1,6 @@
 # HTTP 与应用 DTO 契约 v0.2
 
-[openapi.json](openapi.json) 已替换原 57 接口草稿，当前为 Java + AgentScope 设计。只定义公共 HTTP 和内部工具使用的 DTO，不将同 JVM 应用端口包装成内部 HTTP。所有路径 planned，无运行服务；[manifest](design-manifest.json)记录可复核数量和模块表归属。
+[openapi.json](openapi.json) 已替换原 57 接口草稿，当前为 Java + AgentScope 设计。只定义公共 HTTP 和内部工具使用的 DTO，不将同 JVM 应用端口包装成内部 HTTP。契约按阶段实现，历史 planned 标记不构成运行能力证明；具体实现与验证状态见对应 OpenSpec 变更证据。[manifest](design-manifest.json)记录可复核数量和模块表归属。
 
 ## 统一规则
 
@@ -29,3 +29,13 @@ InteractionResponse.kind 决定 INPUT/APPROVAL 分支；APPROVAL 不允许修改
 SSE 发送 TaskEvent，event名为message，事件 ID=taskId:seq；首次after参数取snapshot.cursor，自动重连的合法Last-Event-ID优先。snapshot 返回一致公开水位，读取与订阅不触发模型。payload 的字段见 [事件规范](../openspec/specs/events-artifacts/spec.md)，不能将任意原生记录直接透传。
 
 [examples.json](examples.json) 为虚构正例；[invalid-examples.json](invalid-examples.json) 为必须拒绝的结构反例。静态检查只验证引用/示例/设计一致性，不代替完整 OpenAPI 工具、SQL 执行或 SDK 故障实验。
+
+## 对话执行基础迁移
+
+`conversation-first-experience` 的 1.1 先增加 MessageReceipt、ConversationSnapshot、MessageView 和 ResponseExecutionView 等 DTO；它们目前是数据与传输基础，消息受理接口、SDK 普通回复运行与页面切换由后续任务接入。新增 schema 的 foundation-dto 标记不代表接口已经开放。
+
+- V7 只扩展消息、回复执行、ExecutionScope、BudgetAccount、会话事件和消息附件关联，以及旧表的归属引用。
+- V8 在事务中回填旧 Task 的共享账户/作用域、原始用户消息和最新公开答案；稳定来源键避免重复。旧任务仍保留，旧 Session/Command/submit key 与 Reservation 金额不变，不创建模型命令，也不伪造历史 ResponseExecution。
+- 账户只保存固定额度，实际占用继续由 Reservation 的 SETTLED/RESERVED/UNKNOWN 事实计算，避免复制汇总余额导致漂移。
+- 新 Scope 查询同时验证用户、会话代际、逻辑删除和真实 owner；跨用户、删除资源或失效代际不可读取。
+- 迁移新增表与列保持旧链路可运行；在运行层切换前，新建旧式 Task 尚不走新消息链路。实际开发库升级与页面验收应在主链路接入后进行，不能据此宣称聊天体验已完成。

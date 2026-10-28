@@ -2,7 +2,7 @@
 
 ## Context
 
-D6 是发布准备，不是新功能开发；目标是让多副本恢复、备份、负载/安全与前端验收有证据，并以“接口数量”以外的方式衡量完成度。见 proposal.md - Why、`api/runtime-config.schema.json` 与主 spec runtime。
+D6 在 `conversation-first-experience` 与 D4/D5 完成后执行，是发布准备，不是新功能开发；目标是让多副本恢复、备份、负载/安全与前端验收有证据，并以“接口数量”以外的方式衡量完成度。见 proposal.md - Why、`api/runtime-config.schema.json` 与主 spec runtime。
 
 ## Goals / Non-Goals
 
@@ -21,14 +21,14 @@ D6 是发布准备，不是新功能开发；目标是让多副本恢复、备�
 - 替代：以 CRUD 页面数量验收（形式化）。未采用。
 
 ### 多副本一致性
-- 选择：沿用数据库 guard/fence/租约，验证两实例不双主、旧 writer 被拒、SSE 水位跨实例一致。
+- 选择：沿用数据库 guard/fence/租约，验证两实例不双主、旧 writer 被拒、会话 SSE 水位跨实例一致；普通回复与 Task 协调采用独立 Binding，不能漏验任一路径。
 - 理由：与 runtime-contract 的租约/恢复决策一致。
 - 替代：引入新协调组件（超出需要）。未采用。
 
 ## Risks / Trade-offs
 
 - [SDK 本地时钟租约偏差] → 校时/偏差/网络分区实验（A13 语义）。
-- [备份不一致] → 平台表/原生日志/对象存储边界先核对再恢复。
+- [备份不一致] → 平台消息/执行/指令/标题/预算账户、原生日志/会话水位/对象存储边界先核对再恢复；新模式写入后不降级到无法识别这些事实的旧版本。
 
 ## Open Questions
 

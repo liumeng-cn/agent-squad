@@ -8410,6 +8410,446 @@
           "files",
           "grant"
         ]
+      },
+      "ResponseExecutionStatus": {
+        "type": "string",
+        "enum": [
+          "QUEUED",
+          "RUNNING",
+          "WAITING_INPUT",
+          "WAITING_APPROVAL",
+          "RECOVERING",
+          "RECONCILING",
+          "CANCELLING",
+          "SUCCEEDED",
+          "PARTIAL",
+          "FAILED",
+          "CANCELLED"
+        ]
+      },
+      "MessageCreateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 20000,
+            "minLength": 1
+          },
+          "artifactIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "minLength": 1
+            },
+            "maxItems": 20,
+            "nullable": true
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "description": "用户消息输入；不接受用户、Scope、Task 或预算账户字段。",
+        "x-implementation-status": "foundation-dto; endpoint implementation pending conversation-first-experience"
+      },
+      "MessageReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "executionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "commandId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ResponseExecutionStatus"
+          },
+          "cursor": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "conversationId",
+          "messageId",
+          "executionId",
+          "commandId",
+          "status",
+          "cursor"
+        ],
+        "description": "持久受理收据；不表示模型已启动或目标任务已创建。",
+        "x-implementation-status": "foundation-dto; endpoint implementation pending conversation-first-experience"
+      },
+      "ConversationView": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "titleSource": {
+            "type": "string",
+            "enum": [
+              "LEGACY",
+              "FALLBACK",
+              "AUTO_PENDING",
+              "AUTO",
+              "MANUAL"
+            ]
+          },
+          "titleVersion": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "generation": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "DELETING",
+              "DELETED"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "activeTaskId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "lastActivityAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "conversationId",
+          "title",
+          "titleSource",
+          "titleVersion",
+          "generation",
+          "status",
+          "version",
+          "activeTaskId",
+          "lastActivityAt"
+        ],
+        "description": "包含独立标题版本与服务端最近活动时间的会话视图。",
+        "x-implementation-status": "foundation-dto; endpoint implementation pending conversation-first-experience"
+      },
+      "MessageView": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sequence": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "USER",
+              "ASSISTANT"
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "completed": {
+            "type": "boolean"
+          },
+          "sourceMessageId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "executionId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "taskId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Artifact"
+            }
+          }
+        },
+        "required": [
+          "messageId",
+          "sequence",
+          "role",
+          "text",
+          "revision",
+          "completed",
+          "sourceMessageId",
+          "executionId",
+          "taskId",
+          "occurredAt",
+          "artifacts"
+        ],
+        "description": "持久用户与助手消息；内部协调不生成用户消息，旧任务消息无虚构回复执行。",
+        "x-implementation-status": "foundation-dto; endpoint implementation pending conversation-first-experience"
+      },
+      "ResponseExecutionView": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "executionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceMessageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ResponseExecutionStatus"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "answerMessageId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "failureId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "allowedActions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "STOP",
+                "RETRY",
+                "PROVIDE_INPUT",
+                "APPROVE",
+                "CONNECT",
+                "RECONCILE"
+              ]
+            }
+          }
+        },
+        "required": [
+          "executionId",
+          "sourceMessageId",
+          "status",
+          "version",
+          "answerMessageId",
+          "failureId",
+          "allowedActions"
+        ],
+        "description": "回复执行状态；连接状态另行显示，动作须由服务端计算。",
+        "x-implementation-status": "foundation-dto; endpoint implementation pending conversation-first-experience"
+      },
+      "ExecutionFailureView": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "failureId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scopeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "INPUT_REQUIRED",
+              "AUTH_REQUIRED",
+              "ENVIRONMENT",
+              "SERVICE_TRANSIENT",
+              "LOGIC_INVALID",
+              "EXTERNAL_UNKNOWN",
+              "INTERNAL"
+            ]
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "actor": {
+            "type": "string",
+            "enum": [
+              "USER",
+              "SYSTEM",
+              "OPERATOR"
+            ]
+          },
+          "safeMessage": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "attempt": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "maxAttempts": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "diagnosticId": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "allowedActions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "RETRY",
+                "PROVIDE_INPUT",
+                "CONNECT",
+                "APPROVE",
+                "RECONCILE",
+                "CONTACT_SUPPORT",
+                "STOP"
+              ]
+            }
+          }
+        },
+        "required": [
+          "failureId",
+          "scopeId",
+          "category",
+          "code",
+          "actor",
+          "safeMessage",
+          "retryable",
+          "attempt",
+          "maxAttempts",
+          "diagnosticId",
+          "allowedActions"
+        ],
+        "description": "安全故障说明与责任动作，不含原生异常或敏感上下文。",
+        "x-implementation-status": "foundation-dto; endpoint implementation pending conversation-first-experience"
+      },
+      "ConversationSnapshot": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "conversation": {
+            "$ref": "#/components/schemas/ConversationView"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessageView"
+            }
+          },
+          "nextBeforeSeq": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "nullable": true
+          },
+          "activeExecutions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponseExecutionView"
+            }
+          },
+          "activeTask": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GoalTask"
+              }
+            ],
+            "nullable": true
+          },
+          "interactions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interaction"
+            }
+          },
+          "deliverables": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Artifact"
+            }
+          },
+          "failures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExecutionFailureView"
+            }
+          },
+          "cursor": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "conversation",
+          "messages",
+          "nextBeforeSeq",
+          "activeExecutions",
+          "activeTask",
+          "interactions",
+          "deliverables",
+          "failures",
+          "cursor"
+        ],
+        "description": "会话一致前缀；cursor 为 conversationId:generation:eventSeq，不能与 Task cursor 混用。",
+        "x-implementation-status": "foundation-dto; endpoint implementation pending conversation-first-experience"
       }
     }
   }

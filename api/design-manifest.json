@@ -19,12 +19,16 @@
   ],
   "modules": {
     "M01": [
-      "sq_conversation"
+      "sq_conversation",
+      "sq_message",
+      "sq_message_artifact"
     ],
     "M02": [
       "sq_goal_task",
       "sq_runtime_binding",
-      "sq_command"
+      "sq_command",
+      "sq_execution_scope",
+      "sq_response_execution"
     ],
     "M03": [
       "sq_plan"
@@ -42,14 +46,19 @@
       "sq_secret_vault",
       "sq_operation",
       "sq_mock_ticket",
-      "sq_interaction"
+      "sq_interaction",
+      "sq_operation_reconciler"
     ],
     "M08": [
       "sq_task_event",
-      "sq_budget_reservation"
+      "sq_budget_reservation",
+      "sq_artifact",
+      "sq_task_artifact",
+      "sq_budget_account",
+      "sq_conversation_event"
     ]
   },
-  "plannedOperationCount": 38,
-  "plannedSchemaCount": 59,
-  "plannedBusinessTableCount": 15
+  "plannedOperationCount": 39,
+  "plannedSchemaCount": 67,
+  "plannedBusinessTableCount": 24
 }

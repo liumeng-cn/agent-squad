@@ -5,7 +5,8 @@
     ],
     "schemas": [
       "AuthView",
-      "Conversation"
+      "Conversation",
+      "ConversationView"
     ],
     "operations": [
       "login",
@@ -21,7 +22,10 @@
     ],
     "schemas": [
       "TaskReceipt",
-      "CommandReceipt"
+      "CommandReceipt",
+      "MessageCreateRequest",
+      "MessageReceipt",
+      "ResponseExecutionStatus"
     ],
     "operations": [
       "createTask"
@@ -38,7 +42,8 @@
     ],
     "schemas": [
       "PlanPublish",
-      "CompletionProposal"
+      "CompletionProposal",
+      "ResponseExecutionView"
     ],
     "operations": [],
     "cases": [
@@ -114,7 +119,8 @@
     ],
     "schemas": [
       "RuntimeBinding",
-      "Operation"
+      "Operation",
+      "ExecutionFailureView"
     ],
     "operations": [],
     "cases": [
@@ -148,7 +154,9 @@
     ],
     "schemas": [
       "TaskSnapshot",
-      "TaskEvent"
+      "TaskEvent",
+      "ConversationSnapshot",
+      "MessageView"
     ],
     "operations": [
       "getTaskSnapshot",

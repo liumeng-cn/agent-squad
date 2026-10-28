@@ -2,7 +2,7 @@
 
 ## Context
 
-D5 依赖框架 Filesystem/Sandbox 驱动；平台补驱动选择、资源/网络策略、产物归属与全局预算。隔离未达标前不开放任意脚本。见 proposal.md - Why。
+D5 依赖 `conversation-first-experience` 的 ExecutionScope/BudgetAccount、会话交付与故障动作契约，后接 D4 的固定上下文；同时依赖框架 Filesystem/Sandbox 驱动；平台补驱动选择、资源/网络策略、产物归属与全局预算。隔离未达标前不开放任意脚本。见 proposal.md - Why。
 
 ## Goals / Non-Goals
 
@@ -23,11 +23,11 @@ D5 依赖框架 Filesystem/Sandbox 驱动；平台补驱动选择、资源/网�
 
 ### 产物交付与归属
 - 选择：Artifact 上传 READY 前校验允许类型/大小/摘要；Worker 经 stage/commit 受控端口交付；下载后端重验授权，删除先禁读再物理清理。
-- 理由：产物与用户/任务归属、交付完整性都由平台把关。
+- 理由：产物与用户/消息/执行 Scope 的归属、可选任务关联和交付完整性都由平台把关；下载与缺失文件说明放在对话内，不要求任务详情。
 - 替代：把框架 Workspace 文件直接透传（无归属鉴权）。未采用。
 
 ### 全局预算
-- 选择：D3 先交付父 Task Reservation 账本及 Master/Worker 模型与工具请求的预留结算；D5 将摘要、沙箱重试及供应商切换接入同一账本，并复核完整定价与并发实验。
+- 选择：D3 已交付父 Task Reservation；优先变更将其归属统一到 ExecutionScope/BudgetAccount，普通回复创建任务共享原账户。D5 将摘要、沙箱重试及供应商切换接入该账本，保留用户全局上限和 UNKNOWN 占用，并复核完整定价与并发实验。
 - 理由：避免并行/重试/供应商切换绕过用户总预算。
 - 替代：按实例或按 Agent 独立配额（扩容即可绕过）。未采用。
 

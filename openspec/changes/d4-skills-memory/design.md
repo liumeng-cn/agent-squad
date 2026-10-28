@@ -2,7 +2,7 @@
 
 ## Context
 
-D4 依赖框架 Harness 的 Skill 发现/读取与上下文压缩能力，平台补上传安全、归属、版本固定与显式记忆治理。一期长期记忆只接受用户显式写入，默认自动提取须关闭。见 proposal.md - Why。
+D4 在 `conversation-first-experience` 主链路验收后实施，依赖其 Message/ExecutionScope/预算和会话交互契约；同时依赖框架 Harness 的 Skill 发现/读取与上下文压缩能力，平台补上传安全、归属、版本固定与显式记忆治理。一期长期记忆只接受用户显式写入，默认自动提取须关闭。见 proposal.md - Why。
 
 ## Goals / Non-Goals
 
@@ -17,7 +17,7 @@ D4 依赖框架 Harness 的 Skill 发现/读取与上下文压缩能力，平台
 ## Decisions
 
 ### Skill 版本固定与只读发布
-- 选择：发布时固定 skillVersionId 与包摘要，使用只读发布视图；Git HEAD 或同名新版本不改变在途任务。
+- 选择：发布时固定 skillVersionId 与包摘要，使用只读发布视图；普通回复 Scope、GoalTask 与 WorkerJob 均固定版本与包摘要，Git HEAD 或同名新版本不改变在途执行。
 - 理由：运行可复现，同名新版本不得扰动在途任务。
 - 替代：直接挂载可变 Git 仓库（不可复现）。未采用。
 
@@ -29,7 +29,7 @@ D4 依赖框架 Harness 的 Skill 发现/读取与上下文压缩能力，平台
 ## Risks / Trade-offs
 
 - [框架默认记忆钩子/工具未真正关闭] → 按固定标签核对 disableMemoryHooks/disableMemoryTools，并用 A15 覆盖压缩与后台路径。
-- [删除后旧摘要仍含原值] → 删除递增代数并校验 tombstone，无法清理即置 RECOVERY_BLOCKED。
+- [删除后旧摘要仍含原值] → 删除递增代数并校验 tombstone，无法清理即阻塞相关普通回复或任务的新派发；不只校验有 taskId 的路径。
 - [恶意 Skill] → 导入规范化校验（文件数/大小/路径），脚本仅经受控工具与 Sandbox 执行。
 
 ## Open Questions
