@@ -45,7 +45,8 @@
     "schemas": [
       "PlanPublish",
       "CompletionProposal",
-      "ResponseExecutionView"
+      "ResponseExecutionView",
+      "GoalTaskCreate"
     ],
     "operations": [],
     "cases": [

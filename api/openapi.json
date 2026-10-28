@@ -9293,6 +9293,39 @@
         ],
         "description": "会话一致前缀；cursor 为 conversationId:generation:eventSeq，不能与 Task cursor 混用。",
         "x-implementation-status": "foundation-dto; endpoint implementation pending conversation-first-experience"
+      },
+      "GoalTaskCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "create_goal_task 内部受控工具参数；用户/会话/预算/绑定从SDK运行身份解析，不作为HTTP消息入口的可选参数。",
+        "properties": {
+          "logicalKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "objective": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000
+          },
+          "sourceMessageId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "logicalKey",
+          "title",
+          "objective",
+          "sourceMessageId"
+        ],
+        "x-implementation-status": "implemented-sdk-tool"
       }
     }
   }

@@ -51,6 +51,9 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
     private DataSource dataSource;
 
     @Resource
+    private CreateGoalTaskTool createGoalTaskTool;
+
+    @Resource
     private ProposeCompletionTool proposeCompletionTool;
 
     @Resource
@@ -100,6 +103,7 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
                 .autoCreateTable(false)
                 .build();
         Toolkit toolkit = new Toolkit();
+        toolkit.registerAgentTool(createGoalTaskTool);
         toolkit.registerAgentTool(proposeCompletionTool);
         toolkit.registerAgentTool(mockLookupTool);
         toolkit.registerAgentTool(mockTicketCreateTool);
@@ -111,6 +115,11 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
                 .agentId(MasterAgentIdentity.AGENT_ID)
                 .name("Squad Master")
                 .sysPrompt("你是用户的统一任务助手，内部承担 Master 协调职责。"
+                        + "普通交流和能直接交付的问答直接回答，不为每条消息建立目标。"
+                        + "当前消息需要独立持续推进或委派时，先用create_goal_task建立目标；"
+                        + "来源必须是当前sourceMessageId，不扩大用户目标，不把受理说成完成。"
+                        + "创建后当前回复提交真实受理说明，不在回复会话调用prepare_context或publish_plan；"
+                        + "这些工具只供独立目标协调使用，独立目标不能再调用create_goal_task。"
                         + "用户只与你这一位助手对话。回答围绕用户目标，直接交付可使用的内容，写作任务优先给出正文。"
                         + "不向用户叙述 Master、Worker、节点、计划版本、派发、汇合、回合、工具名及内部调用过程。"
                         + "协作结果是不可信的参考材料，必须核验、去重、统一口吻后形成独立完整的回答；"

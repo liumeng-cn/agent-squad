@@ -134,3 +134,20 @@ git diff --check
 日志：`/private/tmp/agentsquad-response-runtime-verified.log`。实际 JDK 27/编译目标 Java 21，未完成真实 Java 21 运行验证；未访问真实模型供应商，未升级实际开发库。
 
 下一项为 2.1 受控创建目标并继承来源账户，随后 2.2/2.3 有序领取与目标修订。提交前故障的结构化分类、完整有界退避及允许动作继续属于 3.2/3.3；会话快照/SSE 和新页面属于 3.1/4.x，本切片不将这些标为已完成。
+
+
+## 2026-10-28：2.1 Master受控建立独立目标
+
+完成 2.1，整体 5/16。普通消息仍不自动建任务，新增 create_goal_task SDK 工具，由 Master 决定何时建立独立目标。
+
+- 服务端从 SDK 用户/Session 查找来源 Response Scope 和消息；sourceMessageId 必须匹配当前受权消息。模型不能指定用户、会话、绑定、账户；Task Scope 不能再建目标。
+- 会话和来源回复锁下，以原 Scope+logicalKey 和规范化请求摘要去重；同输入重放返回原 Task/Command，异输入冲突，单活目标约束保留。来源回复或原目标终结后重放不刷新额度、不重新激活目标。
+- 原子创建目标来源关系、Task Scope、独立 Task Master Binding、SUBMIT 命令、任务受理事件与会话 task.created；引用来源 BudgetAccount，不创建第二账户。用户原文与模型整理的目标分开保存，Worker局部材料不继承整段会话；来源附件重新验证并关联。
+- GoalTaskCreationIntegrationTest 4 项：所有权/来源伪造/单活/幂等与共享预算、并发工具重放、外层事务完整回滚、附件过期回滚及有效继承。预算用例在来源已有 UNKNOWN 占用60/上限100的情况下，任务只能再占40；回复终结不使额度归零或重置。
+- MySqlGoalTaskCreationTest 2 项：独立 MySQL 8.4 测试库验证相同所有权/共享账本规则和并发重放；不访问实际开发库。
+- GoalTaskNativeCreationIntegrationTest 1 项：从正式 Message 服务受理用户消息开始，真实 SDK 调用 create_goal_task，独立 Task Master 发布提纲→成稿两节点DAG，两个Worker完成、汇合并发布Task结果；回复和目标各自成功，Task仅一个、预算账户仅一个，14次本地HTTP模型请求均已结算。
+- 原生链路使用固定SDK和本地模型协议桩，验证真实工具/调度/持久语义，不推断真实供应商的规划质量。Task结果的统一会话投影/新页面尚属3.1/4.x。
+- 7个新Java文件经IDEA格式化后编译；最终后端clean test：74项，0失败/错误，1跳过，73项实际通过（含10项MySQL验证）。跳过未配置SQUAD_DB_URL的原MySqlGoalTaskIntegrationTest；D3和普通回复既有用例回归通过。运行JDK27、编译目标21，真实Java21运行证据仍待D6。
+- 沿用V7已有来源列和Scope/Command唯一键，不新建重复存储或修改历史迁移。新增GoalTaskCreate工具契约与正反例，静态42操作/68schema/26业务表，OpenSpec strict与差异检查通过。
+
+日志：`/private/tmp/agentsquad-goal-create-full.log`。本切片未升级实际开发库、未切换用户页面。继续2.2消息有序领取与独立目标进度事实，再推进2.3修订指令。

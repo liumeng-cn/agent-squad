@@ -67,3 +67,15 @@ SSE 发送 TaskEvent，event名为message，事件 ID=taskId:seq；首次after�
 - `POST /api/v1/executions/{executionId}/cancel` 接收 ControlRequest、Cookie/CSRF 和固定 Idempotency-Key，返回 CommandReceipt；只取消本条回答，不取消独立 GoalTask。STOP 没有活跃原生运行时才就地收尾；外部写入未知时保持 RECONCILING，不清掉账本或盲目重放。
 - 删除会话立即禁读并停止所有未终结回复；清理等回复安全收尾。过期代际的迟到候选不能公开正文或追加会话事件。
 - 消息有序领取、Master 按需创建目标及目标修订仍属于 2.1–2.3；会话快照/SSE、分级故障与页面切换仍待 3.x/4.x，不将本节视为完整聊天界面已可验收。
+
+
+## Master按需建立独立目标
+
+`create_goal_task` 是 SDK 工具，不新增用户发送按钮或意图分类前置调用。参数为 GoalTaskCreate：`{logicalKey, title, objective, sourceMessageId}`；返回 TaskReceipt：`{taskId, commandId, status: QUEUED}`。普通问答继续直接提交回复候选，是否建立目标由 Master 根据当前用户需求决定，不使用关键词路由。
+
+- 用户、会话、回复 Scope、预算账户及当前来源消息由可信 SDK 用户/Session 绑定解析。sourceMessageId 必须等于当前回复的来源；不能注入 userId/accountId/bindingId。Task/Worker 的 Task Scope 不允许再次创建目标。
+- 锁定会话和来源回复后，同 Scope+logicalKey 同输入重放返回原 Task/Command；不同输入冲突。原目标已终结时重放不重新激活，也不恢复已停止的回复。会话删除/代际失效拒绝访问，单会话仍只允许一个未完成目标。
+- 创建事务复用来源 BudgetAccount 引用，不新建账户、不移动或清空 Reservation，不因原回复结束增加额度。Task/Worker 后续模型和工具请求继续经过同一账户与用户预算闸门；UNKNOWN 费用继续占用。
+- 同事务创建独立 Task Scope、来源 Message/ResponseExecution 关系、Task Master Binding、SUBMIT Command、task.accepted 和会话 task.created。任何失败整批回滚，原消息保留；事务内不调用 SDK/模型。
+- Task 输入分别保存用户原文和模型拟定的 objective/title；局部 Worker 上下文只使用受权来源材料，不继承整个对话，也不把模型改写标为用户原话。来源附件重新验证后关联目标，过期材料阻止创建。
+- 此项覆盖按需创建并沿用 D3 DAG 执行；任务期间的有序消息领取、进展事实与目标修订继续在 2.2/2.3 实现。目标交付的统一会话投影与页面展示仍属于 3.1/4.x。

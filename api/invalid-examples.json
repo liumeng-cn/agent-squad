@@ -95,6 +95,17 @@
         "version": 1
       },
       "reason": "审批展示不能缺少操作影响详情"
+    },
+    {
+      "schema": "GoalTaskCreate",
+      "value": {
+        "logicalKey": "writing-goal",
+        "title": "短文写作",
+        "objective": "先拟提纲，再完成短文",
+        "sourceMessageId": "11111111-1111-4111-8111-111111111111",
+        "accountId": "22222222-2222-4222-8222-222222222222"
+      },
+      "reason": "模型不能指定预算账户或资源归属"
     }
   ]
 }
