@@ -470,6 +470,11 @@
           "type": "integer",
           "minimum": 1,
           "description": "同一用户所有执行的累计预算上限；对应SQUAD_BUDGET_MAX_MICROUNITS_PER_USER，不随新会话重置"
+        },
+        "maxResponseCostMicrounits": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "单条回复固定预算账户额度，对应SQUAD_BUDGET_MAX_MICROUNITS_PER_RESPONSE"
         }
       },
       "required": [
@@ -484,7 +489,8 @@
         "maxCostMicrounits",
         "absoluteDeadlineSeconds",
         "interactionTtlSeconds",
-        "maxUserCostMicrounits"
+        "maxUserCostMicrounits",
+        "maxResponseCostMicrounits"
       ]
     }
   },

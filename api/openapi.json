@@ -5227,6 +5227,297 @@
           }
         }
       }
+    },
+    "/api/v1/conversations/messages": {
+      "post": {
+        "operationId": "submitFirstMessage",
+        "tags": [
+          "public"
+        ],
+        "summary": "原子创建会话并受理首条消息",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "x-design-status": "implemented-persistent-acceptance",
+        "responses": {
+          "202": {
+            "description": "持久接受，返回同一消息与回复执行收据，不代表模型已启动",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageCreateRequest"
+              }
+            }
+          }
+        },
+        "description": "202只表示消息、回复执行和命令持久接受；同键同输入返回原身份，附件未就绪整体回滚。在途目标不阻断消息。",
+        "x-implementation-status": "Message acceptance implemented; SDK response lifecycle pending task 1.4; UI integration pending task 4.1"
+      }
+    },
+    "/api/v1/conversations/{conversationId}/messages": {
+      "post": {
+        "operationId": "submitConversationMessage",
+        "tags": [
+          "public"
+        ],
+        "summary": "向对话追加消息，不强制创建任务",
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "x-design-status": "implemented-persistent-acceptance",
+        "responses": {
+          "202": {
+            "description": "持久接受，返回同一消息与回复执行收据，不代表模型已启动",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageCreateRequest"
+              }
+            }
+          }
+        },
+        "description": "202只表示消息、回复执行和命令持久接受；同键同输入返回原身份，附件未就绪整体回滚。在途目标不阻断消息。",
+        "x-implementation-status": "Message acceptance implemented; SDK response lifecycle pending task 1.4; UI integration pending task 4.1"
+      }
     }
   },
   "components": {
@@ -8455,7 +8746,7 @@
           "text"
         ],
         "description": "用户消息输入；不接受用户、Scope、Task 或预算账户字段。",
-        "x-implementation-status": "foundation-dto; endpoint implementation pending conversation-first-experience"
+        "x-implementation-status": "implemented-message-acceptance; SDK execution pending task 1.4"
       },
       "MessageReceipt": {
         "type": "object",
@@ -8494,7 +8785,7 @@
           "cursor"
         ],
         "description": "持久受理收据；不表示模型已启动或目标任务已创建。",
-        "x-implementation-status": "foundation-dto; endpoint implementation pending conversation-first-experience"
+        "x-implementation-status": "implemented-message-acceptance; SDK execution pending task 1.4"
       },
       "ConversationView": {
         "type": "object",

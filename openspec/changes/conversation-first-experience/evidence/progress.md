@@ -69,3 +69,26 @@ git diff --check
 日志：`/private/tmp/agentsquad-scope-full-verified.log`、`/private/tmp/agentsquad-scope-mysql-current-read.log`、`/private/tmp/agentsquad-scope-web-build.log`。SDK 固定版本、JDK 27 执行/Java 21 编译目标的限制与上一切片相同。
 
 无 Task 能力实验由测试建立受权执行数据并通过正式治理服务和 SDK 模型事件验证，不是新消息 API/原生回复端到端实验，也没有向真实模型供应商发请求。实际开发库与当前用户页面未切换。
+
+## 2026-10-28：1.3 正式消息持久受理
+
+完成 1.3，整体 3/16。增加两个正式 HTTP 消息入口，仍未宣称普通回复 SDK 生命周期或新页面已经完成。
+
+### 实现与语义
+
+- 首发在一个独立平台事务创建会话、用户消息、回复执行、Scope/Account、SDK Binding、MESSAGE_SUBMIT Command、消息附件关联与两条会话事件；无任何 GoalTask、WorkerJob 或模型预留。
+- 已有会话先按归属锁会话，分配单调 messageSeq；已有在途 GoalTask 不阻断消息，也不被普通消息暗中终结或改写。
+- 首发的命令唯一键裁决并发；失败事务完整回滚后，外层从新读视图补查原收据。相同输入重送、服务重启后重送保留原 conversation/message/execution/command 身份；同键换输入返回 409。
+- Artifact 引用验证同用户、有效期与就绪元数据，规范化 UUID 大小写、拒绝重复/无效引用；失败不遗留空会话、Scope 或执行，但保留之前独立成功的上传。
+- 传输层拒绝注入 Task/用户/Scope 等未知字段，身份来自实际 Cookie+CSRF。首条消息生成安全短标题 fallback，不阻塞受理；完整标题管理/侧栏仍属于 4.3。
+- MESSAGE_SUBMIT 暂不由旧 Task 投递器领取；普通回复的 SDK 接入在 1.4。新路径的运行状态明确标为仅持久受理，界面仍使用旧入口，未切换实际开发库或用户页面。
+
+### 验证
+
+- MessageAcceptanceHttpTest：4 项 H2 实际 HTTP 边界验证，包含首发并发/重送、Cookie/CSRF/身份字段、附件不存在/越权/过期整体回滚、在途任务追加消息，以及应用重启后原收据重送。
+- MySqlMessageAcceptanceTest：3 项 MySQL 8.4 实际 HTTP 验证，覆盖并发首发、附件事务和在途消息；专用隔离库，未访问实际开发数据。
+- 后端 clean test：54 项，0 失败/错误，1 跳过，耗时约 77 秒；53 项实际通过，包含 7 项真实 MySQL 测试，跳过未配置 SQUAD_DB_URL 的原 MySqlGoalTaskIntegrationTest。
+- 静态契约检查：41 个操作、67 个 schema、26 张业务表，正反例/追踪/页面映射通过；不把契约数量视为运行完成度。OpenSpec strict 与差异检查通过。
+- 本切片 8 个新增 Java 文件经 IDEA 格式化，再编译测试；已有文件仅局部修改。
+
+日志：`/private/tmp/agentsquad-message-acceptance-test.log`、`/private/tmp/agentsquad-message-full-verified.log`。测试中的新消息均保持 QUEUED、nativeTurnId 为空、没有创建 GoalTask；这是持久受理事实，不是模型回答验收。

@@ -49,3 +49,11 @@ SSE 发送 TaskEvent，event名为message，事件 ID=taskId:seq；首次after�
 工具计费键固定在 Operation：V10 保留旧操作原稳定键，新 READ 请求按原生会话/Turn/工具调用身份摘要分开预留，WRITE 仍按业务意图去重。连接器写入异常不证明未执行，记录 UNKNOWN；核清前同会话既不准备新外部操作，也不派发先前 PREPARED 的操作。派发校验与 IN_FLIGHT 在独立事务中提交，外部 I/O 在事务外执行。
 
 用户答复在最后一个开放交互解决后把相应执行置 QUEUED，避免 SDK 立即继续时仍被等待态误拦截；这不代表模型已经运行。停止/删除/代际变化拦截新派发，已发生的结算和核对仍保留事实。Operation/Interaction 的 taskId 可省略，CommandReceipt 的 taskId 可为 null。
+
+## 消息持久受理
+
+- `POST /api/v1/conversations/messages` 首发原子创建会话和消息；`POST /api/v1/conversations/{conversationId}/messages` 在已有会话中追加消息，在途 Task 不构成“会话忙”。请求为 `{text, artifactIds?}`，Cookie、CSRF 与 Idempotency-Key 均须合法；用户、Task、Scope 等未知字段拒绝。
+- 原子事务写入 Conversation/Message/ResponseExecution/Scope/Account/Binding/Command 和两个受理事件，附件必须同用户且就绪有效。无效、越权或过期附件使整批回滚，已上传文件不随消息受理失败被删除。
+- 首发并发同键只保留一套事实；唯一键失败先完整回滚，再从新读视图补查胜出收据。同键同正文/附件返回原身份，同键换输入 409；附件 UUID 大小写规范化，顺序保留。
+- 首发重送须使用原首发端口和原 key；获得收据后才把后续消息发送到会话追加端口。接口返回 MessageReceipt，不返回新 Task。cursor 为会话受理前缀，不能当任务事件游标使用。
+- `MESSAGE_SUBMIT` 目前仅持久排队，普通回复 Bridge/SDK 生命周期由 1.4 接入；新增接口的 202 不代表模型已启动。旧聊天页面尚未切换到这些入口。

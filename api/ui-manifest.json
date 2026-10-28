@@ -35,7 +35,9 @@
         "resumeTask",
         "respondInteraction",
         "getCommandReceipt",
-        "deleteConversation"
+        "deleteConversation",
+        "submitFirstMessage",
+        "submitConversationMessage"
       ],
       "cases": [
         "B02",

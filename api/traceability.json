@@ -28,7 +28,9 @@
       "ResponseExecutionStatus"
     ],
     "operations": [
-      "createTask"
+      "createTask",
+      "submitFirstMessage",
+      "submitConversationMessage"
     ],
     "cases": [
       "A01",
