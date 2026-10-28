@@ -46,3 +46,7 @@ cd web/console && npm run build
 ```
 
 MySQL 测试需显式设置项目专用 SQUAD_DB_URL、SQUAD_DB_USER、SQUAD_DB_PASSWORD；未配置时跳过。实际执行使用临时 Maven 缓存 `/private/tmp/agentsquad-m2` 及 offline 模式，缓存路径不是项目配置。页面夹具仅用于视觉检查，不连接真实模型，入口和临时账号在 TaskPageReviewServer 的测试源码中。
+
+## 用户表达调整
+
+统一助手提示词要求直接交付正文或成果，对内部材料核验、去重、统一口吻；Worker 仅提供实质材料与缺口，不面向用户汇报。默认任务页移除执行标识、节点列表、原始结果与内部轮次通知；保留实际状态、追问、操作确认、文件与交互历史。操作状态使用用户可理解的文字。前端构建通过，AutonomousWritingFlowIntegrationTest 与 MultiWorkerExecutionIntegrationTest 共 4 项原生回归通过。此轮未调用真实模型，不将模型桩回归作为真实回答口吻的验收。

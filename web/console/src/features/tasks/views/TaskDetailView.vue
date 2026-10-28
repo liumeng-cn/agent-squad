@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import StatusBadge from '../../../shared/ui/StatusBadge.vue'
 import { useRuntimeStore } from '../../chat/stores/runtime'
@@ -37,7 +37,7 @@ const eventLabels: Record<string, string> = {
   'job.reused': '复用已验证的子任务结果', 'job.recovery_blocked': '子任务恢复受限',
   'interaction.requested': '等待补充信息或操作确认', 'interaction.resolved': '交互已处理',
   'operation.unknown': '操作结果待核对', 'task.recovery_blocked': '目标恢复受限',
-  'answer.completed': '最终答案已生成', 'answer.replaced': '回答已更新', 'task.completed': '目标已收尾',
+  'answer.completed': '回答已就绪', 'answer.replaced': '回答已更新', 'task.completed': '处理已结束',
 }
 async function download(file: Artifact): Promise<void> {
   downloading.value = file.artifactId; artifactError.value = ''
@@ -50,14 +50,6 @@ async function download(file: Artifact): Promise<void> {
   } catch (cause) { artifactError.value = errorMessage(cause) }
   finally { downloading.value = null }
 }
-const jobs = computed(() => runtime.snapshot?.jobs ?? [])
-const finishedJobs = computed(() => jobs.value.filter((job) =>
-  ['SUCCEEDED', 'PARTIAL', 'FAILED', 'CANCELLED', 'SUPERSEDED'].includes(job.status)).length)
-
-function resultText(result: unknown): string {
-  return JSON.stringify(result, null, 2)
-}
-
 onMounted(async () => {
   await runtime.observe(taskId, { replayFromStart: true })
   try { artifacts.value = await listArtifacts(taskId) }
@@ -95,36 +87,7 @@ onBeforeUnmount(() => {
       <button v-if="runtime.stoppable" class="btn btn-danger" :disabled="runtime.stopping" @click="runtime.stop()">
         {{ runtime.stopping ? '正在请求停止…' : '停止任务' }}
       </button>
-      <dl v-if="runtime.task" class="meta-grid">
-        <div>
-          <dt>任务 ID</dt>
-          <dd class="mono">{{ runtime.task.taskId }}</dd>
-        </div>
-        <div>
-          <dt>会话 ID</dt>
-          <dd class="mono">{{ runtime.task.conversationId }}</dd>
-        </div>
-        <div>
-          <dt>版本</dt>
-          <dd>{{ runtime.task.version }}</dd>
-        </div>
-        <div>
-          <dt>计划版本</dt>
-          <dd>{{ runtime.task.planVersion }}</dd>
-        </div>
-        <div>
-          <dt>答案版本</dt>
-          <dd>{{ runtime.task.answerRevision }}</dd>
-        </div>
-        <div>
-          <dt>创建时间</dt>
-          <dd>{{ runtime.task.createdAt ?? '—' }}</dd>
-        </div>
-        <div>
-          <dt>更新时间</dt>
-          <dd>{{ runtime.task.updatedAt ?? '—' }}</dd>
-        </div>
-      </dl>
+
     </div>
 
     <div v-if="runtime.goalMessage" class="detail-card">
@@ -140,24 +103,6 @@ onBeforeUnmount(() => {
     <div v-if="runtime.snapshot?.pending.length" class="detail-card">
       <InteractionCard v-for="interaction in runtime.snapshot.pending" :key="interaction.interactionId"
         :interaction="interaction" @refresh="refreshDetails" />
-    </div>
-
-    <div v-if="runtime.task && runtime.task.planVersion > 0" class="detail-card">
-      <h2>当前计划 · 第 {{ runtime.task.planVersion }} 版</h2>
-      <p class="detail-muted">{{ finishedJobs }} / {{ jobs.length }} 个子任务已结束</p>
-      <p v-if="jobs.length === 0" class="detail-muted">计划节点正在同步…</p>
-      <ol v-else class="job-list">
-        <li v-for="job in jobs" :key="job.jobId" class="job-card">
-          <div class="job-heading">
-            <strong>{{ job.nodeKey }}</strong>
-            <StatusBadge :status="job.status" />
-          </div>
-          <p class="detail-muted">{{ job.workerKey }} · {{ job.workerVersion }}</p>
-          <p class="mono detail-muted">Job {{ job.jobId }}</p>
-          <p v-if="job.reusedFromJobId" class="detail-muted">复用已验证结果 · 来源 Job {{ job.reusedFromJobId }}</p>
-          <pre v-if="job.status === 'SUCCEEDED' && job.result != null" class="job-result">{{ resultText(job.result) }}</pre>
-        </li>
-      </ol>
     </div>
 
     <OperationPanel v-if="runtime.snapshot" :task-id="taskId" :cursor="runtime.snapshot.cursor" :artifacts="artifacts" @refresh="runtime.refreshSnapshot()" />
@@ -187,8 +132,8 @@ onBeforeUnmount(() => {
       <h2>进度时间线</h2>
       <p v-if="runtime.events.length === 0" style="color: var(--text-secondary)">暂无事件</p>
       <ul v-else class="event-log" style="align-self: stretch">
-        <li v-for="event in runtime.events" :key="event.sequence" class="mono">
-          #{{ event.sequence }} {{ eventLabels[event.type] ?? '任务记录更新' }} · {{ event.occurredAt }}
+        <li v-for="event in runtime.events.filter(item => ['task.accepted', 'interaction.requested', 'interaction.resolved', 'answer.completed', 'task.completed'].includes(item.type))" :key="event.sequence" class="mono">
+          {{ eventLabels[event.type] ?? '任务记录更新' }} · {{ event.occurredAt }}
         </li>
       </ul>
     </div>

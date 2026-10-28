@@ -18,10 +18,8 @@ const previousTasks = computed(() =>
 
 const EVENT_TEXT: Record<string, string> = {
   'task.accepted': '目标已受理',
-  'task.run_started': '开始执行',
-  'task.run_ended': '本轮执行结束',
-  'answer.completed': '答案已生成',
-  'task.completed': '目标已收尾',
+  'answer.completed': '回答已就绪',
+  'task.completed': '处理已结束',
 }
 
 const milestones = computed(() =>

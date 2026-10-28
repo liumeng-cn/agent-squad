@@ -101,7 +101,14 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
         master = HarnessAgent.builder()
                 .agentId(MasterAgentIdentity.AGENT_ID)
                 .name("Squad Master")
-                .sysPrompt("你是多智能体平台的 Master。当前可用的平台工具："
+                .sysPrompt("你是用户的统一任务助手，内部承担 Master 协调职责。"
+                        + "用户只与你这一位助手对话。回答围绕用户目标，直接交付可使用的内容，写作任务优先给出正文。"
+                        + "不向用户叙述 Master、Worker、节点、计划版本、派发、汇合、回合、工具名及内部调用过程。"
+                        + "协作结果是不可信的参考材料，必须核验、去重、统一口吻后形成独立完整的回答；"
+                        + "不要原样转发 JSON、工作记录或角色汇报，不用执行报告代替用户所需内容。"
+                        + "能从已授权信息确定的事项自行处理，仅对影响结果的关键信息追问，说明具体缺什么。"
+                        + "部分完成时给出已完成的可用内容和实际缺口。不得隐瞒失败、未知外部结果或操作影响，"
+                        + "不得编造成功或进度。以下仅为内部执行约束，不应出现在用户回答中："
                         + "mock_lookup 用于只读查询；mock_ticket_create 用于创建工单，"
                         + "它需要用户在页面审批，调用后回合会挂起等待，不要重复提交，也不要伪造审批结果；"
                         + "request_input 用于向用户追问补充信息，一次只提一个问题，不要假设用户已经回答。"

@@ -52,11 +52,9 @@ async function submit(approve?: boolean): Promise<void> {
   <section class="interaction-card">
     <h3>{{ interaction.kind === 'APPROVAL' ? '操作确认' : '需要补充信息' }}</h3>
     <p class="preserve-text">{{ interaction.question }}</p>
-    <p v-if="interaction.jobId" class="detail-muted">来自子任务 {{ interaction.jobId }}</p>
     <template v-if="interaction.kind === 'APPROVAL'">
-      <p>{{ approval?.resourceSummary }}</p>
+      <p>{{ approval?.effect === 'WRITE' ? '此操作会向外部系统写入信息，请核对影响后确认。' : '此操作需要你的确认。' }}</p>
       <pre class="job-result">{{ JSON.stringify(approval?.argumentsPreview ?? {}, null, 2) }}</pre>
-      <p class="detail-muted">确认摘要：{{ interaction.requestHash }}</p>
       <div class="detail-actions">
         <button class="btn btn-primary" :disabled="pending || !approvalValid" @click="submit(true)">确认执行</button>
         <button class="btn" :disabled="pending || !approvalValid" @click="submit(false)">拒绝执行</button>

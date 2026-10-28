@@ -75,7 +75,7 @@ defineExpose({ openSidebar: () => (sidebarHidden.value = false) })
     </div>
     <div class="sidebar-footer">
       <router-link v-if="auth.user?.roles.includes('ADMIN')" class="btn btn-sm" :to="{ name: 'workers' }">
-        Worker 管理
+        能力设置
       </router-link>
       <span>{{ auth.user?.username }}</span>
       <button class="btn btn-sm" @click="logout">退出</button>

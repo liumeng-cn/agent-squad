@@ -14,6 +14,7 @@ const notice = ref('')
 const note = ref('')
 const evidence = ref<string[]>([])
 const disposition = ref('UNRESOLVED')
+const stateText: Record<string, string> = { PREPARED: '准备中', WAITING_APPROVAL: '等待确认', IN_FLIGHT: '处理中', UNKNOWN: '结果待核对', RECONCILING: '核对中', SUCCEEDED: '已完成', FAILED: '未完成', CANCELLED: '已取消' }
 let revision = 0
 async function load(append = false): Promise<void> {
   const current = ++revision
@@ -35,7 +36,7 @@ async function reconcile(): Promise<void> {
   try {
     const result = await reconcileOperation(selected.value, disposition.value, evidence.value, note.value)
     await inspect(id); await load(); emit('refresh')
-    notice.value = `核对结论已记录，当前状态：${result.status}`
+    notice.value = `核对结论已记录：${stateText[result.status] ?? '处理中'}`
   } catch (cause) {
     error.value = errorMessage(cause)
     if (cause instanceof ApiError && cause.status === 409) { await inspect(id); await load() }
@@ -50,18 +51,18 @@ watch(() => [props.taskId, props.cursor], () => { void load() }, { immediate: tr
     <p v-if="items.length === 0" class="detail-muted">暂无操作记录</p>
     <ul class="operation-list">
       <li v-for="operation in items" :key="operation.operationId">
-        <span>{{ operation.toolKey }} · {{ operation.effect }} · {{ operation.status }}</span>
+        <span>{{ operation.effect === 'WRITE' ? '外部写入' : '信息处理' }} · {{ stateText[operation.status] ?? '处理中' }}</span>
         <button class="btn btn-sm" @click="inspect(operation.operationId)">查看详情</button>
       </li>
     </ul>
     <button v-if="next" class="btn" @click="load(true)">加载更多操作</button>
     <section v-if="selected" class="operation-detail" aria-label="操作详情">
       <div class="job-heading"><h3>操作详情</h3><button class="btn btn-sm" @click="selected = null">收起</button></div>
-      <p>{{ selected.operation.summary }}</p>
-      <p class="mono detail-muted">{{ selected.operation.operationId }}</p>
+      <p>{{ stateText[selected.operation.status] ?? '处理中' }}</p>
+
       <h4>脱敏参数</h4>
       <pre class="job-result">{{ JSON.stringify(selected.argumentsPreview, null, 2) }}</pre>
-      <p>{{ selected.resultSummary }}</p>
+      <p>{{ selected.evidenceRefs.length ? `已保存 ${selected.evidenceRefs.length} 项核对证据` : '暂无核对证据' }}</p>
       <form v-if="selected.canReconcile" @submit.prevent="reconcile">
         <h4>核对未知结果</h4>
         <label class="detail-field">结论<select v-model="disposition" :disabled="loading">

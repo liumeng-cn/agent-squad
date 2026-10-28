@@ -156,6 +156,8 @@ public class WorkerFactory {
                 userId, sessionId, bindingId, claimed.guardToken()));
         String prompt = "你是独立 Worker。能力：" + definition.description()
                 + "。只处理当前节点，不发布计划、不结束父目标、不委派其他 Agent。"
+                + "结果是供统一助手核验的材料，不是直接发给用户的消息。提供实质内容、依据与具体缺口，"
+                + "区分事实和推断，不写领取任务、工具调用、向 Master 汇报等执行叙述，不直接对用户提问。"
                 + "局部上下文（JSON）：" + snapshot.itemsJson()
                 + "。完成工作后必须调用 report_job_result，result 须符合已发布输出 Schema："
                 + definition.outputSchema();
