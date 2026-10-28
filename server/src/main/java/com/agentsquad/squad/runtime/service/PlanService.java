@@ -30,6 +30,7 @@ import com.agentsquad.squad.worker.profile.WorkerModelProfile;
 import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
+import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,6 +62,9 @@ public class PlanService {
     private static final int MAX_NODES = 16;
     private static final int MAX_PARALLEL = 4;
     private static final Set<String> JOIN_POLICIES = Set.of("ALL_REQUIRED", "BEST_EFFORT");
+
+    @Resource
+    private ExecutionScopeService executionScopes;
 
     @Resource
     private PlanMapper planMapper;
@@ -118,6 +122,7 @@ public class PlanService {
     public PlanReceipt publish(String userId, String sessionId, PlanPublish publish) {
         validateShape(publish);
 
+        executionScopes.lockOwned(userId, executionScopes.scopeForSession(userId, sessionId), true);
         PlanContextRow context = planMapper.lockMasterContext(userId, sessionId);
         if (context == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "Master 会话未绑定目标");

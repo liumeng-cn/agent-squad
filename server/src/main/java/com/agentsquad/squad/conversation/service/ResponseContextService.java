@@ -6,6 +6,12 @@ import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.conversation.domain.ExecutionScopeRow;
+import com.agentsquad.squad.conversation.domain.ConversationRow;
+import com.agentsquad.squad.conversation.domain.TaskRow;
+import com.agentsquad.squad.conversation.domain.ResponseTaskFacts;
+import com.agentsquad.squad.conversation.repository.ConversationMapper;
+import com.agentsquad.squad.conversation.repository.TaskMapper;
+import com.agentsquad.squad.conversation.repository.ResponseTaskFactsMapper;
 import com.agentsquad.squad.conversation.domain.ResponseContextMessage;
 import com.agentsquad.squad.conversation.domain.ResponseContextRow;
 import com.agentsquad.squad.conversation.domain.ResponseHistoryRow;
@@ -41,6 +47,15 @@ public class ResponseContextService {
 
     @Resource
     private ArtifactMapper artifacts;
+
+    @Resource
+    private ConversationMapper conversations;
+
+    @Resource
+    private TaskMapper tasks;
+
+    @Resource
+    private ResponseTaskFactsMapper taskFacts;
 
     @Resource
     private ObjectMapper objectMapper;
@@ -87,12 +102,32 @@ public class ResponseContextService {
         }
         validateArtifacts(userId, messages);
         ResponseContextSnapshot snapshot = new ResponseContextSnapshot(scope.conversationId(),
-                scope.conversationGeneration(), source.sourceMessageId(), source.sourceSequence(), List.copyOf(messages));
+                scope.conversationGeneration(), source.sourceMessageId(), source.sourceSequence(), List.copyOf(messages), activeTask(scope));
         String json = RuntimePayloads.toJson(objectMapper, snapshot);
         if (mapper.freeze(userId, source.executionId(), json, ContentDigests.sha256(json)) != 1) {
             throw new IllegalStateException("回复上下文冻结发生竞争");
         }
         return snapshot;
+    }
+
+    /**
+     * 当前目标与节点按会话→目标→Job顺序读取，与消息材料同事务冻结，不跨模型请求持锁。
+     */
+    private ResponseTaskFacts activeTask(ExecutionScopeRow scope) {
+        ConversationRow conversation = conversations.lockOwned(scope.userId(), scope.conversationId());
+        if (conversation.activeTaskId() == null) {
+            return null;
+        }
+        TaskRow task = tasks.lockOwnedRow(scope.userId(), conversation.activeTaskId());
+        if (task == null || !scope.conversationId().equals(task.conversationId())) {
+            throw new IllegalStateException("会话当前目标归属不一致");
+        }
+        Long taskGeneration = taskFacts.scopeGeneration(scope.userId(), task.taskId());
+        if (taskGeneration == null || taskGeneration != scope.conversationGeneration()) {
+            return null;
+        }
+        return new ResponseTaskFacts(task.taskId(), task.status(), task.version(), task.planVersion(),
+                task.cancelRequestedAt() != null, List.copyOf(taskFacts.jobs(scope.userId(), task.taskId(), task.planVersion())));
     }
 
     private RuntimeBusinessException contextTooLarge() {

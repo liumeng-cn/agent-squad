@@ -4,6 +4,7 @@ import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.conversation.domain.RuntimeCommandAction;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
+import com.agentsquad.squad.conversation.repository.TaskMapper;
 import com.agentsquad.squad.conversation.repository.DeliveryMapper;
 import com.agentsquad.squad.conversation.repository.TaskEventMapper;
 import com.agentsquad.squad.integration.agentscope.NativeSubmissionReceipt;
@@ -37,6 +38,9 @@ import java.util.UUID;
 @Service
 @Slf4j
 public class WorkerRecoveryService {
+
+    @Resource
+    private TaskMapper taskMapper;
 
     @Resource
     private WorkerDispatchMapper dispatchMapper;
@@ -89,6 +93,7 @@ public class WorkerRecoveryService {
                 || receipt.turnId() == null || receipt.turnId().isBlank()) {
             return;
         }
+        taskMapper.lockOwned(target.userId(), target.taskId());
         Long currentVersion = planMapper.lockTaskPlanVersion(target.userId(), target.taskId());
         WorkerLaunchRow job = dispatchMapper.findByBinding(target.userId(), target.bindingId());
         if (job == null || currentVersion == null || currentVersion != job.planVersion()
@@ -152,6 +157,7 @@ public class WorkerRecoveryService {
     @Transactional
     public void blockRejectedResume(String userId, String taskId, String bindingId,
                                     String commandId, String deliveryToken, String errorCode) {
+        taskMapper.lockOwned(userId, taskId);
         Long currentVersion = planMapper.lockTaskPlanVersion(userId, taskId);
         if (deliveryMapper.blockRejectedResume(commandId, deliveryToken, errorCode) != 1) {
             return;

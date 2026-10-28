@@ -79,3 +79,12 @@ SSE 发送 TaskEvent，event名为message，事件 ID=taskId:seq；首次after�
 - 同事务创建独立 Task Scope、来源 Message/ResponseExecution 关系、Task Master Binding、SUBMIT Command、task.accepted 和会话 task.created。任何失败整批回滚，原消息保留；事务内不调用 SDK/模型。
 - Task 输入分别保存用户原文和模型拟定的 objective/title；局部 Worker 上下文只使用受权来源材料，不继承整个对话，也不把模型改写标为用户原话。来源附件重新验证后关联目标，过期材料阻止创建。
 - 此项覆盖按需创建并沿用 D3 DAG 执行；任务期间的有序消息领取、进展事实与目标修订继续在 2.2/2.3 实现。目标交付的统一会话投影与页面展示仍属于 3.1/4.x。
+
+## 消息顺序与任务期间交流
+
+- Bridge 扫描排除同用户、同会话、同代际的后续消息；正式领取在会话→实际所有者→命令的短事务中，以锁后当前读再次检查。前序回复处于 QUEUED/RUNNING/RECOVERING/RECONCILING/CANCELLING 时不启动后续回复；WAITING_INPUT/WAITING_APPROVAL 或终态允许后续消息。不同会话或代际不共用这个队列。
+- 领取与停止、计划工具和恢复回调遵守同一锁顺序，命令领取提交后才调用 SDK。普通消息是独立 Binding，不向在途 Task Binding 新建用户 Turn，不消费别的 Binding 的交互。
+- 回复的内部冻结上下文可含 `activeTask`，记录首派发时的 Task 身份、真实状态、版本、当前计划和节点状态；读取范围限制在当前用户会话的当前有效代际目标，不包含 Worker 日志或候选正文。重投复用原快照，目标后续变化不会改写已冻结的输入；新的用户消息读取新的事实。
+- Task Master 是计划写入者；聊天回复不能通过 prepare_context/publish_plan 改写另一绑定的计划。需要修改目标时使用后续 2.3 的持久指令入口，普通发言不等于已应用修订或已批准交互。
+- SDK 已持久接受 commandId 时，Bridge 直接读取其原收据，不因上下文 JSON 新增字段而重新编码该提交键；未接受时仍以原 commandId 原子 submit。页面查询和刷新不发起推理。
+- 以上是后端执行/上下文语义；对话快照与 SSE 公开模型、交付投影及页面交互仍待 3.1/4.x。

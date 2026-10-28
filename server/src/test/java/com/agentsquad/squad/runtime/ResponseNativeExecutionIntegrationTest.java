@@ -92,7 +92,14 @@ class ResponseNativeExecutionIntegrationTest {
                 assertThat(deliveries.claim(receipt.commandId(), token, now, now.plusSeconds(60))).isEqualTo(1);
                 DeliveryRow delivery = deliveries.findClaimed(receipt.commandId(), token);
                 NativeSessionGateway gateway = context.getBean(NativeSessionGateway.class);
-                turn = gateway.submit(delivery, "主角叫小明").turnId();
+                if (saveReceipt) {
+                    turn = gateway.submit(delivery, "主角叫小明").turnId();
+                } else {
+                    // 模拟SDK已接受旧格式输入；接管时不能按新版上下文重编码同一提交键。
+                    HarnessAgent previous = (HarnessAgent) ReflectionTestUtils.getField(gateway, "master");
+                    turn = previous.session(RuntimeContext.builder().userId(USER).sessionId(delivery.sessionId()).build())
+                            .submit(delivery.commandId(), "主角叫小明").turnId();
+                }
                 ProjectionTarget target = target(delivery);
                 for (int i = 0; i < 150; i++) {
                     if ("completed".equals(gateway.inspectTask(target, receipt.commandId()).status())) {

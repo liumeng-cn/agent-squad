@@ -140,6 +140,7 @@ public class TaskControlService {
     @Transactional
     public void blockRejectedResume(String userId, String taskId, String commandId,
                                     String deliveryToken, String errorCode) {
+        taskMapper.lockOwned(userId, taskId);
         if (deliveryMapper.blockRejectedResume(commandId, deliveryToken, errorCode) != 1) {
             return;
         }

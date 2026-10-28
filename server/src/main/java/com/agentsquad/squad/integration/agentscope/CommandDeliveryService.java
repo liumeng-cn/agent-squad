@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import com.agentsquad.squad.conversation.service.ResponseExecutionService;
+import com.agentsquad.squad.conversation.service.CommandClaimService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -40,6 +41,9 @@ public class CommandDeliveryService {
 
     @Resource
     private ResponseExecutionService responses;
+
+    @Resource
+    private CommandClaimService claims;
 
     @Resource
     private DeliveryMapper deliveryMapper;
@@ -76,8 +80,7 @@ public class CommandDeliveryService {
     public void deliver(String commandId) {
         String token = UUID.randomUUID().toString();
         LocalDateTime claimedAt = now();
-        if (deliveryMapper.claim(commandId, token, claimedAt,
-                claimedAt.plusSeconds(LEASE_SECONDS)) != 1) {
+        if (!claims.claim(commandId, token, claimedAt, claimedAt.plusSeconds(LEASE_SECONDS))) {
             return;
         }
         DeliveryRow delivery = deliveryMapper.findClaimed(commandId, token);

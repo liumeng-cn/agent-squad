@@ -9,7 +9,8 @@ import com.agentsquad.squad.worker.dto.WorkerDefinitionCreateRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -21,6 +22,9 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,15 +35,22 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class GoalTaskNativeCreationIntegrationTest {
 
-    @Test
-    void replyCreatesIndependentGoalAndRunsDependentWorkers(@TempDir Path directory) throws Exception {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void replyCreatesIndependentGoalAndRunsDependentWorkers(boolean queryDuringWork, @TempDir Path directory) throws Exception {
         ObjectMapper json = new ObjectMapper();
         AtomicInteger masterCalls = new AtomicInteger();
         AtomicInteger replyCalls = new AtomicInteger();
         AtomicInteger workerCalls = new AtomicInteger();
+        AtomicInteger progressCalls = new AtomicInteger();
+        AtomicReference<String> progressRequest = new AtomicReference<>();
+        CountDownLatch workerBlocked = new CountDownLatch(1);
+        CountDownLatch releaseWorker = new CountDownLatch(1);
+        var providerThreads = Executors.newFixedThreadPool(4);
         AtomicReference<JdbcTemplate> jdbcRef = new AtomicReference<>();
         AtomicReference<String> taskIdRef = new AtomicReference<>();
         HttpServer model = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        model.setExecutor(providerThreads);
         model.createContext("/v1/chat/completions", exchange -> {
             JsonNode request = json.readTree(exchange.getRequestBody().readAllBytes());
             boolean worker = false;
@@ -50,9 +61,24 @@ class GoalTaskNativeCreationIntegrationTest {
             }
             String response;
             if (worker) {
-                response = workerCalls.incrementAndGet() % 2 == 1
+                int workerCall = workerCalls.incrementAndGet();
+                if (queryDuringWork && workerCall == 1) {
+                    workerBlocked.countDown();
+                    try {
+                        releaseWorker.await(30, TimeUnit.SECONDS);
+                    } catch (InterruptedException exception) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                response = workerCall % 2 == 1
                         ? toolResponse(json, "report_job_result", Map.of("result", Map.of("text", "成稿")), 5)
                         : textResponse("Worker 已提交结果", 6);
+            } else if (request.path("messages").toString().contains("目前做到哪一步了")) {
+                progressRequest.set(request.path("messages").toString());
+                response = progressCalls.incrementAndGet() == 1
+                        ? toolResponse(json, "propose_completion", Map.of("outcome", "SUCCEEDED",
+                                "finalAnswer", "正在拟提纲，成稿尚未开始。"), 201)
+                        : textResponse("等待平台发布进度。", 202);
             } else if (request.path("messages").toString().contains("请回复来源用户消息")) {
                 int call = replyCalls.incrementAndGet();
                 String source = jdbcRef.get().queryForObject("SELECT source_message_id FROM sq_response_execution", String.class);
@@ -145,6 +171,18 @@ class GoalTaskNativeCreationIntegrationTest {
                     Thread.sleep(100);
                 }
                 assertThat(taskIdRef.get()).isNotBlank();
+                if (queryDuringWork) {
+                    assertThat(workerBlocked.await(10, TimeUnit.SECONDS)).isTrue();
+                    ResponseNativeExecutionIntegrationTest.await(spring, message, "SUCCEEDED");
+                    var progress = spring.getBean(MessageAcceptanceService.class).accept(userId, message.conversationId(),
+                            "progress-query", new MessageCreateRequest("目前做到哪一步了？", List.of()));
+                    ResponseNativeExecutionIntegrationTest.await(spring, progress, "SUCCEEDED");
+                    assertThat(workerCalls.get()).isEqualTo(1);
+                    assertThat(progressRequest.get()).contains("activeTask", "outline", "draft", "RUNNING", "BLOCKED");
+                    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_goal_task", Long.class)).isEqualTo(1);
+                    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_plan", Long.class)).isEqualTo(1);
+                    releaseWorker.countDown();
+                }
                 String status = null;
                 for (int attempt = 0; attempt < 300; attempt++) {
                     status = jdbc.queryForObject("SELECT status FROM sq_goal_task WHERE task_id = ?",
@@ -159,12 +197,13 @@ class GoalTaskNativeCreationIntegrationTest {
                 assertThat(masterCalls.get()).isEqualTo(7);
                 assertThat(replyCalls.get()).isEqualTo(3);
                 assertThat(workerCalls.get()).isEqualTo(4);
-                assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_account", Long.class)).isEqualTo(1);
-                assertThat(jdbc.queryForList("SELECT DISTINCT account_id FROM sq_execution_scope", String.class)).hasSize(1);
+                assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_account", Long.class)).isEqualTo(queryDuringWork ? 2 : 1);
+                assertThat(jdbc.queryForObject("SELECT COUNT(DISTINCT account_id) FROM sq_budget_reservation WHERE task_id IS NOT NULL", Long.class)).isEqualTo(1);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_worker_job WHERE status='SUCCEEDED'", Long.class)).isEqualTo(2);
-                assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_runtime_binding WHERE task_id IS NULL", Long.class)).isEqualTo(1);
-                assertThat(jdbc.queryForObject("SELECT status FROM sq_response_execution", String.class)).isEqualTo("SUCCEEDED");
-                assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_reservation WHERE status='SETTLED'", Long.class)).isEqualTo(14);
+                assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_runtime_binding WHERE task_id IS NULL", Long.class)).isEqualTo(queryDuringWork ? 2 : 1);
+                assertThat(jdbc.queryForList("SELECT DISTINCT status FROM sq_response_execution", String.class)).containsExactly("SUCCEEDED");
+                assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_reservation WHERE status='SETTLED'", Long.class)).isEqualTo(queryDuringWork ? 16 : 14);
+                assertThat(progressCalls.get()).isEqualTo(queryDuringWork ? 2 : 0);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_conversation_event WHERE event_type='task.created'", Long.class)).isEqualTo(1);
                 assertThat(jdbc.queryForObject(
                         "SELECT COUNT(*) FROM sq_goal_task WHERE conversation_id = ?",
@@ -175,7 +214,9 @@ class GoalTaskNativeCreationIntegrationTest {
                         """, String.class, taskIdRef.get())).contains("短文已完成：成稿");
             }
         } finally {
+            releaseWorker.countDown();
             model.stop(0);
+            providerThreads.shutdownNow();
         }
     }
 

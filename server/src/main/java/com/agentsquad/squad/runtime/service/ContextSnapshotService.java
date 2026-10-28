@@ -12,6 +12,7 @@ import com.agentsquad.squad.runtime.repository.ContextSnapshotMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
+import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,9 @@ public class ContextSnapshotService {
     private static final Pattern NODE_KEY = Pattern.compile("[a-z][a-z0-9_-]{0,79}");
 
     @Resource
+    private ExecutionScopeService executionScopes;
+
+    @Resource
     private ContextSnapshotMapper snapshotMapper;
 
     @Resource
@@ -49,6 +53,7 @@ public class ContextSnapshotService {
                 || logicalKey == null || logicalKey.isBlank() || logicalKey.length() > 160) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "局部上下文键无效");
         }
+        executionScopes.lockOwned(userId, executionScopes.scopeForSession(userId, sessionId), true);
         ContextPreparationRow context = snapshotMapper.lockPreparation(userId, sessionId);
         if (context == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "Master 会话未绑定活跃目标");

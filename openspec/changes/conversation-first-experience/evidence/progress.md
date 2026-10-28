@@ -151,3 +151,28 @@ git diff --check
 - 沿用V7已有来源列和Scope/Command唯一键，不新建重复存储或修改历史迁移。新增GoalTaskCreate工具契约与正反例，静态42操作/68schema/26业务表，OpenSpec strict与差异检查通过。
 
 日志：`/private/tmp/agentsquad-goal-create-full.log`。本切片未升级实际开发库、未切换用户页面。继续2.2消息有序领取与独立目标进度事实，再推进2.3修订指令。
+
+
+## 2026-10-28：2.2 消息有序领取与工作期间交流
+
+完成2.2，整体6/16。此项建立后端顺序与受权进度事实，用户页面尚未切换。
+
+### 实现
+
+- Bridge扫描排除同用户/会话/代际内被前序回复阻塞的消息；正式领取通过独立短事务，先锁Conversation和执行所有者，再用当前读复核前序状态，最后CAS领取Command。SDK与模型调用发生在事务外。等待用户或终态让后续消息继续，不把浏览器重连当RESUME。
+- 回复内部上下文首次派发时冻结当前有效目标的Task身份/状态/版本、当前Plan和Job状态，重投保持原事实；只读当前用户当前会话当前有效代际，不取Worker日志或候选正文。失效代际目标不重新注入新回复。
+- Task协调保持独立Binding，只有其Task Master可以准备节点材料或发布计划；普通回复的Binding没有目标写入身份。计划/上下文工具和恢复回调补齐会话→所有者→运行对象锁序，避免与领取/取消竞争反向持锁。
+- SDK已接受的commandId直接补原收据，不按新版上下文字段重新编码原提交；不存在时仍以原key原子submit。原SDKsession/turn不更换。
+
+### 验证
+
+- MessageOrderingIntegrationTest 3项及MySqlMessageOrderingTest 3项：后续消息不能越过QUEUED/RUNNING前序；WAITING_INPUT让行且旧Interaction保持OPEN；同Binding重复领取拒绝；跨会话/代际独立；领取和取消并发不反锁；目标进度首次读取真实状态、重放不漂移、新代际不带旧目标事实。
+- 最后补充H2/MySQL权限断言：回复Binding调用prepare_context或publish_plan均按NOT_FOUND拒绝，不能借同会话目标取得计划写权限。6个定向用例全部通过，不依赖模型输出文本推断授权成功。
+- GoalTaskNativeCreationIntegrationTest扩展为两个实际SDK场景：原两节点DAG正常完成；阻塞提纲Worker的HTTP模型请求时，新用户进度消息仍独立回复成功，提示来源确含RUNNING提纲/BLOCKED成稿，Task与Plan均未重复创建。之后释放Worker，原DAG继续成功；两场景分别14/16次模型请求正常结算。新增进度回复有自己的账户，原Task/Worker始终沿用原账户。
+- ResponseNativeExecutionIntegrationTest的A03窗口使用已接受的旧格式SDK输入，重启后只补收据并投影原Turn；不受新上下文JSON字段影响、不多发模型请求。A02/A12/封存writer恢复及取消仍回归通过。
+- 最终后端clean test：81项，0失败/错误，1跳过，80项实际通过，含13项专用MySQL8.4验证；跳过未配置SQUAD_DB_URL的原MySqlGoalTaskIntegrationTest。其后仅补充计划权限断言，H2/MySQL六项再次定向通过，生产行为未变化。
+- 7个新Java文件经IDEA格式化后编译；已有文件仅局部修改。没有新增DDL或外部HTTP入口，内部JSON新增可空activeTask；静态契约仍42操作/68schema/26业务表。OpenSpec strict、设计检查与差异检查通过。
+
+日志：`/private/tmp/agentsquad-message-order-verified.log`、`/private/tmp/agentsquad-message-order-final-guards.log`。SDK使用固定2.1.0-BETA1，本地HTTP模型桩不代表真实供应商规划质量；JDK27运行、编译目标21，真实Java21运行及负载/生产强杀恢复仍待D6。未升级实际开发库，未启用新页面。
+
+后续2.3负责目标补充/替换指令的受理、应用/拒绝与版本屏障；3.1负责公开会话流和任务交付投影，3.2/3.3故障分类与有界恢复，4.x负责对话内完整交互与布局。这些尚未完成，不因当前可并行回复而提前记为完成。
