@@ -1,7 +1,13 @@
 package com.agentsquad.squad.conversation.repository;
 
 import com.agentsquad.squad.conversation.domain.ConversationRow;
-import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Arg;
+import org.apache.ibatis.annotations.ConstructorArgs;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
@@ -100,6 +106,8 @@ public interface ConversationMapper {
             UPDATE sq_conversation SET status = 'DELETED', version = version + 1
             WHERE user_id = #{userId} AND conversation_id = #{conversationId}
               AND status = 'DELETING'
+              AND NOT EXISTS (SELECT 1 FROM sq_response_execution r WHERE r.user_id=sq_conversation.user_id
+                  AND r.conversation_id=sq_conversation.conversation_id AND r.status NOT IN ('SUCCEEDED','PARTIAL','FAILED','CANCELLED'))
             """)
     int markDeleted(@Param("userId") String userId, @Param("conversationId") String conversationId);
 
@@ -117,6 +125,8 @@ public interface ConversationMapper {
             SELECT id, conversation_id, user_id, title, status, active_task_id, generation, version
             FROM sq_conversation
             WHERE status = 'DELETING' AND active_task_id IS NULL
+              AND NOT EXISTS (SELECT 1 FROM sq_response_execution r WHERE r.user_id=sq_conversation.user_id
+                  AND r.conversation_id=sq_conversation.conversation_id AND r.status NOT IN ('SUCCEEDED','PARTIAL','FAILED','CANCELLED'))
             ORDER BY id LIMIT #{limit}
             """)
     List<ConversationRow> findDeletable(@Param("limit") int limit);

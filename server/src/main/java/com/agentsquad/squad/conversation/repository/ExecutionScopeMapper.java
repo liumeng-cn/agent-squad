@@ -85,6 +85,9 @@ public interface ExecutionScopeMapper {
             """)
     ExecutionScopeRow findOwned(@Param("userId") String userId, @Param("scopeId") String scopeId);
 
+    @Select("SELECT binding_id FROM sq_runtime_binding WHERE user_id = #{userId} AND framework_session_id = #{sessionId} AND del_flag = '0'")
+    String findBindingBySession(@Param("userId") String userId, @Param("sessionId") String sessionId);
+
     @Select("SELECT scope_id FROM sq_runtime_binding WHERE user_id = #{userId} AND framework_session_id = #{sessionId} AND del_flag = '0'")
     String findScopeBySession(@Param("userId") String userId, @Param("sessionId") String sessionId);
 

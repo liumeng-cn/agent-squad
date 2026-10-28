@@ -178,7 +178,8 @@
       "ControlRequest"
     ],
     "operations": [
-      "cancelTask"
+      "cancelTask",
+      "cancelResponseExecution"
     ],
     "cases": [
       "A11"

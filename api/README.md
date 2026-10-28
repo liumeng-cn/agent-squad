@@ -42,7 +42,7 @@ SSE 发送 TaskEvent，event名为message，事件 ID=taskId:seq；首次after�
 
 ## 共享执行边界
 
-`conversation-first-experience` 的 1.2 将运行归属扩展为 ExecutionScope：任务绑定、普通回复绑定、命令、工具操作、交互与附件可引用同一用户范围内的执行，taskId 只是可选业务上下文。旧任务入口已经创建固定 Scope/Account，Worker 局部快照也记录 Scope；普通回复的正式消息入口与 SDK 收尾仍由 1.3/1.4 接入。
+`conversation-first-experience` 的 1.2 将运行归属扩展为 ExecutionScope：任务绑定、普通回复绑定、命令、工具操作、交互与附件可引用同一用户范围内的执行，taskId 只是可选业务上下文。旧任务入口已经创建固定 Scope/Account，Worker 局部快照也记录 Scope；普通回复使用独立消息入口和 SDK Binding，不复用目标生命周期。
 
 预算在同一会话/实际所有者、用户总账和账户锁下预留；MySQL 的占用查询使用当前读，不能沿用等待锁前的旧快照。默认同用户累计上限为 50000000 微单位，可通过 `SQUAD_BUDGET_MAX_MICROUNITS_PER_USER` 配置，不随新会话或转任务重置；未知收费继续占用。
 
@@ -56,4 +56,14 @@ SSE 发送 TaskEvent，event名为message，事件 ID=taskId:seq；首次after�
 - 原子事务写入 Conversation/Message/ResponseExecution/Scope/Account/Binding/Command 和两个受理事件，附件必须同用户且就绪有效。无效、越权或过期附件使整批回滚，已上传文件不随消息受理失败被删除。
 - 首发并发同键只保留一套事实；唯一键失败先完整回滚，再从新读视图补查胜出收据。同键同正文/附件返回原身份，同键换输入 409；附件 UUID 大小写规范化，顺序保留。
 - 首发重送须使用原首发端口和原 key；获得收据后才把后续消息发送到会话追加端口。接口返回 MessageReceipt，不返回新 Task。cursor 为会话受理前缀，不能当任务事件游标使用。
-- `MESSAGE_SUBMIT` 目前仅持久排队，普通回复 Bridge/SDK 生命周期由 1.4 接入；新增接口的 202 不代表模型已启动。旧聊天页面尚未切换到这些入口。
+- `MESSAGE_SUBMIT` 经持久 Bridge 投递固定 SDK Binding；202 仍只表示持久受理。普通回复由同 Turn 的完成候选与成功 journal 裁决后发布助手 Message。旧聊天页面尚未切换到这些入口。
+
+
+## 普通回复执行与停止
+
+- 每条回复在首次 SDK submit 前冻结截至来源消息的已提交公开前缀与附件引用；重投、恢复复用原材料，仍重验用户、会话代际与附件有效期。超过 200000 字符明确拒绝，不静默截断，不把 Worker 局部快照替换成整段聊天。
+- SDK submit 继续使用原 commandId，收据丢失按原键补投；原生已完成时只补投影，不再次推理。回复候选不提前公开，必须匹配 Binding/Turn/摘要及无待处理副作用；无有效候选至多追加一次预算内纠正。
+- 实例 writer 失效仅恢复固定 Session/Turn，持久保存恢复次数且最多两次；终态不原地复活。查看回复或刷新页面不会发起 RESUME。
+- `POST /api/v1/executions/{executionId}/cancel` 接收 ControlRequest、Cookie/CSRF 和固定 Idempotency-Key，返回 CommandReceipt；只取消本条回答，不取消独立 GoalTask。STOP 没有活跃原生运行时才就地收尾；外部写入未知时保持 RECONCILING，不清掉账本或盲目重放。
+- 删除会话立即禁读并停止所有未终结回复；清理等回复安全收尾。过期代际的迟到候选不能公开正文或追加会话事件。
+- 消息有序领取、Master 按需创建目标及目标修订仍属于 2.1–2.3；会话快照/SSE、分级故障与页面切换仍待 3.x/4.x，不将本节视为完整聊天界面已可验收。

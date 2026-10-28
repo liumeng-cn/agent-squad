@@ -36,7 +36,7 @@ public class ProposeCompletionTool implements AgentTool {
 
     @Override
     public String getDescription() {
-        return "完成当前用户目标前必须调用。提交最终回答候选；平台将在本次原生回合成功结束后发布答案。";
+        return "完成当前回复或目标前必须调用。提交最终回答候选；平台将在本次原生回合成功结束后发布答案。";
     }
 
     @Override
@@ -74,7 +74,7 @@ public class ProposeCompletionTool implements AgentTool {
             CompletionProposalReceipt receipt = completionProposalService.propose(
                     context.getUserId(), context.getSessionId(), context.get(TURN_ID_KEY, String.class),
                     param.getToolUseBlock().getId(), outcome, answer);
-            return ToolResultBlock.text("完成候选已保存，等待当前回合结束。taskId=" + receipt.taskId());
+            return ToolResultBlock.text("完成候选已保存，等待当前回合结束。");
         } catch (RuntimeBusinessException exception) {
             return ToolResultBlock.error(exception.getMessage());
         }

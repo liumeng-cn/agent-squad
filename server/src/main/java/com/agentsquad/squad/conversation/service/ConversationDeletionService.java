@@ -3,9 +3,18 @@ package com.agentsquad.squad.conversation.service;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
-import com.agentsquad.squad.conversation.domain.*;
-import com.agentsquad.squad.conversation.repository.*;
-import com.agentsquad.squad.runtime.repository.*;
+import com.agentsquad.squad.conversation.domain.CommandRow;
+import com.agentsquad.squad.conversation.domain.ConversationRow;
+import com.agentsquad.squad.conversation.domain.ConversationStatus;
+import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
+import com.agentsquad.squad.conversation.domain.RuntimeCommandAction;
+import com.agentsquad.squad.conversation.domain.TaskRow;
+import com.agentsquad.squad.conversation.repository.BindingMapper;
+import com.agentsquad.squad.conversation.repository.CommandMapper;
+import com.agentsquad.squad.conversation.repository.ConversationMapper;
+import com.agentsquad.squad.conversation.repository.TaskEventMapper;
+import com.agentsquad.squad.conversation.repository.TaskMapper;
+import com.agentsquad.squad.runtime.repository.ProjectionMapper;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,6 +38,9 @@ import java.util.UUID;
 @Service
 @Slf4j
 public class ConversationDeletionService {
+
+    @Resource
+    private ResponseControlService responseControls;
 
     @Resource
     private ConversationMapper conversationMapper;
@@ -86,6 +98,7 @@ public class ConversationDeletionService {
         if (conversationMapper.markDeleting(userId, conversationId, expectedVersion) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "会话版本已变化");
         }
+        responseControls.cancelForDeletion(userId, conversationId);
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         String activeTaskId = conversation.activeTaskId();
         if (activeTaskId != null) {

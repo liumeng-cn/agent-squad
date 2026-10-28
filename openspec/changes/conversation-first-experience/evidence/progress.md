@@ -106,3 +106,31 @@ git diff --check
 - 8 个新 Java 文件经 IDEA 格式化后编译测试。静态设计检查及差异检查通过；无需改变用户传输契约。实际 JDK 27/编译目标 Java 21，仍未验证真实 Java 21 运行。
 
 日志：`/private/tmp/agentsquad-response-context-verified.log`。后续继续接入独立回复 SDK Binding、完成候选、原生投影、取消与原 Turn 恢复；这些未完成项不勾选 1.4。
+
+
+## 2026-10-28：1.4 普通回复SDK生命周期
+
+完成 1.4，整体 4/16。此处是后端正式消息链路，不是新界面或真实模型供应商验收。
+
+### 实现与边界
+
+- MESSAGE_SUBMIT 开始由原持久 Bridge 领取，固定 commandId/Binding/Session；首次 SDK 提交前冻结公开会话前缀。Master 的完成工具按 Scope 区分普通回复和 GoalTask，不把普通消息改名为隐藏任务。
+- 普通回复的原生 run/start、run/end 与持久候选、绑定/Turn/摘要共同裁决生命周期；只有原生成功后才原子写助手 Message 和会话事件。工具回执、内部日志及 Worker 正文不作为最终答案。
+- 缺失/失效候选保留一次有预算纠正；writer 失效只以 RESUME 继续原 Session/Turn，保存恢复次数且最多两次。查询 SDK 时读取来源 Turn 的最新续行状态，避免把已续行完成的 Turn 永远看成原 run 中断。
+- 停止回答有独立 HTTP 入口，校验 Cookie/CSRF、归属、幂等及 expectedVersion，不取消独立 Task。无活跃运行才就地取消；存在 UNKNOWN/RECONCILING/IN_FLIGHT 操作时保留 RECONCILING，不提前取消、不清账、不另发业务写入。
+- 删除会话同时保存未终结回复的停止意图，清理等待所有回复安全收尾；失效代际的完成候选不能重新公开正文或追加会话事件。
+- 所有者锁后，候选、操作、交互及控制幂等使用当前读，避免 MySQL 可重复读的旧快照裁决完成。旧 Task 的完成、派发、汇合与恢复链路保持回归。
+
+### 验证
+
+- ResponseNativeExecutionIntegrationTest 7 项：提交前重启（A02）后完成并连续追问；SDK 完成但平台收据丢失（A03）；收据已存而投影丢失（A12）；停止未派发回复；旧 writer 封存后新实例同 Session/Turn 恢复；失效代际不发布旧候选；未知写入阻止完成、纠正和提前取消。
+- SDK 用例真实运行固定 AgentScope Harness/Bridge/JDBC journal，模型由本地 OpenAI 协议桩提供。普通问答没有 GoalTask；两轮问答共 4 次真实 HTTP 模型请求且模型费用正常结算；收据/投影恢复不增加原 2 次推理。
+- 封存 writer 时已有候选，旧模型请求尚未结束；第二实例沿用原 Turn，MESSAGE_SUBMIT 仍只有一个、RESUME 一个、最终助手消息一个。该受控故障窗口不是操作系统强杀/生产恢复证明。
+- ResponseControlHttpTest 2 项：未授权/缺 CSRF/版本冲突/跨用户拒绝、同键重送、回答取消不影响后台 Task、删除等回复收尾且不产生迟到公开内容。
+- 全量回归曾发现手动投递测试的 due_at 毫秒取整竞争：调用时命令可能尚差不足 1ms 到期，正式轮询下一轮可正常领取。测试明确置为到期命令，保留原取消断言，不靠放宽结果或增加等待掩盖。
+- 最终后端 clean test：67 项，0 失败/错误，1 跳过；66 项实际通过，包含 8 项专用 MySQL 8.4 验证。唯一跳过是未配置 SQUAD_DB_URL 的原 MySqlGoalTaskIntegrationTest。D3 派发、复用、恢复与取消全部回归通过，V6 → V11 实际升级通过。
+- 9 个新增 Java 文件经 IDEA 格式化后编译测试；已有 Java 仅局部修改。OpenAPI/ui-manifest/追踪新增回答取消入口，共 42 操作、67 schema、26 张业务表；没有改前端代码或声称页面切换。
+
+日志：`/private/tmp/agentsquad-response-runtime-verified.log`。实际 JDK 27/编译目标 Java 21，未完成真实 Java 21 运行验证；未访问真实模型供应商，未升级实际开发库。
+
+下一项为 2.1 受控创建目标并继承来源账户，随后 2.2/2.3 有序领取与目标修订。提交前故障的结构化分类、完整有界退避及允许动作继续属于 3.2/3.3；会话快照/SSE 和新页面属于 3.1/4.x，本切片不将这些标为已完成。

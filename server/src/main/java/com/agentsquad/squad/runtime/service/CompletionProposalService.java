@@ -4,6 +4,10 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
 import com.agentsquad.squad.runtime.domain.CompletionContextRow;
+import com.agentsquad.squad.conversation.domain.ExecutionScopeRow;
+import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
+import com.agentsquad.squad.conversation.service.ExecutionScopeService;
+import com.agentsquad.squad.conversation.service.ResponseExecutionService;
 import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
 import com.agentsquad.squad.presentation.dto.CompletionProposalReceipt;
 import com.agentsquad.squad.runtime.repository.CompletionMapper;
@@ -36,6 +40,15 @@ public class CompletionProposalService {
             GoalTaskStatus.SUCCEEDED.name(), GoalTaskStatus.PARTIAL.name());
 
     @Resource
+    private ExecutionScopeMapper scopeMapper;
+
+    @Resource
+    private ExecutionScopeService scopes;
+
+    @Resource
+    private ResponseExecutionService responses;
+
+    @Resource
     private CompletionMapper completionMapper;
 
     @Resource
@@ -60,6 +73,10 @@ public class CompletionProposalService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "完成候选内容无效");
         }
 
+        ExecutionScopeRow scope = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), true);
+        if ("RESPONSE".equals(scope.kind())) {
+            return responses.propose(userId, scopeMapper.findBindingBySession(userId, sessionId), turnId, toolCallId, outcome, finalAnswer);
+        }
         CompletionContextRow context = completionMapper.lockByMasterSession(userId, sessionId);
         if (context == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "Master 会话未绑定目标");

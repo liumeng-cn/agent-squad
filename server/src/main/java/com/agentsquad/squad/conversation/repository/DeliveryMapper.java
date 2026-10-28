@@ -19,7 +19,7 @@ public interface DeliveryMapper {
 
     @Select("""
             SELECT command_id FROM sq_command
-            WHERE action IN ('SUBMIT', 'MASTER_SIGNAL', 'STOP', 'RESUME', 'RESPOND')
+            WHERE action IN ('SUBMIT', 'MESSAGE_SUBMIT', 'MASTER_SIGNAL', 'STOP', 'RESUME', 'RESPOND')
               AND ((status = 'PENDING' AND due_at <= #{now})
                    OR (status = 'DELIVERING' AND delivery_lease_until < #{now}))
             ORDER BY due_at, id LIMIT 20
@@ -32,7 +32,7 @@ public interface DeliveryMapper {
                 delivery_lease_until = #{leaseUntil}, delivery_attempts = delivery_attempts + 1,
                 last_error_code = NULL
             WHERE command_id = #{commandId}
-              AND action IN ('SUBMIT', 'MASTER_SIGNAL', 'STOP', 'RESUME', 'RESPOND')
+              AND action IN ('SUBMIT', 'MESSAGE_SUBMIT', 'MASTER_SIGNAL', 'STOP', 'RESUME', 'RESPOND')
               AND ((status = 'PENDING' AND due_at <= #{now})
                    OR (status = 'DELIVERING' AND delivery_lease_until < #{now}))
             """)
@@ -63,8 +63,9 @@ public interface DeliveryMapper {
 
     @Select("""
             SELECT native_turn_id FROM sq_command
-            WHERE user_id = #{userId} AND task_id = #{taskId}
-              AND binding_id = #{bindingId} AND action = 'SUBMIT'
+            WHERE user_id = #{userId}
+              AND binding_id = #{bindingId} AND action IN ('SUBMIT','MESSAGE_SUBMIT')
+              AND native_turn_id IS NOT NULL
             ORDER BY id DESC LIMIT 1
             """)
     String findSubmitTurnId(@Param("userId") String userId, @Param("taskId") String taskId,

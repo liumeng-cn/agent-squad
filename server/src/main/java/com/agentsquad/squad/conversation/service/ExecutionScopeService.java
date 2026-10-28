@@ -22,7 +22,7 @@ import java.util.UUID;
 @Service
 public class ExecutionScopeService {
 
-    private static final Set<String> DISPATCHABLE = Set.of("QUEUED", "RUNNING", "WAITING_WORKERS", "WAITING_INPUT", "WAITING_APPROVAL");
+    private static final Set<String> DISPATCHABLE = Set.of("QUEUED", "RUNNING", "RECOVERING", "WAITING_WORKERS", "WAITING_INPUT", "WAITING_APPROVAL");
 
     @Resource
     private ExecutionScopeMapper mapper;

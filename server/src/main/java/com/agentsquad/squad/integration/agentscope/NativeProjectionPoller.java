@@ -5,6 +5,7 @@ import com.agentsquad.squad.runtime.repository.ProjectionMapper;
 import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
 import com.agentsquad.squad.runtime.service.WorkerRecoveryService;
 import jakarta.annotation.Resource;
+import com.agentsquad.squad.conversation.service.ResponseExecutionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -21,6 +22,9 @@ import java.util.List;
 @Slf4j
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class NativeProjectionPoller {
+
+    @Resource
+    private ResponseExecutionService responses;
 
     @Resource
     private ProjectionMapper projectionMapper;
@@ -45,7 +49,15 @@ public class NativeProjectionPoller {
                 for (NativeEventView event : events) {
                     projectionService.accept(target, event);
                 }
-                if (!MasterAgentIdentity.AGENT_ID.equals(target.agentId())) {
+                if (target.taskId() == null) {
+                    String commandId = responses.originalCommand(target);
+                    if (commandId != null) {
+                        NativeSubmissionReceipt receipt = nativeSessionGateway.inspectTask(target, commandId);
+                        if (commandId.equals(receipt.commandId())) {
+                            responses.recover(target, receipt);
+                        }
+                    }
+                } else if (!MasterAgentIdentity.AGENT_ID.equals(target.agentId())) {
                     String commandId = workerRecoveryService.originalSubmitCommandId(target);
                     if (commandId != null) {
                         NativeSubmissionReceipt receipt = nativeSessionGateway.inspectTask(target, commandId);

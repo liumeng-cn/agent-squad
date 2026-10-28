@@ -1,6 +1,9 @@
 package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
+import com.agentsquad.squad.conversation.domain.ExecutionScopeRow;
+import com.agentsquad.squad.conversation.service.ResponseExecutionService;
+import com.agentsquad.squad.conversation.service.ConversationEventWriter;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.runtime.domain.NativeRunOutcome;
@@ -42,6 +45,12 @@ import java.util.Map;
 public class NativeProjectionService {
 
     @Resource
+    private ResponseExecutionService responses;
+
+    @Resource
+    private ConversationEventWriter conversationEvents;
+
+    @Resource
     private ExecutionScopeMapper scopeMapper;
 
     @Resource
@@ -76,7 +85,7 @@ public class NativeProjectionService {
      */
     @Transactional
     public void accept(ProjectionTarget target, NativeEventView event) {
-        scopeService.lockOwned(target.userId(), scopeMapper.findScopeByBinding(target.userId(), target.bindingId()), false);
+        ExecutionScopeRow scope = scopeService.lockOwned(target.userId(), scopeMapper.findScopeByBinding(target.userId(), target.bindingId()), false);
         Long cursor = projectionMapper.lockCursor(target.userId(), target.bindingId());
         if (cursor == null) {
             throw new IllegalStateException("原生会话绑定已消失");
@@ -87,7 +96,14 @@ public class NativeProjectionService {
         if (event.sequence() != cursor + 1) {
             throw new IllegalStateException("原生日志事件序号不连续");
         }
-        if (!MasterAgentIdentity.AGENT_ID.equals(target.agentId())) {
+        if ("RESPONSE".equals(scope.kind())) {
+            responses.accept(scope, target, event);
+            if ("interaction/requested".equals(event.type())) {
+                bindInteraction(target, event);
+            } else if ("interaction/resolved".equals(event.type())) {
+                resolveInteraction(target, event);
+            }
+        } else if (!MasterAgentIdentity.AGENT_ID.equals(target.agentId())) {
             acceptWorker(target, event);
         } else if ("run/start".equals(event.type())) {
             projectionMapper.markRunning(target.userId(), target.taskId());
@@ -206,6 +222,11 @@ public class NativeProjectionService {
     }
 
     private void publish(ProjectionTarget target, NativeEventView event, String eventType, Object payloadExtra) {
+        if (target.taskId() == null) {
+            ExecutionScopeRow scope = scopeMapper.findOwned(target.userId(), scopeMapper.findScopeByBinding(target.userId(), target.bindingId()));
+            conversationEvents.publish(scope, "native:" + target.bindingId() + ":" + event.eventId(), eventType, payloadExtra);
+            return;
+        }
         if (projectionMapper.reserveEventSequence(target.userId(), target.taskId()) != 1) {
             throw new IllegalStateException("目标已消失");
         }

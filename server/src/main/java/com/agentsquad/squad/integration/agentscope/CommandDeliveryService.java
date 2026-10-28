@@ -11,6 +11,7 @@ import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
+import com.agentsquad.squad.conversation.service.ResponseExecutionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -36,6 +37,9 @@ public class CommandDeliveryService {
     private static final String ALREADY_SETTLED = "Only the latest unfinished task can continue";
     private static final String CONTINUATION_QUEUED = "Continuation already queued";
     private static final int MAX_RESUME_ATTEMPTS = 5;
+
+    @Resource
+    private ResponseExecutionService responses;
 
     @Resource
     private DeliveryMapper deliveryMapper;
@@ -90,7 +94,7 @@ public class CommandDeliveryService {
                 return;
             }
             switch (action) {
-                case SUBMIT, MASTER_SIGNAL -> deliverSubmit(commandId, token, delivery);
+                case SUBMIT, MESSAGE_SUBMIT, MASTER_SIGNAL -> deliverSubmit(commandId, token, delivery);
                 case STOP -> deliverStop(commandId, token, delivery);
                 case RESUME -> deliverResume(commandId, token, delivery);
                 case RESPOND -> deliverRespond(commandId, token, delivery);
@@ -123,7 +127,11 @@ public class CommandDeliveryService {
     private void deliverStop(String commandId, String token, DeliveryRow delivery) {
         boolean interrupted = nativeSessionGateway.stop(delivery);
         if (!interrupted) {
-            taskFinalizerService.finalizeCancelledTask(delivery.userId(), delivery.taskId());
+            if (delivery.taskId() == null) {
+                responses.stopped(delivery.userId(), delivery.bindingId());
+            } else {
+                taskFinalizerService.finalizeCancelledTask(delivery.userId(), delivery.taskId());
+            }
         }
         saveReceipt(commandId, token, delivery, null, null,
                 interrupted ? "interrupted" : "no-active-run");
@@ -150,7 +158,12 @@ public class CommandDeliveryService {
             if (message.contains(ALREADY_SETTLED) || delivery.attempts() >= MAX_RESUME_ATTEMPTS) {
                 String errorCode = message.contains(ALREADY_SETTLED)
                         ? "NATIVE_TURN_SETTLED" : "NATIVE_RESUME_REJECTED";
-                if (MasterAgentIdentity.AGENT_ID.equals(delivery.agentId())) {
+                if (delivery.taskId() == null) {
+                    workerRecoveryService.discardSettledResume(commandId, token);
+                    if (!message.contains(ALREADY_SETTLED)) {
+                        responses.rejectedResume(delivery.userId(), delivery.bindingId());
+                    }
+                } else if (MasterAgentIdentity.AGENT_ID.equals(delivery.agentId())) {
                     taskControlService.blockRejectedResume(delivery.userId(), delivery.taskId(),
                             commandId, token, errorCode);
                 } else if (message.contains(ALREADY_SETTLED)) {
@@ -179,7 +192,9 @@ public class CommandDeliveryService {
             retry(commandId, token, delivery.attempts(), "INVALID_PAYLOAD");
             return;
         }
-        taskFinalizerService.resumeFromInteraction(delivery.userId(), delivery.taskId());
+        if (delivery.taskId() != null) {
+            taskFinalizerService.resumeFromInteraction(delivery.userId(), delivery.taskId());
+        }
         String nativeStatus = nativeSessionGateway.respond(delivery, requestId, answerText);
         saveReceipt(commandId, token, delivery, null, null, nativeStatus);
     }
