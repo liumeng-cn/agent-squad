@@ -68,6 +68,28 @@ def check():
 
     columns = {name: column_names(body) for name, body in business}
     assert len(business) == len(columns)
+    # CREATE 定义之外，共享运行归属由增量迁移补齐；检查最终字段集。
+    effective_columns = {name: set(fields) for name, fields in columns.items()}
+    for table, column in re.findall(
+        r"ALTER TABLE (\w+) ADD COLUMN (\w+)\b", sql, re.I
+    ):
+        assert table in effective_columns, (table, column)
+        assert column not in effective_columns[table], (table, column, "重复字段")
+        effective_columns[table].add(column)
+    runtime_fields = {
+        "sq_conversation": {"title_source", "title_version", "last_activity_at"},
+        "sq_goal_task": {"scope_id", "goal_revision"},
+        "sq_execution_scope": {"scope_id", "account_id"},
+        "sq_budget_reservation": {"scope_id", "account_id"},
+        "sq_runtime_binding": {"scope_id"},
+        "sq_command": {"scope_id"},
+        "sq_operation": {"scope_id"},
+        "sq_interaction": {"scope_id"},
+        "sq_context_snapshot": {"scope_id", "goal_revision"},
+        "sq_plan": {"goal_revision"},
+    }
+    for table, fields in runtime_fields.items():
+        assert fields <= effective_columns[table], (table, "缺少运行归属字段")
     for name, body in business:
         assert {
             "id",
@@ -181,10 +203,21 @@ def check():
         operation for page in pages for operation in page["operations"]
     } | set(ui_manifest["nonPageActions"])
     assert set(operations) == covered_ui_operations
-    sse = spec["paths"]["/api/v1/tasks/{taskId}/events"]["get"]
-    assert {("query", "after"), ("header", "Last-Event-ID")} <= {
-        (parameter["in"], parameter["name"]) for parameter in sse["parameters"]
-    }
+    for path in (
+        "/api/v1/tasks/{taskId}/events",
+        "/api/v1/conversations/{conversationId}/events",
+    ):
+        sse = spec["paths"][path]["get"]
+        assert {("query", "after"), ("header", "Last-Event-ID")} <= {
+            (parameter["in"], parameter["name"]) for parameter in sse["parameters"]
+        }, path
+    workspace = next(page for page in pages if page["page"] == "workspace")
+    assert {
+        "submitFirstMessage", "submitConversationMessage", "getConversationSnapshot",
+        "observeConversationEvents", "cancelResponseExecution", "retryResponseExecution",
+        "respondInteraction", "downloadArtifact", "reconcileOperation",
+    } <= set(workspace["operations"])
+    assert "createTask" not in workspace["operations"]
 
     identities = json.loads((ROOT / "api/runtime-identifiers.json").read_text())
 
@@ -254,6 +287,7 @@ def check():
         f"SDK key fixture max {max(key_lengths)}/255; Markdown links valid"
     )
     print("Configuration schema, sample and cross-field design limits valid")
+    print("Conversation SSE, workspace actions and migrated runtime ownership fields valid")
     print("Static design validation only; no SQL execution or runtime verification.")
 
 
