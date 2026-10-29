@@ -12,6 +12,7 @@ public enum RuntimeCommandAction {
     SUBMIT,
     MESSAGE_SUBMIT,
     MASTER_SIGNAL,
+    TASK_DIRECTIVE,
     STOP,
     RESUME,
     RESPOND,

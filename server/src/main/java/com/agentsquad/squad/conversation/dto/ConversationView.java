@@ -8,4 +8,9 @@ package com.agentsquad.squad.conversation.dto;
 public record ConversationView(String conversationId, String title, String titleSource, long titleVersion,
                                long generation, String status, long version, String activeTaskId,
                                String lastActivityAt) {
+    public static ConversationView from(com.agentsquad.squad.presentation.domain.ConversationHeader header) {
+        return new ConversationView(header.conversationId(), header.title(), header.titleSource(), header.titleVersion(),
+                header.generation(), header.status(), header.version(), header.activeTaskId(),
+                header.lastActivityAt().atOffset(java.time.ZoneOffset.UTC).toString());
+    }
 }

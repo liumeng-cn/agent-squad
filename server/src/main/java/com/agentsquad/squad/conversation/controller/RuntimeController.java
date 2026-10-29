@@ -48,6 +48,9 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class RuntimeController {
 
     @Resource
+    private com.agentsquad.squad.conversation.service.ConversationTitleService conversationTitles;
+
+    @Resource
     private AuthService authService;
 
     @Resource
@@ -90,11 +93,11 @@ public class RuntimeController {
      * 列出当前用户的会话，cursor 为存储主键 id。
      */
     @GetMapping("/conversations")
-    public ConversationPage listConversations(
+    public com.agentsquad.squad.presentation.dto.ConversationListPage listConversations(
             @CookieValue(value = "SQUAD_SESSION", required = false) String token,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit) {
-        return goalTaskService.listConversations(userId(token), cursor, limit);
+        return conversationTitles.list(userId(token), cursor, limit);
     }
 
     /**

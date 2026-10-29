@@ -1,5 +1,6 @@
 package com.agentsquad.squad.integration.agentscope;
 
+import com.agentsquad.squad.runtime.service.ExecutionFailureService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.runtime.dto.PlanPublish;
 import com.agentsquad.squad.runtime.dto.PlanReceipt;
@@ -28,6 +29,9 @@ import java.util.Map;
 public class PublishPlanTool implements AgentTool {
 
     @Resource
+    private ExecutionFailureService failures;
+
+    @Resource
     private PlanService planService;
 
     @Resource
@@ -46,29 +50,30 @@ public class PublishPlanTool implements AgentTool {
 
     @Override
     public Map<String, Object> getParameters() {
+        Map<String, Object> node = Map.of(
+                "type", "object",
+                "properties", Map.of(
+                        "nodeKey", Map.of("type", "string"),
+                        "workerKey", Map.of("type", "string"),
+                        "workerVersion", Map.of("type", "string"),
+                        "goal", Map.of("type", "string"),
+                        "contextSnapshotId", Map.of("type", "string"),
+                        "dependsOn", Map.of("type", "array", "items", Map.of("type", "string")),
+                        "required", Map.of("type", "boolean"),
+                        "maxRecoveryAttempts", Map.of("type", "integer", "minimum", 0, "maximum", 3)),
+                "required", List.of("nodeKey", "workerKey", "workerVersion", "goal",
+                        "contextSnapshotId", "dependsOn", "required", "maxRecoveryAttempts"),
+                "additionalProperties", false);
         return Map.of(
                 "type", "object",
                 "properties", Map.of(
                         "logicalKey", Map.of("type", "string", "minLength", 1, "maxLength", 160),
                         "expectedPlanVersion", Map.of("type", "integer", "minimum", 0),
                         "joinPolicy", Map.of("type", "string", "enum", List.of("ALL_REQUIRED", "BEST_EFFORT")),
-                        "acceptanceCriteria", Map.of("type", "array",
-                                "items", Map.of("type", "string"), "minItems", 1),
-                        "nodes", Map.of("type", "array", "items", Map.of(
-                                "type", "object",
-                                "properties", Map.of(
-                                        "nodeKey", Map.of("type", "string"),
-                                        "workerKey", Map.of("type", "string"),
-                                        "workerVersion", Map.of("type", "string"),
-                                        "goal", Map.of("type", "string"),
-                                        "contextSnapshotId", Map.of("type", "string"),
-                                        "dependsOn", Map.of("type", "array", "items", Map.of("type", "string")),
-                                        "required", Map.of("type", "boolean"),
-                                        "maxRecoveryAttempts", Map.of("type", "integer", "minimum", 0, "maximum", 3)),
-                                "required", List.of("nodeKey", "workerKey", "workerVersion", "goal",
-                                        "contextSnapshotId", "dependsOn", "required", "maxRecoveryAttempts"))),
+                        "acceptanceCriteria", Map.of("type", "array", "items", Map.of("type", "string"), "minItems", 1),
+                        "nodes", Map.of("type", "array", "items", node, "maxItems", 16)),
                 "required", List.of("logicalKey", "expectedPlanVersion", "nodes", "joinPolicy", "acceptanceCriteria"),
-                "additionalProperties", false));
+                "additionalProperties", false);
     }
 
     /**
@@ -89,14 +94,19 @@ public class PublishPlanTool implements AgentTool {
         try {
             publish = objectMapper.convertValue(param.getInput(), PlanPublish.class);
         } catch (IllegalArgumentException exception) {
+            failures.invalidPlan(context.getUserId(), context.getSessionId());
             return ToolResultBlock.error("计划参数结构无效");
         }
         try {
             PlanReceipt receipt = planService.publish(context.getUserId(),
                     context.getSessionId(), publish);
             return ToolResultBlock.text("计划已发布。planId=" + receipt.planId()
-                    + " planVersion=" + receipt.planVersion() + " jobIds=" + receipt.jobIds());
+                    + " planVersion=" + receipt.planVersion() + " jobIds=" + receipt.jobIds()
+                    + "。请直接结束当前协调回合；不要等待后台结果，平台将在汇合后另行通知。");
         } catch (RuntimeBusinessException exception) {
+            if (exception.code() == com.agentsquad.squad.common.exception.RuntimeExceptionCode.VALIDATION) {
+                failures.invalidPlan(context.getUserId(), context.getSessionId());
+            }
             return ToolResultBlock.error(exception.getMessage());
         }
     }

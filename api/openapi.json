@@ -368,7 +368,7 @@
         "tags": [
           "public"
         ],
-        "summary": "listConversations",
+        "summary": "按真实活动时间分页列出会话",
         "parameters": [
           {
             "name": "cursor",
@@ -397,7 +397,7 @@
             "CookieAuth": []
           }
         ],
-        "x-design-status": "planned-v0.2",
+        "x-design-status": "implemented-conversation-first-experience",
         "responses": {
           "200": {
             "description": "成功",
@@ -5666,6 +5666,487 @@
           }
         }
       }
+    },
+    "/api/v1/conversations/{conversationId}/snapshot": {
+      "get": {
+        "operationId": "getConversationSnapshot",
+        "tags": [
+          "public"
+        ],
+        "summary": "读取会话一致前缀与历史分页",
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "beforeMessageSeq",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 40
+            }
+          }
+        ],
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "x-design-status": "implemented-conversation-first-experience",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationSnapshot"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conversations/{conversationId}/events": {
+      "get": {
+        "operationId": "observeConversationEvents",
+        "tags": [
+          "public"
+        ],
+        "summary": "订阅持久会话增量",
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "x-design-status": "implemented-conversation-first-experience",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationEvent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conversations/{conversationId}/title": {
+      "patch": {
+        "operationId": "renameConversation",
+        "tags": [
+          "public"
+        ],
+        "summary": "手动修改主题，独立标题版本CAS",
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "x-design-status": "implemented-conversation-first-experience",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationTitleUpdate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/executions/{executionId}/retry": {
+      "post": {
+        "operationId": "retryResponseExecution",
+        "tags": [
+          "public"
+        ],
+        "summary": "失败回答的显式后继重试，继承原预算",
+        "parameters": [
+          {
+            "name": "executionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            }
+          }
+        ],
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "x-design-status": "implemented-conversation-first-experience",
+        "responses": {
+          "202": {
+            "description": "已持久受理",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "安全错误说明；归属校验在服务端执行。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ControlRequest"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5805,7 +6286,7 @@
           "title": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 120
+            "maxLength": 200
           },
           "generation": {
             "type": "integer",
@@ -5847,19 +6328,21 @@
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Conversation"
+              "$ref": "#/components/schemas/ConversationView"
             },
             "maxItems": 100
           },
           "nextCursor": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 2048
+            "maxLength": 2048,
+            "nullable": true
           }
         },
         "required": [
           "items"
-        ]
+        ],
+        "description": "按 lastActivityAt、存储主键倒序分页；cursor为包含用户、活动时间和主键的opaque复合游标。"
       },
       "TaskCreate": {
         "type": "object",
@@ -6601,7 +7084,10 @@
               "MEMORY",
               "SKILL",
               "TOOL_RESULT",
-              "DEPENDENCY_RESULT"
+              "DEPENDENCY_RESULT",
+              "USER_SUPPLEMENT",
+              "USER_GOAL_REPLACEMENT",
+              "USER_ORIGIN_REFERENCE"
             ]
           },
           "sourceId": {
@@ -6684,6 +7170,11 @@
           "contentHash": {
             "type": "string",
             "pattern": "^[a-f0-9]{64}$"
+          },
+          "goalRevision": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           }
         },
         "required": [
@@ -6693,7 +7184,8 @@
           "memoryRevision",
           "items",
           "tokenEstimate",
-          "contentHash"
+          "contentHash",
+          "goalRevision"
         ]
       },
       "RuntimeBinding": {
@@ -8945,7 +9437,7 @@
           },
           "title": {
             "type": "string",
-            "maxLength": 120
+            "maxLength": 200
           },
           "titleSource": {
             "type": "string",
@@ -9003,7 +9495,7 @@
           "lastActivityAt"
         ],
         "description": "包含独立标题版本与服务端最近活动时间的会话视图。",
-        "x-implementation-status": "foundation-dto; endpoint implementation pending conversation-first-experience"
+        "x-implementation-status": "implemented-conversation-first-experience"
       },
       "MessageView": {
         "type": "object",
@@ -9076,7 +9568,7 @@
           "artifacts"
         ],
         "description": "持久用户与助手消息；内部协调不生成用户消息，旧任务消息无虚构回复执行。",
-        "x-implementation-status": "foundation-dto; endpoint implementation pending conversation-first-experience"
+        "x-implementation-status": "implemented-conversation-first-experience"
       },
       "ResponseExecutionView": {
         "type": "object",
@@ -9133,7 +9625,7 @@
           "allowedActions"
         ],
         "description": "回复执行状态；连接状态另行显示，动作须由服务端计算。",
-        "x-implementation-status": "foundation-dto; endpoint implementation pending conversation-first-experience"
+        "x-implementation-status": "implemented-conversation-first-experience"
       },
       "ExecutionFailureView": {
         "type": "object",
@@ -9206,6 +9698,40 @@
                 "STOP"
               ]
             }
+          },
+          "executionId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "nullable": true
+          },
+          "taskId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "sourceMessageId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "RETRYING",
+              "RESOLVED"
+            ]
+          },
+          "nextAttemptAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           }
         },
         "required": [
@@ -9219,10 +9745,16 @@
           "attempt",
           "maxAttempts",
           "diagnosticId",
-          "allowedActions"
+          "allowedActions",
+          "executionId",
+          "expectedVersion",
+          "taskId",
+          "sourceMessageId",
+          "status",
+          "nextAttemptAt"
         ],
         "description": "安全故障说明与责任动作，不含原生异常或敏感上下文。",
-        "x-implementation-status": "foundation-dto; endpoint implementation pending conversation-first-experience"
+        "x-implementation-status": "implemented-conversation-first-experience"
       },
       "ConversationSnapshot": {
         "type": "object",
@@ -9278,6 +9810,25 @@
           "cursor": {
             "type": "string",
             "maxLength": 200
+          },
+          "operationIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "executions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponseExecutionView"
+            }
+          },
+          "taskStates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConversationTaskState"
+            }
           }
         },
         "required": [
@@ -9289,10 +9840,13 @@
           "interactions",
           "deliverables",
           "failures",
-          "cursor"
+          "cursor",
+          "operationIds",
+          "executions",
+          "taskStates"
         ],
         "description": "会话一致前缀；cursor 为 conversationId:generation:eventSeq，不能与 Task cursor 混用。",
-        "x-implementation-status": "foundation-dto; endpoint implementation pending conversation-first-experience"
+        "x-implementation-status": "implemented-conversation-first-experience"
       },
       "GoalTaskCreate": {
         "type": "object",
@@ -9325,6 +9879,233 @@
           "objective",
           "sourceMessageId"
         ],
+        "x-implementation-status": "implemented-sdk-tool"
+      },
+      "ConversationTaskState": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceMessageId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "status": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "taskId",
+          "sourceMessageId",
+          "status",
+          "version"
+        ],
+        "description": "消息关联的历史工作状态；取消等终态按状态展示，不伪造模型正文。"
+      },
+      "ConversationEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "generation": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "sequence": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "type": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          }
+        },
+        "required": [
+          "conversationId",
+          "generation",
+          "sequence",
+          "type",
+          "occurredAt",
+          "payload"
+        ],
+        "description": "统一会话事件，事件名message，ID为conversationId:generation:sequence；只公开持久事实。"
+      },
+      "ConversationTitleUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "expectedTitleVersion": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "title",
+          "expectedTitleVersion"
+        ],
+        "description": "纯文本手动主题与独立CAS；控制字符清理后仍需非空。"
+      },
+      "TaskDirectiveSubmit": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "logicalKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "SUPPLEMENT",
+              "REPLACE"
+            ]
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000
+          }
+        },
+        "required": [
+          "logicalKey",
+          "taskId",
+          "expectedVersion",
+          "kind",
+          "content"
+        ],
+        "description": "submit_task_directive内部工具参数；来源原文、附件和归属由当前SDK回复Scope确定。",
+        "x-implementation-status": "implemented-sdk-tool"
+      },
+      "TaskDirectiveDecision": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "directiveId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "APPLY",
+              "REJECT"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "directiveId",
+          "expectedVersion",
+          "decision"
+        ],
+        "description": "apply_task_directive仅供原Task Master；REJECT须有非空reason，未应用不能声称生效。",
+        "x-implementation-status": "implemented-sdk-tool"
+      },
+      "TaskDirectiveReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "directiveId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceMessageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACCEPTED",
+              "APPLIED",
+              "REJECTED"
+            ]
+          },
+          "appliedVersion": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "nullable": true
+          },
+          "goalRevision": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "nullable": true
+          },
+          "reasonCode": {
+            "type": "string",
+            "maxLength": 64,
+            "nullable": true
+          },
+          "reasonMessage": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          }
+        },
+        "required": [
+          "directiveId",
+          "taskId",
+          "sourceMessageId",
+          "status",
+          "appliedVersion",
+          "goalRevision",
+          "reasonCode",
+          "reasonMessage"
+        ],
+        "description": "受理与应用分离，应用版本、原因与事件在同一事务持久化。",
         "x-implementation-status": "implemented-sdk-tool"
       }
     }

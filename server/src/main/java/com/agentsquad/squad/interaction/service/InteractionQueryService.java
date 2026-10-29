@@ -129,7 +129,7 @@ public class InteractionQueryService {
                 row.origin(), KIND_APPROVAL.equals(row.kind()) ? "请确认此操作的影响后决定是否执行" : row.question(),
                 parseJsonOrNull(row.answerSchemaJson()),
                 row.requestHash(), row.planVersion(),
-                row.expiresAt() == null ? null : row.expiresAt().toString(),
+                row.expiresAt() == null ? null : row.expiresAt().atOffset(java.time.ZoneOffset.UTC).toString(),
                 row.status(), row.version(), approvalContext);
     }
 

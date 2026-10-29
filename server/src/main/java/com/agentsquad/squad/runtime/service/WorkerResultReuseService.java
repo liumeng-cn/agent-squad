@@ -75,6 +75,7 @@ public class WorkerResultReuseService {
                     oldInput.path("contextSnapshotId").asText());
             if (previous == null || !immutableUserEvidence(previous, taskId)
                     || previous.conversationGeneration() != current.conversationGeneration()
+                    || previous.goalRevision() != current.goalRevision()
                     || previous.memoryRevision() != current.memoryRevision()
                     || !previous.contentHash().equals(current.contentHash())) {
                 continue;

@@ -167,6 +167,58 @@
         "objective": "先拟提纲，再完成短文",
         "sourceMessageId": "11111111-1111-4111-8111-111111111111"
       }
+    },
+    {
+      "schema": "ConversationTitleUpdate",
+      "value": {
+        "title": "写作协作体验",
+        "expectedTitleVersion": 0
+      }
+    },
+    {
+      "schema": "TaskDirectiveSubmit",
+      "value": {
+        "taskId": "11111111-1111-4111-8111-111111111111",
+        "logicalKey": "style-supplement",
+        "expectedVersion": 2,
+        "kind": "SUPPLEMENT",
+        "content": "改为活泼口吻"
+      }
+    },
+    {
+      "schema": "TaskDirectiveDecision",
+      "value": {
+        "directiveId": "11111111-1111-4111-8111-111111111111",
+        "expectedVersion": 2,
+        "decision": "APPLY"
+      }
+    },
+    {
+      "schema": "ConversationSnapshot",
+      "value": {
+        "conversation": {
+          "conversationId": "11111111-1111-4111-8111-111111111111",
+          "title": "写作交流",
+          "titleSource": "FALLBACK",
+          "titleVersion": 0,
+          "generation": 1,
+          "version": 0,
+          "activeTaskId": null,
+          "lastActivityAt": "2026-10-29T07:00:00Z",
+          "status": "ACTIVE"
+        },
+        "messages": [],
+        "nextBeforeSeq": null,
+        "activeExecutions": [],
+        "activeTask": null,
+        "interactions": [],
+        "deliverables": [],
+        "failures": [],
+        "operationIds": [],
+        "executions": [],
+        "taskStates": [],
+        "cursor": "11111111-1111-4111-8111-111111111111:1:0"
+      }
     }
   ]
 }

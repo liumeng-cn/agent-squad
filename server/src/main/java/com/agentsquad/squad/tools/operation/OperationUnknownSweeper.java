@@ -21,6 +21,9 @@ import java.util.List;
 public class OperationUnknownSweeper {
 
     @Resource
+    private OperationUnknownService unknowns;
+
+    @Resource
     private OperationMapper operationMapper;
 
     @Value("${agentsquad.operation.unknown-sweep-batch:50}")
@@ -34,8 +37,7 @@ public class OperationUnknownSweeper {
         List<OperationRow> expired = operationMapper.findExpiredInFlight(
                 LocalDateTime.now(ZoneOffset.UTC), batchSize);
         for (OperationRow row : expired) {
-            if (operationMapper.markUnknown(row.userId(), row.operationId(),
-                    row.version(), "unknown-sweeper") == 1) {
+            if (unknowns.mark(row, row.version(), "unknown-sweeper")) {
                 log.warn("IN_FLIGHT 租约过期转 UNKNOWN operationId={} taskId={} owner={}",
                         row.operationId(), row.taskId(), row.executorOwner());
             }

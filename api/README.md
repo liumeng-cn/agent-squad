@@ -10,7 +10,7 @@
 - TaskReceipt 的 202 表示平台持久受理，不表示 SDK 已启动。CommandReceipt 表示命令持久接受，不能被当作停止/审批生效的最终确认。
 - SDK 对接通过[运行协议](../openspec/specs/runtime/spec.md)中的应用端口；执行身份只能由平台注入。OpenAPI 中 PlanPublish、RuntimeBinding、ToolIntent 等是内部 DTO，不意味着开放 HTTP 管理接口。
 - Error 含 code/message/requestId/details；校验失败 400 或 422；未登录 401；缺角色 403；资源不存在或无归属权限 404；版本/幂等/任务忙 409；容量限制 429；存储或执行依赖不可用 503。恢复受阻和操作未知是可查询业务状态，不伪装空成功。SSE 过期游标 410。
-- 列表 nextCursor 可缺省，绑定用户/过滤/排序；limit=1–100。游标有签名，不接收任意 SQL 排序。
+- 列表 nextCursor 可缺省，绑定用户/过滤/排序；limit=1–100。游标作为不透明值按固定格式与归属验证，不接收任意 SQL 排序。
 
 ## 条件校验
 
@@ -26,7 +26,7 @@ Interaction.APPROVAL必须携ApprovalContext供用户核实脱敏影响；Operat
 
 InteractionResponse.kind 决定 INPUT/APPROVAL 分支；APPROVAL 不允许修改工具参数或接受永久放行规则。respond 返回 CommandReceipt；原生交互若已消费，通过日志对账返回原结果而非再执行。
 
-SSE 发送 TaskEvent，event名为message，事件 ID=taskId:seq；首次after参数取snapshot.cursor，自动重连的合法Last-Event-ID优先。snapshot 返回一致公开水位，读取与订阅不触发模型。payload 的字段见 [事件规范](../openspec/specs/events-artifacts/spec.md)，不能将任意原生记录直接透传。
+当前对话 SSE 发送 ConversationEvent，event 名为 message，事件 ID 为 conversationId:generation:seq；旧任务诊断流仍使用 TaskEvent 和 taskId:seq，二者不可互换。首次after参数取snapshot.cursor，自动重连的合法Last-Event-ID优先。snapshot 返回一致公开水位，读取与订阅不触发模型。payload 的字段见 [事件规范](../openspec/specs/events-artifacts/spec.md)，不能将任意原生记录直接透传。
 
 [examples.json](examples.json) 为虚构正例；[invalid-examples.json](invalid-examples.json) 为必须拒绝的结构反例。静态检查只验证引用/示例/设计一致性，不代替完整 OpenAPI 工具、SQL 执行或 SDK 故障实验。
 
@@ -38,7 +38,7 @@ SSE 发送 TaskEvent，event名为message，事件 ID=taskId:seq；首次after�
 - V8 在事务中回填旧 Task 的共享账户/作用域、原始用户消息和最新公开答案；稳定来源键避免重复。旧任务仍保留，旧 Session/Command/submit key 与 Reservation 金额不变，不创建模型命令，也不伪造历史 ResponseExecution。
 - 账户只保存固定额度，实际占用继续由 Reservation 的 SETTLED/RESERVED/UNKNOWN 事实计算，避免复制汇总余额导致漂移。
 - 新 Scope 查询同时验证用户、会话代际、逻辑删除和真实 owner；跨用户、删除资源或失效代际不可读取。
-- 迁移新增表与列保持旧链路可运行；在运行层切换前，新建旧式 Task 尚不走新消息链路。实际开发库升级与页面验收应在主链路接入后进行，不能据此宣称聊天体验已完成。
+- 迁移新增表与列保留旧任务诊断链路；页面已切换新消息入口，实际开发库也已增量升级，验证范围以本轮证据为准。
 
 ## 共享执行边界
 
@@ -56,7 +56,7 @@ SSE 发送 TaskEvent，event名为message，事件 ID=taskId:seq；首次after�
 - 原子事务写入 Conversation/Message/ResponseExecution/Scope/Account/Binding/Command 和两个受理事件，附件必须同用户且就绪有效。无效、越权或过期附件使整批回滚，已上传文件不随消息受理失败被删除。
 - 首发并发同键只保留一套事实；唯一键失败先完整回滚，再从新读视图补查胜出收据。同键同正文/附件返回原身份，同键换输入 409；附件 UUID 大小写规范化，顺序保留。
 - 首发重送须使用原首发端口和原 key；获得收据后才把后续消息发送到会话追加端口。接口返回 MessageReceipt，不返回新 Task。cursor 为会话受理前缀，不能当任务事件游标使用。
-- `MESSAGE_SUBMIT` 经持久 Bridge 投递固定 SDK Binding；202 仍只表示持久受理。普通回复由同 Turn 的完成候选与成功 journal 裁决后发布助手 Message。旧聊天页面尚未切换到这些入口。
+- `MESSAGE_SUBMIT` 经持久 Bridge 投递固定 SDK Binding；202 仍只表示持久受理。普通回复由同 Turn 的完成候选与成功 journal 裁决后发布助手 Message。当前对话页面已切换到消息入口。
 
 
 ## 普通回复执行与停止
@@ -66,7 +66,7 @@ SSE 发送 TaskEvent，event名为message，事件 ID=taskId:seq；首次after�
 - 实例 writer 失效仅恢复固定 Session/Turn，持久保存恢复次数且最多两次；终态不原地复活。查看回复或刷新页面不会发起 RESUME。
 - `POST /api/v1/executions/{executionId}/cancel` 接收 ControlRequest、Cookie/CSRF 和固定 Idempotency-Key，返回 CommandReceipt；只取消本条回答，不取消独立 GoalTask。STOP 没有活跃原生运行时才就地收尾；外部写入未知时保持 RECONCILING，不清掉账本或盲目重放。
 - 删除会话立即禁读并停止所有未终结回复；清理等回复安全收尾。过期代际的迟到候选不能公开正文或追加会话事件。
-- 消息有序领取、Master 按需创建目标及目标修订仍属于 2.1–2.3；会话快照/SSE、分级故障与页面切换仍待 3.x/4.x，不将本节视为完整聊天界面已可验收。
+- 有序领取、Master 按需建目标、目标修订、会话级快照/SSE、故障分级与页面现均已接入，验证范围见本变更验收记录。
 
 
 ## Master按需建立独立目标
@@ -78,13 +78,22 @@ SSE 发送 TaskEvent，event名为message，事件 ID=taskId:seq；首次after�
 - 创建事务复用来源 BudgetAccount 引用，不新建账户、不移动或清空 Reservation，不因原回复结束增加额度。Task/Worker 后续模型和工具请求继续经过同一账户与用户预算闸门；UNKNOWN 费用继续占用。
 - 同事务创建独立 Task Scope、来源 Message/ResponseExecution 关系、Task Master Binding、SUBMIT Command、task.accepted 和会话 task.created。任何失败整批回滚，原消息保留；事务内不调用 SDK/模型。
 - Task 输入分别保存用户原文和模型拟定的 objective/title；局部 Worker 上下文只使用受权来源材料，不继承整个对话，也不把模型改写标为用户原话。来源附件重新验证后关联目标，过期材料阻止创建。
-- 此项覆盖按需创建并沿用 D3 DAG 执行；任务期间的有序消息领取、进展事实与目标修订继续在 2.2/2.3 实现。目标交付的统一会话投影与页面展示仍属于 3.1/4.x。
+- 此项覆盖按需创建并沿用 D3 DAG 执行；任务期间已支持有序消息领取、进展事实与安全目标修订。目标交付已进入统一会话投影与页面。
 
 ## 消息顺序与任务期间交流
 
 - Bridge 扫描排除同用户、同会话、同代际的后续消息；正式领取在会话→实际所有者→命令的短事务中，以锁后当前读再次检查。前序回复处于 QUEUED/RUNNING/RECOVERING/RECONCILING/CANCELLING 时不启动后续回复；WAITING_INPUT/WAITING_APPROVAL 或终态允许后续消息。不同会话或代际不共用这个队列。
 - 领取与停止、计划工具和恢复回调遵守同一锁顺序，命令领取提交后才调用 SDK。普通消息是独立 Binding，不向在途 Task Binding 新建用户 Turn，不消费别的 Binding 的交互。
 - 回复的内部冻结上下文可含 `activeTask`，记录首派发时的 Task 身份、真实状态、版本、当前计划和节点状态；读取范围限制在当前用户会话的当前有效代际目标，不包含 Worker 日志或候选正文。重投复用原快照，目标后续变化不会改写已冻结的输入；新的用户消息读取新的事实。
-- Task Master 是计划写入者；聊天回复不能通过 prepare_context/publish_plan 改写另一绑定的计划。需要修改目标时使用后续 2.3 的持久指令入口，普通发言不等于已应用修订或已批准交互。
+- Task Master 是计划写入者；聊天回复不能通过 prepare_context/publish_plan 改写另一绑定的计划。需要修改目标时使用 submit_task_directive 持久指令入口，普通发言不等于已应用修订或已批准交互。
 - SDK 已持久接受 commandId 时，Bridge 直接读取其原收据，不因上下文 JSON 新增字段而重新编码该提交键；未接受时仍以原 commandId 原子 submit。页面查询和刷新不发起推理。
-- 以上是后端执行/上下文语义；对话快照与 SSE 公开模型、交付投影及页面交互仍待 3.1/4.x。
+- 对话快照、SSE 与页面均采用以上顺序和固定上下文语义。
+
+## 对话读取、目标修订与故障恢复
+
+- `GET /conversations/{id}/snapshot` 读取一致前缀和历史分页，`GET /conversations/{id}/events` 读取公开事实；完整路径均以 `/api/v1` 开头。cursor 为 `conversationId:generation:seq`，非法/未来为 400、过期为 410，跨用户拒绝；刷新和重连不创建执行。
+- `PATCH /conversations/{id}/title` 使用独立 expectedTitleVersion，控制字符过滤、CAS 与所有权检查；确定性标题不调用模型，成本为零。历史通用标题由 V14 安全补全，手动名保留。
+- submit_task_directive 由来源回复提交、Task Master 以 apply_task_directive 在安全点应用或拒绝。ACCEPTED 不等于 APPLIED；goalRevision 绑定计划/上下文，旧结果不推进新计划，开放交互和未知操作阻止应用。
+- Failure 明确 category/code/actor/safeMessage/diagnosticId/allowedActions，页面不拿异常文案判断处理责任；普通用户无服务器维修或未授权核对动作。暂时故障在原 Turn 最多恢复两次、计划纠正最多两次、完成候选纠正最多一次；次数与下次时间持久保存。
+- `POST /executions/{id}/retry` 只允许服务端认定可重试的终态回复，携带 CSRF、幂等键与 expectedVersion。保留原失败状态，以同一来源消息和预算账户建立唯一后继；UNKNOWN 操作阻止重发。
+- V12/V13/V14 增量维护指令、故障次数和历史标题；SDK 原提交键不因升级后的上下文字段变化而重编码。框架的 wait_async_results 不参与平台自有 DAG，Master 与 Worker 均不暴露该入口。

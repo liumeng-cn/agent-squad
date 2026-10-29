@@ -7,5 +7,5 @@ package com.agentsquad.squad.runtime.domain;
  */
 public record PlanRow(long id, String planId, String userId, String taskId, long planVersion,
                       String status, String logicalKey, String definitionJson,
-                      long signalVersion, long version) {
+                      long signalVersion, long version, long goalRevision) {
 }

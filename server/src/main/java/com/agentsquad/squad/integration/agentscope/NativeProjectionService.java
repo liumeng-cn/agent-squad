@@ -1,5 +1,7 @@
 package com.agentsquad.squad.integration.agentscope;
 
+import com.agentsquad.squad.runtime.service.ExecutionFailureService;
+import com.agentsquad.squad.presentation.service.TaskEventPublishingService;
 import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
 import com.agentsquad.squad.conversation.domain.ExecutionScopeRow;
 import com.agentsquad.squad.conversation.service.ResponseExecutionService;
@@ -43,6 +45,12 @@ import java.util.Map;
 @Slf4j
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class NativeProjectionService {
+
+    @Resource
+    private ExecutionFailureService failures;
+
+    @Resource
+    private TaskEventPublishingService conversationProjection;
 
     @Resource
     private ResponseExecutionService responses;
@@ -119,10 +127,21 @@ public class NativeProjectionService {
             } else if (!taskFinalizerService.tryCancelAfterStop(target, event)) {
                 if (outcome == NativeRunOutcome.SUSPENDED) {
                     suspendForInteraction(target, event);
+                } else if (outcome == NativeRunOutcome.FAILED && failures.queueTransientRetry(scope, target.bindingId(), event.eventId(), event.turnId())) {
+                    // 原Scope内的有限恢复已持久排队，不能将其提前裁决为终态。
                 } else {
-                    taskFinalizerService.blockAfterNativeRun(target, event, outcome);
+                    failures.ensureNativeFailure(scope, target.bindingId(), "native:" + event.eventId());
+                    if (!failures.finishFailedTask(scope, target.bindingId(), event.eventId())) {
+                        taskFinalizerService.blockAfterNativeRun(target, event, outcome);
+                    }
                 }
             }
+            if (outcome == NativeRunOutcome.COMPLETED
+                    && !"FAILED".equals(scopeMapper.lockTaskOwner(target.userId(), target.taskId(), scope.scopeId()).status())) {
+                failures.resolve(target.userId(), target.bindingId());
+            }
+            projectionMapper.recordEndedTurn(target.userId(), target.bindingId(), event.turnId());
+            projectionMapper.settleControls(target.userId(), target.bindingId());
             masterSignalService.onMasterTurnEnded(target.userId(), target.taskId(), event.turnId());
         } else if ("interaction/requested".equals(event.type())) {
             bindInteraction(target, event);
@@ -158,6 +177,14 @@ public class NativeProjectionService {
                 NativeRunOutcome outcome = NativeRunOutcome.fromCode(event.outcome());
                 boolean completed = outcome == NativeRunOutcome.COMPLETED
                         && workerResultService.finalizeSuccess(target.userId(), target.bindingId(), event.turnId());
+                if (completed) { failures.resolve(target.userId(), target.bindingId()); }
+                if (!completed && outcome == NativeRunOutcome.FAILED) {
+                    var scope = scopeMapper.findOwned(target.userId(), scopeMapper.findScopeByBinding(target.userId(), target.bindingId()));
+                    if (failures.queueTransientRetry(scope, target.bindingId(), event.eventId(), event.turnId())) {
+                        publish(target, event, "job.recovering", Map.of("jobId", job.jobId()));
+                        return;
+                    }
+                }
                 if (!completed) {
                     workerResultService.markRecoveryBlocked(target.userId(), target.bindingId());
                 }
@@ -200,6 +227,12 @@ public class NativeProjectionService {
         if (binding == null) {
             return;
         }
+        var scope = scopeMapper.findOwned(target.userId(), scopeMapper.findScopeByBinding(target.userId(), target.bindingId()));
+        boolean approval = "APPROVAL".equals(binding.kind());
+        failures.record(scope, target.bindingId(), "interaction:" + binding.interactionId(),
+                new com.agentsquad.squad.runtime.domain.FailureClassification(approval ? "AUTH_REQUIRED" : "INPUT_REQUIRED",
+                        approval ? "USER_CONFIRMATION_REQUIRED" : "USER_INPUT_NEEDED", "USER",
+                        approval ? "有一项操作需要你确认影响后决定是否执行。" : "需要你补充一些信息，才能继续。"));
         publish(target, event, "interaction.requested",
                 Map.of("interactionId", binding.interactionId(), "kind", binding.kind()));
     }
@@ -217,6 +250,7 @@ public class NativeProjectionService {
         if (row == null) {
             return;
         }
+        failures.resolveInteraction(target.userId(), row.scopeId(), row.interactionId());
         publish(target, event, "interaction.resolved",
                 Map.of("interactionId", row.interactionId(), "status", row.status()));
     }
@@ -245,7 +279,7 @@ public class NativeProjectionService {
         }
         LocalDateTime occurredAt = LocalDateTime.ofInstant(
                 Instant.ofEpochMilli(event.occurredAtMillis()), ZoneOffset.UTC);
-        taskEventMapper.insertProjected(target.userId(), target.taskId(), sequence,
+        conversationProjection.insertProjected(target.userId(), target.taskId(), sequence,
                 "native:" + target.bindingId() + ":" + event.eventId(), eventType,
                 RuntimePayloads.toJson(objectMapper, payload), occurredAt);
     }

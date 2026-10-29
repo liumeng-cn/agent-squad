@@ -39,6 +39,9 @@ public class OperationReconcileService {
     private static final String OUTCOME_UNRESOLVED = "UNRESOLVED";
 
     @Resource
+    private com.agentsquad.squad.runtime.service.ExecutionFailureService failures;
+
+    @Resource
     private ExecutionScopeService scopeService;
 
     @Resource
@@ -100,6 +103,9 @@ public class OperationReconcileService {
             case OUTCOME_UNRESOLVED -> recordUnresolved(userId, row, evidence);
             default -> throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION,
                     "核对结论只能是 CONFIRMED_SUCCEEDED / CONFIRMED_NOT_EXECUTED / UNRESOLVED");
+        }
+        if (!OUTCOME_UNRESOLVED.equals(request.disposition())) {
+            failures.resolveOperation(userId, row.scopeId(), operationId);
         }
         return operationService.getOwned(userId, operationId);
     }

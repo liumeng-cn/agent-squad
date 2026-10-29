@@ -24,6 +24,9 @@ import java.util.List;
 public class NativeProjectionPoller {
 
     @Resource
+    private com.agentsquad.squad.runtime.service.ExecutionFailureService failures;
+
+    @Resource
     private ResponseExecutionService responses;
 
     @Resource
@@ -64,6 +67,12 @@ public class NativeProjectionPoller {
                         if (commandId.equals(receipt.commandId())) {
                             workerRecoveryService.queueInterrupted(target, receipt);
                         }
+                    }
+                } else {
+                    String commandId = failures.masterCommand(target);
+                    if (commandId != null) {
+                        NativeSubmissionReceipt receipt = nativeSessionGateway.inspectTask(target, commandId);
+                        if (commandId.equals(receipt.commandId())) { failures.recoverInterrupted(target, receipt); }
                     }
                 }
                 projectionMapper.defer(target.userId(), target.bindingId(),

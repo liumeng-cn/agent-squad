@@ -7,5 +7,6 @@ public enum RuntimeExceptionCode {
     NOT_FOUND,
     FORBIDDEN,
     CONFLICT,
+    EXPIRED,
     VALIDATION
 }

@@ -1,5 +1,6 @@
 package com.agentsquad.squad.conversation.service;
 
+import com.agentsquad.squad.runtime.service.ExecutionFailureService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.ContentDigests;
@@ -39,6 +40,9 @@ import java.util.UUID;
 @Slf4j
 public class ResponseExecutionService {
     private static final Set<String> TERMINAL = Set.of("SUCCEEDED", "PARTIAL", "FAILED", "CANCELLED");
+
+    @Resource
+    private ExecutionFailureService failures;
 
     @Resource
     private ExecutionScopeService scopes;
@@ -146,6 +150,10 @@ public class ResponseExecutionService {
             return;
         }
         if (outcome != NativeRunOutcome.COMPLETED) {
+            failures.ensureNativeFailure(scope, row.bindingId(), "native:" + event.eventId());
+            if (outcome == NativeRunOutcome.FAILED && failures.queueTransientRetry(scope, row.bindingId(), event.eventId(), event.turnId())) {
+                return;
+            }
             finish(scope, row, "FAILED", "本次回答暂未完成，请稍后重试。");
             return;
         }
@@ -266,6 +274,8 @@ public class ResponseExecutionService {
                     Map.of("message", "请核对当前用户消息，调用 propose_completion 提交完整回答候选；无法完整完成时选择 PARTIAL 并说明缺口。"));
             publishState(scope, row, "QUEUED", "correction:" + event.eventId());
         } else {
+            failures.record(scope, row.bindingId(), "completion-correction-exhausted",
+                    new com.agentsquad.squad.runtime.domain.FailureClassification("LOGIC_INVALID", "COMPLETION_INVALID", "SYSTEM", "本次未能形成有效回答，已保留你的消息。"));
             finish(scope, row, "FAILED", "本次未能生成有效回答，已保留你的消息，请稍后重试。");
         }
     }
@@ -284,6 +294,12 @@ public class ResponseExecutionService {
     }
 
     private void finish(ExecutionScopeRow scope, ResponseRuntimeRow row, String status, String answer) {
+        if ("SUCCEEDED".equals(status) || "PARTIAL".equals(status) || "CANCELLED".equals(status)) {
+            failures.resolve(scope.userId(), row.bindingId());
+        }
+        if ("FAILED".equals(status)) {
+            failures.ensureNativeFailure(scope, row.bindingId(), "execution-failed:" + row.executionId());
+        }
         String answerId = null;
         ConversationRow conversation = conversations.lockOwned(scope.userId(), scope.conversationId());
         if (answer != null && "ACTIVE".equals(conversation.status())

@@ -1,5 +1,6 @@
 package com.agentsquad.squad.conversation.service;
 
+import com.agentsquad.squad.presentation.service.TaskEventPublishingService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
@@ -38,6 +39,9 @@ import java.util.UUID;
 @Service
 @Slf4j
 public class ConversationDeletionService {
+
+    @Resource
+    private TaskEventPublishingService conversationProjection;
 
     @Resource
     private ResponseControlService responseControls;
@@ -146,7 +150,7 @@ public class ConversationDeletionService {
         if (sequence == null) {
             throw new IllegalStateException("事件序号读取失败");
         }
-        taskEventMapper.insertProjected(userId, taskId, sequence,
+        conversationProjection.insertProjected(userId, taskId, sequence,
                 "conversation-delete:" + taskId + ":task.completed", "task.completed",
                 RuntimePayloads.toJson(objectMapper, Map.of("status", status)), now);
     }

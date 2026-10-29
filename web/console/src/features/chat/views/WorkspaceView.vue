@@ -1,145 +1,45 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import StatusBadge from '../../../shared/ui/StatusBadge.vue'
 import ConversationSidebar from '../components/ConversationSidebar.vue'
-import TaskComposer from '../components/TaskComposer.vue'
-import TaskThread from '../components/TaskThread.vue'
+import ChatComposer from '../components/ChatComposer.vue'
+import MessageThread from '../components/MessageThread.vue'
 import { useConversationsStore } from '../stores/conversations'
-import { useRuntimeStore } from '../stores/runtime'
-import { isTerminal } from '../../../shared/lib/taskStatus'
-
+import type { MessageReceipt } from '../../../shared/api/chatApi'
 const route = useRoute()
 const router = useRouter()
-const conversations = useConversationsStore()
-const runtime = useRuntimeStore()
+const chat = useConversationsStore()
 const sidebar = ref<InstanceType<typeof ConversationSidebar> | null>(null)
-
-const conversationId = computed(() => {
-  const id = route.params.conversationId
-  return typeof id === 'string' && id ? id : null
-})
-
-const hasActiveGoal = computed(() => {
-  const taskId = conversations.conversation?.activeTaskId
-  return taskId !== null && taskId !== undefined && taskId !== ''
-})
-
-const composerBlocked = computed(() => {
-  if (!conversationId.value) {
-    return true
-  }
-  if (hasActiveGoal.value && !runtime.terminal) {
-    return true
-  }
-  return false
-})
-
-const blockHint = computed(() => {
-  if (!conversationId.value) {
-    return '请先新建或选择一个对话'
-  }
-  return '当前有未完成目标：请先停止它，或新建对话后再提新目标'
-})
-
-watch(
-  conversationId,
-  async (id) => {
-    runtime.dispose()
-    if (!id) {
-      conversations.activeConversationId = null
-      conversations.conversation = null
-      conversations.taskHistory = []
-      conversations.historySnapshots = []
-      return
-    }
-    await conversations.open(id)
-    const activeTaskId = conversations.conversation?.activeTaskId
-    if (activeTaskId) {
-      await runtime.observe(activeTaskId)
-    }
-  },
-  { immediate: true },
-)
-
-// 目标进入终态或新目标受理后，同步会话的 activeTaskId，决定输入区是否解锁。
-watch(
-  () => [runtime.taskId, runtime.status],
-  async () => {
-    if (!conversationId.value) {
-      return
-    }
-    const status = runtime.status
-    if (runtime.taskId && (!status || isTerminal(status))) {
-      await conversations.refreshActive()
-    }
-  },
-)
-
-async function removeConversation(): Promise<void> {
-  const conversation = conversations.conversation
-  if (!conversation) {
-    return
-  }
-  if (!window.confirm(`确定删除对话「${conversation.title}」吗？删除后不可恢复。`)) {
-    return
-  }
-  const removed = await conversations.remove(conversation)
-  if (removed) {
-    runtime.dispose()
-    await router.replace({ name: 'workspace' })
-  }
+const editingTitle = ref(false)
+const title = ref('')
+const savingTitle = ref(false)
+const titleInput = ref<HTMLInputElement | null>(null)
+const conversationId = computed(() => typeof route.params.conversationId === 'string' && route.params.conversationId ? route.params.conversationId : null)
+const empty = computed(() => !conversationId.value && !chat.messages.length)
+watch(conversationId, id => { editingTitle.value = false; if (id) void chat.open(id); else chat.startDraft() }, { immediate: true })
+async function accepted(receipt: MessageReceipt) {
+  if (!conversationId.value) await router.replace({ name: 'workspace', params: { conversationId: receipt.conversationId } })
 }
-
-onBeforeUnmount(() => {
-  runtime.dispose()
-})
+async function editTitle() { title.value = chat.conversation?.title ?? ''; editingTitle.value = true; await nextTick(); titleInput.value?.focus(); titleInput.value?.select() }
+async function rename() {
+  if (savingTitle.value || !title.value.trim()) return
+  savingTitle.value = true
+  try { await chat.rename(title.value); editingTitle.value = false } catch { /* 由会话内提示解释冲突。 */ }
+  finally { savingTitle.value = false }
+}
+async function remove() {
+  if (!window.confirm('删除这个对话？对话中的处理也会停止，历史中将不再显示。')) return
+  if (await chat.remove()) await router.replace({ name: 'workspace' })
+}
+onBeforeUnmount(() => { chat.dispose() })
 </script>
-
 <template>
-  <div class="workspace">
+  <div class="chat-workspace">
     <ConversationSidebar ref="sidebar" />
-    <section class="workspace-main">
-      <header class="workspace-header">
-        <button class="btn btn-sm" @click="sidebar?.openSidebar()">会话</button>
-        <h1 class="workspace-title">{{ conversations.conversation?.title ?? '工作台' }}</h1>
-        <StatusBadge v-if="runtime.status" :status="runtime.status" />
-        <span class="spacer"></span>
-        <router-link
-          v-if="runtime.taskId"
-          class="btn btn-sm"
-          :to="{ name: 'task', params: { taskId: runtime.taskId } }"
-        >
-          查看详情
-        </router-link>
-        <button
-          v-if="conversations.conversation"
-          class="btn btn-danger btn-sm"
-          :disabled="conversations.conversation.activeTaskId !== null && !runtime.terminal"
-          @click="removeConversation"
-        >
-          删除对话
-        </button>
-      </header>
-      <p v-if="conversations.conversationError" class="form-error" style="margin: 12px 20px 0">
-        {{ conversations.conversationError }}
-      </p>
-      <TaskThread :history="conversations.historySnapshots">
-        <div class="thread-empty">
-          <span class="thread-empty-icon">✦</span>
-          <h2>让 Agent Squad 处理目标</h2>
-          <p>写下你要解决的问题。任务进度与最终结果会保存在这个对话中。</p>
-        </div>
-      </TaskThread>
-      <TaskComposer
-        v-if="conversationId"
-        :conversation-id="conversationId"
-        :blocked="composerBlocked"
-        :block-hint="blockHint"
-      />
-      <div v-else class="composer-area">
-        <p class="composer-hint">请从左侧选择或新建一个对话</p>
-      </div>
-    </section>
+    <main class="chat-main" :class="{ 'is-empty': empty }">
+      <header class="chat-header"><button class="icon-button sidebar-toggle mobile-only" aria-label="打开对话历史" @click="sidebar?.openSidebar()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M10 4v16"/></svg></button><form v-if="editingTitle" class="title-editor" @submit.prevent="rename"><input ref="titleInput" v-model="title" maxlength="200" aria-label="对话标题" :disabled="savingTitle" @keydown.esc="editingTitle = false" /><button class="text-button" :disabled="savingTitle || !title.trim()">保存</button><button class="text-button" type="button" @click="editingTitle = false">取消</button></form><h1 v-else-if="chat.conversation">{{ chat.conversation.title }}</h1><span class="spacer"></span><details v-if="chat.conversation && !editingTitle" class="conversation-menu"><summary class="icon-button" aria-label="对话选项">···</summary><div class="popup-menu"><button @click="editTitle">修改标题</button><button class="danger-text" @click="remove">删除对话</button></div></details></header>
+      <div v-if="empty" class="chat-welcome"><div class="welcome-heading"><span aria-hidden="true">✦</span><h2>今天想一起完成什么？</h2></div><ChatComposer :key="`draft:${chat.draftRevision}`" :conversation-id="null" :draft-revision="chat.draftRevision" @accepted="accepted" /></div>
+      <template v-else><MessageThread /><ChatComposer :key="conversationId ?? 'draft'" :conversation-id="conversationId" :draft-revision="chat.draftRevision" @accepted="accepted" /></template>
+    </main>
   </div>
 </template>

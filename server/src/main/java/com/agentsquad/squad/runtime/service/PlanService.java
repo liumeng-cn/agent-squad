@@ -1,5 +1,7 @@
 package com.agentsquad.squad.runtime.service;
 
+import com.agentsquad.squad.presentation.service.TaskEventPublishingService;
+import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.RuntimePayloads;
@@ -62,6 +64,12 @@ public class PlanService {
     private static final int MAX_NODES = 16;
     private static final int MAX_PARALLEL = 4;
     private static final Set<String> JOIN_POLICIES = Set.of("ALL_REQUIRED", "BEST_EFFORT");
+
+    @Resource
+    private TaskEventPublishingService conversationProjection;
+
+    @Resource
+    private TaskDirectiveMapper directives;
 
     @Resource
     private ExecutionScopeService executionScopes;
@@ -132,8 +140,15 @@ public class PlanService {
                 || GoalTaskStatus.RUNNING.name().equals(context.taskStatus()))) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已不能发布计划");
         }
+        long goalRevision = directives.goalState(userId, context.taskId()).goalRevision();
+        if (!directives.pending(userId, context.taskId()).isEmpty()) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "尚有目标修改待处理，请先应用或拒绝后再发布计划");
+        }
         PlanRow existing = planMapper.findLatestByLogicalKey(context.taskId(), publish.logicalKey());
         if (existing != null) {
+            if (existing.goalRevision() != goalRevision) {
+                throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "旧计划对应的目标内容已变化，请使用新的计划键");
+            }
             String requestedDefinition = RuntimePayloads.toJson(objectMapper, publish);
             if (!CanonicalJson.sha256(objectMapper, requestedDefinition)
                     .equals(CanonicalJson.sha256(objectMapper, existing.definitionJson()))) {
@@ -185,7 +200,7 @@ public class PlanService {
         String planId = UUID.randomUUID().toString();
         String definitionJson = RuntimePayloads.toJson(objectMapper, publish);
         planMapper.insertPlan(planId, context.userId(), context.taskId(), newVersion,
-                publish.logicalKey(), definitionJson, priorSignalVersion);
+                publish.logicalKey(), definitionJson, priorSignalVersion, goalRevision);
 
         List<String> jobIds = new ArrayList<>(publish.nodes().size());
         Map<String, String> reusedJobIds = new LinkedHashMap<>();
@@ -237,7 +252,7 @@ public class PlanService {
         if (projectionMapper.reserveEventSequence(context.userId(), context.taskId()) != 1) {
             throw new IllegalStateException("计划事件序号预留失败");
         }
-        taskEventMapper.insertProjected(context.userId(), context.taskId(),
+        conversationProjection.insertProjected(context.userId(), context.taskId(),
                 projectionMapper.eventSequence(context.userId(), context.taskId()),
                 "plan:" + planId, "plan.published", RuntimePayloads.toJson(objectMapper, eventPayload),
                 LocalDateTime.now());
@@ -245,7 +260,7 @@ public class PlanService {
             if (projectionMapper.reserveEventSequence(context.userId(), context.taskId()) != 1) {
                 throw new IllegalStateException("结果复用事件序号预留失败");
             }
-            taskEventMapper.insertProjected(context.userId(), context.taskId(),
+            conversationProjection.insertProjected(context.userId(), context.taskId(),
                     projectionMapper.eventSequence(context.userId(), context.taskId()),
                     "job:reused:" + reuse.getKey(), "job.reused",
                     RuntimePayloads.toJson(objectMapper, Map.of(
@@ -348,6 +363,7 @@ public class PlanService {
                     context.userId(), context.taskId(), node.contextSnapshotId());
             if (snapshot == null || !node.nodeKey().equals(snapshot.targetNodeKey())
                     || snapshot.conversationGeneration() != context.conversationGeneration()
+                    || snapshot.goalRevision() != directives.goalState(context.userId(), context.taskId()).goalRevision()
                     || snapshot.memoryRevision() != 0
                     || !CanonicalJson.sha256(objectMapper, snapshot.itemsJson()).equals(snapshot.contentHash())) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION,

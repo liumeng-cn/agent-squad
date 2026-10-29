@@ -81,4 +81,23 @@ public interface ProjectionMapper {
             WHERE user_id = #{userId} AND task_id = #{taskId} AND status = 'QUEUED'
             """)
     int markRunning(@Param("userId") String userId, @Param("taskId") String taskId);
+
+    @Update("""
+            UPDATE sq_runtime_binding
+            SET last_ended_turn_id = #{turnId}
+            WHERE user_id = #{userId}
+              AND binding_id = #{bindingId}
+            """)
+    int recordEndedTurn(@Param("userId") String userId, @Param("bindingId") String bindingId,
+                        @Param("turnId") String turnId);
+
+    @Update("""
+            UPDATE sq_command
+            SET status = 'APPLIED'
+            WHERE user_id = #{userId}
+              AND binding_id = #{bindingId}
+              AND action IN ('RESUME', 'RESPOND')
+              AND status = 'DELIVERED'
+            """)
+    int settleControls(@Param("userId") String userId, @Param("bindingId") String bindingId);
 }

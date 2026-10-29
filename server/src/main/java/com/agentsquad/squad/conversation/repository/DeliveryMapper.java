@@ -40,7 +40,7 @@ public interface DeliveryMapper {
                    AND earlier_message.message_id = earlier_reply.source_message_id
                   WHERE current_reply.user_id = sq_command.user_id
                     AND current_reply.binding_id = sq_command.binding_id
-                    AND earlier_message.message_seq < current_message.message_seq
+                    AND COALESCE(earlier_reply.dispatch_sequence, earlier_message.message_seq) < COALESCE(current_reply.dispatch_sequence, current_message.message_seq)
                     AND earlier_reply.del_flag = '0'
                     AND earlier_reply.status IN ('QUEUED', 'RUNNING', 'RECOVERING', 'RECONCILING', 'CANCELLING')
               ))
@@ -48,7 +48,7 @@ public interface DeliveryMapper {
 
     @Select("""
             SELECT command_id FROM sq_command
-            WHERE action IN ('SUBMIT', 'MESSAGE_SUBMIT', 'MASTER_SIGNAL', 'STOP', 'RESUME', 'RESPOND')
+            WHERE action IN ('SUBMIT', 'MESSAGE_SUBMIT', 'MASTER_SIGNAL', 'TASK_DIRECTIVE', 'STOP', 'RESUME', 'RESPOND')
               AND ((status = 'PENDING' AND due_at <= #{now})
                    OR (status = 'DELIVERING' AND delivery_lease_until < #{now}))
             """ + MESSAGE_ORDER_GUARD + " ORDER BY due_at, id LIMIT 20")
@@ -60,7 +60,7 @@ public interface DeliveryMapper {
                 delivery_lease_until = #{leaseUntil}, delivery_attempts = delivery_attempts + 1,
                 last_error_code = NULL
             WHERE command_id = #{commandId}
-              AND action IN ('SUBMIT', 'MESSAGE_SUBMIT', 'MASTER_SIGNAL', 'STOP', 'RESUME', 'RESPOND')
+              AND action IN ('SUBMIT', 'MESSAGE_SUBMIT', 'MASTER_SIGNAL', 'TASK_DIRECTIVE', 'STOP', 'RESUME', 'RESPOND')
               AND ((status = 'PENDING' AND due_at <= #{now})
                    OR (status = 'DELIVERING' AND delivery_lease_until < #{now}))
             """)
@@ -104,7 +104,7 @@ public interface DeliveryMapper {
              AND earlier_message.message_id = earlier_reply.source_message_id
             WHERE current_reply.user_id = #{userId}
               AND current_reply.binding_id = #{bindingId}
-              AND earlier_message.message_seq < current_message.message_seq
+              AND COALESCE(earlier_reply.dispatch_sequence, earlier_message.message_seq) < COALESCE(current_reply.dispatch_sequence, current_message.message_seq)
               AND earlier_reply.del_flag = '0'
               AND earlier_reply.status IN ('QUEUED', 'RUNNING', 'RECOVERING', 'RECONCILING', 'CANCELLING')
             FOR UPDATE
@@ -136,7 +136,7 @@ public interface DeliveryMapper {
     @Select("""
             SELECT native_turn_id FROM sq_command
             WHERE user_id = #{userId}
-              AND binding_id = #{bindingId} AND action IN ('SUBMIT','MESSAGE_SUBMIT')
+              AND binding_id = #{bindingId} AND action IN ('SUBMIT','MESSAGE_SUBMIT','MASTER_SIGNAL','TASK_DIRECTIVE')
               AND native_turn_id IS NOT NULL
             ORDER BY id DESC LIMIT 1
             """)
@@ -145,7 +145,14 @@ public interface DeliveryMapper {
 
     @Update("""
             UPDATE sq_command SET status = CASE WHEN #{nativeStatus} = 'rejected' THEN 'BLOCKED'
-                                                 ELSE 'DELIVERED' END,
+                                                 WHEN action IN ('SUBMIT', 'MASTER_SIGNAL', 'TASK_DIRECTIVE') AND EXISTS (
+                     SELECT 1 FROM sq_runtime_binding b
+                     WHERE b.binding_id = sq_command.binding_id
+                       AND b.user_id = sq_command.user_id
+                       AND b.role = 'MASTER'
+                       AND b.task_id IS NOT NULL
+                       AND b.last_ended_turn_id = #{turnId}
+                 ) THEN 'APPLIED' ELSE 'DELIVERED' END,
                 delivery_token = NULL,
                 delivery_lease_until = NULL, native_turn_id = #{turnId},
                 native_run_id = #{runId}, native_status = #{nativeStatus}, last_error_code = NULL

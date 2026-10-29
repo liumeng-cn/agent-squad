@@ -8,5 +8,5 @@ import java.util.List;
  * 目标版本与计划节点状态一起保存，供Master说明真实进展；不授予聊天回复修改计划的权限。
  */
 public record ResponseTaskFacts(String taskId, String status, long version, long planVersion,
-                                boolean cancellationRequested, List<ResponseJobFact> jobs) {
+                                boolean cancellationRequested, List<ResponseJobFact> jobs, long goalRevision, List<TaskDirectiveFact> directives) {
 }

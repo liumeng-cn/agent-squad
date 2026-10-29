@@ -1,5 +1,6 @@
 package com.agentsquad.squad.tools.operation;
 
+import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
 import com.agentsquad.squad.governance.BudgetService;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
@@ -38,6 +39,9 @@ import static com.agentsquad.squad.common.util.RuntimePayloads.toJson;
 @Service
 @Slf4j
 public class OperationService {
+
+    @Resource
+    private TaskDirectiveMapper directives;
 
     @Resource
     private OperationAccessService operationAccessService;
@@ -103,6 +107,10 @@ public class OperationService {
             }
         }
 
+        if (EFFECT_WRITE.equals(request.effect()) && context.taskId() != null
+                && !directives.pending(request.userId(), context.taskId()).isEmpty()) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "用户修改尚待处理，暂停新的外部写入");
+        }
         if (!operationMapper.findUncertainInConversation(request.userId(), context.scopeId()).isEmpty()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "已有外部操作结果待核对，暂停新的外部执行");
         }

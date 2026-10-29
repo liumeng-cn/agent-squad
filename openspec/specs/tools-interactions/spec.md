@@ -8,7 +8,7 @@
 
 ### Requirement: 缺信息追问与敏感操作确认
 
-缺信息追问、敏感操作确认，答复后继续原目标。（R07）
+系统 MUST 遵守以下约束：缺信息追问、敏感操作确认，答复后继续原目标。（R07）
 
 #### Scenario: INPUT 追问
 - **WHEN** 模型缺信息调用 request_input
@@ -20,7 +20,7 @@
 
 ### Requirement: 操作账本与幂等
 
-框架 tool 调用进入 wrapper 时按 bindingId/frameworkTurnId/toolCallId 查唯一 Operation；WRITE 还须 businessIntentKey+requestHash 在 taskId+toolKey 范围幂等。
+系统 MUST 遵守以下约束：框架 tool 调用进入 wrapper 时按 bindingId/frameworkTurnId/toolCallId 查唯一 Operation；WRITE 还须 businessIntentKey+requestHash 在 taskId+toolKey 范围幂等。
 
 #### Scenario: WRITE 需审批（A07）
 - **WHEN** 工具 effect=WRITE
@@ -36,7 +36,7 @@
 
 ### Requirement: 审批单一决定
 
-工具预检在原生 ASK 前建立稳定 Operation/Interaction，原生 pending 按 binding/Turn/toolCallId 绑定同一记录；批准与拒绝只有一条决定，平台拒绝不能被原生 ALLOW 绕过。
+系统 MUST 遵守以下约束：工具预检在原生 ASK 前建立稳定 Operation/Interaction，原生 pending 按 binding/Turn/toolCallId 绑定同一记录；批准与拒绝只有一条决定，平台拒绝不能被原生 ALLOW 绕过。
 
 #### Scenario: 批准驱动执行
 - **WHEN** 用户批准且 requestHash 匹配
@@ -48,7 +48,7 @@
 
 ### Requirement: 未知副作用核对
 
-IN_FLIGHT 后失联统一 UNKNOWN，不直接失败也不自动重发；KEY 确认外部幂等、QUERY 按关联号查证、NONE 需人工证据处置。（R08）
+系统 MUST 遵守以下约束：IN_FLIGHT 后失联统一 UNKNOWN，不直接失败也不自动重发；KEY 确认外部幂等、QUERY 按关联号查证、NONE 需人工证据处置。（R08）
 
 #### Scenario: 回执丢失（A08）
 - **WHEN** 写操作成功但本地回执丢失
@@ -64,7 +64,7 @@ IN_FLIGHT 后失联统一 UNKNOWN，不直接失败也不自动重发；KEY 确�
 
 ### Requirement: 取消不视为回滚
 
-取消后阻断新工作，明确已发生的操作；确认未执行后重试仍重验授权、审批与幂等约束。（R11）
+系统 MUST 遵守以下约束：取消后阻断新工作，明确已发生的操作；确认未执行后重试仍重验授权、审批与幂等约束。（R11）
 
 #### Scenario: 取消与在途操作
 - **WHEN** 取消时操作已 IN_FLIGHT

@@ -1,5 +1,9 @@
 package com.agentsquad.squad.runtime.service;
 
+import com.agentsquad.squad.presentation.service.TaskEventPublishingService;
+import com.agentsquad.squad.conversation.service.ExecutionScopeService;
+import com.agentsquad.squad.runtime.domain.FailureClassification;
+import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
 import com.agentsquad.squad.integration.agentscope.NativeEventView;
 import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
 import com.agentsquad.squad.conversation.domain.RuntimeCommandAction;
@@ -47,6 +51,18 @@ public class TaskFinalizerService {
     private static final String MISSING_PROPOSAL_ANSWER = "本次目标未能生成有效的最终回答，请重新发起。";
 
     @Resource
+    private ExecutionFailureService failures;
+
+    @Resource
+    private ExecutionScopeService scopes;
+
+    @Resource
+    private TaskEventPublishingService conversationProjection;
+
+    @Resource
+    private TaskDirectiveMapper directives;
+
+    @Resource
     private CompletionMapper completionMapper;
 
     @Resource
@@ -72,6 +88,9 @@ public class TaskFinalizerService {
      */
     @Transactional
     public boolean tryComplete(ProjectionTarget target, NativeEventView event) {
+        if (!directives.pending(target.userId(), target.taskId()).isEmpty()) {
+            return false;
+        }
         FinalizationRow row = completionMapper.lockTask(target.userId(), target.taskId());
         if (row == null || !GoalTaskStatus.RUNNING.name().equals(row.status()) || row.cancellationRequested()
                 || row.proposalJson() == null) {
@@ -145,6 +164,9 @@ public class TaskFinalizerService {
      */
     @Transactional
     public boolean recoverMissingProposal(ProjectionTarget target, NativeEventView event) {
+        if (!directives.pending(target.userId(), target.taskId()).isEmpty()) {
+            return true;
+        }
         FinalizationRow row = completionMapper.lockTask(target.userId(), target.taskId());
         if (row == null || !GoalTaskStatus.RUNNING.name().equals(row.status()) || row.cancellationRequested()
                 || row.proposalJson() != null || event.turnId() == null) {
@@ -183,6 +205,10 @@ public class TaskFinalizerService {
         if (conversationMapper.clearActiveTask(row.userId(), row.conversationId(), row.taskId()) != 1) {
             throw new IllegalStateException("对话目标占用与失败终态不一致");
         }
+        var scope = scopes.lockOwned(row.userId(), scopes.scopeForSession(row.userId(), target.sessionId()), false);
+        failures.record(scope, target.bindingId(), "completion-correction-exhausted:" + event.turnId(),
+                new FailureClassification("LOGIC_INVALID", "COMPLETION_CORRECTION_EXHAUSTED", "SYSTEM",
+                        "本次未能形成有效的完整结果，已保留你的内容。"));
         String producerPrefix = "completion:" + row.taskId() + ":" + event.turnId();
         publish(row, producerPrefix + ":answer.completed", "answer.completed",
                 Map.of("text", MISSING_PROPOSAL_ANSWER, "evidenceRefs", List.of()));
@@ -297,7 +323,7 @@ public class TaskFinalizerService {
         if (sequence == null) {
             throw new IllegalStateException("最终事件序号读取失败");
         }
-        taskEventMapper.insertProjected(row.userId(), row.taskId(), sequence,
+        conversationProjection.insertProjected(row.userId(), row.taskId(), sequence,
                 producerKey, type, RuntimePayloads.toJson(objectMapper, payload),
                 LocalDateTime.now(ZoneOffset.UTC));
     }

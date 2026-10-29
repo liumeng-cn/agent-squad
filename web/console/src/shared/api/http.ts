@@ -70,16 +70,19 @@ async function request<T>(method: string, path: string, options: RequestOptions 
   const url = API_BASE ? `${API_BASE}${path}` : path
 
   let response: Response
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 30000)
   try {
     response = await fetch(url, {
       method,
+      signal: controller.signal,
       headers,
       credentials: API_BASE ? 'include' : 'same-origin',
       body: options.body instanceof FormData ? options.body : options.body === undefined ? undefined : JSON.stringify(options.body),
     })
   } catch {
-    throw new ApiError(0, '网络异常，请检查连接后重试')
-  }
+    throw new ApiError(0, '暂时无法确认请求结果，请检查连接后重试')
+  } finally { clearTimeout(timeout) }
 
   if (response.status === 401) {
     clearCsrfToken()

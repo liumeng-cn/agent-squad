@@ -9,5 +9,7 @@ import java.util.List;
  */
 public record ExecutionFailureView(String failureId, String scopeId, String category, String code,
                                    String actor, String safeMessage, boolean retryable, int attempt,
-                                   int maxAttempts, String diagnosticId, List<String> allowedActions) {
+                                   int maxAttempts, String diagnosticId, List<String> allowedActions,
+                                   String executionId, Long expectedVersion, String taskId, String sourceMessageId,
+                                   String status, String nextAttemptAt) {
 }

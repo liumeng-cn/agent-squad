@@ -2,6 +2,8 @@ package com.agentsquad.squad.conversation.controller;
 
 import com.agentsquad.squad.conversation.dto.CommandReceipt;
 import com.agentsquad.squad.conversation.dto.ControlRequest;
+import com.agentsquad.squad.conversation.dto.MessageReceipt;
+import com.agentsquad.squad.conversation.service.ResponseRetryService;
 import com.agentsquad.squad.conversation.service.ResponseControlService;
 import com.agentsquad.squad.identity.AuthService;
 import jakarta.annotation.Resource;
@@ -23,6 +25,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class ResponseControlController {
     @Resource
+    private ResponseRetryService retries;
+
+    @Resource
     private AuthService auth;
 
     @Resource
@@ -34,5 +39,13 @@ public class ResponseControlController {
                                  @RequestHeader(value = "X-CSRF-Token", required = false) String csrf, @PathVariable String executionId,
                                  @RequestHeader("Idempotency-Key") String key, @Valid @RequestBody ControlRequest request) {
         return controls.cancel(auth.authenticateWrite(token, csrf).userId(), executionId, key, request.expectedVersion());
+    }
+
+    @PostMapping("/api/v1/executions/{executionId}/retry")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public MessageReceipt retry(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
+            @RequestHeader(value = "X-CSRF-Token", required = false) String csrf, @PathVariable String executionId,
+            @RequestHeader("Idempotency-Key") String key, @Valid @RequestBody ControlRequest request) {
+        return retries.retry(auth.authenticateWrite(token, csrf).userId(), executionId, key, request.expectedVersion());
     }
 }

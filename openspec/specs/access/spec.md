@@ -8,7 +8,7 @@
 
 ### Requirement: 用户数据访问隔离
 
-平台必须确保用户只能访问自己的会话、任务、记忆与产物；服务不接受模型自报身份，身份只能由服务端认证主体建立。（R01）
+系统 MUST 遵守以下约束：平台必须确保用户只能访问自己的会话、任务、记忆与产物；服务不接受模型自报身份，身份只能由服务端认证主体建立。（R01）
 
 #### Scenario: 伪造身份拒绝
 - **WHEN** 请求伪造用户标识或自定义 org/user/session 命名空间
@@ -24,7 +24,7 @@
 
 ### Requirement: 会话认证与 CSRF 防护
 
-登录产生 HttpOnly 会话与绑定 CSRF 令牌，写请求必须同时携带 Cookie 与 X-CSRF-Token；账号禁用或授权版本变化使旧会话失效。
+系统 MUST 遵守以下约束：登录产生 HttpOnly 会话与绑定 CSRF 令牌，写请求必须同时携带 Cookie 与 X-CSRF-Token；账号禁用或授权版本变化使旧会话失效。
 
 #### Scenario: 缺会话或 CSRF 拒绝
 - **WHEN** 写请求缺 Cookie 或 X-CSRF-Token
@@ -36,7 +36,7 @@
 
 ### Requirement: 对话删除屏障
 
-删除对话校验 If-Match，事务内递增 generation、置 DELETING、撤销在途目标并写取消与清理命令；立即禁止读取与继续，仅停止与核对可执行。
+系统 MUST 遵守以下约束：删除对话校验 If-Match，事务内递增 generation、置 DELETING、撤销在途目标并写取消与清理命令；立即禁止读取与继续，仅停止与核对可执行。
 
 #### Scenario: 删除与受理并发
 - **WHEN** 删除对话与提交新目标并发

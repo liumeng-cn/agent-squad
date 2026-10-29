@@ -1,5 +1,6 @@
 package com.agentsquad.squad.conversation.service;
 
+import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
 import com.agentsquad.squad.artifact.ArtifactMapper;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
@@ -35,6 +36,9 @@ import java.util.List;
 public class ResponseContextService {
 
     private static final int MAX_CONTEXT_CHARACTERS = 200000;
+
+    @Resource
+    private TaskDirectiveMapper directives;
 
     @Resource
     private ExecutionScopeService scopeService;
@@ -102,7 +106,9 @@ public class ResponseContextService {
         }
         validateArtifacts(userId, messages);
         ResponseContextSnapshot snapshot = new ResponseContextSnapshot(scope.conversationId(),
-                scope.conversationGeneration(), source.sourceMessageId(), source.sourceSequence(), List.copyOf(messages), activeTask(scope));
+                scope.conversationGeneration(), source.sourceMessageId(), source.sourceSequence(), List.copyOf(messages), activeTask(scope),
+                List.copyOf(taskFacts.recentTasks(userId, scope.conversationId(), scope.conversationGeneration(), source.sourceSequence())),
+                List.copyOf(taskFacts.recentFailures(userId, scope.conversationId(), scope.conversationGeneration(), source.sourceSequence())));
         String json = RuntimePayloads.toJson(objectMapper, snapshot);
         if (mapper.freeze(userId, source.executionId(), json, ContentDigests.sha256(json)) != 1) {
             throw new IllegalStateException("回复上下文冻结发生竞争");
@@ -127,7 +133,9 @@ public class ResponseContextService {
             return null;
         }
         return new ResponseTaskFacts(task.taskId(), task.status(), task.version(), task.planVersion(),
-                task.cancelRequestedAt() != null, List.copyOf(taskFacts.jobs(scope.userId(), task.taskId(), task.planVersion())));
+                task.cancelRequestedAt() != null, List.copyOf(taskFacts.jobs(scope.userId(), task.taskId(), task.planVersion())),
+                directives.goalState(scope.userId(), task.taskId()).goalRevision(),
+                List.copyOf(directives.latestFacts(scope.userId(), task.taskId())));
     }
 
     private RuntimeBusinessException contextTooLarge() {

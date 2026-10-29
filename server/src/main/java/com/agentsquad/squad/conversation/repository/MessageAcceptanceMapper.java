@@ -67,9 +67,9 @@ public interface MessageAcceptanceMapper {
 
     @Insert("""
             INSERT INTO sq_response_execution (execution_id, user_id, conversation_id, source_message_id,
-                                               scope_id, binding_id, status, creator_id, last_updater_id)
+                                               scope_id, binding_id, status, dispatch_sequence, creator_id, last_updater_id)
             VALUES (#{executionId}, #{userId}, #{conversationId}, #{messageId}, #{scopeId}, #{bindingId},
-                    'QUEUED', #{userId}, #{userId})
+                    'QUEUED', (SELECT message_seq FROM sq_message WHERE user_id = #{userId} AND message_id = #{messageId}), #{userId}, #{userId})
             """)
     int insertExecution(@Param("executionId") String executionId, @Param("userId") String userId,
                         @Param("conversationId") String conversationId, @Param("messageId") String messageId,

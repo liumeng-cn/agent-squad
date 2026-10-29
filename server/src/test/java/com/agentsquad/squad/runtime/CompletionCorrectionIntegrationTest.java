@@ -135,6 +135,8 @@ class CompletionCorrectionIntegrationTest {
             projection.accept(target, event(4, "run/end", secondTurn, NativeRunOutcome.COMPLETED.code()));
 
             assertThat(tasks.findTask(USER_ID, target.taskId()).status()).isEqualTo(GoalTaskStatus.FAILED.name());
+            assertThat(context.getBean(org.springframework.jdbc.core.JdbcTemplate.class).queryForObject(
+                    "SELECT category FROM sq_execution_failure WHERE binding_id=?", String.class, target.bindingId())).isEqualTo("LOGIC_INVALID");
             assertThat(conversations.findOwned(USER_ID, conversationId).activeTaskId()).isNull();
             assertThat(tasks.listEvents(USER_ID, target.taskId(), 0))
                     .extracting(item -> item.type())

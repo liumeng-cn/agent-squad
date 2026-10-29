@@ -1,5 +1,6 @@
 package com.agentsquad.squad.integration.agentscope;
 
+import com.agentsquad.squad.runtime.service.ExecutionFailureService;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.governance.BudgetService;
 import com.agentsquad.squad.governance.repository.BudgetMapper;
@@ -38,6 +39,9 @@ import java.util.function.Function;
 @Slf4j
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class ModelBudgetMiddleware implements MiddlewareBase {
+
+    @Resource
+    private ExecutionFailureService failures;
 
     @Resource
     private BudgetMapper budgetMapper;
@@ -80,45 +84,51 @@ public class ModelBudgetMiddleware implements MiddlewareBase {
             }
             WorkerModelProfile profile = profileRegistry.requireExecutableModel(profileKey);
             String requestHash = requestHash(input, profileKey);
-            String usageKey = "model:" + turnId + ":" + requestHash;
-            AtomicBoolean settled = new AtomicBoolean(false);
-            return Mono.fromCallable(() -> {
-                        String scopeId = budgetMapper.findScopeBySession(userId, sessionId);
-                        if (scopeId == null) {
-                            throw new IllegalStateException("模型会话未绑定执行作用域");
-                        }
-                        budgetService.reserveModel(userId, scopeId, usageKey, requestHash,
-                                profileKey, profile);
-                        return scopeId;
-                    })
-                    .subscribeOn(Schedulers.boundedElastic())
-                    .flatMapMany(scopeId -> next.apply(input)
-                            .concatMap(event -> {
-                                if (!(event instanceof ModelCallEndEvent endEvent)) {
-                                    return Mono.just(event);
-                                }
-                                ChatUsage usage = endEvent.getUsage();
-                                if (usage == null) {
-                                    return Mono.error(new IllegalStateException("模型响应缺少可信用量"));
-                                }
-                                return Mono.fromCallable(() -> {
-                                            budgetService.settleModel(userId, scopeId, usageKey,
-                                                    profile, usage.getInputTokens(), usage.getOutputTokens());
-                                            settled.set(true);
-                                            return event;
+            return Mono.fromCallable(() -> failures.modelRetrySuffix(userId, sessionId))
+                    .subscribeOn(Schedulers.boundedElastic()).flatMapMany(retrySuffix -> {
+                        String usageKey = "model:" + turnId + ":" + requestHash + retrySuffix;
+                        AtomicBoolean settled = new AtomicBoolean(false);
+                        return Mono.fromCallable(() -> {
+                                    failures.requireModelAllowed(userId, sessionId);
+                                    String scopeId = budgetMapper.findScopeBySession(userId, sessionId);
+                                    if (scopeId == null) {
+                                        throw new IllegalStateException("模型会话未绑定执行作用域");
+                                    }
+                                    budgetService.reserveModel(userId, scopeId, usageKey, requestHash,
+                                            profileKey, profile);
+                                    return scopeId;
+                                })
+                                .subscribeOn(Schedulers.boundedElastic())
+                                .flatMapMany(scopeId -> next.apply(input)
+                                        .concatMap(event -> {
+                                            if (!(event instanceof ModelCallEndEvent endEvent)) {
+                                                return Mono.just(event);
+                                            }
+                                            ChatUsage usage = endEvent.getUsage();
+                                            if (usage == null) {
+                                                return Mono.error(new IllegalStateException("模型响应缺少可信用量"));
+                                            }
+                                            return Mono.fromCallable(() -> {
+                                                        budgetService.settleModel(userId, scopeId, usageKey,
+                                                                profile, usage.getInputTokens(), usage.getOutputTokens());
+                                                        settled.set(true);
+                                                        return event;
+                                                    })
+                                                    .subscribeOn(Schedulers.boundedElastic());
                                         })
-                                        .subscribeOn(Schedulers.boundedElastic());
-                            })
-                            .onErrorResume(error -> markUnknown(userId, scopeId, usageKey)
-                                    .thenMany(Flux.error(error)))
-                            .concatWith(Flux.defer(() -> settled.get() ? Flux.empty()
-                                    : markUnknown(userId, scopeId, usageKey).thenMany(Flux.error(
-                                    new IllegalStateException("模型调用结束但没有用量终结事件")))))
-                            .doOnCancel(() -> {
-                                if (!settled.get()) {
-                                    markUnknown(userId, scopeId, usageKey).subscribe();
-                                }
-                            }));
+                                        .onErrorResume(error -> markUnknown(userId, scopeId, usageKey)
+                                                .thenMany(Flux.error(error)))
+                                        .concatWith(Flux.defer(() -> settled.get() ? Flux.empty()
+                                                : markUnknown(userId, scopeId, usageKey).thenMany(Flux.error(
+                                                new IllegalStateException("模型调用结束但没有用量终结事件")))))
+                                        .doOnCancel(() -> {
+                                            if (!settled.get()) {
+                                                markUnknown(userId, scopeId, usageKey).subscribe();
+                                            }
+                                        }))
+                                .onErrorResume(error -> Mono.fromRunnable(() -> failures.reportModel(userId, sessionId, usageKey, error))
+                                        .subscribeOn(Schedulers.boundedElastic()).thenMany(Flux.error(error)));
+                    });
         });
     }
 

@@ -124,7 +124,7 @@ public interface CommandMapper {
             UPDATE sq_command SET status = 'APPLIED'
             WHERE user_id = #{userId} AND task_id = #{taskId}
               AND native_turn_id = #{turnId} AND status = 'DELIVERED'
-              AND action IN ('SUBMIT', 'MASTER_SIGNAL')
+              AND action IN ('SUBMIT', 'MASTER_SIGNAL', 'TASK_DIRECTIVE')
             """)
     int markMasterTurnApplied(@Param("userId") String userId, @Param("taskId") String taskId,
                               @Param("turnId") String turnId);
@@ -134,7 +134,7 @@ public interface CommandMapper {
             JOIN sq_runtime_binding b ON b.user_id = c.user_id
                 AND b.binding_id = c.binding_id AND b.role = 'MASTER'
             WHERE c.user_id = #{userId} AND c.task_id = #{taskId}
-              AND c.action IN ('SUBMIT', 'MASTER_SIGNAL')
+              AND c.action IN ('SUBMIT', 'MASTER_SIGNAL', 'TASK_DIRECTIVE')
               AND c.status IN ('PENDING', 'DELIVERING', 'DELIVERED')
             """)
     int countUnprocessedMasterCommands(@Param("userId") String userId,

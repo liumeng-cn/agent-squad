@@ -2,65 +2,65 @@
 
 ## Purpose
 
-Web 工作台能力负责一个目标的统一正文、真实增量、快照与回放，以及追问/审批、连接、记忆、Skill 与管理员能力的页面入口；页面属于一期交付，不生成工具操作页面。视觉基线见 [视觉评审稿](assets/README.md)，静态稿见 assets/ 下 PNG/SVG。（R10）
+Web 工作台以连续对话为入口，负责消息与后台工作的统一正文、真实状态、快照与回放，以及追问/审批、连接、记忆、Skill 与管理员能力的页面入口；页面属于一期交付。视觉基线见 [视觉评审稿](assets/README.md)，静态稿见 assets/ 下 PNG/SVG。（R10）
 
 ## Requirements
 
 ### Requirement: 信息架构与权限
 
-页面按登录、工作台、任务详情、技能、连接设置、记忆设置、Worker 管理七个路由组织；角色只控制导航与交互体验，服务端授权决定最终访问权。路由模板：`/login`、`/app/conversations/:conversationId?`、`/app/tasks/:taskId`、`/app/skills`、`/app/settings/connections`、`/app/settings/memory`、`/app/admin/workers`。
+页面 MUST 以对话为默认入口，包含登录、对话、技能、连接设置、记忆设置和管理员能力设置；普通用户完成回复、工作控制、追问、审批、核对与下载不依赖任务详情路由。角色只控制导航与体验，服务端授权决定访问权。路由模板：`/login`、`/app/conversations/:conversationId?`、`/app/tasks/:taskId`（定位所属对话）、`/app/skills`、`/app/settings/connections`、`/app/settings/memory`、`/app/admin/workers`。
 
 #### Scenario: 未登录转登录（B01）
 - **WHEN** 进入页面先取 currentUser，未登录或登录失效
 - **THEN** 转登录并返回原地址；旧内容和订阅清除，不反复创建新会话
 
 #### Scenario: 管理员不默认越权（B14）
-- **WHEN** 普通用户直达 Worker 管理页或越权调用其接口
+- **WHEN** 普通用户直达管理员能力设置页或越权调用其接口
 - **THEN** 页面无操作入口，直接请求仍被后端拒绝；管理员也不隐式获得读取其他用户内容权限
 
 ### Requirement: 提交目标与恢复显示
 
-提交固定幂等键、附件就绪后才引用；202 只表示平台持久接受；恢复显示只读快照与增量，刷新/重连不触发新执行。
+页面 MUST 发送用户消息而非强制建任务；提交固定幂等键，附件就绪后才引用；202 只表示持久接受。恢复显示只读快照与增量，刷新/重连不触发新执行，任务在途仍可继续交流。
 
 #### Scenario: 发送超时与重复点击（B02）
 - **WHEN** 发送超时或重复点击
-- **THEN** 固定 Idempotency-Key，超时保留原 key/输入补查或重送，不生成第二个目标
+- **THEN** 固定 Idempotency-Key，超时保留原 key/输入补查或重送，不生成第二条消息或回复执行
 
 #### Scenario: 附件未就绪（B03）
 - **WHEN** 附件上传失败或未到 READY
-- **THEN** 不把无效 artifactId 加入 TaskCreate，给出可理解重试入口
+- **THEN** 不把无效 artifactId 加入消息，给出可理解重试入口；原生文件控件隐藏，附件卡显示名称、上传状态与移除动作
 
 #### Scenario: 刷新/切页/断线（B04）
 - **WHEN** 刷新、切换会话或断线重连
-- **THEN** 恢复显示只读 snapshot + events，不 submit/resume，无双连接串消息
+- **THEN** 恢复显示只读 snapshot + events，不 submit/resume，无双连接串消息；未完成回复和工作继续显示
 
 ### Requirement: 状态与可用动作
 
-页面按 QUEUED/RUNNING/WAITING_WORKERS/WAITING_INPUT/WAITING_APPROVAL/RECOVERY_BLOCKED/RECONCILING/CANCELLING 与终态给出初始动作；所有控制请求携带 expectedVersion，409 后刷新快照。
+页面 MUST 区分消息受理、正在回复、任务处理中、等待用户、自动恢复、连接中断和完成/失败；状态及动作来自服务端事实，控制请求携带 expectedVersion，409 后刷新，不展示内部角色、节点或假进度。
 
 #### Scenario: 状态不混同（B05）
 - **WHEN** 任务处于等待输入/审批或部分成功
-- **THEN** 每种状态有正确动作，不显示为完成，不用假百分比或定时文本模拟进度
+- **THEN** 每种状态有正确动作，不显示为完成，不用假百分比或定时文本模拟进度；没有正文时仍可感知真实执行状态
 
 #### Scenario: 取消与在途操作（B07）
 - **WHEN** 取消时仍有在途操作待核对
-- **THEN** 页面区分停止中与已取消，不点击后立即标为已取消
+- **THEN** 页面区分停止中与已取消，不点击后立即标为已取消；回答与工作有明确停止范围
 
 ### Requirement: 追问、审批与核对
 
-INPUT 仅支持受限 JSON Schema 表单；审批卡展示脱敏影响并要求 requestHash 匹配；核对抽屉按服务端计算的 canReconcile 展示。
+对话内 MUST 提供受限 JSON Schema INPUT 表单、展示脱敏影响的审批卡及受权核对入口；审批要求 requestHash 匹配，核对动作按服务端 canReconcile 展示，不要求打开任务详情。
 
 #### Scenario: 旧审批与重复回复（B06）
 - **WHEN** 审批已失效、版本冲突或重复回复
 - **THEN** 刷新事实；重复回复用原幂等键；失败或失效保持真实状态，不显示未发生的成功
 
 #### Scenario: 核对权限（B09）
-- **WHEN** 打开任务详情与核对入口
+- **WHEN** 打开对话中的核对入口
 - **THEN** 无权限无操作入口，直接请求仍被后端拒绝；不提供“忽略未知并继续”
 
 ### Requirement: Skill、连接与记忆页面
 
-Skill 导入先预览再服务端规范化验证，启用只加入个人可用目录；连接不返回原 Secret；记忆由用户主动创建/纠正/删除并有版本冲突提示。
+系统 MUST 遵守以下约束：Skill 导入先预览再服务端规范化验证，启用只加入个人可用目录；连接不返回原 Secret；记忆由用户主动创建/纠正/删除并有版本冲突提示。
 
 #### Scenario: Skill 导入与启用（B11）
 - **WHEN** 导入或启用/停用 Skill
@@ -76,24 +76,48 @@ Skill 导入先预览再服务端规范化验证，启用只加入个人可用�
 
 ### Requirement: SSE 与技术边界
 
-同源 Cookie、原生 EventSource；首次 after 参数取 snapshot.cursor，重连合法 Last-Event-ID 优先；事件名统一 message、按 seq 去重、按 revision 替换正文；受限 Markdown 渲染。
+系统 MUST 使用同源 Cookie、原生 EventSource；首次 after 取会话 snapshot.cursor，重连合法 Last-Event-ID 优先；事件名统一 message，按会话 seq 去重、按消息 revision 替换正文；受限 Markdown 渲染。
 
 #### Scenario: 半答案替换与多轮折叠（B08）
 - **WHEN** 新一轮 Master 或半答案重生成
-- **THEN** 只显示一个用户目标，answer.replaced 替换而不拼接，内部 Turn 不显示为新用户消息
+- **THEN** 同一回复按消息身份替换而不拼接；内部 Turn 不显示为新用户消息，多个真实用户消息分别保留
 
 #### Scenario: 键盘/窄屏/恶意 Markdown（B15）
 - **WHEN** 键盘操作、窄屏或 Markdown 含恶意内容
-- **THEN** 焦点可见、主要动作不隐藏、无脚本执行；颜色不作为唯一状态提示
+- **THEN** 焦点可见、主要动作不隐藏、无脚本执行；颜色不作为唯一状态提示；中文输入法候选确认不误触发送
 
 #### Scenario: 下载与鉴权（B10）
 - **WHEN** 下载不存在或越权产物
-- **THEN** 显示明确错误，无内部路径泄露，后端重验授权
+- **THEN** 对话内显示明确错误，无内部路径泄露，后端重验授权
 
 ### Requirement: 统一助手表达
 
-默认页面和回答围绕用户目标与实际结果表达，隐藏内部角色、节点、版本及轮次。保留必要追问、实际操作确认、未知结果和失败缺口。
+系统 MUST 遵守以下约束：默认页面和回答围绕用户目标与实际结果表达，隐藏内部角色、节点、版本及轮次。保留必要追问、实际操作确认、未知结果和失败缺口。
 
 #### Scenario: 内部协作不打断用户
 - **WHEN** 内部多个执行步骤处理同一目标
 - **THEN** 用户只看到统一助手的结果与必要交互，不接收内部角色汇报或执行记录正文
+
+### Requirement: 标题与默认输入体验
+
+页面 MUST 在无会话地址立即展示可输入空态，首发前不创建持久空会话；首次有效交流后安全生成标题，允许用户修改，历史无标题有确定性展示标题；标题失败不阻塞正文，自动标题不覆盖手动标题。
+
+#### Scenario: 首次进入与新建
+- **WHEN** 登录进入默认对话页或点击新建对话
+- **THEN** 立即展示问候与输入框，焦点可达；首发时原子建立会话与消息，失败重试不重复创建空会话
+
+#### Scenario: 自动与手动标题竞争
+- **WHEN** 自动标题尚未完成时用户手动改名
+- **THEN** 保留用户标题，晚到自动结果不覆盖；标题按纯文本显示且不泄露附件或内部上下文
+
+#### Scenario: 历史标题
+- **WHEN** 打开历史空标题或通用默认标题对话
+- **THEN** 以首条有效用户消息的安全短摘要显示主题，不自动重跑历史任务
+
+### Requirement: 对话布局与附件操作
+
+页面 MUST 采用窄侧栏与可读宽度消息区，空态输入居中、交流后输入停留底部；文本区下方提供附件图标和发送/停止动作，附件紧凑卡片位于输入框内，不显示尚未实现的模型能力开关。
+
+#### Scenario: 上传与发送
+- **WHEN** 用户添加允许类型的附件
+- **THEN** 输入框内展示名称与就绪/上传中/失败状态，可移除或重试；上传未就绪不发送无效引用，切换对话不串入旧上传结果

@@ -97,7 +97,7 @@ public class CommandDeliveryService {
                 return;
             }
             switch (action) {
-                case SUBMIT, MESSAGE_SUBMIT, MASTER_SIGNAL -> deliverSubmit(commandId, token, delivery);
+                case SUBMIT, MESSAGE_SUBMIT, MASTER_SIGNAL, TASK_DIRECTIVE -> deliverSubmit(commandId, token, delivery);
                 case STOP -> deliverStop(commandId, token, delivery);
                 case RESUME -> deliverResume(commandId, token, delivery);
                 case RESPOND -> deliverRespond(commandId, token, delivery);

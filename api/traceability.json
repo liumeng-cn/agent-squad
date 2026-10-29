@@ -21,16 +21,26 @@
       "M02"
     ],
     "schemas": [
-      "TaskReceipt",
       "CommandReceipt",
+      "ConversationEvent",
+      "ConversationTaskState",
+      "ConversationTitleUpdate",
       "MessageCreateRequest",
       "MessageReceipt",
-      "ResponseExecutionStatus"
+      "ResponseExecutionStatus",
+      "TaskDirectiveDecision",
+      "TaskDirectiveReceipt",
+      "TaskDirectiveSubmit",
+      "TaskReceipt"
     ],
     "operations": [
       "createTask",
-      "submitFirstMessage",
-      "submitConversationMessage"
+      "getConversationSnapshot",
+      "observeConversationEvents",
+      "renameConversation",
+      "retryResponseExecution",
+      "submitConversationMessage",
+      "submitFirstMessage"
     ],
     "cases": [
       "A01",
@@ -43,12 +53,23 @@
       "M03"
     ],
     "schemas": [
-      "PlanPublish",
       "CompletionProposal",
+      "ConversationEvent",
+      "ConversationTaskState",
+      "ConversationTitleUpdate",
+      "GoalTaskCreate",
+      "PlanPublish",
       "ResponseExecutionView",
-      "GoalTaskCreate"
+      "TaskDirectiveDecision",
+      "TaskDirectiveReceipt",
+      "TaskDirectiveSubmit"
     ],
-    "operations": [],
+    "operations": [
+      "getConversationSnapshot",
+      "observeConversationEvents",
+      "renameConversation",
+      "retryResponseExecution"
+    ],
     "cases": [
       "A04",
       "A09",
@@ -90,10 +111,21 @@
       "M04"
     ],
     "schemas": [
+      "ConversationEvent",
+      "ConversationTaskState",
+      "ConversationTitleUpdate",
       "PlanPublish",
+      "TaskDirectiveDecision",
+      "TaskDirectiveReceipt",
+      "TaskDirectiveSubmit",
       "WorkerJob"
     ],
-    "operations": [],
+    "operations": [
+      "getConversationSnapshot",
+      "observeConversationEvents",
+      "renameConversation",
+      "retryResponseExecution"
+    ],
     "cases": [
       "A04",
       "A06",
@@ -156,14 +188,24 @@
       "M08"
     ],
     "schemas": [
-      "TaskSnapshot",
-      "TaskEvent",
+      "ConversationEvent",
       "ConversationSnapshot",
-      "MessageView"
+      "ConversationTaskState",
+      "ConversationTitleUpdate",
+      "MessageView",
+      "TaskDirectiveDecision",
+      "TaskDirectiveReceipt",
+      "TaskDirectiveSubmit",
+      "TaskEvent",
+      "TaskSnapshot"
     ],
     "operations": [
+      "getConversationSnapshot",
       "getTaskSnapshot",
-      "observeTaskEvents"
+      "observeConversationEvents",
+      "observeTaskEvents",
+      "renameConversation",
+      "retryResponseExecution"
     ],
     "cases": [
       "A12",

@@ -139,11 +139,7 @@ public class MessageAcceptanceWriter {
     }
 
     private String fallbackTitle(String text) {
-        String title = text.replaceAll("[\\p{Cc}\\p{Cf}]+", " ").replaceAll("(?U)\\s+", " ").strip();
-        if (title.isEmpty()) {
-            return "新对话";
-        }
-        int length = Math.min(32, title.codePointCount(0, title.length()));
-        return title.substring(0, title.offsetByCodePoints(0, length));
+        String title = com.agentsquad.squad.conversation.domain.ConversationTitles.safe(text, 32);
+        return title.isEmpty() ? "新对话" : title;
     }
 }

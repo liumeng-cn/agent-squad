@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime.service;
 
+import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.conversation.domain.RuntimeCommandAction;
@@ -32,6 +33,9 @@ import java.util.Set;
 @Service
 @Slf4j
 public class MasterSignalService {
+
+    @Resource
+    private TaskDirectiveMapper directives;
 
     @Resource
     private PlanMapper planMapper;
@@ -74,6 +78,10 @@ public class MasterSignalService {
     }
 
     private void createIfReady(PlanRow plan) {
+        if (!directives.pending(plan.userId(), plan.taskId()).isEmpty()
+                || directives.pendingControls(plan.userId(), plan.taskId()) > 0) {
+            return;
+        }
         if (planMapper.countSignalEligibleTask(plan.userId(), plan.taskId()) == 0) {
             return;
         }

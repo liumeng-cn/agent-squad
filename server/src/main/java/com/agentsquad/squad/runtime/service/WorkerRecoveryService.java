@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime.service;
 
+import com.agentsquad.squad.presentation.service.TaskEventPublishingService;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.conversation.domain.RuntimeCommandAction;
@@ -38,6 +39,9 @@ import java.util.UUID;
 @Service
 @Slf4j
 public class WorkerRecoveryService {
+
+    @Resource
+    private TaskEventPublishingService conversationProjection;
 
     @Resource
     private TaskMapper taskMapper;
@@ -132,7 +136,7 @@ public class WorkerRecoveryService {
                 if (projectionMapper.reserveEventSequence(target.userId(), target.taskId()) != 1) {
                     throw new IllegalStateException("Worker 恢复阻塞事件序号保留失败");
                 }
-                taskEventMapper.insertProjected(target.userId(), target.taskId(),
+                conversationProjection.insertProjected(target.userId(), target.taskId(),
                         projectionMapper.eventSequence(target.userId(), target.taskId()),
                         "worker-resume:" + job.jobId() + ":limit", "job.recovery_blocked",
                         RuntimePayloads.toJson(objectMapper, Map.of(
@@ -170,7 +174,7 @@ public class WorkerRecoveryService {
             if (projectionMapper.reserveEventSequence(userId, taskId) != 1) {
                 throw new IllegalStateException("Worker 恢复阻塞事件序号保留失败");
             }
-            taskEventMapper.insertProjected(userId, taskId,
+            conversationProjection.insertProjected(userId, taskId,
                     projectionMapper.eventSequence(userId, taskId),
                     "worker-resume:" + commandId + ":blocked", "job.recovery_blocked",
                     RuntimePayloads.toJson(objectMapper, Map.of(

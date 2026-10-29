@@ -24,21 +24,21 @@
       ],
       "operations": [
         "listConversations",
-        "createConversation",
-        "getConversation",
-        "listConversationTasks",
-        "createTask",
-        "uploadArtifact",
-        "getTaskSnapshot",
-        "observeTaskEvents",
-        "cancelTask",
-        "resumeTask",
-        "respondInteraction",
-        "getCommandReceipt",
-        "deleteConversation",
+        "getConversationSnapshot",
+        "observeConversationEvents",
+        "renameConversation",
         "submitFirstMessage",
         "submitConversationMessage",
-        "cancelResponseExecution"
+        "cancelResponseExecution",
+        "retryResponseExecution",
+        "cancelTask",
+        "respondInteraction",
+        "reconcileOperation",
+        "uploadArtifact",
+        "downloadArtifact",
+        "deleteConversation",
+        "getArtifact",
+        "getOperationDetail"
       ],
       "cases": [
         "B02",
@@ -48,6 +48,8 @@
         "B06",
         "B07",
         "B08",
+        "B09",
+        "B10",
         "B15"
       ]
     },
@@ -59,24 +61,15 @@
       ],
       "operations": [
         "getTask",
-        "getTaskSnapshot",
-        "observeTaskEvents",
-        "listTaskJobs",
-        "listTaskOperations",
-        "listTaskInteractions",
-        "getOperationDetail",
-        "getArtifact",
-        "downloadArtifact",
-        "reconcileOperation",
-        "listTaskArtifacts",
-        "respondInteraction"
+        "getConversationSnapshot"
       ],
       "cases": [
         "B04",
         "B05",
         "B09",
         "B10"
-      ]
+      ],
+      "description": "旧地址只定位所属对话，不再提供普通任务详情工作台。"
     },
     {
       "page": "skills",
@@ -145,6 +138,18 @@
     "reconcileOperation": "OPERATOR_WITH_RESOURCE_SCOPE"
   },
   "nonPageActions": [
-    "logout"
+    "createConversation",
+    "createTask",
+    "getCommandReceipt",
+    "getConversation",
+    "getTaskSnapshot",
+    "listConversationTasks",
+    "listTaskArtifacts",
+    "listTaskInteractions",
+    "listTaskJobs",
+    "listTaskOperations",
+    "logout",
+    "observeTaskEvents",
+    "resumeTask"
   ]
 }

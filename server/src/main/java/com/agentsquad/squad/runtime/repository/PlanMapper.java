@@ -22,7 +22,7 @@ import java.util.List;
 public interface PlanMapper {
 
     String PLAN_COLUMNS = "id, plan_id, user_id, task_id, plan_version, status, logical_key, "
-            + "definition_json, signal_version, version";
+            + "definition_json, signal_version, version, goal_revision";
 
     String JOB_COLUMNS = "id, job_id, user_id, task_id, plan_version, node_key, worker_key, "
             + "worker_version, status, depends_on_json, input_json, result_candidate_json, "
@@ -63,7 +63,8 @@ public interface PlanMapper {
             @Arg(column = "logical_key", javaType = String.class),
             @Arg(column = "definition_json", javaType = String.class),
             @Arg(column = "signal_version", javaType = long.class),
-            @Arg(column = "version", javaType = long.class)
+            @Arg(column = "version", javaType = long.class),
+            @Arg(column = "goal_revision", javaType = long.class)
     })
     @Select("SELECT " + PLAN_COLUMNS + " FROM sq_plan "
             + "WHERE task_id = #{taskId} AND logical_key = #{logicalKey} "
@@ -92,7 +93,8 @@ public interface PlanMapper {
             @Arg(column = "logical_key", javaType = String.class),
             @Arg(column = "definition_json", javaType = String.class),
             @Arg(column = "signal_version", javaType = long.class),
-            @Arg(column = "version", javaType = long.class)
+            @Arg(column = "version", javaType = long.class),
+            @Arg(column = "goal_revision", javaType = long.class)
     })
     @Select("SELECT " + PLAN_COLUMNS + " FROM sq_plan WHERE user_id = #{userId} "
             + "AND task_id = #{taskId} AND plan_version = #{planVersion} FOR UPDATE")
@@ -180,17 +182,17 @@ public interface PlanMapper {
 
     @Insert("""
             INSERT INTO sq_plan
-                (plan_id, user_id, task_id, plan_version, logical_key, status, definition_json, signal_version,
+                (plan_id, user_id, task_id, plan_version, logical_key, status, definition_json, signal_version, goal_revision,
                  creator_id, creator_name, last_updater_id, last_updater_name)
             VALUES
                 (#{planId}, #{userId}, #{taskId}, #{planVersion}, #{logicalKey}, 'ACTIVE', #{definitionJson},
-                 #{signalVersion},
+                 #{signalVersion}, #{goalRevision},
                  #{userId}, '', #{userId}, '')
             """)
     int insertPlan(@Param("planId") String planId, @Param("userId") String userId,
                    @Param("taskId") String taskId, @Param("planVersion") long planVersion,
                    @Param("logicalKey") String logicalKey, @Param("definitionJson") String definitionJson,
-                   @Param("signalVersion") long signalVersion);
+                   @Param("signalVersion") long signalVersion, @Param("goalRevision") long goalRevision);
 
     @Insert("""
             INSERT INTO sq_worker_job

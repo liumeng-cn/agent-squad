@@ -24,6 +24,7 @@ import io.agentscope.extensions.jdbc.JdbcDistributedStore;
 import io.agentscope.extensions.jdbc.dialect.AbstractJdbcDialect;
 import io.agentscope.extensions.model.openai.OpenAIChatModel;
 import io.agentscope.harness.agent.HarnessAgent;
+import io.agentscope.harness.agent.tools.ToolsConfig;
 import io.agentscope.harness.agent.IsolationScope;
 import io.agentscope.harness.agent.filesystem.spec.RemoteFilesystemSpec;
 import io.agentscope.harness.agent.session.AgentSession;
@@ -37,6 +38,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 import javax.sql.DataSource;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -161,6 +163,8 @@ public class WorkerFactory {
                 + "局部上下文（JSON）：" + snapshot.itemsJson()
                 + "。完成工作后必须调用 report_job_result，result 须符合已发布输出 Schema："
                 + definition.outputSchema();
+        ToolsConfig toolsConfig = new ToolsConfig();
+        toolsConfig.setDeny(List.of("wait_async_results"));
         HarnessAgent agent = HarnessAgent.builder()
                 .agentId(agentId)
                 .name("Worker " + definition.workerKey() + " " + definition.workerVersion())
@@ -181,6 +185,7 @@ public class WorkerFactory {
                 .toolkit(toolkit)
                 .distributedStore(JdbcDistributedStore.create(dataSource, dialect))
                 .filesystem(new RemoteFilesystemSpec().isolationScope(IsolationScope.USER))
+                .toolsConfig(toolsConfig)
                 .disableSubagents()
                 .disableFilesystemTools()
                 .disableShellTool()

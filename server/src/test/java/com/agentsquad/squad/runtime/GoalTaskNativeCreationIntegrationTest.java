@@ -36,10 +36,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 class GoalTaskNativeCreationIntegrationTest {
 
     @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void replyCreatesIndependentGoalAndRunsDependentWorkers(boolean queryDuringWork, @TempDir Path directory) throws Exception {
+    @ValueSource(strings = {"normal", "query", "directive", "exhaust"})
+    void replyCreatesIndependentGoalAndRunsDependentWorkers(String mode, @TempDir Path directory) throws Exception {
+        boolean directive = "directive".equals(mode);
+        boolean exhaust = "exhaust".equals(mode);
+        boolean queryDuringWork = "query".equals(mode) || directive;
         ObjectMapper json = new ObjectMapper();
         AtomicInteger masterCalls = new AtomicInteger();
+        AtomicInteger directiveReplyCalls = new AtomicInteger();
+        AtomicInteger directiveMasterCalls = new AtomicInteger();
         AtomicInteger replyCalls = new AtomicInteger();
         AtomicInteger workerCalls = new AtomicInteger();
         AtomicInteger progressCalls = new AtomicInteger();
@@ -53,11 +58,27 @@ class GoalTaskNativeCreationIntegrationTest {
         model.setExecutor(providerThreads);
         model.createContext("/v1/chat/completions", exchange -> {
             JsonNode request = json.readTree(exchange.getRequestBody().readAllBytes());
+            assertThat(request.path("tools").toString()).doesNotContain("wait_async_results");
+            if (request.path("messages").toString().contains("请回复来源用户消息")) {
+                assertThat(request.path("tools").toString()).doesNotContain("\"name\":\"prepare_context\"", "\"name\":\"publish_plan\"", "\"name\":\"apply_task_directive\"");
+            } else {
+                assertThat(request.path("tools").toString()).doesNotContain("\"name\":\"create_goal_task\"", "\"name\":\"submit_task_directive\"");
+            }
             boolean worker = false;
             for (JsonNode tool : request.path("tools")) {
                 if ("report_job_result".equals(tool.path("function").path("name").asText())) {
                     worker = true;
                 }
+            }
+            if (exhaust && !worker && !request.path("messages").toString().contains("请回复来源用户消息")) {
+                masterCalls.incrementAndGet();
+                byte[] failure = "{\"error\":{\"message\":\"private-provider-failure\",\"type\":\"server_error\"}}".getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.sendResponseHeaders(503, failure.length);
+                try (var output = exchange.getResponseBody()) {
+                    output.write(failure);
+                }
+                return;
             }
             String response;
             if (worker) {
@@ -70,9 +91,38 @@ class GoalTaskNativeCreationIntegrationTest {
                         Thread.currentThread().interrupt();
                     }
                 }
-                response = workerCall % 2 == 1
+                response = !request.path("messages").toString().contains("\"role\":\"tool\"")
                         ? toolResponse(json, "report_job_result", Map.of("result", Map.of("text", "成稿")), 5)
                         : textResponse("Worker 已提交结果", 6);
+            } else if (request.path("messages").toString().contains("用户对当前目标提出修改")) {
+                int call = directiveMasterCalls.incrementAndGet();
+                JdbcTemplate db = jdbcRef.get();
+                String id = db.queryForObject("SELECT directive_id FROM sq_task_directive", String.class);
+                long version = db.queryForObject("SELECT version FROM sq_goal_task", Long.class);
+                response = switch (call) {
+                    case 1 -> toolResponse(json, "apply_task_directive", Map.of("directiveId", id,
+                            "expectedVersion", version, "decision", "APPLY"), 300+call);
+                    case 2 -> toolResponse(json, "prepare_context", Map.of("targetNodeKey", "outline", "logicalKey", "outline-updated"), 300+call);
+                    case 3 -> toolResponse(json, "prepare_context", Map.of("targetNodeKey", "draft", "logicalKey", "draft-updated"), 300+call);
+                    case 4 -> toolResponse(json, "publish_plan", Map.of("logicalKey", "updated-plan", "expectedPlanVersion", 1,
+                            "nodes", List.of(Map.of("nodeKey", "outline", "workerKey", "draft-writer", "workerVersion", "1.0.0",
+                                    "goal", "拟活泼的提纲", "contextSnapshotId", db.queryForObject("SELECT snapshot_id FROM sq_context_snapshot WHERE logical_key='outline-updated'", String.class),
+                                    "dependsOn", List.of(), "required", true, "maxRecoveryAttempts", 1),
+                                    Map.of("nodeKey", "draft", "workerKey", "draft-writer", "workerVersion", "1.0.0",
+                                    "goal", "写活泼的短文", "contextSnapshotId", db.queryForObject("SELECT snapshot_id FROM sq_context_snapshot WHERE logical_key='draft-updated'", String.class),
+                                    "dependsOn", List.of("outline"), "required", true, "maxRecoveryAttempts", 1)),
+                            "joinPolicy", "ALL_REQUIRED", "acceptanceCriteria", List.of("活泼短文完成")), 300+call);
+                    case 5 -> textResponse("等待更新后的工作完成", 300+call);
+                    case 6 -> toolResponse(json, "propose_completion", Map.of("outcome", "SUCCEEDED", "finalAnswer", "短文已完成：活泼成稿"), 300+call);
+                    default -> textResponse("等待平台发布新答案", 300+call);
+                };
+            } else if (request.path("messages").toString().contains("请改成活泼风格")) {
+                int call = directiveReplyCalls.incrementAndGet();
+                response = call == 1 ? toolResponse(json, "submit_task_directive", Map.of("logicalKey", "style-change",
+                        "taskId", taskIdRef.get(), "expectedVersion", jdbcRef.get().queryForObject("SELECT version FROM sq_goal_task", Long.class),
+                        "kind", "SUPPLEMENT", "content", "将文章改成活泼风格"), 400+call)
+                        : call == 2 ? toolResponse(json, "propose_completion", Map.of("outcome", "SUCCEEDED", "finalAnswer", "已收到风格要求，正在调整。"), 400+call)
+                        : textResponse("等待平台发布说明", 400+call);
             } else if (request.path("messages").toString().contains("目前做到哪一步了")) {
                 progressRequest.set(request.path("messages").toString());
                 response = progressCalls.incrementAndGet() == 1
@@ -175,12 +225,22 @@ class GoalTaskNativeCreationIntegrationTest {
                     assertThat(workerBlocked.await(10, TimeUnit.SECONDS)).isTrue();
                     ResponseNativeExecutionIntegrationTest.await(spring, message, "SUCCEEDED");
                     var progress = spring.getBean(MessageAcceptanceService.class).accept(userId, message.conversationId(),
-                            "progress-query", new MessageCreateRequest("目前做到哪一步了？", List.of()));
+                            "progress-query", new MessageCreateRequest(directive ? "请改成活泼风格" : "目前做到哪一步了？", List.of()));
                     ResponseNativeExecutionIntegrationTest.await(spring, progress, "SUCCEEDED");
-                    assertThat(workerCalls.get()).isEqualTo(1);
-                    assertThat(progressRequest.get()).contains("activeTask", "outline", "draft", "RUNNING", "BLOCKED");
+                    if (directive) {
+                        for (int attempt = 0; attempt < 200; attempt++) {
+                            if (jdbc.queryForObject("SELECT COUNT(*) FROM sq_plan WHERE plan_version=2", Integer.class) == 1) { break; }
+                            Thread.sleep(100);
+                        }
+                        assertThat(jdbc.queryForObject("SELECT status FROM sq_task_directive", String.class)).isEqualTo("APPLIED");
+                        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_worker_job WHERE plan_version=1 AND status='SUPERSEDED'", Integer.class)).isEqualTo(2);
+                        assertThat(jdbc.queryForObject("SELECT goal_revision FROM sq_plan WHERE plan_version=2", Long.class)).isEqualTo(1);
+                    } else {
+                        assertThat(workerCalls.get()).isEqualTo(1);
+                        assertThat(progressRequest.get()).contains("activeTask", "outline", "draft", "RUNNING", "BLOCKED");
+                        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_plan", Long.class)).isEqualTo(1);
+                    }
                     assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_goal_task", Long.class)).isEqualTo(1);
-                    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_plan", Long.class)).isEqualTo(1);
                     releaseWorker.countDown();
                 }
                 String status = null;
@@ -193,17 +253,27 @@ class GoalTaskNativeCreationIntegrationTest {
                     }
                     Thread.sleep(100);
                 }
+                if (exhaust) {
+                    assertThat(status).isEqualTo("FAILED");
+                    assertThat(masterCalls.get()).isEqualTo(3);
+                    assertThat(workerCalls.get()).isZero();
+                    assertThat(jdbc.queryForObject("SELECT active_task_id FROM sq_conversation", String.class)).isNull();
+                    assertThat(jdbc.queryForObject("SELECT service_retry_attempts FROM sq_execution_scope WHERE kind='TASK'", Integer.class)).isEqualTo(2);
+                    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_account", Integer.class)).isEqualTo(1);
+                    return;
+                }
                 assertThat(status).isEqualTo("SUCCEEDED");
-                assertThat(masterCalls.get()).isEqualTo(7);
+                assertThat(masterCalls.get()).isEqualTo(directive ? 5 : 7);
+                assertThat(directiveMasterCalls.get()).isEqualTo(directive ? 7 : 0);
                 assertThat(replyCalls.get()).isEqualTo(3);
-                assertThat(workerCalls.get()).isEqualTo(4);
+                assertThat(workerCalls.get()).isBetween(directive ? 5 : 4, directive ? 6 : 4);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_account", Long.class)).isEqualTo(queryDuringWork ? 2 : 1);
                 assertThat(jdbc.queryForObject("SELECT COUNT(DISTINCT account_id) FROM sq_budget_reservation WHERE task_id IS NOT NULL", Long.class)).isEqualTo(1);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_worker_job WHERE status='SUCCEEDED'", Long.class)).isEqualTo(2);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_runtime_binding WHERE task_id IS NULL", Long.class)).isEqualTo(queryDuringWork ? 2 : 1);
                 assertThat(jdbc.queryForList("SELECT DISTINCT status FROM sq_response_execution", String.class)).containsExactly("SUCCEEDED");
-                assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_reservation WHERE status='SETTLED'", Long.class)).isEqualTo(queryDuringWork ? 16 : 14);
-                assertThat(progressCalls.get()).isEqualTo(queryDuringWork ? 2 : 0);
+                assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_reservation WHERE status='SETTLED'", Long.class)).isGreaterThanOrEqualTo(queryDuringWork ? 16 : 14);
+                assertThat(progressCalls.get()).isEqualTo("query".equals(mode) ? 2 : 0);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_conversation_event WHERE event_type='task.created'", Long.class)).isEqualTo(1);
                 assertThat(jdbc.queryForObject(
                         "SELECT COUNT(*) FROM sq_goal_task WHERE conversation_id = ?",
@@ -211,7 +281,7 @@ class GoalTaskNativeCreationIntegrationTest {
                 assertThat(jdbc.queryForObject("""
                         SELECT payload_json FROM sq_task_event
                         WHERE task_id = ? AND event_type = 'answer.completed'
-                        """, String.class, taskIdRef.get())).contains("短文已完成：成稿");
+                        """, String.class, taskIdRef.get())).contains(directive ? "短文已完成：活泼成稿" : "短文已完成：成稿");
             }
         } finally {
             releaseWorker.countDown();

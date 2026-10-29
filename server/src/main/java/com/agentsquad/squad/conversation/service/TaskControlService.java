@@ -1,5 +1,6 @@
 package com.agentsquad.squad.conversation.service;
 
+import com.agentsquad.squad.presentation.service.TaskEventPublishingService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
@@ -28,6 +29,9 @@ import java.util.UUID;
 @Service
 @Slf4j
 public class TaskControlService {
+
+    @Resource
+    private TaskEventPublishingService conversationProjection;
 
     @Resource
     private TaskMapper taskMapper;
@@ -150,7 +154,7 @@ public class TaskControlService {
                 throw new IllegalStateException("恢复阻塞事件序号保留失败");
             }
             Long sequence = projectionMapper.eventSequence(userId, taskId);
-            taskEventMapper.insertProjected(userId, taskId, sequence,
+            conversationProjection.insertProjected(userId, taskId, sequence,
                     "resume:" + commandId + ":blocked", "task.recovery_blocked",
                     RuntimePayloads.toJson(objectMapper, Map.of("reason", reason, "errorCode", errorCode)),
                     LocalDateTime.now(ZoneOffset.UTC));

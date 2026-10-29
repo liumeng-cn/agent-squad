@@ -112,11 +112,21 @@ def check():
         raise SystemExit(
             "Install jsonschema in a design tooling environment to validate examples"
         ) from error
+    def nullable_schema(value):
+        """Translate OpenAPI 3.0 nullable into JSON Schema for example validation."""
+        if isinstance(value, list):
+            return [nullable_schema(item) for item in value]
+        if not isinstance(value, dict):
+            return value
+        result = {key: nullable_schema(item) for key, item in value.items() if key != "nullable"}
+        return {"anyOf": [result, {"type": "null"}]} if value.get("nullable") else result
+
+    example_components = nullable_schema(spec["components"])
     examples = json.loads((ROOT / "api/examples.json").read_text())["examples"]
     for example in examples:
         schema = {
             "$ref": "#/components/schemas/" + example["schema"],
-            "components": spec["components"],
+            "components": example_components,
         }
         Draft4Validator(schema, format_checker=FormatChecker()).validate(
             example["value"]
@@ -127,7 +137,7 @@ def check():
     for example in invalid_examples:
         schema = {
             "$ref": "#/components/schemas/" + example["schema"],
-            "components": spec["components"],
+            "components": example_components,
         }
         assert not Draft4Validator(schema, format_checker=FormatChecker()).is_valid(
             example["value"]

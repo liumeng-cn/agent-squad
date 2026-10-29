@@ -31,7 +31,8 @@
       "sq_response_execution"
     ],
     "M03": [
-      "sq_plan"
+      "sq_plan",
+      "sq_task_directive"
     ],
     "M04": [
       "sq_worker_definition",
@@ -57,10 +58,11 @@
       "sq_budget_account",
       "sq_conversation_event",
       "sq_user_budget",
-      "sq_scope_artifact"
+      "sq_scope_artifact",
+      "sq_execution_failure"
     ]
   },
-  "plannedOperationCount": 42,
-  "plannedSchemaCount": 68,
-  "plannedBusinessTableCount": 26
+  "plannedOperationCount": 46,
+  "plannedSchemaCount": 74,
+  "plannedBusinessTableCount": 28
 }

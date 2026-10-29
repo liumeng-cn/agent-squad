@@ -32,6 +32,9 @@ public class OperationExecutor {
     private static final long LEASE_SECONDS = 60;
 
     @Resource
+    private OperationUnknownService unknowns;
+
+    @Resource
     private OperationMapper operationMapper;
 
     @Resource
@@ -125,8 +128,7 @@ public class OperationExecutor {
      * 结果不明出账；只能由核对流程再推进。
      */
     public void markUnknown(OperationRow operation) {
-        if (operationMapper.markUnknown(operation.userId(), operation.operationId(),
-                operation.version() + 1, instanceId) == 1) {
+        if (unknowns.mark(operation, operation.version() + 1, instanceId)) {
             log.warn("操作转入 UNKNOWN，等待人工或连接器核对 operationId={}", operation.operationId());
         }
     }

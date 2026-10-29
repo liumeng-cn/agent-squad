@@ -50,11 +50,12 @@ public interface ContextSnapshotMapper {
             @Arg(column = "memory_revision", javaType = long.class),
             @Arg(column = "items_json", javaType = String.class),
             @Arg(column = "token_estimate", javaType = long.class),
-            @Arg(column = "content_hash", javaType = String.class)
+            @Arg(column = "content_hash", javaType = String.class),
+            @Arg(column = "goal_revision", javaType = long.class)
     })
     @Select("""
             SELECT snapshot_id, user_id, task_id, target_node_key, logical_key,
-                   conversation_generation, memory_revision, items_json, token_estimate, content_hash
+                   conversation_generation, memory_revision, items_json, token_estimate, content_hash, goal_revision
             FROM sq_context_snapshot
             WHERE user_id = #{userId} AND task_id = #{taskId}
               AND target_node_key = #{targetNodeKey} AND logical_key = #{logicalKey}
@@ -75,11 +76,12 @@ public interface ContextSnapshotMapper {
             @Arg(column = "memory_revision", javaType = long.class),
             @Arg(column = "items_json", javaType = String.class),
             @Arg(column = "token_estimate", javaType = long.class),
-            @Arg(column = "content_hash", javaType = String.class)
+            @Arg(column = "content_hash", javaType = String.class),
+            @Arg(column = "goal_revision", javaType = long.class)
     })
     @Select("""
             SELECT snapshot_id, user_id, task_id, target_node_key, logical_key,
-                   conversation_generation, memory_revision, items_json, token_estimate, content_hash
+                   conversation_generation, memory_revision, items_json, token_estimate, content_hash, goal_revision
             FROM sq_context_snapshot
             WHERE user_id = #{userId} AND task_id = #{taskId} AND snapshot_id = #{snapshotId}
               AND del_flag = '0'
@@ -90,11 +92,11 @@ public interface ContextSnapshotMapper {
     @Insert("""
             INSERT INTO sq_context_snapshot
                 (snapshot_id, user_id, task_id, target_node_key, logical_key,
-                 conversation_generation, memory_revision, items_json, token_estimate, content_hash, scope_id,
+                 conversation_generation, memory_revision, items_json, token_estimate, content_hash, goal_revision, scope_id,
                  creator_id, creator_name, last_updater_id, last_updater_name)
             VALUES
                 (#{snapshotId}, #{userId}, #{taskId}, #{targetNodeKey}, #{logicalKey},
-                 #{conversationGeneration}, 0, #{itemsJson}, #{tokenEstimate}, #{contentHash},
+                 #{conversationGeneration}, 0, #{itemsJson}, #{tokenEstimate}, #{contentHash}, #{goalRevision},
                  (SELECT scope_id FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}),
                  #{userId}, '', #{userId}, '')
             """)
@@ -103,5 +105,5 @@ public interface ContextSnapshotMapper {
                @Param("logicalKey") String logicalKey,
                @Param("conversationGeneration") long conversationGeneration,
                @Param("itemsJson") String itemsJson, @Param("tokenEstimate") long tokenEstimate,
-               @Param("contentHash") String contentHash);
+               @Param("contentHash") String contentHash, @Param("goalRevision") long goalRevision);
 }

@@ -8,5 +8,5 @@ package com.agentsquad.squad.runtime.domain;
 public record ContextSnapshotRow(String snapshotId, String userId, String taskId,
                                  String targetNodeKey, String logicalKey, long conversationGeneration,
                                  long memoryRevision, String itemsJson, long tokenEstimate,
-                                 String contentHash) {
+                                 String contentHash, long goalRevision) {
 }

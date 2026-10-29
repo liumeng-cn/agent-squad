@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime.service;
 
+import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
@@ -40,6 +41,9 @@ public class CompletionProposalService {
             GoalTaskStatus.SUCCEEDED.name(), GoalTaskStatus.PARTIAL.name());
 
     @Resource
+    private TaskDirectiveMapper directives;
+
+    @Resource
     private ExecutionScopeMapper scopeMapper;
 
     @Resource
@@ -76,6 +80,9 @@ public class CompletionProposalService {
         ExecutionScopeRow scope = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), true);
         if ("RESPONSE".equals(scope.kind())) {
             return responses.propose(userId, scopeMapper.findBindingBySession(userId, sessionId), turnId, toolCallId, outcome, finalAnswer);
+        }
+        if (!directives.pending(userId, scope.ownerId()).isEmpty()) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "尚有用户要求待协调处理，请结束当前回合等待修改通知");
         }
         CompletionContextRow context = completionMapper.lockByMasterSession(userId, sessionId);
         if (context == null) {

@@ -35,7 +35,7 @@ async function submit(): Promise<void> {
   <main class="login-page">
     <form class="login-card" @submit.prevent="submit">
       <h1>Agent Squad 工作台</h1>
-      <p class="login-subtitle">登录后继续你的任务</p>
+      <p class="login-subtitle">登录后继续对话与写作</p>
       <label class="field">
         <span>账号</span>
         <input v-model="username" class="input" type="text" autocomplete="username" required />

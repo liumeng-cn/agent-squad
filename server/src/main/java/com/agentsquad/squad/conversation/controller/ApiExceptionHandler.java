@@ -23,6 +23,7 @@ public class ApiExceptionHandler {
     @ExceptionHandler(RuntimeBusinessException.class)
     public ResponseEntity<Map<String, String>> businessError(RuntimeBusinessException exception) {
         HttpStatus status = switch (exception.code()) {
+            case EXPIRED -> HttpStatus.GONE;
             case NOT_FOUND -> HttpStatus.NOT_FOUND;
             case FORBIDDEN -> HttpStatus.FORBIDDEN;
             case CONFLICT -> HttpStatus.CONFLICT;

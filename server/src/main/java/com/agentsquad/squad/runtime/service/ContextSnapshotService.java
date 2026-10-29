@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime.service;
 
+import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.CanonicalJson;
@@ -35,6 +36,9 @@ public class ContextSnapshotService {
     private static final Pattern NODE_KEY = Pattern.compile("[a-z][a-z0-9_-]{0,79}");
 
     @Resource
+    private TaskDirectiveMapper directives;
+
+    @Resource
     private ExecutionScopeService executionScopes;
 
     @Resource
@@ -64,27 +68,38 @@ public class ContextSnapshotService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已不能准备局部上下文");
         }
 
+        long goalRevision = directives.goalState(userId, context.taskId()).goalRevision();
         ContextSnapshotRow prior = snapshotMapper.findByLogicalKey(userId, context.taskId(),
                 targetNodeKey, logicalKey);
         if (prior != null) {
-            if (prior.conversationGeneration() != context.conversationGeneration()) {
+            if (prior.conversationGeneration() != context.conversationGeneration() || prior.goalRevision() != goalRevision) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "上下文所属对话代际已变化");
             }
             return new ContextSnapshotReceipt(prior.snapshotId(), targetNodeKey, prior.contentHash());
         }
 
         String message = originalMessage(context.inputJson());
-        String itemsJson = RuntimePayloads.toJson(objectMapper, List.of(Map.of(
-                "kind", "USER_CONSTRAINT",
+        var applied = directives.effectiveApplied(userId, context.taskId());
+        var items = new java.util.ArrayList<Map<String, String>>();
+        boolean replaced = applied.stream().anyMatch(item -> "REPLACE".equals(item.kind()));
+        items.add(Map.of(
+                "kind", replaced ? "USER_ORIGIN_REFERENCE" : "USER_CONSTRAINT",
                 "sourceId", context.taskId(),
                 "sourceVersion", "1",
                 "trust", "USER",
-                "content", message)));
+                "content", message));
+        for (var directive : applied) {
+            items.add(Map.of("kind", "REPLACE".equals(directive.kind()) ? "USER_GOAL_REPLACEMENT" : "USER_SUPPLEMENT",
+                    "sourceId", directive.sourceMessageId(), "sourceVersion", String.valueOf(directive.appliedGoalRevision()),
+                    "trust", "USER", "content", directive.sourceText()));
+            message += "\n" + directive.sourceText();
+        }
+        String itemsJson = RuntimePayloads.toJson(objectMapper, items);
         String snapshotId = UUID.randomUUID().toString();
         String contentHash = CanonicalJson.sha256(objectMapper, itemsJson);
         long tokenEstimate = Math.max(1, (message.codePointCount(0, message.length()) + 3L) / 4L);
         snapshotMapper.insert(snapshotId, userId, context.taskId(), targetNodeKey, logicalKey,
-                context.conversationGeneration(), itemsJson, tokenEstimate, contentHash);
+                context.conversationGeneration(), itemsJson, tokenEstimate, contentHash, goalRevision);
         log.info("局部上下文已冻结 taskId={} nodeKey={} snapshotId={} tokenEstimate={}",
                 context.taskId(), targetNodeKey, snapshotId, tokenEstimate);
         return new ContextSnapshotReceipt(snapshotId, targetNodeKey, contentHash);

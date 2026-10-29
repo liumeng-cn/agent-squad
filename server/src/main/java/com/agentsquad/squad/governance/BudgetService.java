@@ -144,14 +144,13 @@ public class BudgetService {
         long userConsumed = budgetMapper.sumUserConsumed(userId);
         if (userLimitMicrounits <= 0 || userConsumed > userLimitMicrounits
                 || units > userLimitMicrounits - userConsumed) {
-            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "用户总预算不足，已拒绝新请求");
+            throw new BudgetExceededException("用户总预算不足，已拒绝新请求");
         }
         long consumed = budgetMapper.sumConsumedUnits(userId, scopeId);
         if (consumed > account.limitMicrounits() || units > account.limitMicrounits() - consumed) {
             log.info("预算预留被拒 userId={} scopeId={} consumed={} requested={} limit={}",
                     userId, scopeId, consumed, units, account.limitMicrounits());
-            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
-                    "执行预算不足，已拒绝新请求");
+            throw new BudgetExceededException("执行预算不足，已拒绝新请求");
         }
     }
 

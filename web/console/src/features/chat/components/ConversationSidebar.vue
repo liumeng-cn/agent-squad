@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../auth/stores/auth'
 import { useConversationsStore } from '../stores/conversations'
@@ -7,78 +7,46 @@ import { useConversationsStore } from '../stores/conversations'
 const router = useRouter()
 const auth = useAuthStore()
 const conversations = useConversationsStore()
-const creating = ref(false)
-const sidebarHidden = ref(false)
-
-onMounted(() => {
-  if (conversations.items.length === 0) {
-    void conversations.loadMore()
+const expanded = ref(false)
+const groups = computed(() => {
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const buckets = new Map<string, typeof conversations.items>()
+  for (const item of conversations.items) {
+    const timestamp = Date.parse(/(?:Z|[+-]\d\d:\d\d)$/.test(item.lastActivityAt) ? item.lastActivityAt : `${item.lastActivityAt}Z`)
+    const boundary = today.getTime()
+    const label = timestamp >= boundary ? '今天' : timestamp >= boundary - 86400000 ? '昨天' : timestamp >= boundary - 6 * 86400000 ? '近 7 天' : '更早'
+    if (!buckets.has(label)) buckets.set(label, [])
+    buckets.get(label)!.push(item)
   }
+  return [...buckets].map(([label, items]) => ({ label, items }))
 })
-
-async function createConversation(): Promise<void> {
-  if (creating.value) {
-    return
-  }
-  creating.value = true
-  const id = await conversations.createAndSelect()
-  creating.value = false
-  if (id) {
-    sidebarHidden.value = true
-    await router.push({ name: 'workspace', params: { conversationId: id } })
-  }
+onMounted(() => { if (!conversations.listLoaded) void conversations.refreshList() })
+function select(id?: string) {
+  expanded.value = false
+  if (!id) conversations.startDraft()
+  void router.push({ name: 'workspace', params: id ? { conversationId: id } : {} })
 }
-
-function select(id: string): void {
-  sidebarHidden.value = true
-  void router.push({ name: 'workspace', params: { conversationId: id } })
+async function logout() {
+  await auth.logout(); conversations.resetAll(); await router.push({ name: 'login' })
 }
-
-async function logout(): Promise<void> {
-  await auth.logout()
-  await router.push({ name: 'login' })
-}
-
-defineExpose({ openSidebar: () => (sidebarHidden.value = false) })
+defineExpose({ openSidebar: () => { expanded.value = true } })
 </script>
 
 <template>
-  <aside class="sidebar" :class="{ 'hidden-narrow': sidebarHidden }">
-    <div class="sidebar-header">
-      <p class="sidebar-brand">Agent Squad</p>
-      <button class="btn btn-primary btn-block" :disabled="creating" @click="createConversation">
-        {{ creating ? '创建中…' : '新建对话' }}
-      </button>
-    </div>
-    <div class="conversation-list">
-      <p v-if="conversations.listError" class="form-error">{{ conversations.listError }}</p>
-      <p v-if="!conversations.loading && conversations.items.length === 0" class="conversation-empty">
-        还没有对话，先新建一个
-      </p>
-      <button
-        v-for="item in conversations.items"
-        :key="item.conversationId"
-        class="conversation-item"
-        :class="{ active: item.conversationId === conversations.activeConversationId }"
-        @click="select(item.conversationId)"
-      >
-        <span class="conversation-title">{{ item.title }}</span>
-      </button>
-      <button
-        v-if="conversations.nextCursor"
-        class="conversation-item"
-        :disabled="conversations.loading"
-        @click="conversations.loadMore()"
-      >
-        <span class="conversation-title">{{ conversations.loading ? '加载中…' : '加载更多' }}</span>
-      </button>
-    </div>
-    <div class="sidebar-footer">
-      <router-link v-if="auth.user?.roles.includes('ADMIN')" class="btn btn-sm" :to="{ name: 'workers' }">
-        能力设置
-      </router-link>
-      <span>{{ auth.user?.username }}</span>
-      <button class="btn btn-sm" @click="logout">退出</button>
-    </div>
+  <button v-if="expanded" class="sidebar-scrim" aria-label="关闭侧栏" @click="expanded = false"></button>
+  <aside class="chat-sidebar" :class="{ 'is-open': expanded }" aria-label="对话历史" @keydown.esc="expanded = false">
+    <div class="chat-brand"><span class="brand-mark" aria-hidden="true">✦</span><span>Agent Squad</span><button class="icon-button mobile-only" aria-label="关闭侧栏" @click="expanded = false">×</button></div>
+    <button class="new-chat-button" @click="select()"><span aria-hidden="true">⊕</span> 开启新对话</button>
+    <nav class="chat-history" aria-label="历史对话">
+      <p v-if="conversations.listError" class="sidebar-error" role="alert">{{ conversations.listError }} <button class="text-button" @click="conversations.refreshList()">重新加载</button></p>
+      <p v-if="conversations.listLoading && !conversations.items.length" class="history-placeholder">正在读取历史…</p>
+      <p v-if="conversations.listLoaded && !conversations.items.length" class="history-placeholder">你的对话会保存在这里</p>
+      <section v-for="group in groups" :key="group.label" class="history-group">
+        <h2>{{ group.label }}</h2>
+        <button v-for="item in group.items" :key="item.conversationId" class="history-item" :class="{ selected: item.conversationId === conversations.activeConversationId }" :title="item.title" :aria-current="item.conversationId === conversations.activeConversationId ? 'page' : undefined" @click="select(item.conversationId)">{{ item.title || '新对话' }}</button>
+      </section>
+      <button v-if="conversations.nextCursor" class="history-more" :disabled="conversations.listLoading" @click="conversations.loadMore()">{{ conversations.listLoading ? '加载中…' : '加载更早的对话' }}</button>
+    </nav>
+    <footer class="chat-account"><div class="account-avatar" aria-hidden="true">{{ auth.user?.username.slice(0, 1).toUpperCase() }}</div><span class="account-name">{{ auth.user?.username }}</span><details class="account-menu"><summary aria-label="账户选项">···</summary><div class="popup-menu"><router-link v-if="auth.user?.roles.includes('ADMIN')" :to="{ name: 'workers' }">能力设置</router-link><button @click="logout">退出登录</button></div></details></footer>
   </aside>
 </template>

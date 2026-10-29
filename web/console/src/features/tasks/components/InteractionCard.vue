@@ -61,7 +61,7 @@ async function submit(approve?: boolean): Promise<void> {
       </div>
     </template>
     <form v-else @submit.prevent="submit()">
-      <p v-if="fields.length === 0" class="banner-warning">表单定义不可用，请刷新任务详情。</p>
+      <p v-if="fields.length === 0" class="banner-warning">表单定义不可用，请刷新对话。</p>
       <label v-for="[key, field] in fields" :key="key" class="detail-field">
         <span>{{ field.title || key }}{{ schema.required?.includes(key) ? ' *' : '' }}</span>
         <small v-if="field.description">{{ field.description }}</small>
