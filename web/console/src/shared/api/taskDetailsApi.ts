@@ -1,5 +1,5 @@
 import { apiGet, apiPost } from './http'
-import type { CommandReceipt, Interaction } from './types'
+import type { CommandReceipt } from './types'
 
 export interface Artifact {
   artifactId: string
@@ -28,11 +28,6 @@ export interface OperationDetail {
   evidenceRefs: string[]
   canReconcile: boolean
 }
-export function listOperations(taskId: string, cursor?: string): Promise<{ items: Operation[]; nextCursor?: string }> {
-  const query = new URLSearchParams({ limit: '100' })
-  if (cursor) query.set('cursor', cursor)
-  return apiGet(`/api/v1/tasks/${taskId}/operations?${query}`)
-}
 export function getOperation(id: string): Promise<OperationDetail> {
   return apiGet(`/api/v1/operations/${id}`)
 }
@@ -40,14 +35,6 @@ export function reconcileOperation(detail: OperationDetail, disposition: string,
   return apiPost(`/api/v1/operations/${detail.operation.operationId}/reconcile`, {
     expectedVersion: detail.operation.version, disposition, evidenceRefs, note,
   })
-}
-export function listArtifacts(taskId: string): Promise<Artifact[]> {
-  return apiGet(`/api/v1/tasks/${taskId}/artifacts`)
-}
-export function listInteractions(taskId: string, cursor?: string): Promise<{ items: Interaction[]; nextCursor?: string }> {
-  const query = new URLSearchParams({ limit: '100' })
-  if (cursor) query.set('cursor', cursor)
-  return apiGet(`/api/v1/tasks/${taskId}/interactions?${query}`)
 }
 export function respondInteraction(id: string, expectedVersion: number, answer: unknown, key: string): Promise<CommandReceipt> {
   return apiPost(`/api/v1/interactions/${id}/responses`, { expectedVersion, answer }, { idempotencyKey: key })

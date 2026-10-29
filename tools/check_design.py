@@ -50,6 +50,10 @@ def check():
     migration_files = sorted(
         (ROOT / "server" / "src" / "main" / "resources" / "db" / "migration").glob("V*.sql")
     )
+    java_migrations = sorted((ROOT / "server/src/main/java/db/migration").glob("V*__*.java"))
+    all_migrations = migration_files + java_migrations
+    migration_versions = [int(re.match(r"V(\d+)__", path.name).group(1)) for path in all_migrations]
+    assert len(migration_versions) == len(set(migration_versions)), "SQL/Java 迁移版本重复"
     sql = "\n".join(path.read_text() for path in migration_files)
     definitions = re.findall(r"CREATE TABLE (\w+)\s*\((.*?)\n\) ENGINE", sql, re.S)
     business = [(name, body) for name, body in definitions if name.startswith("sq_")]
@@ -288,6 +292,7 @@ def check():
     )
     print("Configuration schema, sample and cross-field design limits valid")
     print("Conversation SSE, workspace actions and migrated runtime ownership fields valid")
+    print(f"Flyway inventory: {len(migration_files)} SQL + {len(java_migrations)} Java migrations; latest V{max(migration_versions)}")
     print("Static design validation only; no SQL execution or runtime verification.")
 
 

@@ -18,7 +18,7 @@ Agent Squad 是一个面向 Web 的多智能体运行底座。用户发送消息
 
 新版页面已接入连续会话：普通交流不创建 GoalTask，Master 按需建立后台工作；任务在途可继续提问或补充要求。追问、审批、分级故障、允许的重试与下载均留在对话中，停止回答与停止工作分别控制。侧栏支持安全标题、改名与历史分页，空态及附件布局按用户参考调整。
 
-本轮功能、回归结果与验证边界见 [对话体验验收记录](openspec/changes/conversation-first-experience/evidence/ui-regression-2026-10-29.md)。当前仓库迁移最高为 V13；历史记录曾记为 V14，不能据此认定当前数据库版本，本轮未连接实际开发库核验。D3 原基线仍见 [D3 验收记录](openspec/changes/d3-multi-worker/evidence/progress.md)；D4–D6 尚未交付，不能将本轮对话优化计作这些阶段完成。原 SDK 故障窗口、确定性模型协议测试、真实 DeepSeek 检查分别记载；Java 21 运行时与生产恢复仍未验证。
+本轮功能、回归结果与验证边界见 [对话体验验收记录](openspec/changes/conversation-first-experience/evidence/ui-regression-2026-10-29.md)。当前仓库迁移包含 SQL V13 及 Java V14 标题回填；实际开发库版本本轮未连接核验。D3 原基线仍见 [D3 验收记录](openspec/changes/d3-multi-worker/evidence/progress.md)；D4–D6 尚未交付，不能将本轮对话优化计作这些阶段完成。原 SDK 故障窗口、确定性模型协议测试、真实 DeepSeek 检查分别记载；Java 21 运行时与生产恢复仍未验证。
 
 ## 本地运行
 
