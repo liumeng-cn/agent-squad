@@ -1,5 +1,6 @@
 package com.agentsquad.squad.integration.agentscope;
 
+import com.agentsquad.squad.agent.tool.ReportJobResultTool;
 import com.agentsquad.squad.common.util.CanonicalJson;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;

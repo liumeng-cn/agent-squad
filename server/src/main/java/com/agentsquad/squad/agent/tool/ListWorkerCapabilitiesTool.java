@@ -1,4 +1,4 @@
-package com.agentsquad.squad.integration.agentscope;
+package com.agentsquad.squad.agent.tool;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.util.RuntimePayloads;

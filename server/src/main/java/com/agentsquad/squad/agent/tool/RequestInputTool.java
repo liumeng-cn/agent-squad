@@ -1,4 +1,4 @@
-package com.agentsquad.squad.integration.agentscope;
+package com.agentsquad.squad.agent.tool;
 
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.tool.AgentTool;

@@ -1,8 +1,10 @@
-package com.agentsquad.squad.integration.agentscope;
+package com.agentsquad.squad.agent;
 
+import com.agentsquad.squad.agent.tool.*;
 import com.agentsquad.squad.conversation.domain.DeliveryRow;
 import com.agentsquad.squad.conversation.service.ResponseContextService;
 import com.agentsquad.squad.common.util.RuntimePayloads;
+import com.agentsquad.squad.integration.agentscope.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
 import com.agentsquad.squad.runtime.domain.ProjectionTarget;
@@ -40,7 +42,7 @@ import java.time.Duration;
 @Component
 @DependsOnDatabaseInitialization
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
-public class AgentScopeSessionGateway implements NativeSessionGateway {
+public class MasterAgent implements NativeSessionGateway {
 
     @Resource
     private SubmitTaskDirectiveTool submitTaskDirectiveTool;
@@ -128,7 +130,7 @@ public class AgentScopeSessionGateway implements NativeSessionGateway {
         master = HarnessAgent.builder()
                 .agentId(MasterAgentIdentity.AGENT_ID)
                 .name("Squad Master")
-                .sysPrompt("你是用户的统一任务助手，内部承担 Master 协调职责。"
+                .sysPrompt("你是智能任务助手，内部承担 Master 协调职责。"
                         + "普通交流和能直接交付的问答直接回答，不为每条消息建立目标。"
                         + "当前消息需要独立持续推进或委派时，先用create_goal_task建立目标；"
                         + "来源必须是当前sourceMessageId，不扩大用户目标，不把受理说成完成。"

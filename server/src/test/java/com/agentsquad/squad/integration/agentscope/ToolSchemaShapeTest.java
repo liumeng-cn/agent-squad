@@ -1,5 +1,6 @@
 package com.agentsquad.squad.integration.agentscope;
 
+import com.agentsquad.squad.agent.tool.*;
 import com.agentsquad.squad.tools.mock.MockLookupTool;
 import com.agentsquad.squad.tools.mock.MockTicketCreateTool;
 import io.agentscope.core.tool.AgentTool;
