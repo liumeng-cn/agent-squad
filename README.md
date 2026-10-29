@@ -16,7 +16,9 @@ Agent Squad 是一个面向 Web 的多智能体运行底座。用户提交目标
 | D5 沙箱与交付 | 未开发 | 最小文本上传/下载已前置 D3；仍需沙箱隔离、受控 stage/commit、产物清理与完整预算 |
 | D6 集成发布 | 未开发 | 多副本、备份恢复、负载与安全回归 |
 
-每次提问先作为任务受理，再由后台 Master 决定直接回答或组织 Worker。D3 使用固定 SDK、本地模型桩和隔离数据库验证完整协作链路；页面包含子任务状态、追问/审批、操作详情和核对入口。连接设置、Skill/记忆、沙箱和完整集成发布仍未完成。D3 的实际测试环境、MySQL 专项结果及 Java 21 运行时复验限制见 [验收记录](openspec/changes/d3-multi-worker/evidence/progress.md)。当前版本是开发中的底座，不作为生产平台使用。
+目前有两条入口：现有页面仍沿用按目标受理的旧链路；新的消息接口已经支持普通交流不创建 GoalTask，Master 可按需创建独立目标，并在 Worker 工作期间继续回答进度。新版对话体验变更 `conversation-first-experience` 已完成 6/16 项，尚未接入页面。安全修改在途目标、会话统一消息流、故障分级、标题管理和参考布局仍未完成，不能按完整新版体验验收。
+
+2026-10-29 已验证当前代码并启动本地服务，实际开发库已增量升级到 V11，原有数据保留。页面可验收项、后端已验证行为及未交付项见 [本次验收清单](openspec/changes/conversation-first-experience/evidence/acceptance-2026-10-29.md)。D3 的原验收记录见 [D3 验收记录](openspec/changes/d3-multi-worker/evidence/progress.md)。测试中的模型由本地协议桩提供；真实供应商质量、Java 21 运行时和生产恢复尚未完成验证。
 
 当前设计静态检查还指出两张 D2 表（`sq_secret_vault`、`sq_mock_ticket`）缺少统一审计字段；设计快照和已编号迁移均存在此问题。修正时需新增迁移并核对已有数据，不能直接改写历史迁移。
 
@@ -56,12 +58,10 @@ npm --prefix web/console run build
 ## 运行链路与目录
 
 ```text
-Web 页面 → Spring HTTP API → GoalTask / Command（MySQL）
-                            ↓
-                     AgentScope Master → 模型
-                            ├→ 受控工具 → 操作账本 / 交互
-                            ↓
-                 原生日志投影 → 任务事件 / 快照 / SSE
+现有页面 → 旧目标入口 → GoalTask / Command → Task Master → Worker
+新消息 API → Message / ResponseExecution / Command → 回复 Master
+                                                    └→ 按需创建独立 GoalTask
+原生持久事件 → 平台投影；会话统一消息流与新页面尚待接入
 ```
 
 `server/` 是 Java 服务，`web/console/` 是 Vue 工作台，`api/` 放接口契约（OpenAPI 与配置 Schema），`openspec/` 放能力 spec、变更计划与稳定约束。数据库结构以 `server/src/main/resources/db/migration/` 的 Flyway 迁移为唯一权威。
