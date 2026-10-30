@@ -5,6 +5,7 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.conversation.dto.ConversationResponse;
 import com.agentsquad.squad.conversation.dto.TaskReceipt;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.governance.service.BudgetService;
 import com.agentsquad.squad.worker.profile.WorkerModelProfile;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

@@ -16,7 +16,7 @@ import com.agentsquad.squad.runtime.service.WorkerDispatchService;
 import com.agentsquad.squad.runtime.service.WorkerResultService;
 import com.agentsquad.squad.presentation.service.TaskSnapshotService;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionCreateRequest;
-import com.agentsquad.squad.worker.WorkerDefinitionService;
+import com.agentsquad.squad.worker.service.WorkerDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

@@ -6,7 +6,7 @@ import com.agentsquad.squad.conversation.repository.BindingMapper;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.runtime.domain.WorkerJobRow;
 import com.agentsquad.squad.runtime.repository.PlanMapper;
-import com.agentsquad.squad.worker.WorkerDefinitionService;
+import com.agentsquad.squad.worker.service.WorkerDefinitionService;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

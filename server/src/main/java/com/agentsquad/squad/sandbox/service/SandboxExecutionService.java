@@ -24,10 +24,10 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 public class SandboxExecutionService {
     @Resource
-    private com.agentsquad.squad.artifact.ArtifactService artifacts;
+    private com.agentsquad.squad.artifact.service.ArtifactService artifacts;
 
     @Resource
-    private com.agentsquad.squad.artifact.ArtifactMapper artifactMapper;
+    private com.agentsquad.squad.artifact.repository.ArtifactMapper artifactMapper;
 
     @Resource
     private SandboxAccessService access;

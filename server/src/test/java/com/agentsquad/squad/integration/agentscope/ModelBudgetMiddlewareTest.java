@@ -4,7 +4,7 @@ import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.conversation.dto.ConversationResponse;
 import com.agentsquad.squad.conversation.dto.TaskReceipt;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
-import com.agentsquad.squad.governance.BudgetService;
+import com.agentsquad.squad.governance.service.BudgetService;
 import com.agentsquad.squad.governance.repository.BudgetMapper;
 import com.agentsquad.squad.worker.profile.WorkerModelProfile;
 import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;

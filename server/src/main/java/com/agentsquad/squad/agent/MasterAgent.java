@@ -111,7 +111,7 @@ public class MasterAgent implements NativeSessionGateway {
     private ExecutionContextMiddleware executionContext;
 
     @Resource
-    private com.agentsquad.squad.memory.agent.WriteExplicitMemoryTool writeExplicitMemory;
+    private com.agentsquad.squad.agent.tool.WriteExplicitMemoryTool writeExplicitMemory;
 
     @Resource
     private com.agentsquad.squad.agent.tool.SandboxPythonTool sandboxPython;

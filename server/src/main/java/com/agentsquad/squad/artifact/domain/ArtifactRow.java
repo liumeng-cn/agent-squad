@@ -1,4 +1,4 @@
-package com.agentsquad.squad.artifact;
+package com.agentsquad.squad.artifact.domain;
 
 import java.time.LocalDateTime;
 

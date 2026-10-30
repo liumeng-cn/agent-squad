@@ -1,6 +1,6 @@
 package com.agentsquad.squad.tools.operation;
 
-import com.agentsquad.squad.governance.BudgetService;
+import com.agentsquad.squad.governance.service.BudgetService;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
@@ -10,7 +10,7 @@ import com.agentsquad.squad.tools.operation.domain.OperationStatus;
 import com.agentsquad.squad.tools.operation.dto.OperationView;
 import com.agentsquad.squad.tools.operation.dto.OperationReconcileRequest;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.artifact.ArtifactService;
+import com.agentsquad.squad.artifact.service.ArtifactService;
 import com.agentsquad.squad.tools.operation.repository.MockTicketMapper;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;

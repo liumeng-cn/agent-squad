@@ -1,7 +1,7 @@
 package com.agentsquad.squad.conversation.service;
 
-import com.agentsquad.squad.artifact.ArtifactMapper;
-import com.agentsquad.squad.artifact.ArtifactService;
+import com.agentsquad.squad.artifact.repository.ArtifactMapper;
+import com.agentsquad.squad.artifact.service.ArtifactService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.CanonicalJson;

@@ -17,7 +17,7 @@ import com.agentsquad.squad.runtime.dto.PlanPublish;
 import com.agentsquad.squad.runtime.repository.PlanMapper;
 import com.agentsquad.squad.runtime.repository.ProjectionMapper;
 import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
-import com.agentsquad.squad.worker.WorkerDefinitionService;
+import com.agentsquad.squad.worker.service.WorkerDefinitionService;
 import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;

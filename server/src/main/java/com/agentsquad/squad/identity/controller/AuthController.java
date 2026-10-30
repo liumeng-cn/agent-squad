@@ -1,4 +1,4 @@
-package com.agentsquad.squad.identity.controlle;
+package com.agentsquad.squad.identity.controller;
 
 import com.agentsquad.squad.identity.AuthService;
 import com.agentsquad.squad.identity.AuthView;

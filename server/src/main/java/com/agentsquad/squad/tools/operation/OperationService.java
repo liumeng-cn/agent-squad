@@ -1,7 +1,7 @@
 package com.agentsquad.squad.tools.operation;
 
 import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
-import com.agentsquad.squad.governance.BudgetService;
+import com.agentsquad.squad.governance.service.BudgetService;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;

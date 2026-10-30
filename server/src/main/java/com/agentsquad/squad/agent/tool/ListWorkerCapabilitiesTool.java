@@ -2,7 +2,7 @@ package com.agentsquad.squad.agent.tool;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.worker.WorkerDefinitionService;
+import com.agentsquad.squad.worker.service.WorkerDefinitionService;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionPage;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;

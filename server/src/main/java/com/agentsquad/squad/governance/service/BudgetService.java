@@ -1,9 +1,10 @@
-package com.agentsquad.squad.governance;
+package com.agentsquad.squad.governance.service;
 
 import com.agentsquad.squad.governance.repository.BudgetMapper;
 import com.agentsquad.squad.governance.domain.BudgetAccountRow;
 import com.agentsquad.squad.governance.domain.BudgetReservationRow;
 import com.agentsquad.squad.worker.profile.WorkerModelProfile;
+import com.agentsquad.squad.common.exception.BudgetExceededException;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import jakarta.annotation.Resource;

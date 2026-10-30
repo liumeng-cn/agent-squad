@@ -1,4 +1,4 @@
-package com.agentsquad.squad.worker;
+package com.agentsquad.squad.worker.service;
 
 import com.agentsquad.squad.common.util.JsonSchemaValidator;
 import com.agentsquad.squad.identity.AuthView;

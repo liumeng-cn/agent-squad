@@ -1,7 +1,7 @@
 package com.agentsquad.squad.worker.controller;
 
 import com.agentsquad.squad.identity.AuthService;
-import com.agentsquad.squad.worker.WorkerDefinitionService;
+import com.agentsquad.squad.worker.service.WorkerDefinitionService;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionCreateRequest;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionPage;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionResponse;

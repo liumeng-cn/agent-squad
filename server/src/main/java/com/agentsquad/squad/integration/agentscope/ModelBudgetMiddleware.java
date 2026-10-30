@@ -2,7 +2,7 @@ package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.runtime.service.ExecutionFailureService;
 import com.agentsquad.squad.common.util.ContentDigests;
-import com.agentsquad.squad.governance.BudgetService;
+import com.agentsquad.squad.governance.service.BudgetService;
 import com.agentsquad.squad.governance.repository.BudgetMapper;
 import com.agentsquad.squad.worker.profile.WorkerModelProfile;
 import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;

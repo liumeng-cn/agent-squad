@@ -17,7 +17,7 @@ import com.agentsquad.squad.runtime.service.WorkerResultService;
 import com.agentsquad.squad.runtime.service.WorkerRecoveryService;
 import com.agentsquad.squad.integration.agentscope.NativeSubmissionReceipt;
 import com.agentsquad.squad.runtime.domain.ProjectionTarget;
-import com.agentsquad.squad.worker.WorkerDefinitionService;
+import com.agentsquad.squad.worker.service.WorkerDefinitionService;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionCreateRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;

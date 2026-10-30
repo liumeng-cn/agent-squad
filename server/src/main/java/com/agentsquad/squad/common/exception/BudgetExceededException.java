@@ -1,4 +1,4 @@
-package com.agentsquad.squad.governance;
+package com.agentsquad.squad.common.exception;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;

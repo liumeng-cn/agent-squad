@@ -14,7 +14,7 @@ import com.agentsquad.squad.conversation.repository.ResponseContextMapper;
 import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
 import com.agentsquad.squad.runtime.repository.ExecutionFailureMapper;
 import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
-import com.agentsquad.squad.artifact.ArtifactService;
+import com.agentsquad.squad.artifact.service.ArtifactService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;

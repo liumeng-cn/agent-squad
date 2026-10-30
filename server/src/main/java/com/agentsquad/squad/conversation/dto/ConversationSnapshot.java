@@ -1,6 +1,6 @@
 package com.agentsquad.squad.conversation.dto;
 
-import com.agentsquad.squad.artifact.ArtifactView;
+import com.agentsquad.squad.artifact.dto.ArtifactView;
 import com.agentsquad.squad.presentation.dto.Interaction;
 
 import java.util.List;

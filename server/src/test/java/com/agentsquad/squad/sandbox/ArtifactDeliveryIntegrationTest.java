@@ -1,7 +1,7 @@
 package com.agentsquad.squad.sandbox;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.artifact.ArtifactService;
+import com.agentsquad.squad.artifact.service.ArtifactService;
 import com.agentsquad.squad.artifact.service.ArtifactDeliveryService;
 import com.agentsquad.squad.artifact.service.ArtifactRetentionService;
 import com.agentsquad.squad.conversation.dto.MessageCreateRequest;

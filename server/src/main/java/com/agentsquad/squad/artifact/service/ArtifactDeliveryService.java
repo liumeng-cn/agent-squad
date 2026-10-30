@@ -1,8 +1,8 @@
 package com.agentsquad.squad.artifact.service;
 
-import com.agentsquad.squad.artifact.ArtifactMapper;
-import com.agentsquad.squad.artifact.ArtifactService;
-import com.agentsquad.squad.artifact.ArtifactView;
+import com.agentsquad.squad.artifact.repository.ArtifactMapper;
+import com.agentsquad.squad.artifact.service.ArtifactService;
+import com.agentsquad.squad.artifact.dto.ArtifactView;
 import com.agentsquad.squad.artifact.domain.ArtifactContentPolicy;
 import com.agentsquad.squad.artifact.domain.ArtifactStageRow;
 import com.agentsquad.squad.artifact.dto.ArtifactStageView;

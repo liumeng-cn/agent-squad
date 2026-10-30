@@ -1,4 +1,4 @@
-package com.agentsquad.squad.artifact;
+package com.agentsquad.squad.artifact.dto;
 
 /**
  * 已提交产物的公开元数据。

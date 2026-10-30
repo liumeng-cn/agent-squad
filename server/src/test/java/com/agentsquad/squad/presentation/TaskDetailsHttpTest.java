@@ -1,8 +1,8 @@
 package com.agentsquad.squad.presentation;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.artifact.ArtifactService;
-import com.agentsquad.squad.artifact.ArtifactView;
+import com.agentsquad.squad.artifact.service.ArtifactService;
+import com.agentsquad.squad.artifact.dto.ArtifactView;
 import com.agentsquad.squad.conversation.dto.TaskReceipt;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthService;

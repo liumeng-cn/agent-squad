@@ -2,12 +2,12 @@
 
 ## 1. 分包轻活（低风险，先行）
 
-- [ ] 1.1 修正 identity/controlle → identity/controller 拼写：移动 AuthController.java 到 controller 子包，更新所有 import。验证：`mvn -f server/pom.xml -B -ntp test-compile` 通过，无缺失 import。
-- [ ] 1.2 artifact 顶层散落归位：ArtifactController → controller/、ArtifactMapper → repository/、ArtifactRow → domain/、ArtifactService → service/、ArtifactView → dto/。验证：`mvn test` 通过，artifact 包内子包结构统一。
-- [ ] 1.3 governance 归位：BudgetService.java → service/、BudgetExceededException.java → common/exception/。验证：`mvn test` 通过，governance 包内 service 子包存在。
-- [ ] 1.4 worker 归位：WorkerDefinitionService.java → service/。验证：`mvn test` 通过。
-- [ ] 1.5 清理空目录与 Tool 归类：删除 sandbox/agent 空目录；memory/agent/WriteExplicitMemoryTool.java → agent/tool/。验证：`find server/src/main/java -type d -empty` 无 sandbox/agent；`mvn test` 通过。
-- [ ] 1.6 阶段1验证：全量测试 + 前端构建。验证：`mvn -f server/pom.xml -B -ntp test`（0 失败）+ `npm --prefix web/console run build` 通过。提交阶段1。
+- [x] 1.1 修正 identity/controlle → identity/controller 拼写：移动 AuthController.java 到 controller 子包，更新所有 import。验证：`mvn -f server/pom.xml -B -ntp test-compile` 通过，无缺失 import。
+- [x] 1.2 artifact 顶层散落归位：ArtifactController → controller/、ArtifactMapper → repository/、ArtifactRow → domain/、ArtifactService → service/、ArtifactView → dto/。验证：`mvn test` 通过，artifact 包内子包结构统一。
+- [x] 1.3 governance 归位：BudgetService.java → service/、BudgetExceededException.java → common/exception/。验证：`mvn test` 通过，governance 包内 service 子包存在。
+- [x] 1.4 worker 归位：WorkerDefinitionService.java → service/。验证：`mvn test` 通过。
+- [x] 1.5 清理空目录与 Tool 归类：删除 sandbox/agent 空目录；memory/agent/WriteExplicitMemoryTool.java → agent/tool/。验证：`find server/src/main/java -type d -empty` 无 sandbox/agent；`mvn test` 通过。
+- [x] 1.6 阶段1验证：全量测试 + 前端构建。验证：`mvn -f server/pom.xml -B -ntp test`（0 失败）+ `npm --prefix web/console run build` 通过。提交阶段1。
 
 ## 2. 网关服务（核心改造）
 

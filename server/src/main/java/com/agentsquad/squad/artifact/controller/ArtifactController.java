@@ -1,5 +1,8 @@
-package com.agentsquad.squad.artifact;
+package com.agentsquad.squad.artifact.controller;
 
+import com.agentsquad.squad.artifact.domain.ArtifactRow;
+import com.agentsquad.squad.artifact.dto.ArtifactView;
+import com.agentsquad.squad.artifact.service.ArtifactService;
 import com.agentsquad.squad.identity.AuthService;
 import jakarta.annotation.Resource;
 import org.springframework.http.ContentDisposition;

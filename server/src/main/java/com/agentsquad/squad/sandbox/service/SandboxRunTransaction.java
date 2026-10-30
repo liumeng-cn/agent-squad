@@ -4,7 +4,7 @@ import com.agentsquad.squad.artifact.dto.ArtifactStageView;
 import com.agentsquad.squad.artifact.service.ArtifactDeliveryService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.governance.BudgetService;
+import com.agentsquad.squad.governance.service.BudgetService;
 import com.agentsquad.squad.sandbox.domain.SandboxExecutionContext;
 import com.agentsquad.squad.sandbox.domain.SandboxRunRow;
 import com.agentsquad.squad.sandbox.domain.SandboxDispatchClaim;

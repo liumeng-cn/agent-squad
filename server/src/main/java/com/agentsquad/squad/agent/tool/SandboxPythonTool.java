@@ -5,7 +5,7 @@ import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
 import com.agentsquad.squad.sandbox.dto.SandboxExecuteRequest;
 import com.agentsquad.squad.sandbox.service.SandboxExecutionService;
-import com.agentsquad.squad.worker.WorkerDefinitionService;
+import com.agentsquad.squad.worker.service.WorkerDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.ToolResultBlock;

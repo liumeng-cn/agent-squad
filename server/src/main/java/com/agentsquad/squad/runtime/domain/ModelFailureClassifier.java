@@ -1,6 +1,6 @@
 package com.agentsquad.squad.runtime.domain;
 
-import com.agentsquad.squad.governance.BudgetExceededException;
+import com.agentsquad.squad.common.exception.BudgetExceededException;
 import io.agentscope.core.model.ModelHttpException;
 
 import java.net.ConnectException;

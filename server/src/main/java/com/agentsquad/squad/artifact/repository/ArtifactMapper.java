@@ -1,5 +1,6 @@
-package com.agentsquad.squad.artifact;
+package com.agentsquad.squad.artifact.repository;
 
+import com.agentsquad.squad.artifact.domain.ArtifactRow;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
