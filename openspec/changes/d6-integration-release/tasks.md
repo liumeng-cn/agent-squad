@@ -12,8 +12,8 @@
 
 ## 3. 负载与安全回归
 
-- [ ] 3.1 负载回归：普通回复与 Task 模型并发、会话 SSE 连接、共享预算与用户总上限在多副本下不超。验证：A16 全局预算不超。
-- [ ] 3.2 安全回归：越权、CSRF、日志脱敏、Skill 恶意输入。验证：A14/A15/B09 语义与 access spec 一致。
+- [x] 3.1 负载回归：普通回复与 Task 模型并发、会话 SSE 连接、共享预算与用户总上限在多副本下不超。验证：A16 全局预算不超。普通回复与 Task 并发预留由 BudgetReservationConcurrencyTest 覆盖；会话 SSE 连接由 1.1 的 ConversationSseCrossInstanceIntegrationTest 覆盖；共享预算与用户总上限由本轮新增 BudgetUserTotalConcurrencyTest 覆盖（两个 scope 并发预留，用户行锁只放行一笔、用户总账不超上限）。证据见 `evidence/progress.md`。
+- [x] 3.2 安全回归：越权、CSRF、日志脱敏、Skill 恶意输入。验证：A14/A15/B09 语义与 access spec 一致。越权由 ConversationApiSecurityTest（跨用户→404）、CSRF 由 ConversationApiSecurityTest 与 RuntimeHttpSecurityTest（缺 token→conflict）、Skill 恶意输入由 D4 SkillPackageValidatorTest 覆盖；日志脱敏由本轮新增 OperationPreviewMaskingTest 覆盖（只公开白名单字段类型/长度、隐藏内容、不回显凭据）。证据见 `evidence/progress.md`。
 
 ## 4. 前端验收
 
