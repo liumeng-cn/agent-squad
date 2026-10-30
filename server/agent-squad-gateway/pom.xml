@@ -13,7 +13,7 @@
 
     <artifactId>agentSquad-gateway</artifactId>
     <packaging>jar</packaging>
-    <name>agentSquad-gateway</name>
+    <name>agent-squad-gateway</name>
     <description>Agent Squad 认证网关服务（反向代理+用户认证）</description>
 
     <dependencies>
