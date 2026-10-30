@@ -6,6 +6,15 @@
 
 ## Requirements
 
+### Requirement: 最终表结构与数据库管理边界
+
+项目 MUST 以 `server/agent-squad-server/src/main/resources/db/schema.sql` 维护最终表结构；应用不得自动建表、升级或执行历史数据回填，不维护迁移版本链。实际数据库的创建、变更与数据处理由用户独立管理。
+
+#### Scenario: 应用启动
+- **WHEN** 应用连接已配置的数据库启动
+- **THEN** 使用现有表结构，不自动执行表结构 SQL 或历史迁移
+
+
 ### Requirement: 目标持久受理与幂等
 
 系统 MUST 将用户消息与回复执行持久受理；只有 Master 判定需要独立推进的目标时才创建 GoalTask。同作用域同幂等键同输入返回原收据，不同输入返回冲突。（R02）

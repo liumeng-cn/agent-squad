@@ -2,10 +2,11 @@ schema: spec-driven
 
 context: |
   agent-squad 是 Java + AgentScope 的多智能体运行技术底座（模块化单体），需求以 R01–R12 为唯一权威。
-  技术基线：Java 21；Spring Boot MVC + Spring Security + MyBatis + Flyway + MySQL 8.4；前端 Vue 3 + TypeScript + Vite + Vue Router + Pinia。
+  技术基线：Java 21；Spring Boot MVC + Spring Security + MyBatis + MySQL 8.4；前端 Vue 3 + TypeScript + Vite + Vue Router + Pinia。
   Agent 框架固定评估候选 v2.1.0-BETA1（commit 5451c73abe47053340683a1cc6d67b290b056648），v2.0.4 仅作稳定比较基线，不使用 main；嵌入 Harness SDK，不整套引入 AgentScope Service。
   Master/Worker 是逻辑角色，Sandbox 是隔离执行边界；平台模块化单体，不按角色拆微服务，不接云效/Skill 生成页/项目共享记忆。
   运行权威：GoalTask 是用户目标，WorkerJob 是有界委派节点，AgentScope Session/Turn/Run 是执行事实；平台事务与 SDK journal 不原子，以持久 Command、稳定 SDK submit key、原生日志导出幂等与未知结果核对跨越崩溃窗口。
+  存储结构权威：server/agent-squad-server/src/main/resources/db/schema.sql 仅维护最终表结构；应用不自动建表、升级或管理数据库，不保留迁移版本与历史回填链路；实际数据库变更由用户独立管理。
   数据约束：业务 ID CHAR(36) 与存储主键 BIGINT 分离；公共审计字段统一（creator_id/creator_name/create_time/last_updater_id/last_updater_name/last_update_time/del_flag）；del_flag 不参与业务幂等键；表与字段有中文注释。
   Java 代码约束：功能类与关键业务方法写中文职责/流程/生命周期注释，不写机械访问器注释；Spring 类不声明内部类或嵌套 DTO/record；统一 jakarta.annotation.Resource 字段注入，不使用构造方法注入或 Lombok 隐式注入构造器；关键日志说明操作/阶段/结果/原因并携带适用的 traceId/taskId/jobId/operationId/commandId。
   当前进度：D0–D3 已完成既有切片验证；优先实施 openspec/changes/conversation-first-experience，再推进 d4-skills-memory、d5-sandbox-delivery、d6-integration-release。优先变更的 delta 与 design 定义待实现的新消息/任务边界；在实现并同步主 specs 前，不把规划对象视为已运行能力。

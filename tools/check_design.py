@@ -47,16 +47,9 @@ def check():
                 continue
             assert (path.parent / target.split("#")[0]).exists(), (path, target)
 
-    migration_files = sorted(
-        (ROOT / "server" / "agent-squad-server" / "src" / "main" / "resources" / "db" / "migration").glob("V*.sql")
-    )
-    java_migrations = sorted((ROOT / "server/agent-squad-server/src/main/java/db/migration").glob("V*__*.java"))
-    assert migration_files, "业务模块 SQL 迁移目录为空或路径失效"
-    assert java_migrations, "业务模块 Java 回填迁移目录为空或路径失效"
-    all_migrations = migration_files + java_migrations
-    migration_versions = [int(re.match(r"V(\d+)__", path.name).group(1)) for path in all_migrations]
-    assert len(migration_versions) == len(set(migration_versions)), "SQL/Java 迁移版本重复"
-    sql = "\n".join(path.read_text() for path in migration_files).replace("`", "")
+    schema_file = ROOT / "server/agent-squad-server/src/main/resources/db/schema.sql"
+    assert schema_file.is_file(), "最终表结构 SQL 不存在或路径失效"
+    sql = schema_file.read_text().replace("`", "")
     definitions = re.findall(r"CREATE TABLE (\w+)\s*\((.*?)\n\) ENGINE", sql, re.S)
     business = [(name, body) for name, body in definitions if name.startswith("sq_")]
     non_column_tokens = {
@@ -74,7 +67,7 @@ def check():
 
     columns = {name: column_names(body) for name, body in business}
     assert len(business) == len(columns)
-    # CREATE 定义之外，共享运行归属由增量迁移补齐；检查最终字段集。
+    # 检查最终结构中通过 ALTER 补充的字段。
     effective_columns = {name: set(fields) for name, fields in columns.items()}
     for table, column in re.findall(
         r"ALTER TABLE (\w+) ADD COLUMN (\w+)\b", sql, re.I
@@ -120,7 +113,7 @@ def check():
             foreign_keys.append(
                 (name, match.group(1), match.group(2), match.group(3), match.group(4))
             )
-    # 合并 baseline 的循环归属外键在所有 CREATE 之后统一声明。
+    # 循环归属外键在所有 CREATE 之后统一声明。
     for match in re.finditer(
         r"ALTER TABLE (\w+) ADD CONSTRAINT (\w+) FOREIGN KEY \(([^)]*)\) REFERENCES (\w+) \(([^)]*)\)",
         sql,
@@ -300,7 +293,7 @@ def check():
     )
     print("Configuration schema, sample and cross-field design limits valid")
     print("Conversation SSE, workspace actions and migrated runtime ownership fields valid")
-    print(f"Flyway inventory: {len(migration_files)} SQL + {len(java_migrations)} Java migrations; latest V{max(migration_versions)}")
+    print("Final schema: server/agent-squad-server/src/main/resources/db/schema.sql")
     print("Static design validation only; no SQL execution or runtime verification.")
 
 
