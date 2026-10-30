@@ -26,7 +26,7 @@
 
 ### 阶段2 网关服务（核心改造）
 - 新建主 pom（packaging=pom，modules=[gateway, server]），统一依赖版本
-- 新建 `gateway/` Maven 模块（独立 Spring Boot 服务，端口 18081）
+- 新建 `../../../server/agent-squad-gateway` Maven 模块（独立 Spring Boot 服务，端口 18081）
 - 迁移 AuthService/AuthController/AuthSession/AuthView/LoginRequest 到 gateway
 - 网关实现反向代理：拦截 `/api/**`（除 auth），验 token + CSRF，注入 `X-User-Id`/`X-User-Role`，用 WebClient 转发到业务服务（支持 SSE 流式）
 - 业务服务：删除 AuthService，加 UserContextInterceptor 读 `X-User-Id`，11 个 controller 改用 UserContext（机械改动）
@@ -59,7 +59,7 @@
 ## Impact
 
 **代码影响**：
-- 新增：`gateway/` Maven 模块（约 6 个 Java 文件 + pom + 配置）
+- 新增：`../../../server/agent-squad-gateway` Maven 模块（约 6 个 Java 文件 + pom + 配置）
 - 修改：11 个 controller（移除 AuthService 注入，改用 UserContext）
 - 修改：WebConfig（注册拦截器/网关配置）
 - 移动：AuthService/AuthController/AuthSession/AuthView/LoginRequest 从 identity → gateway

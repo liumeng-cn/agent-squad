@@ -32,7 +32,7 @@
 
 ### 决策1：网关为独立反向代理服务，非进程内拦截器
 
-**选择**：新建 `gateway/` Maven 模块（独立 Spring Boot 服务，端口 18081），实现反向代理。网关拦截 `/api/**`（除 `/api/v1/auth/*`），验 token + CSRF，注入 `X-User-Id`/`X-User-Role` 头，用 WebClient 转发到业务服务（端口 18080）。业务服务加 `UserContextInterceptor` 读 `X-User-Id`，11 个 controller 改用 UserContext。
+**选择**：新建 `../../../server/agent-squad-gateway` Maven 模块（独立 Spring Boot 服务，端口 18081），实现反向代理。网关拦截 `/api/**`（除 `/api/v1/auth/*`），验 token + CSRF，注入 `X-User-Id`/`X-User-Role` 头，用 WebClient 转发到业务服务（端口 18080）。业务服务加 `UserContextInterceptor` 读 `X-User-Id`，11 个 controller 改用 UserContext。
 
 **理由**：用户明确要求"拆成微服务"且选"反向代理网关"；独立服务使认证成为可独立部署、独立扩展的边界，符合未来用户量增长后按认证能力单独扩容的需求。
 

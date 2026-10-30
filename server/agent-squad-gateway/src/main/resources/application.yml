@@ -1,0 +1,17 @@
+server:
+  address: 127.0.0.1
+  port: 18081
+
+gateway:
+  business-service-url: ${GATEWAY_BUSINESS_URL:http://127.0.0.1:18080}
+
+agentsquad:
+  auth:
+    username: ${SQUAD_LOCAL_USER:}
+    password: ${SQUAD_LOCAL_PASSWORD:}
+    user-id: ${SQUAD_LOCAL_USER_ID:00000000-0000-0000-0000-000000000001}
+    role: ${SQUAD_LOCAL_ROLE:ADMIN}
+
+logging:
+  level:
+    com.agentsquad.squad.gateway: INFO
