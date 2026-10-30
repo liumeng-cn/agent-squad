@@ -4,7 +4,7 @@
 
 ## 1. 多副本一致性
 
-- [ ] 1.1 验证多副本 guard/租约不双主、旧 writer 被拒、会话 SSE 跨实例水位一致。验证：A05/A13 在两实例普通回复+后台工作+在途补充下通过，无串消息、重复派发或双主。
+- [x] 1.1 验证多副本 guard/租约不双主、旧 writer 被拒、会话 SSE 跨实例水位一致。验证：A05/A13 在两实例普通回复+后台工作+在途补充下通过，无串消息、重复派发或双主。guard/租约不双主与旧 writer 拒绝沿用 D3 的 WorkerGuardIntegrationTest、NativeWriterFencingTest；SSE 跨实例水位一致由 ConversationSseCrossInstanceIntegrationTest 覆盖（两实例共享 MySQL，一实例写入推进水位、另一实例从旧水位续读只看到新事件、无串消息或重复）。证据见 `evidence/progress.md`。
 
 ## 2. 备份与恢复
 

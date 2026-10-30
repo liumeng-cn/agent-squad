@@ -1,0 +1,35 @@
+{
+  "recordedAt": "2026-10-30",
+  "task": "1.1 多副本一致性",
+  "fullSuite": {
+    "command": "SQUAD_TEST_MYSQL_PASSWORD=<set> SQUAD_SANDBOX_TEST_IMAGE=sha256:<pinned> mvn -f server/pom.xml -B -ntp test",
+    "tests": 132,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 19
+  },
+  "newThisRound": [
+    {
+      "name": "com.agentsquad.squad.runtime.ConversationSseCrossInstanceIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": "2.794",
+      "scope": "D6.1.1",
+      "note": "两实例共享 MySQL 的 SSE 跨实例水位一致性"
+    }
+  ],
+  "carriedFromD3": [
+    {
+      "name": "com.agentsquad.squad.runtime.WorkerGuardIntegrationTest",
+      "scope": "D6.1.1",
+      "note": "guard/租约不双主"
+    },
+    {
+      "name": "com.agentsquad.squad.runtime.NativeWriterFencingTest",
+      "scope": "D6.1.1",
+      "note": "旧 writer 被拒"
+    }
+  ]
+}
