@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.runtime.repository.CompletionMapper">
+
+    <resultMap id="lockByMasterSessionResult" type="com.agentsquad.squad.runtime.domain.CompletionContextRow">
+        <constructor>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="task_status" javaType="java.lang.String"/>
+            <arg column="plan_version" javaType="_long"/>
+            <arg column="answer_revision" javaType="_long"/>
+            <arg column="proposal_turn_id" javaType="java.lang.String"/>
+            <arg column="proposal_hash" javaType="java.lang.String"/>
+            <arg column="proposal_tool_call_id" javaType="java.lang.String"/>
+            <arg column="completion_proposal_json" javaType="java.lang.String"/>
+            <arg column="cancellation_requested" javaType="_boolean"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="lockTaskResult" type="com.agentsquad.squad.runtime.domain.FinalizationRow">
+        <constructor>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="plan_version" javaType="_long"/>
+            <arg column="answer_revision" javaType="_long"/>
+            <arg column="proposal_binding_id" javaType="java.lang.String"/>
+            <arg column="proposal_turn_id" javaType="java.lang.String"/>
+            <arg column="completion_proposal_json" javaType="java.lang.String"/>
+            <arg column="cancellation_requested" javaType="_boolean"/>
+            <arg column="completion_correction_count" javaType="_int"/>
+        </constructor>
+    </resultMap>
+
+    <select id="countPendingEffects" resultType="_int">
+        SELECT (SELECT COUNT(*) FROM sq_operation WHERE user_id = #{userId} AND task_id = #{taskId}
+            AND status IN ('PREPARED',
+            'WAITING_APPROVAL',
+            'IN_FLIGHT',
+            'UNKNOWN',
+            'RECONCILING'))
+            + (SELECT COUNT(*) FROM sq_sandbox_execution x JOIN sq_execution_scope s
+                ON s.user_id = x.user_id AND s.scope_id = x.scope_id
+                WHERE s.user_id = #{userId} AND s.kind = 'TASK' AND s.owner_id = #{taskId}
+                  AND x.status IN ('IN_FLIGHT',
+            'UNKNOWN'))
+            + (SELECT COUNT(*) FROM sq_interaction WHERE user_id = #{userId} AND task_id = #{taskId} AND status = 'OPEN')
+    </select>
+
+    <select id="lockByMasterSession" resultMap="lockByMasterSessionResult">
+        SELECT b.user_id,
+            b.task_id,
+            b.binding_id,
+            t.status AS task_status,
+            t.plan_version,
+            t.answer_revision,
+            t.proposal_turn_id,
+            t.proposal_hash,
+            t.proposal_tool_call_id,
+            t.completion_proposal_json,
+            (t.cancel_requested_at IS NOT NULL) AS cancellation_requested
+        FROM sq_runtime_binding b
+        JOIN sq_goal_task t ON t.user_id = b.user_id AND t.task_id = b.task_id
+        WHERE b.user_id = #{userId} AND b.framework_session_id = #{sessionId}
+          AND b.role = 'MASTER'
+        FOR UPDATE
+    </select>
+
+    <update id="saveProposal">
+        UPDATE sq_goal_task SET completion_proposal_json = #{proposalJson},
+            proposal_binding_id = #{bindingId},
+            proposal_turn_id = #{turnId},
+            proposal_tool_call_id = #{toolCallId},
+            proposal_hash = #{proposalHash},
+            version = version + 1
+        WHERE user_id = #{userId} AND task_id = #{taskId}
+          AND status IN ('QUEUED',
+            'RUNNING') AND cancel_requested_at IS NULL
+          AND completion_proposal_json IS NULL
+    </update>
+
+    <select id="lockTask" resultMap="lockTaskResult">
+        SELECT user_id,
+            task_id,
+            conversation_id,
+            status,
+            version,
+            plan_version,
+            answer_revision,
+            proposal_binding_id,
+            proposal_turn_id,
+            completion_proposal_json,
+            completion_correction_count,
+            (cancel_requested_at IS NOT NULL) AS cancellation_requested
+        FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}
+        FOR UPDATE
+    </select>
+
+    <update id="completeTask">
+        UPDATE sq_goal_task SET status = #{outcome},
+            answer_revision = answer_revision + 1,
+            version = version + 1
+        WHERE user_id = #{userId} AND task_id = #{taskId} AND status = 'RUNNING'
+          AND cancel_requested_at IS NULL AND proposal_binding_id = #{bindingId}
+          AND proposal_turn_id = #{turnId} AND completion_proposal_json IS NOT NULL
+          AND plan_version = #{planVersion} AND answer_revision = #{answerRevision}
+          AND NOT EXISTS (SELECT 1 FROM sq_operation o WHERE o.user_id = #{userId}
+              AND o.task_id = #{taskId} AND o.status IN ('PREPARED',
+            'WAITING_APPROVAL',
+            'IN_FLIGHT',
+            'UNKNOWN',
+            'RECONCILING'))
+          AND NOT EXISTS (SELECT 1 FROM sq_sandbox_execution x JOIN sq_execution_scope s
+              ON s.user_id = x.user_id AND s.scope_id = x.scope_id
+              WHERE s.user_id = #{userId} AND s.kind = 'TASK' AND s.owner_id = #{taskId}
+                AND x.status IN ('IN_FLIGHT',
+            'UNKNOWN'))
+          AND NOT EXISTS (SELECT 1 FROM sq_interaction i WHERE i.user_id = #{userId}
+              AND i.task_id = #{taskId} AND i.status = 'OPEN')
+    </update>
+
+    <update id="cancelTask">
+        UPDATE sq_goal_task SET status = 'CANCELLED',
+            version = version + 1
+        WHERE user_id = #{userId} AND task_id = #{taskId}
+          AND cancel_requested_at IS NOT NULL
+          AND status NOT IN ('SUCCEEDED',
+            'PARTIAL',
+            'FAILED',
+            'CANCELLED')
+    </update>
+
+    <update id="markCorrectionRequested">
+        UPDATE sq_goal_task
+        SET completion_correction_count = 1,
+            version = version + 1
+        WHERE user_id = #{userId} AND task_id = #{taskId} AND status = 'RUNNING'
+          AND completion_correction_count = 0 AND completion_proposal_json IS NULL
+          AND cancel_requested_at IS NULL
+    </update>
+
+    <update id="failWithoutProposal">
+        UPDATE sq_goal_task
+        SET status = 'FAILED',
+            answer_revision = answer_revision + 1,
+            version = version + 1
+        WHERE user_id = #{userId} AND task_id = #{taskId} AND status = 'RUNNING'
+          AND completion_correction_count = 1 AND completion_proposal_json IS NULL
+          AND cancel_requested_at IS NULL
+    </update>
+
+    <update id="blockForRecovery">
+        UPDATE sq_goal_task
+        SET status = 'RECOVERY_BLOCKED',
+            blocked_reason = #{reason},
+            completion_proposal_json = NULL,
+            proposal_binding_id = NULL,
+            proposal_turn_id = NULL,
+            proposal_tool_call_id = NULL,
+            proposal_hash = NULL,
+            version = version + 1
+        WHERE user_id = #{userId} AND task_id = #{taskId}
+          AND status IN ('QUEUED',
+            'RUNNING') AND cancel_requested_at IS NULL
+    </update>
+
+    <update id="waitForInteraction">
+        UPDATE sq_goal_task
+        SET status = #{status},
+            blocked_reason = #{reason},
+            version = version + 1
+        WHERE user_id = #{userId} AND task_id = #{taskId}
+          AND status IN ('QUEUED',
+            'RUNNING') AND cancel_requested_at IS NULL
+    </update>
+
+    <update id="resumeFromInteraction">
+        UPDATE sq_goal_task
+        SET status = 'RUNNING',
+            blocked_reason = NULL,
+            version = version + 1
+        WHERE user_id = #{userId} AND task_id = #{taskId}
+          AND status IN ('WAITING_APPROVAL',
+            'WAITING_INPUT')
+          AND cancel_requested_at IS NULL
+    </update>
+</mapper>

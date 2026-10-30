@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.tools.operation.repository.MockTicketMapper">
+
+    <insert id="insert">
+        INSERT INTO sq_mock_ticket (user_id,
+            external_key,
+            request_hash,
+            title,
+            detail)
+        VALUES (#{userId},
+            #{externalKey},
+            #{requestHash},
+            #{title},
+            #{detail})
+    </insert>
+
+    <select id="countByKey" resultType="_int">
+        SELECT COUNT(*) FROM sq_mock_ticket
+        WHERE user_id = #{userId} AND external_key = #{externalKey}
+    </select>
+
+    <select id="countByUser" resultType="_int">
+        SELECT COUNT(*) FROM sq_mock_ticket WHERE user_id = #{userId}
+    </select>
+
+    <select id="findRequestHash" resultType="java.lang.String">
+        SELECT request_hash FROM sq_mock_ticket
+        WHERE user_id = #{userId} AND external_key = #{externalKey}
+    </select>
+</mapper>

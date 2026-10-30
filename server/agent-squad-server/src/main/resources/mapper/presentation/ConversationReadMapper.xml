@@ -1,0 +1,364 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.presentation.repository.ConversationReadMapper">
+
+    <resultMap id="headerResult" type="com.agentsquad.squad.presentation.domain.ConversationHeader">
+        <constructor>
+            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="title" javaType="java.lang.String"/>
+            <arg column="title_source" javaType="java.lang.String"/>
+            <arg column="title_version" javaType="_long"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="generation" javaType="_long"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="active_task_id" javaType="java.lang.String"/>
+            <arg column="event_sequence" javaType="_long"/>
+            <arg column="last_activity_at" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="messagesResult" type="com.agentsquad.squad.presentation.domain.ConversationMessageRow">
+        <constructor>
+            <arg column="message_id" javaType="java.lang.String"/>
+            <arg column="sequence" javaType="_long"/>
+            <arg column="role" javaType="java.lang.String"/>
+            <arg column="text" javaType="java.lang.String"/>
+            <arg column="revision" javaType="_long"/>
+            <arg column="completed" javaType="_boolean"/>
+            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="execution_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="occurred_at" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="activeExecutionsResult" type="com.agentsquad.squad.presentation.domain.ConversationExecution">
+        <constructor>
+            <arg column="execution_id" javaType="java.lang.String"/>
+            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="cancelled" javaType="_boolean"/>
+            <arg column="answer_message_id" javaType="java.lang.String"/>
+            <arg column="failure_id" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="eventsResult" type="com.agentsquad.squad.presentation.domain.ConversationEventRow">
+        <constructor>
+            <arg column="generation" javaType="_long"/>
+            <arg column="sequence" javaType="_long"/>
+            <arg column="type" javaType="java.lang.String"/>
+            <arg column="payload_json" javaType="java.lang.String"/>
+            <arg column="occurred_at" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="conversationsResult" type="com.agentsquad.squad.presentation.domain.ConversationHeader">
+        <constructor>
+            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="title" javaType="java.lang.String"/>
+            <arg column="title_source" javaType="java.lang.String"/>
+            <arg column="title_version" javaType="_long"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="generation" javaType="_long"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="active_task_id" javaType="java.lang.String"/>
+            <arg column="event_sequence" javaType="_long"/>
+            <arg column="last_activity_at" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="pageExecutionsResult" type="com.agentsquad.squad.presentation.domain.ConversationExecution">
+        <constructor>
+            <arg column="execution_id" javaType="java.lang.String"/>
+            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="cancelled" javaType="_boolean"/>
+            <arg column="answer_message_id" javaType="java.lang.String"/>
+            <arg column="failure_id" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="pageTasksResult" type="com.agentsquad.squad.presentation.domain.ConversationTaskState">
+        <constructor>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+        </constructor>
+    </resultMap>
+
+    <select id="header" resultMap="headerResult">
+        SELECT conversation_id,
+            title,
+            title_source,
+            title_version,
+            status,
+            generation,
+            version,
+            active_task_id,
+            conversation_event_seq AS event_sequence,
+            COALESCE(last_activity_at,
+            create_time) AS last_activity_at
+        FROM sq_conversation
+        WHERE user_id = #{userId}
+          AND conversation_id = #{conversationId}
+          AND status = 'ACTIVE'
+          AND del_flag = '0'
+    </select>
+
+    <select id="messages" resultMap="messagesResult">
+        SELECT message_id,
+            message_seq AS sequence,
+            role,
+            content AS text,
+            revision,
+            completed,
+            source_message_id,
+            execution_id,
+            task_id,
+            occurred_at
+        FROM sq_message
+        WHERE user_id = #{userId}
+          AND conversation_id = #{conversationId}
+          AND del_flag = '0'
+          AND (#{before} IS NULL OR message_seq &lt; #{before})
+        ORDER BY message_seq DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="activeExecutions" resultMap="activeExecutionsResult">
+        SELECT r.execution_id,
+            r.source_message_id,
+            r.status,
+            r.version,
+            (r.cancel_requested_at IS NOT NULL) AS cancelled,
+            r.answer_message_id,
+            r.failure_id
+        FROM sq_response_execution r
+        JOIN sq_execution_scope s ON s.user_id = r.user_id
+            AND s.scope_id = r.scope_id
+        JOIN sq_conversation c ON c.user_id = s.user_id
+            AND c.conversation_id = s.conversation_id
+            AND c.generation = s.conversation_generation
+        WHERE r.user_id = #{userId}
+          AND r.conversation_id = #{conversationId}
+          AND r.status NOT IN ('SUCCEEDED',
+            'PARTIAL',
+            'FAILED',
+            'CANCELLED')
+          AND r.del_flag = '0'
+        ORDER BY r.id
+    </select>
+
+    <select id="events" resultMap="eventsResult">
+        SELECT generation,
+            event_seq AS sequence,
+            event_type AS type,
+            payload_json,
+            occurred_at
+        FROM sq_conversation_event
+        WHERE user_id = #{userId}
+          AND conversation_id = #{conversationId}
+          AND generation = #{generation}
+          AND event_seq &gt; #{after}
+        ORDER BY event_seq
+        LIMIT 100
+    </select>
+
+    <select id="firstEvent" resultType="java.lang.Long">
+        SELECT MIN(event_seq)
+        FROM sq_conversation_event
+        WHERE user_id = #{userId}
+          AND conversation_id = #{conversationId}
+          AND generation = #{generation}
+    </select>
+
+    <select id="interactionIds" resultType="java.lang.String">
+        SELECT i.interaction_id
+        FROM sq_interaction i
+        JOIN sq_execution_scope s ON s.user_id = i.user_id
+            AND s.scope_id = i.scope_id
+        JOIN sq_conversation c ON c.user_id = s.user_id
+            AND c.conversation_id = s.conversation_id
+            AND c.generation = s.conversation_generation
+        WHERE i.user_id = #{userId}
+          AND s.conversation_id = #{conversationId}
+          AND i.status = 'OPEN'
+          AND i.del_flag = '0'
+        ORDER BY i.id
+    </select>
+
+    <select id="deliverableIds" resultType="java.lang.String">
+        SELECT DISTINCT a.artifact_id
+        FROM sq_scope_artifact a
+        JOIN sq_execution_scope s ON s.user_id = a.user_id
+            AND s.scope_id = a.scope_id
+        JOIN sq_conversation c ON c.user_id = s.user_id
+            AND c.conversation_id = s.conversation_id
+            AND c.generation = s.conversation_generation
+        WHERE a.user_id = #{userId}
+          AND s.conversation_id = #{conversationId}
+          AND a.del_flag = '0'
+          AND NOT EXISTS (SELECT 1 FROM sq_message_artifact m
+              WHERE m.user_id = a.user_id AND m.artifact_id = a.artifact_id)
+    </select>
+
+    <select id="taskAnswer" resultType="java.lang.String">
+        SELECT message_id
+        FROM sq_message
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+          AND role = 'ASSISTANT'
+          AND del_flag = '0'
+        ORDER BY message_seq DESC
+        LIMIT 1
+        FOR UPDATE
+    </select>
+
+    <select id="taskSource" resultType="java.lang.String">
+        SELECT origin_message_id
+        FROM sq_goal_task
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+    </select>
+
+    <insert id="insertTaskAnswer">
+        INSERT INTO sq_message (
+            message_id,
+            user_id,
+            conversation_id,
+            message_seq,
+            role,
+            content,
+            revision,
+            completed,
+            source_message_id,
+            task_id,
+            occurred_at,
+            creator_id,
+            last_updater_id
+        ) VALUES (
+            #{messageId},
+            #{userId},
+            #{conversationId},
+            #{sequence},
+            'ASSISTANT',
+            #{text},
+            #{revision},
+            TRUE,
+            #{sourceMessageId},
+            #{taskId},
+            #{now},
+            #{userId},
+            #{userId}
+        )
+    </insert>
+
+    <update id="replaceTaskAnswer">
+        UPDATE sq_message
+        SET content    = #{text},
+            revision   = #{revision},
+            completed  = TRUE
+        WHERE user_id = #{userId}
+          AND message_id = #{messageId}
+          AND revision &lt;= #{revision}
+    </update>
+
+    <select id="conversations" resultMap="conversationsResult">
+        SELECT conversation_id,
+            title,
+            title_source,
+            title_version,
+            status,
+            generation,
+            version,
+            active_task_id,
+            conversation_event_seq AS event_sequence,
+            COALESCE(last_activity_at,
+            create_time) AS last_activity_at
+        FROM sq_conversation
+        WHERE user_id = #{userId}
+          AND status = 'ACTIVE'
+          AND del_flag = '0'
+          AND (#{beforeTime} IS NULL
+               OR COALESCE(last_activity_at,
+            create_time) &lt; #{beforeTime}
+               OR (COALESCE(last_activity_at,
+            create_time) = #{beforeTime} AND id &lt; #{beforeId}))
+        ORDER BY COALESCE(last_activity_at,
+            create_time) DESC,
+            id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="conversationId" resultType="_long">
+        SELECT id
+        FROM sq_conversation
+        WHERE user_id = #{userId}
+          AND conversation_id = #{conversationId}
+    </select>
+
+    <update id="rename">
+        UPDATE sq_conversation
+        SET title         = #{title},
+            title_source  = 'MANUAL',
+            title_version = title_version + 1,
+            version       = version + 1
+        WHERE user_id = #{userId}
+          AND conversation_id = #{conversationId}
+          AND title_version = #{version}
+          AND status = 'ACTIVE'
+    </update>
+
+    <select id="uncertainOperationIds" resultType="java.lang.String">
+        SELECT o.operation_id
+        FROM sq_operation o
+        JOIN sq_execution_scope s ON s.user_id = o.user_id
+            AND s.scope_id = o.scope_id
+        JOIN sq_conversation c ON c.user_id = s.user_id
+            AND c.conversation_id = s.conversation_id
+            AND c.generation = s.conversation_generation
+        WHERE o.user_id = #{userId}
+          AND s.conversation_id = #{conversationId}
+          AND o.status IN ('UNKNOWN',
+            'RECONCILING')
+          AND o.del_flag = '0'
+        ORDER BY o.id
+    </select>
+
+    <select id="pageExecutions" resultMap="pageExecutionsResult">
+        SELECT r.execution_id,
+            r.source_message_id,
+            r.status,
+            r.version,
+            (r.cancel_requested_at IS NOT NULL) AS cancelled,
+            r.answer_message_id,
+            r.failure_id
+        FROM sq_response_execution r
+        JOIN sq_message m ON m.user_id = r.user_id
+            AND m.message_id = r.source_message_id
+        WHERE r.user_id = #{userId}
+          AND r.conversation_id = #{conversationId}
+          AND m.message_seq BETWEEN #{first} AND #{last}
+          AND r.del_flag = '0'
+        ORDER BY r.id
+    </select>
+
+    <select id="pageTasks" resultMap="pageTasksResult">
+        SELECT t.task_id,
+            t.origin_message_id AS source_message_id,
+            t.status,
+            t.version
+        FROM sq_goal_task t
+        JOIN sq_message m ON m.user_id = t.user_id
+            AND m.message_id = t.origin_message_id
+        WHERE t.user_id = #{userId}
+          AND t.conversation_id = #{conversationId}
+          AND m.message_seq BETWEEN #{first} AND #{last}
+          AND t.del_flag = '0'
+        ORDER BY t.id
+    </select>
+</mapper>

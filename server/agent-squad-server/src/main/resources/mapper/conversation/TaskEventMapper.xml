@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.conversation.repository.TaskEventMapper">
+
+    <resultMap id="listAfterResult" type="com.agentsquad.squad.runtime.domain.EventRow">
+        <constructor>
+            <arg column="event_seq" javaType="_long"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="event_type" javaType="java.lang.String"/>
+            <arg column="payload_json" javaType="java.lang.String"/>
+            <arg column="occurred_at" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findLatestAnswerEventResult" type="com.agentsquad.squad.runtime.domain.EventRow">
+        <constructor>
+            <arg column="event_seq" javaType="_long"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="event_type" javaType="java.lang.String"/>
+            <arg column="payload_json" javaType="java.lang.String"/>
+            <arg column="occurred_at" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insertAccepted">
+        INSERT INTO sq_task_event
+            (user_id,
+            task_id,
+            event_seq,
+            producer_key,
+            event_type,
+            payload_json,
+            occurred_at)
+        VALUES
+            (#{userId},
+            #{taskId},
+            1,
+            #{producerKey},
+            'task.accepted',
+            #{payloadJson},
+            #{occurredAt})
+    </insert>
+
+    <insert id="insertProjected">
+        INSERT INTO sq_task_event
+            (user_id,
+            task_id,
+            event_seq,
+            producer_key,
+            event_type,
+            payload_json,
+            occurred_at)
+        VALUES (#{userId},
+            #{taskId},
+            #{sequence},
+            #{producerKey},
+            #{eventType},
+            #{payloadJson},
+            #{occurredAt})
+    </insert>
+
+    <select id="listAfter" resultMap="listAfterResult">
+        SELECT event_seq,
+            task_id,
+            event_type,
+            payload_json,
+            occurred_at
+        FROM sq_task_event
+        WHERE user_id = #{userId} AND task_id = #{taskId} AND event_seq &gt; #{after}
+        ORDER BY event_seq LIMIT 100
+    </select>
+
+    <select id="maxSeq" resultType="_long">
+        SELECT COALESCE(MAX(event_seq),
+            0) FROM sq_task_event
+        WHERE user_id = #{userId} AND task_id = #{taskId}
+    </select>
+
+    <select id="findLatestAnswerEvent" resultMap="findLatestAnswerEventResult">
+        SELECT event_seq,
+            task_id,
+            event_type,
+            payload_json,
+            occurred_at
+        FROM sq_task_event
+        WHERE user_id = #{userId} AND task_id = #{taskId} AND event_type IN ('answer.completed',
+            'answer.replaced')
+        ORDER BY event_seq DESC LIMIT 1
+    </select>
+</mapper>

@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.conversation.repository.CommandMapper">
+
+    <resultMap id="findByKeyResult" type="com.agentsquad.squad.conversation.domain.CommandRow">
+        <constructor>
+            <arg column="command_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="payload_hash" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="native_turn_id" javaType="java.lang.String"/>
+            <arg column="native_run_id" javaType="java.lang.String"/>
+            <arg column="native_status" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findByKeyCurrentResult" type="com.agentsquad.squad.conversation.domain.CommandRow">
+        <constructor>
+            <arg column="command_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="payload_hash" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="native_turn_id" javaType="java.lang.String"/>
+            <arg column="native_run_id" javaType="java.lang.String"/>
+            <arg column="native_status" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findOwnedResult" type="com.agentsquad.squad.conversation.domain.CommandRow">
+        <constructor>
+            <arg column="command_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="payload_hash" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="native_turn_id" javaType="java.lang.String"/>
+            <arg column="native_run_id" javaType="java.lang.String"/>
+            <arg column="native_status" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insertSubmit">
+        INSERT INTO sq_command
+            (command_id,
+            user_id,
+            scope_key,
+            idempotency_key,
+            payload_hash,
+            task_id,
+            binding_id,
+            scope_id,
+            action,
+            payload_json,
+            status,
+            due_at)
+        VALUES
+            (#{commandId},
+            #{userId},
+            #{scopeKey},
+            #{idempotencyKey},
+            #{payloadHash},
+            #{taskId},
+            #{bindingId},
+            (SELECT scope_id FROM sq_runtime_binding WHERE user_id = #{userId} AND binding_id = #{bindingId}),
+            'SUBMIT',
+            #{payloadJson},
+            'PENDING',
+            #{dueAt})
+    </insert>
+
+    <insert id="insertControl">
+        INSERT INTO sq_command
+            (command_id,
+            user_id,
+            scope_key,
+            idempotency_key,
+            payload_hash,
+            task_id,
+            binding_id,
+            scope_id,
+            action,
+            payload_json,
+            status,
+            due_at)
+        VALUES
+            (#{commandId},
+            #{userId},
+            #{scopeKey},
+            #{idempotencyKey},
+            #{payloadHash},
+            #{taskId},
+            #{bindingId},
+            (SELECT scope_id FROM sq_runtime_binding WHERE user_id = #{userId} AND binding_id = #{bindingId}),
+            #{action},
+            #{payloadJson},
+            'PENDING',
+            #{dueAt})
+    </insert>
+
+    <update id="cancelPendingByTask">
+        UPDATE sq_command SET status = 'CANCELLED'
+        WHERE user_id = #{userId} AND task_id = #{taskId}
+          AND status IN ('PENDING',
+            'DELIVERING')
+    </update>
+
+    <select id="findByKey" resultMap="findByKeyResult">
+        SELECT command_id,
+            user_id,
+            task_id,
+            binding_id,
+            payload_hash,
+            status,
+            native_turn_id,
+            native_run_id,
+            native_status
+        FROM sq_command
+        WHERE user_id = #{userId} AND scope_key = #{scopeKey}
+          AND idempotency_key = #{idempotencyKey}
+    </select>
+
+    <select id="findByKeyCurrent" resultMap="findByKeyCurrentResult">
+        SELECT command_id,
+            user_id,
+            task_id,
+            binding_id,
+            payload_hash,
+            status,
+            native_turn_id,
+            native_run_id,
+            native_status
+        FROM sq_command
+        WHERE user_id = #{userId} AND scope_key = #{scopeKey}
+          AND idempotency_key = #{idempotencyKey} FOR UPDATE
+    </select>
+
+    <select id="findOwned" resultMap="findOwnedResult">
+        SELECT command_id,
+            user_id,
+            task_id,
+            binding_id,
+            payload_hash,
+            status,
+            native_turn_id,
+            native_run_id,
+            native_status
+        FROM sq_command WHERE user_id = #{userId} AND command_id = #{commandId}
+    </select>
+
+    <select id="countSignalTurn" resultType="_int">
+        SELECT COUNT(*) FROM sq_command
+        WHERE user_id = #{userId} AND task_id = #{taskId}
+          AND action = 'MASTER_SIGNAL' AND native_turn_id = #{turnId}
+    </select>
+
+    <update id="markMasterTurnApplied">
+        UPDATE sq_command SET status = 'APPLIED'
+        WHERE user_id = #{userId} AND task_id = #{taskId}
+          AND native_turn_id = #{turnId} AND status = 'DELIVERED'
+          AND action IN ('SUBMIT',
+            'MASTER_SIGNAL',
+            'TASK_DIRECTIVE')
+    </update>
+
+    <select id="countUnprocessedMasterCommands" resultType="_int">
+        SELECT COUNT(*) FROM sq_command c
+        JOIN sq_runtime_binding b ON b.user_id = c.user_id
+            AND b.binding_id = c.binding_id AND b.role = 'MASTER'
+        WHERE c.user_id = #{userId} AND c.task_id = #{taskId}
+          AND c.action IN ('SUBMIT',
+            'MASTER_SIGNAL',
+            'TASK_DIRECTIVE')
+          AND c.status IN ('PENDING',
+            'DELIVERING',
+            'DELIVERED')
+    </select>
+
+    <select id="findWorkerSubmitCommandId" resultType="java.lang.String">
+        SELECT command_id FROM sq_command
+        WHERE user_id = #{userId} AND binding_id = #{bindingId}
+          AND action = 'SUBMIT' AND status IN ('DELIVERED',
+            'APPLIED')
+          AND native_turn_id IS NOT NULL
+        ORDER BY id DESC LIMIT 1
+    </select>
+
+    <select id="countWorkerResumes" resultType="_int">
+        SELECT COUNT(*) FROM sq_command
+        WHERE user_id = #{userId} AND binding_id = #{bindingId} AND action = 'RESUME'
+    </select>
+
+    <select id="countPendingWorkerResumes" resultType="_int">
+        SELECT COUNT(*) FROM sq_command
+        WHERE user_id = #{userId} AND binding_id = #{bindingId} AND action = 'RESUME'
+          AND status IN ('PENDING',
+            'DELIVERING')
+    </select>
+
+    <select id="findScopeId" resultType="java.lang.String">
+        SELECT scope_id FROM sq_command WHERE user_id = #{userId} AND command_id = #{commandId}
+    </select>
+</mapper>

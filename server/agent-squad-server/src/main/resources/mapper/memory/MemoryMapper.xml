@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.memory.repository.MemoryMapper">
+
+    <resultMap id="findResult" type="com.agentsquad.squad.memory.domain.MemoryRow">
+        <constructor>
+            <arg column="memory_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="memory_key" javaType="java.lang.String"/>
+            <arg column="content" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="expires_at" javaType="java.time.LocalDateTime"/>
+            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="source_quote" javaType="java.lang.String"/>
+            <arg column="id" javaType="_long"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findActiveKeyResult" type="com.agentsquad.squad.memory.domain.MemoryRow">
+        <constructor>
+            <arg column="memory_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="memory_key" javaType="java.lang.String"/>
+            <arg column="content" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="expires_at" javaType="java.time.LocalDateTime"/>
+            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="source_quote" javaType="java.lang.String"/>
+            <arg column="id" javaType="_long"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="listResult" type="com.agentsquad.squad.memory.domain.MemoryRow">
+        <constructor>
+            <arg column="memory_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="memory_key" javaType="java.lang.String"/>
+            <arg column="content" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="expires_at" javaType="java.time.LocalDateTime"/>
+            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="source_quote" javaType="java.lang.String"/>
+            <arg column="id" javaType="_long"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="activeResult" type="com.agentsquad.squad.memory.domain.MemoryRow">
+        <constructor>
+            <arg column="memory_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="memory_key" javaType="java.lang.String"/>
+            <arg column="content" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="expires_at" javaType="java.time.LocalDateTime"/>
+            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="source_quote" javaType="java.lang.String"/>
+            <arg column="id" javaType="_long"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="pinResult" type="com.agentsquad.squad.memory.domain.MemoryScopePin">
+        <constructor>
+            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="memory_revision" javaType="_long"/>
+            <arg column="barrier_status" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="sourceResult" type="com.agentsquad.squad.memory.domain.MemorySource">
+        <constructor>
+            <arg column="message_id" javaType="java.lang.String"/>
+            <arg column="content" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="receiptResult" type="com.agentsquad.squad.memory.domain.MemoryWriteReceiptRow">
+        <constructor>
+            <arg column="payload_hash" javaType="java.lang.String"/>
+            <arg column="result_json" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="ensureRevision">
+        INSERT INTO sq_memory_revision (user_id,
+            revision) VALUES (#{user},
+            0) ON DUPLICATE KEY UPDATE user_id = user_id
+    </insert>
+
+    <select id="lockRevision" resultType="_long">
+        SELECT revision FROM sq_memory_revision WHERE user_id = #{user} FOR UPDATE
+    </select>
+
+    <select id="revision" resultType="_long">
+        SELECT COALESCE(MAX(revision),
+            0) FROM sq_memory_revision WHERE user_id = #{user}
+    </select>
+
+    <update id="advanceRevision">
+        UPDATE sq_memory_revision SET revision = revision + 1 WHERE user_id = #{user}
+    </update>
+
+    <select id="find" resultMap="findResult">
+        SELECT memory_id,
+            user_id,
+            memory_key,
+            content,
+            status,
+            version,
+            expires_at,
+            source_message_id,
+            source_quote,
+            id FROM sq_memory WHERE user_id = #{user} AND memory_id = #{id} FOR UPDATE
+    </select>
+
+    <select id="findActiveKey" resultMap="findActiveKeyResult">
+        SELECT memory_id,
+            user_id,
+            memory_key,
+            content,
+            status,
+            version,
+            expires_at,
+            source_message_id,
+            source_quote,
+            id FROM sq_memory WHERE user_id = #{user} AND memory_key = #{key} AND status = 'ACTIVE' FOR UPDATE
+    </select>
+
+    <select id="list" resultMap="listResult">
+        SELECT memory_id,
+            user_id,
+            memory_key,
+            content,
+            status,
+            version,
+            expires_at,
+            source_message_id,
+            source_quote,
+            id FROM sq_memory WHERE user_id = #{user} AND (#{before} IS NULL OR id &lt; #{before}) ORDER BY id DESC LIMIT #{limit}
+    </select>
+
+    <select id="active" resultMap="activeResult">
+        SELECT memory_id,
+            user_id,
+            memory_key,
+            content,
+            status,
+            version,
+            expires_at,
+            source_message_id,
+            source_quote,
+            id FROM sq_memory WHERE user_id = #{user} AND status = 'ACTIVE' AND (expires_at IS NULL OR expires_at &gt; #{now}) ORDER BY id LIMIT #{limit} FOR UPDATE
+    </select>
+
+    <select id="recall" resultType="java.lang.String">
+        SELECT memory_id FROM sq_memory
+        WHERE user_id = #{user} AND status = 'ACTIVE'
+          AND (expires_at IS NULL OR expires_at &gt; #{now})
+          AND (#{query} IS NULL OR memory_key = #{query} OR LOCATE(#{query},
+            content) &gt; 0)
+        ORDER BY id LIMIT #{limit}
+    </select>
+
+    <insert id="insert">
+        INSERT INTO sq_memory (
+            memory_id,
+            user_id,
+            memory_key,
+            content,
+            expires_at,
+            source_message_id,
+            source_quote
+        ) VALUES (
+            #{id},
+            #{user},
+            #{key},
+            #{content},
+            #{expires},
+            #{sourceId},
+            #{quote}
+        )
+    </insert>
+
+    <update id="update">
+        UPDATE sq_memory
+        SET content           = #{content},
+            expires_at        = #{expires},
+            source_message_id = #{sourceId},
+            source_quote      = #{quote},
+            version           = version + 1
+        WHERE user_id = #{user} AND memory_id = #{id} AND version = #{version} AND status = 'ACTIVE'
+    </update>
+
+    <update id="delete">
+        UPDATE sq_memory
+        SET content = '',
+            source_quote = NULL,
+            status = 'DELETED',
+            version = version + 1
+        WHERE user_id = #{user} AND memory_id = #{id} AND version = #{version} AND status = 'ACTIVE'
+    </update>
+
+    <update id="blockOldScopes">
+        UPDATE sq_memory_scope SET barrier_status = 'BLOCKED'
+        WHERE user_id = #{user} AND memory_revision &lt; #{revision} AND barrier_status = 'CURRENT'
+    </update>
+
+    <select id="blockedScopes" resultType="_int">
+        SELECT COUNT(*) FROM sq_memory_scope WHERE user_id = #{user} AND barrier_status = 'BLOCKED'
+    </select>
+
+    <select id="pin" resultMap="pinResult">
+        SELECT scope_id,
+            memory_revision,
+            barrier_status FROM sq_memory_scope WHERE user_id = #{user} AND scope_id = #{scope} FOR UPDATE
+    </select>
+
+    <insert id="pinScope">
+        INSERT INTO sq_memory_scope (user_id,
+            scope_id,
+            memory_revision) VALUES (#{user},
+            #{scope},
+            #{revision})
+    </insert>
+
+    <insert id="pinItem">
+        INSERT INTO sq_memory_scope_item (user_id,
+            scope_id,
+            memory_id,
+            memory_version) VALUES (#{user},
+            #{scope},
+            #{id},
+            #{version})
+    </insert>
+
+    <select id="pinnedIds" resultType="java.lang.String">
+        SELECT memory_id FROM sq_memory_scope_item WHERE user_id = #{user} AND scope_id = #{scope} ORDER BY id FOR UPDATE
+    </select>
+
+    <select id="pinnedVersion" resultType="java.lang.Long">
+        SELECT memory_version FROM sq_memory_scope_item WHERE user_id = #{user} AND scope_id = #{scope} AND memory_id = #{id} FOR UPDATE
+    </select>
+
+    <select id="source" resultMap="sourceResult">
+        SELECT m.message_id,
+            m.content FROM sq_response_execution r
+        JOIN sq_message m ON m.user_id = r.user_id AND m.message_id = r.source_message_id
+        WHERE r.user_id = #{user} AND r.scope_id = #{scope} AND m.role = 'USER' AND m.del_flag = '0'
+    </select>
+
+    <select id="receipt" resultMap="receiptResult">
+        SELECT payload_hash,
+            result_json FROM sq_memory_write_receipt WHERE user_id = #{user} AND scope_id = #{scope} AND logical_key = #{key} FOR UPDATE
+    </select>
+
+    <insert id="insertReceipt">
+        INSERT INTO sq_memory_write_receipt (user_id,
+            scope_id,
+            logical_key,
+            payload_hash,
+            result_json)
+        VALUES (#{user},
+            #{scope},
+            #{key},
+            #{hash},
+            #{result})
+    </insert>
+
+    <insert id="recordSource">
+        INSERT INTO sq_memory_source (user_id,
+            memory_id,
+            memory_version,
+            source_message_id)
+        VALUES (#{user},
+            #{memoryId},
+            #{version},
+            #{messageId})
+        ON DUPLICATE KEY UPDATE status = status
+    </insert>
+
+    <update id="invalidateSources">
+        UPDATE sq_memory_source SET status = 'INVALIDATED'
+        WHERE user_id = #{user} AND memory_id = #{memoryId} AND status = 'ACTIVE'
+    </update>
+
+    <select id="invalidatedSources" resultType="java.lang.String">
+        SELECT s.source_message_id FROM sq_memory_source s
+        JOIN sq_memory m ON m.user_id = s.user_id AND m.memory_id = s.memory_id
+        WHERE s.user_id = #{user}
+          AND (s.status = 'INVALIDATED' OR m.status &lt;&gt; 'ACTIVE'
+            OR (m.expires_at IS NOT NULL AND m.expires_at &lt;= #{now}))
+        FOR UPDATE
+    </select>
+
+    <select id="blockedScopeIds" resultType="java.lang.String">
+        SELECT scope_id FROM sq_memory_scope
+        WHERE user_id = #{user} AND (barrier_status = 'BLOCKED' OR memory_revision &lt;&gt; #{revision})
+        FOR UPDATE
+    </select>
+
+    <select id="staleScopeIds" resultType="java.lang.String">
+        SELECT i.scope_id FROM sq_memory_scope_item i
+        JOIN sq_memory m ON m.user_id = i.user_id AND m.memory_id = i.memory_id
+        WHERE i.user_id = #{user} AND (m.status &lt;&gt; 'ACTIVE' OR m.version &lt;&gt; i.memory_version
+          OR (m.expires_at IS NOT NULL AND m.expires_at &lt;= #{now}))
+        FOR UPDATE
+    </select>
+
+    <select id="sourceMessages" resultType="java.lang.String">
+        SELECT message_id FROM sq_message
+        WHERE user_id = #{user} AND (message_id = #{source} OR source_message_id = #{source})
+    </select>
+
+    <select id="scopeMessages" resultType="java.lang.String">
+        SELECT m.message_id FROM sq_message m
+        LEFT JOIN sq_response_execution r ON r.user_id = m.user_id AND r.execution_id = m.execution_id
+        LEFT JOIN sq_goal_task t ON t.user_id = m.user_id AND t.task_id = m.task_id
+        WHERE m.user_id = #{user} AND m.role = 'ASSISTANT' AND (r.scope_id = #{scope} OR t.scope_id = #{scope})
+    </select>
+</mapper>

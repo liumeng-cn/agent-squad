@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper">
+
+    <resultMap id="lockByBindingResult" type="com.agentsquad.squad.conversation.domain.ResponseRuntimeRow">
+        <constructor>
+            <arg column="execution_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="cancelled" javaType="_boolean"/>
+            <arg column="completion_proposal_json" javaType="java.lang.String"/>
+            <arg column="proposal_turn_id" javaType="java.lang.String"/>
+            <arg column="proposal_hash" javaType="java.lang.String"/>
+            <arg column="correction_count" javaType="_int"/>
+            <arg column="recovery_attempts" javaType="_int"/>
+            <arg column="answer_message_id" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <select id="lockByBinding" resultMap="lockByBindingResult">
+        SELECT execution_id,
+            user_id,
+            conversation_id,
+            source_message_id,
+            scope_id,
+            binding_id,
+            status,
+            version,
+            (cancel_requested_at IS NOT NULL) AS cancelled,
+            completion_proposal_json,
+            proposal_turn_id,
+            proposal_hash,
+            correction_count,
+            recovery_attempts,
+            answer_message_id
+        FROM sq_response_execution WHERE user_id=#{userId} AND binding_id=#{bindingId} FOR UPDATE
+    </select>
+
+    <select id="bindingForExecution" resultType="java.lang.String">
+        SELECT binding_id FROM sq_response_execution WHERE user_id=#{userId} AND execution_id=#{executionId} AND del_flag='0'
+    </select>
+
+    <update id="status">
+        UPDATE sq_response_execution SET status=#{status},
+            version=version+1
+        WHERE user_id=#{userId} AND binding_id=#{bindingId}
+          AND status NOT IN ('SUCCEEDED',
+            'PARTIAL',
+            'FAILED',
+            'CANCELLED')
+    </update>
+
+    <update id="propose">
+        UPDATE sq_response_execution SET completion_proposal_json=#{json},
+            proposal_turn_id=#{turnId},
+            proposal_hash=#{hash}
+        WHERE user_id=#{userId} AND binding_id=#{bindingId} AND completion_proposal_json IS NULL
+          AND cancel_requested_at IS NULL AND status IN ('QUEUED',
+            'RUNNING',
+            'RECOVERING')
+    </update>
+
+    <update id="finish">
+        UPDATE sq_response_execution SET status=#{status},
+            version=version+1,
+            answer_message_id=#{answerId}
+        WHERE user_id=#{userId} AND binding_id=#{bindingId}
+          AND status NOT IN ('SUCCEEDED',
+            'PARTIAL',
+            'FAILED',
+            'CANCELLED')
+    </update>
+
+    <update id="correct">
+        UPDATE sq_response_execution SET correction_count=correction_count+1,
+            completion_proposal_json=NULL,
+            proposal_turn_id=NULL,
+            proposal_hash=NULL,
+            status='QUEUED',
+            version=version+1
+        WHERE user_id=#{userId} AND binding_id=#{bindingId} AND correction_count=0 AND cancel_requested_at IS NULL
+    </update>
+
+    <update id="recovering">
+        UPDATE sq_response_execution SET recovery_attempts=recovery_attempts+1,
+            status='RECOVERING',
+            version=version+1
+        WHERE user_id=#{userId} AND binding_id=#{bindingId} AND recovery_attempts&lt;2 AND cancel_requested_at IS NULL
+          AND status NOT IN ('SUCCEEDED',
+            'PARTIAL',
+            'FAILED',
+            'CANCELLED')
+    </update>
+
+    <update id="cancelling">
+        UPDATE sq_response_execution SET cancel_requested_at=#{now},
+            status='CANCELLING',
+            version=version+1
+        WHERE user_id=#{userId} AND binding_id=#{bindingId} AND cancel_requested_at IS NULL
+          AND status NOT IN ('SUCCEEDED',
+            'PARTIAL',
+            'FAILED',
+            'CANCELLED')
+    </update>
+
+    <update id="cancelPending">
+        UPDATE sq_command SET status='CANCELLED',
+            delivery_token=NULL,
+            delivery_lease_until=NULL
+        WHERE user_id=#{userId} AND binding_id=#{bindingId} AND status IN ('PENDING',
+            'DELIVERING')
+    </update>
+
+    <select id="uncertainIds" resultType="java.lang.Long">
+        SELECT id FROM sq_operation WHERE user_id=#{userId} AND scope_id=#{scopeId}
+          AND status IN ('UNKNOWN',
+            'RECONCILING',
+            'IN_FLIGHT') AND del_flag='0' FOR UPDATE
+    </select>
+
+    <select id="uncertainSandboxIds" resultType="java.lang.Long">
+        SELECT id FROM sq_sandbox_execution WHERE user_id=#{userId} AND scope_id=#{scopeId}
+          AND status IN ('IN_FLIGHT',
+            'UNKNOWN') AND del_flag='0' FOR UPDATE
+    </select>
+
+    <select id="openKinds" resultType="java.lang.String">
+        SELECT kind FROM sq_interaction WHERE user_id=#{userId} AND scope_id=#{scopeId}
+          AND status='OPEN' AND del_flag='0' FOR UPDATE
+    </select>
+
+    <insert id="answer">
+        INSERT INTO sq_message(message_id,
+            user_id,
+            conversation_id,
+            message_seq,
+            role,
+            content,
+            completed,
+            source_message_id,
+            execution_id,
+            occurred_at,
+            creator_id,
+            last_updater_id)
+        VALUES(#{messageId},
+            #{userId},
+            #{conversationId},
+            #{sequence},
+            'ASSISTANT',
+            #{text},
+            TRUE,
+            #{sourceMessageId},
+            #{executionId},
+            #{now},
+            #{userId},
+            #{userId})
+    </insert>
+
+    <select id="originalCommand" resultType="java.lang.String">
+        SELECT command_id FROM sq_command WHERE user_id=#{userId} AND binding_id=#{bindingId}
+          AND action IN ('MESSAGE_SUBMIT',
+            'SUBMIT') AND status IN ('DELIVERED',
+            'APPLIED')
+          AND native_turn_id IS NOT NULL ORDER BY id DESC LIMIT 1
+    </select>
+
+    <select id="activeBindings" resultType="java.lang.String">
+        SELECT binding_id FROM sq_response_execution WHERE user_id=#{userId} AND conversation_id=#{conversationId}
+          AND status NOT IN ('SUCCEEDED',
+            'PARTIAL',
+            'FAILED',
+            'CANCELLED') ORDER BY id
+    </select>
+</mapper>

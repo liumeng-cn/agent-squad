@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.interaction.repository.InteractionMapper">
+
+    <resultMap id="findByFrameworkRequestResult" type="com.agentsquad.squad.interaction.domain.InteractionRow">
+        <constructor>
+            <arg column="interaction_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="job_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="operation_id" javaType="java.lang.String"/>
+            <arg column="origin" javaType="java.lang.String"/>
+            <arg column="framework_request_id" javaType="java.lang.String"/>
+            <arg column="kind" javaType="java.lang.String"/>
+            <arg column="question" javaType="java.lang.String"/>
+            <arg column="answer_schema_json" javaType="java.lang.String"/>
+            <arg column="plan_version" javaType="_long"/>
+            <arg column="request_hash" javaType="java.lang.String"/>
+            <arg column="connection_revision" javaType="_long"/>
+            <arg column="expires_at" javaType="java.time.LocalDateTime"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="response_json" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findOwnedResult" type="com.agentsquad.squad.interaction.domain.InteractionRow">
+        <constructor>
+            <arg column="interaction_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="job_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="operation_id" javaType="java.lang.String"/>
+            <arg column="origin" javaType="java.lang.String"/>
+            <arg column="framework_request_id" javaType="java.lang.String"/>
+            <arg column="kind" javaType="java.lang.String"/>
+            <arg column="question" javaType="java.lang.String"/>
+            <arg column="answer_schema_json" javaType="java.lang.String"/>
+            <arg column="plan_version" javaType="_long"/>
+            <arg column="request_hash" javaType="java.lang.String"/>
+            <arg column="connection_revision" javaType="_long"/>
+            <arg column="expires_at" javaType="java.time.LocalDateTime"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="response_json" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="listByTaskResult" type="com.agentsquad.squad.interaction.domain.InteractionRow">
+        <constructor>
+            <arg column="interaction_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="job_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="operation_id" javaType="java.lang.String"/>
+            <arg column="origin" javaType="java.lang.String"/>
+            <arg column="framework_request_id" javaType="java.lang.String"/>
+            <arg column="kind" javaType="java.lang.String"/>
+            <arg column="question" javaType="java.lang.String"/>
+            <arg column="answer_schema_json" javaType="java.lang.String"/>
+            <arg column="plan_version" javaType="_long"/>
+            <arg column="request_hash" javaType="java.lang.String"/>
+            <arg column="connection_revision" javaType="_long"/>
+            <arg column="expires_at" javaType="java.time.LocalDateTime"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="response_json" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO sq_interaction
+            (interaction_id,
+            user_id,
+            task_id,
+            job_id,
+            binding_id,
+            operation_id,
+            origin,
+            framework_request_id,
+            kind,
+            question,
+            answer_schema_json,
+            plan_version,
+            request_hash,
+            connection_revision,
+            expires_at,
+            status,
+            version,
+            scope_id,
+            creator_id,
+            creator_name,
+            last_updater_id,
+            last_updater_name)
+        VALUES
+            (#{interactionId},
+            #{userId},
+            #{taskId},
+            #{jobId},
+            #{bindingId},
+            #{operationId},
+            #{origin},
+            #{frameworkRequestId},
+            #{kind},
+            #{question},
+            #{answerSchemaJson},
+            #{planVersion},
+            #{requestHash},
+            #{connectionRevision},
+            #{expiresAt},
+            'OPEN',
+            0,
+            (SELECT scope_id FROM sq_runtime_binding WHERE user_id = #{userId} AND binding_id = #{bindingId}),
+            #{creatorId},
+            #{creatorName},
+            #{creatorId},
+            #{creatorName})
+    </insert>
+
+    <select id="findByFrameworkRequest" resultMap="findByFrameworkRequestResult">
+        SELECT interaction_id,
+            user_id,
+            task_id,
+            job_id,
+            binding_id,
+            operation_id,
+            origin,
+            framework_request_id,
+            kind,
+            question,
+            answer_schema_json,
+            plan_version,
+            request_hash,
+            connection_revision,
+            expires_at,
+            status,
+            version,
+            scope_id,
+            response_json
+        FROM sq_interaction
+        WHERE user_id = #{userId} AND binding_id = #{bindingId}
+          AND framework_request_id = #{frameworkRequestId} AND del_flag = '0'
+    </select>
+
+    <select id="findOwned" resultMap="findOwnedResult">
+        SELECT interaction_id,
+            user_id,
+            task_id,
+            job_id,
+            binding_id,
+            operation_id,
+            origin,
+            framework_request_id,
+            kind,
+            question,
+            answer_schema_json,
+            plan_version,
+            request_hash,
+            connection_revision,
+            expires_at,
+            status,
+            version,
+            scope_id,
+            response_json
+        FROM sq_interaction
+        WHERE user_id = #{userId} AND interaction_id = #{interactionId} AND del_flag = '0'
+    </select>
+
+    <select id="listByTask" resultMap="listByTaskResult">
+        SELECT interaction_id,
+            user_id,
+            task_id,
+            job_id,
+            binding_id,
+            operation_id,
+            origin,
+            framework_request_id,
+            kind,
+            question,
+            answer_schema_json,
+            plan_version,
+            request_hash,
+            connection_revision,
+            expires_at,
+            status,
+            version,
+            scope_id,
+            response_json
+        FROM sq_interaction
+        WHERE user_id = #{userId} AND task_id = #{taskId} AND del_flag = '0'
+          <if test="cursorId != null">AND id &lt; #{cursorId}</if>
+        ORDER BY id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findOpenIds" resultType="java.lang.String">
+        SELECT interaction_id FROM sq_interaction
+        WHERE user_id = #{userId} AND task_id = #{taskId} AND status = 'OPEN'
+        ORDER BY id ASC
+        LIMIT 8
+    </select>
+
+    <select id="countOpenByKind" resultType="_int">
+        SELECT COUNT(*) FROM sq_interaction
+        WHERE user_id = #{userId} AND task_id = #{taskId}
+          AND kind = #{kind} AND status = 'OPEN' AND del_flag = '0'
+    </select>
+
+    <select id="cursorIdOf" resultType="java.lang.Long">
+        SELECT id FROM sq_interaction
+        WHERE user_id = #{userId} AND interaction_id = #{interactionId} AND del_flag = '0'
+    </select>
+
+    <update id="markResponded">
+        UPDATE sq_interaction
+        SET status = 'RESPONDED',
+            response_json = #{responseJson},
+            version = version + 1,
+            last_updater_id = #{userId},
+            last_updater_name = #{updaterName}
+        WHERE user_id = #{userId} AND interaction_id = #{interactionId}
+          AND status = 'OPEN' AND version = #{expectedVersion}
+    </update>
+
+    <update id="markResolvedByFramework">
+        UPDATE sq_interaction
+        SET status = 'RESPONDED',
+            response_json = COALESCE(response_json,
+            #{responseJson}),
+            version = version + 1,
+            last_updater_id = 'framework'
+        WHERE user_id = #{userId} AND binding_id = #{bindingId}
+          AND framework_request_id = #{frameworkRequestId} AND status = 'OPEN'
+    </update>
+
+    <select id="findOpenByScope" resultType="java.lang.String">
+        SELECT interaction_id FROM sq_interaction
+        WHERE user_id = #{userId} AND scope_id = #{scopeId} AND status = 'OPEN' AND del_flag = '0'
+        ORDER BY id
+    </select>
+
+    <select id="countOpenByScopeKind" resultType="_int">
+        SELECT COUNT(*) FROM sq_interaction WHERE user_id = #{userId} AND scope_id = #{scopeId}
+            AND kind = #{kind} AND status = 'OPEN' AND del_flag = '0'
+    </select>
+</mapper>

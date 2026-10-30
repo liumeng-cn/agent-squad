@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.runtime.repository.ProjectionMapper">
+
+    <resultMap id="findDueTargetsResult" type="com.agentsquad.squad.runtime.domain.ProjectionTarget">
+        <constructor>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="agent_id" javaType="java.lang.String"/>
+            <arg column="framework_session_id" javaType="java.lang.String"/>
+            <arg column="native_event_cursor" javaType="_long"/>
+        </constructor>
+    </resultMap>
+
+    <select id="findDueTargets" resultMap="findDueTargetsResult">
+        SELECT b.user_id,
+            b.task_id,
+            b.binding_id,
+            b.agent_id,
+            b.framework_session_id,
+            b.native_event_cursor
+        FROM sq_runtime_binding b
+        LEFT JOIN sq_goal_task t ON t.user_id = b.user_id AND t.task_id = b.task_id
+        LEFT JOIN sq_response_execution r ON r.user_id = b.user_id AND r.binding_id = b.binding_id
+        WHERE b.next_projection_at &lt;= #{now}
+          AND ((t.task_id IS NOT NULL AND t.status NOT IN ('SUCCEEDED',
+            'PARTIAL',
+            'FAILED',
+            'CANCELLED',
+            'RECOVERY_BLOCKED'))
+            OR (r.execution_id IS NOT NULL AND r.status NOT IN ('SUCCEEDED',
+            'PARTIAL',
+            'FAILED',
+            'CANCELLED')))
+          AND EXISTS (SELECT 1 FROM sq_command c
+                      WHERE c.user_id = b.user_id AND c.binding_id = b.binding_id
+                        AND c.status IN ('DELIVERED',
+            'APPLIED'))
+          AND (b.role = 'MASTER' OR EXISTS (
+              SELECT 1 FROM sq_worker_job j
+              WHERE j.user_id = b.user_id AND j.binding_id = b.binding_id
+                AND j.status IN ('READY',
+            'RUNNING',
+            'WAITING_INPUT',
+            'WAITING_APPROVAL',
+            'RECONCILING',
+            'CANCELLING')))
+        ORDER BY b.next_projection_at,
+            b.id LIMIT 20
+    </select>
+
+    <select id="lockCursor" resultType="java.lang.Long">
+        SELECT native_event_cursor FROM sq_runtime_binding
+        WHERE user_id = #{userId} AND binding_id = #{bindingId} FOR UPDATE
+    </select>
+
+    <update id="advanceCursor">
+        UPDATE sq_runtime_binding SET native_event_cursor = #{next}
+        WHERE user_id = #{userId} AND binding_id = #{bindingId}
+          AND native_event_cursor = #{previous}
+    </update>
+
+    <update id="defer">
+        UPDATE sq_runtime_binding SET next_projection_at = #{nextPollAt}
+        WHERE user_id = #{userId} AND binding_id = #{bindingId}
+    </update>
+
+    <update id="reserveEventSequence">
+        UPDATE sq_goal_task SET event_seq = event_seq + 1
+        WHERE user_id = #{userId} AND task_id = #{taskId}
+    </update>
+
+    <select id="eventSequence" resultType="java.lang.Long">
+        SELECT event_seq FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}
+    </select>
+
+    <update id="markRunning">
+        UPDATE sq_goal_task SET status = 'RUNNING',
+            version = version + 1
+        WHERE user_id = #{userId} AND task_id = #{taskId} AND status = 'QUEUED'
+    </update>
+
+    <update id="recordEndedTurn">
+        UPDATE sq_runtime_binding
+        SET last_ended_turn_id = #{turnId}
+        WHERE user_id = #{userId}
+          AND binding_id = #{bindingId}
+    </update>
+
+    <update id="settleControls">
+        UPDATE sq_command
+        SET status = 'APPLIED'
+        WHERE user_id = #{userId}
+          AND binding_id = #{bindingId}
+          AND action IN ('RESUME',
+            'RESPOND')
+          AND status = 'DELIVERED'
+    </update>
+</mapper>

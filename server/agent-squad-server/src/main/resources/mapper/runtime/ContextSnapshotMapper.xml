@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.runtime.repository.ContextSnapshotMapper">
+
+    <resultMap id="lockPreparationResult" type="com.agentsquad.squad.runtime.domain.ContextPreparationRow">
+        <constructor>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="input_json" javaType="java.lang.String"/>
+            <arg column="task_status" javaType="java.lang.String"/>
+            <arg column="cancellation_requested" javaType="_boolean"/>
+            <arg column="conversation_generation" javaType="_long"/>
+            <arg column="conversation_status" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findByLogicalKeyResult" type="com.agentsquad.squad.runtime.domain.ContextSnapshotRow">
+        <constructor>
+            <arg column="snapshot_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="target_node_key" javaType="java.lang.String"/>
+            <arg column="logical_key" javaType="java.lang.String"/>
+            <arg column="conversation_generation" javaType="_long"/>
+            <arg column="memory_revision" javaType="_long"/>
+            <arg column="items_json" javaType="java.lang.String"/>
+            <arg column="token_estimate" javaType="_long"/>
+            <arg column="content_hash" javaType="java.lang.String"/>
+            <arg column="goal_revision" javaType="_long"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findOwnedResult" type="com.agentsquad.squad.runtime.domain.ContextSnapshotRow">
+        <constructor>
+            <arg column="snapshot_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="target_node_key" javaType="java.lang.String"/>
+            <arg column="logical_key" javaType="java.lang.String"/>
+            <arg column="conversation_generation" javaType="_long"/>
+            <arg column="memory_revision" javaType="_long"/>
+            <arg column="items_json" javaType="java.lang.String"/>
+            <arg column="token_estimate" javaType="_long"/>
+            <arg column="content_hash" javaType="java.lang.String"/>
+            <arg column="goal_revision" javaType="_long"/>
+        </constructor>
+    </resultMap>
+
+    <select id="lockPreparation" resultMap="lockPreparationResult">
+        SELECT b.user_id,
+            b.task_id,
+            t.input_json,
+            t.status AS task_status,
+            (t.cancel_requested_at IS NOT NULL) AS cancellation_requested,
+            c.generation AS conversation_generation,
+            c.status AS conversation_status
+        FROM sq_runtime_binding b
+        JOIN sq_goal_task t ON t.user_id = b.user_id AND t.task_id = b.task_id
+        JOIN sq_conversation c ON c.user_id = t.user_id AND c.conversation_id = t.conversation_id
+        WHERE b.user_id = #{userId} AND b.framework_session_id = #{sessionId}
+          AND b.role = 'MASTER' AND c.active_task_id = t.task_id
+        FOR UPDATE
+    </select>
+
+    <select id="findByLogicalKey" resultMap="findByLogicalKeyResult">
+        SELECT snapshot_id,
+            user_id,
+            task_id,
+            target_node_key,
+            logical_key,
+            conversation_generation,
+            memory_revision,
+            items_json,
+            token_estimate,
+            content_hash,
+            goal_revision
+        FROM sq_context_snapshot
+        WHERE user_id = #{userId} AND task_id = #{taskId}
+          AND target_node_key = #{targetNodeKey} AND logical_key = #{logicalKey}
+          AND del_flag = '0'
+    </select>
+
+    <select id="findOwned" resultMap="findOwnedResult">
+        SELECT snapshot_id,
+            user_id,
+            task_id,
+            target_node_key,
+            logical_key,
+            conversation_generation,
+            memory_revision,
+            items_json,
+            token_estimate,
+            content_hash,
+            goal_revision
+        FROM sq_context_snapshot
+        WHERE user_id = #{userId} AND task_id = #{taskId} AND snapshot_id = #{snapshotId}
+          AND del_flag = '0'
+    </select>
+
+    <insert id="insert">
+        INSERT INTO sq_context_snapshot
+            (snapshot_id,
+            user_id,
+            task_id,
+            target_node_key,
+            logical_key,
+            conversation_generation,
+            memory_revision,
+            items_json,
+            token_estimate,
+            content_hash,
+            goal_revision,
+            scope_id,
+            creator_id,
+            creator_name,
+            last_updater_id,
+            last_updater_name)
+        VALUES
+            (#{snapshotId},
+            #{userId},
+            #{taskId},
+            #{targetNodeKey},
+            #{logicalKey},
+            #{conversationGeneration},
+            #{memoryRevision},
+            #{itemsJson},
+            #{tokenEstimate},
+            #{contentHash},
+            #{goalRevision},
+            (SELECT scope_id FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}),
+            #{userId},
+            '',
+            #{userId},
+            '')
+    </insert>
+</mapper>

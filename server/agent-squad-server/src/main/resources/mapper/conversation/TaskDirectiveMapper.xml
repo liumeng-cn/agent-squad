@@ -1,0 +1,403 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.conversation.repository.TaskDirectiveMapper">
+
+    <resultMap id="lockResult" type="com.agentsquad.squad.conversation.domain.TaskDirectiveRow">
+        <constructor>
+            <arg column="directive_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="conversation_generation" javaType="_long"/>
+            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="source_scope_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="logical_key" javaType="java.lang.String"/>
+            <arg column="payload_hash" javaType="java.lang.String"/>
+            <arg column="expected_version" javaType="_long"/>
+            <arg column="expected_goal_revision" javaType="_long"/>
+            <arg column="kind" javaType="java.lang.String"/>
+            <arg column="content" javaType="java.lang.String"/>
+            <arg column="source_text" javaType="java.lang.String"/>
+            <arg column="artifact_ids_json" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="command_id" javaType="java.lang.String"/>
+            <arg column="applied_version" javaType="java.lang.Long"/>
+            <arg column="applied_goal_revision" javaType="java.lang.Long"/>
+            <arg column="reason_code" javaType="java.lang.String"/>
+            <arg column="reason_message" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findByKeyResult" type="com.agentsquad.squad.conversation.domain.TaskDirectiveRow">
+        <constructor>
+            <arg column="directive_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="conversation_generation" javaType="_long"/>
+            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="source_scope_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="logical_key" javaType="java.lang.String"/>
+            <arg column="payload_hash" javaType="java.lang.String"/>
+            <arg column="expected_version" javaType="_long"/>
+            <arg column="expected_goal_revision" javaType="_long"/>
+            <arg column="kind" javaType="java.lang.String"/>
+            <arg column="content" javaType="java.lang.String"/>
+            <arg column="source_text" javaType="java.lang.String"/>
+            <arg column="artifact_ids_json" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="command_id" javaType="java.lang.String"/>
+            <arg column="applied_version" javaType="java.lang.Long"/>
+            <arg column="applied_goal_revision" javaType="java.lang.Long"/>
+            <arg column="reason_code" javaType="java.lang.String"/>
+            <arg column="reason_message" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="appliedResult" type="com.agentsquad.squad.conversation.domain.TaskDirectiveRow">
+        <constructor>
+            <arg column="directive_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="conversation_generation" javaType="_long"/>
+            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="source_scope_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="logical_key" javaType="java.lang.String"/>
+            <arg column="payload_hash" javaType="java.lang.String"/>
+            <arg column="expected_version" javaType="_long"/>
+            <arg column="expected_goal_revision" javaType="_long"/>
+            <arg column="kind" javaType="java.lang.String"/>
+            <arg column="content" javaType="java.lang.String"/>
+            <arg column="source_text" javaType="java.lang.String"/>
+            <arg column="artifact_ids_json" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="command_id" javaType="java.lang.String"/>
+            <arg column="applied_version" javaType="java.lang.Long"/>
+            <arg column="applied_goal_revision" javaType="java.lang.Long"/>
+            <arg column="reason_code" javaType="java.lang.String"/>
+            <arg column="reason_message" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="goalStateResult" type="com.agentsquad.squad.conversation.domain.TaskGoalState">
+        <constructor>
+            <arg column="goal_revision" javaType="_long"/>
+            <arg column="input_json" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="dueResult" type="com.agentsquad.squad.conversation.domain.TaskDirectiveTarget">
+        <constructor>
+            <arg column="directive_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="latestFactsResult" type="com.agentsquad.squad.conversation.domain.TaskDirectiveFact">
+        <constructor>
+            <arg column="directive_id" javaType="java.lang.String"/>
+            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="kind" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="applied_version" javaType="java.lang.Long"/>
+            <arg column="applied_goal_revision" javaType="java.lang.Long"/>
+            <arg column="reason_code" javaType="java.lang.String"/>
+            <arg column="reason_message" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <select id="lock" resultMap="lockResult">
+        SELECT directive_id,
+            user_id,
+            conversation_id,
+            conversation_generation,
+            source_message_id,
+            source_scope_id,
+            task_id,
+            logical_key,
+            payload_hash,
+            expected_version,
+            expected_goal_revision,
+            kind,
+            content,
+            source_text,
+            artifact_ids_json,
+            status,
+            command_id,
+            applied_version,
+            applied_goal_revision,
+            reason_code,
+            reason_message
+        FROM sq_task_directive
+        WHERE user_id = #{userId}
+          AND directive_id = #{directiveId}
+          AND del_flag = '0' FOR UPDATE
+    </select>
+
+    <select id="findByKey" resultMap="findByKeyResult">
+        SELECT directive_id,
+            user_id,
+            conversation_id,
+            conversation_generation,
+            source_message_id,
+            source_scope_id,
+            task_id,
+            logical_key,
+            payload_hash,
+            expected_version,
+            expected_goal_revision,
+            kind,
+            content,
+            source_text,
+            artifact_ids_json,
+            status,
+            command_id,
+            applied_version,
+            applied_goal_revision,
+            reason_code,
+            reason_message
+        FROM sq_task_directive
+        WHERE user_id = #{userId}
+          AND source_scope_id = #{scopeId}
+          AND logical_key = #{key} FOR UPDATE
+    </select>
+
+    <select id="applied" resultMap="appliedResult">
+        SELECT directive_id,
+            user_id,
+            conversation_id,
+            conversation_generation,
+            source_message_id,
+            source_scope_id,
+            task_id,
+            logical_key,
+            payload_hash,
+            expected_version,
+            expected_goal_revision,
+            kind,
+            content,
+            source_text,
+            artifact_ids_json,
+            status,
+            command_id,
+            applied_version,
+            applied_goal_revision,
+            reason_code,
+            reason_message
+        FROM sq_task_directive
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+          AND status = 'APPLIED'
+          AND applied_goal_revision &gt;= #{revision}
+          AND del_flag = '0'
+        ORDER BY applied_goal_revision FOR UPDATE
+    </select>
+
+    <insert id="insert">
+        INSERT INTO sq_task_directive (
+            directive_id,
+            user_id,
+            conversation_id,
+            conversation_generation,
+            source_message_id,
+            source_scope_id,
+            task_id,
+            logical_key,
+            payload_hash,
+            expected_version,
+            expected_goal_revision,
+            kind,
+            content,
+            source_text,
+            artifact_ids_json,
+            status,
+            next_attempt_at,
+            creator_id,
+            last_updater_id
+        ) VALUES (
+            #{row.directiveId},
+            #{row.userId},
+            #{row.conversationId},
+            #{row.generation},
+            #{row.sourceMessageId},
+            #{row.sourceScopeId},
+            #{row.taskId},
+            #{row.logicalKey},
+            #{row.payloadHash},
+            #{row.expectedVersion},
+            #{row.expectedGoalRevision},
+            #{row.kind},
+            #{row.content},
+            #{row.sourceText},
+            #{row.artifactIdsJson},
+            'ACCEPTED',
+            #{now},
+            #{row.userId},
+            #{row.userId}
+        )
+    </insert>
+
+    <select id="goalState" resultMap="goalStateResult">
+        SELECT goal_revision,
+            input_json
+        FROM sq_goal_task
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+        FOR UPDATE
+    </select>
+
+    <select id="pending" resultType="java.lang.String">
+        SELECT directive_id
+        FROM sq_task_directive
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+          AND status = 'ACCEPTED'
+          AND del_flag = '0'
+        ORDER BY id
+        FOR UPDATE
+    </select>
+
+    <select id="due" resultMap="dueResult">
+        SELECT directive_id,
+            user_id,
+            task_id
+        FROM sq_task_directive
+        WHERE status = 'ACCEPTED'
+          AND next_attempt_at &lt;= #{now}
+          AND del_flag = '0'
+        ORDER BY next_attempt_at,
+            id
+        LIMIT 20
+    </select>
+
+    <update id="defer">
+        UPDATE sq_task_directive
+        SET next_attempt_at = #{next}
+        WHERE user_id = #{userId}
+          AND directive_id = #{directiveId}
+          AND status = 'ACCEPTED'
+    </update>
+
+    <update id="bindCommand">
+        UPDATE sq_task_directive
+        SET command_id = #{commandId}
+        WHERE user_id = #{userId}
+          AND directive_id = #{directiveId}
+          AND status = 'ACCEPTED'
+          AND command_id IS NULL
+    </update>
+
+    <update id="finish">
+        UPDATE sq_task_directive
+        SET status                = #{status},
+            applied_version       = #{version},
+            applied_goal_revision = #{revision},
+            reason_code           = #{code},
+            reason_message        = #{message}
+        WHERE user_id = #{userId}
+          AND directive_id = #{directiveId}
+          AND status = 'ACCEPTED'
+    </update>
+
+    <update id="applyGoal">
+        UPDATE sq_goal_task
+        SET goal_revision               = goal_revision + 1,
+            version                     = version + 1,
+            answer_revision             = answer_revision + 1,
+            input_json                  = #{input},
+            completion_proposal_json    = NULL,
+            proposal_binding_id         = NULL,
+            proposal_turn_id            = NULL,
+            proposal_tool_call_id       = NULL,
+            proposal_hash               = NULL
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+          AND version = #{version}
+          AND goal_revision = #{revision}
+          AND cancel_requested_at IS NULL
+          AND status IN ('QUEUED',
+            'RUNNING')
+    </update>
+
+    <update id="clearCandidate">
+        UPDATE sq_goal_task
+        SET completion_proposal_json = NULL,
+            proposal_binding_id      = NULL,
+            proposal_turn_id         = NULL,
+            proposal_tool_call_id    = NULL,
+            proposal_hash            = NULL
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+    </update>
+
+    <select id="openOperations" resultType="java.lang.String">
+        SELECT operation_id
+        FROM sq_operation
+        WHERE user_id = #{userId}
+          AND scope_id = #{scopeId}
+          AND status IN ('PREPARED',
+            'WAITING_APPROVAL',
+            'IN_FLIGHT',
+            'UNKNOWN',
+            'RECONCILING')
+          AND del_flag = '0'
+        FOR UPDATE
+    </select>
+
+    <select id="openInteractions" resultType="java.lang.String">
+        SELECT interaction_id
+        FROM sq_interaction
+        WHERE user_id = #{userId}
+          AND scope_id = #{scopeId}
+          AND status = 'OPEN'
+          AND del_flag = '0'
+        FOR UPDATE
+    </select>
+
+    <select id="latestFacts" resultMap="latestFactsResult">
+        SELECT directive_id,
+            source_message_id,
+            kind,
+            status,
+            applied_version,
+            applied_goal_revision,
+            reason_code,
+            reason_message
+        FROM sq_task_directive
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+          AND del_flag = '0'
+        ORDER BY id DESC
+        LIMIT 20
+        FOR UPDATE
+    </select>
+
+    <select id="lastReplacement" resultType="java.lang.Long">
+        SELECT applied_goal_revision
+        FROM sq_task_directive
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+          AND kind = 'REPLACE'
+          AND status = 'APPLIED'
+          AND del_flag = '0'
+        ORDER BY applied_goal_revision DESC
+        LIMIT 1 FOR UPDATE
+    </select>
+
+    <select id="pendingControlIds" resultType="java.lang.String">
+        SELECT c.command_id
+        FROM sq_command c
+        JOIN sq_runtime_binding b ON b.user_id = c.user_id
+            AND b.binding_id = c.binding_id
+        WHERE c.user_id = #{userId}
+          AND c.task_id = #{taskId}
+          AND b.role = 'MASTER'
+          AND c.action IN ('RESUME',
+            'RESPOND')
+          AND c.status IN ('PENDING',
+            'DELIVERING')
+        FOR UPDATE
+    </select>
+</mapper>

@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.conversation.repository.ConversationMapper">
+
+    <resultMap id="lockOwnedResult" type="com.agentsquad.squad.conversation.domain.ConversationRow">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="title" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="active_task_id" javaType="java.lang.String"/>
+            <arg column="generation" javaType="_long"/>
+            <arg column="version" javaType="_long"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findOwnedResult" type="com.agentsquad.squad.conversation.domain.ConversationRow">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="title" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="active_task_id" javaType="java.lang.String"/>
+            <arg column="generation" javaType="_long"/>
+            <arg column="version" javaType="_long"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="listByOwnerResult" type="com.agentsquad.squad.conversation.domain.ConversationRow">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="title" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="active_task_id" javaType="java.lang.String"/>
+            <arg column="generation" javaType="_long"/>
+            <arg column="version" javaType="_long"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findDeletableResult" type="com.agentsquad.squad.conversation.domain.ConversationRow">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="title" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="active_task_id" javaType="java.lang.String"/>
+            <arg column="generation" javaType="_long"/>
+            <arg column="version" javaType="_long"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO sq_conversation (conversation_id,
+            user_id,
+            title,
+            status)
+        VALUES (#{conversationId},
+            #{userId},
+            #{title},
+            'ACTIVE')
+    </insert>
+
+    <select id="lockOwned" resultMap="lockOwnedResult">
+        SELECT id,
+            conversation_id,
+            user_id,
+            title,
+            status,
+            active_task_id,
+            generation,
+            version
+        FROM sq_conversation WHERE user_id = #{userId} AND conversation_id = #{conversationId}
+        FOR UPDATE
+    </select>
+
+    <select id="findOwned" resultMap="findOwnedResult">
+        SELECT id,
+            conversation_id,
+            user_id,
+            title,
+            status,
+            active_task_id,
+            generation,
+            version
+        FROM sq_conversation WHERE user_id = #{userId} AND conversation_id = #{conversationId}
+    </select>
+
+    <select id="listByOwner" resultMap="listByOwnerResult">
+        SELECT id,
+            conversation_id,
+            user_id,
+            title,
+            status,
+            active_task_id,
+            generation,
+            version
+        FROM sq_conversation WHERE user_id = #{userId}
+          AND (#{cursorId} IS NULL OR id &lt; #{cursorId})
+          AND status = 'ACTIVE'
+        ORDER BY id DESC LIMIT #{limit}
+    </select>
+
+    <update id="activateTask">
+        UPDATE sq_conversation SET active_task_id = #{taskId},
+            version = version + 1
+        WHERE user_id = #{userId} AND conversation_id = #{conversationId}
+          AND status = 'ACTIVE' AND active_task_id IS NULL
+    </update>
+
+    <update id="clearActiveTask">
+        UPDATE sq_conversation SET active_task_id = NULL,
+            version = version + 1
+        WHERE user_id = #{userId} AND conversation_id = #{conversationId}
+          AND active_task_id = #{taskId}
+    </update>
+
+    <update id="markDeleting">
+        UPDATE sq_conversation
+        SET status = 'DELETING',
+            generation = generation + 1,
+            version = version + 1
+        WHERE user_id = #{userId} AND conversation_id = #{conversationId}
+          AND status = 'ACTIVE' AND version = #{expectedVersion}
+    </update>
+
+    <update id="markDeleted">
+        UPDATE sq_conversation SET status = 'DELETED',
+            version = version + 1
+        WHERE user_id = #{userId} AND conversation_id = #{conversationId}
+          AND status = 'DELETING'
+          AND NOT EXISTS (SELECT 1 FROM sq_response_execution r WHERE r.user_id=sq_conversation.user_id
+              AND r.conversation_id=sq_conversation.conversation_id AND r.status NOT IN ('SUCCEEDED',
+            'PARTIAL',
+            'FAILED',
+            'CANCELLED'))
+    </update>
+
+    <select id="findDeletable" resultMap="findDeletableResult">
+        SELECT id,
+            conversation_id,
+            user_id,
+            title,
+            status,
+            active_task_id,
+            generation,
+            version
+        FROM sq_conversation
+        WHERE status = 'DELETING' AND active_task_id IS NULL
+          AND NOT EXISTS (SELECT 1 FROM sq_response_execution r WHERE r.user_id=sq_conversation.user_id
+              AND r.conversation_id=sq_conversation.conversation_id AND r.status NOT IN ('SUCCEEDED',
+            'PARTIAL',
+            'FAILED',
+            'CANCELLED'))
+        ORDER BY id LIMIT #{limit}
+    </select>
+</mapper>

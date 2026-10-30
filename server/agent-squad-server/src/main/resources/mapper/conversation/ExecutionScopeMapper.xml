@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.conversation.repository.ExecutionScopeMapper">
+
+    <resultMap id="findActiveOwnedResult" type="com.agentsquad.squad.conversation.domain.ExecutionScopeRow">
+        <constructor>
+            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="conversation_generation" javaType="_long"/>
+            <arg column="kind" javaType="java.lang.String"/>
+            <arg column="owner_id" javaType="java.lang.String"/>
+            <arg column="account_id" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findOwnedResult" type="com.agentsquad.squad.conversation.domain.ExecutionScopeRow">
+        <constructor>
+            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="conversation_generation" javaType="_long"/>
+            <arg column="kind" javaType="java.lang.String"/>
+            <arg column="owner_id" javaType="java.lang.String"/>
+            <arg column="account_id" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="lockTaskOwnerResult" type="com.agentsquad.squad.conversation.domain.ExecutionOwnerRow">
+        <constructor>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="cancellation_requested" javaType="_boolean"/>
+            <arg column="del_flag" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="lockResponseOwnerResult" type="com.agentsquad.squad.conversation.domain.ExecutionOwnerRow">
+        <constructor>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="cancellation_requested" javaType="_boolean"/>
+            <arg column="del_flag" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <select id="findActiveOwned" resultMap="findActiveOwnedResult">
+        SELECT s.scope_id,
+            s.user_id,
+            s.conversation_id,
+            s.conversation_generation,
+            s.kind,
+            s.owner_id,
+            s.account_id
+        FROM sq_execution_scope s JOIN sq_conversation c
+            ON c.user_id = s.user_id AND c.conversation_id = s.conversation_id
+        WHERE s.user_id = #{userId} AND s.scope_id = #{scopeId}
+          AND s.del_flag = '0' AND c.del_flag = '0' AND c.status = 'ACTIVE'
+          AND s.conversation_generation = c.generation
+          AND ((s.kind = 'TASK' AND EXISTS (SELECT 1 FROM sq_goal_task t
+                WHERE t.user_id = s.user_id AND t.task_id = s.owner_id
+                  AND t.scope_id = s.scope_id AND t.conversation_id = s.conversation_id AND t.del_flag = '0'))
+            OR (s.kind = 'RESPONSE' AND EXISTS (SELECT 1 FROM sq_response_execution r
+                WHERE r.user_id = s.user_id AND r.execution_id = s.owner_id
+                  AND r.scope_id = s.scope_id AND r.conversation_id = s.conversation_id AND r.del_flag = '0')))
+    </select>
+
+    <insert id="insertAccount">
+        INSERT INTO sq_budget_account (account_id,
+            user_id,
+            limit_microunits,
+            profile_key,
+            status)
+        VALUES (#{accountId},
+            #{userId},
+            #{limit},
+            #{profileKey},
+            'OPEN')
+    </insert>
+
+    <insert id="insertScope">
+        INSERT INTO sq_execution_scope (scope_id,
+            user_id,
+            conversation_id,
+            conversation_generation,
+            kind,
+            owner_id,
+            account_id)
+        VALUES (#{scopeId},
+            #{userId},
+            #{conversationId},
+            #{generation},
+            #{kind},
+            #{ownerId},
+            #{accountId})
+    </insert>
+
+    <update id="linkTaskScope">
+        UPDATE sq_goal_task SET scope_id = #{scopeId}
+        WHERE user_id = #{userId} AND task_id = #{taskId} AND scope_id IS NULL
+          AND EXISTS (SELECT 1 FROM sq_execution_scope s
+              WHERE s.user_id = sq_goal_task.user_id AND s.scope_id = #{scopeId}
+                AND s.owner_id = sq_goal_task.task_id AND s.kind = 'TASK'
+                AND s.conversation_id = sq_goal_task.conversation_id)
+    </update>
+
+    <select id="findOwned" resultMap="findOwnedResult">
+        SELECT scope_id,
+            user_id,
+            conversation_id,
+            conversation_generation,
+            kind,
+            owner_id,
+            account_id
+        FROM sq_execution_scope WHERE user_id = #{userId} AND scope_id = #{scopeId} AND del_flag = '0'
+    </select>
+
+    <select id="findBindingBySession" resultType="java.lang.String">
+        SELECT binding_id FROM sq_runtime_binding WHERE user_id = #{userId} AND framework_session_id = #{sessionId} AND del_flag = '0'
+    </select>
+
+    <select id="findScopeBySession" resultType="java.lang.String">
+        SELECT scope_id FROM sq_runtime_binding WHERE user_id = #{userId} AND framework_session_id = #{sessionId} AND del_flag = '0'
+    </select>
+
+    <select id="findScopeByBinding" resultType="java.lang.String">
+        SELECT scope_id FROM sq_runtime_binding WHERE user_id = #{userId} AND binding_id = #{bindingId} AND del_flag = '0'
+    </select>
+
+    <select id="findScopeByTask" resultType="java.lang.String">
+        SELECT scope_id FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}
+    </select>
+
+    <select id="lockTaskOwner" resultMap="lockTaskOwnerResult">
+        SELECT status,
+            (cancel_requested_at IS NOT NULL) AS cancellation_requested,
+            del_flag
+        FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{ownerId} AND scope_id = #{scopeId} FOR UPDATE
+    </select>
+
+    <select id="lockResponseOwner" resultMap="lockResponseOwnerResult">
+        SELECT status,
+            (cancel_requested_at IS NOT NULL) AS cancellation_requested,
+            del_flag
+        FROM sq_response_execution WHERE user_id = #{userId} AND execution_id = #{ownerId} AND scope_id = #{scopeId} FOR UPDATE
+    </select>
+
+    <update id="queueTaskAfterInteraction">
+        UPDATE sq_goal_task SET status = 'QUEUED',
+            version = version + 1
+        WHERE user_id = #{userId} AND scope_id = #{scopeId}
+          AND status IN ('WAITING_INPUT',
+            'WAITING_APPROVAL') AND cancel_requested_at IS NULL
+          AND NOT EXISTS (SELECT 1 FROM sq_interaction i WHERE i.user_id = #{userId}
+              AND i.scope_id = #{scopeId} AND i.status = 'OPEN' AND i.del_flag = '0')
+    </update>
+
+    <update id="queueResponseAfterInteraction">
+        UPDATE sq_response_execution SET status = 'QUEUED',
+            version = version + 1
+        WHERE user_id = #{userId} AND scope_id = #{scopeId}
+          AND status IN ('WAITING_INPUT',
+            'WAITING_APPROVAL') AND cancel_requested_at IS NULL
+          AND NOT EXISTS (SELECT 1 FROM sq_interaction i WHERE i.user_id = #{userId}
+              AND i.scope_id = #{scopeId} AND i.status = 'OPEN' AND i.del_flag = '0')
+    </update>
+</mapper>

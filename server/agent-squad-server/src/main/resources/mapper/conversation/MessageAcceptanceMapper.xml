@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper">
+
+    <resultMap id="findSubmissionResult" type="com.agentsquad.squad.conversation.domain.MessageSubmissionRow">
+        <constructor>
+            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="execution_id" javaType="java.lang.String"/>
+            <arg column="command_id" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="payload_hash" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="conversation_generation" javaType="_long"/>
+            <arg column="event_seq" javaType="_long"/>
+        </constructor>
+    </resultMap>
+
+    <select id="findSubmission" resultMap="findSubmissionResult">
+        SELECT s.conversation_id,
+            r.source_message_id,
+            r.execution_id,
+            c.command_id,
+            s.scope_id,
+            c.payload_hash,
+            r.status,
+            s.conversation_generation,
+            e.event_seq
+        FROM sq_command c JOIN sq_execution_scope s ON s.user_id = c.user_id AND s.scope_id = c.scope_id
+        JOIN sq_response_execution r ON r.user_id = s.user_id AND r.execution_id = s.owner_id AND r.scope_id = s.scope_id
+        JOIN sq_conversation_event e ON e.user_id = c.user_id AND e.conversation_id = s.conversation_id
+            AND e.producer_key = CONCAT('command:',
+            c.command_id,
+            ':execution.queued')
+        WHERE c.user_id = #{userId} AND c.scope_key = #{scopeKey} AND c.idempotency_key = #{key}
+          AND s.kind = 'RESPONSE'
+    </select>
+
+    <update id="reserveMessage">
+        UPDATE sq_conversation SET message_seq = message_seq + 1,
+            version = version + 1,
+            last_activity_at = #{now}
+        WHERE user_id = #{userId} AND conversation_id = #{conversationId} AND status = 'ACTIVE'
+    </update>
+
+    <select id="messageSequence" resultType="_long">
+        SELECT message_seq FROM sq_conversation WHERE user_id = #{userId} AND conversation_id = #{conversationId}
+    </select>
+
+    <insert id="insertMessage">
+        INSERT INTO sq_message (message_id,
+            user_id,
+            conversation_id,
+            message_seq,
+            role,
+            content,
+            completed,
+            execution_id,
+            occurred_at,
+            creator_id,
+            last_updater_id)
+        VALUES (#{messageId},
+            #{userId},
+            #{conversationId},
+            #{sequence},
+            'USER',
+            #{text},
+            TRUE,
+            #{executionId},
+            #{now},
+            #{userId},
+            #{userId})
+    </insert>
+
+    <insert id="insertExecution">
+        INSERT INTO sq_response_execution (execution_id,
+            user_id,
+            conversation_id,
+            source_message_id,
+            scope_id,
+            binding_id,
+            status,
+            dispatch_sequence,
+            creator_id,
+            last_updater_id)
+        VALUES (#{executionId},
+            #{userId},
+            #{conversationId},
+            #{messageId},
+            #{scopeId},
+            #{bindingId},
+            'QUEUED',
+            (SELECT message_seq FROM sq_message WHERE user_id = #{userId} AND message_id = #{messageId}),
+            #{userId},
+            #{userId})
+    </insert>
+
+    <update id="markFallbackTitle">
+        UPDATE sq_conversation SET title_source = 'FALLBACK'
+        WHERE user_id = #{userId} AND conversation_id = #{conversationId} AND title_source = 'LEGACY'
+    </update>
+
+    <update id="reserveEvent">
+        UPDATE sq_conversation SET conversation_event_seq = conversation_event_seq + 1
+        WHERE user_id = #{userId} AND conversation_id = #{conversationId} AND status = 'ACTIVE'
+    </update>
+
+    <select id="eventSequence" resultType="_long">
+        SELECT conversation_event_seq FROM sq_conversation WHERE user_id = #{userId} AND conversation_id = #{conversationId}
+    </select>
+
+    <insert id="insertEvent">
+        INSERT INTO sq_conversation_event (user_id,
+            conversation_id,
+            generation,
+            event_seq,
+            producer_key,
+            event_type,
+            payload_json,
+            occurred_at,
+            creator_id,
+            last_updater_id)
+        VALUES (#{userId},
+            #{conversationId},
+            #{generation},
+            #{sequence},
+            #{producerKey},
+            #{type},
+            #{payloadJson},
+            #{now},
+            #{userId},
+            #{userId})
+    </insert>
+</mapper>

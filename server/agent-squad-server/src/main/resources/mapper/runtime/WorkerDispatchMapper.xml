@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.runtime.repository.WorkerDispatchMapper">
+
+    <resultMap id="findByBindingResult" type="com.agentsquad.squad.runtime.domain.WorkerLaunchRow">
+        <constructor>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="job_id" javaType="java.lang.String"/>
+            <arg column="plan_version" javaType="_long"/>
+            <arg column="node_key" javaType="java.lang.String"/>
+            <arg column="worker_key" javaType="java.lang.String"/>
+            <arg column="worker_version" javaType="java.lang.String"/>
+            <arg column="job_status" javaType="java.lang.String"/>
+            <arg column="plan_status" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="agent_id" javaType="java.lang.String"/>
+            <arg column="input_json" javaType="java.lang.String"/>
+            <arg column="cancel_requested_at" javaType="java.time.LocalDateTime"/>
+            <arg column="guard_token" javaType="java.lang.String"/>
+            <arg column="guard_lease_until" javaType="java.time.LocalDateTime"/>
+            <arg column="result_candidate_json" javaType="java.lang.String"/>
+            <arg column="candidate_guard_token" javaType="java.lang.String"/>
+            <arg column="candidate_turn_id" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <select id="findByBinding" resultMap="findByBindingResult">
+        SELECT j.user_id,
+            j.task_id,
+            j.job_id,
+            j.plan_version,
+            j.node_key,
+            j.worker_key,
+            j.worker_version,
+            j.status AS job_status,
+            p.status AS plan_status,
+            j.binding_id,
+            b.agent_id,
+            j.input_json,
+            j.cancel_requested_at,
+            j.guard_token,
+            j.guard_lease_until,
+            j.result_candidate_json,
+            j.candidate_guard_token,
+            j.candidate_turn_id
+        FROM sq_worker_job j
+        JOIN sq_plan p ON p.task_id = j.task_id AND p.plan_version = j.plan_version
+        JOIN sq_runtime_binding b ON b.user_id = j.user_id AND b.binding_id = j.binding_id
+        WHERE j.user_id = #{userId} AND j.binding_id = #{bindingId} AND b.role = 'WORKER'
+    </select>
+
+    <update id="claimGuard">
+        UPDATE sq_worker_job j
+        SET j.status = 'RUNNING',
+            j.guard_token = #{guardToken},
+            j.candidate_guard_token = CASE WHEN j.result_candidate_json IS NOT NULL
+                THEN #{guardToken} ELSE j.candidate_guard_token END,
+            j.guard_lease_until = #{leaseUntil},
+            j.version = j.version + 1
+        WHERE j.user_id = #{userId} AND j.binding_id = #{bindingId}
+          AND j.cancel_requested_at IS NULL
+          AND (j.status = 'READY'
+               OR (j.status = 'RUNNING' AND j.guard_lease_until &lt; #{now}))
+          AND EXISTS (SELECT 1 FROM sq_plan p
+                      WHERE p.task_id = j.task_id AND p.plan_version = j.plan_version
+                        AND p.status = 'ACTIVE')
+    </update>
+
+    <update id="renewGuard">
+        UPDATE sq_worker_job SET guard_lease_until = #{leaseUntil}
+        WHERE user_id = #{userId} AND binding_id = #{bindingId}
+          AND status = 'RUNNING' AND guard_token = #{guardToken}
+          AND cancel_requested_at IS NULL AND guard_lease_until &gt; #{now}
+    </update>
+
+    <update id="saveCandidate">
+        UPDATE sq_worker_job SET result_candidate_json = #{resultJson},
+            candidate_guard_token = #{guardToken},
+            candidate_turn_id = #{turnId},
+            version = version + 1
+        WHERE user_id = #{userId} AND binding_id = #{bindingId}
+          AND status = 'RUNNING' AND guard_token = #{guardToken}
+          AND guard_lease_until &gt; #{now} AND cancel_requested_at IS NULL
+          AND result_candidate_json IS NULL
+          AND EXISTS (SELECT 1 FROM sq_plan p WHERE p.task_id = sq_worker_job.task_id
+                      AND p.plan_version = sq_worker_job.plan_version AND p.status = 'ACTIVE')
+    </update>
+
+    <update id="finalizeSuccess">
+        UPDATE sq_worker_job SET status = 'SUCCEEDED',
+            result_json = result_candidate_json,
+            guard_token = NULL,
+            guard_lease_until = NULL,
+            version = version + 1
+        WHERE user_id = #{userId} AND binding_id = #{bindingId} AND status = 'RUNNING'
+          AND candidate_turn_id = #{turnId} AND candidate_guard_token = guard_token
+          AND guard_lease_until &gt; #{now}
+          AND cancel_requested_at IS NULL
+          AND EXISTS (SELECT 1 FROM sq_plan p WHERE p.task_id = sq_worker_job.task_id
+                      AND p.plan_version = sq_worker_job.plan_version AND p.status = 'ACTIVE')
+    </update>
+
+    <update id="supersedeInFlight">
+        UPDATE sq_worker_job SET status = 'SUPERSEDED',
+            guard_token = NULL,
+            guard_lease_until = NULL,
+            version = version + 1
+        WHERE user_id = #{userId} AND binding_id = #{bindingId}
+          AND status IN ('RUNNING',
+            'WAITING_INPUT',
+            'WAITING_APPROVAL',
+            'RECONCILING',
+            'CANCELLING')
+          AND cancel_requested_at IS NOT NULL
+          AND EXISTS (SELECT 1 FROM sq_plan p WHERE p.task_id = sq_worker_job.task_id
+                      AND p.plan_version = sq_worker_job.plan_version
+                      AND p.status = 'SUPERSEDED')
+    </update>
+
+    <update id="markFailed">
+        UPDATE sq_worker_job SET status = 'FAILED',
+            guard_token = NULL,
+            guard_lease_until = NULL,
+            version = version + 1
+        WHERE user_id = #{userId} AND binding_id = #{bindingId} AND status = 'RUNNING'
+    </update>
+
+    <update id="markRecoveryBlocked">
+        UPDATE sq_worker_job SET status = 'RECOVERY_BLOCKED',
+            guard_token = NULL,
+            guard_lease_until = NULL,
+            version = version + 1
+        WHERE user_id = #{userId} AND binding_id = #{bindingId} AND status = 'RUNNING'
+    </update>
+</mapper>

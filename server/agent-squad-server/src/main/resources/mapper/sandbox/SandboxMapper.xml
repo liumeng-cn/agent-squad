@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.sandbox.repository.SandboxMapper">
+
+    <select id="binding" resultType="com.agentsquad.squad.sandbox.domain.SandboxBindingRow">
+        SELECT user_id,
+            scope_id,
+            binding_id,
+            framework_session_id AS session_id,
+            role
+        FROM sq_runtime_binding
+        WHERE user_id = #{userId} AND framework_session_id = #{sessionId} AND del_flag = '0'
+    </select>
+
+    <select id="activeWorker" resultType="_int">
+        SELECT COUNT(*) FROM sq_worker_job j
+        JOIN sq_plan p ON p.task_id = j.task_id AND p.plan_version = j.plan_version
+        WHERE j.user_id = #{userId} AND j.binding_id = #{bindingId}
+          AND j.guard_token = #{guardToken} AND j.guard_lease_until &gt; CURRENT_TIMESTAMP
+          AND j.status = 'RUNNING' AND j.cancel_requested_at IS NULL AND p.status = 'ACTIVE'
+    </select>
+
+    <select id="prior" resultType="com.agentsquad.squad.sandbox.domain.SandboxRunRow">
+        SELECT execution_id,
+            user_id,
+            scope_id,
+            binding_id,
+            request_hash,
+            status,
+            result_json
+        FROM sq_sandbox_execution
+        WHERE user_id = #{userId} AND binding_id = #{bindingId}
+          AND (logical_key = #{logicalKey} OR (turn_id = #{turnId} AND tool_call_id = #{toolCallId}))
+        FOR UPDATE
+    </select>
+
+    <select id="find" resultType="com.agentsquad.squad.sandbox.domain.SandboxRunRow">
+        SELECT execution_id,
+            user_id,
+            scope_id,
+            binding_id,
+            request_hash,
+            status,
+            result_json
+        FROM sq_sandbox_execution WHERE user_id = #{userId} AND execution_id = #{executionId} FOR UPDATE
+    </select>
+
+    <insert id="insert">
+        INSERT INTO sq_sandbox_execution
+            (execution_id,
+            user_id,
+            scope_id,
+            binding_id,
+            logical_key,
+            turn_id,
+            tool_call_id,
+            request_hash,
+            status,
+            deadline_at,
+            creator_id,
+            last_updater_id)
+        VALUES
+            (#{executionId},
+            #{userId},
+            #{scopeId},
+            #{bindingId},
+            #{logicalKey},
+            #{turnId},
+            #{toolCallId},
+            #{requestHash},
+            'IN_FLIGHT',
+            #{deadlineAt},
+            #{userId},
+            #{userId})
+    </insert>
+
+    <update id="finish">
+        UPDATE sq_sandbox_execution SET status = #{status},
+            result_json = #{resultJson},
+            last_update_time = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId} AND execution_id = #{executionId} AND status = 'IN_FLIGHT'
+    </update>
+
+    <select id="expired" resultType="com.agentsquad.squad.sandbox.domain.SandboxRunRow">
+        SELECT execution_id,
+            user_id,
+            scope_id,
+            binding_id,
+            request_hash,
+            status,
+            result_json
+        FROM sq_sandbox_execution
+        WHERE status = 'IN_FLIGHT' AND deadline_at &lt; CURRENT_TIMESTAMP
+        ORDER BY id LIMIT 100
+    </select>
+
+    <update id="expireOne">
+        UPDATE sq_sandbox_execution SET status = 'UNKNOWN',
+            last_update_time = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId} AND execution_id = #{executionId}
+          AND status = 'IN_FLIGHT' AND deadline_at &lt; CURRENT_TIMESTAMP
+    </update>
+</mapper>

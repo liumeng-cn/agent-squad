@@ -1,0 +1,486 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.tools.operation.repository.OperationMapper">
+
+    <resultMap id="lockToolContextResult" type="com.agentsquad.squad.tools.operation.domain.ToolExecutionContextRow">
+        <constructor>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="task_status" javaType="java.lang.String"/>
+            <arg column="cancellation_requested" javaType="_boolean"/>
+            <arg column="scope_id" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findByNativeCallResult" type="com.agentsquad.squad.tools.operation.domain.OperationRow">
+        <constructor>
+            <arg column="operation_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="job_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="framework_turn_id" javaType="java.lang.String"/>
+            <arg column="tool_call_id" javaType="java.lang.String"/>
+            <arg column="tool_key" javaType="java.lang.String"/>
+            <arg column="tool_version" javaType="java.lang.String"/>
+            <arg column="business_intent_key" javaType="java.lang.String"/>
+            <arg column="effect" javaType="java.lang.String"/>
+            <arg column="connection_id" javaType="java.lang.String"/>
+            <arg column="connection_revision" javaType="_long"/>
+            <arg column="auth_version" javaType="_long"/>
+            <arg column="request_hash" javaType="java.lang.String"/>
+            <arg column="arguments_json" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="executor_owner" javaType="java.lang.String"/>
+            <arg column="executor_fence" javaType="_long"/>
+            <arg column="external_key" javaType="java.lang.String"/>
+            <arg column="result_json" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="budget_usage_key" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findByBusinessIntentResult" type="com.agentsquad.squad.tools.operation.domain.OperationRow">
+        <constructor>
+            <arg column="operation_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="job_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="framework_turn_id" javaType="java.lang.String"/>
+            <arg column="tool_call_id" javaType="java.lang.String"/>
+            <arg column="tool_key" javaType="java.lang.String"/>
+            <arg column="tool_version" javaType="java.lang.String"/>
+            <arg column="business_intent_key" javaType="java.lang.String"/>
+            <arg column="effect" javaType="java.lang.String"/>
+            <arg column="connection_id" javaType="java.lang.String"/>
+            <arg column="connection_revision" javaType="_long"/>
+            <arg column="auth_version" javaType="_long"/>
+            <arg column="request_hash" javaType="java.lang.String"/>
+            <arg column="arguments_json" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="executor_owner" javaType="java.lang.String"/>
+            <arg column="executor_fence" javaType="_long"/>
+            <arg column="external_key" javaType="java.lang.String"/>
+            <arg column="result_json" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="budget_usage_key" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findOwnedResult" type="com.agentsquad.squad.tools.operation.domain.OperationRow">
+        <constructor>
+            <arg column="operation_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="job_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="framework_turn_id" javaType="java.lang.String"/>
+            <arg column="tool_call_id" javaType="java.lang.String"/>
+            <arg column="tool_key" javaType="java.lang.String"/>
+            <arg column="tool_version" javaType="java.lang.String"/>
+            <arg column="business_intent_key" javaType="java.lang.String"/>
+            <arg column="effect" javaType="java.lang.String"/>
+            <arg column="connection_id" javaType="java.lang.String"/>
+            <arg column="connection_revision" javaType="_long"/>
+            <arg column="auth_version" javaType="_long"/>
+            <arg column="request_hash" javaType="java.lang.String"/>
+            <arg column="arguments_json" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="executor_owner" javaType="java.lang.String"/>
+            <arg column="executor_fence" javaType="_long"/>
+            <arg column="external_key" javaType="java.lang.String"/>
+            <arg column="result_json" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="budget_usage_key" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="listByTaskResult" type="com.agentsquad.squad.tools.operation.domain.OperationRow">
+        <constructor>
+            <arg column="operation_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="job_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="framework_turn_id" javaType="java.lang.String"/>
+            <arg column="tool_call_id" javaType="java.lang.String"/>
+            <arg column="tool_key" javaType="java.lang.String"/>
+            <arg column="tool_version" javaType="java.lang.String"/>
+            <arg column="business_intent_key" javaType="java.lang.String"/>
+            <arg column="effect" javaType="java.lang.String"/>
+            <arg column="connection_id" javaType="java.lang.String"/>
+            <arg column="connection_revision" javaType="_long"/>
+            <arg column="auth_version" javaType="_long"/>
+            <arg column="request_hash" javaType="java.lang.String"/>
+            <arg column="arguments_json" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="executor_owner" javaType="java.lang.String"/>
+            <arg column="executor_fence" javaType="_long"/>
+            <arg column="external_key" javaType="java.lang.String"/>
+            <arg column="result_json" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="budget_usage_key" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findExpiredInFlightResult" type="com.agentsquad.squad.tools.operation.domain.OperationRow">
+        <constructor>
+            <arg column="operation_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="job_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="framework_turn_id" javaType="java.lang.String"/>
+            <arg column="tool_call_id" javaType="java.lang.String"/>
+            <arg column="tool_key" javaType="java.lang.String"/>
+            <arg column="tool_version" javaType="java.lang.String"/>
+            <arg column="business_intent_key" javaType="java.lang.String"/>
+            <arg column="effect" javaType="java.lang.String"/>
+            <arg column="connection_id" javaType="java.lang.String"/>
+            <arg column="connection_revision" javaType="_long"/>
+            <arg column="auth_version" javaType="_long"/>
+            <arg column="request_hash" javaType="java.lang.String"/>
+            <arg column="arguments_json" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="executor_owner" javaType="java.lang.String"/>
+            <arg column="executor_fence" javaType="_long"/>
+            <arg column="external_key" javaType="java.lang.String"/>
+            <arg column="result_json" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="budget_usage_key" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <select id="lockToolContext" resultMap="lockToolContextResult">
+        SELECT CASE WHEN s.kind = 'TASK' THEN s.owner_id ELSE NULL END AS task_id,
+            b.binding_id,
+            COALESCE(t.status,
+            r.status) AS task_status,
+            (COALESCE(t.cancel_requested_at,
+            r.cancel_requested_at) IS NOT NULL) AS cancellation_requested,
+            b.scope_id FROM sq_runtime_binding b
+        JOIN sq_execution_scope s ON s.user_id = b.user_id AND s.scope_id = b.scope_id
+        LEFT JOIN sq_goal_task t ON s.kind = 'TASK' AND t.user_id = s.user_id AND t.task_id = s.owner_id
+        LEFT JOIN sq_response_execution r ON s.kind = 'RESPONSE' AND r.user_id = s.user_id AND r.execution_id = s.owner_id
+        WHERE b.user_id = #{userId} AND b.framework_session_id = #{sessionId} AND b.role = 'MASTER'
+          AND b.del_flag = '0'
+    </select>
+
+    <insert id="insert">
+        INSERT INTO sq_operation
+            (operation_id,
+            user_id,
+            task_id,
+            job_id,
+            binding_id,
+            framework_turn_id,
+            tool_call_id,
+            tool_key,
+            tool_version,
+            business_intent_key,
+            effect,
+            connection_id,
+            connection_revision,
+            auth_version,
+            request_hash,
+            arguments_json,
+            status,
+            version,
+            scope_id,
+            budget_usage_key,
+            creator_id,
+            creator_name,
+            last_updater_id,
+            last_updater_name)
+        VALUES
+            (#{operationId},
+            #{userId},
+            #{taskId},
+            #{jobId},
+            #{bindingId},
+            #{frameworkTurnId},
+            #{toolCallId},
+            #{toolKey},
+            #{toolVersion},
+            #{businessIntentKey},
+            #{effect},
+            #{connectionId},
+            #{connectionRevision},
+            #{authVersion},
+            #{requestHash},
+            #{argumentsJson},
+            #{status},
+            0,
+            (SELECT scope_id FROM sq_runtime_binding WHERE user_id = #{userId} AND binding_id = #{bindingId}),
+            #{budgetUsageKey},
+            #{userId},
+            #{creatorName},
+            #{userId},
+            #{creatorName})
+    </insert>
+
+    <select id="findByNativeCall" resultMap="findByNativeCallResult">
+        SELECT operation_id,
+            user_id,
+            task_id,
+            job_id,
+            binding_id,
+            framework_turn_id,
+            tool_call_id,
+            tool_key,
+            tool_version,
+            business_intent_key,
+            effect,
+            connection_id,
+            connection_revision,
+            auth_version,
+            request_hash,
+            arguments_json,
+            status,
+            version,
+            executor_owner,
+            executor_fence,
+            external_key,
+            result_json,
+            scope_id,
+            budget_usage_key
+        FROM sq_operation
+        WHERE user_id = #{userId} AND binding_id = #{bindingId}
+          AND framework_turn_id = #{frameworkTurnId} AND tool_call_id = #{toolCallId} FOR UPDATE
+    </select>
+
+    <select id="findByBusinessIntent" resultMap="findByBusinessIntentResult">
+        SELECT operation_id,
+            user_id,
+            task_id,
+            job_id,
+            binding_id,
+            framework_turn_id,
+            tool_call_id,
+            tool_key,
+            tool_version,
+            business_intent_key,
+            effect,
+            connection_id,
+            connection_revision,
+            auth_version,
+            request_hash,
+            arguments_json,
+            status,
+            version,
+            executor_owner,
+            executor_fence,
+            external_key,
+            result_json,
+            scope_id,
+            budget_usage_key
+        FROM sq_operation
+        WHERE user_id = #{userId} AND scope_id = #{scopeId} AND tool_key = #{toolKey}
+          AND business_intent_key = #{businessIntentKey} FOR UPDATE
+    </select>
+
+    <select id="findOwned" resultMap="findOwnedResult">
+        SELECT operation_id,
+            user_id,
+            task_id,
+            job_id,
+            binding_id,
+            framework_turn_id,
+            tool_call_id,
+            tool_key,
+            tool_version,
+            business_intent_key,
+            effect,
+            connection_id,
+            connection_revision,
+            auth_version,
+            request_hash,
+            arguments_json,
+            status,
+            version,
+            executor_owner,
+            executor_fence,
+            external_key,
+            result_json,
+            scope_id,
+            budget_usage_key
+        FROM sq_operation
+        WHERE user_id = #{userId} AND operation_id = #{operationId}
+    </select>
+
+    <select id="listByTask" resultMap="listByTaskResult">
+        SELECT operation_id,
+            user_id,
+            task_id,
+            job_id,
+            binding_id,
+            framework_turn_id,
+            tool_call_id,
+            tool_key,
+            tool_version,
+            business_intent_key,
+            effect,
+            connection_id,
+            connection_revision,
+            auth_version,
+            request_hash,
+            arguments_json,
+            status,
+            version,
+            executor_owner,
+            executor_fence,
+            external_key,
+            result_json,
+            scope_id,
+            budget_usage_key
+        FROM sq_operation
+        WHERE user_id = #{userId} AND task_id = #{taskId} AND del_flag = '0'
+          <if test="cursorId != null">AND id &lt; #{cursorId}</if>
+        ORDER BY id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="cursorIdOf" resultType="java.lang.Long">
+        SELECT id FROM sq_operation
+        WHERE user_id = #{userId} AND operation_id = #{operationId} AND del_flag = '0'
+    </select>
+
+    <update id="markWaitingApproval">
+        UPDATE sq_operation
+        SET status = 'WAITING_APPROVAL',
+            version = version + 1,
+            last_updater_id = user_id
+        WHERE user_id = #{userId} AND operation_id = #{operationId}
+          AND status = 'PREPARED' AND version = #{expectedVersion}
+    </update>
+
+    <update id="markInFlight">
+        UPDATE sq_operation
+        SET status = 'IN_FLIGHT',
+            executor_owner = #{owner},
+            executor_fence = #{fence},
+            executor_until = #{leaseUntil},
+            external_key = #{externalKey},
+            version = version + 1,
+            last_updater_id = #{owner}
+        WHERE user_id = #{userId} AND operation_id = #{operationId}
+          AND status IN ('PREPARED',
+            'WAITING_APPROVAL') AND version = #{expectedVersion}
+          AND EXISTS (SELECT 1 FROM sq_execution_scope s JOIN sq_conversation c
+              ON c.user_id = s.user_id AND c.conversation_id = s.conversation_id
+              WHERE s.user_id = sq_operation.user_id AND s.scope_id = sq_operation.scope_id
+                AND s.del_flag = '0' AND c.del_flag = '0' AND c.status = 'ACTIVE'
+                AND c.generation = s.conversation_generation
+                AND ((s.kind = 'TASK' AND EXISTS (SELECT 1 FROM sq_goal_task t
+                    WHERE t.user_id = s.user_id AND t.task_id = s.owner_id AND t.scope_id = s.scope_id
+                      AND t.cancel_requested_at IS NULL AND t.del_flag = '0'
+                      AND t.status IN ('QUEUED',
+            'RUNNING',
+            'WAITING_APPROVAL',
+            'WAITING_INPUT',
+            'WAITING_WORKERS')))
+                  OR (s.kind = 'RESPONSE' AND EXISTS (SELECT 1 FROM sq_response_execution r
+                    WHERE r.user_id = s.user_id AND r.execution_id = s.owner_id AND r.scope_id = s.scope_id
+                      AND r.cancel_requested_at IS NULL AND r.del_flag = '0'
+                      AND r.status IN ('QUEUED',
+            'RUNNING',
+            'WAITING_APPROVAL',
+            'WAITING_INPUT')))))
+    </update>
+
+    <update id="completeInFlight">
+        UPDATE sq_operation
+        SET status = #{status},
+            result_json = #{resultJson},
+            version = version + 1,
+            last_updater_id = #{updaterId}
+        WHERE user_id = #{userId} AND operation_id = #{operationId}
+          AND status = 'IN_FLIGHT' AND version = #{expectedVersion}
+          AND executor_owner = #{owner} AND executor_fence = #{fence}
+    </update>
+
+    <update id="markUnknown">
+        UPDATE sq_operation
+        SET status = 'UNKNOWN',
+            version = version + 1,
+            last_updater_id = #{updaterId}
+        WHERE user_id = #{userId} AND operation_id = #{operationId}
+          AND status = 'IN_FLIGHT' AND version = #{expectedVersion}
+    </update>
+
+    <select id="findExpiredInFlight" resultMap="findExpiredInFlightResult">
+        SELECT operation_id,
+            user_id,
+            task_id,
+            job_id,
+            binding_id,
+            framework_turn_id,
+            tool_call_id,
+            tool_key,
+            tool_version,
+            business_intent_key,
+            effect,
+            connection_id,
+            connection_revision,
+            auth_version,
+            request_hash,
+            arguments_json,
+            status,
+            version,
+            executor_owner,
+            executor_fence,
+            external_key,
+            result_json,
+            scope_id,
+            budget_usage_key
+        FROM sq_operation
+        WHERE status = 'IN_FLIGHT' AND executor_until &lt; #{now} AND del_flag = '0'
+        ORDER BY id
+        LIMIT #{limit}
+    </select>
+
+    <update id="reconcileOutcome">
+        UPDATE sq_operation
+        SET status = #{status},
+            result_json = #{resultJson},
+            version = version + 1,
+            last_updater_id = #{updaterId}
+        WHERE user_id = #{userId} AND operation_id = #{operationId}
+          AND status = 'UNKNOWN' AND version = #{expectedVersion}
+    </update>
+
+    <update id="recordUnresolved">
+        UPDATE sq_operation
+        SET result_json = #{resultJson},
+            version = version + 1,
+            last_updater_id = #{updaterId}
+        WHERE user_id = #{userId} AND operation_id = #{operationId}
+          AND status = 'UNKNOWN' AND version = #{expectedVersion}
+    </update>
+
+    <update id="cancelWaitingApproval">
+        UPDATE sq_operation
+        SET status = 'CANCELLED',
+            result_json = #{resultJson},
+            version = version + 1,
+            last_updater_id = #{updaterId}
+        WHERE user_id = #{userId} AND operation_id = #{operationId}
+          AND status = 'WAITING_APPROVAL' AND version = #{expectedVersion}
+    </update>
+
+    <select id="findUncertainInConversation" resultType="java.lang.String">
+        SELECT o.operation_id FROM sq_operation o JOIN sq_execution_scope s
+            ON s.user_id = o.user_id AND s.scope_id = o.scope_id
+        WHERE o.user_id = #{userId} AND o.status IN ('UNKNOWN',
+            'RECONCILING') AND o.del_flag = '0'
+          AND s.conversation_id = (SELECT conversation_id FROM sq_execution_scope
+              WHERE user_id = #{userId} AND scope_id = #{scopeId})
+        FOR UPDATE
+    </select>
+</mapper>

@@ -19,7 +19,7 @@
 - [x] 2.6 改造 11 个 controller：移除 AuthService 注入与 cookie/csrf 参数，改用 UserContext.current(request).userId()。验证：逐 controller grep `@CookieValue.*SQUAD_SESSION` 无残留；`mvn test` 通过。
 - [x] 2.7 前端指向网关：web/console VITE_API_TARGET 改为 http://127.0.0.1:18081。验证：`npm --prefix web/console run build` 通过，前端请求走网关。
 - [x] 2.8 测试拆分：网关测认证/CSRF（login/me/logout/401/CSRF 拒绝）；业务服务测试直接设 X-User-Id 绕过网关。验证：网关与业务服务各自的测试套件通过。
-- [ ] 2.9 阶段2验证：双服务启动 + 端到端。验证：gateway(18081)+business(18080) 同时启动，前端登录→发消息→SSE 链路通；`mvn -f server/pom.xml -B -ntp test` 通过。提交阶段2。
+- [x] 2.9 阶段2验证：双服务启动 + 端到端。验证：gateway(18081)+business(18080) 同时启动，前端登录→发消息→SSE 链路通；`mvn -f server/pom.xml -B -ntp test` 通过。提交阶段2。
 
 ## 3. MyBatis XML（中等风险，渐进迁移）
 
@@ -29,7 +29,7 @@
 - [x] 3.4 governance/memory/interaction/presentation 包迁移：BudgetMapper/MemoryMapper/InteractionMapper/ConversationReadMapper 转 XML。验证：`mvn test` 通过。
 - [x] 3.5 runtime 包迁移：CompletionMapper/ContextSnapshotMapper/ExecutionFailureMapper/ExecutionRestrictionMapper/PlanMapper/ProjectionMapper/WorkerDispatchMapper 转 XML。验证：`mvn test` 通过。
 - [x] 3.6 conversation 包迁移（最后，最复杂）：13 个 mapper 转 XML，重点核对 FOR UPDATE/JOIN/CASE WHEN/子查询。验证：`mvn test` 通过；全仓 grep 接口无残留 SQL 注解。
-- [ ] 3.7 阶段3验证：全量测试 + 开发库冒烟。验证：`mvn -f server/pom.xml -B -ntp test`（0 失败）；启动业务服务冒烟 BudgetMapper.lockAccount FOR UPDATE 与 ConnectionMapper 乐观锁。提交阶段3。
+- [x] 3.7 阶段3验证：全量测试 + 开发库冒烟。验证：`mvn -f server/pom.xml -B -ntp test`（0 失败）；启动业务服务冒烟 BudgetMapper.lockAccount FOR UPDATE 与 ConnectionMapper 乐观锁。提交阶段3。
 
 ## 4. SQL 统一（中等风险）
 

@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.tools.repository.ConnectionMapper">
+
+    <resultMap id="findOwnedResult" type="com.agentsquad.squad.tools.domain.ConnectionRow">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="connection_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="name" javaType="java.lang.String"/>
+            <arg column="provider" javaType="java.lang.String"/>
+            <arg column="environment" javaType="java.lang.String"/>
+            <arg column="resource_policy_json" javaType="java.lang.String"/>
+            <arg column="secret_ref" javaType="java.lang.String"/>
+            <arg column="create_idempotency_key" javaType="java.lang.String"/>
+            <arg column="revision" javaType="_long"/>
+            <arg column="enabled" javaType="_boolean"/>
+            <arg column="creator_id" javaType="java.lang.String"/>
+            <arg column="creator_name" javaType="java.lang.String"/>
+            <arg column="last_updater_id" javaType="java.lang.String"/>
+            <arg column="last_updater_name" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findByIdempotencyKeyResult" type="com.agentsquad.squad.tools.domain.ConnectionRow">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="connection_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="name" javaType="java.lang.String"/>
+            <arg column="provider" javaType="java.lang.String"/>
+            <arg column="environment" javaType="java.lang.String"/>
+            <arg column="resource_policy_json" javaType="java.lang.String"/>
+            <arg column="secret_ref" javaType="java.lang.String"/>
+            <arg column="create_idempotency_key" javaType="java.lang.String"/>
+            <arg column="revision" javaType="_long"/>
+            <arg column="enabled" javaType="_boolean"/>
+            <arg column="creator_id" javaType="java.lang.String"/>
+            <arg column="creator_name" javaType="java.lang.String"/>
+            <arg column="last_updater_id" javaType="java.lang.String"/>
+            <arg column="last_updater_name" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="listByOwnerResult" type="com.agentsquad.squad.tools.domain.ConnectionRow">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="connection_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="name" javaType="java.lang.String"/>
+            <arg column="provider" javaType="java.lang.String"/>
+            <arg column="environment" javaType="java.lang.String"/>
+            <arg column="resource_policy_json" javaType="java.lang.String"/>
+            <arg column="secret_ref" javaType="java.lang.String"/>
+            <arg column="create_idempotency_key" javaType="java.lang.String"/>
+            <arg column="revision" javaType="_long"/>
+            <arg column="enabled" javaType="_boolean"/>
+            <arg column="creator_id" javaType="java.lang.String"/>
+            <arg column="creator_name" javaType="java.lang.String"/>
+            <arg column="last_updater_id" javaType="java.lang.String"/>
+            <arg column="last_updater_name" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO sq_connection
+            (connection_id,
+            user_id,
+            name,
+            provider,
+            environment,
+            resource_policy_json,
+            secret_ref,
+            create_idempotency_key,
+            revision,
+            enabled,
+            creator_id,
+            creator_name,
+            last_updater_id,
+            last_updater_name)
+        VALUES
+            (#{connectionId},
+            #{userId},
+            #{name},
+            #{provider},
+            #{environment},
+            #{resourcePolicyJson},
+            #{secretRef},
+            #{createIdempotencyKey},
+            0,
+            1,
+            #{userId},
+            #{creatorName},
+            #{userId},
+            #{creatorName})
+    </insert>
+
+    <select id="findOwned" resultMap="findOwnedResult">
+        SELECT id,
+            connection_id,
+            user_id,
+            name,
+            provider,
+            environment,
+            resource_policy_json,
+            secret_ref,
+            create_idempotency_key,
+            revision,
+            enabled,
+            creator_id,
+            creator_name,
+            last_updater_id,
+            last_updater_name
+        FROM sq_connection
+        WHERE user_id = #{userId} AND connection_id = #{connectionId} AND del_flag = '0'
+    </select>
+
+    <select id="findByIdempotencyKey" resultMap="findByIdempotencyKeyResult">
+        SELECT id,
+            connection_id,
+            user_id,
+            name,
+            provider,
+            environment,
+            resource_policy_json,
+            secret_ref,
+            create_idempotency_key,
+            revision,
+            enabled,
+            creator_id,
+            creator_name,
+            last_updater_id,
+            last_updater_name
+        FROM sq_connection
+        WHERE user_id = #{userId} AND create_idempotency_key = #{createIdempotencyKey}
+          AND del_flag = '0'
+    </select>
+
+    <select id="listByOwner" resultMap="listByOwnerResult">
+        SELECT id,
+            connection_id,
+            user_id,
+            name,
+            provider,
+            environment,
+            resource_policy_json,
+            secret_ref,
+            create_idempotency_key,
+            revision,
+            enabled,
+            creator_id,
+            creator_name,
+            last_updater_id,
+            last_updater_name
+        FROM sq_connection
+        WHERE user_id = #{userId} AND del_flag = '0'
+          <if test="cursorId != null">AND id &lt; #{cursorId}</if>
+        ORDER BY id DESC
+        LIMIT #{limit}
+    </select>
+
+    <update id="updateOwned">
+        UPDATE sq_connection
+        SET resource_policy_json = COALESCE(#{resourcePolicyJson},
+            resource_policy_json),
+            enabled = COALESCE(#{enabled},
+            enabled),
+            revision = revision + 1,
+            last_updater_id = #{userId},
+            last_updater_name = #{updaterName}
+        WHERE user_id = #{userId} AND connection_id = #{connectionId}
+          AND revision = #{expectedRevision} AND del_flag = '0'
+    </update>
+</mapper>

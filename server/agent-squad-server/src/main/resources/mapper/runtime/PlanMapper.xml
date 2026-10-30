@@ -1,0 +1,367 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.runtime.repository.PlanMapper">
+
+    <resultMap id="lockMasterContextResult" type="com.agentsquad.squad.runtime.domain.PlanContextRow">
+        <constructor>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="plan_version" javaType="_long"/>
+            <arg column="task_status" javaType="java.lang.String"/>
+            <arg column="cancellation_requested" javaType="_boolean"/>
+            <arg column="conversation_generation" javaType="_long"/>
+            <arg column="conversation_status" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findLatestByLogicalKeyResult" type="com.agentsquad.squad.runtime.domain.PlanRow">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="plan_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="plan_version" javaType="_long"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="logical_key" javaType="java.lang.String"/>
+            <arg column="definition_json" javaType="java.lang.String"/>
+            <arg column="signal_version" javaType="_long"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="goal_revision" javaType="_long"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="lockPlanResult" type="com.agentsquad.squad.runtime.domain.PlanRow">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="plan_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="plan_version" javaType="_long"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="logical_key" javaType="java.lang.String"/>
+            <arg column="definition_json" javaType="java.lang.String"/>
+            <arg column="signal_version" javaType="_long"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="goal_revision" javaType="_long"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="listJobsResult" type="com.agentsquad.squad.runtime.domain.WorkerJobRow">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="job_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="plan_version" javaType="_long"/>
+            <arg column="node_key" javaType="java.lang.String"/>
+            <arg column="worker_key" javaType="java.lang.String"/>
+            <arg column="worker_version" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="depends_on_json" javaType="java.lang.String"/>
+            <arg column="input_json" javaType="java.lang.String"/>
+            <arg column="result_candidate_json" javaType="java.lang.String"/>
+            <arg column="result_json" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="reused_from_job_id" javaType="java.lang.String"/>
+            <arg column="cancel_requested_at" javaType="java.time.LocalDateTime"/>
+            <arg column="version" javaType="_long"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="lockJobsResult" type="com.agentsquad.squad.runtime.domain.WorkerJobRow">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="job_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="plan_version" javaType="_long"/>
+            <arg column="node_key" javaType="java.lang.String"/>
+            <arg column="worker_key" javaType="java.lang.String"/>
+            <arg column="worker_version" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="depends_on_json" javaType="java.lang.String"/>
+            <arg column="input_json" javaType="java.lang.String"/>
+            <arg column="result_candidate_json" javaType="java.lang.String"/>
+            <arg column="result_json" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="reused_from_job_id" javaType="java.lang.String"/>
+            <arg column="cancel_requested_at" javaType="java.time.LocalDateTime"/>
+            <arg column="version" javaType="_long"/>
+        </constructor>
+    </resultMap>
+
+    <select id="lockMasterContext" resultMap="lockMasterContextResult">
+        SELECT b.user_id,
+            b.task_id,
+            b.binding_id,
+            t.plan_version,
+            t.status AS task_status,
+            (t.cancel_requested_at IS NOT NULL) AS cancellation_requested,
+            c.generation AS conversation_generation,
+            c.status AS conversation_status
+        FROM sq_runtime_binding b
+        JOIN sq_goal_task t ON t.user_id = b.user_id AND t.task_id = b.task_id
+        JOIN sq_conversation c ON c.user_id = t.user_id AND c.conversation_id = t.conversation_id
+        WHERE b.user_id = #{userId} AND b.framework_session_id = #{sessionId}
+          AND b.role = 'MASTER' AND c.active_task_id = t.task_id
+        FOR UPDATE
+    </select>
+
+    <select id="findLatestByLogicalKey" resultMap="findLatestByLogicalKeyResult">
+        SELECT id,
+            plan_id,
+            user_id,
+            task_id,
+            plan_version,
+            status,
+            logical_key,
+            definition_json,
+            signal_version,
+            version,
+            goal_revision FROM sq_plan WHERE task_id = #{taskId} AND logical_key = #{logicalKey} ORDER BY plan_version DESC LIMIT 1
+    </select>
+
+    <select id="lockTaskPlanVersion" resultType="java.lang.Long">
+        SELECT plan_version FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId} FOR UPDATE
+    </select>
+
+    <select id="countSignalEligibleTask" resultType="_int">
+        SELECT COUNT(*) FROM sq_goal_task
+        WHERE user_id = #{userId} AND task_id = #{taskId}
+          AND status IN ('QUEUED',
+            'RUNNING') AND cancel_requested_at IS NULL
+    </select>
+
+    <select id="lockPlan" resultMap="lockPlanResult">
+        SELECT id,
+            plan_id,
+            user_id,
+            task_id,
+            plan_version,
+            status,
+            logical_key,
+            definition_json,
+            signal_version,
+            version,
+            goal_revision FROM sq_plan WHERE user_id = #{userId} AND task_id = #{taskId} AND plan_version = #{planVersion} FOR UPDATE
+    </select>
+
+    <select id="countUnfinishedJobs" resultType="_int">
+        SELECT COUNT(*) FROM sq_worker_job
+        WHERE user_id = #{userId} AND task_id = #{taskId}
+          AND plan_version = #{planVersion} AND status &lt;&gt; 'SUCCEEDED'
+    </select>
+
+    <select id="countActiveJobs" resultType="_int">
+        SELECT COUNT(*) FROM sq_worker_job
+        WHERE user_id = #{userId} AND task_id = #{taskId} AND plan_version = #{planVersion}
+          AND status IN ('READY',
+            'RUNNING',
+            'WAITING_INPUT',
+            'WAITING_APPROVAL',
+            'RECONCILING',
+            'CANCELLING')
+    </select>
+
+    <select id="countActivePlan" resultType="_int">
+        SELECT COUNT(*) FROM sq_plan WHERE user_id = #{userId} AND task_id = #{taskId}
+          AND plan_version = #{planVersion} AND status = 'ACTIVE'
+    </select>
+
+    <update id="advanceSignalVersion">
+        UPDATE sq_plan SET signal_version = signal_version + 1,
+            version = version + 1
+        WHERE user_id = #{userId} AND task_id = #{taskId}
+          AND plan_version = #{planVersion} AND status = 'ACTIVE'
+    </update>
+
+    <select id="listJobs" resultMap="listJobsResult">
+        SELECT id,
+            job_id,
+            user_id,
+            task_id,
+            plan_version,
+            node_key,
+            worker_key,
+            worker_version,
+            status,
+            depends_on_json,
+            input_json,
+            result_candidate_json,
+            result_json,
+            binding_id,
+            reused_from_job_id,
+            cancel_requested_at,
+            version FROM sq_worker_job WHERE task_id = #{taskId} AND plan_version = #{planVersion} ORDER BY id
+    </select>
+
+    <select id="lockJobs" resultMap="lockJobsResult">
+        SELECT id,
+            job_id,
+            user_id,
+            task_id,
+            plan_version,
+            node_key,
+            worker_key,
+            worker_version,
+            status,
+            depends_on_json,
+            input_json,
+            result_candidate_json,
+            result_json,
+            binding_id,
+            reused_from_job_id,
+            cancel_requested_at,
+            version FROM sq_worker_job WHERE task_id = #{taskId} AND plan_version = #{planVersion} ORDER BY id FOR UPDATE
+    </select>
+
+    <insert id="insertPlan">
+        INSERT INTO sq_plan
+            (plan_id,
+            user_id,
+            task_id,
+            plan_version,
+            logical_key,
+            status,
+            definition_json,
+            signal_version,
+            goal_revision,
+            creator_id,
+            creator_name,
+            last_updater_id,
+            last_updater_name)
+        VALUES
+            (#{planId},
+            #{userId},
+            #{taskId},
+            #{planVersion},
+            #{logicalKey},
+            'ACTIVE',
+            #{definitionJson},
+            #{signalVersion},
+            #{goalRevision},
+            #{userId},
+            '',
+            #{userId},
+            '')
+    </insert>
+
+    <insert id="insertJob">
+        INSERT INTO sq_worker_job
+            (job_id,
+            user_id,
+            task_id,
+            plan_version,
+            node_key,
+            worker_key,
+            worker_version,
+            status,
+            depends_on_json,
+            input_json,
+            creator_id,
+            creator_name,
+            last_updater_id,
+            last_updater_name)
+        VALUES
+            (#{jobId},
+            #{userId},
+            #{taskId},
+            #{planVersion},
+            #{nodeKey},
+            #{workerKey},
+            #{workerVersion},
+            #{status},
+            #{dependsOnJson},
+            #{inputJson},
+            #{userId},
+            '',
+            #{userId},
+            '')
+    </insert>
+
+    <update id="reuseResult">
+        UPDATE sq_worker_job SET status = 'SUCCEEDED',
+            result_json = #{resultJson},
+            reused_from_job_id = #{sourceJobId},
+            version = version + 1
+        WHERE user_id = #{userId} AND job_id = #{jobId}
+          AND status IN ('READY',
+            'BLOCKED') AND binding_id IS NULL
+    </update>
+
+    <update id="bindReadyJob">
+        UPDATE sq_worker_job SET binding_id = #{bindingId},
+            version = version + 1
+        WHERE user_id = #{userId} AND job_id = #{jobId}
+          AND status = 'READY' AND binding_id IS NULL
+    </update>
+
+    <update id="activateBlockedJob">
+        UPDATE sq_worker_job SET status = 'READY',
+            binding_id = #{bindingId},
+            version = version + 1
+        WHERE user_id = #{userId} AND job_id = #{jobId} AND status = 'BLOCKED'
+          AND binding_id IS NULL
+          AND EXISTS (SELECT 1 FROM sq_plan p WHERE p.task_id = sq_worker_job.task_id
+                      AND p.plan_version = sq_worker_job.plan_version AND p.status = 'ACTIVE')
+    </update>
+
+    <update id="advanceTaskPlan">
+        UPDATE sq_goal_task
+        SET plan_version = #{planVersion},
+            status = 'RUNNING',
+            version = version + 1
+        WHERE user_id = #{userId} AND task_id = #{taskId}
+          AND plan_version = #{expectedPlanVersion}
+          AND status IN ('QUEUED',
+            'RUNNING') AND cancel_requested_at IS NULL
+    </update>
+
+    <update id="supersedePlans">
+        UPDATE sq_plan SET status = 'SUPERSEDED',
+            version = version + 1
+        WHERE task_id = #{taskId} AND plan_version &lt; #{planVersion} AND status = 'ACTIVE'
+    </update>
+
+    <update id="supersedeUnstartedJobs">
+        UPDATE sq_worker_job SET status = 'SUPERSEDED',
+            version = version + 1
+        WHERE task_id = #{taskId} AND plan_version &lt; #{planVersion}
+          AND status IN ('BLOCKED',
+            'READY')
+    </update>
+
+    <update id="cancelSupersededCommands">
+        UPDATE sq_command SET status = 'CANCELLED',
+            delivery_token = NULL,
+            delivery_lease_until = NULL
+        WHERE task_id = #{taskId} AND status IN ('PENDING',
+            'DELIVERING')
+          AND binding_id IN (SELECT binding_id FROM sq_worker_job
+                             WHERE task_id = #{taskId} AND plan_version &lt; #{planVersion}
+                               AND status = 'SUPERSEDED' AND binding_id IS NOT NULL)
+    </update>
+
+    <update id="cancelSupersededSignals">
+        UPDATE sq_command SET status = 'CANCELLED',
+            delivery_token = NULL,
+            delivery_lease_until = NULL
+        WHERE task_id = #{taskId} AND action = 'MASTER_SIGNAL'
+          AND status IN ('PENDING',
+            'DELIVERING')
+    </update>
+
+    <update id="barrierInFlightJobs">
+        UPDATE sq_worker_job SET status = 'SUPERSEDED',
+            cancel_requested_at = CURRENT_TIMESTAMP,
+            guard_token = NULL,
+            guard_lease_until = NULL,
+            version = version + 1
+        WHERE task_id = #{taskId} AND plan_version &lt; #{planVersion}
+          AND status IN ('RUNNING',
+            'WAITING_INPUT',
+            'WAITING_APPROVAL',
+            'RECONCILING')
+    </update>
+</mapper>

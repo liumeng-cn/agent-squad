@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.worker.repository.WorkerDefinitionMapper">
+
+    <resultMap id="findByPublishKeyResult" type="com.agentsquad.squad.worker.domain.WorkerDefinitionRow">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="definition_id" javaType="java.lang.String"/>
+            <arg column="worker_key" javaType="java.lang.String"/>
+            <arg column="worker_version" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="definition_json" javaType="java.lang.String"/>
+            <arg column="publish_key" javaType="java.lang.String"/>
+            <arg column="payload_hash" javaType="java.lang.String"/>
+            <arg column="last_status_key" javaType="java.lang.String"/>
+            <arg column="last_status_actor" javaType="java.lang.String"/>
+            <arg column="last_status_hash" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findByDefinitionIdResult" type="com.agentsquad.squad.worker.domain.WorkerDefinitionRow">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="definition_id" javaType="java.lang.String"/>
+            <arg column="worker_key" javaType="java.lang.String"/>
+            <arg column="worker_version" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="definition_json" javaType="java.lang.String"/>
+            <arg column="publish_key" javaType="java.lang.String"/>
+            <arg column="payload_hash" javaType="java.lang.String"/>
+            <arg column="last_status_key" javaType="java.lang.String"/>
+            <arg column="last_status_actor" javaType="java.lang.String"/>
+            <arg column="last_status_hash" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="listAfterResult" type="com.agentsquad.squad.worker.domain.WorkerDefinitionRow">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="definition_id" javaType="java.lang.String"/>
+            <arg column="worker_key" javaType="java.lang.String"/>
+            <arg column="worker_version" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="definition_json" javaType="java.lang.String"/>
+            <arg column="publish_key" javaType="java.lang.String"/>
+            <arg column="payload_hash" javaType="java.lang.String"/>
+            <arg column="last_status_key" javaType="java.lang.String"/>
+            <arg column="last_status_actor" javaType="java.lang.String"/>
+            <arg column="last_status_hash" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="listEnabledAfterResult" type="com.agentsquad.squad.worker.domain.WorkerDefinitionRow">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="definition_id" javaType="java.lang.String"/>
+            <arg column="worker_key" javaType="java.lang.String"/>
+            <arg column="worker_version" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="definition_json" javaType="java.lang.String"/>
+            <arg column="publish_key" javaType="java.lang.String"/>
+            <arg column="payload_hash" javaType="java.lang.String"/>
+            <arg column="last_status_key" javaType="java.lang.String"/>
+            <arg column="last_status_actor" javaType="java.lang.String"/>
+            <arg column="last_status_hash" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findEnabledResult" type="com.agentsquad.squad.worker.domain.WorkerDefinitionRow">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="definition_id" javaType="java.lang.String"/>
+            <arg column="worker_key" javaType="java.lang.String"/>
+            <arg column="worker_version" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="definition_json" javaType="java.lang.String"/>
+            <arg column="publish_key" javaType="java.lang.String"/>
+            <arg column="payload_hash" javaType="java.lang.String"/>
+            <arg column="last_status_key" javaType="java.lang.String"/>
+            <arg column="last_status_actor" javaType="java.lang.String"/>
+            <arg column="last_status_hash" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findPublishedResult" type="com.agentsquad.squad.worker.domain.WorkerDefinitionRow">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="definition_id" javaType="java.lang.String"/>
+            <arg column="worker_key" javaType="java.lang.String"/>
+            <arg column="worker_version" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="definition_json" javaType="java.lang.String"/>
+            <arg column="publish_key" javaType="java.lang.String"/>
+            <arg column="payload_hash" javaType="java.lang.String"/>
+            <arg column="last_status_key" javaType="java.lang.String"/>
+            <arg column="last_status_actor" javaType="java.lang.String"/>
+            <arg column="last_status_hash" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO sq_worker_definition
+            (definition_id,
+            worker_key,
+            worker_version,
+            status,
+            definition_json,
+            publish_key,
+            payload_hash,
+            creator_id,
+            creator_name,
+            last_updater_id,
+            last_updater_name)
+        VALUES
+            (#{definitionId},
+            #{workerKey},
+            #{workerVersion},
+            'ENABLED',
+            #{definitionJson},
+            #{publishKey},
+            #{payloadHash},
+            #{actorId},
+            #{actorName},
+            #{actorId},
+            #{actorName})
+    </insert>
+
+    <select id="findByPublishKey" resultMap="findByPublishKeyResult">
+        SELECT id,
+            definition_id,
+            worker_key,
+            worker_version,
+            status,
+            version,
+            definition_json,
+            publish_key,
+            payload_hash,
+            last_status_key,
+            last_status_actor,
+            last_status_hash FROM sq_worker_definition WHERE creator_id = #{actorId} AND publish_key = #{publishKey}
+    </select>
+
+    <select id="findByDefinitionId" resultMap="findByDefinitionIdResult">
+        SELECT id,
+            definition_id,
+            worker_key,
+            worker_version,
+            status,
+            version,
+            definition_json,
+            publish_key,
+            payload_hash,
+            last_status_key,
+            last_status_actor,
+            last_status_hash FROM sq_worker_definition WHERE definition_id = #{definitionId}
+    </select>
+
+    <select id="listAfter" resultMap="listAfterResult">
+        SELECT id,
+            definition_id,
+            worker_key,
+            worker_version,
+            status,
+            version,
+            definition_json,
+            publish_key,
+            payload_hash,
+            last_status_key,
+            last_status_actor,
+            last_status_hash FROM sq_worker_definition WHERE id &gt; #{afterId} ORDER BY id LIMIT #{limit}
+    </select>
+
+    <update id="updateStatus">
+        UPDATE sq_worker_definition
+        SET status = #{status},
+            version = version + 1,
+            last_status_key = #{idempotencyKey},
+            last_status_hash = #{payloadHash},
+            last_status_actor = #{actorId},
+            last_updater_id = #{actorId},
+            last_updater_name = #{actorName}
+        WHERE definition_id = #{definitionId} AND version = #{expectedVersion}
+          AND status &lt;&gt; 'REVOKED'
+    </update>
+
+    <select id="countEnabled" resultType="_int">
+        SELECT COUNT(*) FROM sq_worker_definition
+        WHERE worker_key = #{workerKey} AND worker_version = #{workerVersion}
+          AND status = 'ENABLED'
+    </select>
+
+    <select id="listEnabledAfter" resultMap="listEnabledAfterResult">
+        SELECT id,
+            definition_id,
+            worker_key,
+            worker_version,
+            status,
+            version,
+            definition_json,
+            publish_key,
+            payload_hash,
+            last_status_key,
+            last_status_actor,
+            last_status_hash FROM sq_worker_definition WHERE status = 'ENABLED' AND id &gt; #{afterId} ORDER BY id LIMIT #{limit}
+    </select>
+
+    <select id="findEnabled" resultMap="findEnabledResult">
+        SELECT id,
+            definition_id,
+            worker_key,
+            worker_version,
+            status,
+            version,
+            definition_json,
+            publish_key,
+            payload_hash,
+            last_status_key,
+            last_status_actor,
+            last_status_hash FROM sq_worker_definition WHERE worker_key = #{workerKey} AND worker_version = #{workerVersion} AND status = 'ENABLED'
+    </select>
+
+    <select id="findPublished" resultMap="findPublishedResult">
+        SELECT id,
+            definition_id,
+            worker_key,
+            worker_version,
+            status,
+            version,
+            definition_json,
+            publish_key,
+            payload_hash,
+            last_status_key,
+            last_status_actor,
+            last_status_hash FROM sq_worker_definition WHERE worker_key = #{workerKey} AND worker_version = #{workerVersion}
+    </select>
+</mapper>

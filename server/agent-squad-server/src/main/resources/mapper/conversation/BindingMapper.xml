@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.conversation.repository.BindingMapper">
+
+    <insert id="insertMaster">
+        INSERT INTO sq_runtime_binding
+            (binding_id,
+            user_id,
+            task_id,
+            role,
+            agent_id,
+            framework_session_id,
+            scope_id,
+            status,
+            next_projection_at)
+        VALUES (#{bindingId},
+            #{userId},
+            #{taskId},
+            'MASTER',
+            #{agentId},
+            #{sessionId},
+            (SELECT scope_id FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}),
+            'IDLE',
+            #{nextProjectionAt})
+    </insert>
+
+    <insert id="insertWorker">
+        INSERT INTO sq_runtime_binding
+            (binding_id,
+            user_id,
+            task_id,
+            role,
+            agent_id,
+            framework_session_id,
+            scope_id,
+            status,
+            next_projection_at)
+        VALUES (#{bindingId},
+            #{userId},
+            #{taskId},
+            'WORKER',
+            #{agentId},
+            #{sessionId},
+            (SELECT scope_id FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}),
+            'IDLE',
+            #{nextProjectionAt})
+    </insert>
+
+    <select id="findMasterBindingId" resultType="java.lang.String">
+        SELECT binding_id FROM sq_runtime_binding
+        WHERE user_id = #{userId} AND task_id = #{taskId} AND role = 'MASTER'
+    </select>
+
+    <insert id="insertResponse">
+        INSERT INTO sq_runtime_binding (binding_id,
+            user_id,
+            scope_id,
+            role,
+            agent_id,
+            framework_session_id,
+            status,
+            next_projection_at)
+        VALUES (#{bindingId},
+            #{userId},
+            #{scopeId},
+            'MASTER',
+            #{agentId},
+            #{sessionId},
+            'IDLE',
+            #{nextProjectionAt})
+    </insert>
+</mapper>

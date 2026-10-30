@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.conversation.repository.TaskMapper">
+
+    <resultMap id="lockOwnedRowResult" type="com.agentsquad.squad.conversation.domain.TaskRow">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="plan_version" javaType="_long"/>
+            <arg column="answer_revision" javaType="_long"/>
+            <arg column="cancel_requested_at" javaType="java.time.LocalDateTime"/>
+            <arg column="blocked_reason" javaType="java.lang.String"/>
+            <arg column="create_time" javaType="java.time.LocalDateTime"/>
+            <arg column="last_update_time" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="findOwnedResult" type="com.agentsquad.squad.conversation.domain.TaskRow">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="plan_version" javaType="_long"/>
+            <arg column="answer_revision" javaType="_long"/>
+            <arg column="cancel_requested_at" javaType="java.time.LocalDateTime"/>
+            <arg column="blocked_reason" javaType="java.lang.String"/>
+            <arg column="create_time" javaType="java.time.LocalDateTime"/>
+            <arg column="last_update_time" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="listByConversationResult" type="com.agentsquad.squad.conversation.domain.TaskRow">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="version" javaType="_long"/>
+            <arg column="plan_version" javaType="_long"/>
+            <arg column="answer_revision" javaType="_long"/>
+            <arg column="cancel_requested_at" javaType="java.time.LocalDateTime"/>
+            <arg column="blocked_reason" javaType="java.lang.String"/>
+            <arg column="create_time" javaType="java.time.LocalDateTime"/>
+            <arg column="last_update_time" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO sq_goal_task
+            (task_id,
+            user_id,
+            conversation_id,
+            status,
+            input_json,
+            event_seq,
+            budget_profile_key,
+            budget_limit_microunits)
+        VALUES
+            (#{taskId},
+            #{userId},
+            #{conversationId},
+            'QUEUED',
+            #{inputJson},
+            1,
+            'STANDARD',
+            #{budgetLimitMicrounits})
+    </insert>
+
+    <select id="lockOwnedRow" resultMap="lockOwnedRowResult">
+        SELECT id,
+            task_id,
+            user_id,
+            conversation_id,
+            status,
+            version,
+            plan_version,
+            answer_revision,
+            cancel_requested_at,
+            blocked_reason,
+            create_time,
+            last_update_time
+        FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}
+        FOR UPDATE
+    </select>
+
+    <select id="conversationIdOf" resultType="java.lang.String">
+        SELECT conversation_id FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}
+    </select>
+
+    <select id="lockConversation" resultType="java.lang.String">
+        SELECT conversation_id FROM sq_conversation WHERE user_id = #{userId} AND conversation_id = #{conversationId} FOR UPDATE
+    </select>
+
+    <select id="findOwned" resultMap="findOwnedResult">
+        SELECT id,
+            task_id,
+            user_id,
+            conversation_id,
+            status,
+            version,
+            plan_version,
+            answer_revision,
+            cancel_requested_at,
+            blocked_reason,
+            create_time,
+            last_update_time
+        FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}
+    </select>
+
+    <select id="findInputJson" resultType="java.lang.String">
+        SELECT input_json FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}
+    </select>
+
+    <update id="updateCancelling">
+        UPDATE sq_goal_task
+        SET status = 'CANCELLING',
+            version = version + 1,
+            cancel_requested_at = #{cancelledAt}
+        WHERE user_id = #{userId} AND task_id = #{taskId} AND version = #{expectedVersion}
+          AND status NOT IN ('CANCELLING',
+            'SUCCEEDED',
+            'PARTIAL',
+            'FAILED',
+            'CANCELLED')
+    </update>
+
+    <update id="updateCancelled">
+        UPDATE sq_goal_task
+        SET status = 'CANCELLED',
+            version = version + 1,
+            cancel_requested_at = #{cancelledAt}
+        WHERE user_id = #{userId} AND task_id = #{taskId}
+          AND status = 'QUEUED'
+    </update>
+
+    <update id="updateResuming">
+        UPDATE sq_goal_task
+        SET status = 'QUEUED',
+            blocked_reason = NULL,
+            version = version + 1
+        WHERE user_id = #{userId} AND task_id = #{taskId} AND version = #{expectedVersion}
+    </update>
+
+    <update id="blockRejectedResume">
+        UPDATE sq_goal_task
+        SET status = 'RECOVERY_BLOCKED',
+            blocked_reason = #{reason},
+            version = version + 1
+        WHERE user_id = #{userId} AND task_id = #{taskId} AND status = 'QUEUED'
+          AND cancel_requested_at IS NULL
+    </update>
+
+    <select id="listByConversation" resultMap="listByConversationResult">
+        SELECT id,
+            task_id,
+            user_id,
+            conversation_id,
+            status,
+            version,
+            plan_version,
+            answer_revision,
+            cancel_requested_at,
+            blocked_reason,
+            create_time,
+            last_update_time
+        FROM sq_goal_task
+        WHERE user_id = #{userId} AND conversation_id = #{conversationId}
+          AND (#{cursorId} IS NULL OR id &lt; #{cursorId})
+        ORDER BY id DESC LIMIT #{limit}
+    </select>
+</mapper>

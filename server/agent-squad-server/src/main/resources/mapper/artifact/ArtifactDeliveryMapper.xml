@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.artifact.repository.ArtifactDeliveryMapper">
+
+    <insert id="insert">
+        INSERT INTO sq_artifact_stage
+            (stage_id,
+            user_id,
+            scope_id,
+            binding_id,
+            execution_id,
+            workspace_key,
+            file_name,
+            sha256,
+            content_bytes,
+            status,
+            expires_at,
+            creator_id,
+            last_updater_id)
+        VALUES
+            (#{stageId},
+            #{userId},
+            #{scopeId},
+            #{bindingId},
+            #{executionId},
+            #{workspaceKey},
+            #{fileName},
+            #{hash},
+            #{content},
+            'STAGED',
+            #{expiresAt},
+            #{userId},
+            #{userId})
+    </insert>
+
+    <select id="find" resultType="com.agentsquad.squad.artifact.domain.ArtifactStageRow">
+        SELECT stage_id,
+            user_id,
+            scope_id,
+            binding_id,
+            execution_id,
+            workspace_key,
+            file_name,
+            sha256,
+            content_bytes AS content,
+            status,
+            artifact_id
+        FROM sq_artifact_stage WHERE user_id = #{userId} AND stage_id = #{stageId}
+          AND expires_at &gt; CURRENT_TIMESTAMP AND del_flag = '0'
+    </select>
+
+    <select id="lock" resultType="com.agentsquad.squad.artifact.domain.ArtifactStageRow">
+        SELECT stage_id,
+            user_id,
+            scope_id,
+            binding_id,
+            execution_id,
+            workspace_key,
+            file_name,
+            sha256,
+            content_bytes AS content,
+            status,
+            artifact_id
+        FROM sq_artifact_stage WHERE user_id = #{userId} AND stage_id = #{stageId}
+          AND expires_at &gt; CURRENT_TIMESTAMP AND del_flag = '0' FOR UPDATE
+    </select>
+
+    <select id="findPath" resultType="com.agentsquad.squad.artifact.domain.ArtifactStageRow">
+        SELECT stage_id,
+            user_id,
+            scope_id,
+            binding_id,
+            execution_id,
+            workspace_key,
+            file_name,
+            sha256,
+            content_bytes AS content,
+            status,
+            artifact_id
+        FROM sq_artifact_stage WHERE user_id = #{userId} AND execution_id = #{executionId}
+          AND workspace_key = #{workspaceKey} AND del_flag = '0'
+    </select>
+
+    <update id="commit">
+        UPDATE sq_artifact_stage SET status = 'COMMITTED',
+            artifact_id = #{artifactId},
+            content_bytes = X'',
+            last_update_time = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId} AND stage_id = #{stageId} AND status = 'STAGED'
+          AND expires_at &gt; CURRENT_TIMESTAMP AND del_flag = '0'
+    </update>
+
+    <update id="expireArtifacts">
+        UPDATE sq_artifact SET del_flag = '1',
+            last_update_time = CURRENT_TIMESTAMP
+        WHERE expires_at &lt;= CURRENT_TIMESTAMP AND del_flag = '0'
+    </update>
+
+    <update id="clearScopeReferences">
+        UPDATE sq_scope_artifact SET del_flag = '1'
+        WHERE EXISTS (SELECT 1 FROM sq_artifact a WHERE a.user_id = sq_scope_artifact.user_id
+            AND a.artifact_id = sq_scope_artifact.artifact_id AND a.del_flag = '1')
+    </update>
+
+    <update id="clearTaskReferences">
+        UPDATE sq_task_artifact SET del_flag = '1'
+        WHERE EXISTS (SELECT 1 FROM sq_artifact a WHERE a.user_id = sq_task_artifact.user_id
+            AND a.artifact_id = sq_task_artifact.artifact_id AND a.del_flag = '1')
+    </update>
+
+    <update id="clearMessageReferences">
+        UPDATE sq_message_artifact SET del_flag = '1'
+        WHERE EXISTS (SELECT 1 FROM sq_artifact a WHERE a.user_id = sq_message_artifact.user_id
+            AND a.artifact_id = sq_message_artifact.artifact_id AND a.del_flag = '1')
+    </update>
+
+    <update id="purgeContents">
+        UPDATE sq_artifact SET content_bytes = X''
+        WHERE del_flag = '1' AND OCTET_LENGTH(content_bytes) &gt; 0
+          AND NOT EXISTS (SELECT 1 FROM sq_scope_artifact r WHERE r.user_id = sq_artifact.user_id
+              AND r.artifact_id = sq_artifact.artifact_id AND r.del_flag = '0')
+          AND NOT EXISTS (SELECT 1 FROM sq_task_artifact r WHERE r.user_id = sq_artifact.user_id
+              AND r.artifact_id = sq_artifact.artifact_id AND r.del_flag = '0')
+          AND NOT EXISTS (SELECT 1 FROM sq_message_artifact r WHERE r.user_id = sq_artifact.user_id
+              AND r.artifact_id = sq_artifact.artifact_id AND r.del_flag = '0')
+    </update>
+
+    <update id="purgeStages">
+        UPDATE sq_artifact_stage SET status = 'EXPIRED',
+            del_flag = '1',
+            content_bytes = X''
+        WHERE expires_at &lt;= CURRENT_TIMESTAMP AND status = 'STAGED'
+    </update>
+</mapper>

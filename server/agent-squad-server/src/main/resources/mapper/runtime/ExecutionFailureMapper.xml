@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.runtime.repository.ExecutionFailureMapper">
+
+    <resultMap id="latestResult" type="com.agentsquad.squad.presentation.domain.ExecutionFailureRow">
+        <constructor>
+            <arg column="failure_id" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="category" javaType="java.lang.String"/>
+            <arg column="code" javaType="java.lang.String"/>
+            <arg column="actor" javaType="java.lang.String"/>
+            <arg column="safe_message" javaType="java.lang.String"/>
+            <arg column="diagnostic_id" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="retry_attempt" javaType="_int"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="activeInConversationResult" type="com.agentsquad.squad.presentation.domain.ExecutionFailureRow">
+        <constructor>
+            <arg column="failure_id" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="category" javaType="java.lang.String"/>
+            <arg column="code" javaType="java.lang.String"/>
+            <arg column="actor" javaType="java.lang.String"/>
+            <arg column="safe_message" javaType="java.lang.String"/>
+            <arg column="diagnostic_id" javaType="java.lang.String"/>
+            <arg column="status" javaType="java.lang.String"/>
+            <arg column="retry_attempt" javaType="_int"/>
+        </constructor>
+    </resultMap>
+
+    <select id="latest" resultMap="latestResult">
+        SELECT failure_id,
+            scope_id,
+            binding_id,
+            category,
+            code,
+            actor,
+            safe_message,
+            diagnostic_id,
+            status,
+            retry_attempt
+        FROM sq_execution_failure
+        WHERE user_id = #{userId}
+          AND scope_id = #{scopeId}
+          AND binding_id = #{bindingId}
+          AND status &lt;&gt; 'RESOLVED'
+        ORDER BY id DESC
+        LIMIT 1 FOR UPDATE
+    </select>
+
+    <select id="activeInConversation" resultMap="activeInConversationResult">
+        SELECT f.failure_id,
+            f.scope_id,
+            f.binding_id,
+            f.category,
+            f.code,
+            f.actor,
+            f.safe_message,
+            f.diagnostic_id,
+            f.status,
+            f.retry_attempt
+        FROM sq_execution_failure f
+        JOIN sq_execution_scope s ON s.user_id = f.user_id
+            AND s.scope_id = f.scope_id
+        JOIN sq_conversation c ON c.user_id = s.user_id
+            AND c.conversation_id = s.conversation_id
+            AND c.generation = s.conversation_generation
+        WHERE f.user_id = #{userId}
+          AND s.conversation_id = #{conversationId}
+          AND f.status &lt;&gt; 'RESOLVED'
+          AND NOT EXISTS (SELECT 1 FROM sq_execution_failure newer
+              WHERE newer.user_id = f.user_id AND newer.binding_id = f.binding_id
+                AND newer.id &gt; f.id AND newer.status &lt;&gt; 'RESOLVED')
+          AND f.del_flag = '0'
+        ORDER BY f.id
+    </select>
+
+    <select id="byKey" resultType="java.lang.String">
+        SELECT failure_id
+        FROM sq_execution_failure
+        WHERE user_id = #{userId}
+          AND scope_id = #{scopeId}
+          AND failure_key = #{key}
+        FOR UPDATE
+    </select>
+
+    <insert id="insert">
+        INSERT INTO sq_execution_failure (
+            failure_id,
+            user_id,
+            scope_id,
+            binding_id,
+            failure_key,
+            category,
+            code,
+            actor,
+            safe_message,
+            diagnostic_id,
+            creator_id,
+            last_updater_id
+        ) VALUES (
+            #{row.failureId},
+            #{userId},
+            #{row.scopeId},
+            #{row.bindingId},
+            #{key},
+            #{row.category},
+            #{row.code},
+            #{row.actor},
+            #{row.safeMessage},
+            #{row.diagnosticId},
+            #{userId},
+            #{userId}
+        )
+    </insert>
+
+    <update id="status">
+        UPDATE sq_execution_failure
+        SET status = #{status}
+        WHERE user_id = #{userId}
+          AND failure_id = #{failureId}
+    </update>
+
+    <update id="resolveBinding">
+        UPDATE sq_execution_failure
+        SET status = 'RESOLVED'
+        WHERE user_id = #{userId}
+          AND binding_id = #{bindingId}
+          AND status &lt;&gt; 'RESOLVED'
+    </update>
+
+    <select id="serviceAttempts" resultType="_int">
+        SELECT service_retry_attempts
+        FROM sq_execution_scope
+        WHERE user_id = #{userId}
+          AND scope_id = #{scopeId}
+        FOR UPDATE
+    </select>
+
+    <select id="planAttempts" resultType="_int">
+        SELECT plan_correction_attempts
+        FROM sq_execution_scope
+        WHERE user_id = #{userId}
+          AND scope_id = #{scopeId}
+        FOR UPDATE
+    </select>
+
+    <update id="reserveServiceRetry">
+        UPDATE sq_execution_scope
+        SET service_retry_attempts = service_retry_attempts + 1,
+            retry_next_attempt_at  = #{next}
+        WHERE user_id = #{userId}
+          AND scope_id = #{scopeId}
+          AND service_retry_attempts &lt; 2
+    </update>
+
+    <select id="nextAttempt" resultType="java.time.LocalDateTime">
+        SELECT retry_next_attempt_at
+        FROM sq_execution_scope
+        WHERE user_id = #{userId}
+          AND scope_id = #{scopeId}
+    </select>
+
+    <update id="invalidPlan">
+        UPDATE sq_execution_scope
+        SET plan_correction_attempts = plan_correction_attempts + 1
+        WHERE user_id = #{userId}
+          AND scope_id = #{scopeId}
+    </update>
+
+    <update id="responseRetrying">
+        UPDATE sq_response_execution
+        SET status                   = 'RECOVERING',
+            version                  = version + 1,
+            next_attempt_at          = #{next}
+        WHERE user_id = #{userId}
+          AND binding_id = #{bindingId}
+          AND cancel_requested_at IS NULL
+          AND status NOT IN ('SUCCEEDED',
+            'PARTIAL',
+            'FAILED',
+            'CANCELLED')
+    </update>
+
+    <select id="predecessor" resultType="java.lang.String">
+        SELECT retry_of_execution_id
+        FROM sq_response_execution
+        WHERE user_id = #{userId}
+          AND execution_id = #{executionId}
+    </select>
+
+    <select id="serviceAttemptsView" resultType="_int">
+        SELECT service_retry_attempts
+        FROM sq_execution_scope
+        WHERE user_id = #{userId}
+          AND scope_id = #{scopeId}
+    </select>
+
+    <select id="sourceMessage" resultType="java.lang.String">
+        SELECT CASE WHEN s.kind = 'RESPONSE' THEN r.source_message_id ELSE t.origin_message_id END
+        FROM sq_execution_scope s
+        LEFT JOIN sq_response_execution r ON r.user_id = s.user_id
+            AND r.execution_id = s.owner_id AND s.kind = 'RESPONSE'
+        LEFT JOIN sq_goal_task t ON t.user_id = s.user_id
+            AND t.task_id = s.owner_id AND s.kind = 'TASK'
+        WHERE s.user_id = #{userId}
+          AND s.scope_id = #{scopeId}
+    </select>
+
+    <select id="retryAllowed" resultType="_boolean">
+        SELECT CASE WHEN COUNT(*) = 1 THEN TRUE ELSE FALSE END
+        FROM sq_response_execution r
+        JOIN sq_execution_scope s ON s.user_id = r.user_id
+            AND s.scope_id = r.scope_id
+        JOIN sq_budget_account a ON a.user_id = s.user_id
+            AND a.account_id = s.account_id
+        JOIN sq_execution_failure f ON f.user_id = r.user_id
+            AND f.failure_id = r.failure_id
+            AND f.category = 'SERVICE_TRANSIENT'
+        WHERE r.user_id = #{userId}
+          AND r.execution_id = #{executionId}
+          AND r.status = 'FAILED'
+          AND a.status = 'OPEN'
+          AND a.limit_microunits &gt; COALESCE((SELECT SUM(CASE WHEN b.status = 'SETTLED' THEN b.settled_units ELSE b.reserved_units END)
+              FROM sq_budget_reservation b WHERE b.user_id = s.user_id AND b.account_id = s.account_id),
+            0)
+          AND NOT EXISTS (SELECT 1 FROM sq_response_execution child
+              WHERE child.user_id = r.user_id AND child.retry_of_execution_id = r.execution_id)
+          AND NOT EXISTS (SELECT 1 FROM sq_operation o WHERE o.user_id = r.user_id
+              AND o.scope_id = r.scope_id AND o.status IN ('PREPARED',
+            'WAITING_APPROVAL',
+            'IN_FLIGHT',
+            'UNKNOWN',
+            'RECONCILING'))
+          AND NOT EXISTS (SELECT 1 FROM sq_interaction i WHERE i.user_id = r.user_id
+              AND i.scope_id = r.scope_id AND i.status = 'OPEN')
+    </select>
+
+    <update id="clearWorkerCandidate">
+        UPDATE sq_worker_job
+        SET result_candidate_json = NULL,
+            candidate_guard_token = NULL,
+            candidate_turn_id     = NULL
+        WHERE user_id = #{userId}
+          AND binding_id = #{bindingId}
+          AND status = 'RUNNING'
+    </update>
+
+    <update id="recoverTask">
+        UPDATE sq_goal_task
+        SET status         = 'RUNNING',
+            blocked_reason = NULL,
+            version        = version + 1
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+          AND cancel_requested_at IS NULL
+          AND status IN ('RUNNING',
+            'RECOVERY_BLOCKED',
+            'RECONCILING')
+    </update>
+
+    <select id="latestMasterCommand" resultType="java.lang.String">
+        SELECT command_id
+        FROM sq_command
+        WHERE user_id = #{userId}
+          AND binding_id = #{bindingId}
+          AND action IN ('SUBMIT',
+            'MASTER_SIGNAL',
+            'TASK_DIRECTIVE')
+          AND native_turn_id IS NOT NULL
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+
+    <select id="executionVersion" resultType="java.lang.Long">
+        SELECT version
+        FROM sq_response_execution
+        WHERE user_id = #{userId}
+          AND execution_id = #{executionId}
+    </select>
+
+    <update id="linkRetry">
+        UPDATE sq_response_execution
+        SET retry_of_execution_id = #{previous},
+            dispatch_sequence = (SELECT c.message_seq FROM sq_conversation c
+                WHERE c.user_id = sq_response_execution.user_id AND c.conversation_id = sq_response_execution.conversation_id)
+        WHERE user_id = #{userId}
+          AND execution_id = #{executionId}
+          AND retry_of_execution_id IS NULL
+    </update>
+
+    <select id="userActionAvailable" resultType="_boolean">
+        SELECT CASE WHEN COUNT(*) &gt; 0 THEN TRUE ELSE FALSE END
+        FROM sq_interaction
+        WHERE user_id = #{userId}
+          AND binding_id = #{bindingId}
+          AND kind = #{kind}
+          AND status = 'OPEN'
+          AND del_flag = '0'
+          AND (expires_at IS NULL OR expires_at &gt; #{now})
+    </select>
+
+    <update id="approveRetry">
+        UPDATE sq_execution_failure
+        SET status        = 'RETRYING',
+            retry_attempt = #{attempt}
+        WHERE user_id = #{userId}
+          AND failure_id = #{failureId}
+    </update>
+
+    <update id="failTask">
+        UPDATE sq_goal_task
+        SET status                     = 'FAILED',
+            version                    = version + 1,
+            blocked_reason             = NULL,
+            completion_proposal_json   = NULL,
+            proposal_binding_id        = NULL,
+            proposal_turn_id           = NULL,
+            proposal_tool_call_id      = NULL,
+            proposal_hash              = NULL
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+          AND status IN ('QUEUED',
+            'RUNNING')
+          AND cancel_requested_at IS NULL
+    </update>
+
+    <update id="linkFailure">
+        UPDATE sq_response_execution
+        SET failure_id = #{failureId}
+        WHERE user_id = #{userId}
+          AND binding_id = #{bindingId}
+    </update>
+</mapper>
