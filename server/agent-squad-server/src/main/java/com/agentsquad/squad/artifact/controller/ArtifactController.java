@@ -3,14 +3,14 @@ package com.agentsquad.squad.artifact.controller;
 import com.agentsquad.squad.artifact.domain.ArtifactRow;
 import com.agentsquad.squad.artifact.dto.ArtifactView;
 import com.agentsquad.squad.artifact.service.ArtifactService;
-import com.agentsquad.squad.identity.AuthService;
+import com.agentsquad.squad.identity.UserContext;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.annotation.Resource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,36 +34,32 @@ import java.util.List;
 @RequestMapping("/api/v1")
 public class ArtifactController {
     @Resource
-    private AuthService authService;
-
-    @Resource
     private ArtifactService artifactService;
 
     @PostMapping("/artifacts")
     @ResponseStatus(HttpStatus.CREATED)
-    public ArtifactView upload(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
-                               @RequestHeader(value = "X-CSRF-Token", required = false) String csrf,
+    public ArtifactView upload(HttpServletRequest servletRequest,
                                @RequestHeader("Idempotency-Key") String key, @RequestParam("file") MultipartFile file) throws IOException {
-        String userId = authService.authenticateWrite(token, csrf).userId();
+        String userId = UserContext.current(servletRequest).userId();
         return artifactService.upload(userId, key, file.getOriginalFilename(), file.getBytes());
     }
 
     @GetMapping("/artifacts/{artifactId}")
-    public ArtifactView get(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
+    public ArtifactView get(HttpServletRequest servletRequest,
                             @PathVariable String artifactId) {
-        return artifactService.get(authService.authenticate(token).userId(), artifactId);
+        return artifactService.get(UserContext.current(servletRequest).userId(), artifactId);
     }
 
     @GetMapping("/tasks/{taskId}/artifacts")
-    public List<ArtifactView> list(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
+    public List<ArtifactView> list(HttpServletRequest servletRequest,
                                    @PathVariable String taskId) {
-        return artifactService.listTask(authService.authenticate(token).userId(), taskId);
+        return artifactService.listTask(UserContext.current(servletRequest).userId(), taskId);
     }
 
     @GetMapping("/artifacts/{artifactId}/content")
-    public ResponseEntity<byte[]> download(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
+    public ResponseEntity<byte[]> download(HttpServletRequest servletRequest,
                                            @PathVariable String artifactId) {
-        ArtifactRow row = artifactService.content(authService.authenticate(token).userId(), artifactId);
+        ArtifactRow row = artifactService.content(UserContext.current(servletRequest).userId(), artifactId);
         return ResponseEntity.ok().contentType(MediaType.parseMediaType(row.mediaType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
                         .filename(row.fileName(), StandardCharsets.UTF_8).build().toString())

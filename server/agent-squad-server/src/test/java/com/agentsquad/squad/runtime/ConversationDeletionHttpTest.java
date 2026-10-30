@@ -3,7 +3,6 @@ package com.agentsquad.squad.runtime;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
@@ -37,16 +36,9 @@ class ConversationDeletionHttpTest {
             MockMvc mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();
             ObjectMapper mapper = context.getBean(ObjectMapper.class);
 
-            var login = mvc.perform(post("/api/v1/auth/login")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"username\":\"local-user\",\"password\":\"local-password\"}"))
-                    .andExpect(status().isOk()).andReturn();
-            String session = login.getResponse().getCookie("SQUAD_SESSION").getValue();
-            String csrf = mapper.readTree(login.getResponse().getContentAsString()).get("csrfToken").asText();
 
             var conversation = mvc.perform(post("/api/v1/conversations")
-                            .cookie(new Cookie("SQUAD_SESSION", session))
-                            .header("X-CSRF-Token", csrf)
+                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"title\":\"待删除\"}"))
                     .andExpect(status().isCreated()).andReturn();
@@ -54,25 +46,23 @@ class ConversationDeletionHttpTest {
             String conversationId = conversationJson.get("conversationId").asText();
 
             mvc.perform(delete("/api/v1/conversations/{conversationId}", conversationId)
-                            .cookie(new Cookie("SQUAD_SESSION", session))
-                            .header("X-CSRF-Token", csrf)
+                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
                             .header("Idempotency-Key", "delete-1")
                             .header("If-Match", "0"))
                     .andExpect(status().isAccepted());
 
             mvc.perform(get("/api/v1/conversations/{conversationId}", conversationId)
-                            .cookie(new Cookie("SQUAD_SESSION", session)))
+                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN"))
                     .andExpect(status().isNotFound());
 
             var list = mvc.perform(get("/api/v1/conversations")
-                            .cookie(new Cookie("SQUAD_SESSION", session)))
+                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN"))
                     .andExpect(status().isOk()).andReturn();
             JsonNode items = mapper.readTree(list.getResponse().getContentAsString()).get("items");
             assertThat(items).isEmpty();
 
             mvc.perform(post("/api/v1/conversations/{conversationId}/tasks", conversationId)
-                            .cookie(new Cookie("SQUAD_SESSION", session))
-                            .header("X-CSRF-Token", csrf)
+                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
                             .header("Idempotency-Key", "late-task")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"message\":\"迟到的目标\"}"))
@@ -93,16 +83,9 @@ class ConversationDeletionHttpTest {
             MockMvc mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();
             ObjectMapper mapper = context.getBean(ObjectMapper.class);
 
-            var login = mvc.perform(post("/api/v1/auth/login")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"username\":\"local-user\",\"password\":\"local-password\"}"))
-                    .andExpect(status().isOk()).andReturn();
-            String session = login.getResponse().getCookie("SQUAD_SESSION").getValue();
-            String csrf = mapper.readTree(login.getResponse().getContentAsString()).get("csrfToken").asText();
 
             var conversation = mvc.perform(post("/api/v1/conversations")
-                            .cookie(new Cookie("SQUAD_SESSION", session))
-                            .header("X-CSRF-Token", csrf)
+                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"title\":\"幂等删除\"}"))
                     .andExpect(status().isCreated()).andReturn();
@@ -110,29 +93,25 @@ class ConversationDeletionHttpTest {
                     .get("conversationId").asText();
 
             mvc.perform(delete("/api/v1/conversations/{conversationId}", conversationId)
-                            .cookie(new Cookie("SQUAD_SESSION", session))
-                            .header("X-CSRF-Token", csrf)
+                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
                             .header("Idempotency-Key", "delete-1")
                             .header("If-Match", "0"))
                     .andExpect(status().isAccepted());
             mvc.perform(delete("/api/v1/conversations/{conversationId}", conversationId)
-                            .cookie(new Cookie("SQUAD_SESSION", session))
-                            .header("X-CSRF-Token", csrf)
+                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
                             .header("Idempotency-Key", "delete-1")
                             .header("If-Match", "0"))
                     .andExpect(status().isAccepted());
 
             var other = mvc.perform(post("/api/v1/conversations")
-                            .cookie(new Cookie("SQUAD_SESSION", session))
-                            .header("X-CSRF-Token", csrf)
+                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"title\":\"版本冲突\"}"))
                     .andExpect(status().isCreated()).andReturn();
             String otherId = mapper.readTree(other.getResponse().getContentAsString())
                     .get("conversationId").asText();
             mvc.perform(delete("/api/v1/conversations/{conversationId}", otherId)
-                            .cookie(new Cookie("SQUAD_SESSION", session))
-                            .header("X-CSRF-Token", csrf)
+                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
                             .header("Idempotency-Key", "delete-2")
                             .header("If-Match", "7"))
                     .andExpect(status().isConflict());

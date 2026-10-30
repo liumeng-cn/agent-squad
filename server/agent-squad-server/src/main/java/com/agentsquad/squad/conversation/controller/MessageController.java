@@ -3,11 +3,11 @@ package com.agentsquad.squad.conversation.controller;
 import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
 import com.agentsquad.squad.conversation.dto.MessageReceipt;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
-import com.agentsquad.squad.identity.AuthService;
+import com.agentsquad.squad.identity.UserContext;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,27 +26,22 @@ import org.springframework.web.bind.annotation.RestController;
 public class MessageController {
 
     @Resource
-    private AuthService auth;
-
-    @Resource
     private MessageAcceptanceService messages;
 
     @PostMapping("/messages")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public MessageReceipt first(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
-                                @RequestHeader(value = "X-CSRF-Token", required = false) String csrf,
+    public MessageReceipt first(HttpServletRequest servletRequest,
                                 @RequestHeader("Idempotency-Key") String key,
                                 @Valid @RequestBody MessageCreateRequest request) {
-        return messages.accept(auth.authenticateWrite(token, csrf).userId(), null, key, request);
+        return messages.accept(UserContext.current(servletRequest).userId(), null, key, request);
     }
 
     @PostMapping("/{conversationId}/messages")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public MessageReceipt append(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
-                                 @RequestHeader(value = "X-CSRF-Token", required = false) String csrf,
+    public MessageReceipt append(HttpServletRequest servletRequest,
                                  @PathVariable String conversationId,
                                  @RequestHeader("Idempotency-Key") String key,
                                  @Valid @RequestBody MessageCreateRequest request) {
-        return messages.accept(auth.authenticateWrite(token, csrf).userId(), conversationId, key, request);
+        return messages.accept(UserContext.current(servletRequest).userId(), conversationId, key, request);
     }
 }

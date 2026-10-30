@@ -5,7 +5,7 @@
 - 设计阶段已结束，用户授权按 D0–D6 分阶段实现；每个阶段验证后提交。尚未实现的能力如实标记，不以测试探针冒充正式运行链路。
 - 项目定位为多智能体运行技术底座；不得再次将云效、车辆、Skill 页面或普通聊天工作台作为架构中心。
 - 设计细化到用例步骤、请求响应字段、数据结构、状态转换、事务与故障恢复；不能只列组件名。
-- openspec/specs/ 定义能力与行为（R01–R12），api/openapi.json 定义传输结构，server/src/main/resources/db/migration/ 定义实际存储。变更时同步检查，不复制多套现行方案。
+- openspec/specs/ 定义能力与行为（R01–R12），api/openapi.json 定义传输结构，server/agent-squad-server/src/main/resources/db/migration/ 定义实际存储。变更时同步检查，不复制多套现行方案。
 - 旧项目只读参考；没有兼容义务。不自动迁入其服务、迁移、界面、私有配置或未提交改动。
 - Java 采用可读的 Controller → Service → Repository/Mapper 分层，DTO 与持久对象分离；功能类和关键方法写中文职责注释，四空格缩进，控制语句有花括号，不用通配符导入。
 - 表与字段有中文注释，业务 ID 与存储主键分离，公共审计字段统一；不因当前为开发期就自动清理任何实际数据库。

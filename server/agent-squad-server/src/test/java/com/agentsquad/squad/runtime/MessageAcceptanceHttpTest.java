@@ -4,16 +4,14 @@ import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.artifact.service.ArtifactService;
 import com.agentsquad.squad.conversation.dto.MessageReceipt;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
-import com.agentsquad.squad.identity.AuthService;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -34,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 正式消息受理HTTP集成验证。
  * <p>
- * 验证登录、CSRF、首发原子性、并发幂等、附件回滚和在途目标不锁消息；不宣称SDK回复已经执行。
+ * 验证网关身份缺失、首发原子性、并发幂等、附件回滚和在途目标不锁消息；不宣称SDK回复已经执行。
  */
 class MessageAcceptanceHttpTest {
 
@@ -93,9 +91,9 @@ class MessageAcceptanceHttpTest {
         String path = "/api/v1/conversations/messages";
         mvc.perform(post(path).header("Idempotency-Key", "unauth").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"text\":\"你好\"}")).andExpect(status().isUnauthorized());
-        mvc.perform(post(path).cookie(actor.cookie()).header("Idempotency-Key", "no-csrf")
+        mvc.perform(post(path).header("Idempotency-Key", "no-identity")
                 .contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"你好\"}")).andExpect(status().isUnauthorized());
-        mvc.perform(post(path).cookie(actor.cookie()).header("X-CSRF-Token", actor.view().csrfToken())
+        mvc.perform(post(path).header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER")
                 .header("Idempotency-Key", "identity-injection").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"text\":\"你好\",\"taskId\":\"forged\"}")).andExpect(status().isBadRequest());
         assertThat(count(context, "sq_conversation", actor.view().userId())).isZero();
@@ -123,19 +121,16 @@ class MessageAcceptanceHttpTest {
         assertThat(jdbc.queryForObject("SELECT action FROM sq_command WHERE command_id = ?", String.class, first.commandId()))
                 .isEqualTo("MESSAGE_SUBMIT");
         assertThat(jdbc.queryForObject("SELECT native_turn_id FROM sq_command WHERE command_id = ?", String.class, first.commandId())).isNull();
-        mvc.perform(post(path).cookie(actor.cookie()).header("X-CSRF-Token", actor.view().csrfToken())
+        mvc.perform(post(path).header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER")
                 .header("Idempotency-Key", "concurrent-first").contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(Map.of("text", "变更内容")))).andExpect(status().isConflict());
-
-        AuthService auth = context.getBean(AuthService.class);
-        ReflectionTestUtils.setField(auth, "configuredUserId", UUID.randomUUID().toString());
-        MessageTestActor other = actor(context);
-        mvc.perform(post("/api/v1/conversations/{id}/messages", first.conversationId()).cookie(other.cookie())
-                        .header("X-CSRF-Token", other.view().csrfToken()).header("Idempotency-Key", "foreign")
+        MessageTestActor other = new MessageTestActor(new com.agentsquad.squad.identity.AuthView(UUID.randomUUID().toString(), "other", java.util.List.of("USER"), null));
+        mvc.perform(post("/api/v1/conversations/{id}/messages", first.conversationId()).header("X-User-Id", other.view().userId()).header("X-User-Role", "USER")
+                        .header("Idempotency-Key", "foreign")
                         .contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"不能读写别人的对话\"}"))
                 .andExpect(status().isNotFound());
         jdbc.update("UPDATE sq_conversation SET status = 'DELETING', generation = generation + 1 WHERE user_id = ?", actor.view().userId());
-        mvc.perform(post(path).cookie(actor.cookie()).header("X-CSRF-Token", actor.view().csrfToken())
+        mvc.perform(post(path).header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER")
                 .header("Idempotency-Key", "concurrent-first").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"text\":\"你好，介绍一下能力\"}")).andExpect(status().isNotFound());
     }
@@ -145,8 +140,8 @@ class MessageAcceptanceHttpTest {
         MockMvc mvc = mvc(context);
         ObjectMapper json = context.getBean(ObjectMapper.class);
         String owner = actor.view().userId();
-        mvc.perform(post("/api/v1/conversations/messages").cookie(actor.cookie())
-                        .header("X-CSRF-Token", actor.view().csrfToken()).header("Idempotency-Key", "attachment-first")
+        mvc.perform(post("/api/v1/conversations/messages").header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER")
+                        .header("Idempotency-Key", "attachment-first")
                         .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(
                                 Map.of("text", "分析材料", "artifactIds", List.of(UUID.randomUUID().toString())))))
                 .andExpect(status().isNotFound());
@@ -157,13 +152,13 @@ class MessageAcceptanceHttpTest {
         String file = artifacts.upload(owner, "message-file", "material.txt", "事实材料".getBytes(StandardCharsets.UTF_8)).artifactId();
         String expired = artifacts.upload(owner, "expired-file", "expired.txt", "过期材料".getBytes(StandardCharsets.UTF_8)).artifactId();
         context.getBean(JdbcTemplate.class).update("UPDATE sq_artifact SET expires_at = '2000-01-01' WHERE artifact_id = ?", expired);
-        mvc.perform(post("/api/v1/conversations/messages").cookie(actor.cookie()).header("X-CSRF-Token", actor.view().csrfToken())
+        mvc.perform(post("/api/v1/conversations/messages").header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER")
                         .header("Idempotency-Key", "expired-file").contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(Map.of("text", "分析", "artifactIds", List.of(expired)))))
                 .andExpect(status().isNotFound());
         assertThat(count(context, "sq_conversation", owner)).isZero();
         String foreign = artifacts.upload(UUID.randomUUID().toString(), "foreign-file", "other.txt", "不能引用".getBytes(StandardCharsets.UTF_8)).artifactId();
-        mvc.perform(post("/api/v1/conversations/messages").cookie(actor.cookie()).header("X-CSRF-Token", actor.view().csrfToken())
+        mvc.perform(post("/api/v1/conversations/messages").header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER")
                         .header("Idempotency-Key", "foreign-file").contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(Map.of("text", "分析", "artifactIds", List.of(foreign)))))
                 .andExpect(status().isNotFound());
@@ -196,16 +191,15 @@ class MessageAcceptanceHttpTest {
     }
 
     static MessageTestActor actor(ConfigurableApplicationContext context) {
-        AuthService auth = context.getBean(AuthService.class);
-        String token = auth.login("tester", "test-only");
-        return new MessageTestActor(auth.authenticate(token), new Cookie("SQUAD_SESSION", token));
+        String userId = context.getEnvironment().getProperty("agentsquad.auth.user-id");
+        return new MessageTestActor(new com.agentsquad.squad.identity.AuthView(userId, "tester", java.util.List.of("USER"), null));
     }
 
     static MessageReceipt send(ConfigurableApplicationContext context, MessageTestActor actor, String path,
                                String key, Map<String, Object> body) throws Exception {
         ObjectMapper json = context.getBean(ObjectMapper.class);
-        String response = mvc(context).perform(post(path).cookie(actor.cookie())
-                        .header("X-CSRF-Token", actor.view().csrfToken()).header("Idempotency-Key", key)
+        String response = mvc(context).perform(post(path).header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER")
+                        .header("Idempotency-Key", key)
                         .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(body)))
                 .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString();
         return json.readValue(response, MessageReceipt.class);

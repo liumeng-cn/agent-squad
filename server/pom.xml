@@ -25,6 +25,7 @@
 
     <properties>
         <java.version>27</java.version>
+        <maven.compiler.release>21</maven.compiler.release>
         <agentscope.version>2.1.0-BETA1</agentscope.version>
         <lombok.version>1.18.48</lombok.version>
     </properties>

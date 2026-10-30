@@ -2,6 +2,7 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import db.migration.V8__BackfillConversationExecution;
+import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.mapping.Environment;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.SqlSession;
@@ -16,6 +17,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.util.List;
@@ -169,12 +171,16 @@ class ConversationExecutionMigrationTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_command", Integer.class)).isEqualTo(1);
     }
 
-    private static void verifyOwnership(DriverManagerDataSource dataSource, JdbcTemplate jdbc) {
+    private static void verifyOwnership(DriverManagerDataSource dataSource, JdbcTemplate jdbc) throws Exception {
         String scopeId = jdbc.queryForObject("SELECT scope_id FROM sq_goal_task WHERE user_id = ? AND task_id = ?",
                 String.class, USER, TASK);
         Configuration configuration = new Configuration(new Environment("migration-test",
                 new JdbcTransactionFactory(), dataSource));
-        configuration.addMapper(ExecutionScopeMapper.class);
+        // 此测试手动创建 MyBatis 工厂，需显式加载正式 XML 以验证归属查询映射。
+        String mapperResource = "mapper/conversation/ExecutionScopeMapper.xml";
+        try (InputStream mapperXml = ExecutionScopeMapper.class.getClassLoader().getResourceAsStream(mapperResource)) {
+            new XMLMapperBuilder(mapperXml, configuration, mapperResource, configuration.getSqlFragments()).parse();
+        }
         SqlSessionFactory factory = new SqlSessionFactoryBuilder().build(configuration);
         try (SqlSession session = factory.openSession()) {
             ExecutionScopeMapper mapper = session.getMapper(ExecutionScopeMapper.class);

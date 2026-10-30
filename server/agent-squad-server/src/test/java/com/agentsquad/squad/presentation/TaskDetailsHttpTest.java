@@ -5,12 +5,11 @@ import com.agentsquad.squad.artifact.service.ArtifactService;
 import com.agentsquad.squad.artifact.dto.ArtifactView;
 import com.agentsquad.squad.conversation.dto.TaskReceipt;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
-import com.agentsquad.squad.identity.AuthService;
+
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.interaction.repository.InteractionMapper;
 import com.agentsquad.squad.interaction.service.InputFormSchema;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
@@ -18,7 +17,6 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -53,63 +51,60 @@ class TaskDetailsHttpTest {
                 "--agentsquad.delivery.enabled=true", "--agentsquad.delivery.poll-delay-ms=600000",
                 "--agentsquad.projection.poll-delay-ms=600000")) {
             MockMvc mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();
-            AuthService auth = context.getBean(AuthService.class);
-            String token = auth.login("tester", "test-only");
-            AuthView actor = auth.authenticate(token);
-            Cookie cookie = new Cookie("SQUAD_SESSION", token);
+            String userId = "00000000-0000-0000-0000-000000000001";
+            AuthView actor = new AuthView(userId, "tester", java.util.List.of("USER"), null);
             ObjectMapper json = context.getBean(ObjectMapper.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             byte[] bytes = "验收证据：本地验证".getBytes(StandardCharsets.UTF_8);
             MockMultipartFile file = new MockMultipartFile("file", "evidence.txt", "text/plain", bytes);
-            String body = mvc.perform(multipart("/api/v1/artifacts").file(file).cookie(cookie)
-                            .header("X-CSRF-Token", actor.csrfToken()).header("Idempotency-Key", "upload-1"))
+            String body = mvc.perform(multipart("/api/v1/artifacts").file(file).header("X-User-Id", userId).header("X-User-Role", "USER")
+                            .header("Idempotency-Key", "upload-1"))
                     .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
             String artifactId = json.readTree(body).path("artifactId").asText();
             assertThat(body).doesNotContain("content_bytes", "userId", "uploadKey");
-            mvc.perform(multipart("/api/v1/artifacts").file(file).cookie(cookie)
-                            .header("X-CSRF-Token", actor.csrfToken()).header("Idempotency-Key", "upload-1"))
+            mvc.perform(multipart("/api/v1/artifacts").file(file).header("X-User-Id", userId).header("X-User-Role", "USER")
+                            .header("Idempotency-Key", "upload-1"))
                     .andExpect(status().isCreated());
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_artifact", Integer.class)).isEqualTo(1);
             mvc.perform(multipart("/api/v1/artifacts").file(new MockMultipartFile("file", "other.txt", "text/plain", bytes))
-                            .cookie(cookie).header("X-CSRF-Token", actor.csrfToken()).header("Idempotency-Key", "upload-1"))
+                            .header("X-User-Id", userId).header("X-User-Role", "USER").header("Idempotency-Key", "upload-1"))
                     .andExpect(status().isConflict());
             mvc.perform(multipart("/api/v1/artifacts").file(new MockMultipartFile("file", "bad.html", "text/html", bytes))
-                            .cookie(cookie).header("X-CSRF-Token", actor.csrfToken()).header("Idempotency-Key", "bad-type"))
+                            .header("X-User-Id", userId).header("X-User-Role", "USER").header("Idempotency-Key", "bad-type"))
                     .andExpect(status().isBadRequest());
-            mvc.perform(multipart("/api/v1/artifacts").file(file).cookie(cookie).header("Idempotency-Key", "csrf-missing"))
+            mvc.perform(multipart("/api/v1/artifacts").file(file).header("Idempotency-Key", "identity-missing"))
                     .andExpect(status().isUnauthorized());
-            assertThat(mvc.perform(get("/api/v1/artifacts/{id}/content", artifactId).cookie(cookie))
+            assertThat(mvc.perform(get("/api/v1/artifacts/{id}/content", artifactId).header("X-User-Id", userId).header("X-User-Role", "USER"))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray()).isEqualTo(bytes);
             ArtifactView corrupted = context.getBean(ArtifactService.class).upload(actor.userId(), "corrupt-check",
                     "corrupt.txt", "before".getBytes(StandardCharsets.UTF_8));
             jdbc.update("UPDATE sq_artifact SET content_bytes = ? WHERE artifact_id = ?",
                     "after".getBytes(StandardCharsets.UTF_8), corrupted.artifactId());
-            mvc.perform(get("/api/v1/artifacts/{id}/content", corrupted.artifactId()).cookie(cookie))
+            mvc.perform(get("/api/v1/artifacts/{id}/content", corrupted.artifactId()).header("X-User-Id", userId).header("X-User-Role", "USER"))
                     .andExpect(status().isConflict());
-            ReflectionTestUtils.setField(auth, "configuredUserId", "00000000-0000-0000-0000-000000000002");
-            Cookie other = new Cookie("SQUAD_SESSION", auth.login("tester", "test-only"));
-            mvc.perform(get("/api/v1/artifacts/{id}/content", artifactId).cookie(other)).andExpect(status().isNotFound());
-            mvc.perform(get("/api/v1/artifacts/{id}/content", UUID.randomUUID()).cookie(cookie)).andExpect(status().isNotFound());
+            String otherUserId = UUID.randomUUID().toString();
+            mvc.perform(get("/api/v1/artifacts/{id}/content", artifactId).header("X-User-Id", otherUserId).header("X-User-Role", "USER")).andExpect(status().isNotFound());
+            mvc.perform(get("/api/v1/artifacts/{id}/content", UUID.randomUUID()).header("X-User-Id", userId).header("X-User-Role", "USER")).andExpect(status().isNotFound());
 
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             String conversation = tasks.createConversation(actor.userId(), "页面验收").conversationId();
-            mvc.perform(post("/api/v1/conversations/{id}/tasks", conversation).cookie(cookie)
-                            .header("X-CSRF-Token", actor.csrfToken()).header("Idempotency-Key", "invalid-attachment")
+            mvc.perform(post("/api/v1/conversations/{id}/tasks", conversation).header("X-User-Id", userId).header("X-User-Role", "USER")
+                            .header("Idempotency-Key", "invalid-attachment")
                             .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of(
                                     "message", "引用不存在的文件", "artifactIds", List.of(UUID.randomUUID().toString())))))
                     .andExpect(status().isNotFound());
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_goal_task", Integer.class)).isZero();
-            String taskBody = mvc.perform(post("/api/v1/conversations/{id}/tasks", conversation).cookie(cookie)
-                            .header("X-CSRF-Token", actor.csrfToken()).header("Idempotency-Key", "task-1")
+            String taskBody = mvc.perform(post("/api/v1/conversations/{id}/tasks", conversation).header("X-User-Id", userId).header("X-User-Role", "USER")
+                            .header("Idempotency-Key", "task-1")
                             .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of(
                                     "message", "写一篇文章", "artifactIds", List.of(artifactId)))))
                     .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString();
             String taskId = json.readTree(taskBody).path("taskId").asText();
             jdbc.update("UPDATE sq_command SET status = 'CANCELLED' WHERE task_id = ?", taskId);
-            assertThat(mvc.perform(get("/api/v1/tasks/{id}/artifacts", taskId).cookie(cookie))
+            assertThat(mvc.perform(get("/api/v1/tasks/{id}/artifacts", taskId).header("X-User-Id", userId).header("X-User-Role", "USER"))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).contains(artifactId);
-            mvc.perform(get("/api/v1/tasks/{id}/jobs", taskId).cookie(cookie)).andExpect(status().isOk());
-            mvc.perform(get("/api/v1/tasks/{id}/jobs", taskId).cookie(other)).andExpect(status().isNotFound());
+            mvc.perform(get("/api/v1/tasks/{id}/jobs", taskId).header("X-User-Id", userId).header("X-User-Role", "USER")).andExpect(status().isOk());
+            mvc.perform(get("/api/v1/tasks/{id}/jobs", taskId).header("X-User-Id", otherUserId).header("X-User-Role", "USER")).andExpect(status().isNotFound());
             String binding = jdbc.queryForObject("SELECT binding_id FROM sq_runtime_binding WHERE task_id = ?", String.class, taskId);
             String operationId = UUID.randomUUID().toString();
             jdbc.update("""
@@ -118,30 +113,25 @@ class TaskDetailsHttpTest {
                             VALUES (?, ?, ?, ?, 'turn-1', 'call-1', 'mock_ticket_create', 'v1', 'WRITE', 'hash-1', ?, 'UNKNOWN', (SELECT scope_id FROM sq_runtime_binding WHERE binding_id = ?))
                             """, operationId, actor.userId(), taskId, binding,
                     "{\"title\":\"private-title\",\"password\":\"must-not-leak\"}", binding);
-            String detail = mvc.perform(get("/api/v1/operations/{id}", operationId).cookie(cookie))
+            String detail = mvc.perform(get("/api/v1/operations/{id}", operationId).header("X-User-Id", userId).header("X-User-Role", "USER"))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
             assertThat(detail).doesNotContain("private-title", "must-not-leak", "frameworkTurnId");
             assertThat(json.readTree(detail).path("canReconcile").asBoolean()).isFalse();
             String reconcile = json.writeValueAsString(Map.of("expectedVersion", 0, "disposition", "UNRESOLVED",
                     "evidenceRefs", List.of(artifactId), "note", "仍需进一步确认"));
-            mvc.perform(post("/api/v1/operations/{id}/reconcile", operationId).cookie(cookie)
-                            .header("X-CSRF-Token", actor.csrfToken()).contentType(MediaType.APPLICATION_JSON).content(reconcile))
+            mvc.perform(post("/api/v1/operations/{id}/reconcile", operationId).header("X-User-Id", userId).header("X-User-Role", "USER")
+                            .contentType(MediaType.APPLICATION_JSON).content(reconcile))
                     .andExpect(status().isForbidden());
-            ReflectionTestUtils.setField(auth, "configuredUserId", actor.userId());
-            ReflectionTestUtils.setField(auth, "configuredRole", "OPERATOR");
-            String operatorToken = auth.login("tester", "test-only");
-            AuthView operator = auth.authenticate(operatorToken);
-            Cookie operatorCookie = new Cookie("SQUAD_SESSION", operatorToken);
-            mvc.perform(post("/api/v1/operations/{id}/reconcile", operationId).cookie(operatorCookie)
-                            .header("X-CSRF-Token", operator.csrfToken()).contentType(MediaType.APPLICATION_JSON).content(reconcile))
+            mvc.perform(post("/api/v1/operations/{id}/reconcile", operationId).header("X-User-Id", actor.userId()).header("X-User-Role", "OPERATOR")
+                            .contentType(MediaType.APPLICATION_JSON).content(reconcile))
                     .andExpect(status().isForbidden());
             jdbc.update("INSERT INTO sq_operation_reconciler (user_id, task_id, scope_id) SELECT user_id, task_id, scope_id FROM sq_goal_task WHERE user_id = ? AND task_id = ?", actor.userId(), taskId);
-            mvc.perform(post("/api/v1/operations/{id}/reconcile", operationId).cookie(operatorCookie)
-                            .header("X-CSRF-Token", operator.csrfToken()).contentType(MediaType.APPLICATION_JSON).content(reconcile))
+            mvc.perform(post("/api/v1/operations/{id}/reconcile", operationId).header("X-User-Id", actor.userId()).header("X-User-Role", "OPERATOR")
+                            .contentType(MediaType.APPLICATION_JSON).content(reconcile))
                     .andExpect(status().isOk());
             assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id = ?", String.class, operationId)).isEqualTo("UNKNOWN");
-            mvc.perform(post("/api/v1/operations/{id}/reconcile", operationId).cookie(operatorCookie)
-                            .header("X-CSRF-Token", operator.csrfToken()).contentType(MediaType.APPLICATION_JSON).content(reconcile))
+            mvc.perform(post("/api/v1/operations/{id}/reconcile", operationId).header("X-User-Id", actor.userId()).header("X-User-Role", "OPERATOR")
+                            .contentType(MediaType.APPLICATION_JSON).content(reconcile))
                     .andExpect(status().isConflict());
 
             String interactionId = UUID.randomUUID().toString();
@@ -153,13 +143,13 @@ class TaskDetailsHttpTest {
                     "input-hash", 0, LocalDateTime.now().plusHours(1), actor.userId(), "tester");
             String response = json.writeValueAsString(Map.of("expectedVersion", 0,
                     "answer", Map.of("kind", "INPUT", "value", Map.of("style", "正式"))));
-            mvc.perform(post("/api/v1/interactions/{id}/responses", interactionId).cookie(cookie)
-                            .header("X-CSRF-Token", actor.csrfToken()).header("Idempotency-Key", "answer-1")
+            mvc.perform(post("/api/v1/interactions/{id}/responses", interactionId).header("X-User-Id", userId).header("X-User-Role", "USER")
+                            .header("Idempotency-Key", "answer-1")
                             .contentType(MediaType.APPLICATION_JSON).content(response.replace("正式", "不允许")))
                     .andExpect(status().isBadRequest());
             for (int i = 0; i < 2; i++) {
-                mvc.perform(post("/api/v1/interactions/{id}/responses", interactionId).cookie(cookie)
-                        .header("X-CSRF-Token", actor.csrfToken()).header("Idempotency-Key", "answer-1")
+                mvc.perform(post("/api/v1/interactions/{id}/responses", interactionId).header("X-User-Id", userId).header("X-User-Role", "USER")
+                        .header("Idempotency-Key", "answer-1")
                         .contentType(MediaType.APPLICATION_JSON).content(response)).andExpect(status().isAccepted());
             }
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_command WHERE action = 'RESPOND'", Integer.class)).isEqualTo(1);
@@ -169,13 +159,13 @@ class TaskDetailsHttpTest {
             events.insertProjected(actor.userId(), taskId, 3, "answer-new", "answer.replaced",
                     "{\"text\":\"新回答\",\"revision\":1}", LocalDateTime.now());
             jdbc.update("UPDATE sq_goal_task SET answer_revision = 1, event_seq = 3, status = 'PARTIAL' WHERE task_id = ?", taskId);
-            String snapshot = mvc.perform(get("/api/v1/tasks/{id}/snapshot", taskId).cookie(cookie))
+            String snapshot = mvc.perform(get("/api/v1/tasks/{id}/snapshot", taskId).header("X-User-Id", userId).header("X-User-Role", "USER"))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
             assertThat(json.readTree(snapshot).path("answer").path("text").asText()).isEqualTo("新回答");
             assertThat(json.readTree(snapshot).path("answer").path("completed").asBoolean()).isFalse();
             assertThat(json.readTree(snapshot).path("task").path("status").asText()).isEqualTo("PARTIAL");
             jdbc.update("UPDATE sq_conversation SET status = 'DELETING' WHERE conversation_id = ?", conversation);
-            mvc.perform(get("/api/v1/artifacts/{id}/content", artifactId).cookie(cookie)).andExpect(status().isNotFound());
+            mvc.perform(get("/api/v1/artifacts/{id}/content", artifactId).header("X-User-Id", userId).header("X-User-Role", "USER")).andExpect(status().isNotFound());
         }
     }
 }

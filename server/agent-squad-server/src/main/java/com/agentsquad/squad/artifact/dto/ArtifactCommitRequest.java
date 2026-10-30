@@ -1,4 +1,4 @@
-package com.agentsquad.squad.agent.tool;
+package com.agentsquad.squad.artifact.dto;
 
 /**
  * 产物提交请求。

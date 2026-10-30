@@ -5,11 +5,11 @@ import com.agentsquad.squad.conversation.dto.ControlRequest;
 import com.agentsquad.squad.conversation.dto.MessageReceipt;
 import com.agentsquad.squad.conversation.service.ResponseRetryService;
 import com.agentsquad.squad.conversation.service.ResponseControlService;
-import com.agentsquad.squad.identity.AuthService;
+import com.agentsquad.squad.identity.UserContext;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -28,24 +28,19 @@ public class ResponseControlController {
     private ResponseRetryService retries;
 
     @Resource
-    private AuthService auth;
-
-    @Resource
     private ResponseControlService controls;
 
     @PostMapping("/api/v1/executions/{executionId}/cancel")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public CommandReceipt cancel(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
-                                 @RequestHeader(value = "X-CSRF-Token", required = false) String csrf, @PathVariable String executionId,
+    public CommandReceipt cancel(HttpServletRequest servletRequest, @PathVariable String executionId,
                                  @RequestHeader("Idempotency-Key") String key, @Valid @RequestBody ControlRequest request) {
-        return controls.cancel(auth.authenticateWrite(token, csrf).userId(), executionId, key, request.expectedVersion());
+        return controls.cancel(UserContext.current(servletRequest).userId(), executionId, key, request.expectedVersion());
     }
 
     @PostMapping("/api/v1/executions/{executionId}/retry")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public MessageReceipt retry(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
-            @RequestHeader(value = "X-CSRF-Token", required = false) String csrf, @PathVariable String executionId,
+    public MessageReceipt retry(HttpServletRequest servletRequest, @PathVariable String executionId,
             @RequestHeader("Idempotency-Key") String key, @Valid @RequestBody ControlRequest request) {
-        return retries.retry(auth.authenticateWrite(token, csrf).userId(), executionId, key, request.expectedVersion());
+        return retries.retry(UserContext.current(servletRequest).userId(), executionId, key, request.expectedVersion());
     }
 }

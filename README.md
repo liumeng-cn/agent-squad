@@ -22,19 +22,28 @@ Agent Squad 是一个面向 Web 的多智能体运行底座。用户发送消息
 
 ## 本地运行
 
-准备 JDK 21、Maven、Docker MySQL 8.4，以及 Node.js 20.19+ 或 22.12+。MySQL 需监听 `127.0.0.1:13306`，预建 `agent_squad` 数据库和可访问该库的账号；应用启动时由 Flyway 执行表结构迁移。已有同名容器和数据库时直接复用，不要为启动服务清空数据。
+当前 Maven 构建使用 JDK 27（Java 21 运行兼容性仍需单独验证）。准备 Maven、Docker MySQL 8.4，以及 Node.js 20.19+ 或 22.12+。MySQL 需监听 `127.0.0.1:13306`，预建 `agent_squad` 数据库和可访问该库的账号；应用启动时由 Flyway 执行表结构迁移。已有同名容器和数据库时直接复用，不要为启动服务清空数据。
 
 1. 在仓库根目录复制 [环境变量示例](.env.example) 为 `.env.local`，填写 MySQL 账号、本地登录账号及模型配置。`.env.local` 已被 Git 忽略。若希望提问得到模型回答，设置 `SQUAD_DELIVERY_ENABLED=true` 并填写 `SQUAD_MODEL_API_KEY`、`SQUAD_MODEL_BASE_URL`、`SQUAD_MODEL_NAME`；保持 `false` 时只会受理消息，不会投递执行。
-2. 在一个终端启动 Java 服务：
+2. 在一个终端启动业务服务：
 
    ```bash
    set -a
    source ./.env.local
    set +a
-   mvn -f server/pom.xml -B -ntp spring-boot:run
+   mvn -f server/agent-squad-server/pom.xml -B -ntp spring-boot:run
    ```
 
-3. 在另一个终端启动页面：
+3. 在另一个终端加载同一环境配置，启动认证网关：
+
+   ```bash
+   set -a
+   source ./.env.local
+   set +a
+   mvn -f server/agent-squad-gateway/pom.xml -B -ntp spring-boot:run
+   ```
+
+4. 在第三个终端启动页面：
 
    ```bash
    cd web/console
@@ -42,7 +51,7 @@ Agent Squad 是一个面向 Web 的多智能体运行底座。用户发送消息
    npm run dev
    ```
 
-默认打开 [http://127.0.0.1:5173/login](http://127.0.0.1:5173/login)，后端监听 `127.0.0.1:18080`。使用 `.env.local` 中的 `SQUAD_LOCAL_USER` 和 `SQUAD_LOCAL_PASSWORD` 登录；本地单账号默认具有 `ADMIN` 角色，可用 `SQUAD_LOCAL_ROLE=USER` 改为普通角色。若后端改用 `SERVER_PORT=18081`，启动页面前设置 `VITE_API_TARGET=http://127.0.0.1:18081`；页面端口可用 `npm run dev -- --port 5174` 调整。
+默认打开 [http://127.0.0.1:5173/login](http://127.0.0.1:5173/login)，页面代理到网关 `127.0.0.1:18081`，业务服务监听 `127.0.0.1:18080`。使用 `.env.local` 中的 `SQUAD_LOCAL_USER` 和 `SQUAD_LOCAL_PASSWORD` 登录；本地单账号默认具有 `ADMIN` 角色，可用 `SQUAD_LOCAL_ROLE=USER` 改为普通角色。自定义网关地址时设置 `VITE_API_TARGET`，网关的业务服务地址通过 `SQUAD_BUSINESS_SERVICE_URL` 配置；页面端口可用 `npm run dev -- --port 5174` 调整。
 
 运行测试时使用**未加载 `.env.local` 的独立终端**，避免测试任务进入正在使用的 MySQL：
 
@@ -51,23 +60,23 @@ mvn -f server/pom.xml -B -ntp test
 npm --prefix web/console run build
 ```
 
-常规后端测试使用临时 H2；专用 MySQL 集成测试需显式配置测试数据库，默认跳过。另可在装有 Python 3.10+ 和 `jsonschema` 的设计工具环境运行 `python3 tools/check_design.py`；Python 不参与服务运行。
+后端集成测试使用独立 MySQL schema，需显式设置 `SQUAD_TEST_MYSQL_ADMIN_URL`（指向 `mysql` 系统库）、`SQUAD_TEST_MYSQL_USER` 与 `SQUAD_TEST_MYSQL_PASSWORD`；测试只创建 `as_test_` 前缀的隔离库，不读取应用私有配置。部分故障或多实例专项测试还需单独开启。另可在装有 Python 3.10+ 和 `jsonschema` 的设计工具环境运行 `python3 tools/check_design.py`；Python 不参与服务运行。
 
 ## 运行链路与目录
 
 ```text
-页面 → Message / ResponseExecution / Command → 回复 Master
+页面 → 认证网关 → Message / ResponseExecution / Command → 回复 Master
                                               └→ 按需建立 GoalTask → Task Master → Worker
 原生持久事件 → 平台投影 → 会话消息/状态快照与 SSE → 当前对话
 ```
 
-`server/` 是 Java 服务，`web/console/` 是 Vue 工作台，`api/` 放接口契约（OpenAPI 与配置 Schema），`openspec/` 放能力 spec、变更计划与稳定约束。数据库结构以 `server/src/main/resources/db/migration/` 的 Flyway 迁移为唯一权威。
+`server/pom.xml` 聚合 `agent-squad-gateway`（认证与 Spring Cloud Gateway 内置路由）和 `agent-squad-server`（运行底座）两个 Java 模块，`web/console/` 是 Vue 工作台，`api/` 放接口契约（OpenAPI 与配置 Schema），`openspec/` 放能力 spec、变更计划与稳定约束。数据库结构以 `server/agent-squad-server/src/main/resources/db/migration/` 的 Flyway 迁移为唯一权威。
 
 ### Java 服务包结构
 
 ```text
 com.agentsquad.squad
-├── identity/              认证、登录、会话主体
+├── identity/              网关传入的请求身份上下文
 ├── conversation/          会话、任务、命令、投递的受理与控制
 ├── runtime/               运行协调：完成提案、终结、投影映射
 ├── presentation/          读投影：任务快照、事件流、SSE
@@ -79,6 +88,8 @@ com.agentsquad.squad
 ├── config/                Spring 配置
 └── common/                共享异常与工具类
 ```
+
+Mapper XML 按能力放在 `server/agent-squad-server/src/main/resources/mapper/<模块>/` 下，不增加 `repository/` 中间目录；XML namespace 对应 Java Mapper 接口的完整包名。
 
 每个能力包内部按 controller → service → repository 分层；domain 放持久行对象，dto 放请求/响应 record，与持久对象分离。注入统一使用 `@Resource` 字段注入，不使用构造方法注入。
 

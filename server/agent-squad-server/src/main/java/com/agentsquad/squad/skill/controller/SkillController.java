@@ -1,6 +1,7 @@
 package com.agentsquad.squad.skill.controller;
 
-import com.agentsquad.squad.identity.AuthService;
+import com.agentsquad.squad.identity.UserContext;
+import jakarta.servlet.http.HttpServletRequest;
 import com.agentsquad.squad.skill.dto.SkillDetail;
 import com.agentsquad.squad.skill.dto.SkillGrantRequest;
 import com.agentsquad.squad.skill.dto.SkillGrantView;
@@ -12,13 +13,11 @@ import com.agentsquad.squad.skill.service.SkillService;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -34,44 +33,38 @@ import org.springframework.web.bind.annotation.RestController;
 public class SkillController {
 
     @Resource
-    private AuthService authentication;
-
-    @Resource
     private SkillService skills;
 
     @GetMapping
-    public SkillPage list(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
+    public SkillPage list(HttpServletRequest servletRequest,
                           @RequestParam(required = false) String cursor,
                           @RequestParam(defaultValue = "20") int limit) {
-        return skills.list(authentication.authenticate(token).userId(), cursor, limit);
+        return skills.list(UserContext.current(servletRequest).userId(), cursor, limit);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public SkillVersionView importPackage(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
-                                          @RequestHeader(value = "X-CSRF-Token", required = false) String csrf,
+    public SkillVersionView importPackage(HttpServletRequest servletRequest,
                                           @RequestBody SkillImportRequest request) {
-        return skills.importPackage(authentication.authenticateWrite(token, csrf).userId(), request);
+        return skills.importPackage(UserContext.current(servletRequest).userId(), request);
     }
 
     @GetMapping("/{versionId}")
-    public SkillDetail detail(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
+    public SkillDetail detail(HttpServletRequest servletRequest,
                               @PathVariable String versionId) {
-        return skills.detail(authentication.authenticate(token).userId(), versionId);
+        return skills.detail(UserContext.current(servletRequest).userId(), versionId);
     }
 
     @PutMapping("/{versionId}/grant")
-    public SkillGrantView grant(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
-                                @RequestHeader(value = "X-CSRF-Token", required = false) String csrf,
+    public SkillGrantView grant(HttpServletRequest servletRequest,
                                 @PathVariable String versionId, @Valid @RequestBody SkillGrantRequest request) {
-        return skills.changeGrant(authentication.authenticateWrite(token, csrf).userId(), versionId, request);
+        return skills.changeGrant(UserContext.current(servletRequest).userId(), versionId, request);
     }
 
     @PostMapping("/{versionId}/revoke")
-    public SkillDetail revoke(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
-                              @RequestHeader(value = "X-CSRF-Token", required = false) String csrf,
+    public SkillDetail revoke(HttpServletRequest servletRequest,
                               @PathVariable String versionId, @Valid @RequestBody SkillRevokeRequest request) {
-        return skills.revoke(authentication.authenticateWrite(token, csrf).userId(), versionId,
+        return skills.revoke(UserContext.current(servletRequest).userId(), versionId,
                 request.expectedVersion());
     }
 }

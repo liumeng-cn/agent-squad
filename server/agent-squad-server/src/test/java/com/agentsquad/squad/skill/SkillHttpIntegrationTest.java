@@ -15,7 +15,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.harness.agent.skill.SkillResources;
-import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
@@ -57,25 +56,17 @@ class SkillHttpIntegrationTest {
         try (ConfigurableApplicationContext context = start(directory)) {
             MockMvc mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();
             ObjectMapper json = context.getBean(ObjectMapper.class);
-            MvcResult login = mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"username\":\"local-user\",\"password\":\"local-password\"}"))
-                    .andExpect(status().isOk()).andReturn();
-            Cookie cookie = login.getResponse().getCookie("SQUAD_SESSION");
-            String csrf = json.readTree(login.getResponse().getContentAsString()).get("csrfToken").asText();
             SkillService skills = context.getBean(SkillService.class);
             SkillRuntimeService runtime = context.getBean(SkillRuntimeService.class);
             MessageAcceptanceService messages = context.getBean(MessageAcceptanceService.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
 
             mvc.perform(get("/api/v1/skills")).andExpect(status().isUnauthorized());
-            mvc.perform(post("/api/v1/skills").cookie(cookie).contentType(MediaType.APPLICATION_JSON)
-                            .content(json.writeValueAsString(request("1.0.0", "旧资源"))))
-                    .andExpect(status().isUnauthorized());
-            mvc.perform(post("/api/v1/skills").cookie(cookie).header("X-CSRF-Token", csrf)
+            mvc.perform(post("/api/v1/skills").header("X-User-Id", USER).header("X-User-Role", "ADMIN")
                             .contentType(MediaType.APPLICATION_JSON).content("{\"files\":[],\"userId\":\"forged\"}"))
                     .andExpect(status().isBadRequest());
 
-            String imported = mvc.perform(post("/api/v1/skills").cookie(cookie).header("X-CSRF-Token", csrf)
+            String imported = mvc.perform(post("/api/v1/skills").header("X-User-Id", USER).header("X-User-Role", "ADMIN")
                             .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(request("1.0.0", "旧资源"))))
                     .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
             JsonNode created = json.readTree(imported);
@@ -85,23 +76,23 @@ class SkillHttpIntegrationTest {
             assertThatThrownBy(() -> skills.importPackage(USER, request("1.0.0", "不同资源")))
                     .hasMessageContaining("内容不同");
             String otherVersion = skills.importPackage(OTHER, request("1.0.0", "其他用户资源")).skillVersionId();
-            mvc.perform(get("/api/v1/skills/{id}", otherVersion).cookie(cookie)).andExpect(status().isNotFound());
+            mvc.perform(get("/api/v1/skills/{id}", otherVersion).header("X-User-Id", USER).header("X-User-Role", "ADMIN")).andExpect(status().isNotFound());
             assertThat(skills.list(USER, null, 10).items()).hasSize(1);
             assertThatThrownBy(() -> skills.detail(OTHER, versionId)).isInstanceOf(RuntimeBusinessException.class);
 
             var emptyReceipt = messages.accept(USER, null, "empty-catalog", new MessageCreateRequest("普通回复", List.of()));
             String emptyScope = scope(jdbc, emptyReceipt.executionId());
             assertThat(runtime.freeze(USER, emptyScope).skills()).isEmpty();
-            mvc.perform(put("/api/v1/skills/{id}/grant", versionId).cookie(cookie).header("X-CSRF-Token", csrf)
+            mvc.perform(put("/api/v1/skills/{id}/grant", versionId).header("X-User-Id", USER).header("X-User-Role", "ADMIN")
                             .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":null,\"enabled\":true}"))
                     .andExpect(status().isBadRequest());
-            mvc.perform(put("/api/v1/skills/{id}/grant", versionId).cookie(cookie).header("X-CSRF-Token", csrf)
+            mvc.perform(put("/api/v1/skills/{id}/grant", versionId).header("X-User-Id", USER).header("X-User-Role", "ADMIN")
                             .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0,\"enabled\":null}"))
                     .andExpect(status().isBadRequest());
-            mvc.perform(post("/api/v1/skills/{id}/revoke", versionId).cookie(cookie).header("X-CSRF-Token", csrf)
+            mvc.perform(post("/api/v1/skills/{id}/revoke", versionId).header("X-User-Id", USER).header("X-User-Role", "ADMIN")
                             .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":null}"))
                     .andExpect(status().isBadRequest());
-            mvc.perform(put("/api/v1/skills/{id}/grant", versionId).cookie(cookie).header("X-CSRF-Token", csrf)
+            mvc.perform(put("/api/v1/skills/{id}/grant", versionId).header("X-User-Id", USER).header("X-User-Role", "ADMIN")
                             .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0,\"enabled\":true}"))
                     .andExpect(status().isOk());
             assertThat(runtime.freeze(USER, emptyScope).skills()).isEmpty();
@@ -137,7 +128,7 @@ class SkillHttpIntegrationTest {
             assertThatThrownBy(() -> runtime.read(OTHER, scopeId, versionId, "SKILL.md"))
                     .isInstanceOf(RuntimeBusinessException.class);
 
-            mvc.perform(post("/api/v1/skills/{id}/revoke", versionId).cookie(cookie).header("X-CSRF-Token", csrf)
+            mvc.perform(post("/api/v1/skills/{id}/revoke", versionId).header("X-User-Id", USER).header("X-User-Role", "ADMIN")
                             .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":2}"))
                     .andExpect(status().isOk());
             assertThatThrownBy(() -> lazy.read("references/guide.md")).hasMessageContaining("SKILL_REVOKED");

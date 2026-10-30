@@ -61,8 +61,8 @@ agentsquad:
         max-recovery-attempts: 3
         model-request-timeout-seconds: 90
         tool-timeout-seconds: 30
-  auth:
-    username: ${SQUAD_LOCAL_USER:}
-    password: ${SQUAD_LOCAL_PASSWORD:}
-    user-id: ${SQUAD_LOCAL_USER_ID:00000000-0000-0000-0000-000000000001}
-    role: ${SQUAD_LOCAL_ROLE:ADMIN}
+
+mybatis:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: false

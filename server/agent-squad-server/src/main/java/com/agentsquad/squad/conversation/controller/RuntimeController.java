@@ -3,7 +3,8 @@ package com.agentsquad.squad.conversation.controller;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
-import com.agentsquad.squad.identity.AuthService;
+import com.agentsquad.squad.identity.UserContext;
+import jakarta.servlet.http.HttpServletRequest;
 import com.agentsquad.squad.conversation.dto.CommandReceipt;
 import com.agentsquad.squad.conversation.dto.CommandResponse;
 import com.agentsquad.squad.conversation.dto.ControlRequest;
@@ -25,7 +26,6 @@ import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -51,9 +51,6 @@ public class RuntimeController {
     private com.agentsquad.squad.conversation.service.ConversationTitleService conversationTitles;
 
     @Resource
-    private AuthService authService;
-
-    @Resource
     private GoalTaskService goalTaskService;
 
     @Resource
@@ -72,9 +69,9 @@ public class RuntimeController {
      * 查询当前计划的归属子任务；不把 Worker 当作可由用户独立启动的目标。
      */
     @GetMapping("/tasks/{taskId}/jobs")
-    public WorkerJobPage listJobs(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
+    public WorkerJobPage listJobs(HttpServletRequest servletRequest,
                                   @PathVariable String taskId) {
-        return taskSnapshotService.listJobs(userId(token), taskId);
+        return taskSnapshotService.listJobs(UserContext.current(servletRequest).userId(), taskId);
     }
 
     /**
@@ -83,10 +80,9 @@ public class RuntimeController {
     @PostMapping("/conversations")
     @ResponseStatus(HttpStatus.CREATED)
     public ConversationResponse createConversation(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
-            @RequestHeader(value = "X-CSRF-Token", required = false) String csrfToken,
+            HttpServletRequest servletRequest,
             @Valid @RequestBody ConversationCreateRequest request) {
-        return goalTaskService.createConversation(authService.authenticateWrite(token, csrfToken).userId(), request.title());
+        return goalTaskService.createConversation(UserContext.current(servletRequest).userId(), request.title());
     }
 
     /**
@@ -94,10 +90,10 @@ public class RuntimeController {
      */
     @GetMapping("/conversations")
     public com.agentsquad.squad.presentation.dto.ConversationListPage listConversations(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
+            HttpServletRequest servletRequest,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit) {
-        return conversationTitles.list(userId(token), cursor, limit);
+        return conversationTitles.list(UserContext.current(servletRequest).userId(), cursor, limit);
     }
 
     /**
@@ -105,9 +101,9 @@ public class RuntimeController {
      */
     @GetMapping("/conversations/{conversationId}")
     public ConversationResponse getConversation(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
+            HttpServletRequest servletRequest,
             @PathVariable String conversationId) {
-        return goalTaskService.getConversation(userId(token), conversationId);
+        return goalTaskService.getConversation(UserContext.current(servletRequest).userId(), conversationId);
     }
 
     /**
@@ -116,12 +112,11 @@ public class RuntimeController {
     @DeleteMapping("/conversations/{conversationId}")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void deleteConversation(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
-            @RequestHeader(value = "X-CSRF-Token", required = false) String csrfToken,
+            HttpServletRequest servletRequest,
             @PathVariable String conversationId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @RequestHeader("If-Match") String ifMatch) {
-        conversationDeletionService.delete(authService.authenticateWrite(token, csrfToken).userId(),
+        conversationDeletionService.delete(UserContext.current(servletRequest).userId(),
                 conversationId, idempotencyKey, parseVersion(ifMatch));
     }
 
@@ -141,11 +136,11 @@ public class RuntimeController {
      */
     @GetMapping("/conversations/{conversationId}/tasks")
     public GoalTaskPage listConversationTasks(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
+            HttpServletRequest servletRequest,
             @PathVariable String conversationId,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit) {
-        return goalTaskService.listConversationTasks(userId(token), conversationId, cursor, limit);
+        return goalTaskService.listConversationTasks(UserContext.current(servletRequest).userId(), conversationId, cursor, limit);
     }
 
     /**
@@ -154,12 +149,11 @@ public class RuntimeController {
     @PostMapping("/conversations/{conversationId}/tasks")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public TaskReceipt createTask(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
-            @RequestHeader(value = "X-CSRF-Token", required = false) String csrfToken,
+            HttpServletRequest servletRequest,
             @PathVariable String conversationId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody TaskCreateRequest request) {
-        return goalTaskService.submit(authService.authenticateWrite(token, csrfToken).userId(),
+        return goalTaskService.submit(UserContext.current(servletRequest).userId(),
                 conversationId, idempotencyKey, request.message(), request.artifactIds());
     }
 
@@ -167,18 +161,18 @@ public class RuntimeController {
      * 查询当前用户的目标状态。
      */
     @GetMapping("/tasks/{taskId}")
-    public TaskResponse getTask(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
+    public TaskResponse getTask(HttpServletRequest servletRequest,
                                 @PathVariable String taskId) {
-        return goalTaskService.findTask(userId(token), taskId);
+        return goalTaskService.findTask(UserContext.current(servletRequest).userId(), taskId);
     }
 
     /**
      * 查询当前用户的目标详情快照。
      */
     @GetMapping("/tasks/{taskId}/snapshot")
-    public TaskSnapshot getTaskSnapshot(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
+    public TaskSnapshot getTaskSnapshot(HttpServletRequest servletRequest,
                                         @PathVariable String taskId) {
-        return taskSnapshotService.snapshot(userId(token), taskId);
+        return taskSnapshotService.snapshot(UserContext.current(servletRequest).userId(), taskId);
     }
 
     /**
@@ -187,12 +181,11 @@ public class RuntimeController {
     @PostMapping("/tasks/{taskId}/cancel")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public CommandReceipt cancelTask(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
-            @RequestHeader(value = "X-CSRF-Token", required = false) String csrfToken,
+            HttpServletRequest servletRequest,
             @PathVariable String taskId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody ControlRequest request) {
-        return taskControlService.cancel(authService.authenticateWrite(token, csrfToken).userId(),
+        return taskControlService.cancel(UserContext.current(servletRequest).userId(),
                 taskId, idempotencyKey, request.expectedVersion());
     }
 
@@ -202,12 +195,11 @@ public class RuntimeController {
     @PostMapping("/tasks/{taskId}/resume")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public CommandReceipt resumeTask(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
-            @RequestHeader(value = "X-CSRF-Token", required = false) String csrfToken,
+            HttpServletRequest servletRequest,
             @PathVariable String taskId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody ControlRequest request) {
-        return taskControlService.resume(authService.authenticateWrite(token, csrfToken).userId(),
+        return taskControlService.resume(UserContext.current(servletRequest).userId(),
                 taskId, idempotencyKey, request.expectedVersion());
     }
 
@@ -216,11 +208,11 @@ public class RuntimeController {
      */
     @GetMapping(value = "/tasks/{taskId}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter observeEvents(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
+            HttpServletRequest servletRequest,
             @PathVariable String taskId,
             @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId,
             @RequestParam(required = false) String after) {
-        return taskEventStreamer.stream(userId(token), taskId, resolveEventCursor(taskId, lastEventId, after));
+        return taskEventStreamer.stream(UserContext.current(servletRequest).userId(), taskId, resolveEventCursor(taskId, lastEventId, after));
     }
 
     private long resolveEventCursor(String taskId, String lastEventId, String after) {
@@ -254,12 +246,9 @@ public class RuntimeController {
      * 查询当前用户的命令回执，不能通过命令 ID 枚举他人目标。
      */
     @GetMapping("/commands/{commandId}")
-    public CommandResponse getCommand(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
+    public CommandResponse getCommand(HttpServletRequest servletRequest,
                                       @PathVariable String commandId) {
-        return goalTaskService.findCommand(userId(token), commandId);
+        return goalTaskService.findCommand(UserContext.current(servletRequest).userId(), commandId);
     }
 
-    private String userId(String token) {
-        return authService.authenticate(token).userId();
-    }
 }

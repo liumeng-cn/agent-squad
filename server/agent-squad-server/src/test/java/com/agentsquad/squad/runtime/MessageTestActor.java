@@ -1,12 +1,11 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.identity.AuthView;
-import jakarta.servlet.http.Cookie;
 
 /**
- * 消息HTTP测试的登录身份。
- * <p>
- * Cookie与CSRF均由实际开发认证服务签发，不用自造身份头替代认证。
+ * 业务HTTP测试的网关身份投影。
+ *
+ * 测试显式传入用户身份头，认证与CSRF验证由网关测试覆盖。
  */
-record MessageTestActor(AuthView view, Cookie cookie) {
+record MessageTestActor(AuthView view) {
 }

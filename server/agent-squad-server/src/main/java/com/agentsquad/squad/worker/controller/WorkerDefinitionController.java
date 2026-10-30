@@ -1,6 +1,7 @@
 package com.agentsquad.squad.worker.controller;
 
-import com.agentsquad.squad.identity.AuthService;
+import com.agentsquad.squad.identity.UserContext;
+import jakarta.servlet.http.HttpServletRequest;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionCreateRequest;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionPage;
@@ -21,9 +22,6 @@ import org.springframework.web.bind.annotation.*;
 public class WorkerDefinitionController {
 
     @Resource
-    private AuthService authService;
-
-    @Resource
     private WorkerDefinitionService definitionService;
 
     /**
@@ -32,11 +30,10 @@ public class WorkerDefinitionController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public WorkerDefinitionResponse publish(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
-            @RequestHeader(value = "X-CSRF-Token", required = false) String csrfToken,
+            HttpServletRequest servletRequest,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody WorkerDefinitionCreateRequest request) {
-        return definitionService.publish(authService.authenticateWrite(token, csrfToken),
+        return definitionService.publish(UserContext.current(servletRequest),
                 idempotencyKey, request);
     }
 
@@ -45,10 +42,10 @@ public class WorkerDefinitionController {
      */
     @GetMapping
     public WorkerDefinitionPage list(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
+            HttpServletRequest servletRequest,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit) {
-        authService.authenticate(token);
+        UserContext.current(servletRequest);
         return definitionService.list(cursor, limit);
     }
 
@@ -57,12 +54,11 @@ public class WorkerDefinitionController {
      */
     @PatchMapping("/{definitionId}")
     public WorkerDefinitionResponse changeStatus(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
-            @RequestHeader(value = "X-CSRF-Token", required = false) String csrfToken,
+            HttpServletRequest servletRequest,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @PathVariable String definitionId,
             @Valid @RequestBody WorkerStatusUpdateRequest request) {
-        return definitionService.changeStatus(authService.authenticateWrite(token, csrfToken),
+        return definitionService.changeStatus(UserContext.current(servletRequest),
                 definitionId, idempotencyKey, request);
     }
 }

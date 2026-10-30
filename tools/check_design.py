@@ -48,9 +48,11 @@ def check():
             assert (path.parent / target.split("#")[0]).exists(), (path, target)
 
     migration_files = sorted(
-        (ROOT / "server" / "src" / "main" / "resources" / "db" / "migration").glob("V*.sql")
+        (ROOT / "server" / "agent-squad-server" / "src" / "main" / "resources" / "db" / "migration").glob("V*.sql")
     )
-    java_migrations = sorted((ROOT / "server/src/main/java/db/migration").glob("V*__*.java"))
+    java_migrations = sorted((ROOT / "server/agent-squad-server/src/main/java/db/migration").glob("V*__*.java"))
+    assert migration_files, "业务模块 SQL 迁移目录为空或路径失效"
+    assert java_migrations, "业务模块 Java 回填迁移目录为空或路径失效"
     all_migrations = migration_files + java_migrations
     migration_versions = [int(re.match(r"V(\d+)__", path.name).group(1)) for path in all_migrations]
     assert len(migration_versions) == len(set(migration_versions)), "SQL/Java 迁移版本重复"

@@ -1,6 +1,7 @@
 package com.agentsquad.squad.tools.operation;
 
-import com.agentsquad.squad.identity.AuthService;
+import com.agentsquad.squad.identity.UserContext;
+import jakarta.servlet.http.HttpServletRequest;
 import com.agentsquad.squad.tools.operation.dto.OperationPage;
 import com.agentsquad.squad.tools.operation.dto.OperationReconcileRequest;
 import com.agentsquad.squad.tools.operation.dto.OperationView;
@@ -8,12 +9,10 @@ import com.agentsquad.squad.tools.operation.dto.OperationDetail;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -27,9 +26,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class OperationController {
 
     @Resource
-    private AuthService authService;
-
-    @Resource
     private OperationService operationService;
 
     @Resource
@@ -40,11 +36,11 @@ public class OperationController {
      */
     @GetMapping("/tasks/{taskId}/operations")
     public OperationPage listByTask(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
+            HttpServletRequest servletRequest,
             @PathVariable String taskId,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit) {
-        return operationService.listPage(authService.authenticate(token).userId(),
+        return operationService.listPage(UserContext.current(servletRequest).userId(),
                 taskId, cursor, limit);
     }
 
@@ -53,9 +49,9 @@ public class OperationController {
      */
     @GetMapping("/operations/{operationId}")
     public OperationDetail getOwned(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
+            HttpServletRequest servletRequest,
             @PathVariable String operationId) {
-        return operationService.detail(authService.authenticate(token), operationId);
+        return operationService.detail(UserContext.current(servletRequest), operationId);
     }
 
     /**
@@ -64,11 +60,10 @@ public class OperationController {
     @PostMapping("/operations/{operationId}/reconcile")
     @ResponseStatus(HttpStatus.OK)
     public OperationView reconcile(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
-            @RequestHeader(value = "X-CSRF-Token", required = false) String csrfToken,
+            HttpServletRequest servletRequest,
             @PathVariable String operationId,
             @Valid @RequestBody OperationReconcileRequest request) {
         return operationReconcileService.reconcile(
-                authService.authenticateWrite(token, csrfToken), operationId, request);
+                UserContext.current(servletRequest), operationId, request);
     }
 }

@@ -1,6 +1,7 @@
 package com.agentsquad.squad.interaction.controller;
 
-import com.agentsquad.squad.identity.AuthService;
+import com.agentsquad.squad.identity.UserContext;
+import jakarta.servlet.http.HttpServletRequest;
 import com.agentsquad.squad.conversation.dto.CommandReceipt;
 import com.agentsquad.squad.presentation.dto.Interaction;
 import com.agentsquad.squad.presentation.dto.InteractionPage;
@@ -11,7 +12,6 @@ import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,9 +32,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class InteractionController {
 
     @Resource
-    private AuthService authService;
-
-    @Resource
     private InteractionQueryService interactionQueryService;
 
     @Resource
@@ -45,11 +42,11 @@ public class InteractionController {
      */
     @GetMapping("/tasks/{taskId}/interactions")
     public InteractionPage listByTask(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
+            HttpServletRequest servletRequest,
             @PathVariable String taskId,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit) {
-        return interactionQueryService.listPage(authService.authenticate(token).userId(),
+        return interactionQueryService.listPage(UserContext.current(servletRequest).userId(),
                 taskId, cursor, limit);
     }
 
@@ -58,9 +55,9 @@ public class InteractionController {
      */
     @GetMapping("/interactions/{interactionId}")
     public Interaction getOwned(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
+            HttpServletRequest servletRequest,
             @PathVariable String interactionId) {
-        return interactionQueryService.getOwned(authService.authenticate(token).userId(),
+        return interactionQueryService.getOwned(UserContext.current(servletRequest).userId(),
                 interactionId);
     }
 
@@ -70,12 +67,11 @@ public class InteractionController {
     @PostMapping("/interactions/{interactionId}/responses")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public CommandReceipt respond(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
-            @RequestHeader(value = "X-CSRF-Token", required = false) String csrfToken,
+            HttpServletRequest servletRequest,
             @PathVariable String interactionId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody InteractionAnswerRequest request) {
-        return interactionService.respond(authService.authenticateWrite(token, csrfToken),
+        return interactionService.respond(UserContext.current(servletRequest),
                 interactionId, idempotencyKey, request.expectedVersion(), request.answer().kind(),
                 request.answer().approve(), request.answer().confirmedRequestHash(), request.answer().value());
     }

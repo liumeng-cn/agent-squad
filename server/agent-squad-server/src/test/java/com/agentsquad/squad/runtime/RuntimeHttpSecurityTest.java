@@ -3,7 +3,6 @@ package com.agentsquad.squad.runtime;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
@@ -20,12 +19,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * HTTP 边界测试：验证伪造身份头无效，Cookie 与 CSRF 缺一不可。
+ * HTTP 边界测试：验证业务端拒绝缺失的网关身份，并接收可信身份上下文。
  */
 class RuntimeHttpSecurityTest {
 
     @Test
-    void shouldRequireAuthenticatedCookieAndCsrfForMutation(@TempDir Path tempDirectory) throws Exception {
+    void shouldRequireGatewayIdentityForMutation(@TempDir Path tempDirectory) throws Exception {
         String databaseUrl = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(tempDirectory.resolve("squad"));
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class,
                 "--server.port=0",
@@ -41,27 +40,14 @@ class RuntimeHttpSecurityTest {
                             .content("{\"title\":\"test\"}"))
                     .andExpect(status().isUnauthorized());
 
-            var login = mvc.perform(post("/api/v1/auth/login")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"username\":\"local-user\",\"password\":\"local-password\"}"))
-                    .andExpect(status().isOk()).andReturn();
-            String session = login.getResponse().getCookie("SQUAD_SESSION").getValue();
-            JsonNode auth = context.getBean(ObjectMapper.class).readTree(login.getResponse().getContentAsString());
-            String csrf = auth.get("csrfToken").asText();
 
             mvc.perform(post("/api/v1/conversations")
-                            .cookie(new Cookie("SQUAD_SESSION", session))
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"title\":\"test\"}"))
-                    .andExpect(status().isUnauthorized());
-            mvc.perform(post("/api/v1/conversations")
-                            .cookie(new Cookie("SQUAD_SESSION", session))
-                            .header("X-CSRF-Token", csrf)
+                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"title\":\"test\"}"))
                     .andExpect(status().isCreated());
             mvc.perform(get("/api/v1/commands/00000000-0000-0000-0000-000000000000")
-                            .cookie(new Cookie("SQUAD_SESSION", session)))
+                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN"))
                     .andExpect(status().isNotFound());
         }
     }

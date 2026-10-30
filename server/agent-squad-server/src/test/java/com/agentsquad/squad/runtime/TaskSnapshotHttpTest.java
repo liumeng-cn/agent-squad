@@ -3,7 +3,6 @@ package com.agentsquad.squad.runtime;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
@@ -39,16 +38,9 @@ class TaskSnapshotHttpTest {
             MockMvc mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();
             ObjectMapper mapper = context.getBean(ObjectMapper.class);
 
-            var login = mvc.perform(post("/api/v1/auth/login")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"username\":\"local-user\",\"password\":\"local-password\"}"))
-                    .andExpect(status().isOk()).andReturn();
-            String session = login.getResponse().getCookie("SQUAD_SESSION").getValue();
-            String csrf = mapper.readTree(login.getResponse().getContentAsString()).get("csrfToken").asText();
 
             var conversation = mvc.perform(post("/api/v1/conversations")
-                            .cookie(new Cookie("SQUAD_SESSION", session))
-                            .header("X-CSRF-Token", csrf)
+                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"title\":\"快照测试\"}"))
                     .andExpect(status().isCreated()).andReturn();
@@ -56,8 +48,7 @@ class TaskSnapshotHttpTest {
                     .get("conversationId").asText();
 
             var receipt = mvc.perform(post("/api/v1/conversations/{conversationId}/tasks", conversationId)
-                            .cookie(new Cookie("SQUAD_SESSION", session))
-                            .header("X-CSRF-Token", csrf)
+                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
                             .header("Idempotency-Key", "snapshot-test-1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"message\":\"检查快照字段\"}"))
@@ -65,7 +56,7 @@ class TaskSnapshotHttpTest {
             String taskId = mapper.readTree(receipt.getResponse().getContentAsString()).get("taskId").asText();
 
             MvcResult result = mvc.perform(get("/api/v1/tasks/{taskId}/snapshot", taskId)
-                            .cookie(new Cookie("SQUAD_SESSION", session)))
+                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN"))
                     .andExpect(status().isOk()).andReturn();
             JsonNode snapshot = mapper.readTree(result.getResponse().getContentAsString());
 

@@ -25,10 +25,10 @@
 - 验证：`mvn test` 通过
 
 ### 阶段2 网关服务（核心改造）
-- 新建主 pom（packaging=pom，modules=[gateway, server]），统一依赖版本
+- 使用 server/pom.xml 主 pom（packaging=pom，modules=[agent-squad-gateway, agent-squad-server]），统一依赖版本
 - 新建 `../../../server/agent-squad-gateway` Maven 模块（独立 Spring Boot 服务，端口 18081）
 - 迁移 AuthService/AuthController/AuthSession/AuthView/LoginRequest 到 gateway
-- 网关实现反向代理：拦截 `/api/**`（除 auth），验 token + CSRF，注入 `X-User-Id`/`X-User-Role`，用 WebClient 转发到业务服务（支持 SSE 流式）
+- 网关使用 Spring Cloud Gateway Server WebFlux 内置路由转发 `/api/**`（排除 auth）；GlobalFilter 校验 token + CSRF 并覆盖可信用户头，框架处理 HTTP 与 SSE 流式传输，不编写代理 Controller/Service
 - 业务服务：删除 AuthService，加 UserContextInterceptor 读 `X-User-Id`，11 个 controller 改用 UserContext（机械改动）
 - 前端 VITE_API_TARGET 指向网关
 - 网关无 DB（认证用内存会话 + 配置预置用户，预留后续用户表扩展位）

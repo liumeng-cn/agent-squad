@@ -30,25 +30,23 @@
 
 ## Decisions
 
-### 决策1：网关为独立反向代理服务，非进程内拦截器
+### 决策1：使用 Spring Cloud Gateway 内置路由转发
 
-**选择**：新建 `../../../server/agent-squad-gateway` Maven 模块（独立 Spring Boot 服务，端口 18081），实现反向代理。网关拦截 `/api/**`（除 `/api/v1/auth/*`），验 token + CSRF，注入 `X-User-Id`/`X-User-Role` 头，用 WebClient 转发到业务服务（端口 18080）。业务服务加 `UserContextInterceptor` 读 `X-User-Id`，11 个 controller 改用 UserContext。
+**选择**：`server/agent-squad-gateway` 为独立 Spring Cloud Gateway Server WebFlux 应用，端口 18081。使用框架路由将 `/api/**`（排除 `/api/v1/auth/**`）转发到业务服务 18080；不编写代理 Controller、传输 Service 或自建 WebClient 转发循环。业务服务继续使用 Spring MVC。
 
-**理由**：用户明确要求"拆成微服务"且选"反向代理网关"；独立服务使认证成为可独立部署、独立扩展的边界，符合未来用户量增长后按认证能力单独扩容的需求。
+**认证边界**：登录、当前会话和注销由网关本地认证接口处理，保持原 Cookie、CSRF 和内存会话语义。自定义 GlobalFilter 仅校验会话及写请求 CSRF，清除客户端传入的身份头，并注入可信 `X-User-Id`、`X-User-Name`、`X-User-Role` 后交给框架过滤器链。业务服务的 UserContextInterceptor 从可信网关请求建立身份上下文；业务端口仅供内部访问。
 
-**替代方案**：进程内 HandlerInterceptor + UserContext（不改部署拓扑）。未采用——用户要求独立服务，且进程内方案不满足"网关单独处理请求"的诉求。
+**理由**：路由、HTTP 传输、连接生命周期和流式转发属于网关框架职责。用户明确要求使用网关自带能力，移除手写代理。
 
-### 决策2：网关转发用 WebClient（支持 SSE 流式）
+### 决策2：框架承担流式转发，真实 HTTP 验证边界
 
-**选择**：网关转发用 WebClient（响应式 HTTP 客户端），不使用 RestTemplate。
+**选择**：通过 Gateway Server WebFlux 的路由链转发原始请求及响应，业务层不手动聚合响应内容。网关独立使用与 Spring Boot 3.5 兼容的 Spring Cloud 4.3 系列组件；不引入 MVC starter。
 
-**理由**：业务服务有 SSE 端点（`/api/v1/conversations/{id}/events`），RestTemplate 会缓冲响应破坏流式；WebClient 支持流式转发，保持 SSE 长连接语义。
-
-**替代方案**：RestTemplate + 特殊处理 SSE；或网关做 socket 级反向代理。未采用——前者逻辑复杂，后者超出 Java 服务范畴。
+**验证**：真实 HTTP 测试覆盖登录/me/注销、401、CSRF 拒绝、伪造身份头覆盖、请求体与上游状态/响应头保留、multipart 原始字节和 SSE 首帧。SSE 上游由屏障保持未完成，首帧必须在结束前到达，避免完整缓冲被普通请求测试掩盖。随后执行真实网关 + 业务服务 + 隔离 MySQL 的消息受理和事件读取。
 
 ### 决策3：主子 pom + 两个应用
 
-**选择**：根目录新建主 pom（packaging=pom，modules=[gateway, server]），统一依赖版本管理；gateway 和 server 各自独立 pom 与 Spring Boot 启动类。
+**选择**：server/pom.xml 为主 pom（packaging=pom，modules=[agent-squad-gateway, agent-squad-server]），统一依赖版本管理；gateway 和 server 各自独立 pom 与 Spring Boot 启动类。
 
 **理由**：用户要求"一个 pom 管理多个项目"；多模块结构使两个服务独立打包部署，主 pom 统一 BOM。
 
@@ -88,7 +86,7 @@
 
 ## Risks / Trade-offs
 
-- [网关反向代理破坏 SSE 流式] → WebClient 转发保持流式；网关/业务测试分层验证 SSE 链路
+- [网关路由破坏 SSE 流式] → Gateway 内置路由保持流式；网关/业务测试分层验证 SSE 链路
 - [网关与业务服务部署复杂性] → 本地 dev 双服务启动；README 更新启动步骤
 - [11 个 controller 改造遗漏] → 逐 controller grep `@CookieValue.*SQUAD_SESSION` 确保全部替换；mvn test 覆盖
 - [MyBatis XML 迁移遗漏语句] → 每批迁移后 grep 接口无残留 `@Select/@Insert/@Update`；启动期 "Invalid bound statement" 暴露遗漏
@@ -115,5 +113,4 @@
 ## Open Questions
 
 - conversation 巨型包（82 文件）是否在本次拆分？建议单独评估，不阻塞本次重构
-- 网关是否做 socket 级反向代理（更高效但更复杂）？当前用 WebClient HTTP 转发，够用
 - 用户表引入的具体时机？阶段二按需，接口设计预留扩展位

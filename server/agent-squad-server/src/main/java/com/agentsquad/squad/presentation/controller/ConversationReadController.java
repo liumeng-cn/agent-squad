@@ -6,7 +6,8 @@ import com.agentsquad.squad.conversation.service.ConversationTitleService;
 import com.agentsquad.squad.conversation.dto.ConversationSnapshot;
 import com.agentsquad.squad.presentation.service.ConversationQueryService;
 import com.agentsquad.squad.presentation.service.ConversationEventStreamer;
-import com.agentsquad.squad.identity.AuthService;
+import com.agentsquad.squad.identity.UserContext;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
@@ -18,7 +19,6 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
@@ -33,34 +33,30 @@ public class ConversationReadController {
     private ConversationTitleService titles;
 
     @Resource
-    private AuthService auth;
-
-    @Resource
     private ConversationQueryService queries;
 
     @Resource
     private ConversationEventStreamer events;
 
     @GetMapping("/snapshot")
-    public ConversationSnapshot snapshot(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
+    public ConversationSnapshot snapshot(HttpServletRequest servletRequest,
                                          @PathVariable String conversationId, @RequestParam(required = false) Long beforeMessageSeq,
                                          @RequestParam(defaultValue = "40") int limit) {
-        return queries.snapshot(auth.authenticate(token).userId(), conversationId, beforeMessageSeq, limit);
+        return queries.snapshot(UserContext.current(servletRequest).userId(), conversationId, beforeMessageSeq, limit);
     }
 
     @GetMapping(value = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter stream(@CookieValue(value = "SQUAD_SESSION", required = false) String token,
+    public SseEmitter stream(HttpServletRequest servletRequest,
                              @PathVariable String conversationId, @RequestParam(required = false) String after,
                              @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId) {
-        return events.stream(auth.authenticate(token).userId(), conversationId,
+        return events.stream(UserContext.current(servletRequest).userId(), conversationId,
                 lastEventId != null && !lastEventId.isBlank() ? lastEventId : after);
     }
 
     @PatchMapping("/title")
     public ConversationView rename(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
-            @RequestHeader(value = "X-CSRF-Token", required = false) String csrf, @PathVariable String conversationId,
+            HttpServletRequest servletRequest, @PathVariable String conversationId,
             @Valid @RequestBody ConversationTitleUpdate request) {
-        return titles.rename(auth.authenticateWrite(token, csrf).userId(), conversationId, request);
+        return titles.rename(UserContext.current(servletRequest).userId(), conversationId, request);
     }
 }

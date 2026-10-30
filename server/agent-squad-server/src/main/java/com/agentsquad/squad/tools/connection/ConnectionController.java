@@ -1,6 +1,7 @@
 package com.agentsquad.squad.tools.connection;
 
-import com.agentsquad.squad.identity.AuthService;
+import com.agentsquad.squad.identity.UserContext;
+import jakarta.servlet.http.HttpServletRequest;
 import com.agentsquad.squad.tools.dto.ConnectionCreateRequest;
 import com.agentsquad.squad.tools.dto.ConnectionPage;
 import com.agentsquad.squad.tools.dto.ConnectionResponse;
@@ -18,9 +19,6 @@ import org.springframework.web.bind.annotation.*;
 public class ConnectionController {
 
     @Resource
-    private AuthService authService;
-
-    @Resource
     private ConnectionService connectionService;
 
     /**
@@ -29,11 +27,10 @@ public class ConnectionController {
     @PostMapping("/connections")
     @ResponseStatus(HttpStatus.CREATED)
     public ConnectionResponse create(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
-            @RequestHeader(value = "X-CSRF-Token", required = false) String csrfToken,
+            HttpServletRequest servletRequest,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody ConnectionCreateRequest request) {
-        return connectionService.create(authService.authenticateWrite(token, csrfToken),
+        return connectionService.create(UserContext.current(servletRequest),
                 idempotencyKey, request);
     }
 
@@ -42,10 +39,10 @@ public class ConnectionController {
      */
     @GetMapping("/connections")
     public ConnectionPage list(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
+            HttpServletRequest servletRequest,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit) {
-        return connectionService.list(authService.authenticate(token).userId(), cursor, limit);
+        return connectionService.list(UserContext.current(servletRequest).userId(), cursor, limit);
     }
 
     /**
@@ -53,9 +50,9 @@ public class ConnectionController {
      */
     @GetMapping("/connections/{connectionId}")
     public ConnectionResponse get(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
+            HttpServletRequest servletRequest,
             @PathVariable String connectionId) {
-        return connectionService.get(authService.authenticate(token).userId(), connectionId);
+        return connectionService.get(UserContext.current(servletRequest).userId(), connectionId);
     }
 
     /**
@@ -63,12 +60,11 @@ public class ConnectionController {
      */
     @PatchMapping("/connections/{connectionId}")
     public ConnectionResponse update(
-            @CookieValue(value = "SQUAD_SESSION", required = false) String token,
-            @RequestHeader(value = "X-CSRF-Token", required = false) String csrfToken,
+            HttpServletRequest servletRequest,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @PathVariable String connectionId,
             @Valid @RequestBody ConnectionUpdateRequest request) {
-        return connectionService.update(authService.authenticateWrite(token, csrfToken),
+        return connectionService.update(UserContext.current(servletRequest),
                 connectionId, idempotencyKey, request);
     }
 }
