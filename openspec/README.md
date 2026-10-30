@@ -29,7 +29,7 @@
 | d3-multi-worker | 多 Worker 协作 | 完成（本地验收，证据见 evidence/） |
 | d4-skills-memory | Skill 与显式记忆 | 完成（本地验收，证据见 evidence/） |
 | d5-sandbox-delivery | 沙箱与产物交付 | 完成（本地验收，证据见 evidence/） |
-| d6-integration-release | 集成与发布准备 | 待开工（前置 D4/D5 已完成） |
+| d6-integration-release | 集成与发布准备 | 完成（本地验收，证据见 evidence/） |
 
 ## 旧设计资料的迁移关系
 
