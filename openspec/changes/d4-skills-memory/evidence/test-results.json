@@ -1,0 +1,84 @@
+{
+  "recordedAt": "2026-10-30",
+  "targeted": {
+    "command": "SQUAD_TEST_MYSQL_PASSWORD=<set> mvn -f server/pom.xml -B -ntp test -Dtest='Memory*,Skill*,ExecutionKnowledge*,MySqlKnowledge*' -DfailIfNoTests=false",
+    "database": "isolated as_test_* schema on agent-squad-mysql (127.0.0.1:13306, MySQL 8.4)",
+    "tests": 22,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1
+  },
+  "fullSuite": {
+    "command": "SQUAD_TEST_MYSQL_PASSWORD=<set> SQUAD_SANDBOX_TEST_IMAGE=sha256:<pinned> mvn -f server/pom.xml -B -ntp test",
+    "tests": 131,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 19
+  },
+  "classes": [
+    {
+      "name": "com.agentsquad.squad.memory.MemoryHttpTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": "1.317",
+      "scope": "D4"
+    },
+    {
+      "name": "com.agentsquad.squad.memory.MemoryIntegrationTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": "10.73",
+      "scope": "D4"
+    },
+    {
+      "name": "com.agentsquad.squad.memory.MemoryRulesTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": "0.001",
+      "scope": "D4"
+    },
+    {
+      "name": "com.agentsquad.squad.skill.SkillHttpIntegrationTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": "6.035",
+      "scope": "D4"
+    },
+    {
+      "name": "com.agentsquad.squad.skill.SkillPackageValidatorTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": "0.005",
+      "scope": "D4"
+    },
+    {
+      "name": "com.agentsquad.squad.runtime.ExecutionKnowledgeIntegrationTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": "8.494",
+      "scope": "D4"
+    },
+    {
+      "name": "com.agentsquad.squad.runtime.MySqlKnowledgeGovernanceTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "time": "0.001",
+      "scope": "D4",
+      "note": "默认跳过的专用 MySQL 治理测试"
+    }
+  ]
+}

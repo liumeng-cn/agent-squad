@@ -1,0 +1,52 @@
+{
+  "recordedAt": "2026-10-30",
+  "sandboxImage": {
+    "reference": "public.ecr.aws/docker/library/python:3.12-slim",
+    "imageId": "sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1"
+  },
+  "targeted": {
+    "command": "SQUAD_SANDBOX_TEST_IMAGE=sha256:<image-id> SQUAD_TEST_MYSQL_PASSWORD=<set> mvn -f server/pom.xml -B -ntp test -Dtest='HarnessDockerSandboxDriverTest,Sandbox*,Artifact*' -DfailIfNoTests=false",
+    "database": "isolated as_test_* schema on agent-squad-mysql (127.0.0.1:13306, MySQL 8.4)",
+    "tests": 10,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "fullSuite": {
+    "command": "SQUAD_TEST_MYSQL_PASSWORD=<set> SQUAD_SANDBOX_TEST_IMAGE=sha256:<pinned> mvn -f server/pom.xml -B -ntp test",
+    "tests": 131,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 19
+  },
+  "classes": [
+    {
+      "name": "com.agentsquad.squad.sandbox.HarnessDockerSandboxDriverTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": "5.792",
+      "scope": "D5",
+      "note": "真实容器隔离实验；未固定 SQUAD_SANDBOX_TEST_IMAGE 时其中 5 项跳过"
+    },
+    {
+      "name": "com.agentsquad.squad.sandbox.SandboxPolicyTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": "0.002",
+      "scope": "D5"
+    },
+    {
+      "name": "com.agentsquad.squad.sandbox.ArtifactDeliveryIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": "1.17",
+      "scope": "D5"
+    }
+  ]
+}
