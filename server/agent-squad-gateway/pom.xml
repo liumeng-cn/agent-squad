@@ -11,7 +11,7 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>agentSquad-gateway</artifactId>
+    <artifactId>agent-squad-gateway</artifactId>
     <packaging>jar</packaging>
     <name>agent-squad-gateway</name>
     <description>Agent Squad 认证网关服务（反向代理+用户认证）</description>
