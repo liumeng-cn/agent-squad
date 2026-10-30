@@ -1,6 +1,6 @@
 # Tasks
 
-前置：采用 `conversation-first-experience` 已验收的 ExecutionScope/BudgetAccount、会话交付和故障动作契约；不另建普通用户任务详情流程。
+前置：采用已实现的 ExecutionScope/BudgetAccount、会话交付和故障动作契约；用户授权与 D4 并行开发，最终验收必须通过撤销/删除屏障交叉测试，不另建普通用户任务详情流程。
 
 ## 1. 沙箱隔离执行
 

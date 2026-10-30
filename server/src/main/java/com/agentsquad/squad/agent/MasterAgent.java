@@ -101,6 +101,27 @@ public class MasterAgent implements NativeSessionGateway {
     @Resource
     private ScopedMasterToolsMiddleware scopedTools;
 
+    @Resource
+    private com.agentsquad.squad.skill.integration.ScopeSkillRepository scopeSkillRepository;
+
+    @Resource
+    private PlatformSkillVisibility skillVisibility;
+
+    @Resource
+    private ExecutionContextMiddleware executionContext;
+
+    @Resource
+    private com.agentsquad.squad.memory.agent.WriteExplicitMemoryTool writeExplicitMemory;
+
+    @Resource
+    private com.agentsquad.squad.agent.tool.SandboxPythonTool sandboxPython;
+
+    @Resource
+    private com.agentsquad.squad.agent.tool.CommitArtifactTool commitArtifact;
+
+    @org.springframework.beans.factory.annotation.Value("${agentsquad.sandbox.enabled:false}")
+    private boolean sandboxEnabled;
+
     private HarnessAgent master;
 
     /**
@@ -115,6 +136,11 @@ public class MasterAgent implements NativeSessionGateway {
                 .autoCreateTable(false)
                 .build();
         Toolkit toolkit = new Toolkit();
+        if (sandboxEnabled) {
+            toolkit.registerAgentTool(sandboxPython);
+            toolkit.registerAgentTool(commitArtifact);
+        }
+        toolkit.registerAgentTool(writeExplicitMemory);
         toolkit.registerAgentTool(createGoalTaskTool);
         toolkit.registerAgentTool(submitTaskDirectiveTool);
         toolkit.registerAgentTool(applyTaskDirectiveTool);
@@ -162,6 +188,9 @@ public class MasterAgent implements NativeSessionGateway {
                         .modelName(modelName).stream(false).build())
                 .modelExecutionConfig(ExecutionConfig.builder()
                         .timeout(Duration.ofSeconds(90)).maxAttempts(1).build())
+                .middleware(executionContext)
+                .skillRepository(scopeSkillRepository)
+                .enableSkillPromotionGate(null, skillVisibility)
                 .middleware(scopedTools)
                 .middleware(modelBudgetMiddleware)
                 .toolkit(toolkit)
@@ -174,7 +203,6 @@ public class MasterAgent implements NativeSessionGateway {
                 .disableWebTools()
                 .disableMemoryTools()
                 .disableMemoryHooks()
-                .disableDynamicSkills()
                 .disableDefaultWorkspaceSkills()
                 .build();
     }
@@ -264,6 +292,13 @@ public class MasterAgent implements NativeSessionGateway {
                 .userId(delivery.userId())
                 .sessionId(delivery.sessionId())
                 .build();
+        java.util.Set<String> allowedTools = new java.util.HashSet<>(java.util.Set.of(
+                "load_skill_through_path", "request_input", "propose_completion", "list_worker_capabilities",
+                "create_goal_task", "submit_task_directive", "prepare_context", "publish_plan", "apply_task_directive",
+                "write_explicit_memory", "mock_lookup", "mock_ticket_create"));
+        if (sandboxEnabled) { allowedTools.addAll(java.util.Set.of("sandbox_python", "commit_artifact")); }
+        context.put(com.agentsquad.squad.skill.integration.ScopeSkillCapabilities.class,
+                new com.agentsquad.squad.skill.integration.ScopeSkillCapabilities(allowedTools));
         return master.session(context);
     }
 

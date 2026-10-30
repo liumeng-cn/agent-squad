@@ -47,6 +47,6 @@ defineExpose({ openSidebar: () => { expanded.value = true } })
       </section>
       <button v-if="conversations.nextCursor" class="history-more" :disabled="conversations.listLoading" @click="conversations.loadMore()">{{ conversations.listLoading ? '加载中…' : '加载更早的对话' }}</button>
     </nav>
-    <footer class="chat-account"><div class="account-avatar" aria-hidden="true">{{ auth.user?.username.slice(0, 1).toUpperCase() }}</div><span class="account-name">{{ auth.user?.username }}</span><details class="account-menu"><summary aria-label="账户选项">···</summary><div class="popup-menu"><router-link v-if="auth.user?.roles.includes('ADMIN')" :to="{ name: 'workers' }">能力设置</router-link><button @click="logout">退出登录</button></div></details></footer>
+    <footer class="chat-account"><div class="account-avatar" aria-hidden="true">{{ auth.user?.username.slice(0, 1).toUpperCase() }}</div><span class="account-name">{{ auth.user?.username }}</span><details class="account-menu"><summary aria-label="账户选项">···</summary><div class="popup-menu"><router-link :to="{ name: 'skills' }">个人技能</router-link><router-link :to="{ name: 'memory' }">长期记忆</router-link><router-link v-if="auth.user?.roles.includes('ADMIN')" :to="{ name: 'workers' }">能力设置</router-link><button @click="logout">退出登录</button></div></details></footer>
   </aside>
 </template>

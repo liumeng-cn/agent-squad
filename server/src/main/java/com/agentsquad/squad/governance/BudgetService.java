@@ -140,6 +140,15 @@ public class BudgetService {
         budgetMapper.markModelUnknown(userId, scopeId, usageKey);
     }
 
+    /**
+     * 执行已发生而结果无法确认时保留占额；不因失联释放预算或重置同键执行机会。
+     */
+    @Transactional
+    public void markUnknown(String userId, String scopeId, String usageKey) {
+        lockBudget(userId, scopeId, false);
+        budgetMapper.markUnknown(userId, scopeId, usageKey);
+    }
+
     private void requireAvailable(String userId, String scopeId, BudgetAccountRow account, long units) {
         long userConsumed = budgetMapper.sumUserConsumed(userId);
         if (userLimitMicrounits <= 0 || userConsumed > userLimitMicrounits

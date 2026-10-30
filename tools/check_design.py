@@ -129,7 +129,7 @@ def check():
             set(re.findall(r"\w+", key_columns)) == target_cols
             for key_columns in re.findall(r"UNIQUE KEY \w+ \(([^)]*)\)", bodies[target])
         ), (source, target, target_columns)
-    assert not re.search(r"^\s*(DROP|TRUNCATE|CREATE DATABASE)\b", sql, re.M | re.I)
+    assert not re.search(r"^\s*(DROP(?!\s+INDEX\b)|TRUNCATE|CREATE DATABASE)\b", sql, re.M | re.I)
 
     # Optional dependency for field-level request example checks; not an app dependency.
     try:

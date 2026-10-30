@@ -168,4 +168,12 @@ public interface BudgetMapper {
             """)
     int markModelUnknown(@Param("userId") String userId, @Param("scopeId") String scopeId,
                          @Param("usageKey") String usageKey);
+    @Update("""
+            UPDATE sq_budget_reservation
+            SET status = 'UNKNOWN', version = version + 1, last_updater_id = user_id
+            WHERE user_id = #{userId} AND scope_id = #{scopeId} AND usage_key = #{usageKey}
+              AND status = 'RESERVED'
+            """)
+    int markUnknown(@Param("userId") String userId, @Param("scopeId") String scopeId,
+                    @Param("usageKey") String usageKey);
 }

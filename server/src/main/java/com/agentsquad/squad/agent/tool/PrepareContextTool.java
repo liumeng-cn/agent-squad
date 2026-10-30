@@ -26,6 +26,9 @@ import java.util.Map;
 public class PrepareContextTool implements AgentTool {
 
     @Resource
+    private com.fasterxml.jackson.databind.ObjectMapper json;
+
+    @Resource
     private ContextSnapshotService contextSnapshotService;
 
     @Override
@@ -44,7 +47,9 @@ public class PrepareContextTool implements AgentTool {
                 "type", "object",
                 "properties", Map.of(
                         "targetNodeKey", Map.of("type", "string", "pattern", "^[a-z][a-z0-9_-]{0,79}$"),
-                        "logicalKey", Map.of("type", "string", "minLength", 1, "maxLength", 160)),
+                        "logicalKey", Map.of("type", "string", "minLength", 1, "maxLength", 160),
+                        "skillVersionIds", Map.of("type", "array", "items", Map.of("type", "string"), "maxItems", 64, "uniqueItems", true),
+                        "memoryIds", Map.of("type", "array", "items", Map.of("type", "string"), "maxItems", 20, "uniqueItems", true)),
                 "required", List.of("targetNodeKey", "logicalKey"),
                 "additionalProperties", false);
     }
@@ -70,9 +75,12 @@ public class PrepareContextTool implements AgentTool {
         }
         try {
             ContextSnapshotReceipt receipt = contextSnapshotService.prepare(
-                    context.getUserId(), context.getSessionId(), node, key);
+                    context.getUserId(), context.getSessionId(), json.convertValue(param.getInput(),
+                            com.agentsquad.squad.runtime.dto.ContextPreparationRequest.class));
             return ToolResultBlock.text("局部上下文已准备。contextSnapshotId=" + receipt.snapshotId()
                     + " contentHash=" + receipt.contentHash());
+        } catch (IllegalArgumentException exception) {
+            return ToolResultBlock.error("局部材料选择格式无效");
         } catch (RuntimeBusinessException exception) {
             return ToolResultBlock.error(exception.getMessage());
         }

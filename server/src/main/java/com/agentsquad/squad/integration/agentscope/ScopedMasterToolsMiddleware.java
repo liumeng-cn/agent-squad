@@ -29,7 +29,7 @@ import java.util.function.Function;
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class ScopedMasterToolsMiddleware implements MiddlewareBase {
     private static final Set<String> TASK_ONLY = Set.of("prepare_context", "publish_plan", "apply_task_directive");
-    private static final Set<String> RESPONSE_ONLY = Set.of("create_goal_task", "submit_task_directive");
+    private static final Set<String> RESPONSE_ONLY = Set.of("create_goal_task", "submit_task_directive", "write_explicit_memory");
 
     @Resource
     private ExecutionScopeService scopes;
@@ -68,8 +68,11 @@ public class ScopedMasterToolsMiddleware implements MiddlewareBase {
                         position++;
                     }
                     messages.add(position, Msg.builder().role(MsgRole.SYSTEM).textContent(roleInstruction).build());
-                    return new ModelCallInput(messages, input.tools().stream()
-                            .filter(tool -> !hidden.contains(tool.getName())).toList(), input.options(), input.model());
+                    var tools = input.tools().stream().filter(tool -> !hidden.contains(tool.getName())).toList();
+                    context.put(com.agentsquad.squad.skill.integration.ScopeSkillCapabilities.class,
+                            new com.agentsquad.squad.skill.integration.ScopeSkillCapabilities(
+                                    tools.stream().map(tool -> tool.getName()).collect(java.util.stream.Collectors.toSet())));
+                    return new ModelCallInput(messages, tools, input.options(), input.model());
                 }).subscribeOn(Schedulers.boundedElastic())
                 .flatMapMany(next);
     }

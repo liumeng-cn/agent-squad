@@ -40,6 +40,15 @@ public class CommandDeliveryService {
     private static final int MAX_RESUME_ATTEMPTS = 5;
 
     @Resource
+    private com.agentsquad.squad.runtime.service.ExecutionAuthorizationService authorization;
+
+    @Resource
+    private com.agentsquad.squad.runtime.service.ExecutionRestrictionService restrictions;
+
+    @Resource
+    private com.agentsquad.squad.conversation.service.ExecutionScopeService scopes;
+
+    @Resource
     private ResponseExecutionService responses;
 
     @Resource
@@ -96,6 +105,10 @@ public class CommandDeliveryService {
                 fail(commandId, token, delivery.attempts(), "UNKNOWN_ACTION");
                 return;
             }
+            if (action != RuntimeCommandAction.STOP && action != RuntimeCommandAction.DELETE_CONVERSATION) {
+                String scopeId = scopes.scopeForSession(delivery.userId(), delivery.sessionId());
+                authorization.prepare(delivery.userId(), scopeId);
+            }
             switch (action) {
                 case SUBMIT, MESSAGE_SUBMIT, MASTER_SIGNAL, TASK_DIRECTIVE -> deliverSubmit(commandId, token, delivery);
                 case STOP -> deliverStop(commandId, token, delivery);
@@ -103,6 +116,8 @@ public class CommandDeliveryService {
                 case RESPOND -> deliverRespond(commandId, token, delivery);
                 case DELETE_CONVERSATION -> fail(commandId, token, delivery.attempts(), "UNDELIVERABLE_ACTION");
             }
+        } catch (com.agentsquad.squad.runtime.domain.ExecutionContextInvalidatedException exception) {
+            restrictions.restrict(delivery.userId(), scopes.scopeForSession(delivery.userId(), delivery.sessionId()), delivery.bindingId());
         } catch (Exception exception) {
             retry(commandId, token, delivery.attempts(), "NATIVE_SUBMIT_FAILED");
             log.warn("原生命令提交失败，稍后按原键重试 commandId={} taskId={} errorType={}",

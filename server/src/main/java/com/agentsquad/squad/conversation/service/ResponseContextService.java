@@ -35,6 +35,9 @@ import java.util.List;
 @Service
 public class ResponseContextService {
 
+    @Resource
+    private com.agentsquad.squad.memory.service.MemoryContextService memories;
+
     private static final int MAX_CONTEXT_CHARACTERS = 200000;
 
     @Resource
@@ -91,14 +94,17 @@ public class ResponseContextService {
         if (mapper.characterCount(userId, scope.conversationId(), source.sourceSequence()) > MAX_CONTEXT_CHARACTERS) {
             throw contextTooLarge();
         }
+        var excluded = memories.excludedHistoryMessageIds(userId);
         List<ResponseContextMessage> messages = new ArrayList<>();
         long characters = 0;
         for (ResponseHistoryRow row : mapper.prefix(userId, scope.conversationId(), source.sourceSequence())) {
-            characters += row.text().length();
+            String text = excluded.contains(row.messageId()) && !source.sourceMessageId().equals(row.messageId())
+                    ? "[已删除或纠正的记忆关联内容不再用于上下文]" : row.text();
+            characters += text.length();
             if (characters > MAX_CONTEXT_CHARACTERS) {
                 throw contextTooLarge();
             }
-            messages.add(new ResponseContextMessage(row.messageId(), row.sequence(), row.role(), row.text(),
+            messages.add(new ResponseContextMessage(row.messageId(), row.sequence(), row.role(), text,
                     row.revision(), List.copyOf(mapper.artifactIds(userId, row.messageId()))));
         }
         if (messages.isEmpty() || !source.sourceMessageId().equals(messages.getLast().messageId())) {

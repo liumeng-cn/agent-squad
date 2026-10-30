@@ -96,7 +96,7 @@ public interface ContextSnapshotMapper {
                  creator_id, creator_name, last_updater_id, last_updater_name)
             VALUES
                 (#{snapshotId}, #{userId}, #{taskId}, #{targetNodeKey}, #{logicalKey},
-                 #{conversationGeneration}, 0, #{itemsJson}, #{tokenEstimate}, #{contentHash}, #{goalRevision},
+                 #{conversationGeneration}, #{memoryRevision}, #{itemsJson}, #{tokenEstimate}, #{contentHash}, #{goalRevision},
                  (SELECT scope_id FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}),
                  #{userId}, '', #{userId}, '')
             """)
@@ -105,5 +105,6 @@ public interface ContextSnapshotMapper {
                @Param("logicalKey") String logicalKey,
                @Param("conversationGeneration") long conversationGeneration,
                @Param("itemsJson") String itemsJson, @Param("tokenEstimate") long tokenEstimate,
-               @Param("contentHash") String contentHash, @Param("goalRevision") long goalRevision);
+               @Param("contentHash") String contentHash, @Param("goalRevision") long goalRevision,
+               @Param("memoryRevision") long memoryRevision);
 }

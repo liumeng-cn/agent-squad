@@ -236,8 +236,8 @@ class ResponseNativeExecutionIntegrationTest {
 
     static ConfigurableApplicationContext start(Path directory, ResponseModelStub model, boolean fast) {
         return SpringApplication.run(AgentSquadApplication.class, "--spring.main.web-application-type=none",
-                "--spring.datasource.url=jdbc:h2:file:" + directory.resolve("reply") + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE;LOCK_TIMEOUT=10000",
-                "--spring.datasource.username=sa", "--spring.datasource.password=", "--spring.datasource.driver-class-name=org.h2.Driver",
+                "--spring.datasource.url=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("reply")),
+                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.delivery.enabled=true", "--agentsquad.delivery.poll-delay-ms=" + (fast ? 100 : 3600000),
                 "--agentsquad.projection.poll-delay-ms=" + (fast ? 100 : 3600000), "--agentsquad.model.api-key=test-only",
                 "--agentsquad.model.base-url=" + model.baseUrl(), "--agentsquad.model.name=test-model",

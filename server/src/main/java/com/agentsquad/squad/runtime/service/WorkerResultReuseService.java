@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 /**
  * 重规划时的保守 Worker 结果复用判定。
  * <p>
- * D3 仅有同一 Task 的不可变用户约束快照，且 Worker 尚无 Skill 和外部工具权限；
+ * 仅复用同一目标、相同局部材料与固定资料代际的结果；
  * 存在外部证据、依赖输入或任何授权差异时重新执行，绝不把旧结果默认视为当前事实。
  */
 @Service
@@ -114,13 +114,18 @@ public class WorkerResultReuseService {
 
     private boolean immutableUserEvidence(ContextSnapshotRow snapshot, String taskId) {
         JsonNode items = read(snapshot.itemsJson());
-        return snapshot.memoryRevision() == 0 && items != null && items.isArray()
-                && items.size() == 1
-                && "USER_CONSTRAINT".equals(items.get(0).path("kind").asText())
-                && "USER".equals(items.get(0).path("trust").asText())
-                && taskId.equals(items.get(0).path("sourceId").asText())
-                && "1".equals(items.get(0).path("sourceVersion").asText())
-                && snapshot.contentHash().equals(CanonicalJson.sha256(objectMapper, snapshot.itemsJson()));
+        if (items == null || !items.isArray() || items.isEmpty()
+                || !snapshot.contentHash().equals(CanonicalJson.sha256(objectMapper, snapshot.itemsJson()))) {
+            return false;
+        }
+        for (JsonNode item : items) {
+            String kind = item.path("kind").asText();
+            if (!java.util.Set.of("USER_CONSTRAINT", "USER_ORIGIN_REFERENCE", "USER_GOAL_REPLACEMENT",
+                    "USER_SUPPLEMENT", "SKILL_REFERENCE", "EXPLICIT_MEMORY").contains(kind)) {
+                return false;
+            }
+        }
+        return taskId.equals(items.get(0).path("sourceId").asText());
     }
 
     private boolean hasExternalEvidence(JsonNode result) {

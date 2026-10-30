@@ -23,6 +23,16 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../features/tasks/views/TaskDetailView.vue'),
   },
   {
+    path: '/app/skills',
+    name: 'skills',
+    component: () => import('../features/skills/views/SkillsView.vue'),
+  },
+  {
+    path: '/app/settings/memory',
+    name: 'memory',
+    component: () => import('../features/memory/views/MemorySettingsView.vue'),
+  },
+  {
     path: '/app/admin/workers',
     name: 'workers',
     component: () => import('../features/workers/views/WorkerDefinitionsView.vue'),

@@ -29,6 +29,9 @@ import java.time.ZoneOffset;
 public class WorkerResultService {
 
     @Resource
+    private ExecutionAuthorizationService authorization;
+
+    @Resource
     private WorkerDispatchMapper dispatchMapper;
 
     @Resource
@@ -58,6 +61,7 @@ public class WorkerResultService {
         if (turnId == null || turnId.isBlank() || result == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "Worker 结果参数无效");
         }
+        authorization.requireBindingCurrent(userId, bindingId);
         WorkerLaunchRow job = dispatchMapper.findByBinding(userId, bindingId);
         if (job == null || !"RUNNING".equals(job.jobStatus())
                 || !"ACTIVE".equals(job.planStatus()) || job.cancelRequestedAt() != null
@@ -92,6 +96,7 @@ public class WorkerResultService {
      */
     @Transactional
     public boolean finalizeSuccess(String userId, String bindingId, String turnId) {
+        authorization.requireBindingCurrent(userId, bindingId);
         WorkerLaunchRow job = dispatchMapper.findByBinding(userId, bindingId);
         if (job == null) {
             return false;
@@ -134,6 +139,7 @@ public class WorkerResultService {
      */
     @Transactional
     public void markRecoveryBlocked(String userId, String bindingId) {
+        authorization.requireBindingCurrent(userId, bindingId);
         WorkerLaunchRow job = dispatchMapper.findByBinding(userId, bindingId);
         if (job == null) {
             return;

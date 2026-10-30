@@ -66,6 +66,9 @@ public class PlanService {
     private static final Set<String> JOIN_POLICIES = Set.of("ALL_REQUIRED", "BEST_EFFORT");
 
     @Resource
+    private ExecutionAuthorizationService authorization;
+
+    @Resource
     private TaskEventPublishingService conversationProjection;
 
     @Resource
@@ -364,11 +367,11 @@ public class PlanService {
             if (snapshot == null || !node.nodeKey().equals(snapshot.targetNodeKey())
                     || snapshot.conversationGeneration() != context.conversationGeneration()
                     || snapshot.goalRevision() != directives.goalState(context.userId(), context.taskId()).goalRevision()
-                    || snapshot.memoryRevision() != 0
                     || !CanonicalJson.sha256(objectMapper, snapshot.itemsJson()).equals(snapshot.contentHash())) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION,
                         "计划节点的局部上下文未准备或已失效");
             }
+            authorization.requireScopeCurrent(context.userId(), executionScopes.scopeForTask(context.userId(), context.taskId()));
             WorkerDefinitionResponse definition = workerDefinitionService.requireEnabled(
                     node.workerKey(), node.workerVersion());
             schemaValidator.requireMatches(objectMapper.valueToTree(Map.of(

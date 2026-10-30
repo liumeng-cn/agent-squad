@@ -199,13 +199,12 @@ class WorkerDefinitionHttpTest {
     }
 
     private ConfigurableApplicationContext start(Path directory, String role, String... overrides) {
-        String databaseUrl = "jdbc:h2:file:" + directory.resolve("squad")
-                + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE";
+        String databaseUrl = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("squad"));
         List<String> properties = new ArrayList<>(List.of(
                 "--server.port=0",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=sa",
-                "--spring.datasource.driver-class-name=org.h2.Driver",
+                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.auth.username=local-user",
                 "--agentsquad.auth.password=local-password",
                 "--agentsquad.auth.role=" + role));

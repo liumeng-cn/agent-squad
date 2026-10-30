@@ -40,21 +40,21 @@ class MessageAcceptanceHttpTest {
 
     @Test
     void concurrentFirstSendCreatesOneConversationAndReceipt(@TempDir Path directory) throws Exception {
-        try (ConfigurableApplicationContext context = start(h2(directory), "sa", "", UUID.randomUUID().toString())) {
+        try (ConfigurableApplicationContext context = start(databaseUrl(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), UUID.randomUUID().toString())) {
             verifyFirstSend(context);
         }
     }
 
     @Test
     void invalidAttachmentRollsBackWholeFirstSend(@TempDir Path directory) throws Exception {
-        try (ConfigurableApplicationContext context = start(h2(directory), "sa", "", UUID.randomUUID().toString())) {
+        try (ConfigurableApplicationContext context = start(databaseUrl(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), UUID.randomUUID().toString())) {
             verifyAttachments(context);
         }
     }
 
     @Test
     void activeTaskDoesNotRejectNewMessages(@TempDir Path directory) throws Exception {
-        try (ConfigurableApplicationContext context = start(h2(directory), "sa", "", UUID.randomUUID().toString())) {
+        try (ConfigurableApplicationContext context = start(databaseUrl(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), UUID.randomUUID().toString())) {
             verifyDuringTask(context);
         }
     }
@@ -62,13 +62,13 @@ class MessageAcceptanceHttpTest {
     @Test
     void retryAfterRestartReturnsOriginalFirstReceipt(@TempDir Path directory) throws Exception {
         String ownerId = UUID.randomUUID().toString();
-        String url = h2(directory);
+        String url = databaseUrl(directory);
         MessageReceipt original;
-        try (ConfigurableApplicationContext context = start(url, "sa", "", ownerId)) {
+        try (ConfigurableApplicationContext context = start(url, com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), ownerId)) {
             original = send(context, actor(context), "/api/v1/conversations/messages", "restart-first",
                     Map.of("text", "重启后继续交流"));
         }
-        try (ConfigurableApplicationContext context = start(url, "sa", "", ownerId)) {
+        try (ConfigurableApplicationContext context = start(url, com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), ownerId)) {
             assertThat(send(context, actor(context), "/api/v1/conversations/messages", "restart-first",
                     Map.of("text", "重启后继续交流"))).isEqualTo(original);
             assertThat(count(context, "sq_conversation", ownerId)).isEqualTo(1);
@@ -80,7 +80,7 @@ class MessageAcceptanceHttpTest {
         return SpringApplication.run(AgentSquadApplication.class, "--server.port=0",
                 "--spring.datasource.url=" + url, "--spring.datasource.username=" + username,
                 "--spring.datasource.password=" + password,
-                "--spring.datasource.driver-class-name=" + (url.startsWith("jdbc:h2:") ? "org.h2.Driver" : "com.mysql.cj.jdbc.Driver"),
+                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.delivery.enabled=false", "--agentsquad.auth.username=tester",
                 "--agentsquad.auth.password=test-only", "--agentsquad.auth.role=USER",
                 "--agentsquad.auth.user-id=" + ownerId);
@@ -228,7 +228,7 @@ class MessageAcceptanceHttpTest {
         return context.getBean(JdbcTemplate.class).queryForObject("SELECT COUNT(*) FROM " + table + " WHERE user_id = ?", Long.class, owner);
     }
 
-    private String h2(Path directory) {
-        return "jdbc:h2:file:" + directory.resolve("messages") + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE;LOCK_TIMEOUT=10000";
+    private String databaseUrl(Path directory) {
+        return com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("messages"));
     }
 }

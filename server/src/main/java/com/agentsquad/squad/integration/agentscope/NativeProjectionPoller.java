@@ -24,6 +24,15 @@ import java.util.List;
 public class NativeProjectionPoller {
 
     @Resource
+    private com.agentsquad.squad.runtime.service.ExecutionAuthorizationService authorization;
+
+    @Resource
+    private com.agentsquad.squad.runtime.service.ExecutionRestrictionService restrictions;
+
+    @Resource
+    private com.agentsquad.squad.conversation.repository.ExecutionScopeMapper scopeMapper;
+
+    @Resource
     private com.agentsquad.squad.runtime.service.ExecutionFailureService failures;
 
     @Resource
@@ -48,6 +57,7 @@ public class NativeProjectionPoller {
     public void projectDue() {
         for (ProjectionTarget target : projectionMapper.findDueTargets(now())) {
             try {
+                authorization.requireBindingCurrent(target.userId(), target.bindingId());
                 List<NativeEventView> events = nativeSessionGateway.readEvents(target, target.cursor(), 100);
                 for (NativeEventView event : events) {
                     projectionService.accept(target, event);
@@ -77,6 +87,8 @@ public class NativeProjectionPoller {
                 }
                 projectionMapper.defer(target.userId(), target.bindingId(),
                         now().plusSeconds(events.isEmpty() ? 5 : 1));
+            } catch (com.agentsquad.squad.runtime.domain.ExecutionContextInvalidatedException exception) {
+                restrictions.restrict(target.userId(), scopeMapper.findScopeByBinding(target.userId(), target.bindingId()), target.bindingId());
             } catch (Exception exception) {
                 projectionMapper.defer(target.userId(), target.bindingId(), now().plusSeconds(10));
                 log.warn("原生日志投影待重试 bindingId={} taskId={} errorType={}",

@@ -35,14 +35,12 @@ class StopDeliveryIntegrationTest {
 
     @Test
     void shouldFinalizeCancelledTaskWhenNoActiveNativeRun(@TempDir Path tempDirectory) {
-        String databaseUrl = "jdbc:h2:file:" + tempDirectory.resolve("squad")
-                + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE";
+        String databaseUrl = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(tempDirectory.resolve("squad"));
         String[] properties = {
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=sa",
-                "--spring.datasource.password=",
-                "--spring.datasource.driver-class-name=org.h2.Driver",
+                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--spring.flyway.enabled=true",
                 "--agentsquad.delivery.enabled=true",
                 "--agentsquad.delivery.poll-delay-ms=60000",

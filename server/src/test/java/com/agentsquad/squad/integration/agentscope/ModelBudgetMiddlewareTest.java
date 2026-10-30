@@ -88,10 +88,9 @@ class ModelBudgetMiddlewareTest {
     private ConfigurableApplicationContext start(Path directory) {
         return SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=none",
-                "--spring.datasource.url=jdbc:h2:file:" + directory.resolve("squad")
-                        + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE",
-                "--spring.datasource.username=sa",
-                "--spring.datasource.driver-class-name=org.h2.Driver");
+                "--spring.datasource.url=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("squad")),
+                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver");
     }
 
     private Fixture fixture(ConfigurableApplicationContext spring) {

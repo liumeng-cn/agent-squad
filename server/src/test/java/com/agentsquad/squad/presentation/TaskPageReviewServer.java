@@ -32,9 +32,8 @@ public final class TaskPageReviewServer {
     public static void main(String[] args) throws Exception {
         Path directory = Files.createTempDirectory("agentsquad-page-review-");
         var context = SpringApplication.run(AgentSquadApplication.class,
-                "--server.port=18080", "--spring.datasource.url=jdbc:h2:file:" + directory.resolve("squad")
-                        + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE",
-                "--spring.datasource.username=sa", "--spring.datasource.driver-class-name=org.h2.Driver",
+                "--server.port=18080", "--spring.datasource.url=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("squad")),
+                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.auth.username=review", "--agentsquad.auth.password=local-review",
                 "--agentsquad.auth.role=OPERATOR", "--agentsquad.model.api-key=test-only",
                 "--agentsquad.model.name=test-model", "--agentsquad.model.base-url=http://127.0.0.1:1/v1",

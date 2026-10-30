@@ -53,21 +53,21 @@ class ScopeRuntimeOwnershipIntegrationTest {
 
     @Test
     void responseCanUseGovernedCapabilitiesWithoutTask(@TempDir Path directory) {
-        try (ConfigurableApplicationContext context = start(h2(directory), "sa", "", 50000000)) {
+        try (ConfigurableApplicationContext context = start(databaseUrl(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), 50000000)) {
             verifyCapabilitiesWithoutTask(context);
         }
     }
 
     @Test
     void concurrentScopesCannotExceedUserBudget(@TempDir Path directory) throws Exception {
-        try (ConfigurableApplicationContext context = start(h2(directory), "sa", "", 100)) {
+        try (ConfigurableApplicationContext context = start(databaseUrl(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), 100)) {
             verifyConcurrentUserBudget(context);
         }
     }
 
     @Test
     void sharedAccountAndUnknownChargeSurviveScopeChanges(@TempDir Path directory) {
-        try (ConfigurableApplicationContext context = start(h2(directory), "sa", "", 1000)) {
+        try (ConfigurableApplicationContext context = start(databaseUrl(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), 1000)) {
             verifySharedAccount(context);
         }
     }
@@ -77,7 +77,7 @@ class ScopeRuntimeOwnershipIntegrationTest {
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + url, "--spring.datasource.username=" + username,
                 "--spring.datasource.password=" + password,
-                "--spring.datasource.driver-class-name=" + (url.startsWith("jdbc:h2:") ? "org.h2.Driver" : "com.mysql.cj.jdbc.Driver"),
+                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.delivery.enabled=true", "--agentsquad.delivery.poll-delay-ms=3600000",
                 "--agentsquad.projection.poll-delay-ms=3600000", "--agentsquad.conversation.cleanup.delay-ms=3600000",
                 "--agentsquad.budget.max-microunits-per-user=" + userLimit,
@@ -304,7 +304,7 @@ class ScopeRuntimeOwnershipIntegrationTest {
                 effect, Map.of("title", "受控测试", "detail", "仅本地模拟系统"), intent, approval, null, 0, units, "tester");
     }
 
-    private String h2(Path directory) {
-        return "jdbc:h2:file:" + directory.resolve("scope") + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE;LOCK_TIMEOUT=10000";
+    private String databaseUrl(Path directory) {
+        return com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("scope"));
     }
 }

@@ -30,13 +30,12 @@ class BudgetReservationConcurrencyTest {
 
     @Test
     void concurrentReservationsCannotExceedTaskLimit(@TempDir Path tempDirectory) throws Exception {
-        String databaseUrl = "jdbc:h2:file:" + tempDirectory.resolve("squad")
-                + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE;LOCK_TIMEOUT=10000";
+        String databaseUrl = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(tempDirectory.resolve("squad"));
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=sa",
-                "--spring.datasource.driver-class-name=org.h2.Driver",
+                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.budget.max-microunits-per-task=100")) {
             String userId = "00000000-0000-0000-0000-000000000001";
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
@@ -80,13 +79,12 @@ class BudgetReservationConcurrencyTest {
 
     @Test
     void modelReservationSettlesTrustedUsageAndRetainsUnknownCharge(@TempDir Path tempDirectory) {
-        String databaseUrl = "jdbc:h2:file:" + tempDirectory.resolve("squad")
-                + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE";
+        String databaseUrl = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(tempDirectory.resolve("squad"));
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=sa",
-                "--spring.datasource.driver-class-name=org.h2.Driver",
+                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.budget.max-microunits-per-task=100")) {
             String userId = "00000000-0000-0000-0000-000000000001";
             GoalTaskService tasks = context.getBean(GoalTaskService.class);

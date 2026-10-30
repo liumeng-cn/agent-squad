@@ -32,7 +32,7 @@ class ResponseContextIntegrationTest {
         String owner = UUID.randomUUID().toString();
         String binding;
         ResponseContextSnapshot frozen;
-        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url, "sa", "", owner)) {
+        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url, com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), owner)) {
             MessageTestActor actor = MessageAcceptanceHttpTest.actor(context);
             MessageReceipt first = MessageAcceptanceHttpTest.send(context, actor, "/api/v1/conversations/messages",
                     "first", Map.of("text", "主角叫小明"));
@@ -52,7 +52,7 @@ class ResponseContextIntegrationTest {
             assertThat(context.getBean(ResponseContextService.class).freeze(owner, binding)).isEqualTo(frozen);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_goal_task", Long.class)).isZero();
         }
-        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url, "sa", "", owner)) {
+        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url, com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), owner)) {
             assertThat(context.getBean(ResponseContextService.class).freeze(owner, binding)).isEqualTo(frozen);
             assertThatThrownBy(() -> context.getBean(ResponseContextService.class).freeze(UUID.randomUUID().toString(), binding))
                     .isInstanceOf(RuntimeBusinessException.class);
@@ -65,7 +65,7 @@ class ResponseContextIntegrationTest {
     @Test
     void expiredMaterialBlocksEvenFrozenContext(@TempDir Path directory) throws Exception {
         String owner = UUID.randomUUID().toString();
-        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url(directory), "sa", "", owner)) {
+        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), owner)) {
             String file = context.getBean(ArtifactService.class).upload(owner, "input", "facts.txt",
                     "材料".getBytes(StandardCharsets.UTF_8)).artifactId();
             MessageReceipt receipt = MessageAcceptanceHttpTest.send(context, MessageAcceptanceHttpTest.actor(context),
@@ -82,7 +82,7 @@ class ResponseContextIntegrationTest {
     @Test
     void overLimitFailsWithoutSilentlyDroppingHistoryOrSavingSnapshot(@TempDir Path directory) throws Exception {
         String owner = UUID.randomUUID().toString();
-        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url(directory), "sa", "", owner)) {
+        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), owner)) {
             MessageReceipt receipt = MessageAcceptanceHttpTest.send(context, MessageAcceptanceHttpTest.actor(context),
                     "/api/v1/conversations/messages", "large", Map.of("text", "开始"));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
@@ -99,6 +99,6 @@ class ResponseContextIntegrationTest {
     }
 
     private String url(Path directory) {
-        return "jdbc:h2:file:" + directory.resolve("context") + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE;LOCK_TIMEOUT=10000";
+        return com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("context"));
     }
 }

@@ -39,6 +39,10 @@ export function apiPost<T>(path: string, body?: unknown, options: RequestOptions
   return request<T>('POST', path, { ...options, body })
 }
 
+export function apiPut<T>(path: string, body: unknown, options: RequestOptions = {}): Promise<T> {
+  return request<T>('PUT', path, { ...options, body })
+}
+
 export function apiPatch<T>(path: string, body: unknown, options: RequestOptions = {}): Promise<T> {
   return request<T>('PATCH', path, { ...options, body })
 }

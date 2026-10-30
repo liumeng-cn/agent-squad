@@ -57,14 +57,13 @@ class WorkerNativeExecutionIntegrationTest {
         });
         model.start();
         try {
-            String database = "jdbc:h2:file:" + directory.resolve("squad")
-                    + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE";
+            String database = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("squad"));
             String baseUrl = "http://127.0.0.1:" + model.getAddress().getPort() + "/v1";
             String[] base = {
                     "--spring.main.web-application-type=none",
                     "--spring.datasource.url=" + database,
-                    "--spring.datasource.username=sa",
-                    "--spring.datasource.driver-class-name=org.h2.Driver",
+                    "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                    "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                     "--agentsquad.model.api-key=test-only",
                     "--agentsquad.model.base-url=" + baseUrl,
                     "--agentsquad.model.name=test-model",

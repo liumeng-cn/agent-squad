@@ -47,6 +47,9 @@ import java.util.Map;
 public class NativeProjectionService {
 
     @Resource
+    private com.agentsquad.squad.runtime.service.ExecutionAuthorizationService authorization;
+
+    @Resource
     private ExecutionFailureService failures;
 
     @Resource
@@ -94,6 +97,7 @@ public class NativeProjectionService {
     @Transactional
     public void accept(ProjectionTarget target, NativeEventView event) {
         ExecutionScopeRow scope = scopeService.lockOwned(target.userId(), scopeMapper.findScopeByBinding(target.userId(), target.bindingId()), false);
+        authorization.requireScopeCurrent(target.userId(), scope.scopeId());
         Long cursor = projectionMapper.lockCursor(target.userId(), target.bindingId());
         if (cursor == null) {
             throw new IllegalStateException("原生会话绑定已消失");

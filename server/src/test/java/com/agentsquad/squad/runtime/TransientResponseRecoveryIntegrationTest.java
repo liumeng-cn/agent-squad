@@ -73,8 +73,8 @@ class TransientResponseRecoveryIntegrationTest {
         model.start();
         String base = "http://127.0.0.1:" + model.getAddress().getPort() + "/v1";
         try (var context = SpringApplication.run(AgentSquadApplication.class,
-                "--spring.main.web-application-type=none", "--spring.datasource.url=jdbc:h2:file:" + directory.resolve("recovery") + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE",
-                "--spring.datasource.username=sa", "--spring.datasource.password=", "--spring.datasource.driver-class-name=org.h2.Driver",
+                "--spring.main.web-application-type=none", "--spring.datasource.url=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("recovery")),
+                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.delivery.enabled=true", "--agentsquad.delivery.poll-delay-ms=100", "--agentsquad.projection.poll-delay-ms=100",
                 "--agentsquad.model.api-key=test-only", "--agentsquad.model.base-url=" + base, "--agentsquad.model.name=test-model",
                 "--agentsquad.worker.model-profiles.default.api-key=test-only", "--agentsquad.worker.model-profiles.default.base-url=" + base, "--agentsquad.worker.model-profiles.default.model-name=test-model")) {

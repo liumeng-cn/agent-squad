@@ -97,8 +97,14 @@ public interface ResponseRuntimeMapper {
             """)
     List<Long> uncertainIds(@Param("userId") String userId, @Param("scopeId") String scopeId);
 
+    @Select("""
+            SELECT id FROM sq_sandbox_execution WHERE user_id=#{userId} AND scope_id=#{scopeId}
+              AND status IN ('IN_FLIGHT','UNKNOWN') AND del_flag='0' FOR UPDATE
+            """)
+    List<Long> uncertainSandboxIds(@Param("userId") String userId, @Param("scopeId") String scopeId);
+
     default int uncertain(String userId, String scopeId) {
-        return uncertainIds(userId, scopeId).size();
+        return uncertainIds(userId, scopeId).size() + uncertainSandboxIds(userId, scopeId).size();
     }
 
     @Select("""

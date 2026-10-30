@@ -18,6 +18,10 @@ public interface CompletionMapper {
     @Select("""
             SELECT (SELECT COUNT(*) FROM sq_operation WHERE user_id = #{userId} AND task_id = #{taskId}
                 AND status IN ('PREPARED', 'WAITING_APPROVAL', 'IN_FLIGHT', 'UNKNOWN', 'RECONCILING'))
+                + (SELECT COUNT(*) FROM sq_sandbox_execution x JOIN sq_execution_scope s
+                    ON s.user_id = x.user_id AND s.scope_id = x.scope_id
+                    WHERE s.user_id = #{userId} AND s.kind = 'TASK' AND s.owner_id = #{taskId}
+                      AND x.status IN ('IN_FLIGHT','UNKNOWN'))
                 + (SELECT COUNT(*) FROM sq_interaction WHERE user_id = #{userId} AND task_id = #{taskId} AND status = 'OPEN')
             """)
     int countPendingEffects(@Param("userId") String userId, @Param("taskId") String taskId);
@@ -97,6 +101,10 @@ public interface CompletionMapper {
               AND plan_version = #{planVersion} AND answer_revision = #{answerRevision}
               AND NOT EXISTS (SELECT 1 FROM sq_operation o WHERE o.user_id = #{userId}
                   AND o.task_id = #{taskId} AND o.status IN ('PREPARED', 'WAITING_APPROVAL', 'IN_FLIGHT', 'UNKNOWN', 'RECONCILING'))
+              AND NOT EXISTS (SELECT 1 FROM sq_sandbox_execution x JOIN sq_execution_scope s
+                  ON s.user_id = x.user_id AND s.scope_id = x.scope_id
+                  WHERE s.user_id = #{userId} AND s.kind = 'TASK' AND s.owner_id = #{taskId}
+                    AND x.status IN ('IN_FLIGHT','UNKNOWN'))
               AND NOT EXISTS (SELECT 1 FROM sq_interaction i WHERE i.user_id = #{userId}
                   AND i.task_id = #{taskId} AND i.status = 'OPEN')
             """)

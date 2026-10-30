@@ -2,7 +2,7 @@
 
 ## Why
 
-优先变更 `conversation-first-experience` 与 D4 完成后进入 D5，把不可信脚本隔离执行与产物交付/保留/完整预算落到实现，使外部脚本在受限沙箱运行、产物可归属下载且预算不被绕过。行为由主 spec `tools-interactions`(M07)、`events-artifacts`(M08) 及优先变更的会话/预算 delta 规定。
+采用已实现的消息与 Scope 链路，与 D4 并行开发 D5，最终验收等待共享授权与上下文集成，把不可信脚本隔离执行与产物交付/保留/完整预算落到实现，使外部脚本在受限沙箱运行、产物可归属下载且预算不被绕过。行为由主 spec `tools-interactions`(M07)、`events-artifacts`(M08) 及优先变更的会话/预算 delta 规定。
 
 ## What Changes
 

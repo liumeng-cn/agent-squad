@@ -81,7 +81,8 @@
         "listSkills",
         "getSkillDetail",
         "importSkill",
-        "setSkillGrant"
+        "setSkillGrant",
+        "revokeSkill"
       ],
       "cases": [
         "B11"

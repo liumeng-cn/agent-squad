@@ -39,16 +39,29 @@
       "sq_worker_job"
     ],
     "M05": [
-      "sq_context_snapshot"
+      "sq_context_snapshot",
+      "sq_memory",
+      "sq_memory_revision",
+      "sq_memory_scope",
+      "sq_memory_scope_item",
+      "sq_memory_write_receipt",
+      "sq_memory_source"
     ],
-    "M06": [],
+    "M06": [
+      "sq_skill_version",
+      "sq_skill_file",
+      "sq_skill_grant",
+      "sq_scope_skill_catalog",
+      "sq_scope_skill_ref"
+    ],
     "M07": [
       "sq_connection",
       "sq_secret_vault",
       "sq_operation",
       "sq_mock_ticket",
       "sq_interaction",
-      "sq_operation_reconciler"
+      "sq_operation_reconciler",
+      "sq_sandbox_execution"
     ],
     "M08": [
       "sq_task_event",
@@ -59,10 +72,11 @@
       "sq_conversation_event",
       "sq_user_budget",
       "sq_scope_artifact",
-      "sq_execution_failure"
+      "sq_execution_failure",
+      "sq_artifact_stage"
     ]
   },
-  "plannedOperationCount": 46,
-  "plannedSchemaCount": 74,
-  "plannedBusinessTableCount": 28
+  "plannedOperationCount": 47,
+  "plannedSchemaCount": 76,
+  "plannedBusinessTableCount": 41
 }

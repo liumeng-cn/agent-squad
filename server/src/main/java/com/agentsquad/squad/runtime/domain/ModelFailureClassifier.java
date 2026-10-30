@@ -38,6 +38,14 @@ public final class ModelFailureClassifier {
             if (current instanceof PlanCorrectionExhaustedException) {
                 return new FailureClassification("LOGIC_INVALID", "PLAN_CORRECTION_EXHAUSTED", "SYSTEM", "处理方案未能通过校验，已停止继续尝试并保留你的内容。");
             }
+            if (current instanceof com.agentsquad.squad.skill.domain.SkillCapabilityUnavailableException) {
+                return new FailureClassification("ENVIRONMENT", "SKILL_CAPABILITY_UNAVAILABLE", "SYSTEM",
+                        "本次所需技能依赖的工具暂不可用，已保留你的内容；系统不会自动安装或扩大授权。");
+            }
+            if (current instanceof ExecutionContextInvalidatedException) {
+                return new FailureClassification("AUTH_REQUIRED", "EXECUTION_CONTEXT_INVALIDATED", "SYSTEM",
+                        "技能授权或记忆已变化，已停止使用旧上下文，请重新发起。");
+            }
             if (current instanceof BudgetExceededException) {
                 return new FailureClassification("ENVIRONMENT", "BUDGET_EXHAUSTED", "SYSTEM", "本次可用处理额度已用完，已保留你的消息和已完成内容。");
             }

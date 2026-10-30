@@ -81,6 +81,24 @@ public class WorkerFactory {
     @Resource
     private ObjectMapper objectMapper;
 
+    @Resource
+    private com.agentsquad.squad.skill.integration.ScopeSkillRepository scopeSkillRepository;
+
+    @Resource
+    private PlatformSkillVisibility skillVisibility;
+
+    @Resource
+    private ExecutionContextMiddleware executionContext;
+
+    @Resource
+    private com.agentsquad.squad.agent.tool.SandboxPythonTool sandboxPython;
+
+    @Resource
+    private com.agentsquad.squad.agent.tool.CommitArtifactTool commitArtifact;
+
+    @org.springframework.beans.factory.annotation.Value("${agentsquad.sandbox.enabled:false}")
+    private boolean sandboxEnabled;
+
     private final Map<String, WorkerAgentHandle> active = new ConcurrentHashMap<>();
 
     private AbstractJdbcDialect dialect;
@@ -119,7 +137,33 @@ public class WorkerFactory {
         }
         dispatchService.renew(userId, bindingId, handle.guardToken());
         RuntimeContext context = RuntimeContext.builder().userId(userId).sessionId(sessionId).build();
+        context.put(com.agentsquad.squad.runtime.domain.WorkerExecutionIdentity.class,
+                new com.agentsquad.squad.runtime.domain.WorkerExecutionIdentity(bindingId, handle.guardToken()));
+        WorkerLaunchRow job = dispatchMapper.findByBinding(userId, bindingId);
+        JsonNode selectedInput = readInput(job.inputJson());
+        ContextSnapshotRow selected = snapshotMapper.findOwned(userId, job.taskId(), selectedInput.path("contextSnapshotId").asText());
+        java.util.List<String> ids = new java.util.ArrayList<>();
+        for (JsonNode item : readInput(selected.itemsJson())) {
+            if ("SKILL_REFERENCE".equals(item.path("kind").asText())) {
+                ids.add(item.path("sourceId").asText());
+            }
+        }
+        context.put(com.agentsquad.squad.skill.integration.SkillSelection.class,
+                new com.agentsquad.squad.skill.integration.SkillSelection(ids));
+        var allowedTools = new java.util.HashSet<>(definitionService.requirePublished(job.workerKey(), job.workerVersion()).toolAllowlist());
+        allowedTools.add("load_skill_through_path");
+        allowedTools.add("report_job_result");
+        context.put(com.agentsquad.squad.skill.integration.ScopeSkillCapabilities.class,
+                new com.agentsquad.squad.skill.integration.ScopeSkillCapabilities(allowedTools));
         return handle.agent().session(context);
+    }
+
+    private JsonNode readInput(String value) {
+        try {
+            return RuntimePayloads.readJson(objectMapper, value);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Worker固定资料无法解析", exception);
+        }
     }
 
     private WorkerAgentHandle create(String userId, String bindingId,
@@ -136,7 +180,8 @@ public class WorkerFactory {
         if (!expectedAgentId.equals(agentId)) {
             throw new IllegalStateException("Worker 固定能力版本与 Binding 不一致");
         }
-        if (!definition.toolAllowlist().isEmpty()) {
+        if (!java.util.Set.of("sandbox_python", "commit_artifact").containsAll(definition.toolAllowlist())
+                || !sandboxEnabled && !definition.toolAllowlist().isEmpty()) {
             throw new IllegalStateException("Worker Definition 引用了当前未注册的受控工具");
         }
         WorkerModelProfile model = profileRegistry.requireExecutableModel(definition.modelProfileKey());
@@ -155,6 +200,12 @@ public class WorkerFactory {
         }
         WorkerLaunchRow claimed = dispatchService.claim(userId, bindingId);
         Toolkit toolkit = new Toolkit();
+        if (definition.toolAllowlist().contains("sandbox_python")) {
+            toolkit.registerAgentTool(sandboxPython);
+        }
+        if (definition.toolAllowlist().contains("commit_artifact")) {
+            toolkit.registerAgentTool(commitArtifact);
+        }
         toolkit.registerAgentTool(new ReportJobResultTool(resultService, objectMapper,
                 userId, sessionId, bindingId, claimed.guardToken()));
         String prompt = "你是独立 Worker。能力：" + definition.description()
@@ -181,6 +232,9 @@ public class WorkerFactory {
                         .timeout(Duration.ofSeconds(runtime.getToolTimeoutSeconds()))
                         .maxAttempts(1).build())
                 .maxIters(runtime.getMaxModelCalls())
+                .middleware(executionContext)
+                .skillRepository(scopeSkillRepository)
+                .enableSkillPromotionGate(null, skillVisibility)
                 .middleware(new ProfiledModelBudgetMiddleware(
                         budgetMiddleware, definition.modelProfileKey()))
                 .toolkit(toolkit)
@@ -193,7 +247,6 @@ public class WorkerFactory {
                 .disableWebTools()
                 .disableMemoryTools()
                 .disableMemoryHooks()
-                .disableDynamicSkills()
                 .disableDefaultWorkspaceSkills()
                 .build();
         return new WorkerAgentHandle(agent, userId, bindingId, sessionId, agentId, claimed.guardToken());

@@ -101,8 +101,8 @@ class MultiWorkerExecutionIntegrationTest {
         model.start();
         String url = "http://127.0.0.1:" + model.getAddress().getPort() + "/v1";
         String[] base = {"--spring.main.web-application-type=none",
-                "--spring.datasource.url=jdbc:h2:file:" + directory.resolve("squad") + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE",
-                "--spring.datasource.username=sa", "--spring.datasource.driver-class-name=org.h2.Driver",
+                "--spring.datasource.url=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("squad")),
+                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.model.api-key=test-only", "--agentsquad.model.base-url=" + url,
                 "--agentsquad.model.name=test-model", "--agentsquad.worker.model-profiles.default.api-key=test-only",
                 "--agentsquad.worker.model-profiles.default.base-url=" + url,

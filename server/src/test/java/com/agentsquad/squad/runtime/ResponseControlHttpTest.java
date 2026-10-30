@@ -84,6 +84,6 @@ class ResponseControlHttpTest {
     }
 
     private ConfigurableApplicationContext start(Path directory) {
-        return MessageAcceptanceHttpTest.start("jdbc:h2:file:" + directory.resolve("controls") + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE", "sa", "", UUID.randomUUID().toString());
+        return MessageAcceptanceHttpTest.start(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("controls")), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), UUID.randomUUID().toString());
     }
 }

@@ -3120,16 +3120,6 @@
         "summary": "importSkill",
         "parameters": [
           {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 160
-            }
-          },
-          {
             "name": "X-CSRF-Token",
             "in": "header",
             "required": true,
@@ -3265,16 +3255,6 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 160
             }
           },
           {
@@ -3950,16 +3930,6 @@
         "summary": "createMemory",
         "parameters": [
           {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 160
-            }
-          },
-          {
             "name": "X-CSRF-Token",
             "in": "header",
             "required": true,
@@ -3982,7 +3952,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Memory"
+                  "$ref": "#/components/schemas/MemoryMutationResult"
                 }
               }
             }
@@ -4098,16 +4068,6 @@
             }
           },
           {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 160
-            }
-          },
-          {
             "name": "X-CSRF-Token",
             "in": "header",
             "required": true,
@@ -4130,7 +4090,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Memory"
+                  "$ref": "#/components/schemas/MemoryMutationResult"
                 }
               }
             }
@@ -4244,16 +4204,6 @@
             }
           },
           {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 160
-            }
-          },
-          {
             "name": "X-CSRF-Token",
             "in": "header",
             "required": true,
@@ -4264,13 +4214,13 @@
             }
           },
           {
-            "name": "If-Match",
-            "in": "header",
+            "name": "expectedVersion",
+            "in": "query",
             "required": true,
-            "description": "十进制资源版本，例如 3；与 version 字段一致。",
             "schema": {
-              "type": "string",
-              "pattern": "^[0-9]+$"
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
             }
           }
         ],
@@ -4281,9 +4231,6 @@
         ],
         "x-design-status": "planned-v0.2",
         "responses": {
-          "204": {
-            "description": "成功"
-          },
           "400": {
             "description": "错误语义见 contracts/README.md",
             "content": {
@@ -4360,6 +4307,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "记忆变更已提交，受影响的旧上下文进入受限状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryMutationResult"
                 }
               }
             }
@@ -6147,6 +6104,144 @@
           }
         }
       }
+    },
+    "/api/v1/skills/{skillVersionId}/revoke": {
+      "post": {
+        "operationId": "revokeSkill",
+        "tags": [
+          "public"
+        ],
+        "summary": "安全撤销个人技能版本",
+        "parameters": [
+          {
+            "name": "skillVersionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "x-design-status": "planned-v0.2",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SkillRevokeRequest"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -7087,7 +7182,9 @@
               "DEPENDENCY_RESULT",
               "USER_SUPPLEMENT",
               "USER_GOAL_REPLACEMENT",
-              "USER_ORIGIN_REFERENCE"
+              "USER_ORIGIN_REFERENCE",
+              "SKILL_REFERENCE",
+              "EXPLICIT_MEMORY"
             ]
           },
           "sourceId": {
@@ -7105,7 +7202,9 @@
             "enum": [
               "PLATFORM",
               "USER",
-              "EXTERNAL"
+              "EXTERNAL",
+              "UNTRUSTED",
+              "USER_DATA"
             ]
           },
           "content": {
@@ -7116,6 +7215,15 @@
           "artifactId": {
             "type": "string",
             "format": "uuid"
+          },
+          "contentHash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "authorizationRevision": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           }
         },
         "required": [
@@ -7368,7 +7476,8 @@
           "nextCursor": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 2048
+            "maxLength": 2048,
+            "nullable": true
           }
         },
         "required": [
@@ -7575,19 +7684,17 @@
             "minLength": 1,
             "maxLength": 8000
           },
-          "sourceTaskId": {
-            "type": "string",
-            "format": "uuid"
-          },
           "expiresAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "nullable": true
           }
         },
         "required": [
           "key",
           "content"
-        ]
+        ],
+        "description": "创建当前用户的显式记忆。有效记忆键在用户内唯一；删除后可使用同一键创建新memoryId，历史删除记录不恢复。"
       },
       "MemoryUpdate": {
         "type": "object",
@@ -7606,7 +7713,8 @@
           },
           "expiresAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "nullable": true
           }
         },
         "required": [
@@ -7629,7 +7737,7 @@
           },
           "content": {
             "type": "string",
-            "minLength": 1,
+            "minLength": 0,
             "maxLength": 8000
           },
           "kind": {
@@ -7654,7 +7762,13 @@
           },
           "expiresAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "nullable": true
+          },
+          "sourceMessageId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "required": [
@@ -7680,11 +7794,24 @@
           "nextCursor": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 2048
+            "maxLength": 2048,
+            "nullable": true
+          },
+          "memoryRevision": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "affectedScopes": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           }
         },
         "required": [
-          "items"
+          "items",
+          "memoryRevision",
+          "affectedScopes"
         ]
       },
       "Artifact": {
@@ -10107,6 +10234,48 @@
         ],
         "description": "受理与应用分离，应用版本、原因与事件在同一事务持久化。",
         "x-implementation-status": "implemented-sdk-tool"
+      },
+      "MemoryMutationResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "memory": {
+            "$ref": "#/components/schemas/Memory"
+          },
+          "memoryRevision": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "affectedScopes": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "impact": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "memory",
+          "memoryRevision",
+          "affectedScopes",
+          "impact"
+        ]
+      },
+      "SkillRevokeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ]
       }
     }
   }

@@ -44,15 +44,13 @@ class ConversationExecutionMigrationTest {
 
     @Test
     void shouldPreserveLegacyFactsAndEnforceOwnership(@TempDir Path directory) throws Exception {
-        DriverManagerDataSource dataSource = new DriverManagerDataSource("jdbc:h2:file:"
-                + directory.resolve("migration") + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE", "sa", "");
+        DriverManagerDataSource dataSource = new DriverManagerDataSource(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("migration")), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password());
         verifyUpgrade(dataSource);
     }
 
     @Test
     void malformedHistoricalInputRollsBackAllBackfill(@TempDir Path directory) {
-        DriverManagerDataSource dataSource = new DriverManagerDataSource("jdbc:h2:file:"
-                + directory.resolve("rollback") + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE", "sa", "");
+        DriverManagerDataSource dataSource = new DriverManagerDataSource(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("rollback")), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password());
         Flyway.configure().dataSource(dataSource).target(MigrationVersion.fromVersion("6")).load().migrate();
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         seedLegacyFacts(jdbc);
@@ -72,8 +70,8 @@ class ConversationExecutionMigrationTest {
 
     @Test
     void legacyToolReservationKeepsItsOriginalIdentity(@TempDir Path directory) {
-        String url = "jdbc:h2:file:" + directory.resolve("legacy-budget") + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE";
-        DriverManagerDataSource dataSource = new DriverManagerDataSource(url, "sa", "");
+        String url = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("legacy-budget"));
+        DriverManagerDataSource dataSource = new DriverManagerDataSource(url, com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password());
         Flyway.configure().dataSource(dataSource).target(MigrationVersion.fromVersion("6")).load().migrate();
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         seedLegacyFacts(jdbc);
@@ -86,8 +84,8 @@ class ConversationExecutionMigrationTest {
         Flyway.configure().dataSource(dataSource).load().migrate();
         try (var context = org.springframework.boot.SpringApplication.run(com.agentsquad.squad.AgentSquadApplication.class,
                 "--spring.main.web-application-type=none", "--spring.datasource.url=" + url,
-                "--spring.datasource.username=sa", "--spring.datasource.password=",
-                "--spring.datasource.driver-class-name=org.h2.Driver")) {
+                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver")) {
             var operation = context.getBean(com.agentsquad.squad.tools.operation.repository.OperationMapper.class)
                     .listByTask(USER, TASK, null, 20).getFirst();
             assertThat(operation.budgetUsageKey()).isEqualTo("read:call-1");

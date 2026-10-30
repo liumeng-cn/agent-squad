@@ -42,7 +42,7 @@ class OperationExecutorTransactionTest {
         ReflectionTestUtils.setField(target, "dispatchService", dispatch);
         ReflectionTestUtils.setField(target, "objectMapper", new ObjectMapper());
         DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(
-                new DriverManagerDataSource("jdbc:h2:mem:operation-boundary", "sa", ""));
+                new DriverManagerDataSource(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(java.nio.file.Path.of(System.getProperty("java.io.tmpdir"), "operation-boundary-" + java.util.UUID.randomUUID())), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password()));
         ProxyFactory proxyFactory = new ProxyFactory(target);
         proxyFactory.setProxyTargetClass(true);
         proxyFactory.addAdvice(new TransactionInterceptor(transactionManager,

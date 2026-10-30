@@ -45,9 +45,8 @@ class TaskDetailsHttpTest {
     @Test
     void protectsArtifactsReconciliationAndInteraction(@TempDir Path directory) throws Exception {
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class,
-                "--server.port=0", "--spring.datasource.url=jdbc:h2:file:" + directory.resolve("squad")
-                        + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE",
-                "--spring.datasource.username=sa", "--spring.datasource.driver-class-name=org.h2.Driver",
+                "--server.port=0", "--spring.datasource.url=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("squad")),
+                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.auth.username=tester", "--agentsquad.auth.password=test-only",
                 "--agentsquad.model.api-key=test-only", "--agentsquad.model.base-url=http://127.0.0.1:1/v1",
                 "--agentsquad.model.name=test-model",

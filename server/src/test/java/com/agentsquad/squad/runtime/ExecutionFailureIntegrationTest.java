@@ -46,7 +46,7 @@ class ExecutionFailureIntegrationTest {
 
     @Test
     void retainsRetryLimitAcrossRestartAndCreatesOneSuccessor(@TempDir Path directory) {
-        String database = "jdbc:h2:file:" + directory.resolve("failure") + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE;LOCK_TIMEOUT=10000";
+        String database = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("failure"));
         String user = UUID.randomUUID().toString();
         String execution;
         String session;
@@ -96,7 +96,7 @@ class ExecutionFailureIntegrationTest {
 
     @Test
     void unknownWriteBlocksAutomaticAndManualRetry(@TempDir Path directory) {
-        try (var context = start("jdbc:h2:file:" + directory.resolve("unknown") + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE;LOCK_TIMEOUT=10000")) {
+        try (var context = start(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("unknown")))) {
             String user = UUID.randomUUID().toString();
             var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateRequest("处理这项工作", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
@@ -123,7 +123,7 @@ class ExecutionFailureIntegrationTest {
 
     @Test
     void invalidPlanLimitSurvivesRestart(@TempDir Path directory) {
-        String database = "jdbc:h2:file:" + directory.resolve("plan-limit") + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE";
+        String database = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("plan-limit"));
         String user = UUID.randomUUID().toString();
         String session;
         String scopeId;
@@ -148,6 +148,6 @@ class ExecutionFailureIntegrationTest {
     }
 
     private static ConfigurableApplicationContext start(String database) {
-        return MessageAcceptanceHttpTest.start(database, "sa", "", UUID.randomUUID().toString());
+        return MessageAcceptanceHttpTest.start(database, com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), UUID.randomUUID().toString());
     }
 }

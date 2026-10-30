@@ -1,6 +1,6 @@
 # Tasks
 
-前置：先完成 `conversation-first-experience` 消息/执行主链路验收，采用其 Message/ExecutionScope 与预算账户；本阶段不再引入 Task 专属聊天入口。
+前置：采用已实现的 Message/ExecutionScope 与预算账户；用户授权与 D5 并行开发，最终联合验收仍保留对话改造未完成项。共享运行与契约由主任务统一集成，本阶段不再引入 Task 专属聊天入口。
 
 ## 1. Skill 导入与版本治理
 

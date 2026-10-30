@@ -26,13 +26,12 @@ class ConversationDeletionHttpTest {
 
     @Test
     void shouldAcceptDeleteAndBlockReadsAndSubmits(@TempDir Path tempDirectory) throws Exception {
-        String databaseUrl = "jdbc:h2:file:" + tempDirectory.resolve("squad")
-                + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE";
+        String databaseUrl = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(tempDirectory.resolve("squad"));
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class,
                 "--server.port=0",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=sa",
-                "--spring.datasource.driver-class-name=org.h2.Driver",
+                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.auth.username=local-user",
                 "--agentsquad.auth.password=local-password")) {
             MockMvc mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();
@@ -83,13 +82,12 @@ class ConversationDeletionHttpTest {
 
     @Test
     void shouldReplaySameDeleteAndRejectStaleVersion(@TempDir Path tempDirectory) throws Exception {
-        String databaseUrl = "jdbc:h2:file:" + tempDirectory.resolve("squad")
-                + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE";
+        String databaseUrl = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(tempDirectory.resolve("squad"));
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class,
                 "--server.port=0",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=sa",
-                "--spring.datasource.driver-class-name=org.h2.Driver",
+                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.auth.username=local-user",
                 "--agentsquad.auth.password=local-password")) {
             MockMvc mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();

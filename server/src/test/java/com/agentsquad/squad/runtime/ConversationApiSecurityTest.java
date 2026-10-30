@@ -24,7 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ConversationApiSecurityTest {
     @Test
     void readRenameAndRetryRequireCorrectIdentityAndVersion(@TempDir Path directory) throws Exception {
-        try (var context = MessageAcceptanceHttpTest.start("jdbc:h2:file:" + directory.resolve("api") + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE", "sa", "", UUID.randomUUID().toString())) {
+        try (var context = MessageAcceptanceHttpTest.start(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("api")), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), UUID.randomUUID().toString())) {
             var actor = MessageAcceptanceHttpTest.actor(context);
             var receipt = MessageAcceptanceHttpTest.send(context, actor, "/api/v1/conversations/messages", "first", Map.of("text", "接口验证"));
             var mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();
