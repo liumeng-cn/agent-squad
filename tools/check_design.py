@@ -56,7 +56,7 @@ def check():
     all_migrations = migration_files + java_migrations
     migration_versions = [int(re.match(r"V(\d+)__", path.name).group(1)) for path in all_migrations]
     assert len(migration_versions) == len(set(migration_versions)), "SQL/Java 迁移版本重复"
-    sql = "\n".join(path.read_text() for path in migration_files)
+    sql = "\n".join(path.read_text() for path in migration_files).replace("`", "")
     definitions = re.findall(r"CREATE TABLE (\w+)\s*\((.*?)\n\) ENGINE", sql, re.S)
     business = [(name, body) for name, body in definitions if name.startswith("sq_")]
     non_column_tokens = {
@@ -67,7 +67,7 @@ def check():
     def column_names(body):
         names = set()
         for line in body.splitlines():
-            match = re.match(r"    (\w+)\s+", line)
+            match = re.match(r"\s{2,}(\w+)\s+", line)
             if match and match.group(1).upper() not in non_column_tokens:
                 names.add(match.group(1))
         return names
@@ -108,7 +108,7 @@ def check():
             "del_flag",
         } <= columns[name], (name, "缺少统一审计字段")
         for column in columns[name]:
-            assert re.search(rf"^    {column}\s+.*COMMENT", body, re.M), (name, column)
+            assert re.search(rf"^\s{{2,}}{column}\s+.*COMMENT", body, re.M), (name, column)
 
     bodies = dict(business)
     foreign_keys = []
@@ -120,6 +120,12 @@ def check():
             foreign_keys.append(
                 (name, match.group(1), match.group(2), match.group(3), match.group(4))
             )
+    # 合并 baseline 的循环归属外键在所有 CREATE 之后统一声明。
+    for match in re.finditer(
+        r"ALTER TABLE (\w+) ADD CONSTRAINT (\w+) FOREIGN KEY \(([^)]*)\) REFERENCES (\w+) \(([^)]*)\)",
+        sql,
+    ):
+        foreign_keys.append(tuple(match.groups()))
     assert len({row[1] for row in foreign_keys}) == len(foreign_keys)
     for source, _, source_columns, target, target_columns in foreign_keys:
         source_cols = set(re.findall(r"\w+", source_columns))

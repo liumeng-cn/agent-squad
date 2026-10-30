@@ -1,7 +1,7 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
-import db.migration.V8__BackfillConversationExecution;
+import legacy.migration.V8__BackfillConversationExecution;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.mapping.Environment;
 import org.apache.ibatis.session.Configuration;
@@ -53,13 +53,13 @@ class ConversationExecutionMigrationTest {
     @Test
     void malformedHistoricalInputRollsBackAllBackfill(@TempDir Path directory) {
         DriverManagerDataSource dataSource = new DriverManagerDataSource(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("rollback")), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password());
-        Flyway.configure().dataSource(dataSource).target(MigrationVersion.fromVersion("6")).load().migrate();
+        Flyway.configure().locations("classpath:db/legacy-migration", "classpath:legacy/migration").dataSource(dataSource).target(MigrationVersion.fromVersion("6")).load().migrate();
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         seedLegacyFacts(jdbc);
-        Flyway.configure().dataSource(dataSource).target(MigrationVersion.fromVersion("7")).load().migrate();
+        Flyway.configure().locations("classpath:db/legacy-migration", "classpath:legacy/migration").dataSource(dataSource).target(MigrationVersion.fromVersion("7")).load().migrate();
         jdbc.update("UPDATE sq_goal_task SET input_json = '[]' WHERE task_id = ?", ACTIVE_TASK);
 
-        assertThatThrownBy(() -> Flyway.configure().dataSource(dataSource).load().migrate())
+        assertThatThrownBy(() -> Flyway.configure().locations("classpath:db/legacy-migration", "classpath:legacy/migration").dataSource(dataSource).load().migrate())
                 .hasStackTraceContaining("历史公开记录不是受支持的 JSON 对象");
         for (String table : List.of("sq_execution_scope", "sq_budget_account", "sq_message", "sq_conversation_event")) {
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM " + table, Integer.class)).as(table).isZero();
@@ -74,7 +74,7 @@ class ConversationExecutionMigrationTest {
     void legacyToolReservationKeepsItsOriginalIdentity(@TempDir Path directory) {
         String url = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("legacy-budget"));
         DriverManagerDataSource dataSource = new DriverManagerDataSource(url, com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password());
-        Flyway.configure().dataSource(dataSource).target(MigrationVersion.fromVersion("6")).load().migrate();
+        Flyway.configure().locations("classpath:db/legacy-migration", "classpath:legacy/migration").dataSource(dataSource).target(MigrationVersion.fromVersion("6")).load().migrate();
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         seedLegacyFacts(jdbc);
         String reservationId = UUID.randomUUID().toString();
@@ -83,9 +83,9 @@ class ConversationExecutionMigrationTest {
                                                     reserved_units, status)
                 VALUES (?, ?, ?, 'read:call-1', 'TOOL', 7, 'RESERVED')
                 """, reservationId, USER, TASK);
-        Flyway.configure().dataSource(dataSource).load().migrate();
+        Flyway.configure().locations("classpath:db/legacy-migration", "classpath:legacy/migration").dataSource(dataSource).load().migrate();
         try (var context = org.springframework.boot.SpringApplication.run(com.agentsquad.squad.AgentSquadApplication.class,
-                "--spring.main.web-application-type=none", "--spring.datasource.url=" + url,
+                "--spring.main.web-application-type=none", "--spring.flyway.locations=classpath:db/legacy-migration,classpath:legacy/migration", "--spring.datasource.url=" + url,
                 "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
                 "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver")) {
             var operation = context.getBean(com.agentsquad.squad.tools.operation.repository.OperationMapper.class)
@@ -103,7 +103,7 @@ class ConversationExecutionMigrationTest {
      * 可由专用 MySQL 测试复用同一验收；调用方必须提供全新隔离库，不得指向实际开发数据。
      */
     static void verifyUpgrade(DriverManagerDataSource dataSource) throws Exception {
-        Flyway.configure().dataSource(dataSource).target(MigrationVersion.fromVersion("6")).load().migrate();
+        Flyway.configure().locations("classpath:db/legacy-migration", "classpath:legacy/migration").dataSource(dataSource).target(MigrationVersion.fromVersion("6")).load().migrate();
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         seedLegacyFacts(jdbc);
         List<Map<String, Object>> bindings = jdbc.queryForList(
@@ -119,7 +119,7 @@ class ConversationExecutionMigrationTest {
         long total = jdbc.queryForObject("SELECT SUM(CASE WHEN status = 'SETTLED' THEN settled_units "
                 + "ELSE reserved_units END) FROM sq_budget_reservation", Long.class);
 
-        Flyway flyway = Flyway.configure().dataSource(dataSource).load();
+        Flyway flyway = Flyway.configure().locations("classpath:db/legacy-migration", "classpath:legacy/migration").dataSource(dataSource).load();
         assertThat(flyway.migrate().migrationsExecuted).isGreaterThanOrEqualTo(2);
         assertThat(jdbc.queryForList("SELECT user_id, binding_id, framework_session_id, native_event_cursor "
                 + "FROM sq_runtime_binding ORDER BY id")).isEqualTo(bindings);

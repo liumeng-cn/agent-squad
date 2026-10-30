@@ -16,7 +16,7 @@ import java.util.Set;
  * <p>
  * 仅从已存在的首条用户消息或原目标原文取短主题，不调用模型，不覆盖用户已有的有效自定义标题。
  */
-public class V14__BackfillConversationTitles extends BaseJavaMigration {
+public class V3__BackfillConversationTitles extends BaseJavaMigration {
     @Override
     public Integer getChecksum() {
         return 2026102901;
