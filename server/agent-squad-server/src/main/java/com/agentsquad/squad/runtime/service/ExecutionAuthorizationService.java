@@ -7,6 +7,7 @@ import com.agentsquad.squad.runtime.domain.ExecutionContextInvalidatedException;
 import com.agentsquad.squad.runtime.dto.ExecutionContextSnapshot;
 import com.agentsquad.squad.skill.service.SkillRuntimeService;
 import jakarta.annotation.Resource;
+import com.agentsquad.squad.identity.UserStatusGuard;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class ExecutionAuthorizationService {
+    @Resource private UserStatusGuard userStatus;
     @Resource
     private ExecutionScopeService scopes;
 
@@ -35,6 +37,7 @@ public class ExecutionAuthorizationService {
      */
     @Transactional
     public ExecutionContextSnapshot prepare(String userId, String scopeId) {
+        userStatus.requireActive(userId);
         scopes.lockOwned(userId, scopeId, true);
         validate(userId, scopeId);
         var catalog = skills.freeze(userId, scopeId);
