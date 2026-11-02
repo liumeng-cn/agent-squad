@@ -45,19 +45,21 @@ public class SignedIdentityVerifier {
             String encoded=value.substring(0,dot), signature=value.substring(dot+1);
             String body=new String(Base64.getUrlDecoder().decode(encoded),StandardCharsets.UTF_8);
             String[] parts=body.split("\\|",-1);
-            if(parts.length!=7)throw invalid();
-            String secret=parts[0].equals(currentKid)?currentKey:
-                    (parts[0].equals(previousKid)?previousKey:"");
+            if(parts.length!=11)throw invalid();
+            if(!"agent-squad-gateway".equals(parts[0]) || !"agent-squad-server".equals(parts[1]))throw invalid();
+            String secret=parts[2].equals(currentKid)?currentKey:
+                    (parts[2].equals(previousKid)?previousKey:"");
             if(secret.getBytes(StandardCharsets.UTF_8).length<32)throw invalid();
             Mac mac=Mac.getInstance("HmacSHA256");
             mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8),"HmacSHA256"));
             byte[] expected=mac.doFinal(encoded.getBytes(StandardCharsets.US_ASCII));
             if(!MessageDigest.isEqual(expected,Base64.getUrlDecoder().decode(signature)))throw invalid();
-            long expiry=Long.parseLong(parts[4]),now=Instant.now().getEpochSecond();
-            if(expiry<now-5||expiry>now+35)throw invalid();
-            if(!parts[5].equals(request.getMethod())||!parts[6].equals(request.getRequestURI()))throw invalid();
-            if(!parts[1].matches("[0-9a-fA-F-]{36}")||!List.of("ADMIN","USER").contains(parts[3]))throw invalid();
-            return new AuthView(parts[1],parts[2],List.of(parts[3]),null);
+            long issued=Long.parseLong(parts[6]),expiry=Long.parseLong(parts[7]),now=Instant.now().getEpochSecond();
+            if(issued>now+5||issued<now-35||expiry<now-5||expiry>issued+30)throw invalid();
+            if(!parts[8].equals(request.getMethod())||!parts[9].equals(request.getRequestURI()))throw invalid();
+            if(!parts[3].matches("[0-9a-fA-F-]{36}")||!List.of("ADMIN","USER").contains(parts[5]))throw invalid();
+            if(!parts[10].matches("[0-9a-fA-F-]{36}"))throw invalid();
+            return new AuthView(parts[3],parts[4],List.of(parts[5]),null);
         }catch(IllegalArgumentException|java.security.GeneralSecurityException ex) {
             throw invalid();
         }

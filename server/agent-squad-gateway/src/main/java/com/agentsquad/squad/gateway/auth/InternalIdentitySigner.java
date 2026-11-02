@@ -31,10 +31,13 @@ public class InternalIdentitySigner {
             if(strict) throw new IllegalStateException("内部签名密钥缺失");
             return null;
         }
-        long expires=Instant.now().getEpochSecond()+30;
+        long issued=Instant.now().getEpochSecond();
+        long expires=issued+30;
         String role=actor.roles().getFirst();
-        String value=String.join("|",keyId,actor.userId(),actor.username(),role,
-                Long.toString(expires),method,path);
+        String requestId=java.util.UUID.randomUUID().toString();
+        String value=String.join("|","agent-squad-gateway","agent-squad-server",keyId,
+                actor.userId(),actor.username(),role,Long.toString(issued),Long.toString(expires),
+                method,path,requestId);
         String payload=Base64.getUrlEncoder().withoutPadding()
                 .encodeToString(value.getBytes(StandardCharsets.UTF_8));
         try {
