@@ -4,9 +4,14 @@ import com.agentsquad.squad.conversation.domain.RuntimeAdmissionSlot;
 import com.agentsquad.squad.conversation.repository.RuntimeAdmissionMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+
+import java.util.Set;
+import java.util.List;
 
 /**
  * 原生运行持久容量管理。
@@ -20,7 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class RuntimeAdmissionService {
 
     private static final String GLOBAL_POOL = "GLOBAL";
-    private static final String ACTIVE = "ACTIVE";
+    private static final Set<String> SUBMISSION_ACTIONS = Set.of(
+            "SUBMIT", "MESSAGE_SUBMIT", "MASTER_SIGNAL", "TASK_DIRECTIVE");
 
     @Resource
     private RuntimeAdmissionMapper mapper;
@@ -34,10 +40,14 @@ public class RuntimeAdmissionService {
     @Value("${agentsquad.delivery.admission.per-user-limit:2}")
     private int perUserLimit;
 
+    @Value("${agentsquad.delivery.admission.audit-max-pools:10}")
+    private int auditMaxPools;
+
     /**
      * 与 CommandClaimService.claim 共用事务；抛出容量异常时整个命令领取回滚。
      * STOP 只负责停止原有运行，不占用新的执行配额。
      */
+    @Transactional(propagation = Propagation.MANDATORY)
     public void acquire(String userId, String bindingId, String commandId, String action) {
         if (!enabled || "STOP".equals(action)) {
             return;
@@ -83,24 +93,49 @@ public class RuntimeAdmissionService {
      * 收到原生投递回执后关联真实 Turn，不立即释放执行容量。
      * 兼容同命令重投；未知回执保持原占位供下一次投影或运维核对。
      */
+    /**
+     * 先按照全局、用户、Binding 的统一锁序绑定回执。
+     * 普通提交若已有本次 Turn 的持久结束水位，说明结束事件早于回执到达；
+     * 在同一事务内补偿释放。RESUME/RESPOND 无法仅凭旧 Turn 断言新 Run 已结束。
+     */
     @Transactional
     public void bindReceipt(String userId, String bindingId, String commandId,
                             String action, String turnId) {
         if (!enabled || "STOP".equals(action)) {
             return;
         }
+
+        String userPool = poolKey(userId);
+        lockPools(userPool);
+        RuntimeAdmissionSlot slot = mapper.lockSlot(bindingId);
+        if (slot == null || !slot.active() || !userId.equals(slot.userId())
+                || !commandId.equals(slot.commandId())) {
+            log.debug("命令回执未命中活动容量占位 commandId={} bindingId={}", commandId, bindingId);
+            return;
+        }
+
         String resolvedTurn = turnId;
         if (resolvedTurn == null && "RESPOND".equals(action)) {
             resolvedTurn = mapper.findPriorTurn(userId, bindingId);
         }
         if (resolvedTurn == null || resolvedTurn.isBlank()) {
-            log.warn("原生运行占位缺少可核对 Turn，暂不释放 commandId={} bindingId={}", commandId, bindingId);
+            log.warn("原生运行回执缺少可核对 Turn，暂保留占位 commandId={} bindingId={}",
+                    commandId, bindingId);
             return;
         }
-        int changed = mapper.bindTurn(userId, bindingId, commandId, resolvedTurn);
-        if (changed != 1) {
-            // 已结束回合或并发恢复期间可能已经释放，占位归属无法确认时拒绝修改其他命令。
-            log.warn("原生运行占位绑定回执未命中 commandId={} bindingId={}", commandId, bindingId);
+        if (slot.turnId() != null && !slot.turnId().equals(resolvedTurn)) {
+            throw new IllegalStateException("相同命令的原生 Turn 与已冻结占位不一致");
+        }
+        if (mapper.bindTurn(userId, bindingId, commandId, resolvedTurn) != 1) {
+            throw new IllegalStateException("原生运行回执绑定时占位状态已变化");
+        }
+
+        if (SUBMISSION_ACTIONS.contains(action)
+                && resolvedTurn.equals(mapper.findLastProjectedEndedTurn(userId, bindingId))) {
+            // 新提交的原生 Turn 已在收据到达前结束；不会根据旧 RESUME/RESPOND Turn 自动放行。
+            releaseSlot(slot, userPool);
+            log.info("延迟回执已按持久结束事实补偿释放 commandId={} bindingId={}",
+                    commandId, bindingId);
         }
     }
 
@@ -108,6 +143,7 @@ public class RuntimeAdmissionService {
      * 必须在 NativeProjectionService.accept 的原生日志水位事务内调用。
      * 若投递回执尚未来得及绑定，则从原命令持久收据中补查 Turn。
      */
+    @Transactional(propagation = Propagation.MANDATORY)
     public void releaseEnded(String userId, String bindingId, String turnId) {
         if (!enabled || turnId == null || turnId.isBlank()) {
             return;
@@ -119,12 +155,13 @@ public class RuntimeAdmissionService {
         if (slot == null || !slot.active() || !userId.equals(slot.userId())) {
             return;
         }
+        if (!SUBMISSION_ACTIONS.contains(slot.action())) {
+            // RESUME/RESPOND 可能复用旧 Turn。仅 Turn 相同不足以确认本次 Run 结束。
+            return;
+        }
         String expectedTurn = slot.turnId();
         if (expectedTurn == null) {
             expectedTurn = mapper.findCommandTurn(userId, slot.commandId());
-        }
-        if (expectedTurn == null && "RESPOND".equals(slot.action())) {
-            expectedTurn = mapper.findPriorTurn(userId, bindingId);
         }
         if (!turnId.equals(expectedTurn)) {
             return;
@@ -149,6 +186,22 @@ public class RuntimeAdmissionService {
             return;
         }
         releaseSlot(slot, userPool);
+    }
+
+    /**
+     * 周期性只读巡检全局与用户计数；发现漂移只告警，不在原生事实未知时重建或释放占位。
+     */
+    @Scheduled(fixedDelayString = "${agentsquad.delivery.admission.audit-delay-ms:60000}")
+    public void auditCounters() {
+        if (!enabled) {
+            return;
+        }
+        int limit = Math.min(Math.max(auditMaxPools, 1), 100);
+        List<String> mismatches = mapper.findCounterMismatches(limit);
+        if (!mismatches.isEmpty()) {
+            log.error("持久运行占位与配额计数存在差异 mismatchPools={} truncated={}",
+                    mismatches.size(), mismatches.size() == limit);
+        }
     }
 
     private void releaseSlot(RuntimeAdmissionSlot slot, String userPool) {

@@ -4,6 +4,8 @@ import com.agentsquad.squad.conversation.domain.RuntimeAdmissionSlot;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
+
 /**
  * 持久原生运行占位的数据访问接口。
  *
@@ -39,6 +41,11 @@ public interface RuntimeAdmissionMapper {
 
     String findPriorTurn(@Param("userId") String userId,
                          @Param("bindingId") String bindingId);
+
+    String findLastProjectedEndedTurn(@Param("userId") String userId,
+                                     @Param("bindingId") String bindingId);
+
+    List<String> findCounterMismatches(@Param("limit") int limit);
 
     int releaseSlot(@Param("userId") String userId,
                     @Param("bindingId") String bindingId,

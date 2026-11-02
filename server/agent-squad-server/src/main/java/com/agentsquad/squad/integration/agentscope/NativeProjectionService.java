@@ -148,7 +148,6 @@ public class NativeProjectionService {
                     && !"FAILED".equals(scopeMapper.lockTaskOwner(target.userId(), target.taskId(), scope.scopeId()).status())) {
                 failures.resolve(target.userId(), target.bindingId());
             }
-            projectionMapper.recordEndedTurn(target.userId(), target.bindingId(), event.turnId());
             projectionMapper.settleControls(target.userId(), target.bindingId());
             masterSignalService.onMasterTurnEnded(target.userId(), target.taskId(), event.turnId());
         } else if ("interaction/requested".equals(event.type())) {
@@ -157,8 +156,11 @@ public class NativeProjectionService {
             resolveInteraction(target, event);
         }
         if ("run/end".equals(event.type())) {
-            // 与原生事件水位在同一事务内核对并释放；崩溃回放不会二次扣减。
-            admission.releaseEnded(target.userId(), target.bindingId(), event.turnId());
+            // 所有 Master/Worker/普通回复的原生结束事实均与投影水位同事务保存。
+            if (event.turnId() != null && !event.turnId().isBlank()) {
+                projectionMapper.recordEndedTurn(target.userId(), target.bindingId(), event.turnId());
+                admission.releaseEnded(target.userId(), target.bindingId(), event.turnId());
+            }
         }
         if (projectionMapper.advanceCursor(target.userId(), target.bindingId(), cursor, event.sequence()) != 1) {
             throw new IllegalStateException("原生日志投影水位竞争");

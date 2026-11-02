@@ -6,6 +6,16 @@
 >
 > 用户要求暂时跳过测试环节，当前所有功能验证、构建及回归结果均为 NOT_RUN。GitHub 写入成功不是编译通过。
 
+## 2026-11-02 C2 批次：Slot 恢复一致性补强（NOT_RUN）
+
+- 改造回执绑定的锁序及事务内核对，普通提交的 `run/end` 先到、回执后到时按原 Turn 补偿释放容量。
+- Master、Worker 和普通回复统一写入 `last_ended_turn_id`，与原生事件投影水位同事务完成。
+- 对 RESUME/RESPOND 的旧 Turn 复用不做不可靠自动回收；无法确认新 Run 结束时保守保留 Slot。
+- 补齐原生调用前确定性拒绝的占位清理，以及单条命令异常不影响批量扫描。
+- 增加全局和每用户占位计数只读巡检，异常只告警不自动调整；更新设计与回归清单。
+
+**状态：源码完成 / 编译、MySQL、SDK、事务并发、恢复与压测全部 NOT_RUN。** 
+
 ## 2026-11-02 C2 批次：持久原生运行容量 Slot（NOT_RUN）
 
 - 新增 `sq_runtime_admission_counter` 与 `sq_runtime_admission_slot`，使用固定 Binding、原命令 ID 与原生 Turn 持久定位运行占位。

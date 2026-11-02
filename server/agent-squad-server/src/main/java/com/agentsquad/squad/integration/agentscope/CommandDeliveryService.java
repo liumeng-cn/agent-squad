@@ -85,7 +85,13 @@ public class CommandDeliveryService {
     public void deliverDue() {
         List<String> commandIds = deliveryMapper.findDueIds(now());
         for (String commandId : commandIds) {
-            deliver(commandId);
+            try {
+                deliver(commandId);
+            } catch (Exception exception) {
+                // 单条命令异常不得阻断同批其他用户的命令；本次未领取成功的命令由下轮扫描重试。
+                log.warn("持久命令调度异常 commandId={} errorType={}",
+                        commandId, exception.getClass().getSimpleName(), exception);
+            }
         }
     }
 
@@ -101,6 +107,11 @@ public class CommandDeliveryService {
             }
         } catch (RuntimeAdmissionBusyException exception) {
             // 等待下次公平扫描；领取事务回滚后命令仍处于原待领取状态。
+            return;
+        } catch (org.springframework.web.server.ResponseStatusException exception) {
+            // 用户被禁用后不应停止整个投递轮询；受理记录与原命令保持不变。
+            log.debug("命令领取因用户状态被拒绝 commandId={} status={}",
+                    commandId, exception.getStatusCode().value());
             return;
         }
         DeliveryRow delivery = deliveryMapper.findClaimed(commandId, token);
@@ -131,7 +142,10 @@ public class CommandDeliveryService {
                 case STOP -> deliverStop(commandId, token, delivery);
                 case RESUME -> deliverResume(commandId, token, delivery);
                 case RESPOND -> deliverRespond(commandId, token, delivery);
-                case DELETE_CONVERSATION -> fail(commandId, token, delivery.attempts(), "UNDELIVERABLE_ACTION");
+                case DELETE_CONVERSATION -> {
+                    admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
+                    fail(commandId, token, delivery.attempts(), "UNDELIVERABLE_ACTION");
+                }
             }
         } catch (com.agentsquad.squad.runtime.domain.ExecutionContextInvalidatedException exception) {
             restrictions.restrict(delivery.userId(), scopes.scopeForSession(delivery.userId(), delivery.sessionId()), delivery.bindingId());
@@ -180,6 +194,8 @@ public class CommandDeliveryService {
         String turnId = deliveryMapper.findSubmitTurnId(delivery.userId(), delivery.taskId(),
                 delivery.bindingId());
         if (turnId == null) {
+            // 未进入 SDK，恢复命令确定没有启动新的原生 Run。
+            admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
             retry(commandId, token, delivery.attempts(), "NATIVE_TURN_MISSING");
             return;
         }
@@ -225,6 +241,7 @@ public class CommandDeliveryService {
         String requestId = payload.path("requestId").textValue();
         String answerText = payload.path("answerText").textValue();
         if (requestId == null || requestId.isBlank() || answerText == null) {
+            admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
             retry(commandId, token, delivery.attempts(), "INVALID_PAYLOAD");
             return;
         }
