@@ -7,5 +7,6 @@ server:
 agentsquad:
   identity:
     strict: true
+    enforce-user-status: true
   fault:
     after-inflight-exit: false
