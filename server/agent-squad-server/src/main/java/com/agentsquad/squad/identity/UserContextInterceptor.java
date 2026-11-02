@@ -49,7 +49,8 @@ public class UserContextInterceptor implements HandlerInterceptor {
 
         String userId = request.getHeader("X-User-Id");
         String role = request.getHeader("X-User-Role");
-        if (userId == null || role == null || (!"ADMIN".equals(role) && !"USER".equals(role))) {
+        if (userId == null || role == null
+                || (!"ADMIN".equals(role) && !"USER".equals(role) && !"OPERATOR".equals(role))) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "缺少有效的本地开发身份");
         }
         try {

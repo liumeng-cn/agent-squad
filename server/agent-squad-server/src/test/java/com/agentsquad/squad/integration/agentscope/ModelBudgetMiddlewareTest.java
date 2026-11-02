@@ -122,6 +122,7 @@ class ModelBudgetMiddlewareTest {
         profiles.setModelProfiles(Map.of("default", profile));
 
         ModelBudgetMiddleware middleware = new ModelBudgetMiddleware();
+        ReflectionTestUtils.setField(middleware, "userStatus", new com.agentsquad.squad.identity.UserStatusGuard());
         ReflectionTestUtils.setField(middleware, "failures", spring.getBean(com.agentsquad.squad.runtime.service.ExecutionFailureService.class));
         ReflectionTestUtils.setField(middleware, "budgetMapper", spring.getBean(BudgetMapper.class));
         ReflectionTestUtils.setField(middleware, "budgetService", spring.getBean(BudgetService.class));

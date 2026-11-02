@@ -105,7 +105,7 @@ public class SignedIdentityVerifier {
             String requestId = UUID.fromString(fields[10]).toString();
             if (!userId.equalsIgnoreCase(fields[3]) || !requestId.equalsIgnoreCase(fields[10])
                     || fields[4].isBlank() || fields[4].length() > 64
-                    || !List.of("ADMIN", "USER").contains(fields[5])) {
+                    || !List.of("ADMIN", "USER", "OPERATOR").contains(fields[5])) {
                 throw invalid();
             }
             return new AuthView(userId, fields[4], List.of(fields[5]), null);

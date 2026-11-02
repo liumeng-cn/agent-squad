@@ -1,5 +1,5 @@
 {
-  "version": "0.2.1",
+  "version": "0.2.2",
   "status": "design-only",
   "routes": [
     {
@@ -117,6 +117,35 @@
       ],
       "cases": [
         "B13"
+      ]
+    },
+    {
+      "page": "changePassword",
+      "route": "/app/account/password",
+      "roles": [
+        "USER"
+      ],
+      "operations": [
+        "changePassword"
+      ],
+      "cases": [
+        "B16"
+      ]
+    },
+    {
+      "page": "adminUsers",
+      "route": "/app/admin/users",
+      "roles": [
+        "ADMIN"
+      ],
+      "operations": [
+        "listUsers",
+        "createUser",
+        "updateUser",
+        "resetUserPassword"
+      ],
+      "cases": [
+        "B17"
       ]
     },
     {

@@ -8,7 +8,7 @@ Web 工作台以连续对话为入口，负责消息与后台工作的统一正�
 
 ### Requirement: 信息架构与权限
 
-页面 MUST 以对话为默认入口，包含登录、对话、技能、连接设置、记忆设置和管理员能力设置；普通用户完成回复、工作控制、追问、审批、核对与下载不依赖任务详情路由。角色只控制导航与体验，服务端授权决定访问权。路由模板：`/login`、`/app/conversations/:conversationId?`、`/app/tasks/:taskId`（定位所属对话）、`/app/skills`、`/app/settings/connections`、`/app/settings/memory`、`/app/admin/workers`。
+页面 MUST 以对话为默认入口，包含登录、对话、技能、连接设置、记忆设置、账号改密和管理员能力设置；普通用户完成回复、工作控制、追问、审批、核对与下载不依赖任务详情路由。角色只控制导航与体验，服务端授权决定访问权。路由模板：`/login`、`/app/conversations/:conversationId?`、`/app/tasks/:taskId`（定位所属对话）、`/app/skills`、`/app/settings/connections`、`/app/settings/memory`、`/app/account/password`、`/app/admin/users`、`/app/admin/workers`。
 
 #### Scenario: 未登录转登录（B01）
 - **WHEN** 进入页面先取 currentUser，未登录或登录失效
@@ -17,6 +17,14 @@ Web 工作台以连续对话为入口，负责消息与后台工作的统一正�
 #### Scenario: 管理员不默认越权（B14）
 - **WHEN** 普通用户直达管理员能力设置页或越权调用其接口
 - **THEN** 页面无操作入口，直接请求仍被后端拒绝；管理员也不隐式获得读取其他用户内容权限
+
+#### Scenario: 首次改密与临时密码（B16）
+- **WHEN** 登录账号被标记首次改密，或管理员重置了用户密码
+- **THEN** 路由强制进入改密页，完成后回到原目标；临时密码只在当次结果中显示，离开或刷新后清屏，不写入本地持久存储
+
+#### Scenario: 管理员分页与并发冲突（B17）
+- **WHEN** 管理员加载更多用户，或对已被他人修改的用户提交更新
+- **THEN** 按游标逐页加载且不重复；版本冲突提示后刷新列表，不静默覆盖，也不因分页把管理员自己锁在最后一页之外
 
 ### Requirement: 提交目标与恢复显示
 
