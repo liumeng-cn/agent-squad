@@ -150,6 +150,14 @@ public class ArtifactService {
         return mapper.listScopeIds(userId, scopeId).stream().map(id -> get(userId, id)).toList();
     }
 
+    /**
+     * 校验产物已关联到指定执行作用域，供按需读取附件的工具入口使用。
+     */
+    public boolean isLinkedToScope(String userId, String scopeId, String id) {
+        scopeService.requireReadable(userId, scopeId);
+        return mapper.listScopeIds(userId, scopeId).contains(id);
+    }
+
     private ArtifactView sameUpload(String userId, ArtifactRow row, String name, String hash) {
         if (row == null || !row.fileName().equals(name) || !row.sha256().equals(hash)) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同上传键的文件不一致");

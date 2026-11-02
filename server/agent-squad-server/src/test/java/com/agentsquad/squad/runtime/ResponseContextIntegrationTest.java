@@ -94,6 +94,42 @@ class ResponseContextIntegrationTest {
         }
     }
 
+    @Test
+    void freezesMaterialContentIntoSnapshot(@TempDir Path directory) throws Exception {
+        String owner = UUID.randomUUID().toString();
+        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), owner)) {
+            String file = context.getBean(ArtifactService.class).upload(owner, "material", "facts.json",
+                    "{\"name\":\"小明\"}".getBytes(StandardCharsets.UTF_8)).artifactId();
+            MessageReceipt receipt = MessageAcceptanceHttpTest.send(context, MessageAcceptanceHttpTest.actor(context),
+                    "/api/v1/conversations/messages", "with-file", Map.of("text", "分析材料", "artifactIds", List.of(file)));
+            JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
+            ResponseContextSnapshot snapshot = context.getBean(ResponseContextService.class).freeze(owner, binding(jdbc, receipt));
+            var material = snapshot.messages().getFirst().materials().getFirst();
+            assertThat(material.artifactId()).isEqualTo(file);
+            assertThat(material.fileName()).isEqualTo("facts.json");
+            assertThat(material.content()).contains("小明");
+            assertThat(material.truncated()).isFalse();
+        }
+    }
+
+    @Test
+    void largeMaterialIsTruncatedWithMarker(@TempDir Path directory) throws Exception {
+        String owner = UUID.randomUUID().toString();
+        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), owner)) {
+            String big = "x".repeat(25000);
+            String file = context.getBean(ArtifactService.class).upload(owner, "big-material", "large.txt",
+                    big.getBytes(StandardCharsets.UTF_8)).artifactId();
+            MessageReceipt receipt = MessageAcceptanceHttpTest.send(context, MessageAcceptanceHttpTest.actor(context),
+                    "/api/v1/conversations/messages", "big-file", Map.of("text", "分析", "artifactIds", List.of(file)));
+            JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
+            ResponseContextSnapshot snapshot = context.getBean(ResponseContextService.class).freeze(owner, binding(jdbc, receipt));
+            var material = snapshot.messages().getFirst().materials().getFirst();
+            assertThat(material.truncated()).isTrue();
+            assertThat(material.content()).contains("已截断");
+            assertThat(material.content().length()).isLessThan(25000);
+        }
+    }
+
     private String binding(JdbcTemplate jdbc, MessageReceipt receipt) {
         return jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id = ?", String.class, receipt.executionId());
     }

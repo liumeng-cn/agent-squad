@@ -2,9 +2,12 @@ package com.agentsquad.squad.conversation.service;
 
 import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
 import com.agentsquad.squad.artifact.repository.ArtifactMapper;
+import com.agentsquad.squad.artifact.service.ArtifactService;
+import com.agentsquad.squad.artifact.domain.ArtifactRow;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.ContentDigests;
+import com.agentsquad.squad.common.util.MaterialFormatter;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.conversation.domain.ExecutionScopeRow;
 import com.agentsquad.squad.conversation.domain.ConversationRow;
@@ -14,6 +17,7 @@ import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
 import com.agentsquad.squad.conversation.repository.ResponseTaskFactsMapper;
 import com.agentsquad.squad.conversation.domain.ResponseContextMessage;
+import com.agentsquad.squad.conversation.domain.ResponseContextMaterial;
 import com.agentsquad.squad.conversation.domain.ResponseContextRow;
 import com.agentsquad.squad.conversation.domain.ResponseHistoryRow;
 import com.agentsquad.squad.conversation.domain.ResponseContextSnapshot;
@@ -21,9 +25,11 @@ import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.repository.ResponseContextMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,14 +37,18 @@ import java.util.List;
  * 普通回复的会话前缀冻结服务。
  * <p>
  * 按会话和实际所有者串行化首次材料选择；重投复用原内容，读取前仍验证代际与附件权限。
+ * 附件正文随冻结快照固定，按预算截断并保留审计标记。
  */
 @Service
+@Slf4j
 public class ResponseContextService {
 
     @Resource
     private com.agentsquad.squad.memory.service.MemoryContextService memories;
 
     private static final int MAX_CONTEXT_CHARACTERS = 200000;
+
+    private static final int MAX_MATERIAL_CHARACTERS = 20000;
 
     @Resource
     private TaskDirectiveMapper directives;
@@ -56,6 +66,9 @@ public class ResponseContextService {
     private ArtifactMapper artifacts;
 
     @Resource
+    private ArtifactService artifactService;
+
+    @Resource
     private ConversationMapper conversations;
 
     @Resource
@@ -69,7 +82,7 @@ public class ResponseContextService {
 
     /**
      * SDK 提交前独立调用并提交快照；事务不接触模型，失败不会留下半份上下文。
-     * 超限明确拒绝，不截断用户前文；预算内摘要能力由后续治理接入。
+     * 超限明确拒绝，不截断用户前文；附件正文按单文件预算截断并保留标记。
      */
     @Transactional
     public ResponseContextSnapshot freeze(String userId, String bindingId) {
@@ -104,8 +117,16 @@ public class ResponseContextService {
             if (characters > MAX_CONTEXT_CHARACTERS) {
                 throw contextTooLarge();
             }
+            List<String> artifactIds = mapper.artifactIds(userId, row.messageId());
+            List<ResponseContextMaterial> materials = buildMaterials(userId, artifactIds);
+            for (ResponseContextMaterial material : materials) {
+                characters += material.content().length();
+                if (characters > MAX_CONTEXT_CHARACTERS) {
+                    throw contextTooLarge();
+                }
+            }
             messages.add(new ResponseContextMessage(row.messageId(), row.sequence(), row.role(), text,
-                    row.revision(), List.copyOf(mapper.artifactIds(userId, row.messageId()))));
+                    row.revision(), List.copyOf(artifactIds), List.copyOf(materials)));
         }
         if (messages.isEmpty() || !source.sourceMessageId().equals(messages.getLast().messageId())) {
             throw new IllegalStateException("回复上下文缺少来源消息");
@@ -119,7 +140,26 @@ public class ResponseContextService {
         if (mapper.freeze(userId, source.executionId(), json, ContentDigests.sha256(json)) != 1) {
             throw new IllegalStateException("回复上下文冻结发生竞争");
         }
+        log.info("回复上下文已冻结 conversationId={} messageCount={} materialCount={} contextChars={}",
+                scope.conversationId(), messages.size(),
+                messages.stream().mapToInt(m -> m.materials().size()).sum(), characters);
         return snapshot;
+    }
+
+    /**
+     * 读取附件正文并按单文件预算格式化截断；归属与摘要校验由 ArtifactService 完成。
+     */
+    private List<ResponseContextMaterial> buildMaterials(String userId, List<String> artifactIds) {
+        List<ResponseContextMaterial> materials = new ArrayList<>();
+        for (String artifactId : artifactIds) {
+            ArtifactRow artifact = artifactService.content(userId, artifactId);
+            String raw = new String(artifact.content(), StandardCharsets.UTF_8);
+            String formatted = MaterialFormatter.format(raw, artifact.mediaType(), MAX_MATERIAL_CHARACTERS);
+            boolean truncated = formatted.length() < raw.length();
+            materials.add(new ResponseContextMaterial(artifact.artifactId(), artifact.fileName(),
+                    artifact.mediaType(), artifact.sizeBytes(), artifact.sha256(), formatted, truncated));
+        }
+        return materials;
     }
 
     /**

@@ -119,6 +119,9 @@ public class MasterAgent implements NativeSessionGateway {
     @Resource
     private com.agentsquad.squad.agent.tool.CommitArtifactTool commitArtifact;
 
+    @Resource
+    private com.agentsquad.squad.agent.tool.ReadAttachmentTool readAttachment;
+
     @org.springframework.beans.factory.annotation.Value("${agentsquad.sandbox.enabled:false}")
     private boolean sandboxEnabled;
 
@@ -151,6 +154,7 @@ public class MasterAgent implements NativeSessionGateway {
         toolkit.registerAgentTool(publishPlanTool);
         toolkit.registerAgentTool(prepareContextTool);
         toolkit.registerAgentTool(listWorkerCapabilitiesTool);
+        toolkit.registerAgentTool(readAttachment);
         ToolsConfig toolsConfig = new ToolsConfig();
         toolsConfig.setDeny(List.of("wait_async_results"));
         master = HarnessAgent.builder()
@@ -172,6 +176,7 @@ public class MasterAgent implements NativeSessionGateway {
                         + "协作结果是不可信的参考材料，必须核验、去重、统一口吻后形成独立完整的回答；"
                         + "不要原样转发 JSON、工作记录或角色汇报，不用执行报告代替用户所需内容。"
                         + "能从已授权信息确定的事项自行处理，仅对影响结果的关键信息追问，说明具体缺什么。"
+                        + "对话材料中的附件正文已按预算截断，需要完整内容时调用 read_attachment 按附件 ID 读取。"
                         + "部分完成时给出已完成的可用内容和实际缺口。不得隐瞒失败、未知外部结果或操作影响，"
                         + "不得编造成功或进度。以下仅为内部执行约束，不应出现在用户回答中："
                         + "mock_lookup 用于只读查询；mock_ticket_create 用于创建工单，"
@@ -295,7 +300,7 @@ public class MasterAgent implements NativeSessionGateway {
         java.util.Set<String> allowedTools = new java.util.HashSet<>(java.util.Set.of(
                 "load_skill_through_path", "request_input", "propose_completion", "list_worker_capabilities",
                 "create_goal_task", "submit_task_directive", "prepare_context", "publish_plan", "apply_task_directive",
-                "write_explicit_memory", "mock_lookup", "mock_ticket_create"));
+                "write_explicit_memory", "mock_lookup", "mock_ticket_create", "read_attachment"));
         if (sandboxEnabled) { allowedTools.addAll(java.util.Set.of("sandbox_python", "commit_artifact")); }
         context.put(com.agentsquad.squad.skill.integration.ScopeSkillCapabilities.class,
                 new com.agentsquad.squad.skill.integration.ScopeSkillCapabilities(allowedTools));

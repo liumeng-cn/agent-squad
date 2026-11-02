@@ -28,7 +28,7 @@ Web 工作台 MUST 提供会话的持久消息记录、统一助手正文、真�
 
 ### Requirement: 产物治理
 
-Artifact 上传 READY 前 MUST 验证允许类型、大小与摘要；输入附件关联消息，交付物关联回复执行且可关联任务；Worker 通过 stage/commit 受控端口交付，归属删除先禁读、清运行引用后物理清理。
+Artifact 上传 READY 前 MUST 验证允许类型、大小与摘要；输入附件关联消息，交付物关联回复执行且可关联任务；Worker 通过 stage/commit 受控端口交付，归属删除先禁读、清运行引用后物理清理。附件正文在回复上下文冻结时注入模型，按单文件预算截断并保留审计标记；大文件可通过 read_attachment 工具按需读取完整内容。
 
 #### Scenario: 越权下载拒绝（B10）
 - **WHEN** 下载不存在或越权产物
@@ -37,6 +37,10 @@ Artifact 上传 READY 前 MUST 验证允许类型、大小与摘要；输入附�
 #### Scenario: 交付校验
 - **WHEN** Worker 交付文件
 - **THEN** Operation/Job guard、写空间与文件 hash 全部匹配才置 READY
+
+#### Scenario: 材料正文注入
+- **WHEN** 回复上下文冻结且消息关联附件
+- **THEN** 附件正文按媒体类型格式化后随快照固定，计入上下文预算；超长截断并标记，模型可通过 read_attachment 读取完整内容
 
 ### Requirement: 预算治理
 
