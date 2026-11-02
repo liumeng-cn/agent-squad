@@ -28,6 +28,8 @@ public class RuntimeAdmissionService {
     private static final Set<String> SUBMISSION_ACTIONS = Set.of(
             "SUBMIT", "MESSAGE_SUBMIT", "MASTER_SIGNAL", "TASK_DIRECTIVE");
 
+    private static final Set<String> RECOVERY_ACTIONS = Set.of("RESUME", "RESPOND");
+
     @Resource
     private RuntimeAdmissionMapper mapper;
 
@@ -57,6 +59,12 @@ public class RuntimeAdmissionService {
             throw new IllegalStateException("运行占位缺少用户或命令归属");
         }
 
+        // 以领取时的原生投影水位为屏障；只允许后续新 run/start 绑定恢复命令。
+        Long claimCursor = mapper.lockBindingCursor(userId, bindingId);
+        if (claimCursor == null) {
+            throw new IllegalStateException("运行绑定不存在，无法获取容量占位");
+        }
+
         String userPool = poolKey(userId);
         mapper.ensureCounter(GLOBAL_POOL);
         mapper.ensureCounter(userPool);
@@ -80,8 +88,8 @@ public class RuntimeAdmissionService {
         }
 
         int changed = existing == null
-                ? mapper.createSlot(userId, bindingId, commandId, action)
-                : mapper.activateSlot(userId, bindingId, commandId, action);
+                ? mapper.createSlot(userId, bindingId, commandId, action, claimCursor)
+                : mapper.activateSlot(userId, bindingId, commandId, action, claimCursor);
         if (changed != 1 || mapper.increment(GLOBAL_POOL) != 1
                 || mapper.increment(userPool) != 1) {
             throw new IllegalStateException("原生运行容量占位和计数写入不一致");
@@ -89,10 +97,6 @@ public class RuntimeAdmissionService {
         log.info("原生运行占位已获取 commandId={} bindingId={}", commandId, bindingId);
     }
 
-    /**
-     * 收到原生投递回执后关联真实 Turn，不立即释放执行容量。
-     * 兼容同命令重投；未知回执保持原占位供下一次投影或运维核对。
-     */
     /**
      * 先按照全局、用户、Binding 的统一锁序绑定回执。
      * 普通提交若已有本次 Turn 的持久结束水位，说明结束事件早于回执到达；
@@ -140,12 +144,26 @@ public class RuntimeAdmissionService {
     }
 
     /**
-     * 必须在 NativeProjectionService.accept 的原生日志水位事务内调用。
-     * 若投递回执尚未来得及绑定，则从原命令持久收据中补查 Turn。
+     * 原生 run/start 到达后，为恢复/交互答复占位记录本次新 Run。
+     * 仅识别领取时原生投影水位之后的事件，操作与事件投影同事务。
      */
     @Transactional(propagation = Propagation.MANDATORY)
-    public void releaseEnded(String userId, String bindingId, String turnId) {
-        if (!enabled || turnId == null || turnId.isBlank()) {
+    public void recordRunStarted(String userId, String bindingId, String runId, long sequence) {
+        if (!enabled || runId == null || runId.isBlank() || sequence <= 0) {
+            return;
+        }
+        if (mapper.bindRecoveryRun(userId, bindingId, runId, sequence) == 1) {
+            log.info("恢复类原生运行已关联 bindingId={} runId={}", bindingId, runId);
+        }
+    }
+
+    /**
+     * 在原生事件投影水位事务内核对并释放 Slot。
+     * 普通提交按 Turn 识别；恢复/答复必须匹配新 Run ID。
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void releaseEnded(String userId, String bindingId, String turnId, String runId) {
+        if (!enabled || (turnId == null && runId == null)) {
             return;
         }
         String userPool = poolKey(userId);
@@ -155,8 +173,13 @@ public class RuntimeAdmissionService {
         if (slot == null || !slot.active() || !userId.equals(slot.userId())) {
             return;
         }
-        if (!SUBMISSION_ACTIONS.contains(slot.action())) {
-            // RESUME/RESPOND 可能复用旧 Turn。仅 Turn 相同不足以确认本次 Run 结束。
+        if (RECOVERY_ACTIONS.contains(slot.action())) {
+            if (runId != null && !runId.isBlank() && runId.equals(slot.runId())) {
+                releaseSlot(slot, userPool);
+            }
+            return;
+        }
+        if (!SUBMISSION_ACTIONS.contains(slot.action()) || turnId == null || turnId.isBlank()) {
             return;
         }
         String expectedTurn = slot.turnId();

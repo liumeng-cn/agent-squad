@@ -21,20 +21,30 @@ public interface RuntimeAdmissionMapper {
 
     RuntimeAdmissionSlot lockSlot(@Param("bindingId") String bindingId);
 
+    Long lockBindingCursor(@Param("userId") String userId,
+                           @Param("bindingId") String bindingId);
+
     int createSlot(@Param("userId") String userId,
                    @Param("bindingId") String bindingId,
                    @Param("commandId") String commandId,
-                   @Param("action") String action);
+                   @Param("action") String action,
+                   @Param("claimCursor") long claimCursor);
 
     int activateSlot(@Param("userId") String userId,
                      @Param("bindingId") String bindingId,
                      @Param("commandId") String commandId,
-                     @Param("action") String action);
+                     @Param("action") String action,
+                     @Param("claimCursor") long claimCursor);
 
     int bindTurn(@Param("userId") String userId,
                  @Param("bindingId") String bindingId,
                  @Param("commandId") String commandId,
                  @Param("turnId") String turnId);
+
+    int bindRecoveryRun(@Param("userId") String userId,
+                        @Param("bindingId") String bindingId,
+                        @Param("runId") String runId,
+                        @Param("eventSequence") long eventSequence);
 
     String findCommandTurn(@Param("userId") String userId,
                            @Param("commandId") String commandId);

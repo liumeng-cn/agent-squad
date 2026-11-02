@@ -8,3 +8,5 @@
 - `V3__runtime_admission.sql` 新增两张原生运行容量表；启用 `SQUAD_ADMISSION_ENABLED=true` 前必须由 DBA 在隔离环境核验 V3 迁移和计数一致性。
 - 历史已发布的 V1/V2 不变；后续 schema 变更继续采用新的不可变增量 SQL。
 - 生产配置默认关闭运行占位功能；启用前应先处理在途 SDK 原生运行，避免没有被计入新配额的老任务产生并发超配。
+
+- `V4__admission_run_identity.sql` 在 V3 后新增 `run_id` 和 `claim_cursor` 字段，历史版本不得重写。

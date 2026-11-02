@@ -15,6 +15,13 @@
 - `NativeProjectionService.accept` 看到与占位 Turn 对应的 `run/end` 时，在原生事件持久水位事务内释放；重复事件不能重复计数。
 - 原生状态不确定、提交收据丢失或 Turn 无法对应时保持占位，不自动按 60 秒投递租约回收。
 
+## C2 恢复与交互答复的 Run ID 关联（NOT_RUN）
+
+- 固定命令领取时保存绑定的原生投影水位 `claim_cursor`。
+- `RESUME / RESPOND` 在后续 `run/start` 中绑定新 `run_id`，对应 `run/end` 匹配后释放容量。
+- 缺失 Run ID、没有新的 `run/start` 或结果不明时保留占位；V4 增量迁移在 V3 后执行。
+- **未验证风险**：旧 Run 的延迟 `run/start` 可能在冻结水位后到达，水位不足以严格证明命令与 Run 一一对应。功能维持默认关闭。
+
 ## C2 Slot 恢复一致性补强（NOT_RUN）
 
 本批实现了可确认的延迟回执补偿，并收紧了尚无 SDK 证据的自动释放条件。

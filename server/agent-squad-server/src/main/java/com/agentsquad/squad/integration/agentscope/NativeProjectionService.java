@@ -155,12 +155,15 @@ public class NativeProjectionService {
         } else if ("interaction/resolved".equals(event.type())) {
             resolveInteraction(target, event);
         }
+        if ("run/start".equals(event.type())) {
+            // 新 Run 必须在本次领取的原生水位之后出现；恢复和答复不复用旧 Turn 身份。
+            admission.recordRunStarted(target.userId(), target.bindingId(), event.runId(), event.sequence());
+        }
         if ("run/end".equals(event.type())) {
-            // 所有 Master/Worker/普通回复的原生结束事实均与投影水位同事务保存。
             if (event.turnId() != null && !event.turnId().isBlank()) {
                 projectionMapper.recordEndedTurn(target.userId(), target.bindingId(), event.turnId());
-                admission.releaseEnded(target.userId(), target.bindingId(), event.turnId());
             }
+            admission.releaseEnded(target.userId(), target.bindingId(), event.turnId(), event.runId());
         }
         if (projectionMapper.advanceCursor(target.userId(), target.bindingId(), cursor, event.sequence()) != 1) {
             throw new IllegalStateException("原生日志投影水位竞争");
