@@ -23,10 +23,10 @@ function inline(text: string): (string | VNode)[] {
  * 表格、引用和代码围栏的内容最终仍由 Vue 做文本转义。
  */
 function tableCells(line: string): string[] {
-  return line.trim().replace(/^\\|/, '').replace(/\\|$/, '').split('|').map(cell => cell.trim())
+  return line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(cell => cell.trim())
 }
 function isTableSeparator(line: string): boolean {
-  return /^\\s*\\|?\\s*:?-{3,}:?\\s*(?:\\|\\s*:?-{3,}:?\\s*)+\\|?\\s*$/.test(line)
+  return /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line)
 }
 function blocks(text: string): VNode[] {
   const lines = text.replace(/\r\n/g, '\n').split('\n')
@@ -42,10 +42,10 @@ function blocks(text: string): VNode[] {
     }
     if (line.trim().startsWith('>')) {
       const quote: string[] = []
-      while (index < lines.length && /^\\s*>/.test(lines[index]!)) {
-        quote.push(lines[index++]!.replace(/^\\s*> ?/, ''))
+      while (index < lines.length && /^\s*>/.test(lines[index]!)) {
+        quote.push(lines[index++]!.replace(/^\s*> ?/, ''))
       }
-      result.push(h('blockquote', blocks(quote.join('\\n'))))
+      result.push(h('blockquote', blocks(quote.join('\n'))))
       continue
     }
     if (index + 1 < lines.length && line.includes('|') && isTableSeparator(lines[index + 1]!)) {
