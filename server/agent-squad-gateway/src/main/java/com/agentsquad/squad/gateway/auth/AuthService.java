@@ -3,6 +3,8 @@ package com.agentsquad.squad.gateway.auth;
 import com.agentsquad.squad.gateway.exception.AuthenticationRequiredException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 import java.util.Map;
@@ -17,6 +19,15 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Service
 public class AuthService {
+
+    @Resource
+    private DatabaseAuthService database;
+
+    @Value("${agentsquad.auth.mode:local}")
+    private String mode;
+
+    private boolean persistent() { return "database".equalsIgnoreCase(mode); }
+
 
     @Value("${agentsquad.auth.username:}")
     private String configuredUsername;
@@ -36,6 +47,7 @@ public class AuthService {
      * 登录成功后生成不可预测的临时会话令牌，不记录密码。
      */
     public String login(String username, String password) {
+        if (persistent()) return database.login(username, password);
         if (configuredUsername.isBlank() || configuredPassword.isBlank()
                 || !configuredUsername.equals(username) || !configuredPassword.equals(password)) {
             throw new AuthenticationRequiredException();
@@ -50,6 +62,7 @@ public class AuthService {
      * 校验会话令牌并返回当前主体，失败时不泄露账号是否存在。
      */
     public AuthView authenticate(String token) {
+        if (persistent()) return database.authenticate(token);
         if (token == null || token.isBlank()) {
             throw new AuthenticationRequiredException();
         }
@@ -64,6 +77,7 @@ public class AuthService {
      * 写请求须同时持有 Cookie 和登录时签发的 CSRF 值；返回完整主体供服务层取归属与角色。
      */
     public AuthView authenticateWrite(String token, String csrfToken) {
+        if (persistent()) return database.authenticateWrite(token, csrfToken);
         AuthView view = authenticate(token);
         if (csrfToken == null || !view.csrfToken().equals(csrfToken)) {
             throw new AuthenticationRequiredException();
@@ -75,6 +89,7 @@ public class AuthService {
      * 注销当前会话，使后续请求立即失效。
      */
     public void logout(String token) {
+        if (persistent()) { database.logout(token); return; }
         if (token != null) {
             sessions.remove(token);
         }

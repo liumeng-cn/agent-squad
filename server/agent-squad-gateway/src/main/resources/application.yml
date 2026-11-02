@@ -5,8 +5,16 @@ server:
 gateway:
   business-service-url: ${SQUAD_BUSINESS_SERVICE_URL:http://127.0.0.1:18080}
 
+spring:
+  datasource:
+    url: ${SQUAD_DB_URL:jdbc:mysql://127.0.0.1:13306/agent_squad}
+    username: ${SQUAD_DB_USER:squad}
+    password: ${SQUAD_DB_PASSWORD:}
+
 agentsquad:
   auth:
+    # 显式设置 database 启用多用户持久会话；旧 local 模式仅供单机本地开发。
+    mode: ${SQUAD_AUTH_MODE:local}
     username: ${SQUAD_LOCAL_USER:}
     password: ${SQUAD_LOCAL_PASSWORD:}
     user-id: ${SQUAD_LOCAL_USER_ID:00000000-0000-0000-0000-000000000001}
