@@ -47,6 +47,7 @@ agentsquad:
   events:
     poll-threads: ${SQUAD_EVENT_POLL_THREADS:4}
     max-connections: ${SQUAD_EVENT_MAX_CONNECTIONS:100}
+    max-connections-per-user: ${SQUAD_EVENT_MAX_CONNECTIONS_PER_USER:5}
   model:
     api-key: ${SQUAD_MODEL_API_KEY:}
     base-url: ${SQUAD_MODEL_BASE_URL:}

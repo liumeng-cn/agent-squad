@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -36,12 +37,15 @@ public class ConversationEventStreamer {
 
     @Value("${agentsquad.events.max-connections:100}")
     private int maxConnections;
+    @Value("${agentsquad.events.max-connections-per-user:5}")
+    private int maxConnectionsPerUser;
+    private final ConcurrentHashMap<String,Integer> userConnections = new ConcurrentHashMap<>();
     private ScheduledThreadPoolExecutor executor;
     private Semaphore slots;
 
     @PostConstruct
     public void initialize() {
-        if (pollThreads < 1 || maxConnections < 1) {
+        if (pollThreads < 1 || maxConnections < 1 || maxConnectionsPerUser < 1) {
             throw new IllegalArgumentException("会话订阅配置无效");
         }
         slots = new Semaphore(maxConnections);
@@ -66,6 +70,12 @@ public class ConversationEventStreamer {
         if (!slots.tryAcquire()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "连接暂时繁忙，请稍后重试");
         }
+        int userCount = userConnections.compute(userId, (key, existing) -> existing == null ? 1 : existing + 1);
+        if (userCount > maxConnectionsPerUser) {
+            userConnections.compute(userId, (key, existing) -> existing == null || existing <= 1 ? null : existing - 1);
+            slots.release();
+            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "当前用户订阅连接已达上限");
+        }
         SseEmitter emitter = new SseEmitter(0L);
         AtomicReference<String> after = new AtomicReference<>(cursor);
         AtomicBoolean closed = new AtomicBoolean();
@@ -77,6 +87,7 @@ public class ConversationEventStreamer {
                 if (scheduled != null) {
                     scheduled.cancel(false);
                 }
+                userConnections.compute(userId, (key, existing) -> existing == null || existing <= 1 ? null : existing - 1);
                 slots.release();
             }
         };
