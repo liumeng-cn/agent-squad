@@ -33,6 +33,17 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../features/memory/views/MemorySettingsView.vue'),
   },
   {
+    path: '/app/account/password',
+    name: 'changePassword',
+    component: () => import('../features/auth/views/ChangePasswordView.vue'),
+  },
+  {
+    path: '/app/admin/users',
+    name: 'adminUsers',
+    component: () => import('../features/auth/views/AdminUsersView.vue'),
+    meta: { role: 'ADMIN' },
+  },
+  {
     path: '/app/admin/workers',
     name: 'workers',
     component: () => import('../features/workers/views/WorkerDefinitionsView.vue'),
@@ -62,6 +73,9 @@ router.beforeEach(async (to) => {
       name: 'login',
       query: to.fullPath === '/' ? {} : { redirect: to.fullPath },
     }
+  }
+  if (loggedIn && auth.user?.mustChangePassword && to.name !== 'changePassword' && to.name !== 'login') {
+    return { name: 'changePassword' }
   }
   if (loggedIn && to.name === 'login') {
     return { name: 'workspace' }
