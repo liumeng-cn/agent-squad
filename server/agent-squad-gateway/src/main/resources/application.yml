@@ -11,6 +11,8 @@ agentsquad:
     password: ${SQUAD_LOCAL_PASSWORD:}
     user-id: ${SQUAD_LOCAL_USER_ID:00000000-0000-0000-0000-000000000001}
     role: ${SQUAD_LOCAL_ROLE:ADMIN}
+    # 生产 HTTPS 部署必须设置 SQUAD_AUTH_COOKIE_SECURE=true；本地 HTTP 调试默认关闭。
+    cookie-secure: ${SQUAD_AUTH_COOKIE_SECURE:false}
 
 logging:
   level:
