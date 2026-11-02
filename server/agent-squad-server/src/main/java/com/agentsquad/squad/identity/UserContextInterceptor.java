@@ -2,6 +2,7 @@ package com.agentsquad.squad.identity;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.annotation.Resource;
 
 import java.util.List;
 
@@ -17,8 +18,16 @@ import org.springframework.web.servlet.HandlerInterceptor;
  */
 @Component
 public class UserContextInterceptor implements HandlerInterceptor {
+    @Resource
+    private SignedIdentityVerifier verifier;
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        AuthView assertion = verifier.verify(request);
+        if (assertion != null) {
+            request.setAttribute(UserContext.ATTRIBUTE, assertion);
+            return true;
+        }
+        // 无断言仅允许显式的本地非生产兼容模式，prod 配置严格拒绝。
         String userId = request.getHeader("X-User-Id");
         String role = request.getHeader("X-User-Role");
         if (userId == null || userId.isBlank() || role == null || role.isBlank()) {
