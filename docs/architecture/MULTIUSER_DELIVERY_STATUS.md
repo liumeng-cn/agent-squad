@@ -6,6 +6,16 @@
 >
 > 用户要求暂时跳过测试环节，当前所有功能验证、构建及回归结果均为 NOT_RUN。GitHub 写入成功不是编译通过。
 
+## 2026-11-02 C2 批次：到期命令公平扫描（NOT_RUN）
+
+- 调整 `DeliveryMapper.findDueIds`：从全局 `due_at,id` 前 20 条改为 MySQL 8 的 `ROW_NUMBER() OVER (PARTITION BY user_id)`，按用户轮次扫描到期命令。
+- `PENDING` 命令以 `due_at`、过期 `DELIVERING` 命令以 `delivery_lease_until` 作为排序时间；同用户内按时间、ID 稳定排序。
+- 过滤已经明确标记 `DISABLED` 的用户，让其历史待处理命令不反复占用轮询窗口；本地未注册账号仍由原命令领取规则处理。
+- 完整保留 `MESSAGE_SUBMIT` 先前回复阻断逻辑，命令领取、租约更新、AgentScope 原生幂等链路不变。
+- 回归及风险清单：`docs/architecture/C2_FAIR_DUE_SCAN.md`。
+
+**验收状态：** MySQL 8 执行计划、真实 SQL、Maven、回归、跨实例/压力及恢复场景均为 **NOT_RUN**。该批只解决候选扫描公平性，**不等同于 C2 完整的运行 Slot 公平调度或全链路容量隔离**。
+
 ## 2026-11-02 后续代码批次：C1 请求身份与订阅撤权（NOT_RUN）
 
 - Server 对正式请求要求有效网关 HMAC 身份断言；即使误开启本地身份兼容，strict 模式仍拒绝未签名身份。

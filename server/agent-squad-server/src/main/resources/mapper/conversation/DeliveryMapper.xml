@@ -25,48 +25,96 @@
         </constructor>
     </resultMap>
 
+    <!--
+        公平发现：每名用户按最早到期命令排序，先轮询各用户第1条，再轮询第2条。
+        这里仅筛选候选命令，最终权限、会话顺序与租约仍由 claim 事务校验。
+    -->
     <select id="findDueIds" resultType="java.lang.String">
-        SELECT command_id FROM sq_command
-        WHERE action IN ('SUBMIT',
-            'MESSAGE_SUBMIT',
-            'MASTER_SIGNAL',
-            'TASK_DIRECTIVE',
-            'STOP',
-            'RESUME',
-            'RESPOND')
-          AND ((status = 'PENDING' AND due_at &lt;= #{now})
-               OR (status = 'DELIVERING' AND delivery_lease_until &lt; #{now}))AND (sq_command.action &lt;&gt; 'MESSAGE_SUBMIT' OR NOT EXISTS (
-            SELECT 1
-            FROM sq_response_execution current_reply
-            JOIN sq_execution_scope current_scope
-              ON current_scope.user_id = current_reply.user_id
-             AND current_scope.scope_id = current_reply.scope_id
-            JOIN sq_message current_message
-              ON current_message.user_id = current_reply.user_id
-             AND current_message.message_id = current_reply.source_message_id
-            JOIN sq_response_execution earlier_reply
-              ON earlier_reply.user_id = current_reply.user_id
-             AND earlier_reply.conversation_id = current_reply.conversation_id
-            JOIN sq_execution_scope earlier_scope
-              ON earlier_scope.user_id = earlier_reply.user_id
-             AND earlier_scope.scope_id = earlier_reply.scope_id
-             AND earlier_scope.conversation_generation = current_scope.conversation_generation
-            JOIN sq_message earlier_message
-              ON earlier_message.user_id = earlier_reply.user_id
-             AND earlier_message.message_id = earlier_reply.source_message_id
-            WHERE current_reply.user_id = sq_command.user_id
-              AND current_reply.binding_id = sq_command.binding_id
-              AND COALESCE(earlier_reply.dispatch_sequence,
-            earlier_message.message_seq) &lt; COALESCE(current_reply.dispatch_sequence,
-            current_message.message_seq)
-              AND earlier_reply.del_flag = '0'
-              AND earlier_reply.status IN ('QUEUED',
-            'RUNNING',
-            'RECOVERING',
-            'RECONCILING',
-            'CANCELLING')
-        )) ORDER BY due_at,
-            id LIMIT 20
+        SELECT due.command_id
+        FROM (
+            SELECT
+                c.command_id,
+                c.id,
+                CASE
+                    WHEN c.status = 'DELIVERING' THEN c.delivery_lease_until
+                    ELSE c.due_at
+                END AS eligible_at,
+                ROW_NUMBER() OVER (
+                    PARTITION BY c.user_id
+                    ORDER BY
+                        CASE
+                            WHEN c.status = 'DELIVERING' THEN c.delivery_lease_until
+                            ELSE c.due_at
+                        END,
+                        c.id
+                ) AS user_position
+            FROM sq_command c
+            WHERE c.action IN (
+                'SUBMIT',
+                'MESSAGE_SUBMIT',
+                'MASTER_SIGNAL',
+                'TASK_DIRECTIVE',
+                'STOP',
+                'RESUME',
+                'RESPOND'
+            )
+              AND (
+                (c.status = 'PENDING' AND c.due_at &lt;= #{now})
+                OR (c.status = 'DELIVERING' AND c.delivery_lease_until &lt; #{now})
+              )
+              AND NOT EXISTS (
+                SELECT 1
+                FROM sq_user blocked_user
+                WHERE blocked_user.user_id = c.user_id
+                  AND blocked_user.status = 'DISABLED'
+                  AND blocked_user.del_flag = '0'
+              )
+              AND (
+                c.action &lt;&gt; 'MESSAGE_SUBMIT'
+                OR NOT EXISTS (
+                    SELECT 1
+                    FROM sq_response_execution current_reply
+                    INNER JOIN sq_execution_scope current_scope
+                        ON current_scope.user_id = current_reply.user_id
+                       AND current_scope.scope_id = current_reply.scope_id
+                    INNER JOIN sq_message current_message
+                        ON current_message.user_id = current_reply.user_id
+                       AND current_message.message_id = current_reply.source_message_id
+                    INNER JOIN sq_response_execution earlier_reply
+                        ON earlier_reply.user_id = current_reply.user_id
+                       AND earlier_reply.conversation_id = current_reply.conversation_id
+                    INNER JOIN sq_execution_scope earlier_scope
+                        ON earlier_scope.user_id = earlier_reply.user_id
+                       AND earlier_scope.scope_id = earlier_reply.scope_id
+                       AND earlier_scope.conversation_generation = current_scope.conversation_generation
+                    INNER JOIN sq_message earlier_message
+                        ON earlier_message.user_id = earlier_reply.user_id
+                       AND earlier_message.message_id = earlier_reply.source_message_id
+                    WHERE current_reply.user_id = c.user_id
+                      AND current_reply.binding_id = c.binding_id
+                      AND COALESCE(
+                            earlier_reply.dispatch_sequence,
+                            earlier_message.message_seq
+                          ) &lt; COALESCE(
+                            current_reply.dispatch_sequence,
+                            current_message.message_seq
+                          )
+                      AND earlier_reply.del_flag = '0'
+                      AND earlier_reply.status IN (
+                            'QUEUED',
+                            'RUNNING',
+                            'RECOVERING',
+                            'RECONCILING',
+                            'CANCELLING'
+                          )
+                )
+              )
+        ) due
+        ORDER BY
+            due.user_position,
+            due.eligible_at,
+            due.id
+        LIMIT 20
     </select>
 
     <update id="claim">
