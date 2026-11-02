@@ -36,7 +36,7 @@
 - [x] 4.1 生成合并清单：以 V1 baseline（15 张表）为基础，逐文件应用 V2-V18 DDL（CREATE TABLE + ALTER），生成表/列/索引/约束/审计字段完整清单。验证：清单含 V1 15 张 + V2-V18 新增 29 张 = 44 张表（含 3 张 agentscope 框架表）。
 - [x] 4.2 合并到单一 baseline：V1-V18 结构变更合并为 V1__baseline.sql（FK 顺序、审计字段口径、中文注释），删除 V2-V18 SQL 文件。验证：`python3 tools/check_design.py` 全量通过（DDL/OpenAPI/链接/FK/示例校验，44 张表）；`grep -l "sq_plan\|sq_worker_job\|sq_artifact\|sq_message" V1__baseline.sql` 命中。合并遗漏的 V18 `sq_memory.active_key` 生成列与 `uk_memory_active_key` 已补回，由 `MemoryIntegrationTest` 覆盖。
 - [x] 4.3 处理 Java 迁移：确认 Flyway 依赖与 V8/V14 Java 回填迁移已移除，旧结构 SQL 归档不再被引用并删除。验证：`grep -r "flyway\|Backfill" server/` 无实现残留；`mvn -f server/pom.xml -B -ntp test` 通过。
-- [ ] 4.4 重建开发库（由用户执行）：执行下方 SQL 后启动业务服务，由 `spring.sql.init` 重放 `V1__baseline.sql`。验证：`SHOW TABLES FROM agent_squad` 与 baseline 的 44 张表一致，启动无建表错误。
+- [x] 4.4 重建开发库（由用户执行）：执行下方 SQL 后启动业务服务，由 `spring.sql.init` 重放 `V1__baseline.sql`。验证：`SHOW TABLES FROM agent_squad` 与 baseline 的 44 张表一致，启动无建表错误。已在 127.0.0.1:13306 执行重建，后端启动生成 44 张表且无错误。
 
   ```sql
   DROP DATABASE IF EXISTS `agent_squad`;
