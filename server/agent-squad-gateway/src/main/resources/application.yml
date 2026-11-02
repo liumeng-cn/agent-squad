@@ -19,6 +19,11 @@ agentsquad:
   auth:
     # 显式设置 database 启用多用户持久会话；旧 local 模式仅供单机本地开发。
     mode: ${SQUAD_AUTH_MODE:local}
+    bootstrap:
+      enabled: ${SQUAD_BOOTSTRAP_ADMIN_ENABLED:false}
+      username: ${SQUAD_BOOTSTRAP_ADMIN_USER:}
+      password: ${SQUAD_BOOTSTRAP_ADMIN_PASSWORD:}
+      user-id: ${SQUAD_BOOTSTRAP_ADMIN_USER_ID:}
     username: ${SQUAD_LOCAL_USER:}
     password: ${SQUAD_LOCAL_PASSWORD:}
     user-id: ${SQUAD_LOCAL_USER_ID:00000000-0000-0000-0000-000000000001}
