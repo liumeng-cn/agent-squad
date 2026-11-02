@@ -144,8 +144,14 @@ public class PlanService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已不能发布计划");
         }
         long goalRevision = directives.goalState(userId, context.taskId()).goalRevision();
-        if (!directives.pending(userId, context.taskId()).isEmpty()) {
-            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "尚有目标修改待处理，请先应用或拒绝后再发布计划");
+        List<String> pendingDirectives = directives.pending(userId, context.taskId());
+        if (!pendingDirectives.isEmpty()) {
+            // 规划中插入的用户补充不能让模型猜测 directiveId；
+            // 必须提供同一目标的真实指令ID，让 Master 先完成确定性的修改协调。
+            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
+                    "尚有目标修改待处理；请使用 directiveId=" + pendingDirectives.getFirst()
+                    + " 调用 apply_task_directive（不是 sourceMessageId），"
+                    + "完成 APPLY/REJECT 后重新 prepare_context 和 publish_plan");
         }
         PlanRow existing = planMapper.findLatestByLogicalKey(context.taskId(), publish.logicalKey());
         if (existing != null) {
