@@ -24,5 +24,5 @@
 
 ## 4. 完成门槛
 - [x] C1.4.1 `mvn -f server/pom.xml -B -ntp test`、`npm --prefix web/console run build`、`python3 tools/check_design.py` 实际通过；环境跳过逐项记录，不允许写“全部通过”掩盖 skipped。
-- [ ] C1.4.2 使用两个真实账号验证登录、修改密码、退出、管理员禁用、越权、SSE、发送消息、断网后快照恢复；两个网关实例同库读取同一 Session。将 HTTP 状态、DB 状态与结果存 `evidence/acceptance.md`，不记录密钥/Token。
-- [ ] C1.4.3 提交本阶段代码/契约/文档与验收证据；未确认所有门槛前禁止启动 C2；禁止生产 DDL、部署或推送线上服务。
+- [x] C1.4.2 使用两个真实账号验证登录、修改密码、退出、管理员禁用、越权、SSE、发送消息、断网后快照恢复；两个网关实例同库读取同一 Session。将 HTTP 状态、DB 状态与结果存 `evidence/acceptance.md`，不记录密钥/Token。
+- [x] C1.4.3 提交本阶段代码/契约/文档与验收证据；未确认所有门槛前禁止启动 C2；禁止生产 DDL、部署或推送线上服务。
