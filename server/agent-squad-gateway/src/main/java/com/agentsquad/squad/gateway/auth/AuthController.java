@@ -3,6 +3,8 @@ package com.agentsquad.squad.gateway.auth;
 import com.agentsquad.squad.gateway.exception.AuthenticationRequiredException;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Value;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import org.springframework.http.HttpCookie;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
@@ -32,6 +34,9 @@ public class AuthController {
     @Resource
     private AuthService authService;
 
+    @Resource
+    private DatabaseAuthService users;
+
     @Value("${agentsquad.auth.cookie-secure:false}")
     private boolean secureCookie;
 
@@ -39,21 +44,24 @@ public class AuthController {
      * 登录成功后写入 HttpOnly 会话 Cookie。
      */
     @PostMapping("/login")
-    public AuthView login(@RequestBody LoginRequest request, ServerHttpResponse response) {
+    public Mono<AuthView> login(@RequestBody LoginRequest request, ServerHttpResponse response) {
         response.getHeaders().set(HttpHeaders.CACHE_CONTROL, "no-store");
-        String token = authService.login(request.username(), request.password());
-        response.getHeaders().add(HttpHeaders.SET_COOKIE, ResponseCookie.from(SESSION_COOKIE, token)
-                .httpOnly(true).secure(secureCookie).sameSite("Lax").path("/").build().toString());
-        return authService.authenticate(token);
+        return Mono.fromCallable(() -> {
+            String token = authService.login(request.username(), request.password());
+            response.getHeaders().add(HttpHeaders.SET_COOKIE, ResponseCookie.from(SESSION_COOKIE, token)
+                    .httpOnly(true).secure(secureCookie).sameSite("Lax").path("/").build().toString());
+            return authService.authenticate(token);
+        }).subscribeOn(Schedulers.boundedElastic());
     }
 
     /**
      * 返回当前会话主体。
      */
     @GetMapping("/me")
-    public AuthView me(ServerHttpRequest request, ServerHttpResponse response) {
+    public Mono<AuthView> me(ServerHttpRequest request, ServerHttpResponse response) {
         response.getHeaders().set(HttpHeaders.CACHE_CONTROL, "no-store");
-        return authService.authenticate(readToken(request));
+        return Mono.fromCallable(() -> authService.authenticate(readToken(request)))
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     /**
@@ -61,13 +69,26 @@ public class AuthController {
      */
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void logout(ServerHttpRequest request, ServerHttpResponse response,
+    public Mono<Void> logout(ServerHttpRequest request, ServerHttpResponse response,
                        @RequestHeader("X-CSRF-Token") String csrfToken) {
         response.getHeaders().set(HttpHeaders.CACHE_CONTROL, "no-store");
-        authService.authenticateWrite(readToken(request), csrfToken);
-        authService.logout(readToken(request));
-        response.getHeaders().add(HttpHeaders.SET_COOKIE, ResponseCookie.from(SESSION_COOKIE, "")
-                .httpOnly(true).sameSite("Lax").path("/").maxAge(0).build().toString());
+        return Mono.fromRunnable(() -> {
+            authService.authenticateWrite(readToken(request), csrfToken);
+            authService.logout(readToken(request));
+            response.getHeaders().add(HttpHeaders.SET_COOKIE, ResponseCookie.from(SESSION_COOKIE, "")
+                    .httpOnly(true).secure(secureCookie).sameSite("Lax").path("/").maxAge(0).build().toString());
+        }).subscribeOn(Schedulers.boundedElastic()).then();
+    }
+
+    @PostMapping("/password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> changePassword(ServerHttpRequest request,ServerHttpResponse response,
+            @RequestHeader("X-CSRF-Token") String csrf,@RequestBody PasswordChangeRequest change) {
+        response.getHeaders().set(HttpHeaders.CACHE_CONTROL,"no-store");
+        return Mono.fromRunnable(() -> {
+            authService.authenticateWrite(readToken(request),csrf);
+            users.changePassword(readToken(request),change);
+        }).subscribeOn(Schedulers.boundedElastic()).then();
     }
 
     private String readToken(ServerHttpRequest request) {

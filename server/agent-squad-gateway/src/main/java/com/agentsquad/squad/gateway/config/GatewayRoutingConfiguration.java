@@ -18,7 +18,7 @@ public class GatewayRoutingConfiguration {
     public RouteLocator businessRoutes(RouteLocatorBuilder builder,
                                        @Value("${gateway.business-service-url}") String businessUrl) {
         return builder.routes().route("business", route -> route.path("/api/**")
-                .and().not(other -> other.path("/api/v1/auth/**"))
+                .and().not(other -> other.path("/api/v1/auth/**", "/api/v1/admin/users", "/api/v1/admin/users/**"))
                 .uri(businessUrl)).build();
     }
 }
