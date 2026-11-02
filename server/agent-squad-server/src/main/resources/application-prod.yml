@@ -8,6 +8,7 @@ agentsquad:
   identity:
     strict: true
     enforce-user-status: true
+    allow-unsigned-local: false
   fault:
     after-inflight-exit: false
 

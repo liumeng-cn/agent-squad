@@ -2,6 +2,7 @@ package com.agentsquad.squad.presentation.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.identity.UserStatusGuard;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
@@ -31,6 +32,9 @@ import java.util.concurrent.atomic.AtomicReference;
 public class ConversationEventStreamer {
     @Resource
     private ConversationQueryService queries;
+
+    @Resource
+    private UserStatusGuard userStatus;
 
     @Value("${agentsquad.events.poll-threads:4}")
     private int pollThreads;
@@ -66,6 +70,7 @@ public class ConversationEventStreamer {
      * 先校验游标再占用名额；清理以原子标记保证完成、异常和超时只释放一次。
      */
     public SseEmitter stream(String userId, String conversationId, String cursor) {
+        userStatus.requireActive(userId);
         queries.events(userId, conversationId, cursor);
         if (!slots.tryAcquire()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "连接暂时繁忙，请稍后重试");
@@ -99,6 +104,8 @@ public class ConversationEventStreamer {
                 return;
             }
             try {
+                // SSE 后续轮询不会重新经过网关登录校验，禁用用户后必须停止事件推送。
+                userStatus.requireActive(userId);
                 for (var event : queries.events(userId, conversationId, after.get())) {
                     String next = queries.eventCursor(event);
                     emitter.send(SseEmitter.event().name("message").id(next).data(event, MediaType.APPLICATION_JSON));
