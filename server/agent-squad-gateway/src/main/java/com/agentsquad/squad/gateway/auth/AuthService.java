@@ -4,7 +4,6 @@ import com.agentsquad.squad.gateway.exception.AuthenticationRequiredException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.Resource;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 import java.util.Map;
@@ -70,7 +69,7 @@ public class AuthService {
         if (session == null) {
             throw new AuthenticationRequiredException();
         }
-        return new AuthView(session.userId(), session.username(), List.of(session.role()), session.csrfToken());
+        return new AuthView(session.userId(), session.username(), List.of(session.role()), session.csrfToken(), false);
     }
 
     /**

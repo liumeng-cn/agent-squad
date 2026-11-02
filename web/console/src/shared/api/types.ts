@@ -7,6 +7,7 @@ export interface AuthView {
   username: string
   roles: string[]
   csrfToken: string
+  mustChangePassword: boolean
 }
 
 export interface ConversationResponse {

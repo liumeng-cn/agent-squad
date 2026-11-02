@@ -1,0 +1,10 @@
+agentsquad:
+  auth:
+    mode: database
+    cookie-secure: true
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 16
+server:
+  address: 0.0.0.0

@@ -88,13 +88,12 @@ public class DatabaseAuthService {
      * 只产生摘要入库；失败凭据和未知用户统一抛 401。
      * 限流记录以账号摘要为键并在同一 SQL 存储，避免多网关绕过。
      */
-    @Transactional
     public String login(String username, String password) {
         String name = normalize(username);
         String bucket = digest("login:" + name);
         LocalDateTime time = now();
         jdbc.update("INSERT IGNORE INTO sq_auth_rate_bucket(bucket_key,window_start,failures) VALUES(?,?,0)", bucket,time);
-        List<LocalDateTime> locks = jdbc.query("SELECT locked_until FROM sq_auth_rate_bucket WHERE bucket_key=? FOR UPDATE",
+        List<LocalDateTime> locks = jdbc.query("SELECT locked_until FROM sq_auth_rate_bucket WHERE bucket_key=?",
                 (rs,i) -> rs.getTimestamp(1)==null?null:rs.getTimestamp(1).toLocalDateTime(),bucket);
         if (!locks.isEmpty() && locks.getFirst()!=null && locks.getFirst().isAfter(time)) {
             throw new AuthenticationRequiredException();
@@ -102,10 +101,11 @@ public class DatabaseAuthService {
         AccountRecord account = find(name);
         boolean ok = account != null && password != null && passwordEncoder.matches(password,account.passwordHash());
         if (!ok || !"ACTIVE".equals(account.status())) {
-            jdbc.update("UPDATE sq_auth_rate_bucket SET window_start=CASE WHEN window_start<? THEN ? ELSE window_start END,"
-                            + "failures=CASE WHEN window_start<? THEN 1 ELSE failures+1 END,"
-                            + "locked_until=CASE WHEN window_start>=? AND failures>=4 THEN ? ELSE NULL END WHERE bucket_key=?",
-                    time.minusMinutes(15),time,time.minusMinutes(15),time.minusMinutes(15),time.plusMinutes(15),bucket);
+            jdbc.update("UPDATE sq_auth_rate_bucket SET failures=CASE WHEN window_start<? THEN 1 ELSE failures+1 END,"
+                            + "locked_until=CASE WHEN window_start>=? AND failures>=4 THEN ? ELSE NULL END,"
+                            + "window_start=CASE WHEN window_start<? THEN ? ELSE window_start END WHERE bucket_key=?",
+                    time.minusMinutes(15),time.minusMinutes(15),time.plusMinutes(15),
+                    time.minusMinutes(15),time,bucket);
             throw new AuthenticationRequiredException();
         }
         jdbc.update("UPDATE sq_auth_rate_bucket SET failures=0,locked_until=NULL,window_start=? WHERE bucket_key=?",time,bucket);
@@ -141,7 +141,7 @@ public class DatabaseAuthService {
                             + "WHERE token_hash=? AND revoked_at IS NULL AND last_seen_at<?",
                     time,time.plusHours(24),digest(token),time.minusMinutes(5));
         }
-        return new AuthView(account.userId(),account.username(),List.of(account.role()),csrf(token));
+        return new AuthView(account.userId(),account.username(),List.of(account.role()),csrf(token),account.mustChangePassword());
     }
 
     public AuthView authenticateWrite(String token,String csrfToken) {
@@ -170,7 +170,7 @@ public class DatabaseAuthService {
     }
 
     private void requireAdmin(AuthView actor) {
-        if(actor==null || !actor.roles().contains("ADMIN")) throw new AuthForbiddenException();
+        if(actor==null || !actor.roles().contains("ADMIN") || actor.mustChangePassword()) throw new AuthForbiddenException();
     }
 
     @Transactional

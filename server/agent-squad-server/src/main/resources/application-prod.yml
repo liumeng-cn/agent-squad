@@ -1,0 +1,9 @@
+spring:
+  sql:
+    init:
+      mode: never
+server:
+  address: 0.0.0.0
+agentsquad:
+  fault:
+    after-inflight-exit: false
