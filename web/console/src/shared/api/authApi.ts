@@ -37,8 +37,10 @@ export function changePasswordApi(currentPassword: string, newPassword: string):
   return apiPost('/api/v1/auth/password', { currentPassword, newPassword })
 }
 
-export function adminUsersApi(): Promise<AdminUserPage> {
-  return apiGet('/api/v1/admin/users?limit=100')
+export function adminUsersApi(cursor?: string): Promise<AdminUserPage> {
+  const params = new URLSearchParams({ limit: '100' })
+  if (cursor) params.set('after', cursor)
+  return apiGet('/api/v1/admin/users?' + params.toString())
 }
 
 export function createUserApi(username: string, displayName: string, role: 'USER' | 'ADMIN'): Promise<CreatedUser> {
