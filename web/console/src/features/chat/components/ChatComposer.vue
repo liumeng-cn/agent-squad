@@ -2,6 +2,7 @@
 import { shouldSendOnEnter } from '../../../shared/lib/chatKeyboard'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useConversationsStore } from '../stores/conversations'
+import { useAuthStore } from '../../auth/stores/auth'
 import { uploadArtifact, type Artifact } from '../../../shared/api/taskDetailsApi'
 import { ApiError, errorMessage } from '../../../shared/api/http'
 import { newIdempotencyKey } from '../../../shared/lib/idempotency'
@@ -10,6 +11,7 @@ import type { MessageReceipt } from '../../../shared/api/chatApi'
 const props = defineProps<{ conversationId: string | null; draftRevision: number }>()
 const emit = defineEmits<{ accepted: [receipt: MessageReceipt] }>()
 const chat = useConversationsStore()
+const auth = useAuthStore()
 interface Upload { id: string; file: File; key: string; status: 'uploading' | 'ready' | 'failed'; artifact?: Artifact; error?: string }
 const draft = ref('')
 const uploads = ref<Upload[]>([])
@@ -24,7 +26,44 @@ const blocked = computed(() => chat.submitting || chat.unavailable || uploads.va
 const canSend = computed(() => !blocked.value && !!draft.value.trim() && draft.value.length <= 20000)
 const activeAnswer = computed(() => chat.latestExecution)
 const canStop = computed(() => activeAnswer.value?.allowedActions.includes('STOP'))
-watch(() => [props.conversationId, props.draftRevision], () => { generation++; draft.value = ''; uploads.value = []; error.value = ''; uncertain.value = false; attempt = null; void nextTick(resize) })
+// 草稿按 userId+conversationId 分区；仅保存文本/幂等键，不把浏览器 File 或凭据持久化。
+function draftKey(conversationId: string | null): string {
+  return 'agentsquad:draft:' + (auth.user?.userId || 'anonymous') + ':' + (conversationId || 'new')
+}
+function saveDraft(key: string) {
+  try {
+    if (draft.value || attempt) {
+      sessionStorage.setItem(key, JSON.stringify({ text: draft.value, attempt: uploads.value.length ? null : attempt }))
+    } else {
+      sessionStorage.removeItem(key)
+    }
+  } catch { /* 隐私模式或容量不足时仅保存在组件内存 */ }
+}
+function restoreDraft(key: string) {
+  draft.value = ''; attempt = null; uncertain.value = false
+  try {
+    const raw = sessionStorage.getItem(key)
+    if (!raw) return
+    const saved = JSON.parse(raw) as { text?: unknown; attempt?: { text: string; files: string[]; key: string } }
+    if (typeof saved.text === 'string') draft.value = saved.text.slice(0, 20000)
+    if (saved.attempt && typeof saved.attempt.key === 'string' && saved.attempt.text === draft.value
+        && Array.isArray(saved.attempt.files) && saved.attempt.files.length === 0) {
+      attempt = saved.attempt
+      uncertain.value = true
+    }
+  } catch { /* 无效草稿记录不阻断聊天 */ }
+}
+let previousKey = draftKey(props.conversationId)
+restoreDraft(previousKey)
+watch(() => [props.conversationId, props.draftRevision, auth.user?.userId], () => {
+  saveDraft(previousKey)
+  generation++; uploads.value = []; error.value = ''
+  previousKey = draftKey(props.conversationId)
+  restoreDraft(previousKey)
+  void nextTick(resize)
+})
+watch(draft, () => saveDraft(previousKey))
+
 function resize() { if (textarea.value) { textarea.value.style.height = 'auto'; textarea.value.style.height = `${Math.min(240, textarea.value.scrollHeight)}px` } }
 async function upload(id: string) {
   const current = generation
@@ -63,10 +102,12 @@ async function send() {
     const receipt = await chat.send(attempt.text, attempt.files, attempt.key)
     if (current !== generation) return
     draft.value = ''; uploads.value = []; uncertain.value = false; attempt = null
+    try { sessionStorage.removeItem(previousKey) } catch { /* 私密模式 */ }
     resize(); emit('accepted', receipt)
   } catch (cause) {
     if (current !== generation) return
     uncertain.value = cause instanceof ApiError && (cause.status === 0 || cause.status >= 500)
+    saveDraft(previousKey)
     error.value = uncertain.value ? '暂时还未确认是否收到。内容已保留，请点击发送按钮确认，重复确认不会重复发送。' : errorMessage(cause)
   }
 }
@@ -74,7 +115,7 @@ function enter(event: KeyboardEvent) {
   if (!shouldSendOnEnter(event, composing.value)) return
   event.preventDefault(); void send()
 }
-onBeforeUnmount(() => { generation++ })
+onBeforeUnmount(() => { saveDraft(previousKey); generation++ })
 </script>
 
 <template>
