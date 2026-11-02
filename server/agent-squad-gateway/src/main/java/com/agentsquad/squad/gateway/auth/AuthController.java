@@ -2,6 +2,7 @@ package com.agentsquad.squad.gateway.auth;
 
 import com.agentsquad.squad.gateway.exception.AuthenticationRequiredException;
 import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpCookie;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
@@ -31,14 +32,18 @@ public class AuthController {
     @Resource
     private AuthService authService;
 
+    @Value("${agentsquad.auth.cookie-secure:false}")
+    private boolean secureCookie;
+
     /**
      * 登录成功后写入 HttpOnly 会话 Cookie。
      */
     @PostMapping("/login")
     public AuthView login(@RequestBody LoginRequest request, ServerHttpResponse response) {
+        response.getHeaders().set(HttpHeaders.CACHE_CONTROL, "no-store");
         String token = authService.login(request.username(), request.password());
         response.getHeaders().add(HttpHeaders.SET_COOKIE, ResponseCookie.from(SESSION_COOKIE, token)
-                .httpOnly(true).sameSite("Lax").path("/").build().toString());
+                .httpOnly(true).secure(secureCookie).sameSite("Lax").path("/").build().toString());
         return authService.authenticate(token);
     }
 
@@ -46,7 +51,8 @@ public class AuthController {
      * 返回当前会话主体。
      */
     @GetMapping("/me")
-    public AuthView me(ServerHttpRequest request) {
+    public AuthView me(ServerHttpRequest request, ServerHttpResponse response) {
+        response.getHeaders().set(HttpHeaders.CACHE_CONTROL, "no-store");
         return authService.authenticate(readToken(request));
     }
 
@@ -57,6 +63,7 @@ public class AuthController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void logout(ServerHttpRequest request, ServerHttpResponse response,
                        @RequestHeader("X-CSRF-Token") String csrfToken) {
+        response.getHeaders().set(HttpHeaders.CACHE_CONTROL, "no-store");
         authService.authenticateWrite(readToken(request), csrfToken);
         authService.logout(readToken(request));
         response.getHeaders().add(HttpHeaders.SET_COOKIE, ResponseCookie.from(SESSION_COOKIE, "")
