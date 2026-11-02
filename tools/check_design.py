@@ -47,10 +47,10 @@ def check():
                 continue
             assert (path.parent / target.split("#")[0]).exists(), (path, target)
 
-    schema_file = ROOT / "server/agent-squad-server/src/main/resources/db/schema.sql"
+    schema_file = ROOT / "server/agent-squad-server/src/main/resources/db/migration/V1__baseline.sql"
     assert schema_file.is_file(), "最终表结构 SQL 不存在或路径失效"
     sql = schema_file.read_text().replace("`", "")
-    definitions = re.findall(r"CREATE TABLE (\w+)\s*\((.*?)\n\) ENGINE", sql, re.S)
+    definitions = re.findall(r"CREATE TABLE (?:IF NOT EXISTS )?(\w+)\s*\((.*?)\n\) ENGINE", sql, re.S)
     business = [(name, body) for name, body in definitions if name.startswith("sq_")]
     non_column_tokens = {
         "PRIMARY", "UNIQUE", "KEY", "CONSTRAINT", "CHECK", "FOREIGN", "INDEX",
@@ -293,7 +293,7 @@ def check():
     )
     print("Configuration schema, sample and cross-field design limits valid")
     print("Conversation SSE, workspace actions and migrated runtime ownership fields valid")
-    print("Final schema: server/agent-squad-server/src/main/resources/db/schema.sql")
+    print(f"Final schema: {schema_file.relative_to(ROOT)} ({len(definitions)} tables)")
     print("Static design validation only; no SQL execution or runtime verification.")
 
 

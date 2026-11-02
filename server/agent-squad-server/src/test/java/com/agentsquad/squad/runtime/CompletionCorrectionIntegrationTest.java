@@ -263,7 +263,6 @@ class CompletionCorrectionIntegrationTest {
                 "--spring.datasource.url=" + databaseUrl,
                 "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
                 "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
-                "--spring.flyway.enabled=true",
                 "--agentsquad.delivery.enabled=true",
                 "--agentsquad.delivery.poll-delay-ms=3600000",
                 "--agentsquad.projection.poll-delay-ms=3600000",

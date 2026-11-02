@@ -58,7 +58,6 @@ class MySqlKnowledgeGovernanceTest {
             assertThatThrownBy(() -> gate.requireScopeCurrent(user, scope)).hasMessageContaining("旧上下文");
             memories.delete(user, memory.memory().memoryId(), 1);
             assertThat(jdbc.queryForObject("SELECT content FROM sq_memory WHERE memory_id=?", String.class, memory.memory().memoryId())).isEmpty();
-            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM flyway_schema_history WHERE version='17' AND success=1", Integer.class)).isEqualTo(1);
         }
     }
 }

@@ -7,8 +7,10 @@ spring:
     url: ${SQUAD_DB_URL:jdbc:mysql://127.0.0.1:13306/agent_squad}
     username: ${SQUAD_DB_USER:squad}
     password: ${SQUAD_DB_PASSWORD:}
-  flyway:
-    enabled: true
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/migration/V1__baseline.sql
   servlet:
     multipart:
       max-file-size: 10MB

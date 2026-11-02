@@ -219,21 +219,20 @@ class MemoryIntegrationTest {
     }
 
     @Test
-    void upgradesV17TombstonesWithoutChangingTheirIdentity(@TempDir Path directory) {
+    void upgradesV17TombstonesWithoutChangingTheirIdentity(@TempDir Path directory) throws Exception {
         String url = database(directory);
-        org.flywaydb.core.Flyway.configure().locations("classpath:db/legacy-migration", "classpath:legacy/migration").dataSource(url,
-                        com.agentsquad.squad.testsupport.MySqlTestDatabase.username(),
-                        com.agentsquad.squad.testsupport.MySqlTestDatabase.password())
-                .target("17").load().migrate();
         var dataSource = new org.springframework.jdbc.datasource.DriverManagerDataSource(url,
                 com.agentsquad.squad.testsupport.MySqlTestDatabase.username(),
                 com.agentsquad.squad.testsupport.MySqlTestDatabase.password());
         JdbcTemplate beforeUpgrade = new JdbcTemplate(dataSource);
+        org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(
+                beforeUpgrade.getDataSource().getConnection(),
+                new org.springframework.core.io.ClassPathResource("db/migration/V1__baseline.sql"));
         String user = UUID.randomUUID().toString();
         String oldId = UUID.randomUUID().toString();
         beforeUpgrade.update("INSERT INTO sq_memory (memory_id,user_id,memory_key,content,status,version) VALUES (?,?,?,'','DELETED',1)",
                 oldId, user, "可重新使用的键");
-        try (var context = start(url, "classpath:db/legacy-migration,classpath:legacy/migration")) {
+        try (var context = start(url, "classpath:db/migration/V1__baseline.sql")) {
             MemoryService service = context.getBean(MemoryService.class);
             String newId = service.create(user, new MemoryCreate("可重新使用的键", "升级后明确重新创建", null)).memory().memoryId();
             assertThat(newId).isNotEqualTo(oldId);
@@ -255,11 +254,12 @@ class MemoryIntegrationTest {
     }
 
     private ConfigurableApplicationContext start(String database) {
-        return start(database, "classpath:db/migration");
+        return start(database, "classpath:db/migration/V1__baseline.sql");
     }
 
     private ConfigurableApplicationContext start(String database, String locations) {
-        return SpringApplication.run(AgentSquadApplication.class, "--server.port=0", "--spring.flyway.locations=" + locations, "--spring.datasource.url=" + database,
+        return SpringApplication.run(AgentSquadApplication.class, "--server.port=0",
+                "--spring.sql.init.schema-locations=" + locations, "--spring.datasource.url=" + database,
                 "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.delivery.enabled=false", "--agentsquad.auth.username=tester", "--agentsquad.auth.password=test-only",
                 "--agentsquad.auth.role=USER", "--agentsquad.auth.user-id=" + UUID.randomUUID());

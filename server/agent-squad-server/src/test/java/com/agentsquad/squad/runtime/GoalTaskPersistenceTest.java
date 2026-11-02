@@ -30,7 +30,6 @@ class GoalTaskPersistenceTest {
                 "--spring.datasource.url=" + databaseUrl,
                 "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
                 "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
-                "--spring.flyway.enabled=true"
         };
         String userId = "00000000-0000-0000-0000-000000000001";
         String otherUser = "00000000-0000-0000-0000-000000000002";

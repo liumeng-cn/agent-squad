@@ -125,7 +125,7 @@ public class MasterAgent implements NativeSessionGateway {
     private HarnessAgent master;
 
     /**
-     * 启用投递前检查模型配置和 Flyway 表结构，再创建长生命周期 Master。
+     * 启用投递前检查模型配置和数据库表结构，再创建长生命周期 Master。
      */
     @PostConstruct
     public void initialize() {

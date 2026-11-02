@@ -1,4 +1,4 @@
-CREATE TABLE `agentscope_sessions`
+CREATE TABLE IF NOT EXISTS `agentscope_sessions`
 (
     `session_id` varchar(255) NOT NULL COMMENT '框架会话标识',
     `state_key`  varchar(255) NOT NULL COMMENT '框架状态键',
@@ -12,7 +12,7 @@ CREATE TABLE `agentscope_sessions`
 ) ENGINE = InnoDB
     COMMENT ='AgentScope 会话状态';
 
-CREATE TABLE `agentscope_snapshots`
+CREATE TABLE IF NOT EXISTS `agentscope_snapshots`
 (
     `snapshot_id` varchar(512) NOT NULL COMMENT '框架沙箱快照标识',
     `data`        longblob     NOT NULL COMMENT '沙箱快照字节',
@@ -21,7 +21,7 @@ CREATE TABLE `agentscope_snapshots`
 ) ENGINE = InnoDB
     COMMENT ='AgentScope 沙箱快照';
 
-CREATE TABLE `agentscope_store`
+CREATE TABLE IF NOT EXISTS `agentscope_store`
 (
     `namespace_path` varchar(255) NOT NULL COMMENT 'AgentScope 用户隔离与存储分区',
     `item_key`       varchar(512) NOT NULL COMMENT 'Workspace 与原生日志对象路径',
@@ -33,7 +33,7 @@ CREATE TABLE `agentscope_store`
 ) ENGINE = InnoDB
     COMMENT ='AgentScope JDBC 共享存储';
 
-CREATE TABLE `sq_artifact`
+CREATE TABLE IF NOT EXISTS `sq_artifact`
 (
     `id`                bigint       NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `artifact_id`       char(36)     NOT NULL COMMENT '产物业务ID',
@@ -59,7 +59,7 @@ CREATE TABLE `sq_artifact`
 ) ENGINE = InnoDB
     COMMENT ='小文件产物';
 
-CREATE TABLE `sq_artifact_stage`
+CREATE TABLE IF NOT EXISTS `sq_artifact_stage`
 (
     `id`                bigint       NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `stage_id`          char(36)     NOT NULL COMMENT '暂存产物业务ID',
@@ -90,7 +90,7 @@ CREATE TABLE `sq_artifact_stage`
 ) ENGINE = InnoDB
     COMMENT ='隔离产物受控暂存';
 
-CREATE TABLE `sq_budget_account`
+CREATE TABLE IF NOT EXISTS `sq_budget_account`
 (
     `id`                bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `account_id`        char(36)    NOT NULL COMMENT '预算账户业务ID',
@@ -111,7 +111,7 @@ CREATE TABLE `sq_budget_account`
 ) ENGINE = InnoDB
     COMMENT ='回复与任务共享预算账户';
 
-CREATE TABLE `sq_budget_reservation`
+CREATE TABLE IF NOT EXISTS `sq_budget_reservation`
 (
     `id`                bigint       NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `reservation_id`    char(36)     NOT NULL COMMENT '预留ID',
@@ -145,7 +145,7 @@ CREATE TABLE `sq_budget_reservation`
 ) ENGINE = InnoDB
     COMMENT ='全局预算预留及可信结算';
 
-CREATE TABLE `sq_command`
+CREATE TABLE IF NOT EXISTS `sq_command`
 (
     `id`                   bigint       NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `command_id`           char(36)     NOT NULL COMMENT '命令业务ID',
@@ -183,7 +183,7 @@ CREATE TABLE `sq_command`
 ) ENGINE = InnoDB
     COMMENT ='持久命令与幂等回执';
 
-CREATE TABLE `sq_connection`
+CREATE TABLE IF NOT EXISTS `sq_connection`
 (
     `id`                     bigint       NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `connection_id`          char(36)     NOT NULL COMMENT '连接业务ID',
@@ -209,7 +209,7 @@ CREATE TABLE `sq_connection`
 ) ENGINE = InnoDB
     COMMENT ='用户外部连接凭据引用';
 
-CREATE TABLE `sq_context_snapshot`
+CREATE TABLE IF NOT EXISTS `sq_context_snapshot`
 (
     `id`                      bigint       NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `snapshot_id`             char(36)     NOT NULL COMMENT '局部上下文快照业务ID',
@@ -239,7 +239,7 @@ CREATE TABLE `sq_context_snapshot`
 ) ENGINE = InnoDB
     COMMENT ='Worker授权局部上下文快照';
 
-CREATE TABLE `sq_conversation`
+CREATE TABLE IF NOT EXISTS `sq_conversation`
 (
     `id`                     bigint       NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `conversation_id`        char(36)     NOT NULL COMMENT '对话业务ID',
@@ -266,7 +266,7 @@ CREATE TABLE `sq_conversation`
 ) ENGINE = InnoDB
     COMMENT ='用户对话';
 
-CREATE TABLE `sq_conversation_event`
+CREATE TABLE IF NOT EXISTS `sq_conversation_event`
 (
     `id`                bigint       NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `user_id`           char(36)     NOT NULL COMMENT '资源归属用户ID',
@@ -290,7 +290,7 @@ CREATE TABLE `sq_conversation_event`
 ) ENGINE = InnoDB
     COMMENT ='会话一致前缀公开事件';
 
-CREATE TABLE `sq_execution_failure`
+CREATE TABLE IF NOT EXISTS `sq_execution_failure`
 (
     `id`                bigint       NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `failure_id`        char(36)     NOT NULL COMMENT '故障业务ID',
@@ -319,7 +319,7 @@ CREATE TABLE `sq_execution_failure`
 ) ENGINE = InnoDB
     COMMENT ='执行的结构化故障事实';
 
-CREATE TABLE `sq_execution_scope`
+CREATE TABLE IF NOT EXISTS `sq_execution_scope`
 (
     `id`                       bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `scope_id`                 char(36)    NOT NULL COMMENT '执行作用域业务ID',
@@ -347,7 +347,7 @@ CREATE TABLE `sq_execution_scope`
 ) ENGINE = InnoDB
     COMMENT ='统一执行归属与授权边界';
 
-CREATE TABLE `sq_goal_task`
+CREATE TABLE IF NOT EXISTS `sq_goal_task`
 (
     `id`                          bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `task_id`                     char(36)    NOT NULL COMMENT '目标业务ID',
@@ -388,7 +388,7 @@ CREATE TABLE `sq_goal_task`
 ) ENGINE = InnoDB
     COMMENT ='用户目标';
 
-CREATE TABLE `sq_interaction`
+CREATE TABLE IF NOT EXISTS `sq_interaction`
 (
     `id`                   bigint        NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `interaction_id`       char(36)      NOT NULL COMMENT '交互ID',
@@ -425,12 +425,13 @@ CREATE TABLE `sq_interaction`
 ) ENGINE = InnoDB
     COMMENT ='持久输入与审批请求';
 
-CREATE TABLE `sq_memory`
+CREATE TABLE IF NOT EXISTS `sq_memory`
 (
     `id`                bigint       NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `memory_id`         char(36)     NOT NULL COMMENT '记忆业务ID',
     `user_id`           char(36)     NOT NULL COMMENT '归属用户ID',
-    `memory_key`        varchar(100) NOT NULL COMMENT '用户记忆键',
+    `memory_key`        varchar(100) NOT NULL COMMENT '用户记忆键；删除后可由新记忆重复使用',
+    `active_key`        varchar(100) GENERATED ALWAYS AS (CASE WHEN `status` = 'ACTIVE' THEN `memory_key` ELSE NULL END) STORED COMMENT '有效记忆键；已删除记录为空以允许显式重新创建',
     `content`           text         NOT NULL COMMENT '显式记忆正文，删除后清空',
     `status`            varchar(16)  NOT NULL DEFAULT 'ACTIVE' COMMENT '记忆状态[ACTIVE,DELETED]',
     `version`           bigint       NOT NULL DEFAULT '0' COMMENT '记忆内容乐观版本',
@@ -446,11 +447,11 @@ CREATE TABLE `sq_memory`
     `del_flag`          char(1)      NOT NULL DEFAULT '0' COMMENT '删除标志[0-否,1-是]',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_memory_identity` (`user_id`, `memory_id`),
-    UNIQUE KEY `uk_memory_key` (`user_id`, `memory_key`),
+    UNIQUE KEY `uk_memory_active_key` (`user_id`, `active_key`),
     KEY `idx_memory_active` (`user_id`, `status`, `id`)
 ) ENGINE = InnoDB COMMENT ='用户显式长期记忆';
 
-CREATE TABLE `sq_memory_revision`
+CREATE TABLE IF NOT EXISTS `sq_memory_revision`
 (
     `id`                bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `user_id`           char(36)    NOT NULL COMMENT '归属用户ID',
@@ -467,7 +468,7 @@ CREATE TABLE `sq_memory_revision`
 ) ENGINE = InnoDB
     COMMENT ='用户记忆失效代际';
 
-CREATE TABLE `sq_memory_scope`
+CREATE TABLE IF NOT EXISTS `sq_memory_scope`
 (
     `id`                bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `user_id`           char(36)    NOT NULL COMMENT '归属用户ID',
@@ -486,7 +487,7 @@ CREATE TABLE `sq_memory_scope`
 ) ENGINE = InnoDB
     COMMENT ='执行固定的记忆授权视图';
 
-CREATE TABLE `sq_memory_scope_item`
+CREATE TABLE IF NOT EXISTS `sq_memory_scope_item`
 (
     `id`                bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `user_id`           char(36)    NOT NULL COMMENT '归属用户ID',
@@ -506,7 +507,7 @@ CREATE TABLE `sq_memory_scope_item`
 ) ENGINE = InnoDB
     COMMENT ='执行固定的记忆版本引用';
 
-CREATE TABLE `sq_memory_source`
+CREATE TABLE IF NOT EXISTS `sq_memory_source`
 (
     `id`                bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `user_id`           char(36)    NOT NULL COMMENT '归属用户ID',
@@ -527,7 +528,7 @@ CREATE TABLE `sq_memory_source`
 ) ENGINE = InnoDB
     COMMENT ='显式记忆原话来源和失效记录';
 
-CREATE TABLE `sq_memory_write_receipt`
+CREATE TABLE IF NOT EXISTS `sq_memory_write_receipt`
 (
     `id`                bigint       NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `user_id`           char(36)     NOT NULL COMMENT '归属用户ID',
@@ -547,7 +548,7 @@ CREATE TABLE `sq_memory_write_receipt`
 ) ENGINE = InnoDB
     COMMENT ='记忆工具的持久幂等收据';
 
-CREATE TABLE `sq_message`
+CREATE TABLE IF NOT EXISTS `sq_message`
 (
     `id`                bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `message_id`        char(36)    NOT NULL COMMENT '消息业务ID',
@@ -578,7 +579,7 @@ CREATE TABLE `sq_message`
 ) ENGINE = InnoDB
     COMMENT ='持久用户与助手消息账本';
 
-CREATE TABLE `sq_message_artifact`
+CREATE TABLE IF NOT EXISTS `sq_message_artifact`
 (
     `id`                bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `user_id`           char(36)    NOT NULL COMMENT '资源归属用户ID',
@@ -597,7 +598,7 @@ CREATE TABLE `sq_message_artifact`
 ) ENGINE = InnoDB
     COMMENT ='消息与产物归属关联';
 
-CREATE TABLE `sq_mock_ticket`
+CREATE TABLE IF NOT EXISTS `sq_mock_ticket`
 (
     `id`                bigint        NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `user_id`           char(36)      NOT NULL COMMENT '资源归属用户ID',
@@ -617,7 +618,7 @@ CREATE TABLE `sq_mock_ticket`
 ) ENGINE = InnoDB
     COMMENT ='本地模拟外部工单系统';
 
-CREATE TABLE `sq_operation`
+CREATE TABLE IF NOT EXISTS `sq_operation`
 (
     `id`                  bigint       NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `operation_id`        char(36)     NOT NULL COMMENT '操作ID',
@@ -661,7 +662,7 @@ CREATE TABLE `sq_operation`
 ) ENGINE = InnoDB
     COMMENT ='外部工具副作用账本';
 
-CREATE TABLE `sq_operation_reconciler`
+CREATE TABLE IF NOT EXISTS `sq_operation_reconciler`
 (
     `id`                bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `user_id`           char(36)    NOT NULL COMMENT '被授权核对用户ID',
@@ -680,7 +681,7 @@ CREATE TABLE `sq_operation_reconciler`
 ) ENGINE = InnoDB
     COMMENT ='操作核对显式授权范围';
 
-CREATE TABLE `sq_plan`
+CREATE TABLE IF NOT EXISTS `sq_plan`
 (
     `id`                bigint       NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `plan_id`           char(36)     NOT NULL COMMENT '计划业务ID',
@@ -709,7 +710,7 @@ CREATE TABLE `sq_plan`
 ) ENGINE = InnoDB
     COMMENT ='不可变协作计划DAG';
 
-CREATE TABLE `sq_response_execution`
+CREATE TABLE IF NOT EXISTS `sq_response_execution`
 (
     `id`                       bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `execution_id`             char(36)    NOT NULL COMMENT '回复执行业务ID',
@@ -750,7 +751,7 @@ CREATE TABLE `sq_response_execution`
 ) ENGINE = InnoDB
     COMMENT ='独立于目标任务的可靠回复执行';
 
-CREATE TABLE `sq_runtime_binding`
+CREATE TABLE IF NOT EXISTS `sq_runtime_binding`
 (
     `id`                   bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `binding_id`           char(36)    NOT NULL COMMENT '绑定业务ID',
@@ -778,7 +779,7 @@ CREATE TABLE `sq_runtime_binding`
 ) ENGINE = InnoDB
     COMMENT ='AgentScope会话绑定';
 
-CREATE TABLE `sq_sandbox_execution`
+CREATE TABLE IF NOT EXISTS `sq_sandbox_execution`
 (
     `id`                bigint       NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `execution_id`      char(36)     NOT NULL COMMENT '沙箱执行业务ID',
@@ -807,7 +808,7 @@ CREATE TABLE `sq_sandbox_execution`
 ) ENGINE = InnoDB
     COMMENT ='隔离沙箱执行账本';
 
-CREATE TABLE `sq_scope_artifact`
+CREATE TABLE IF NOT EXISTS `sq_scope_artifact`
 (
     `id`                bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `user_id`           char(36)    NOT NULL COMMENT '资源归属用户ID',
@@ -826,7 +827,7 @@ CREATE TABLE `sq_scope_artifact`
 ) ENGINE = InnoDB
     COMMENT ='执行作用域与产物关联';
 
-CREATE TABLE `sq_scope_skill_catalog`
+CREATE TABLE IF NOT EXISTS `sq_scope_skill_catalog`
 (
     `id`                bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `catalog_id`        char(36)    NOT NULL COMMENT '固定目录业务ID',
@@ -845,7 +846,7 @@ CREATE TABLE `sq_scope_skill_catalog`
 ) ENGINE = InnoDB
     COMMENT ='执行作用域固定技能目录';
 
-CREATE TABLE `sq_scope_skill_ref`
+CREATE TABLE IF NOT EXISTS `sq_scope_skill_ref`
 (
     `id`                     bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `reference_id`           char(36)    NOT NULL COMMENT '技能引用业务ID',
@@ -868,7 +869,7 @@ CREATE TABLE `sq_scope_skill_ref`
 ) ENGINE = InnoDB
     COMMENT ='执行作用域固定技能版本引用';
 
-CREATE TABLE `sq_secret_vault`
+CREATE TABLE IF NOT EXISTS `sq_secret_vault`
 (
     `id`                bigint          NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `secret_ref`        varchar(240)    NOT NULL COMMENT '密钥引用；格式 local-vault:keyId:uuid',
@@ -886,7 +887,7 @@ CREATE TABLE `sq_secret_vault`
 ) ENGINE = InnoDB
     COMMENT ='本地密钥保险库密文；不保存明文';
 
-CREATE TABLE `sq_skill_file`
+CREATE TABLE IF NOT EXISTS `sq_skill_file`
 (
     `id`                bigint       NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `skill_file_id`     char(36)     NOT NULL COMMENT '技能文件业务ID',
@@ -907,7 +908,7 @@ CREATE TABLE `sq_skill_file`
 ) ENGINE = InnoDB
     COMMENT ='技能版本只读文本文件';
 
-CREATE TABLE `sq_skill_grant`
+CREATE TABLE IF NOT EXISTS `sq_skill_grant`
 (
     `id`                bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `grant_id`          char(36)    NOT NULL COMMENT '技能授权业务ID',
@@ -928,7 +929,7 @@ CREATE TABLE `sq_skill_grant`
 ) ENGINE = InnoDB
     COMMENT ='用户技能版本使用授权';
 
-CREATE TABLE `sq_skill_version`
+CREATE TABLE IF NOT EXISTS `sq_skill_version`
 (
     `id`                     bigint        NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `skill_version_id`       char(36)      NOT NULL COMMENT '技能版本业务ID',
@@ -953,7 +954,7 @@ CREATE TABLE `sq_skill_version`
 ) ENGINE = InnoDB
     COMMENT ='用户技能不可变版本';
 
-CREATE TABLE `sq_task_artifact`
+CREATE TABLE IF NOT EXISTS `sq_task_artifact`
 (
     `id`                bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `user_id`           char(36)    NOT NULL COMMENT '归属用户ID',
@@ -973,7 +974,7 @@ CREATE TABLE `sq_task_artifact`
 ) ENGINE = InnoDB
     COMMENT ='目标与产物归属关联';
 
-CREATE TABLE `sq_task_directive`
+CREATE TABLE IF NOT EXISTS `sq_task_directive`
 (
     `id`                      bigint       NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `directive_id`            char(36)     NOT NULL COMMENT '目标修订指令业务ID',
@@ -1015,7 +1016,7 @@ CREATE TABLE `sq_task_directive`
 ) ENGINE = InnoDB
     COMMENT ='用户目标修改的持久受理与应用事实';
 
-CREATE TABLE `sq_task_event`
+CREATE TABLE IF NOT EXISTS `sq_task_event`
 (
     `id`                bigint       NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `user_id`           char(36)     NOT NULL COMMENT '资源归属用户ID',
@@ -1038,7 +1039,7 @@ CREATE TABLE `sq_task_event`
 ) ENGINE = InnoDB
     COMMENT ='用户可见持久事件';
 
-CREATE TABLE `sq_user_budget`
+CREATE TABLE IF NOT EXISTS `sq_user_budget`
 (
     `id`                bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `user_id`           char(36)    NOT NULL COMMENT '资源归属用户ID',
@@ -1054,7 +1055,7 @@ CREATE TABLE `sq_user_budget`
 ) ENGINE = InnoDB
     COMMENT ='用户全局预算预留串行锁';
 
-CREATE TABLE `sq_worker_definition`
+CREATE TABLE IF NOT EXISTS `sq_worker_definition`
 (
     `id`                bigint       NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `definition_id`     char(36)     NOT NULL COMMENT '能力定义业务ID',
@@ -1083,7 +1084,7 @@ CREATE TABLE `sq_worker_definition`
 ) ENGINE = InnoDB
     COMMENT ='不可变Worker能力定义';
 
-CREATE TABLE `sq_worker_job`
+CREATE TABLE IF NOT EXISTS `sq_worker_job`
 (
     `id`                    bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `job_id`                char(36)    NOT NULL COMMENT '委派节点业务ID',

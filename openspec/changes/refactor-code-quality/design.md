@@ -68,13 +68,13 @@
 
 **替代方案**：一次性全转。未采用——337 条 SQL 全改 diff 巨大，回滚困难。
 
-### 决策6：SQL 合并保留 Java 迁移 V8/V14 为 baseline 之后的回填迁移
+### 决策6：SQL 合并为单一 baseline，移除 Flyway 与 Java 回填迁移
 
-**选择**：V1–V18 结构变更合并为单一 `V1__baseline.sql`；V8/V14 是数据回填迁移（无 schema 变更），保留为 baseline 之后的 Java 迁移（版本号调整到 baseline 之后），全新库空跑，已有库保留回填能力。
+**选择**：V1–V18 结构变更合并为单一 `V1__baseline.sql`（全部 `CREATE TABLE IF NOT EXISTS`），删除 V2–V18 SQL、V8/V14 Java 回填迁移与 Flyway 依赖；应用启动时由 `spring.sql.init.mode=always` 重放 baseline 建表。旧结构 SQL 仅作为归档参考暂存测试资源，确认无引用后删除。
 
-**理由**：V8/V14 含跨 8 张表的读取-投影-写入编排、稳定 UUID 生成、JSON 解析、幂等去重，纯 SQL 无法表达；保留 Java 迁移对已有开发库有意义，新库空跑无性能问题。
+**理由**：项目仍处开发期，开发库与测试库均可从空库重建；V8/V14 的跨表回填针对的是合并前的历史开发库，保留它们需要持续维护与合并后 baseline 对齐的版本链和 Flyway 依赖，收益低于成本。幂等 baseline 重放保证空库与既有库启动一致，且不引入迁移历史表。
 
-**替代方案**：删除 V8/V14（仅面向全新库）。未采用——会丢失对已有开发库的回填能力，且 AGENTS.md 要求不自动清理实际数据库。
+**替代方案**：保留 V8/V14 为 baseline 之后的 Java 迁移（原计划）。未采用——Flyway 已被 `spring.sql.init` 取代，Java 回填迁移在空库无实际作用，且与“不保留迁移版本与历史回填链路”的项目约束冲突。
 
 ### 决策7：分包轻活先行，低风险快赢
 
@@ -91,7 +91,7 @@
 - [11 个 controller 改造遗漏] → 逐 controller grep `@CookieValue.*SQUAD_SESSION` 确保全部替换；mvn test 覆盖
 - [MyBatis XML 迁移遗漏语句] → 每批迁移后 grep 接口无残留 `@Select/@Insert/@Update`；启动期 "Invalid bound statement" 暴露遗漏
 - [SQL 合并 FK 顺序错误] → 合并清单 diff 校验；check_design.py + Flyway 校验 + 表清单 diff 三重验证
-- [SQL 合并校验和漂移] → 开发库 drop 重建；测试库每次全新 schema
+- [SQL 合并校验和漂移] → 空库或临时库验证 baseline 重放幂等；测试库每次全新 schema
 - [分包改动影响 import] → 机械改动，mvn 编译暴露缺失 import；Spring 组件扫描基于根包自动覆盖
 - [认证行为变更破坏测试] → 网关保持 Cookie 名 `SQUAD_SESSION`、CSRF header `X-CSRF-Token`、401 语义不变；HTTP 测试兼容
 - [用户量增长后网关内存会话不扩展] → 预留用户表扩展位，阶段二按需引入
@@ -101,7 +101,7 @@
 **部署步骤**：
 1. 阶段1-4 在 `refactor-code-quality` 分支完成，每阶段独立提交
 2. 阶段2 完成后，本地 dev 启动双服务：gateway(18081) + business(18080)，前端 VITE_API_TARGET 指向网关
-3. 阶段4 完成后，重建开发库 agent-squad-mysql，Flyway 应用合并后 baseline
+3. 阶段4 完成后，由用户按提供的 SQL 重建开发库，应用启动时由 `spring.sql.init` 重放合并后 baseline
 4. 全阶段验证通过后合并到主分支
 
 **回滚策略**：

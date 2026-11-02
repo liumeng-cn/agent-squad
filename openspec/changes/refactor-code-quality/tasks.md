@@ -34,10 +34,17 @@
 ## 4. SQL 统一（中等风险）
 
 - [x] 4.1 生成合并清单：以 V1 baseline（15 张表）为基础，逐文件应用 V2-V18 DDL（CREATE TABLE + ALTER），生成表/列/索引/约束/审计字段完整清单。验证：清单含 V1 15 张 + V2-V18 新增 29 张 = 44 张表（含 3 张 agentscope 框架表）。
-- [ ] 4.2 合并到单一 baseline：V1-V18 结构变更合并为 V1__baseline.sql（FK 顺序、审计字段口径、中文注释），删除 V2-V18 SQL 文件。验证：`python3 tools/check_design.py` 通过；`grep -l "sq_plan\|sq_worker_job\|sq_artifact\|sq_message" V1__baseline.sql` 命中。
-- [ ] 4.3 处理 Java 迁移：V8/V14 数据回填迁移保留为 baseline 之后的 Java 迁移（版本号调整），删除旧 V8/V14 文件位置，辅助类 LegacyConversationBackfill 等归位。验证：`mvn -f server/pom.xml -B -ntp test` 通过，Flyway 历史表仅含合并后 baseline + 回填迁移。
-- [ ] 4.4 重建开发库：drop 并重建 agent_squad 库（agent-squad-mysql 容器），启动服务让 Flyway 应用合并后 baseline。验证：Flyway 成功、无校验和错误、`SHOW TABLES FROM agent_squad` 与 V1 baseline 表清单一致。
-- [ ] 4.5 阶段4验证：全量测试 + MySQL 端到端。验证：`mvn -f server/pom.xml -B -ntp test`（0 失败）；隔离 MySQL 端到端验证迁移与产物链路。提交阶段4。
+- [x] 4.2 合并到单一 baseline：V1-V18 结构变更合并为 V1__baseline.sql（FK 顺序、审计字段口径、中文注释），删除 V2-V18 SQL 文件。验证：`python3 tools/check_design.py` 全量通过（DDL/OpenAPI/链接/FK/示例校验，44 张表）；`grep -l "sq_plan\|sq_worker_job\|sq_artifact\|sq_message" V1__baseline.sql` 命中。合并遗漏的 V18 `sq_memory.active_key` 生成列与 `uk_memory_active_key` 已补回，由 `MemoryIntegrationTest` 覆盖。
+- [x] 4.3 处理 Java 迁移：确认 Flyway 依赖与 V8/V14 Java 回填迁移已移除，旧结构 SQL 归档不再被引用并删除。验证：`grep -r "flyway\|Backfill" server/` 无实现残留；`mvn -f server/pom.xml -B -ntp test` 通过。
+- [ ] 4.4 重建开发库（由用户执行）：执行下方 SQL 后启动业务服务，由 `spring.sql.init` 重放 `V1__baseline.sql`。验证：`SHOW TABLES FROM agent_squad` 与 baseline 的 44 张表一致，启动无建表错误。
+
+  ```sql
+  DROP DATABASE IF EXISTS `agent_squad`;
+  CREATE DATABASE `agent_squad` CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
+  ```
+
+  如需保留现有数据，先备份：`mysqldump -h127.0.0.1 -P13306 -uroot -p --databases agent_squad > agent_squad_backup_$(date +%Y%m%d%H%M).sql`
+- [x] 4.5 阶段4验证：`mvn -f server/pom.xml -B -ntp test` 通过（137 测试、0 失败、0 错误、23 环境跳过）；空 MySQL schema 启动真实服务，`spring.sql.init` 自动建 44 张表，会话接口 200，产物上传 201、下载内容一致。已提交阶段4。
 
 ## Workflow follow-up
 
