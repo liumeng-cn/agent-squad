@@ -440,7 +440,7 @@ Agent 工程能力处于**"编排与治理层成熟、执行边界保守、外�
 | S1 | **高** | 业务服务无鉴权信任 `X-User-Id/X-User-Role` 头，仅注释约束"应限制内部访问"；且业务服务 CORS `allowedHeaders("*")` + `allowCredentials(true)` | [UserContextInterceptor.java:22-30](server/agent-squad-server/src/main/java/com/agentsquad/squad/identity/UserContextInterceptor.java#L22)、WebConfig.java:26-33 | 同机任意进程直连 18080 冒充任意用户；localhost 浏览器页面经 CORS 预检也可冒充。缓解：绑定 127.0.0.1 + 网关剥离外部身份头。网关-业务间无共享密钥/mTLS |
 | S2 | 中 | 登录明文 `String.equals` 比较密码（无哈希、非常量时间），无速率限制 | gateway AuthService.java:38-47 | 本地单账号场景可接受，部署形态变化即风险 |
 | S3 | 中 | 会话令牌 UUID 存内存 Map，**无 TTL、无上限**，Cookie 无 maxAge/Secure | AuthService.java:33-47 | 泄露后无法自动失效；重启全登出（后者可视为特性） |
-| S4 | 中低 | 备份恢复仅有设计文档，无脚本无演练产物；schema 无版本演进（baseline 合并后） | openspec/changes/d6-integration-release/design.md、application.yml | README 自称"本地验收完成"与实际不符 |
+| S4 | 中低 | 备份恢复仅有设计文档，无脚本无演练产物；schema 无版本演进（baseline 合并后） | openspec/changes/archive/2026-11-02-d6-integration-release/design.md、application.yml | README 自称"本地验收完成"与实际不符 |
 | S5 | 低 | `prefix` 查询整段 longtext 消息正文载入内存（有前置字符计数预算）；产物 longblob 入库（≤10MB/文件） | ResponseContextMapper.xml、V1__baseline.sql:46 | 大会话/大文件内存与存储膨胀 |
 
 **安全做得好的部分**：沙箱隔离（sha256 镜像 + network=none + 只读 + cap-drop ALL + pids-limit + 非 root + tmpfs noexec + 监督进程清杀逃逸后代 + 拒绝静默工作区）达到生产级谨慎；SQL 全参数化；Markdown 构造式渲染结构性免疫 XSS；密钥库 AES-256-GCM 随机 IV、主密钥缺失即拒绝、密文不落日志；租户前缀唯一键纵深防御；预算表只存 request_hash 不存 prompt。
@@ -577,4 +577,4 @@ Agent 工程能力处于**"编排与治理层成熟、执行边界保守、外�
 | 前端 Markdown | web/console/src/shared/ui/SafeMarkdown.vue |
 | 前端 HTTP/CSRF | web/console/src/shared/api/http.ts |
 | 测试基建 | server/agent-squad-server/src/test/java/.../testsupport/MySqlTestDatabase.java · runtime/ResponseModelStub.java |
-| 验收证据 | openspec/changes/d6-integration-release/evidence/ · d3-multi-worker/evidence/ · conversation-first-experience/evidence/ |
+| 验收证据 | openspec/changes/archive/2026-11-02-d6-integration-release/evidence/ · 2026-11-02-d3-multi-worker/evidence/ · 2026-11-02-conversation-first-experience/evidence/ |

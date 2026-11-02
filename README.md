@@ -12,17 +12,22 @@ Agent Squad 是一个面向 Web 的多智能体运行底座。用户发送消息
 | D1 单 Master | 主链路已验证 | 本地登录、任务受理、直接回答、快照/SSE、取消与故障注入通过；普通回复与目标支持有界暂时故障恢复；生产故障演练属于 D6 |
 | D2 受控工具 | 后端核心已验证 | 连接、操作账本、只读/模拟写入、追问/审批、核对及基础预算；D2 页面、预算超限场景和最新事务调整的真实崩溃复验待完成 |
 | D3 多 Worker | 本地验收完成 | 新能力发现、计划准入、串行/并行派发、汇合、分支恢复、保守结果复用；任务详情、交互、显式授权核对与最小文本产物链路通过本地验证 |
-| D4 Skill 与记忆 | 本地验收完成 | Skill 导入/版本固定/Grant 隔离、自动发现按需读取、显式记忆写入/纠正/删除屏障；证据见 openspec/changes/d4-skills-memory/evidence/ |
-| D5 沙箱与交付 | 本地验收完成 | 真实容器隔离实验（资源/网络/挂载/超时/逃逸阻断）、stage/commit 受控交付、归属鉴权与清理、全局预算；证据见 openspec/changes/d5-sandbox-delivery/evidence/ |
-| D6 集成发布 | 本地验收完成 | 多副本 SSE 跨实例水位、guard/租约不双主、备份恢复机制、预算/安全回归、Markdown 消毒；完整备份还原与真实压测属发布门槛，证据见 openspec/changes/d6-integration-release/evidence/ |
+| D4 Skill 与记忆 | 本地验收完成 | Skill 导入/版本固定/Grant 隔离、自动发现按需读取、显式记忆写入/纠正/删除屏障；证据见 openspec/changes/archive/2026-11-02-d4-skills-memory/evidence/ |
+| D5 沙箱与交付 | 本地验收完成 | 真实容器隔离实验（资源/网络/挂载/超时/逃逸阻断）、stage/commit 受控交付、归属鉴权与清理、全局预算；证据见 openspec/changes/archive/2026-11-02-d5-sandbox-delivery/evidence/ |
+| D6 集成发布 | 本地验收完成 | 多副本 SSE 跨实例水位、guard/租约不双主、备份恢复机制、预算/安全回归、Markdown 消毒；完整备份还原与真实压测属发布门槛，证据见 openspec/changes/archive/2026-11-02-d6-integration-release/evidence/ |
 
 新版页面已接入连续会话：普通交流不创建 GoalTask，Master 按需建立后台工作；任务在途可继续提问或补充要求。追问、审批、分级故障、允许的重试与下载均留在对话中，停止回答与停止工作分别控制。侧栏支持安全标题、改名与历史分页，空态及附件布局按用户参考调整。
 
-本轮功能、回归结果与验证边界见 [对话体验验收记录](openspec/changes/archive/2026-11-02-conversation-first-experience/evidence/ui-regression-2026-10-29.md) 与 [端到端验收](openspec/changes/archive/2026-11-02-conversation-first-experience/evidence/e2e-2026-11-02.md)。仓库已将历史迁移合并为单一 `V1__baseline.sql`，本机开发库重建后由启动流程生成 44 张表。D3 原基线仍见 [D3 验收记录](openspec/changes/d3-multi-worker/evidence/progress.md)；D4–D6 已有本地验收证据，但 Java 21 运行时、完整备份还原与真实负载压测仍属发布门槛，不能将本轮对话优化计作这些门槛已验证。原 SDK 故障窗口、确定性模型协议测试、真实 DeepSeek 检查分别记载；规划回合内早到补充的竞态仍待修复。
+本轮功能、回归结果与验证边界见 [对话体验验收记录](openspec/changes/archive/2026-11-02-conversation-first-experience/evidence/ui-regression-2026-10-29.md) 与 [端到端验收](openspec/changes/archive/2026-11-02-conversation-first-experience/evidence/e2e-2026-11-02.md)。仓库已将历史迁移合并为单一 `V1__baseline.sql`，本机开发库重建后由启动流程生成 44 张表。D3 原基线仍见 [D3 验收记录](openspec/changes/archive/2026-11-02-d3-multi-worker/evidence/progress.md)；D4–D6 已有本地验收证据，但 Java 21 运行时、完整备份还原与真实负载压测仍属发布门槛，不能将本轮对话优化计作这些门槛已验证。原 SDK 故障窗口、确定性模型协议测试、真实 DeepSeek 检查分别记载。
+
+### 已知缺陷与延后事项
+
+- 规划回合内早到补充：已登记为已知缺陷，延后修复；在途补充与普通追问不受影响。
+- 发布门槛：Java 21 真实运行时、完整备份还原演练、真实负载压测、真实供应商故障注入、离线恢复演练，以及 D2 页面和预算超限场景。
 
 ## 本地运行
 
-当前 Maven 构建使用 JDK 27（Java 21 运行兼容性仍需单独验证）。准备 Maven、Docker MySQL 8.4，以及 Node.js 20.19+ 或 22.12+。MySQL 需监听 `127.0.0.1:13306`，预建 `agent_squad` 数据库和可访问该库的账号；应用启动时由 `spring.sql.init` 重放 `V1__baseline.sql` 建表。已有同名容器和数据库时直接复用，不要为启动服务清空数据。
+当前 Maven 构建使用 JDK 27（Java 21 运行兼容性仍需单独验证）。准备 Maven、Docker MySQL 8.4，以及 Node.js 20.19+ 或 22.12+。MySQL 需监听 `127.0.0.1:13306`，预建 `agent_squad` 数据库和可访问该库的账号；应用启动时由 `spring.sql.init` 重放 `V1__baseline.sql` 建表。已有同名容器和数据库时直接复用，不要为启动服务清空数据。本地开发库可直接修改表结构，修改后同步回 `V1__baseline.sql`，保证空库重建结果一致。
 
 1. 在仓库根目录复制 [环境变量示例](.env.example) 为 `.env.local`，填写 MySQL 账号、本地登录账号及模型配置。`.env.local` 已被 Git 忽略。若希望提问得到模型回答，设置 `SQUAD_DELIVERY_ENABLED=true` 并填写 `SQUAD_MODEL_API_KEY`、`SQUAD_MODEL_BASE_URL`、`SQUAD_MODEL_NAME`；保持 `false` 时只会受理消息，不会投递执行。
 2. 在一个终端启动业务服务：
@@ -60,7 +65,7 @@ mvn -f server/pom.xml -B -ntp test
 npm --prefix web/console run build
 ```
 
-后端集成测试使用独立 MySQL schema，需显式设置 `SQUAD_TEST_MYSQL_ADMIN_URL`（指向 `mysql` 系统库）、`SQUAD_TEST_MYSQL_USER` 与 `SQUAD_TEST_MYSQL_PASSWORD`；测试只创建 `as_test_` 前缀的隔离库，不读取应用私有配置。部分故障或多实例专项测试还需单独开启。另可在装有 Python 3.10+ 和 `jsonschema` 的设计工具环境运行 `python3 tools/check_design.py`；Python 不参与服务运行。
+后端集成测试使用独立 MySQL schema，需显式设置 `SQUAD_TEST_MYSQL_ADMIN_URL`（指向 `mysql` 系统库）、`SQUAD_TEST_MYSQL_USER` 与 `SQUAD_TEST_MYSQL_PASSWORD`；测试只创建 `as_test_` 前缀的隔离库，不读取应用私有配置；测试 JVM 正常退出时会自动删除本次创建的库，异常终止可能残留，可手动清理 `as_test_%`。部分故障或多实例专项测试还需单独开启。另可在装有 Python 3.10+ 和 `jsonschema` 的设计工具环境运行 `python3 tools/check_design.py`；Python 不参与服务运行。
 
 ## 运行链路与目录
 
