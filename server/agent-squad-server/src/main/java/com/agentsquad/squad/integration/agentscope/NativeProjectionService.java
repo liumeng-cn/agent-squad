@@ -5,6 +5,7 @@ import com.agentsquad.squad.presentation.service.TaskEventPublishingService;
 import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
 import com.agentsquad.squad.conversation.domain.ExecutionScopeRow;
 import com.agentsquad.squad.conversation.service.ResponseExecutionService;
+import com.agentsquad.squad.conversation.service.RuntimeAdmissionService;
 import com.agentsquad.squad.conversation.service.ConversationEventWriter;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
@@ -91,6 +92,9 @@ public class NativeProjectionService {
     @Resource
     private ObjectMapper objectMapper;
 
+    @Resource
+    private RuntimeAdmissionService admission;
+
     /**
      * 重复事件只跳过；缺少前序事件则回滚并等待重新读取完整前缀。
      */
@@ -151,6 +155,10 @@ public class NativeProjectionService {
             bindInteraction(target, event);
         } else if ("interaction/resolved".equals(event.type())) {
             resolveInteraction(target, event);
+        }
+        if ("run/end".equals(event.type())) {
+            // 与原生事件水位在同一事务内核对并释放；崩溃回放不会二次扣减。
+            admission.releaseEnded(target.userId(), target.bindingId(), event.turnId());
         }
         if (projectionMapper.advanceCursor(target.userId(), target.bindingId(), cursor, event.sequence()) != 1) {
             throw new IllegalStateException("原生日志投影水位竞争");

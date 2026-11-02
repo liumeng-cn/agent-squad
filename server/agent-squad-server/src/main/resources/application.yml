@@ -46,6 +46,11 @@ agentsquad:
   delivery:
     enabled: ${SQUAD_DELIVERY_ENABLED:false}
     poll-delay-ms: ${SQUAD_DELIVERY_POLL_DELAY_MS:1000}
+    admission:
+      # 持久运行占位需要先在独立数据库完成 V3 迁移，默认关闭。
+      enabled: ${SQUAD_ADMISSION_ENABLED:false}
+      global-limit: ${SQUAD_ADMISSION_GLOBAL_LIMIT:12}
+      per-user-limit: ${SQUAD_ADMISSION_PER_USER_LIMIT:2}
   events:
     poll-threads: ${SQUAD_EVENT_POLL_THREADS:4}
     max-connections: ${SQUAD_EVENT_MAX_CONNECTIONS:100}

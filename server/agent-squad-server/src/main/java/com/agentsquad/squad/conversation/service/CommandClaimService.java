@@ -23,6 +23,9 @@ public class CommandClaimService {
     @Resource
     private ExecutionScopeService scopes;
 
+    @Resource
+    private RuntimeAdmissionService admission;
+
     @Transactional
     public boolean claim(String commandId, String token, LocalDateTime now, LocalDateTime leaseUntil) {
         CommandClaimContext context = deliveries.claimContext(commandId);
@@ -35,6 +38,13 @@ public class CommandClaimService {
                 && !deliveries.earlierBlockingReplies(context.userId(), context.bindingId()).isEmpty()) {
             return false;
         }
-        return deliveries.claim(commandId, token, now, leaseUntil) == 1;
+        if (deliveries.claim(commandId, token, now, leaseUntil) != 1) {
+            return false;
+        }
+
+        // 原领取更新与全局/用户容量占位在同一 MySQL 事务提交。
+        // 配额不足时抛出异常，回滚命令领取，不丢失已受理的用户命令。
+        admission.acquire(context.userId(), context.bindingId(), commandId, context.action());
+        return true;
     }
 }

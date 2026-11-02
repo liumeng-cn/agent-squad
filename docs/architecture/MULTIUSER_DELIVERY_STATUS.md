@@ -6,6 +6,18 @@
 >
 > 用户要求暂时跳过测试环节，当前所有功能验证、构建及回归结果均为 NOT_RUN。GitHub 写入成功不是编译通过。
 
+## 2026-11-02 C2 批次：持久原生运行容量 Slot（NOT_RUN）
+
+- 新增 `sq_runtime_admission_counter` 与 `sq_runtime_admission_slot`，使用固定 Binding、原命令 ID 与原生 Turn 持久定位运行占位。
+- Command 领取与全局/用户配额递增在同一数据库事务中完成；额度不足时回滚领取，保留已受理命令。
+- 同一个原命令在原生提交不确定时重试复用已有占位，不重复计数；STOP 不占用新额度。
+- 收到原生投递收据时关联 Turn，只有原生 `run/end` 被持久投影且 Turn 匹配时才与水位同事务释放，防止重复回收。
+- 对收据缺失、异常、进程崩溃等未确证结束状态，采取保守占位，不以命令短期租约到期替代运行结束事实。
+- 增加独立 V3 迁移文件、local 基线和配置；默认关闭，待隔离数据库与真实 SDK 验收后才能显式启用。
+- 使用边界、恢复运维及待执行用例见 `docs/architecture/C2_RUNTIME_ADMISSION.md`。
+
+**验证状态：NOT_RUN**：Maven/SQL/MySQL/真实 SDK/多实例并发/灾备均未运行。这是首版持久占位实现，**不能标记 C2 完成或生产就绪**；长期占位、原生回合不一致和恢复期间的容量行为需要实测裁决。
+
 ## 2026-11-02 C2 批次：到期命令公平扫描（NOT_RUN）
 
 - 调整 `DeliveryMapper.findDueIds`：从全局 `due_at,id` 前 20 条改为 MySQL 8 的 `ROW_NUMBER() OVER (PARTITION BY user_id)`，按用户轮次扫描到期命令。

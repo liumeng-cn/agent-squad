@@ -1,6 +1,9 @@
 package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.conversation.domain.DeliveryRow;
+import com.agentsquad.squad.conversation.domain.CommandClaimContext;
+import com.agentsquad.squad.conversation.service.RuntimeAdmissionService;
+import com.agentsquad.squad.conversation.service.RuntimeAdmissionBusyException;
 import com.agentsquad.squad.conversation.domain.RuntimeCommandAction;
 import com.agentsquad.squad.conversation.repository.DeliveryMapper;
 import com.agentsquad.squad.conversation.service.TaskControlService;
@@ -58,6 +61,9 @@ public class CommandDeliveryService {
     private DeliveryMapper deliveryMapper;
 
     @Resource
+    private RuntimeAdmissionService admission;
+
+    @Resource
     private NativeSessionGateway nativeSessionGateway;
 
     @Resource
@@ -89,11 +95,21 @@ public class CommandDeliveryService {
     public void deliver(String commandId) {
         String token = UUID.randomUUID().toString();
         LocalDateTime claimedAt = now();
-        if (!claims.claim(commandId, token, claimedAt, claimedAt.plusSeconds(LEASE_SECONDS))) {
+        try {
+            if (!claims.claim(commandId, token, claimedAt, claimedAt.plusSeconds(LEASE_SECONDS))) {
+                return;
+            }
+        } catch (RuntimeAdmissionBusyException exception) {
+            // 等待下次公平扫描；领取事务回滚后命令仍处于原待领取状态。
             return;
         }
         DeliveryRow delivery = deliveryMapper.findClaimed(commandId, token);
         if (delivery == null) {
+            // 尚未调用原生 SDK，缺失 Binding 不可能产生本次原生运行。
+            CommandClaimContext context = deliveryMapper.claimContext(commandId);
+            if (context != null) {
+                admission.releaseUnsubmitted(context.userId(), context.bindingId(), commandId);
+            }
             retry(commandId, token, 1, "BINDING_MISSING");
             return;
         }
@@ -102,6 +118,7 @@ public class CommandDeliveryService {
             try {
                 action = RuntimeCommandAction.valueOf(delivery.action());
             } catch (IllegalArgumentException exception) {
+                admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
                 fail(commandId, token, delivery.attempts(), "UNKNOWN_ACTION");
                 return;
             }
@@ -129,6 +146,7 @@ public class CommandDeliveryService {
         JsonNode payload = RuntimePayloads.readJson(objectMapper, delivery.payloadJson());
         String message = payload.path("message").textValue();
         if (message == null || message.isBlank()) {
+            admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
             retry(commandId, token, delivery.attempts(), "INVALID_PAYLOAD");
             return;
         }
@@ -221,6 +239,13 @@ public class CommandDeliveryService {
                              String turnId, String runId, String nativeStatus) {
         int saved = deliveryMapper.saveReceipt(commandId, token, turnId, runId, nativeStatus, now());
         if (saved == 1) {
+            if ("rejected".equals(nativeStatus)) {
+                // SDK 已明确拒绝受理，未生成新的原生运行。
+                admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
+            } else {
+                admission.bindReceipt(delivery.userId(), delivery.bindingId(),
+                        commandId, delivery.action(), turnId);
+            }
             log.info("原生命令已投递 commandId={} taskId={} action={} nativeStatus={}",
                     commandId, delivery.taskId(), delivery.action(), nativeStatus);
         } else {
