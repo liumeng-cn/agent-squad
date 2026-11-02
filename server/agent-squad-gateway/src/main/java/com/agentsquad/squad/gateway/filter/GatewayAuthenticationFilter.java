@@ -38,6 +38,7 @@ public class GatewayAuthenticationFilter implements GlobalFilter, Ordered {
             return read ? authService.authenticate(token)
                     : authService.authenticateWrite(token,exchange.getRequest().getHeaders().getFirst("X-CSRF-Token"));
         }).subscribeOn(Schedulers.boundedElastic()).flatMap(user -> {
+            if (user.mustChangePassword()) return Mono.error(new com.agentsquad.squad.gateway.auth.AuthForbiddenException());
             String assertion=signer.sign(user,exchange.getRequest().getMethod().name(),
                     exchange.getRequest().getURI().getRawPath());
             var request=exchange.getRequest().mutate().headers(headers -> {

@@ -88,12 +88,13 @@ public class DatabaseAuthService {
      * 只产生摘要入库；失败凭据和未知用户统一抛 401。
      * 限流记录以账号摘要为键并在同一 SQL 存储，避免多网关绕过。
      */
+    @Transactional(noRollbackFor = AuthenticationRequiredException.class)
     public String login(String username, String password) {
         String name = normalize(username);
         String bucket = digest("login:" + name);
         LocalDateTime time = now();
         jdbc.update("INSERT IGNORE INTO sq_auth_rate_bucket(bucket_key,window_start,failures) VALUES(?,?,0)", bucket,time);
-        List<LocalDateTime> locks = jdbc.query("SELECT locked_until FROM sq_auth_rate_bucket WHERE bucket_key=?",
+        List<LocalDateTime> locks = jdbc.query("SELECT locked_until FROM sq_auth_rate_bucket WHERE bucket_key=? FOR UPDATE",
                 (rs,i) -> rs.getTimestamp(1)==null?null:rs.getTimestamp(1).toLocalDateTime(),bucket);
         if (!locks.isEmpty() && locks.getFirst()!=null && locks.getFirst().isAfter(time)) {
             throw new AuthenticationRequiredException();
@@ -208,6 +209,8 @@ public class DatabaseAuthService {
         AccountRecord current=byId(userId);
         if(current==null) throw new AuthConflictException();
         if("ADMIN".equals(current.role()) && (!"ADMIN".equals(request.role()) || !"ACTIVE".equals(request.status()))) {
+            jdbc.query("SELECT id FROM sq_user WHERE role='ADMIN' AND status='ACTIVE' AND del_flag='0' ORDER BY id FOR UPDATE",
+                    (rs,i)->rs.getLong(1));
             Integer admins=jdbc.queryForObject("SELECT COUNT(*) FROM sq_user WHERE role='ADMIN' AND status='ACTIVE' AND del_flag='0'",Integer.class);
             if(admins==null || admins<=1)throw new AuthConflictException();
         }

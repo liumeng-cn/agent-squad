@@ -72,6 +72,13 @@ export const useAuthStore = defineStore('auth', {
     },
 
     clearUser(): void {
+      try {
+        const prefix = 'agentsquad:draft:' + (this.user?.userId || 'anonymous') + ':'
+        for (let i = sessionStorage.length - 1; i >= 0; i--) {
+          const key = sessionStorage.key(i)
+          if (key?.startsWith(prefix)) sessionStorage.removeItem(key)
+        }
+      } catch { /* 可能不支持 sessionStorage */ }
       this.user = null
       clearCsrfToken()
     },

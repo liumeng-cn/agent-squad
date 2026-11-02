@@ -56,7 +56,7 @@ function restoreDraft(key: string) {
 let previousKey = draftKey(props.conversationId)
 restoreDraft(previousKey)
 watch(() => [props.conversationId, props.draftRevision, auth.user?.userId], () => {
-  saveDraft(previousKey)
+  if (auth.user?.userId && previousKey.startsWith('agentsquad:draft:' + auth.user.userId + ':')) saveDraft(previousKey)
   generation++; uploads.value = []; error.value = ''
   previousKey = draftKey(props.conversationId)
   restoreDraft(previousKey)
@@ -115,7 +115,10 @@ function enter(event: KeyboardEvent) {
   if (!shouldSendOnEnter(event, composing.value)) return
   event.preventDefault(); void send()
 }
-onBeforeUnmount(() => { saveDraft(previousKey); generation++ })
+onBeforeUnmount(() => {
+  if (auth.user?.userId && previousKey.startsWith('agentsquad:draft:' + auth.user.userId + ':')) saveDraft(previousKey)
+  generation++
+})
 </script>
 
 <template>
