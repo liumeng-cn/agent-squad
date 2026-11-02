@@ -1,4 +1,6 @@
 agentsquad:
+  identity:
+    strict: true
   auth:
     mode: database
     cookie-secure: true
