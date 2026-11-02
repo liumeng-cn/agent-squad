@@ -1,0 +1,54 @@
+# 仅用于隔离 staging；生产环境须配置独立 TLS 入口及受控数据库迁移。
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: agent_squad
+      MYSQL_USER: squad
+      MYSQL_PASSWORD: ${SQUAD_DB_PASSWORD:?请配置数据库密码}
+      MYSQL_ROOT_PASSWORD: ${SQUAD_DB_ROOT_PASSWORD:?请配置隔离实例 root 密码}
+    volumes:
+      - staging_db:/var/lib/mysql
+    networks: [private]
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+  server:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.server
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SQUAD_DB_URL: jdbc:mysql://db:3306/agent_squad
+      SQUAD_DB_USER: squad
+      SQUAD_DB_PASSWORD: ${SQUAD_DB_PASSWORD:?数据库密码}
+      SQUAD_IDENTITY_HMAC_KEY: ${SQUAD_IDENTITY_HMAC_KEY:?必须配置至少32字节随机密钥}
+      SQUAD_IDENTITY_STRICT: "true"
+      SQUAD_IDENTITY_ENFORCE_USER_STATUS: "true"
+      SQUAD_CONNECTION_SECRET_KEY: ${SQUAD_CONNECTION_SECRET_KEY:?须配置 Vault 主密钥}
+    depends_on:
+      db: {condition: service_healthy}
+    networks: [private]
+  gateway:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.gateway
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SQUAD_DB_URL: jdbc:mysql://db:3306/agent_squad
+      SQUAD_DB_USER: squad
+      SQUAD_DB_PASSWORD: ${SQUAD_DB_PASSWORD:?数据库密码}
+      SQUAD_AUTH_MODE: database
+      SQUAD_AUTH_COOKIE_SECURE: "true"
+      SQUAD_IDENTITY_HMAC_KEY: ${SQUAD_IDENTITY_HMAC_KEY:?内部断言密钥}
+      SQUAD_BUSINESS_SERVICE_URL: http://server:18080
+    ports:
+      - "127.0.0.1:18081:18081"
+    depends_on: [server]
+    networks: [private]
+networks:
+  private:
+volumes:
+  staging_db:
