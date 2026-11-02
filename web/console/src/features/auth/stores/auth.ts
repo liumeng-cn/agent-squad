@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { loginApi, logoutApi, meApi } from '../../../shared/api/authApi'
+import { changePasswordApi, loginApi, logoutApi, meApi } from '../../../shared/api/authApi'
 import { clearCsrfToken, setCsrfToken } from '../../../shared/api/csrf'
 import { errorMessage } from '../../../shared/api/http'
 import type { AuthView } from '../../../shared/api/types'
@@ -20,6 +20,8 @@ export const useAuthStore = defineStore('auth', {
 
   getters: {
     loggedIn: (state) => state.user !== null,
+    /** 临时密码状态下服务端只允许改密、查询主体与登出。 */
+    mustChangePassword: (state) => state.user?.mustChangePassword === true,
   },
 
   actions: {
@@ -56,6 +58,12 @@ export const useAuthStore = defineStore('auth', {
       } catch {
         // 会话可能已失效，本地状态照常清理
       }
+      this.clearUser()
+    },
+
+    /** 改密会导致服务端撤销全部会话；成功后本地状态一并清空。 */
+    async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+      await changePasswordApi(currentPassword, newPassword)
       this.clearUser()
     },
 

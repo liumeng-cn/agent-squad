@@ -13,6 +13,11 @@ const routes: RouteRecordRaw[] = [
     meta: { public: true },
   },
   {
+    path: '/change-password',
+    name: 'change-password',
+    component: () => import('../features/auth/views/ChangePasswordView.vue'),
+  },
+  {
     path: '/app/conversations/:conversationId?',
     name: 'workspace',
     component: () => import('../features/chat/views/WorkspaceView.vue'),
@@ -36,6 +41,12 @@ const routes: RouteRecordRaw[] = [
     path: '/app/admin/workers',
     name: 'workers',
     component: () => import('../features/workers/views/WorkerDefinitionsView.vue'),
+    meta: { role: 'ADMIN' },
+  },
+  {
+    path: '/app/admin/users',
+    name: 'admin-users',
+    component: () => import('../features/admin/views/AdminUsersView.vue'),
     meta: { role: 'ADMIN' },
   },
   {
@@ -64,7 +75,11 @@ router.beforeEach(async (to) => {
     }
   }
   if (loggedIn && to.name === 'login') {
-    return { name: 'workspace' }
+    return auth.mustChangePassword ? { name: 'change-password' } : { name: 'workspace' }
+  }
+  // 临时密码状态下除改密页外一律回到改密流程，避免进入业务页面受 403 拦截。
+  if (loggedIn && auth.mustChangePassword && to.name !== 'change-password') {
+    return { name: 'change-password' }
   }
   if (loggedIn && to.meta.role && !auth.user?.roles.includes(String(to.meta.role))) {
     return { name: 'workspace' }

@@ -22,6 +22,7 @@ import com.agentsquad.squad.conversation.repository.TaskEventMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
 import com.agentsquad.squad.governance.domain.BudgetAccountRow;
 import com.agentsquad.squad.governance.repository.BudgetMapper;
+import com.agentsquad.squad.identity.UserStatusGuard;
 import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -85,6 +86,9 @@ public class GoalTaskCreationService {
     @Resource
     private ObjectMapper json;
 
+    @Resource
+    private UserStatusGuard userStatusGuard;
+
     /**
      * 会话→来源回复→用户预算→账户顺序持锁，同事务创建目标、来源、Scope、Binding、命令与事件。
      * 首次创建检查运行状态；原调用重放仅返回原收据，不重新激活已结束目标或刷新额度。
@@ -92,6 +96,7 @@ public class GoalTaskCreationService {
     @Transactional
     public TaskReceipt create(String userId, String sessionId, GoalTaskCreate request) {
         validate(request);
+        userStatusGuard.requireActive(userId);
         ExecutionScopeRow source = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), false);
         if (!"RESPONSE".equals(source.kind())) {
             throw error(RuntimeExceptionCode.FORBIDDEN, "只有消息回复可以建立独立目标");

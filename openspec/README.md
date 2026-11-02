@@ -45,4 +45,4 @@
 | docs/predevelopment.md（D0–D6） | openspec/changes/d3–d6 |
 | contracts/（现 api/） | 保留为接口契约（OpenAPI + JSON Schema） |
 
-`api/` 是接口契约（OpenAPI 与 JSON Schema），被 `tools/check_design.py` 和前端 DTO 镜像引用；SQL 以 `server/src/main/resources/db/migration/` 的 Flyway 迁移为唯一权威，`data/` 已删除；历史设计、计划、证据与研究文件已随 `docs/`、`decisions/` 一并删除。
+`api/` 是接口契约（OpenAPI 与 JSON Schema），被 `tools/check_design.py` 和前端 DTO 镜像引用；本地与测试库以 `server/agent-squad-server/src/main/resources/db/migration/V1__baseline.sql` 为权威并由 `spring.sql.init` 重放，生产快照与增量由 `deploy/db/migrations/` 维护，`data/` 已删除；历史设计、计划、证据与研究文件已随 `docs/`、`decisions/` 一并删除。

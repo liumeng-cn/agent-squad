@@ -1,6 +1,7 @@
 package com.agentsquad.squad.runtime;
 
 
+import com.agentsquad.squad.testsupport.TestAssertion;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.http.MediaType;
@@ -29,20 +30,22 @@ class ConversationApiSecurityTest {
             var mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();
             String base = "/api/v1/conversations/" + receipt.conversationId();
             mvc.perform(get(base + "/snapshot")).andExpect(status().isUnauthorized());
-            mvc.perform(get(base + "/snapshot").header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER")).andExpect(status().isOk());
-            mvc.perform(get(base + "/events").header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER").param("after", "invalid")).andExpect(status().isBadRequest());
-            mvc.perform(get(base + "/events").header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER").param("after", receipt.conversationId() + ":1:999999")).andExpect(status().isBadRequest());
+            mvc.perform(get(base + "/snapshot").with(TestAssertion.as(actor.view().userId(), "USER"))).andExpect(status().isOk());
+            mvc.perform(get(base + "/events").with(TestAssertion.as(actor.view().userId(), "USER")).param("after", "invalid")).andExpect(status().isBadRequest());
+            mvc.perform(get(base + "/events").with(TestAssertion.as(actor.view().userId(), "USER")).param("after", receipt.conversationId() + ":1:999999")).andExpect(status().isBadRequest());
             String body = "{\"title\":\"新的标题\",\"expectedTitleVersion\":0}";
             mvc.perform(patch(base + "/title").contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isUnauthorized());
-            mvc.perform(patch(base + "/title").header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER").header("Origin", "http://127.0.0.1:5174").contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk());
-            mvc.perform(patch(base + "/title").header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER").contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isConflict());
+            mvc.perform(patch(base + "/title").with(TestAssertion.as(actor.view().userId(), "USER")).header("Origin", "http://127.0.0.1:5174").contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk());
+            mvc.perform(patch(base + "/title").with(TestAssertion.as(actor.view().userId(), "USER")).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isConflict());
             String retry = "/api/v1/executions/" + receipt.executionId() + "/retry";
             mvc.perform(post(retry).header("Idempotency-Key", "retry").contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")).andExpect(status().isUnauthorized());
-            mvc.perform(post(retry).header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER").header("Idempotency-Key", "retry").contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")).andExpect(status().isConflict());
+            mvc.perform(post(retry).with(TestAssertion.as(actor.view().userId(), "USER")).header("Idempotency-Key", "retry").contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")).andExpect(status().isConflict());
             var other = new MessageTestActor(new com.agentsquad.squad.identity.AuthView(UUID.randomUUID().toString(), "other", java.util.List.of("USER"), null));
-            mvc.perform(get(base + "/snapshot").header("X-User-Id", other.view().userId()).header("X-User-Role", "USER")).andExpect(status().isNotFound());
-            mvc.perform(get(base + "/events").header("X-User-Id", other.view().userId()).header("X-User-Role", "USER").param("after", receipt.conversationId() + ":1:0")).andExpect(status().isNotFound());
-            mvc.perform(post(retry).header("X-User-Id", other.view().userId()).header("X-User-Role", "USER").header("Idempotency-Key", "retry").contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")).andExpect(status().isNotFound());
+            mvc.perform(get(base + "/snapshot").with(TestAssertion.as(other.view().userId(), "USER"))).andExpect(status().isNotFound());
+            mvc.perform(get(base + "/snapshot").with(TestAssertion.as(other.view().userId(), "ADMIN"))).andExpect(status().isNotFound());
+            mvc.perform(get(base + "/events").with(TestAssertion.as(other.view().userId(), "USER")).param("after", receipt.conversationId() + ":1:0")).andExpect(status().isNotFound());
+            mvc.perform(get(base + "/events").with(TestAssertion.as(other.view().userId(), "ADMIN")).param("after", receipt.conversationId() + ":1:0")).andExpect(status().isNotFound());
+            mvc.perform(post(retry).with(TestAssertion.as(other.view().userId(), "USER")).header("Idempotency-Key", "retry").contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")).andExpect(status().isNotFound());
         }
     }
 }

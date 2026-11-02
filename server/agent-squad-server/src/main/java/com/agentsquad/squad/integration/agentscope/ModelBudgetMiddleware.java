@@ -4,6 +4,7 @@ import com.agentsquad.squad.runtime.service.ExecutionFailureService;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.governance.service.BudgetService;
 import com.agentsquad.squad.governance.repository.BudgetMapper;
+import com.agentsquad.squad.identity.UserStatusGuard;
 import com.agentsquad.squad.worker.profile.WorkerModelProfile;
 import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -55,6 +56,9 @@ public class ModelBudgetMiddleware implements MiddlewareBase {
     @Resource
     private ObjectMapper objectMapper;
 
+    @Resource
+    private UserStatusGuard userStatusGuard;
+
     @Override
     public Set<ExtensionPoint> activePoints() {
         return EnumSet.of(ExtensionPoint.ON_MODEL_CALL);
@@ -89,6 +93,7 @@ public class ModelBudgetMiddleware implements MiddlewareBase {
                         String usageKey = "model:" + turnId + ":" + requestHash + retrySuffix;
                         AtomicBoolean settled = new AtomicBoolean(false);
                         return Mono.fromCallable(() -> {
+                                    userStatusGuard.requireActive(userId);
                                     failures.requireModelAllowed(userId, sessionId);
                                     String scopeId = budgetMapper.findScopeBySession(userId, sessionId);
                                     if (scopeId == null) {

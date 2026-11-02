@@ -135,6 +135,15 @@ textarea.input {
   font-size: 14px;
 }
 
+.form-notice {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  background: var(--surface-muted, #f1f5f9);
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
 .banner-warning {
   margin: 0;
   padding: 8px 12px;

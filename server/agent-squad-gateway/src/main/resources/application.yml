@@ -1,16 +1,45 @@
+spring:
+  application:
+    name: agent-squad-gateway
+  profiles:
+    default: local
+  sql:
+    init:
+      mode: never
+
 server:
-  address: 127.0.0.1
+  address: ${SQUAD_SERVER_ADDRESS:127.0.0.1}
   port: 18081
 
 gateway:
   business-service-url: ${SQUAD_BUSINESS_SERVICE_URL:http://127.0.0.1:18080}
 
 agentsquad:
+  assertion:
+    issuer: ${SQUAD_ASSERTION_ISSUER:agent-squad-gateway}
+    audience: ${SQUAD_ASSERTION_AUDIENCE:agent-squad-server}
+    ttl-seconds: ${SQUAD_ASSERTION_TTL_SECONDS:30}
+    clock-skew-seconds: ${SQUAD_ASSERTION_CLOCK_SKEW_SECONDS:5}
+    current-kid: ${SQUAD_ASSERTION_CURRENT_KID:k1}
+    current-secret: ${SQUAD_ASSERTION_CURRENT_SECRET:}
+    previous-kid: ${SQUAD_ASSERTION_PREVIOUS_KID:}
+    previous-secret: ${SQUAD_ASSERTION_PREVIOUS_SECRET:}
   auth:
-    username: ${SQUAD_LOCAL_USER:}
-    password: ${SQUAD_LOCAL_PASSWORD:}
-    user-id: ${SQUAD_LOCAL_USER_ID:00000000-0000-0000-0000-000000000001}
-    role: ${SQUAD_LOCAL_ROLE:ADMIN}
+    bcrypt-strength: ${SQUAD_AUTH_BCRYPT_STRENGTH:10}
+    idle-timeout: ${SQUAD_AUTH_IDLE_TIMEOUT:24h}
+    absolute-timeout: ${SQUAD_AUTH_ABSOLUTE_TIMEOUT:7d}
+    touch-interval: ${SQUAD_AUTH_TOUCH_INTERVAL:5m}
+    failure-window: ${SQUAD_AUTH_FAILURE_WINDOW:15m}
+    max-failures: ${SQUAD_AUTH_MAX_FAILURES:5}
+    lock-duration: ${SQUAD_AUTH_LOCK_DURATION:15m}
+    secure-cookie: ${SQUAD_AUTH_SECURE_COOKIE:false}
+    cleanup-interval-ms: ${SQUAD_AUTH_CLEANUP_INTERVAL_MS:600000}
+    cleanup-initial-delay-ms: ${SQUAD_AUTH_CLEANUP_INITIAL_DELAY_MS:60000}
+
+mybatis:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: false
 
 logging:
   level:

@@ -2,6 +2,7 @@ package com.agentsquad.squad.runtime.service;
 
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
+import com.agentsquad.squad.identity.UserStatusGuard;
 import com.agentsquad.squad.memory.service.MemoryContextService;
 import com.agentsquad.squad.runtime.domain.ExecutionContextInvalidatedException;
 import com.agentsquad.squad.runtime.dto.ExecutionContextSnapshot;
@@ -29,12 +30,16 @@ public class ExecutionAuthorizationService {
     @Resource
     private MemoryContextService memories;
 
+    @Resource
+    private UserStatusGuard userStatusGuard;
+
     /**
      * 首次派发冻结目录与记忆；重放只读取原固定引用，授权变更则拒绝恢复旧 Session。
      * 锁顺序为会话/所有者、技能授权、记忆代际，事务内不调用模型或沙箱。
      */
     @Transactional
     public ExecutionContextSnapshot prepare(String userId, String scopeId) {
+        userStatusGuard.requireActive(userId);
         scopes.lockOwned(userId, scopeId, true);
         validate(userId, scopeId);
         var catalog = skills.freeze(userId, scopeId);
@@ -48,6 +53,7 @@ public class ExecutionAuthorizationService {
      */
     @Transactional
     public void requireScopeCurrent(String userId, String scopeId) {
+        userStatusGuard.requireActive(userId);
         if (scopeMapper.findOwned(userId, scopeId) == null) {
             scopes.requireReadable(userId, scopeId);
         }

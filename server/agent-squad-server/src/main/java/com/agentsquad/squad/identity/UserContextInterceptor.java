@@ -1,32 +1,29 @@
 package com.agentsquad.squad.identity;
 
+import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
-import java.util.List;
-
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 /**
  * 业务服务的网关身份接入边界。
- * <p>
- * 仅接收部署可信网关写入的身份头，业务端口应限制为内部访问。
+ *
+ * <p>除 CORS 预检外，所有 `/api/**` 请求都必须携带可验证的网关签名断言；
+ * 裸 `X-User-*` 不再作为主体来源，浏览器直连业务端口无法伪造身份。</p>
  */
 @Component
 public class UserContextInterceptor implements HandlerInterceptor {
+
+    @Resource
+    private AssertionVerifier assertionVerifier;
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        String userId = request.getHeader("X-User-Id");
-        String role = request.getHeader("X-User-Role");
-        if (userId == null || userId.isBlank() || role == null || role.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "缺少网关身份");
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
         }
-        String username = request.getHeader("X-User-Name");
-        request.setAttribute(UserContext.ATTRIBUTE,
-                new AuthView(userId, username == null ? userId : username, List.of(role), null));
+        request.setAttribute(UserContext.ATTRIBUTE, assertionVerifier.verify(request));
         return true;
     }
 }

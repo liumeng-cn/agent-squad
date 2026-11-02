@@ -1,5 +1,6 @@
 package com.agentsquad.squad.skill;
 
+import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
@@ -62,11 +63,11 @@ class SkillHttpIntegrationTest {
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
 
             mvc.perform(get("/api/v1/skills")).andExpect(status().isUnauthorized());
-            mvc.perform(post("/api/v1/skills").header("X-User-Id", USER).header("X-User-Role", "ADMIN")
+            mvc.perform(post("/api/v1/skills").with(TestAssertion.as(USER, "ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON).content("{\"files\":[],\"userId\":\"forged\"}"))
                     .andExpect(status().isBadRequest());
 
-            String imported = mvc.perform(post("/api/v1/skills").header("X-User-Id", USER).header("X-User-Role", "ADMIN")
+            String imported = mvc.perform(post("/api/v1/skills").with(TestAssertion.as(USER, "ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(request("1.0.0", "旧资源"))))
                     .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
             JsonNode created = json.readTree(imported);
@@ -76,23 +77,23 @@ class SkillHttpIntegrationTest {
             assertThatThrownBy(() -> skills.importPackage(USER, request("1.0.0", "不同资源")))
                     .hasMessageContaining("内容不同");
             String otherVersion = skills.importPackage(OTHER, request("1.0.0", "其他用户资源")).skillVersionId();
-            mvc.perform(get("/api/v1/skills/{id}", otherVersion).header("X-User-Id", USER).header("X-User-Role", "ADMIN")).andExpect(status().isNotFound());
+            mvc.perform(get("/api/v1/skills/{id}", otherVersion).with(TestAssertion.as(USER, "ADMIN"))).andExpect(status().isNotFound());
             assertThat(skills.list(USER, null, 10).items()).hasSize(1);
             assertThatThrownBy(() -> skills.detail(OTHER, versionId)).isInstanceOf(RuntimeBusinessException.class);
 
             var emptyReceipt = messages.accept(USER, null, "empty-catalog", new MessageCreateRequest("普通回复", List.of()));
             String emptyScope = scope(jdbc, emptyReceipt.executionId());
             assertThat(runtime.freeze(USER, emptyScope).skills()).isEmpty();
-            mvc.perform(put("/api/v1/skills/{id}/grant", versionId).header("X-User-Id", USER).header("X-User-Role", "ADMIN")
+            mvc.perform(put("/api/v1/skills/{id}/grant", versionId).with(TestAssertion.as(USER, "ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":null,\"enabled\":true}"))
                     .andExpect(status().isBadRequest());
-            mvc.perform(put("/api/v1/skills/{id}/grant", versionId).header("X-User-Id", USER).header("X-User-Role", "ADMIN")
+            mvc.perform(put("/api/v1/skills/{id}/grant", versionId).with(TestAssertion.as(USER, "ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0,\"enabled\":null}"))
                     .andExpect(status().isBadRequest());
-            mvc.perform(post("/api/v1/skills/{id}/revoke", versionId).header("X-User-Id", USER).header("X-User-Role", "ADMIN")
+            mvc.perform(post("/api/v1/skills/{id}/revoke", versionId).with(TestAssertion.as(USER, "ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":null}"))
                     .andExpect(status().isBadRequest());
-            mvc.perform(put("/api/v1/skills/{id}/grant", versionId).header("X-User-Id", USER).header("X-User-Role", "ADMIN")
+            mvc.perform(put("/api/v1/skills/{id}/grant", versionId).with(TestAssertion.as(USER, "ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0,\"enabled\":true}"))
                     .andExpect(status().isOk());
             assertThat(runtime.freeze(USER, emptyScope).skills()).isEmpty();
@@ -128,7 +129,7 @@ class SkillHttpIntegrationTest {
             assertThatThrownBy(() -> runtime.read(OTHER, scopeId, versionId, "SKILL.md"))
                     .isInstanceOf(RuntimeBusinessException.class);
 
-            mvc.perform(post("/api/v1/skills/{id}/revoke", versionId).header("X-User-Id", USER).header("X-User-Role", "ADMIN")
+            mvc.perform(post("/api/v1/skills/{id}/revoke", versionId).with(TestAssertion.as(USER, "ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":2}"))
                     .andExpect(status().isOk());
             assertThatThrownBy(() -> lazy.read("references/guide.md")).hasMessageContaining("SKILL_REVOKED");

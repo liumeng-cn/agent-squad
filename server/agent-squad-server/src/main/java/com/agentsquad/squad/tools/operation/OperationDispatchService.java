@@ -3,6 +3,7 @@ package com.agentsquad.squad.tools.operation;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
+import com.agentsquad.squad.identity.UserStatusGuard;
 import com.agentsquad.squad.tools.operation.domain.OperationRow;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import jakarta.annotation.Resource;
@@ -26,6 +27,9 @@ public class OperationDispatchService {
     @Resource
     private OperationMapper mapper;
 
+    @Resource
+    private UserStatusGuard userStatusGuard;
+
     /**
      * 独立事务领取操作；UNKNOWN或RECONCILING未核清前，同会话不得发出新的外部请求。
      */
@@ -35,6 +39,7 @@ public class OperationDispatchService {
         if (current == null || !java.util.Objects.equals(current.scopeId(), operation.scopeId())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "操作执行归属已变化");
         }
+        userStatusGuard.requireActive(current.userId());
         scopeService.lockOwned(current.userId(), current.scopeId(), true);
         if (!mapper.findUncertainInConversation(current.userId(), current.scopeId()).isEmpty()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "已有外部操作结果待核对，暂停新的外部执行");

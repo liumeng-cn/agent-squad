@@ -9,8 +9,9 @@
         "ANONYMOUS"
       ],
       "operations": [
-        "login",
-        "currentUser"
+        "changePassword",
+        "currentUser",
+        "login"
       ],
       "cases": [
         "B01"
@@ -129,6 +130,22 @@
         "listWorkerDefinitions",
         "publishWorkerDefinition",
         "changeWorkerStatus"
+      ],
+      "cases": [
+        "B14"
+      ]
+    },
+    {
+      "page": "admin-users",
+      "route": "/app/admin/users",
+      "roles": [
+        "ADMIN"
+      ],
+      "operations": [
+        "listUsers",
+        "createUser",
+        "updateUser",
+        "resetUserPassword"
       ],
       "cases": [
         "B14"

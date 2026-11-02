@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,7 +39,7 @@ class ConversationDeletionHttpTest {
 
 
             var conversation = mvc.perform(post("/api/v1/conversations")
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"title\":\"待删除\"}"))
                     .andExpect(status().isCreated()).andReturn();
@@ -46,23 +47,23 @@ class ConversationDeletionHttpTest {
             String conversationId = conversationJson.get("conversationId").asText();
 
             mvc.perform(delete("/api/v1/conversations/{conversationId}", conversationId)
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
                             .header("Idempotency-Key", "delete-1")
                             .header("If-Match", "0"))
                     .andExpect(status().isAccepted());
 
             mvc.perform(get("/api/v1/conversations/{conversationId}", conversationId)
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN"))
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN")))
                     .andExpect(status().isNotFound());
 
             var list = mvc.perform(get("/api/v1/conversations")
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN"))
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN")))
                     .andExpect(status().isOk()).andReturn();
             JsonNode items = mapper.readTree(list.getResponse().getContentAsString()).get("items");
             assertThat(items).isEmpty();
 
             mvc.perform(post("/api/v1/conversations/{conversationId}/tasks", conversationId)
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
                             .header("Idempotency-Key", "late-task")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"message\":\"迟到的目标\"}"))
@@ -85,7 +86,7 @@ class ConversationDeletionHttpTest {
 
 
             var conversation = mvc.perform(post("/api/v1/conversations")
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"title\":\"幂等删除\"}"))
                     .andExpect(status().isCreated()).andReturn();
@@ -93,25 +94,25 @@ class ConversationDeletionHttpTest {
                     .get("conversationId").asText();
 
             mvc.perform(delete("/api/v1/conversations/{conversationId}", conversationId)
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
                             .header("Idempotency-Key", "delete-1")
                             .header("If-Match", "0"))
                     .andExpect(status().isAccepted());
             mvc.perform(delete("/api/v1/conversations/{conversationId}", conversationId)
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
                             .header("Idempotency-Key", "delete-1")
                             .header("If-Match", "0"))
                     .andExpect(status().isAccepted());
 
             var other = mvc.perform(post("/api/v1/conversations")
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"title\":\"版本冲突\"}"))
                     .andExpect(status().isCreated()).andReturn();
             String otherId = mapper.readTree(other.getResponse().getContentAsString())
                     .get("conversationId").asText();
             mvc.perform(delete("/api/v1/conversations/{conversationId}", otherId)
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
                             .header("Idempotency-Key", "delete-2")
                             .header("If-Match", "7"))
                     .andExpect(status().isConflict());

@@ -9,6 +9,7 @@ import com.agentsquad.squad.conversation.domain.ResponseExecutionStatus;
 import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
 import com.agentsquad.squad.conversation.dto.MessageReceipt;
 import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
+import com.agentsquad.squad.identity.UserStatusGuard;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -41,10 +42,14 @@ public class MessageAcceptanceService {
     @Resource
     private ObjectMapper objectMapper;
 
+    @Resource
+    private UserStatusGuard userStatusGuard;
+
     /**
      * 先持久消息与回复命令；同键同规范化输入只返回原身份，在途目标不阻断新消息。
      */
     public MessageReceipt accept(String userId, String conversationId, String key, MessageCreateRequest request) {
+        userStatusGuard.requireActive(userId);
         if (key == null || key.isBlank() || key.length() > 160) {
             throw invalid("消息幂等键长度必须为1到160");
         }

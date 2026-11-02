@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.conversation.service.ConversationCleanupScheduler;
 import com.agentsquad.squad.conversation.service.ConversationDeletionService;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
@@ -42,19 +43,19 @@ class ResponseControlHttpTest {
             String path = "/api/v1/executions/" + receipt.executionId() + "/cancel";
             mvc.perform(post(path).header("Idempotency-Key", "stop")
                     .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")).andExpect(status().isUnauthorized());
-            mvc.perform(post(path).header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER").header("Idempotency-Key", "stale")
+            mvc.perform(post(path).with(TestAssertion.as(actor.view().userId(), "USER")).header("Idempotency-Key", "stale")
                     .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":9}")).andExpect(status().isConflict());
-            String first = mvc.perform(post(path).header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER").header("Idempotency-Key", "stop")
+            String first = mvc.perform(post(path).with(TestAssertion.as(actor.view().userId(), "USER")).header("Idempotency-Key", "stop")
                             .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")).andExpect(status().isAccepted())
                     .andReturn().getResponse().getContentAsString();
-            String again = mvc.perform(post(path).header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER").header("Idempotency-Key", "stop")
+            String again = mvc.perform(post(path).with(TestAssertion.as(actor.view().userId(), "USER")).header("Idempotency-Key", "stop")
                             .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")).andExpect(status().isAccepted())
                     .andReturn().getResponse().getContentAsString();
             assertThat(again).isEqualTo(first);
             assertThat(tasks.getConversation(user, conversation).activeTaskId()).isEqualTo(task);
             assertThat(tasks.findTask(user, task).status()).isEqualTo("QUEUED");
             MessageTestActor other = new MessageTestActor(new com.agentsquad.squad.identity.AuthView(UUID.randomUUID().toString(), "other", java.util.List.of("USER"), null));
-            mvc.perform(post(path).header("X-User-Id", other.view().userId()).header("X-User-Role", "USER").header("Idempotency-Key", "foreign")
+            mvc.perform(post(path).with(TestAssertion.as(other.view().userId(), "USER")).header("Idempotency-Key", "foreign")
                     .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")).andExpect(status().isNotFound());
         }
     }

@@ -12,3 +12,8 @@ export function meApi(): Promise<AuthView> {
 export function logoutApi(): Promise<void> {
   return apiPost('/api/v1/auth/logout')
 }
+
+/** 修改密码成功后服务端撤销全部会话，调用方必须回到登录页。 */
+export function changePasswordApi(currentPassword: string, newPassword: string): Promise<void> {
+  return apiPost('/api/v1/auth/password', { currentPassword, newPassword })
+}

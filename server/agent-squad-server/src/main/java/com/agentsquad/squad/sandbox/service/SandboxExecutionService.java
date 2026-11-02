@@ -2,6 +2,7 @@ package com.agentsquad.squad.sandbox.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.identity.UserStatusGuard;
 import com.agentsquad.squad.sandbox.domain.SandboxPolicy;
 import com.agentsquad.squad.sandbox.dto.SandboxExecuteRequest;
 import com.agentsquad.squad.sandbox.dto.SandboxExecutionResult;
@@ -41,8 +42,12 @@ public class SandboxExecutionService {
     @Resource
     private ObjectMapper json;
 
+    @Resource
+    private UserStatusGuard userStatusGuard;
+
     public SandboxExecutionResult execute(String userId, String sessionId, String guardToken,
                                           String turnId, String toolCallId, SandboxExecuteRequest request) {
+        userStatusGuard.requireActive(userId);
         driver.requireAvailable();
         SandboxPolicy.validate(request);
         var context = access.resolve(userId, sessionId, guardToken, turnId, toolCallId);

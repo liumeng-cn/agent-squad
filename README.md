@@ -18,7 +18,7 @@ Agent Squad 是一个面向 Web 的多智能体运行底座。用户发送消息
 
 新版页面已接入连续会话：普通交流不创建 GoalTask，Master 按需建立后台工作；任务在途可继续提问或补充要求。追问、审批、分级故障、允许的重试与下载均留在对话中，停止回答与停止工作分别控制。侧栏支持安全标题、改名与历史分页，空态及附件布局按用户参考调整。
 
-本轮功能、回归结果与验证边界见 [对话体验验收记录](openspec/changes/archive/2026-11-02-conversation-first-experience/evidence/ui-regression-2026-10-29.md) 与 [端到端验收](openspec/changes/archive/2026-11-02-conversation-first-experience/evidence/e2e-2026-11-02.md)。仓库已将历史迁移合并为单一 `V1__baseline.sql`，本机开发库重建后由启动流程生成 44 张表。D3 原基线仍见 [D3 验收记录](openspec/changes/archive/2026-11-02-d3-multi-worker/evidence/progress.md)；D4–D6 已有本地验收证据，但 Java 21 运行时、完整备份还原与真实负载压测仍属发布门槛，不能将本轮对话优化计作这些门槛已验证。原 SDK 故障窗口、确定性模型协议测试、真实 DeepSeek 检查分别记载。
+本轮功能、回归结果与验证边界见 [对话体验验收记录](openspec/changes/archive/2026-11-02-conversation-first-experience/evidence/ui-regression-2026-10-29.md) 与 [端到端验收](openspec/changes/archive/2026-11-02-conversation-first-experience/evidence/e2e-2026-11-02.md)。仓库已将历史迁移合并为单一 `V1__baseline.sql`，本机开发库重建后由启动流程生成 48 张表（含身份四表）。D3 原基线仍见 [D3 验收记录](openspec/changes/archive/2026-11-02-d3-multi-worker/evidence/progress.md)；D4–D6 已有本地验收证据，但 Java 21 运行时、完整备份还原与真实负载压测仍属发布门槛，不能将本轮对话优化计作这些门槛已验证。原 SDK 故障窗口、确定性模型协议测试、真实 DeepSeek 检查分别记载。
 
 ### 已知缺陷与延后事项
 
@@ -29,7 +29,7 @@ Agent Squad 是一个面向 Web 的多智能体运行底座。用户发送消息
 
 当前 Maven 构建使用 JDK 27（Java 21 运行兼容性仍需单独验证）。准备 Maven、Docker MySQL 8.4，以及 Node.js 20.19+ 或 22.12+。MySQL 需监听 `127.0.0.1:13306`，预建 `agent_squad` 数据库和可访问该库的账号；应用启动时由 `spring.sql.init` 重放 `V1__baseline.sql` 建表。已有同名容器和数据库时直接复用，不要为启动服务清空数据。本地开发库可直接修改表结构，修改后同步回 `V1__baseline.sql`，保证空库重建结果一致。
 
-1. 在仓库根目录复制 [环境变量示例](.env.example) 为 `.env.local`，填写 MySQL 账号、本地登录账号及模型配置。`.env.local` 已被 Git 忽略。若希望提问得到模型回答，设置 `SQUAD_DELIVERY_ENABLED=true` 并填写 `SQUAD_MODEL_API_KEY`、`SQUAD_MODEL_BASE_URL`、`SQUAD_MODEL_NAME`；保持 `false` 时只会受理消息，不会投递执行。
+1. 在仓库根目录复制 [环境变量示例](.env.example) 为 `.env.local`，填写 MySQL 账号、网关断言密钥及模型配置。`.env.local` 已被 Git 忽略。账号与会话持久化在 MySQL，首个管理员通过一次性 `bootstrap-admin` 命令创建（`SQUAD_BOOTSTRAP_ADMIN_USERNAME` / `SQUAD_BOOTSTRAP_ADMIN_PASSWORD`，首次登录强制改密）；没有公开注册入口。若希望提问得到模型回答，设置 `SQUAD_DELIVERY_ENABLED=true` 并填写 `SQUAD_MODEL_API_KEY`、`SQUAD_MODEL_BASE_URL`、`SQUAD_MODEL_NAME`；保持 `false` 时只会受理消息，不会投递执行。
 2. 在一个终端启动业务服务：
 
    ```bash
@@ -56,7 +56,7 @@ Agent Squad 是一个面向 Web 的多智能体运行底座。用户发送消息
    npm run dev
    ```
 
-默认打开 [http://127.0.0.1:5173/login](http://127.0.0.1:5173/login)，页面代理到网关 `127.0.0.1:18081`，业务服务监听 `127.0.0.1:18080`。使用 `.env.local` 中的 `SQUAD_LOCAL_USER` 和 `SQUAD_LOCAL_PASSWORD` 登录；本地单账号默认具有 `ADMIN` 角色，可用 `SQUAD_LOCAL_ROLE=USER` 改为普通角色。自定义网关地址时设置 `VITE_API_TARGET`，网关的业务服务地址通过 `SQUAD_BUSINESS_SERVICE_URL` 配置；页面端口可用 `npm run dev -- --port 5174` 调整。
+默认打开 [http://127.0.0.1:5173/login](http://127.0.0.1:5173/login)，页面代理到网关 `127.0.0.1:18081`，业务服务监听 `127.0.0.1:18080`。登录使用 MySQL 中已创建的账号；管理员可在 `/app/admin/users` 创建、停用、重置账号，临时密码账号首次登录只能进入改密页。自定义网关地址时设置 `VITE_API_TARGET`，网关的业务服务地址通过 `SQUAD_BUSINESS_SERVICE_URL` 配置；页面端口可用 `npm run dev -- --port 5174` 调整。
 
 运行测试时使用**未加载 `.env.local` 的独立终端**，避免测试任务进入正在使用的 MySQL：
 
