@@ -40,9 +40,7 @@ public class AdminUserController {
                                     ServerHttpRequest request, ServerHttpResponse response) {
         response.getHeaders().setCacheControl("no-store");
         String token = SessionRequestSupport.readToken(request);
-        String requestId = SessionRequestSupport.requestId(request);
-        return authService.authenticate(token, requestId)
-                .flatMap(actor -> BlockingCalls.mono(() -> userAccountService.list(actor, cursor, limit)));
+        return BlockingCalls.mono(() -> userAccountService.list(authService.authenticate(token), cursor, limit));
     }
 
     @PostMapping
@@ -51,10 +49,10 @@ public class AdminUserController {
                                               ServerHttpRequest request, ServerHttpResponse response) {
         response.getHeaders().setCacheControl("no-store");
         String requestId = SessionRequestSupport.requestId(request);
-        return authService.authenticateWrite(SessionRequestSupport.readToken(request),
-                        SessionRequestSupport.csrfToken(request), requestId)
-                .flatMap(actor -> BlockingCalls.mono(
-                        () -> userAccountService.create(actor, body, requestId)));
+        return BlockingCalls.mono(() -> userAccountService.create(
+                authService.authenticateWrite(SessionRequestSupport.readToken(request),
+                        SessionRequestSupport.csrfToken(request)),
+                body, requestId));
     }
 
     @PatchMapping("/{userId}")
@@ -62,10 +60,10 @@ public class AdminUserController {
                                       ServerHttpRequest request, ServerHttpResponse response) {
         response.getHeaders().setCacheControl("no-store");
         String requestId = SessionRequestSupport.requestId(request);
-        return authService.authenticateWrite(SessionRequestSupport.readToken(request),
-                        SessionRequestSupport.csrfToken(request), requestId)
-                .flatMap(actor -> BlockingCalls.mono(
-                        () -> userAccountService.update(actor, userId, body, requestId)));
+        return BlockingCalls.mono(() -> userAccountService.update(
+                authService.authenticateWrite(SessionRequestSupport.readToken(request),
+                        SessionRequestSupport.csrfToken(request)),
+                userId, body, requestId));
     }
 
     @PostMapping("/{userId}/reset-password")
@@ -73,9 +71,9 @@ public class AdminUserController {
                                                    ServerHttpRequest request, ServerHttpResponse response) {
         response.getHeaders().setCacheControl("no-store");
         String requestId = SessionRequestSupport.requestId(request);
-        return authService.authenticateWrite(SessionRequestSupport.readToken(request),
-                        SessionRequestSupport.csrfToken(request), requestId)
-                .flatMap(actor -> BlockingCalls.mono(
-                        () -> userAccountService.resetPassword(actor, userId, requestId)));
+        return BlockingCalls.mono(() -> userAccountService.resetPassword(
+                authService.authenticateWrite(SessionRequestSupport.readToken(request),
+                        SessionRequestSupport.csrfToken(request)),
+                userId, requestId));
     }
 }

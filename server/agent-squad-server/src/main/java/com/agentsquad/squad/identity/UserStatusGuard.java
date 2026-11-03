@@ -1,27 +1,40 @@
 package com.agentsquad.squad.identity;
 
+import com.agentsquad.squad.common.exception.RuntimeBusinessException;
+import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
- * 用户禁用后的执行授权安全点。正式环境必须启用。
- * 账号禁用不删除任务与已发出外部副作用；只是阻断新的派发动作。
+ * 账号停用的运行时安全点。
+ *
+ * <p>在受理、领取、执行授权、模型调用与外部派发前读取共享身份库；
+ * 停用或缺失账号拒绝新的受控动作，不迁移既有会话数据，也不改写已进入 IN_FLIGHT 的账本记录。
+ * 生产 profile 必须开启本检查，本地单机模式可显式关闭。</p>
  */
 @Service
+@Slf4j
 public class UserStatusGuard {
-    @Resource private JdbcTemplate jdbc;
-    @Value("${agentsquad.identity.enforce-user-status:false}") private boolean enabled;
 
+    @Resource
+    private UserStatusMapper mapper;
+
+    @Value("${agentsquad.identity.enforce-user-status:false}")
+    private boolean enabled;
+
+    /**
+     * 账号必须存在且为 ACTIVE；停用、删除或未知账号统一拒绝，避免异步任务在停用后继续产生副作用。
+     */
     public void requireActive(String userId) {
-        if (!enabled) return;
-        Integer count=jdbc.queryForObject(
-                "SELECT COUNT(*) FROM sq_user WHERE user_id=? AND status='ACTIVE' AND del_flag='0'",
-                Integer.class,userId);
-        if(count==null || count!=1)
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"用户已停用，禁止开始新执行");
+        if (!enabled) {
+            return;
+        }
+        String status = userId == null || userId.isBlank() ? null : mapper.findStatus(userId);
+        if (!"ACTIVE".equals(status)) {
+            log.warn("账号状态阻止新的受控动作 userId={} status={}", userId, status == null ? "MISSING" : status);
+            throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "账号已停用或不可用");
+        }
     }
 }

@@ -25,7 +25,7 @@ async function submit(): Promise<void> {
   }
   password.value = ''
   if (auth.mustChangePassword) {
-    await router.replace({ name: 'change-password' })
+    await router.replace({ name: 'changePassword' })
     return
   }
   const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : null

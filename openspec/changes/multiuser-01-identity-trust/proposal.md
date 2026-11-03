@@ -27,7 +27,7 @@
 
 ## Impact / Dependencies
 
-- 主要代码：`server/agent-squad-gateway/auth/`、`filter/`、`gateway/pom.xml`；`server/agent-squad-server/identity/`、`runtime/service/ExecutionAuthorizationService.java`、模型与工具执行入口；`web/console/src/features/auth` 和新管理页；`api/openapi.json`、`V1__baseline.sql`、部署 SQL。
+- 主要代码：`server/agent-squad-gateway/auth/`、`filter/`、`gateway/pom.xml`；`server/agent-squad-server/identity/`、`runtime/service/ExecutionAuthorizationService.java`、模型与工具执行入口；`web/workbench/src/features/auth` 和新管理页；`api/openapi.json`、`V1__baseline.sql`、部署 SQL。
 - R01、B01/B14、R08/R11；回归 A01/A02/A03/A07/A11/A12。
 - 前置：锁定 Git 基线，完成测试基线和迁移备份方案；不允许生产数据库操作。
 - 完成门槛：两个真实不同账号登录、会话隔离、过期/停用/改密立即失效、未经网关的伪造身份请求被拒绝；两套网关实例共享会话存储且行为一致。

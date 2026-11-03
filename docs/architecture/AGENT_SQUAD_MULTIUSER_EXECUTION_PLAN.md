@@ -27,7 +27,7 @@
 | 真实缺陷 | 首轮规划阶段早到 Directive 后模型拿错 ID 进入迭代耗尽 | C3 用结构化 ID 和协调安全点修复 |
 | 验收 | 仓库已有真实模型、MySQL 及 SDK 测试记录 | 可作为基线，但须在本地重新执行并记录 |
 
-**来源入口**：`README.md`、`openspec/config.yaml`、`openspec/specs/{access,runtime,master,worker,web-console}`、`server/.../AuthService.java`、`UserContextInterceptor.java`、`CommandDeliveryService.java`、`MasterAgent.java`、`NativeProjectionPoller.java`、`ResponseContextService.java`、`web/console/src/features/chat/stores/conversations.ts`；真实模型缺陷：`openspec/changes/archive/2026-11-02-conversation-first-experience/evidence/e2e-2026-11-02.md`。
+**来源入口**：`README.md`、`openspec/config.yaml`、`openspec/specs/{access,runtime,master,worker,web-console}`、`server/.../AuthService.java`、`UserContextInterceptor.java`、`CommandDeliveryService.java`、`MasterAgent.java`、`NativeProjectionPoller.java`、`ResponseContextService.java`、`web/workbench/src/features/chat/stores/conversations.ts`；真实模型缺陷：`openspec/changes/archive/2026-11-02-conversation-first-experience/evidence/e2e-2026-11-02.md`。
 
 ## 2. 目标架构
 
@@ -101,10 +101,10 @@ flowchart TB
 ```bash
 # 真实命令；执行体需先确认本地独立测试 MySQL 容器和凭据，不可让测试命中生产 DB
 mvn -f server/pom.xml -B -ntp test
-npm --prefix web/console ci
-npm --prefix web/console run build
+npm --prefix web/workbench ci
+npm --prefix web/workbench run build
 # C3 建立 test script 之后执行
-npm --prefix web/console test
+npm --prefix web/workbench test
 # 需要 Python3/jsonschema 依赖，安装规则按仓库工具说明
 python3 tools/check_design.py
 ```

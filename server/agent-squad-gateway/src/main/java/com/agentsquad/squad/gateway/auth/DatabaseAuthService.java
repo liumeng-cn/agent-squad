@@ -2,7 +2,6 @@ package com.agentsquad.squad.gateway.auth;
 
 import com.agentsquad.squad.gateway.exception.AuthenticationRequiredException;
 import jakarta.annotation.Resource;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -156,80 +155,5 @@ public class DatabaseAuthService {
         if(token!=null && !token.isBlank()) {
             jdbc.update("UPDATE sq_auth_session SET revoked_at=? WHERE token_hash=? AND revoked_at IS NULL",now(),digest(token));
         }
-    }
-
-    @Transactional
-    public void changePassword(String token,PasswordChangeRequest request) {
-        AuthView actor=authenticate(token);
-        AccountRecord user=byId(actor.userId());
-        if(request==null || request.newPassword()==null || request.newPassword().length()<12
-                || request.currentPassword()==null || !passwordEncoder.matches(request.currentPassword(),user.passwordHash()))
-            throw new AuthenticationRequiredException();
-        jdbc.update("UPDATE sq_user SET password_hash=?,must_change_password=0,auth_version=auth_version+1,"
-                + "version=version+1 WHERE user_id=?",passwordEncoder.encode(request.newPassword()),actor.userId());
-        jdbc.update("UPDATE sq_auth_session SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL",now(),actor.userId());
-    }
-
-    private void requireAdmin(AuthView actor) {
-        if(actor==null || !actor.roles().contains("ADMIN") || actor.mustChangePassword()) throw new AuthForbiddenException();
-    }
-
-    @Transactional
-    public UserCreateReceipt createUser(AuthView actor,UserCreateRequest request) {
-        requireAdmin(actor);
-        String username=normalize(request.username());
-        if(!username.matches("[a-z0-9._-]{3,64}") || !List.of("USER","ADMIN").contains(request.role()))
-            throw new IllegalArgumentException("账号参数无效");
-        String password=randomToken(24),userId=UUID.randomUUID().toString();
-        try {
-            jdbc.update("INSERT INTO sq_user(user_id,username,display_name,password_hash,role,status,creator_id) "
-                    + "VALUES(?,?,?,?,?,'ACTIVE',?)",userId,username,request.displayName()==null?"":request.displayName(),
-                    passwordEncoder.encode(password),request.role(),actor.userId());
-        }catch(DuplicateKeyException ex){throw new AuthConflictException();}
-        return new UserCreateReceipt(userId,password);
-    }
-
-    public UserPage users(AuthView actor,int limit,long after) {
-        requireAdmin(actor);
-        int size=Math.min(Math.max(limit,1),100);
-        var items=jdbc.query("SELECT id,user_id,username,display_name,role,status,must_change_password,version "
-                + "FROM sq_user WHERE id>? AND del_flag='0' ORDER BY id LIMIT ?",
-                (rs,i)->new UserSummary(rs.getString("user_id"),rs.getString("username"),rs.getString("display_name"),
-                        rs.getString("role"),rs.getString("status"),rs.getBoolean("must_change_password"),
-                        rs.getLong("version")),after,size);
-        return new UserPage(items,null);
-    }
-
-    @Transactional
-    public void updateUser(AuthView actor,String userId,UserUpdateRequest request) {
-        requireAdmin(actor);
-        if(request==null || !List.of("USER","ADMIN").contains(request.role())
-                || !List.of("ACTIVE","DISABLED").contains(request.status()))
-            throw new IllegalArgumentException("用户更新参数无效");
-        AccountRecord current=byId(userId);
-        if(current==null) throw new AuthConflictException();
-        if("ADMIN".equals(current.role()) && (!"ADMIN".equals(request.role()) || !"ACTIVE".equals(request.status()))) {
-            jdbc.query("SELECT id FROM sq_user WHERE role='ADMIN' AND status='ACTIVE' AND del_flag='0' ORDER BY id FOR UPDATE",
-                    (rs,i)->rs.getLong(1));
-            Integer admins=jdbc.queryForObject("SELECT COUNT(*) FROM sq_user WHERE role='ADMIN' AND status='ACTIVE' AND del_flag='0'",Integer.class);
-            if(admins==null || admins<=1)throw new AuthConflictException();
-        }
-        int updated=jdbc.update("UPDATE sq_user SET display_name=?,role=?,status=?,auth_version=auth_version+1,"
-                + "version=version+1 WHERE user_id=? AND version=?",
-                request.displayName(),request.role(),request.status(),userId,request.expectedVersion());
-        if(updated!=1)throw new AuthConflictException();
-        jdbc.update("UPDATE sq_auth_session SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL",now(),userId);
-    }
-
-    @Transactional
-    public UserCreateReceipt resetPassword(AuthView actor,String userId) {
-        requireAdmin(actor);
-        String password=randomToken(24);
-        int count=jdbc.update("UPDATE sq_user SET password_hash=?,must_change_password=1,"
-                + "auth_version=auth_version+1,version=version+1 WHERE user_id=?",
-                passwordEncoder.encode(password),userId);
-        if(count!=1)throw new AuthConflictException();
-        jdbc.update("UPDATE sq_auth_session SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL",now(),userId);
-        return new UserCreateReceipt(userId,password);
     }
 }

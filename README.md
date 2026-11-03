@@ -51,7 +51,7 @@ Agent Squad 是一个面向 Web 的多智能体运行底座。用户发送消息
 4. 在第三个终端启动页面：
 
    ```bash
-   cd web/console
+   cd web/workbench
    npm ci
    npm run dev
    ```
@@ -62,7 +62,7 @@ Agent Squad 是一个面向 Web 的多智能体运行底座。用户发送消息
 
 ```bash
 mvn -f server/pom.xml -B -ntp test
-npm --prefix web/console run build
+npm --prefix web/workbench run build
 ```
 
 后端集成测试使用独立 MySQL schema，需显式设置 `SQUAD_TEST_MYSQL_ADMIN_URL`（指向 `mysql` 系统库）、`SQUAD_TEST_MYSQL_USER` 与 `SQUAD_TEST_MYSQL_PASSWORD`；测试只创建 `as_test_` 前缀的隔离库，不读取应用私有配置；测试 JVM 正常退出时会自动删除本次创建的库，异常终止可能残留，可手动清理 `as_test_%`。部分故障或多实例专项测试还需单独开启。另可在装有 Python 3.10+ 和 `jsonschema` 的设计工具环境运行 `python3 tools/check_design.py`；Python 不参与服务运行。
@@ -75,7 +75,7 @@ npm --prefix web/console run build
 原生持久事件 → 平台投影 → 会话消息/状态快照与 SSE → 当前对话
 ```
 
-`server/pom.xml` 聚合 `agent-squad-gateway`（认证与 Spring Cloud Gateway 内置路由）和 `agent-squad-server`（运行底座）两个 Java 模块，`web/console/` 是 Vue 工作台，`api/` 放接口契约（OpenAPI 与配置 Schema），`openspec/` 放能力 spec、变更计划与稳定约束。数据库结构以 `server/agent-squad-server/src/main/resources/db/migration/V1__baseline.sql` 为唯一权威。
+`server/pom.xml` 聚合 `agent-squad-gateway`（认证与 Spring Cloud Gateway 内置路由）和 `agent-squad-server`（运行底座）两个 Java 模块，`web/workbench/` 是 Vue 工作台，`api/` 放接口契约（OpenAPI 与配置 Schema），`openspec/` 放能力 spec、变更计划与稳定约束。数据库结构以 `server/agent-squad-server/src/main/resources/db/migration/V1__baseline.sql` 为唯一权威。
 
 ### Java 服务包结构
 

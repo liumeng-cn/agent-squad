@@ -15,7 +15,7 @@
 
 - 已通过 GitHub connector 读取并写入实际源码，提交在目标 feature 分支。
 - **尚未执行 Maven / MySQL / 真实 HTTP 集成测试**：当前远程编辑环境无 Maven，也无法联网克隆仓库。GitHub 写入成功不代表测试通过。
-- 本地执行命令：`mvn -f server/pom.xml -B -ntp test`，以及 `npm --prefix web/console run build`。如存在 skipped，按数量与原因记录。
+- 本地执行命令：`mvn -f server/pom.xml -B -ntp test`，以及 `npm --prefix web/workbench run build`。如存在 skipped，按数量与原因记录。
 
 ## 尚未完成的主要 C1 内容
 

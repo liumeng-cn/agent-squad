@@ -18,7 +18,6 @@ import io.agentscope.core.middleware.ModelCallInput;
 import io.agentscope.core.model.ChatUsage;
 import io.agentscope.core.session.SessionRecorder;
 import jakarta.annotation.Resource;
-import com.agentsquad.squad.identity.UserStatusGuard;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -41,8 +40,6 @@ import java.util.function.Function;
 @Slf4j
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class ModelBudgetMiddleware implements MiddlewareBase {
-    @Resource private UserStatusGuard userStatus;
-
     @Resource
     private ExecutionFailureService failures;
 
@@ -88,7 +85,7 @@ public class ModelBudgetMiddleware implements MiddlewareBase {
             if (userId == null || sessionId == null || turnId == null || turnId.isBlank()) {
                 return Flux.error(new IllegalStateException("模型调用缺少固定会话或原生回合"));
             }
-            userStatus.requireActive(userId);
+            userStatusGuard.requireActive(userId);
             WorkerModelProfile profile = profileRegistry.requireExecutableModel(profileKey);
             String requestHash = requestHash(input, profileKey);
             return Mono.fromCallable(() -> failures.modelRetrySuffix(userId, sessionId))

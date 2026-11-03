@@ -1,8 +1,9 @@
 package com.agentsquad.squad.gateway.auth;
 
+import com.agentsquad.squad.gateway.admin.UserAccountService;
+import com.agentsquad.squad.gateway.common.BlockingCalls;
 import com.agentsquad.squad.gateway.exception.AuthenticationRequiredException;
 import jakarta.annotation.Resource;
-import org.springframework.beans.factory.annotation.Value;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import org.springframework.http.HttpCookie;
@@ -35,10 +36,10 @@ public class AuthController {
     private AuthService authService;
 
     @Resource
-    private DatabaseAuthService users;
+    private UserAccountService userAccountService;
 
-    @Value("${agentsquad.auth.cookie-secure:false}")
-    private boolean secureCookie;
+    @Resource
+    private AuthProperties authProperties;
 
     /**
      * 登录成功后写入 HttpOnly 会话 Cookie。
@@ -49,7 +50,8 @@ public class AuthController {
         return Mono.fromCallable(() -> {
             String token = authService.login(request.username(), request.password());
             response.getHeaders().add(HttpHeaders.SET_COOKIE, ResponseCookie.from(SESSION_COOKIE, token)
-                    .httpOnly(true).secure(secureCookie).sameSite("Lax").path("/").build().toString());
+                    .httpOnly(true).secure(authProperties.isSecureCookie()).sameSite("Lax").path("/").build()
+                    .toString());
             return authService.authenticate(token);
         }).subscribeOn(Schedulers.boundedElastic());
     }
@@ -76,19 +78,21 @@ public class AuthController {
             authService.authenticateWrite(readToken(request), csrfToken);
             authService.logout(readToken(request));
             response.getHeaders().add(HttpHeaders.SET_COOKIE, ResponseCookie.from(SESSION_COOKIE, "")
-                    .httpOnly(true).secure(secureCookie).sameSite("Lax").path("/").maxAge(0).build().toString());
+                    .httpOnly(true).secure(authProperties.isSecureCookie()).sameSite("Lax").path("/").maxAge(0)
+                    .build().toString());
         }).subscribeOn(Schedulers.boundedElastic()).then();
     }
 
     @PostMapping("/password")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public Mono<Void> changePassword(ServerHttpRequest request,ServerHttpResponse response,
-            @RequestHeader("X-CSRF-Token") String csrf,@RequestBody PasswordChangeRequest change) {
-        response.getHeaders().set(HttpHeaders.CACHE_CONTROL,"no-store");
-        return Mono.fromRunnable(() -> {
-            authService.authenticateWrite(readToken(request),csrf);
-            users.changePassword(readToken(request),change);
-        }).subscribeOn(Schedulers.boundedElastic()).then();
+    public Mono<Void> changePassword(ServerHttpRequest request, ServerHttpResponse response,
+            @RequestHeader("X-CSRF-Token") String csrf, @RequestBody PasswordChangeRequest change) {
+        response.getHeaders().set(HttpHeaders.CACHE_CONTROL, "no-store");
+        String requestId = SessionRequestSupport.requestId(request);
+        return BlockingCalls.run(() -> {
+            AuthView actor = authService.authenticateWrite(readToken(request), csrf);
+            userAccountService.changePassword(actor, change, requestId);
+        });
     }
 
     private String readToken(ServerHttpRequest request) {

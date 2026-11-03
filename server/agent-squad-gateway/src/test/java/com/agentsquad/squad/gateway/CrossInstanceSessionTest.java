@@ -86,6 +86,7 @@ class CrossInstanceSessionTest {
                 "--spring.datasource.password=" + GatewayTestDatabase.password(),
                 "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--gateway.business-service-url=http://127.0.0.1:9",
+                "--agentsquad.auth.mode=database",
                 "--agentsquad.auth.cleanup-initial-delay-ms=3600000");
     }
 

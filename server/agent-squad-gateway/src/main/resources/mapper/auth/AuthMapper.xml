@@ -56,33 +56,32 @@
                s.idle_expires_at, s.absolute_expires_at, s.revoked_at
         FROM sq_auth_session s
         JOIN sq_user u ON u.user_id = s.user_id AND u.del_flag = '0'
-        WHERE s.token_hash = #{tokenHash} AND s.del_flag = '0'
+        WHERE s.token_hash = #{tokenHash}
     </select>
 
     <insert id="insertSession">
         INSERT INTO sq_auth_session (session_id, user_id, token_hash, csrf_hash, issued_auth_version,
-            last_seen_at, idle_expires_at, absolute_expires_at, creator_id, creator_name)
+            last_seen_at, idle_expires_at, absolute_expires_at)
         VALUES (#{session.sessionId}, #{session.userId}, #{session.tokenHash}, #{session.csrfHash},
             #{session.issuedAuthVersion}, #{lastSeenAt}, #{session.idleExpiresAt},
-            #{session.absoluteExpiresAt}, #{session.userId}, #{session.username})
+            #{session.absoluteExpiresAt})
     </insert>
 
     <update id="touchSession">
         UPDATE sq_auth_session
-        SET last_seen_at = #{lastSeenAt}, idle_expires_at = #{idleExpiresAt},
-            last_update_time = CURRENT_TIMESTAMP(3)
+        SET last_seen_at = #{lastSeenAt}, idle_expires_at = #{idleExpiresAt}
         WHERE session_id = #{sessionId} AND revoked_at IS NULL
     </update>
 
     <update id="revokeSession">
         UPDATE sq_auth_session
-        SET revoked_at = #{now}, last_update_time = CURRENT_TIMESTAMP(3)
+        SET revoked_at = #{now}
         WHERE session_id = #{sessionId} AND revoked_at IS NULL
     </update>
 
     <update id="revokeUserSessions">
         UPDATE sq_auth_session
-        SET revoked_at = #{now}, last_update_time = CURRENT_TIMESTAMP(3)
+        SET revoked_at = #{now}
         WHERE user_id = #{userId} AND revoked_at IS NULL
     </update>
 
@@ -104,8 +103,7 @@
 
     <update id="updateBucket">
         UPDATE sq_auth_rate_bucket
-        SET window_start = #{windowStart}, failures = #{failures}, locked_until = #{lockedUntil},
-            last_update_time = CURRENT_TIMESTAMP(3)
+        SET window_start = #{windowStart}, failures = #{failures}, locked_until = #{lockedUntil}
         WHERE bucket_key = #{bucketKey}
     </update>
 

@@ -36,6 +36,7 @@ class OperationExecutorTransactionTest {
                 anyLong(), anyString(), anyString(), anyString())).thenReturn(1);
 
         OperationExecutor target = new OperationExecutor();
+        ReflectionTestUtils.setField(target, "userStatus", mock(com.agentsquad.squad.identity.UserStatusGuard.class));
         ReflectionTestUtils.setField(target, "operationMapper", operationMapper);
         OperationDispatchService dispatch = mock(OperationDispatchService.class);
         when(dispatch.begin(any(), anyString(), anyLong(), any(), anyString())).thenReturn(1);

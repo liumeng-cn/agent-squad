@@ -3,7 +3,7 @@ agentsquad:
     strict: true
   auth:
     mode: database
-    cookie-secure: true
+    secure-cookie: true
 spring:
   datasource:
     hikari:

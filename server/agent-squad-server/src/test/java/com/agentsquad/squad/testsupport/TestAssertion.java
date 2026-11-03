@@ -1,6 +1,5 @@
 package com.agentsquad.squad.testsupport;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import javax.crypto.Mac;
@@ -8,9 +7,8 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.UUID;
 
 /**
  * 测试用内部身份断言。
@@ -22,8 +20,6 @@ public final class TestAssertion {
 
     public static final String KID = "k-test";
     public static final String SECRET = "test-only-assertion-secret-0123456789abcdef";
-
-    private static final ObjectMapper JSON = new ObjectMapper();
 
     private TestAssertion() {
     }
@@ -38,27 +34,18 @@ public final class TestAssertion {
         };
     }
 
+    /**
+     * 生成与网关相同的紧凑断言：管道分隔载荷 + HMAC-SHA256 签名。
+     */
     public static String sign(String userId, List<String> roles, String method, String path, Instant now) {
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("iss", "agent-squad-gateway");
-        payload.put("aud", "agent-squad-server");
-        payload.put("sub", userId);
-        payload.put("name", userId);
-        payload.put("roles", roles);
-        payload.put("authVersion", 0);
-        payload.put("iat", now.getEpochSecond());
-        payload.put("exp", now.plusSeconds(30).getEpochSecond());
-        payload.put("method", method);
-        payload.put("path", path);
-        payload.put("requestId", "test");
-        payload.put("kid", KID);
-        try {
-            Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
-            String encoded = encoder.encodeToString(JSON.writeValueAsBytes(payload));
-            return encoded + "." + encoder.encodeToString(hmac(SECRET.getBytes(StandardCharsets.UTF_8), encoded));
-        } catch (Exception exception) {
-            throw new IllegalStateException("测试断言签发失败", exception);
-        }
+        String role = roles == null || roles.isEmpty() ? "USER" : roles.getFirst();
+        long issued = now.getEpochSecond();
+        String value = String.join("|", "agent-squad-gateway", "agent-squad-server", KID,
+                userId, userId, role, Long.toString(issued), Long.toString(issued + 30),
+                method, path, UUID.randomUUID().toString());
+        Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
+        String encoded = encoder.encodeToString(value.getBytes(StandardCharsets.UTF_8));
+        return encoded + "." + encoder.encodeToString(hmac(SECRET.getBytes(StandardCharsets.UTF_8), encoded));
     }
 
     private static byte[] hmac(byte[] key, String payload) {

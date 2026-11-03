@@ -100,7 +100,7 @@ Tests run: 1, Failures: 0, Errors: 0, Skipped: 0 -- UserStatusGuardIntegrationTe
 
 ```bash
 mvn -f server/pom.xml -B -ntp test
-npm --prefix web/console run build
+npm --prefix web/workbench run build
 python3 tools/check_design.py
 ```
 

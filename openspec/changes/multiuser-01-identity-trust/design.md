@@ -91,7 +91,7 @@ DDL 实施要求：4 表与既有 44 表形成空库 48 表；增加完整公共
 
 - 浏览器 Cookie 名继续 `SQUAD_SESSION`，值为 CSPRNG 生成的 256-bit 随机密钥（base64url）；数据库**只存 SHA256(token)**，不可存明文。
 - 过期：滑动空闲 24 小时 + 绝对 7 天（可配）；活跃更新 `last_seen_at/idle_expires_at` 每 5 分钟最多一次；过期/撤销/禁用/auth_version 不一致始终 401。多网关实例读同一 DB；退出/改密/停用跨实例立即失效。
-- CSRF 128-bit 以上随机值，数据库存摘要；由会话令牌经 HMAC-SHA256 派生（而非每次重新随机构造），使刷新或多标签页重复取 `/me` 得到同一令牌、不互相失效。`/login` 和 `/me` 返回给已验证的同源客户端，写请求 `X-CSRF-Token` 必须匹配；保持 `web/console/src/shared/api/csrf.ts` 与 HttpOnly Cookie 分离。`/me` 响应 no-store；CORS 生产只允许明确同源，不接受 `*` 或 `localhost:*`。
+- CSRF 128-bit 以上随机值，数据库存摘要；由会话令牌经 HMAC-SHA256 派生（而非每次重新随机构造），使刷新或多标签页重复取 `/me` 得到同一令牌、不互相失效。`/login` 和 `/me` 返回给已验证的同源客户端，写请求 `X-CSRF-Token` 必须匹配；保持 `web/workbench/src/shared/api/csrf.ts` 与 HttpOnly Cookie 分离。`/me` 响应 no-store；CORS 生产只允许明确同源，不接受 `*` 或 `localhost:*`。
 - 生产 Cookie：`HttpOnly; Secure; SameSite=Lax; Path=/`，按环境明确控制 Secure，不可仅依靠 `X-Forwarded-Proto` 无条件信任；所有 auth 响应 `Cache-Control: no-store`。使用 HTTPS/HSTS（部署阶段落实）。
 - 登录防爆破：对规范化用户名 + 来源 IP 派生不可逆 bucket key，使用 DB 原子窗口计数或渐进锁定；推荐默认 5 次失败/15 分钟、15 分钟冻结，**不可令单个恶意客户端轻易锁死所有账号**；额外设 IP 维度总限流。失败不暴露账户是否存在，成功审计不记明文 IP。
 - 数据清理：定时分批清理已过期会话与旧 rate bucket；不使用 JVM 无上限 Map 做正式会话权威。
@@ -101,7 +101,7 @@ DDL 实施要求：4 表与既有 44 表形成空库 48 表；增加完整公共
 当前 Gateway 的 `GatewayAuthenticationFilter` 设置 `X-User-Id`，业务仅检查非空。替换为：
 
 1. Gateway 从持久会话取得已认证账号，移除所有外部传入的 `X-User-*`、`X-Squad-Assertion` 等内部身份头；不转发 Cookie、原始 CSRF 到业务（保持现行为）。
-2. Gateway 使用唯一内部共享密钥（不少于 256 bit；从密钥管理/环境注入）生成 `X-Squad-Assertion`。格式可用简单 `base64url(payload).base64url(HMAC-SHA256(payload))`，固定 JSON 字段并校验严格：`iss=agent-squad-gateway`、`aud=agent-squad-server`、`sub=userId`、`roles`（角色数组）、`authVersion`、`iat`、`exp<=iat+30s`、`method`、`path`、`requestId`、`kid`。签名覆盖全部 payload 字节；时间判定允许有限时钟偏差（<=5s）。
+2. Gateway 使用唯一内部共享密钥（不少于 256 bit；从密钥管理/环境注入）生成 `X-Squad-Assertion`。格式为 `base64url(payload).base64url(HMAC-SHA256(payload))`，payload 为管道分隔字段，业务端严格校验：`iss=agent-squad-gateway`、`aud=agent-squad-server`、`kid`、`sub=userId`、`username`、`role`（单角色，限 `ADMIN`/`USER`/`OPERATOR`）、`iat`、`exp<=iat+30s`、`method`、原始 `path`、`requestId`；签名覆盖全部 payload 字节；时间判定允许有限时钟偏差（<=5s）。
 3. Business `UserContextInterceptor` 在所有 `/api/**` 路由上验证签名、密钥版本、受众、方法、规范化后的转发路径与时间窗，然后设置 `UserContext`；**禁止在生产回退读取 `X-User-Id`**。常量时间签名比较，拒绝带多个同名认证头、缺失/超长/畸形断言。
 4. 所有业务端点只在受限私有网络监听；公开反向代理只暴露 Gateway，服务间使用 TLS（生产更推荐 mTLS）。短时断言只是纵深防御，不替代网络隔离。若未来出现跨网关重放风险，再评估 jti 存储或 mTLS 绑定；当前不得将此方案宣称为防止被盗断言在 30 秒内同端点重放。写接口依靠原有业务幂等、CSRF 和网络隔离。
 5. 密钥轮换：按 `kid` 支持当前与上一把公用 HMAC 密钥的短暂双读，网关只用当前钥签名；旧钥超过最大断言寿命后撤销。禁止把公用密钥写在 Git 或日志。

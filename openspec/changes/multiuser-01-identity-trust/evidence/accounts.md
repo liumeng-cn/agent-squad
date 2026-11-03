@@ -71,7 +71,7 @@ Tests run: 1, Failures: 0, Errors: 0, Skipped: 0 -- BootstrapAdminServiceTest
 真实结果：
 
 ```text
-npm --prefix web/console run build
+npm --prefix web/workbench run build
 vue-tsc --noEmit + vite build 通过；新增 ChangePasswordView、AdminUsersView 产物
 ```
 

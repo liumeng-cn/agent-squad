@@ -41,6 +41,7 @@ class BootstrapAdminServiceTest {
         registry.add("spring.datasource.username", GatewayTestDatabase::username);
         registry.add("spring.datasource.password", GatewayTestDatabase::password);
         registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
+        registry.add("agentsquad.auth.mode", () -> "database");
         registry.add("agentsquad.auth.cleanup-initial-delay-ms", () -> "3600000");
     }
 
@@ -69,8 +70,8 @@ class BootstrapAdminServiceTest {
                 () -> userAccountService.bootstrapAdmin("another-admin", RAW_PASSWORD));
         assertEquals(1, countUsers());
 
-        var login = authService.login("root-admin", RAW_PASSWORD, "bootstrap-test", "test").block();
-        assertTrue(login.view().mustChangePassword());
+        String token = authService.login("root-admin", RAW_PASSWORD);
+        assertTrue(authService.authenticate(token).mustChangePassword());
     }
 
     private int countUsers() throws Exception {

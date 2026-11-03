@@ -43,6 +43,7 @@ class SessionPolicyHttpTest {
         registry.add("spring.datasource.username", GatewayTestDatabase::username);
         registry.add("spring.datasource.password", GatewayTestDatabase::password);
         registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
+        registry.add("agentsquad.auth.mode", () -> "database");
         registry.add("agentsquad.auth.secure-cookie", () -> "true");
         registry.add("agentsquad.auth.cleanup-initial-delay-ms", () -> "3600000");
     }

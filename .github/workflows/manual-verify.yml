@@ -26,12 +26,12 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: web/console/package-lock.json
+          cache-dependency-path: web/workbench/package-lock.json
       - name: Build and compile Java (no automated test execution)
         run: mvn -f server/pom.xml -B -ntp -DskipTests package
       - name: Install and build frontend
         run: |
-          npm --prefix web/console ci
-          npm --prefix web/console run build
+          npm --prefix web/workbench ci
+          npm --prefix web/workbench run build
       - name: Manual tests remain required
         run: echo "Per user request, test execution is deferred to local regression."

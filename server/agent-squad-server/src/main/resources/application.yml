@@ -31,6 +31,7 @@ agentsquad:
     previous-hmac-key: ${SQUAD_IDENTITY_PREVIOUS_HMAC_KEY:}
     previous-key-id: ${SQUAD_IDENTITY_PREVIOUS_KEY_ID:}
     strict: ${SQUAD_IDENTITY_STRICT:false}
+    allow-unsigned-local: ${SQUAD_IDENTITY_ALLOW_UNSIGNED_LOCAL:false}
     enforce-user-status: ${SQUAD_IDENTITY_ENFORCE_USER_STATUS:false}
   vault:
     master-key: ${SQUAD_CONNECTION_SECRET_KEY:}
