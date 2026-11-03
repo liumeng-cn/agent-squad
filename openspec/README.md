@@ -1,48 +1,37 @@
-# OpenSpec 规划与设计（权威）
+# OpenSpec
 
-本目录是 agent-squad 的规划与设计权威来源。后续设计、计划与变更从这里开始：`openspec-propose` 把讨论变成 change，`openspec-apply-change` 按 change 的 tasks 实现，归档后回到 `specs/`。
+`specs/` 定义项目现行能力与行为，`changes/` 保存未完成变更及其任务和验证证据，`config.yaml` 定义跨模块约束。
 
-## 结构
+已归档变更已从工作区删除；需要追溯时使用 Git 历史。不要根据旧阶段名称推断当前实现或验收结果。
 
-- `specs/`：系统能力的稳定行为（R01–R12），对应 M01–M08 与一期 Web 工作台。
-- `changes/`：在途变更（proposal/design/tasks）。D0–D2 已完成，D3–D6 以 change 承载。
-- `config.yaml`：跨模块稳定约束与各 artifact 的撰写规则。
+## 能力规格
 
-## 能力清单
-
-| spec | 模块 | 对应需求 |
-| --- | --- | --- |
-| access | M01 | R01 |
-| runtime | M02 | R02/R08/R11 |
-| master | M03 | R03/R06 |
-| worker | M04 | R06/R12 |
-| context-memory | M05 | R04/R09 |
-| skills | M06 | R05 |
-| tools-interactions | M07 | R07/R08/R11 |
-| events-artifacts | M08 | R10 |
-| web-console | 页面 | R10（B01–B15） |
+| 目录 | 能力 | 需求 |
+|---|---|---|
+| access | 账号、会话与身份信任 | R01 |
+| runtime | 运行状态、命令、恢复与持久事实 | R02/R08/R11 |
+| master | 目标、计划和协调 | R03/R06 |
+| worker | Worker 定义、委派与执行 | R06/R12 |
+| context-memory | 上下文与显式记忆 | R04/R09 |
+| skills | Skill 版本与授权 | R05 |
+| tools-interactions | 工具、操作与交互 | R07/R08/R11 |
+| events-artifacts | 公共事件与产物 | R10 |
+| web-console | Web 工作台 | R10 |
 
 ## 在途变更
 
-| change | 内容 | 状态 |
-| --- | --- | --- |
-| d3-multi-worker | 多 Worker 协作 | 完成（本地验收，证据见 evidence/） |
-| d4-skills-memory | Skill 与显式记忆 | 完成（本地验收，证据见 evidence/） |
-| d5-sandbox-delivery | 沙箱与产物交付 | 完成（本地验收，证据见 evidence/） |
-| d6-integration-release | 集成与发布准备 | 完成（本地验收，证据见 evidence/） |
+- [重复最终交付修复](changes/fix-duplicate-final-delivery/tasks.md)
+- [C2 资源治理与并发恢复](changes/multiuser-02-admission-isolation/tasks.md)
+- [C3 对话与 Agent 体验](changes/multiuser-03-chat-agent-experience/tasks.md)
+- [C4 发布准备](changes/multiuser-04-release-readiness/tasks.md)
 
-## 旧设计资料的迁移关系
+任务只有在指定行为和验收完成后才勾选。代码实现、定向测试、全量测试、真实 SDK/模型及生产验收分别记录；未完成的门槛不得用历史通过结果代替。
 
-以下历史文件已删除，其设计/计划内容已迁入 OpenSpec（历史版本见 git 提交记录）：
+## 配套权威
 
-| 旧文件 | 迁移去向 |
-| --- | --- |
-| docs/modules/01–08 | openspec/specs/ 对应 8 个 spec |
-| docs/web-console.md + docs/ui/ | openspec/specs/web-console/（含 assets 视觉稿） |
-| docs/architecture.md、project-structure.md | openspec/config.yaml context |
-| docs/runtime-contract.md | specs runtime/master/worker/tools-interactions + config.yaml context |
-| decisions/001–003 | config.yaml context + specs（ADR 结论） |
-| docs/predevelopment.md（D0–D6） | openspec/changes/d3–d6 |
-| contracts/（现 api/） | 保留为接口契约（OpenAPI + JSON Schema） |
+- [OpenAPI](../api/openapi.json)：传输结构。
+- [UI manifest](../api/ui-manifest.json)：路由与接口映射。
+- [最终 baseline](../server/agent-squad-server/src/main/resources/db/migration/V1__baseline.sql)：开发及测试最终存储结构。
+- [受控生产迁移](../deploy/db/migrations/README.md)：生产迁移链和数据管理边界。
 
-`api/` 是接口契约（OpenAPI 与 JSON Schema），被 `tools/check_design.py` 和前端 DTO 镜像引用；本地与测试库以 `server/agent-squad-server/src/main/resources/db/migration/V1__baseline.sql` 为权威并由 `spring.sql.init` 重放，生产快照与增量由 `deploy/db/migrations/` 维护，`data/` 已删除；历史设计、计划、证据与研究文件已随 `docs/`、`decisions/` 一并删除。
+在项目根目录执行 `openspec list --json` 查看进度，执行 `openspec validate --all --strict` 校验规格。设计与接口静态检查使用 `python3 tools/check_design.py`，静态通过不能代替数据库和运行时验证。

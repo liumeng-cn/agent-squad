@@ -23,4 +23,4 @@
 
 ## 4. 发布决策
 - [ ] C4.4.1 仅在全部 blocker 解除且用户明确批准后可安排正式生产迁移和部署。执行体不得自行部署生产、删除/重建任何数据库或把业务端口开放公网。
-- [ ] C4.4.2 在尚未生产发布时可以提交经过验证的代码、staging 配置、OpenSpec 变更与验收证据，明确标注“production not yet approved”；只有验收结束才归档 OpenSpec changes。
+- [x] C4.4.2 在尚未生产发布时可以提交经过验证的代码、staging 配置、OpenSpec 变更与验收证据，明确标注“production not yet approved”；只有验收结束才归档 OpenSpec changes。

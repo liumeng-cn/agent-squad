@@ -27,7 +27,7 @@
 | 真实缺陷 | 首轮规划阶段早到 Directive 后模型拿错 ID 进入迭代耗尽 | C3 用结构化 ID 和协调安全点修复 |
 | 验收 | 仓库已有真实模型、MySQL 及 SDK 测试记录 | 可作为基线，但须在本地重新执行并记录 |
 
-**来源入口**：`README.md`、`openspec/config.yaml`、`openspec/specs/{access,runtime,master,worker,web-console}`、`server/.../AuthService.java`、`UserContextInterceptor.java`、`CommandDeliveryService.java`、`MasterAgent.java`、`NativeProjectionPoller.java`、`ResponseContextService.java`、`web/workbench/src/features/chat/stores/conversations.ts`；真实模型缺陷：`openspec/changes/archive/2026-11-02-conversation-first-experience/evidence/e2e-2026-11-02.md`。
+**来源入口**：`README.md`、`openspec/config.yaml`、`openspec/specs/{access,runtime,master,worker,web-console}`、`server/.../AuthService.java`、`UserContextInterceptor.java`、`CommandDeliveryService.java`、`MasterAgent.java`、`NativeProjectionPoller.java`、`ResponseContextService.java`、`web/workbench/src/features/chat/stores/conversations.ts`。历史真实模型缺陷记录已随归档材料从工作区移除，可在 Git 历史查阅。
 
 ## 2. 目标架构
 
