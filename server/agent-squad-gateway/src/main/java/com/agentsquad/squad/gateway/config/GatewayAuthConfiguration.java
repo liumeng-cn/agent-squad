@@ -30,8 +30,7 @@ public class GatewayAuthConfiguration {
     @PostConstruct
     public void validateProductionAuthentication() {
         if (environment.acceptsProfiles(Profiles.of("prod"))
-                && (!"database".equals(environment.getProperty("agentsquad.auth.mode"))
-                || !authProperties.isSecureCookie()
+                && (!authProperties.isSecureCookie()
                 || !environment.getProperty("agentsquad.identity.strict", Boolean.class, false)
                 || !"never".equals(environment.getProperty("spring.sql.init.mode")))) {
             throw new IllegalStateException("生产网关必须使用数据库认证、安全 Cookie、严格内部签名并禁止启动 DDL");

@@ -29,25 +29,43 @@ Java 服务和页面可在本机运行，Docker 提供 MySQL 与受控沙箱依�
 
 ## 本地启动
 
-### 1. 配置数据库与环境
+### 1. 本地配置
 
-准备 JDK 27、Maven、Node.js 22 和 MySQL 8.4。默认数据库地址为 `127.0.0.1:13306/agent_squad`，需预建数据库并配置可访问账号。已有数据库不得为启动应用而清空或重建。
+准备 JDK 27、Maven、Node.js 22 和 MySQL 8.4。本机验证参数已直接填写在两个模块的 `src/main/resources/application-local.yml`：数据库连接账号密码、内部身份密钥和模型参数，不使用环境变量占位表达式。
+
+- [Server 本地配置](server/agent-squad-server/src/main/resources/application-local.yml)：数据库、模型、Worker、密钥保险库与投递开关。
+- [Gateway 本地配置](server/agent-squad-gateway/src/main/resources/application-local.yml)：数据库连接和内部身份配置。
+- `deploy/compose.local.yml`：本机 MySQL 参数，仅本地保存。
+
+两个服务默认使用 `local` profile，直接执行下方启动命令即可，不需要加载 `.env.local`。已有数据库不得为启动应用而清空或重建。测试使用独立配置；其他环境后续再配置 Nacos 或其他来源。
+
+### 2. 先启动 MySQL
+
+先启动 Docker Desktop，再启动本机已有的数据库容器：
 
 ```bash
-cp .env.example .env.local
+docker start squad-mysql
+docker ps --filter name=squad-mysql
 ```
 
-在 `.env.local` 配置数据库连接，并设置：
+确认容器处于运行状态，`13306` 端口可用后再启动 Java 服务。日常重启复用该容器及原有数据，不重复创建数据库或切换数据卷。
 
-- `SQUAD_AUTH_MODE=database`：使用持久账号。
-- `SQUAD_IDENTITY_HMAC_KEY`：不少于 32 字节，Gateway 与 Server 保持一致。
-- `SQUAD_IDENTITY_STRICT=true`、`SQUAD_IDENTITY_ENFORCE_USER_STATUS=true`：校验网关身份及账号状态。
-- `SQUAD_CONNECTION_SECRET_KEY`：连接密钥保险库主密钥；未设置时不能保存连接密钥。
-- `SQUAD_DELIVERY_ENABLED=false`：仅持久受理，不调用模型。启用执行时同时配置模型的 API Key、Base URL 和模型名。
+全新环境才使用下面的本地 Compose 创建数据库；已有 `squad-mysql` 时不要同时运行两套 MySQL，以免争用 `13306` 端口：
 
-`.env.local` 已忽略，不提交密钥、密码或令牌。以下服务终端分别执行 `set -a; source ./.env.local; set +a` 加载环境。
+```bash
+docker compose -f deploy/compose.local.yml up -d db
+```
 
-### 2. 启动业务服务并初始化管理员
+### 3. 导入本地表结构并启动业务服务
+
+需要重新刷本地库时，在数据库客户端手动执行 [完整重建 SQL](deploy/db/local-rebuild.sql)。脚本会删除并重建51张项目表，导入最终 baseline，并创建两个测试账号；执行前停止 Server 和 Gateway，确认目标库与需要保留的数据。平时重启服务不执行此脚本。
+
+| 登录账号 | 测试密码 | 角色 |
+|---|---|---|
+| admin | admin-password | 管理员 |
+| demo | demo-password | 普通用户 |
+
+以上密码在执行重建 SQL 后生效，原库现有账号不会被服务启动自动重置。密码在数据库中以 BCrypt 摘要存储。
 
 ```bash
 mvn -f server/agent-squad-server/pom.xml -B -ntp spring-boot:run
@@ -55,16 +73,11 @@ mvn -f server/agent-squad-server/pom.xml -B -ntp spring-boot:run
 
 开发环境启动时重放最终 baseline，补齐缺失表，不更新已有表的结构。已有本地表需要显式调整并同步 baseline；生产环境禁止应用启动执行 DDL。
 
-首次使用时，在另一个已加载环境的终端构建并运行一次性管理员命令：
+登录账号存放在数据库 `sq_user`，密码以 BCrypt 摘要保存，不从配置文件读取登录密码。`admin` 为管理员，`demo` 为本地普通测试账号；不要将数据库连接账号与网页登录账号混淆。
 
-```bash
-mvn -f server/agent-squad-gateway/pom.xml -B -ntp package -DskipTests
-java -jar server/agent-squad-gateway/target/agent-squad-gateway-0.1.0-SNAPSHOT-bootstrap-admin.jar
-```
+空白数据库的首个管理员仍通过独立 `bootstrap-admin` 初始化命令建立；已有账号时不重复初始化，也不在服务启动时自动覆盖账号密码。
 
-执行前通过终端环境设置 `SQUAD_BOOTSTRAP_ADMIN_USERNAME` 和 `SQUAD_BOOTSTRAP_ADMIN_PASSWORD`。账号表非空时拒绝再次初始化；成功后移除临时环境变量，首次登录须改密。这里的 `-DskipTests` 仅用于构建初始化命令，不代表完成验证。
-
-### 3. 启动网关与前端
+### 4. 启动网关与前端
 
 网关终端：
 
@@ -79,11 +92,30 @@ npm --prefix web/workbench ci
 npm --prefix web/workbench run dev
 ```
 
-访问 [本地登录页](http://127.0.0.1:5173/login)。默认链路为页面 `5173` → Gateway `18081` → Server `18080`。`VITE_API_TARGET` 可覆盖前端代理目标，`SQUAD_BUSINESS_SERVICE_URL` 可覆盖业务服务地址。
+访问 [本地登录页](http://127.0.0.1:5173/login)。默认链路为页面 `5173` → Gateway `18081` → Server `18080`。前端代理目标直接修改 `web/workbench/vite.config.ts`，业务服务地址直接修改网关的 `application-local.yml` 中 `gateway.business-service-url`。
+
+### 停止本地服务
+
+在前端、网关和业务服务各自的终端按 `Ctrl+C`，待进程退出后停止数据库：
+
+```bash
+docker stop squad-mysql
+```
+
+如果使用本地 Compose 启动数据库，则执行 `docker compose -f deploy/compose.local.yml stop db`。停止服务保留数据，下次按 MySQL → Server → Gateway → 前端的顺序启动。
+
+### 启动报错排查
+
+出现 `dataSourceScriptDatabaseInitializer` / `Failed to execute database script` 时，先确认数据库已启动，再查看异常末尾的 `Caused by`。这两行是初始化失败的外层异常，不能单凭它们认定 SQL 脚本有问题。
+
+- 连接拒绝或通信失败：检查 Docker、MySQL 容器及 `13306` 端口。
+- `Access denied`：核对两个 `application-local.yml` 中的数据库账号密码。
+- 数据库不存在：核对 JDBC URL 与实际库名；已有数据时不要删除或重建数据库。
+- 具体 SQL 执行失败：根据最内层异常定位语句和结构差异，修复前核对现有数据。
 
 ## 验证
 
-在未加载 `.env.local` 的独立终端执行。MySQL 集成测试需要显式设置 `SQUAD_TEST_MYSQL_ADMIN_URL`（指向专用测试实例的 `mysql` 系统库）、`SQUAD_TEST_MYSQL_USER` 和 `SQUAD_TEST_MYSQL_PASSWORD`。测试创建自己的 `as_test_` schema，不能指向生产或共享数据库。
+测试不启用 `local` profile，不加载本地账号和模型配置。MySQL 集成测试需要显式设置 `SQUAD_TEST_MYSQL_ADMIN_URL`（指向专用测试实例的 `mysql` 系统库）、`SQUAD_TEST_MYSQL_USER` 和 `SQUAD_TEST_MYSQL_PASSWORD`。测试创建自己的 `as_test_` schema，不能指向生产或共享数据库。
 
 ```bash
 mvn -f server/pom.xml -B -ntp test

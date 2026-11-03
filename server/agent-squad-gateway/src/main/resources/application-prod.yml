@@ -2,7 +2,6 @@ agentsquad:
   identity:
     strict: true
   auth:
-    mode: database
     secure-cookie: true
 spring:
   datasource:

@@ -42,3 +42,11 @@
 Maven XML报告已复制到 `/tmp/agent-squad-verification-20261103/`，构建输出清理后仍可复核。删除两个模块target和前端dist，共释放约171 MB（163 MiB）；开发依赖与运行事实保留。
 
 本地修复提交：`1ca5775`，分支 `codex/parallel-runtime-fixes-20261103`。未推送远程、未部署生产；在途变更继续保留，不将部分任务验收冒充全部发布门槛通过。
+
+## MyBatis统一与本地重建SQL
+
+- 生产认证、Skill与结构门禁全部改为Mapper/XML；移除配置账号、内存会话和启动式旧Bootstrap入口，账号只认数据库sq_user。
+- 全量测试及清理后的网关回归汇总194项通过，0失败/错误/跳过；生产直接JDBC静态检查通过。
+- `deploy/db/local-rebuild.sql` 包含51张项目表的删除/重建与admin、demo的BCrypt测试账号，在独立23306容器完整执行并验证两个账号登录/角色/CSRF/退出。
+- 未执行13306原本本地库的删表、重建或清空，交由用户手动刷库。SDK只通过官方持久化接口接入，项目自写数据库访问统一MyBatis。
+- 报告：`/tmp/agent-squad-mybatis-verification-20261103/`；原始全量日志`/tmp/agent-squad-mybatis-full.log`，最终网关日志`/tmp/agent-squad-mybatis-gateway-final.log`。

@@ -20,6 +20,22 @@ public class AuthRepository {
     @Resource
     private AuthMapper authMapper;
 
+    public void ensureLoginBucket(String bucketKey, LocalDateTime now) {
+        authMapper.ensureLoginBucket(bucketKey, now);
+    }
+
+    public RateBucket lockLoginBucket(String bucketKey) {
+        return authMapper.findBucketForUpdate(bucketKey);
+    }
+
+    public void recordLoginFailure(String bucketKey, LocalDateTime now) {
+        authMapper.recordLoginFailure(bucketKey, now);
+    }
+
+    public void resetLoginFailures(String bucketKey, LocalDateTime now) {
+        authMapper.resetLoginFailures(bucketKey, now);
+    }
+
     public Optional<AuthAccount> findAccountByUsername(String username) {
         return Optional.ofNullable(authMapper.findAccountByUsername(username));
     }
@@ -45,51 +61,10 @@ public class AuthRepository {
         authMapper.revokeUserSessions(userId, now);
     }
 
-    public Optional<LocalDateTime> lockedUntil(String bucketKey, LocalDateTime now) {
-        LocalDateTime value = authMapper.findLockedUntil(bucketKey);
-        return value != null && value.isAfter(now) ? Optional.of(value) : Optional.empty();
-    }
-
-    /**
-     * 事务内锁行累加失败次数并计算锁定截止时间；窗口过期自动重置。
-     */
-    @Transactional
-    public Optional<LocalDateTime> recordFailure(String bucketKey, LocalDateTime now, AuthProperties properties) {
-        RateBucket bucket = authMapper.findBucketForUpdate(bucketKey);
-        LocalDateTime windowStart = now;
-        int failures = 0;
-        LocalDateTime lockedUntil = null;
-        if (bucket == null) {
-            authMapper.insertBucket(bucketKey, now);
-            failures = 1;
-        } else {
-            lockedUntil = bucket.lockedUntil();
-            if (bucket.windowStart().plus(properties.getFailureWindow()).isAfter(now)) {
-                windowStart = bucket.windowStart();
-                failures = bucket.failures();
-            } else {
-                lockedUntil = null;
-            }
-            failures++;
-            if (failures >= properties.getMaxFailures()) {
-                lockedUntil = now.plus(properties.getLockDuration());
-            }
-            authMapper.updateBucket(bucketKey, windowStart, failures, lockedUntil);
-        }
-        if (failures >= properties.getMaxFailures()) {
-            lockedUntil = now.plus(properties.getLockDuration());
-        }
-        return Optional.ofNullable(lockedUntil);
-    }
-
-    public void clearFailures(String bucketKey) {
-        authMapper.deleteBucket(bucketKey);
-    }
-
     public void insertAudit(String userId, String actorUserId, String eventType, String result,
                             String requestId) {
         authMapper.insertAudit(UUID.randomUUID().toString(), userId, actorUserId, eventType, result,
-                LocalDateTime.now(), requestId == null ? "" : requestId);
+                LocalDateTime.now(java.time.ZoneOffset.UTC), requestId == null ? "" : requestId);
     }
 
     public int deleteExpiredSessions(LocalDateTime now) {

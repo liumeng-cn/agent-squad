@@ -28,3 +28,11 @@
 - 功能类注释说明职责、所属模块与关键边界；核心方法注释说明业务步骤、事务/副作用、幂等及失败恢复要点。避免只翻译方法名，不为机械访问器堆注释。
 - 关键日志说明操作、阶段、结果及原因，按需带traceId/taskId/jobId/operationId/commandId；异常保留必要堆栈，避免各层重复记录同一异常。
 - 不输出密钥、Cookie、密码、完整Prompt/上下文、模型内部推理；入参和工具结果只记录允许字段、摘要及大小。正常等待/取消不是ERROR，恢复重试要有次数和原因，避免轮询/续租刷屏。
+
+## 数据访问统一约定（用户明确要求）
+
+- 项目生产代码的数据库读写统一使用 MyBatis Mapper 接口与 Mapper XML，业务服务、Repository 和配置校验不得直接使用 JDBC、JdbcTemplate、NamedParameterJdbcTemplate、DriverManager、Connection、Statement 或 ResultSet 执行 SQL。
+- SQL 只放在对应模块 Mapper XML，Service 负责业务步骤和事务；不得同时保留 JDBC 与 MyBatis 两套现行实现。
+- 官方 AgentScope 持久化只通过其公开 SDK 接口接入；向 SDK 提供 DataSource 不代表允许项目自行编写 JDBC SQL。测试建库、DDL执行及结构对比夹具与生产访问链路分开。
+- 登录账号以 sq_user 为权威，密码只存 BCrypt 摘要；配置文件中的数据库连接账号不是网页登录账号。预置测试账号通过显式 SQL 或账号管理服务写入数据库，不在正常启动时反复覆盖。
+- 数据结构变更先同步最终 V1__baseline.sql、Mapper XML 和验证。用户要求提供刷库 SQL 时，只生成、校验文件；未经用户明确要求，不执行真实库的删除、重建或清空。

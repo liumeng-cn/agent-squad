@@ -1,6 +1,9 @@
 package com.agentsquad.squad.testsupport;
 
 import com.agentsquad.squad.AgentSquadApplication;
+import com.agentsquad.squad.config.SchemaVersionGate;
+import com.agentsquad.squad.config.repository.SchemaInspectionMapper;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -12,6 +15,9 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -66,6 +72,27 @@ class SchemaVersionGateTest {
         Exception missingVersion = assertThrows(Exception.class, () -> start(url));
         assertTrue(messageChain(missingVersion).contains("生产数据库迁移版本落后"));
         assertEquals(52, countTables(url), "中间版本缺失时也不能执行 DDL");
+    }
+
+    @Test
+    void mapperChecksKeepMissingTablesAndLegacyDeliveryFailClosed() {
+        SchemaInspectionMapper mapper = mock(SchemaInspectionMapper.class);
+        SchemaVersionGate gate = new SchemaVersionGate();
+        ReflectionTestUtils.setField(gate, "schemaInspection", mapper);
+        ReflectionTestUtils.setField(gate, "expectedVersion", 5);
+        ReflectionTestUtils.setField(gate, "sqlInitMode", "never");
+        ReflectionTestUtils.setField(gate, "strictIdentity", true);
+        ReflectionTestUtils.setField(gate, "enforceUserStatus", true);
+        when(mapper.countAppliedVersions(5)).thenReturn(5);
+        when(mapper.countRequiredTables(anyList())).thenReturn(6);
+        assertTrue(assertThrows(IllegalStateException.class, gate::afterPropertiesSet)
+                .getMessage().contains("缺少必需业务表"));
+        when(mapper.countRequiredTables(anyList())).thenReturn(7);
+        when(mapper.countPendingWithoutDelivery()).thenReturn(1L);
+        assertTrue(assertThrows(IllegalStateException.class, gate::afterPropertiesSet)
+                .getMessage().contains("缺少最终交付权"));
+        when(mapper.countPendingWithoutDelivery()).thenReturn(0L);
+        gate.afterPropertiesSet();
     }
 
     private ConfigurableApplicationContext start(String url) {

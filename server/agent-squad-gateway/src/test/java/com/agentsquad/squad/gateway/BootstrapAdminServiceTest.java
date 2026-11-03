@@ -45,7 +45,6 @@ class BootstrapAdminServiceTest {
         registry.add("spring.datasource.username", GatewayTestDatabase::username);
         registry.add("spring.datasource.password", GatewayTestDatabase::password);
         registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
-        registry.add("agentsquad.auth.mode", () -> "database");
         registry.add("agentsquad.auth.cleanup-initial-delay-ms", () -> "3600000");
     }
 
@@ -85,7 +84,24 @@ class BootstrapAdminServiceTest {
         assertEquals(1, countUsers());
 
         String token = authService.login("root-admin", RAW_PASSWORD);
-        assertTrue(authService.authenticate(token).mustChangePassword());
+        var principal = authService.authenticate(token);
+        assertTrue(principal.mustChangePassword());
+        assertEquals(userId, principal.userId());
+        assertEquals(userId, authService.authenticateWrite(token, principal.csrfToken()).userId());
+        assertThrows(com.agentsquad.squad.gateway.exception.AuthenticationRequiredException.class,
+                () -> authService.authenticateWrite(token, "invalid-csrf"));
+        try (Connection connection = DriverManager.getConnection(DB_URL, GatewayTestDatabase.username(),
+                GatewayTestDatabase.password());
+             Statement statement = connection.createStatement();
+             ResultSet result = statement.executeQuery(
+                     "SELECT created_at, last_seen_at FROM sq_auth_session")) {
+            assertTrue(result.next());
+            assertTrue(result.getTimestamp("created_at") != null);
+            assertTrue(result.getTimestamp("last_seen_at") != null);
+        }
+        authService.logout(token);
+        assertThrows(com.agentsquad.squad.gateway.exception.AuthenticationRequiredException.class,
+                () -> authService.authenticate(token));
     }
 
     private int countUsers() throws Exception {

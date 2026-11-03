@@ -43,6 +43,28 @@
         </constructor>
     </resultMap>
 
+    <insert id="ensureLoginBucket">
+        INSERT IGNORE INTO sq_auth_rate_bucket (bucket_key, window_start, failures)
+        VALUES (#{bucketKey}, #{now}, 0)
+    </insert>
+
+    <update id="recordLoginFailure">
+        UPDATE sq_auth_rate_bucket
+        SET failures = CASE WHEN window_start &lt; DATE_SUB(#{now}, INTERVAL 15 MINUTE) THEN 1 ELSE failures + 1 END,
+            locked_until = CASE WHEN window_start &gt;= DATE_SUB(#{now}, INTERVAL 15 MINUTE)
+                                     AND failures &gt;= 4 THEN DATE_ADD(#{now}, INTERVAL 15 MINUTE) ELSE NULL END,
+            window_start = CASE WHEN window_start &lt; DATE_SUB(#{now}, INTERVAL 15 MINUTE) THEN #{now} ELSE window_start END
+        WHERE bucket_key = #{bucketKey}
+    </update>
+
+    <update id="resetLoginFailures">
+        UPDATE sq_auth_rate_bucket
+        SET failures = 0,
+            locked_until = NULL,
+            window_start = #{now}
+        WHERE bucket_key = #{bucketKey}
+    </update>
+
     <select id="findAccountByUsername" resultMap="accountRow">
         SELECT user_id, username, display_name, password_hash, role, status,
                auth_version, must_change_password, version
@@ -61,16 +83,17 @@
 
     <insert id="insertSession">
         INSERT INTO sq_auth_session (session_id, user_id, token_hash, csrf_hash, issued_auth_version,
-            last_seen_at, idle_expires_at, absolute_expires_at)
+            created_at, last_seen_at, idle_expires_at, absolute_expires_at)
         VALUES (#{session.sessionId}, #{session.userId}, #{session.tokenHash}, #{session.csrfHash},
-            #{session.issuedAuthVersion}, #{lastSeenAt}, #{session.idleExpiresAt},
+            #{session.issuedAuthVersion}, #{lastSeenAt}, #{lastSeenAt}, #{session.idleExpiresAt},
             #{session.absoluteExpiresAt})
     </insert>
 
     <update id="touchSession">
         UPDATE sq_auth_session
-        SET last_seen_at = #{lastSeenAt}, idle_expires_at = #{idleExpiresAt}
+        SET last_seen_at = #{lastSeenAt}, idle_expires_at = LEAST(absolute_expires_at, #{idleExpiresAt})
         WHERE session_id = #{sessionId} AND revoked_at IS NULL
+          AND last_seen_at &lt; DATE_SUB(#{lastSeenAt}, INTERVAL 5 MINUTE)
     </update>
 
     <update id="revokeSession">
@@ -85,31 +108,12 @@
         WHERE user_id = #{userId} AND revoked_at IS NULL
     </update>
 
-    <select id="findLockedUntil" resultType="java.time.LocalDateTime">
-        SELECT locked_until FROM sq_auth_rate_bucket WHERE bucket_key = #{bucketKey}
-    </select>
-
     <select id="findBucketForUpdate" resultMap="rateBucketRow">
         SELECT window_start, failures, locked_until
         FROM sq_auth_rate_bucket
         WHERE bucket_key = #{bucketKey}
         FOR UPDATE
     </select>
-
-    <insert id="insertBucket">
-        INSERT INTO sq_auth_rate_bucket (bucket_key, window_start, failures)
-        VALUES (#{bucketKey}, #{now}, 1)
-    </insert>
-
-    <update id="updateBucket">
-        UPDATE sq_auth_rate_bucket
-        SET window_start = #{windowStart}, failures = #{failures}, locked_until = #{lockedUntil}
-        WHERE bucket_key = #{bucketKey}
-    </update>
-
-    <delete id="deleteBucket">
-        DELETE FROM sq_auth_rate_bucket WHERE bucket_key = #{bucketKey}
-    </delete>
 
     <insert id="insertAudit">
         INSERT INTO sq_auth_audit (event_id, user_id, actor_user_id, event_type, result, occurred_at, request_id)

@@ -24,7 +24,10 @@ jobs:
       SQUAD_DB_URL: jdbc:mysql://127.0.0.1:3306/squad_ci?serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
       SQUAD_DB_USER: root
       SQUAD_DB_PASSWORD: isolated-ci-only
-      SQUAD_DELIVERY_ENABLED: "false"
+      SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/squad_ci?serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: isolated-ci-only
+      AGENTSQUAD_DELIVERY_ENABLED: "false"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4

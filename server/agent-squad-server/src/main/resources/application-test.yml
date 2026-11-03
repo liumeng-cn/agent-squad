@@ -1,9 +1,9 @@
-# 仅使用调用方显式传入的隔离数据库，不读取应用私有配置。
+# 独立测试环境的配置，不启用 local profile 或读取本地账号。
 spring:
   datasource:
-    url: ${SQUAD_TEST_MYSQL_URL}
-    username: ${SQUAD_TEST_MYSQL_USER}
-    password: ${SQUAD_TEST_MYSQL_PASSWORD}
+    url: jdbc:mysql://127.0.0.1:13306/agent_squad_test
+    username: root
+    password: ""
   sql:
     init:
       mode: never
