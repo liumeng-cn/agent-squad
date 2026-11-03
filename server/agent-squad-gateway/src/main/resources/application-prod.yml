@@ -2,13 +2,13 @@ agentsquad:
   identity:
     strict: true
   auth:
-    mode: database
     secure-cookie: true
 spring:
   datasource:
     hikari:
       maximum-pool-size: 16
 server:
+  shutdown: graceful
   address: 0.0.0.0
 
 management:
@@ -22,3 +22,6 @@ management:
     health:
       probes:
         enabled: true
+      group:
+        readiness:
+          include: readinessState,db

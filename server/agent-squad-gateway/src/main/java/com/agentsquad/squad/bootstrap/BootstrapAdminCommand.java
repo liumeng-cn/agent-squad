@@ -10,33 +10,41 @@ import org.springframework.context.ConfigurableApplicationContext;
 /**
  * 一次性初始管理员命令。
  *
- * <p>仅通过环境变量传入账号与初始密码，且要求用户表为空；应用启动不会自动调用。
+ * <p>从当前环境配置读取账号与初始密码，且要求用户表为空；应用启动不会自动调用。
  * 命令不打印密码，失败只输出可理解原因；创建后须首次登录改密。</p>
  */
 public final class BootstrapAdminCommand {
 
-    private static final String USERNAME_ENV = "SQUAD_BOOTSTRAP_ADMIN_USERNAME";
-    private static final String PASSWORD_ENV = "SQUAD_BOOTSTRAP_ADMIN_PASSWORD";
+    private static final String USERNAME_PROPERTY = "agentsquad.auth.bootstrap.username";
+    private static final String PASSWORD_PROPERTY = "agentsquad.auth.bootstrap.password";
 
     private BootstrapAdminCommand() {
     }
 
     public static void main(String[] args) {
-        String username = System.getenv(USERNAME_ENV);
-        String password = System.getenv(PASSWORD_ENV);
-        if (username == null || username.isBlank() || password == null || password.isBlank()) {
-            System.err.println("用法：设置 " + USERNAME_ENV + " 与 " + PASSWORD_ENV
-                    + " 后执行 bootstrap-admin；密码不会写入日志");
-            System.exit(2);
-            return;
+        int result = initialize(args);
+        if (result != 0) {
+            System.exit(result);
         }
+    }
+
+    /** 加载独立配置后执行一次性初始化，配置缺失或创建失败均返回明确退出码。 */
+    private static int initialize(String[] args) {
         try (ConfigurableApplicationContext context = new SpringApplicationBuilder(BootstrapAdminApplication.class)
-                .web(WebApplicationType.NONE).run()) {
+                .web(WebApplicationType.NONE).run(args)) {
+            String username = context.getEnvironment().getProperty(USERNAME_PROPERTY);
+            String password = context.getEnvironment().getProperty(PASSWORD_PROPERTY);
+            if (username == null || username.isBlank() || password == null || password.isBlank()) {
+                System.err.println("请在配置文件中填写 " + USERNAME_PROPERTY + " 与 " + PASSWORD_PROPERTY
+                        + " 后执行 bootstrap-admin；密码不会写入日志");
+                return 2;
+            }
             String userId = context.getBean(UserAccountService.class).bootstrapAdmin(username, password);
             System.out.println("初始管理员已创建，请使用临时密码登录并立即修改；userId=" + userId);
+            return 0;
         } catch (Exception exception) {
             System.err.println("初始管理员创建失败：" + safeMessage(exception));
-            System.exit(1);
+            return 1;
         }
     }
 

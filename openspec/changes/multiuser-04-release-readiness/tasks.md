@@ -1,7 +1,7 @@
 # Tasks：C4 CI、部署、监控、灾备与发布验收
 
 ## 0. 工程化基线
-- [ ] C4.0.1 确认 C1–C3 已通过/已知阻碍，制作 release feature 分支；对照全部 OpenSpec、OpenAPI、DDL、README 清除陈旧的单账号、Flyway、Java21 等虚假声明。
+- [x] C4.0.1 确认 C1–C3 已通过/已知阻碍，制作 release feature 分支；对照全部 OpenSpec、OpenAPI、DDL、README 清除陈旧的单账号、Flyway、Java21 等虚假声明。
 - [ ] C4.0.2 新增 CI：Node22 `npm ci/test/build`、JDK27 Maven 全量、隔离 MySQL8.4、设计检查与 skipped 审计；测试没有必需环境时 CI 必须失败而非成功跳过。验证一轮干净 CI 日志。
 - [ ] C4.0.3 单独跑 JDK21 runtime 兼容性冒烟，记录真实 SDK/框架问题；不兼容即将正式运行环境明确标为 JDK27 并开兼容修复 issue，不能虚称 Java21 支持。
 
@@ -19,8 +19,8 @@
 - [ ] C4.3.1 staging 使用可控 Stub 做逐级压测，记录 HTTP p50/p95/p99、模型/Worker 并发、SSE 连接、MySQL CPU/连接和队列延迟，确认实际发布容量参数。
 - [ ] C4.3.2 经隔离 staging 完整备份→还原→验证数据（44 + 新增表）、SDK journal、UNKNOWN 账本、密钥与会话撤销语义，记录真实 RPO/RTO。
 - [ ] C4.3.3 演练重启 Gateway、单业务执行实例重启、SSE 断线以及一个受控 UNKNOWN 故障；不触发真正外部写副作用。报告包含崩溃窗口和恢复结果。
-- [ ] C4.3.4 编写 `evidence/release-gate.md`：逐项 `PASS/FAIL/BLOCKED/NOT_RUN`，附执行命令/日志文件/日期/部署容量与限制。
+- [x] C4.3.4 编写 `evidence/release-gate.md`：逐项 `PASS/FAIL/BLOCKED/NOT_RUN`，附执行命令/日志文件/日期/部署容量与限制。
 
 ## 4. 发布决策
 - [ ] C4.4.1 仅在全部 blocker 解除且用户明确批准后可安排正式生产迁移和部署。执行体不得自行部署生产、删除/重建任何数据库或把业务端口开放公网。
-- [ ] C4.4.2 在尚未生产发布时可以提交经过验证的代码、staging 配置、OpenSpec 变更与验收证据，明确标注“production not yet approved”；只有验收结束才归档 OpenSpec changes。
+- [x] C4.4.2 在尚未生产发布时可以提交经过验证的代码、staging 配置、OpenSpec 变更与验收证据，明确标注“production not yet approved”；只有验收结束才归档 OpenSpec changes。

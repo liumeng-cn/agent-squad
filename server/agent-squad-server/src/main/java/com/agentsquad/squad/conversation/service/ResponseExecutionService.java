@@ -42,6 +42,9 @@ public class ResponseExecutionService {
     private static final Set<String> TERMINAL = Set.of("SUCCEEDED", "PARTIAL", "FAILED", "CANCELLED");
 
     @Resource
+    private FinalDeliveryService finalDeliveries;
+
+    @Resource
     private ExecutionFailureService failures;
 
     @Resource
@@ -110,6 +113,8 @@ public class ResponseExecutionService {
      */
     @Transactional
     public void accept(ExecutionScopeRow scope, ProjectionTarget target, NativeEventView event) {
+        // 与目标创建保持会话→来源回复→交付位的锁序，避免完成与转交相互等待。
+        scopes.lockOwned(scope.userId(), scope.scopeId(), false);
         ResponseRuntimeRow row = replies.lockByBinding(scope.userId(), target.bindingId());
         if (row == null || TERMINAL.contains(row.status())) {
             return;
@@ -304,12 +309,17 @@ public class ResponseExecutionService {
         ConversationRow conversation = conversations.lockOwned(scope.userId(), scope.conversationId());
         if (answer != null && "ACTIVE".equals(conversation.status())
                 && conversation.generation() == scope.conversationGeneration()) {
-            answerId = UUID.randomUUID().toString();
+            answerId = finalDeliveries.claimPublication(scope.userId(), row.sourceMessageId(), "RESPONSE", row.executionId());
+        }
+        if (answerId != null) {
             messages.reserveMessage(scope.userId(), scope.conversationId(), now());
             replies.answer(answerId, scope.userId(), scope.conversationId(), messages.messageSequence(scope.userId(), scope.conversationId()),
                     row.sourceMessageId(), row.executionId(), answer, now());
             events.publish(scope, "response:" + row.executionId() + ":answer", "message.completed",
                     Map.of("messageId", answerId, "executionId", row.executionId(), "text", answer, "revision", 0));
+        }
+        if ("CANCELLED".equals(status)) {
+            finalDeliveries.close(scope.userId(), row.sourceMessageId(), "RESPONSE", row.executionId());
         }
         if (replies.finish(scope.userId(), row.bindingId(), status, answerId) != 1) {
             throw new IllegalStateException("回复终态写入竞争");

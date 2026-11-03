@@ -10,7 +10,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import com.agentsquad.squad.identity.UserStatusGuard;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,9 +46,6 @@ public class OperationExecutor {
 
     private final String instanceId = "op-" + UUID.randomUUID().toString().substring(0, 8);
 
-    @Value("${agentsquad.fault.after-inflight-exit:false}")
-    private boolean faultAfterInflightExit;
-
     /**
      * 执行账本操作并返回连接器结果 JSON；暂停调用方事务，确保 IN_FLIGHT 在外部调用前独立提交。
      */
@@ -58,10 +54,6 @@ public class OperationExecutor {
         userStatus.requireActive(operation.userId());
         String externalKey = "mock:" + operation.operationId();
         markInFlight(operation, externalKey);
-        if (faultAfterInflightExit) {
-            log.error("故障注入：IN_FLIGHT 已持久，发送前进程退出 operationId={}", operation.operationId());
-            Runtime.getRuntime().halt(137);
-        }
         String resultJson;
         try {
             resultJson = externalCall.call(externalKey);

@@ -1,0 +1,9 @@
+# 独立测试环境的配置，不启用 local profile 或读取本地账号。
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:13306/agent_squad_test
+    username: root
+    password: ""
+  sql:
+    init:
+      mode: never

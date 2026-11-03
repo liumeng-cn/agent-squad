@@ -264,7 +264,7 @@
             completed  = TRUE
         WHERE user_id = #{userId}
           AND message_id = #{messageId}
-          AND revision &lt;= #{revision}
+          AND revision &lt; #{revision}
     </update>
 
     <select id="conversations" resultMap="conversationsResult">

@@ -3,6 +3,7 @@ spring:
     init:
       mode: never
 server:
+  shutdown: graceful
   address: 0.0.0.0
 agentsquad:
   identity:
@@ -12,9 +13,7 @@ agentsquad:
   delivery:
     admission:
       # 完成独立迁移、SDK 回归与多用户容量验收后才由运维显式启用。
-      enabled: ${SQUAD_ADMISSION_ENABLED:false}
-  fault:
-    after-inflight-exit: false
+      enabled: false
 
 management:
   server:
@@ -27,3 +26,6 @@ management:
     health:
       probes:
         enabled: true
+      group:
+        readiness:
+          include: readinessState,db

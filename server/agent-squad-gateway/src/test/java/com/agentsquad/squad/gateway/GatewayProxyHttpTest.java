@@ -27,9 +27,16 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>
  * 通过独立上游服务器验证身份覆盖、状态保留与上游结束前事件帧可见。
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"agentsquad.auth.username=test", "agentsquad.auth.password=test"})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class GatewayProxyHttpTest {
+
+    private static final String DB_URL = createDatabase();
+
+    private static String createDatabase() {
+        String url = GatewayTestDatabase.create("gateway-proxy");
+        GatewayTestDatabase.seedUser(url, "00000000-0000-0000-0000-000000000001", "test", "test", "ADMIN", false);
+        return url;
+    }
 
     private static final CountDownLatch RELEASE = new CountDownLatch(1);
     private static final HttpServer UPSTREAM = startUpstream();
@@ -42,6 +49,10 @@ class GatewayProxyHttpTest {
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", () -> DB_URL);
+        registry.add("spring.datasource.username", GatewayTestDatabase::username);
+        registry.add("spring.datasource.password", GatewayTestDatabase::password);
+        registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
         registry.add("gateway.business-service-url", () -> "http://127.0.0.1:" + UPSTREAM.getAddress().getPort());
     }
 

@@ -14,6 +14,16 @@ import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import org.springframework.beans.factory.annotation.Value;
+import java.util.Set;
+import java.util.LinkedHashSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.RejectedExecutionException;
 import com.agentsquad.squad.conversation.service.ResponseExecutionService;
 import com.agentsquad.squad.conversation.service.CommandClaimService;
 import lombok.extern.slf4j.Slf4j;
@@ -78,19 +88,84 @@ public class CommandDeliveryService {
     @Resource
     private ObjectMapper objectMapper;
 
-    /**
-     * 周期性寻找到期命令；多实例可并发扫描，只有一个能原子领取。
-     */
+    @Value("${agentsquad.delivery.workers:4}")
+    private int workers;
+
+    @Value("${agentsquad.delivery.control-workers:2}")
+    private int controlWorkers;
+
+    private ThreadPoolExecutor deliveryExecutor;
+    private ThreadPoolExecutor controlExecutor;
+    private final Set<String> scheduledCommands = ConcurrentHashMap.newKeySet();
+
+    /** 初始化无等待队列的投递池；线程容量不足时不领取数据库命令。 */
+    @PostConstruct
+    public void initializeDelivery() {
+        if (workers < 1 || controlWorkers < 1) {
+            throw new IllegalArgumentException("命令投递线程数必须为正数");
+        }
+        deliveryExecutor = executor(workers);
+        controlExecutor = executor(controlWorkers);
+    }
+
+    private ThreadPoolExecutor executor(int size) {
+        return new ThreadPoolExecutor(size, size, 0L, TimeUnit.MILLISECONDS,
+                new SynchronousQueue<>(), runnable -> {
+                    Thread thread = new Thread(runnable, "command-delivery");
+                    thread.setDaemon(true);
+                    return thread;
+                }, new ThreadPoolExecutor.AbortPolicy());
+    }
+
+    /** 停机先停止领取，让已开始的 SDK 投递完成；超时保留原命令供租约恢复。 */
+    @PreDestroy
+    public void shutdownDelivery() {
+        deliveryExecutor.shutdown();
+        controlExecutor.shutdown();
+        try {
+            if (!deliveryExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
+                deliveryExecutor.shutdownNow();
+            }
+            if (!controlExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
+                controlExecutor.shutdownNow();
+            }
+        } catch (InterruptedException exception) {
+            deliveryExecutor.shutdownNow();
+            controlExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /** 公平候选扫描后按容量派发；控制命令拥有独立容量，不被慢提交占满。 */
     @Scheduled(fixedDelayString = "${agentsquad.delivery.poll-delay-ms:1000}")
     public void deliverDue() {
-        List<String> commandIds = deliveryMapper.findDueIds(now());
+        LocalDateTime scannedAt = now();
+        deliveryMapper.blockUnknownPending(scannedAt);
+        Set<String> commandIds = new LinkedHashSet<>(deliveryMapper.findDueControlIds(scannedAt));
+        commandIds.addAll(deliveryMapper.findDueIds(scannedAt));
         for (String commandId : commandIds) {
+            if (!scheduledCommands.add(commandId)) {
+                continue;
+            }
             try {
-                deliver(commandId);
+                CommandClaimContext context = deliveryMapper.claimContext(commandId);
+                boolean control = context != null && ("STOP".equals(context.action())
+                        || "RESPOND".equals(context.action()));
+                (control ? controlExecutor : deliveryExecutor).execute(() -> {
+                    try {
+                        deliver(commandId);
+                    } catch (Exception exception) {
+                        log.warn("持久命令调度异常 commandId={} errorType={}",
+                                commandId, exception.getClass().getSimpleName(), exception);
+                    } finally {
+                        scheduledCommands.remove(commandId);
+                    }
+                });
+            } catch (RejectedExecutionException exception) {
+                scheduledCommands.remove(commandId);
             } catch (Exception exception) {
-                // 单条命令异常不得阻断同批其他用户的命令；本次未领取成功的命令由下轮扫描重试。
-                log.warn("持久命令调度异常 commandId={} errorType={}",
-                        commandId, exception.getClass().getSimpleName(), exception);
+                scheduledCommands.remove(commandId);
+                log.warn("命令候选读取失败 commandId={}", commandId, exception);
             }
         }
     }
@@ -147,6 +222,9 @@ public class CommandDeliveryService {
                     fail(commandId, token, delivery.attempts(), "UNDELIVERABLE_ACTION");
                 }
             }
+        } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
+            admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
+            fail(commandId, token, delivery.attempts(), "INVALID_PAYLOAD");
         } catch (com.agentsquad.squad.runtime.domain.ExecutionContextInvalidatedException exception) {
             restrictions.restrict(delivery.userId(), scopes.scopeForSession(delivery.userId(), delivery.sessionId()), delivery.bindingId());
         } catch (Exception exception) {
@@ -158,10 +236,10 @@ public class CommandDeliveryService {
 
     private void deliverSubmit(String commandId, String token, DeliveryRow delivery) throws Exception {
         JsonNode payload = RuntimePayloads.readJson(objectMapper, delivery.payloadJson());
-        String message = payload.path("message").textValue();
+        String message = payload == null ? null : payload.path("message").textValue();
         if (message == null || message.isBlank()) {
             admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
-            retry(commandId, token, delivery.attempts(), "INVALID_PAYLOAD");
+            fail(commandId, token, delivery.attempts(), "INVALID_PAYLOAD");
             return;
         }
         NativeSubmissionReceipt receipt = nativeSessionGateway.submit(delivery, message);
@@ -238,11 +316,11 @@ public class CommandDeliveryService {
      */
     private void deliverRespond(String commandId, String token, DeliveryRow delivery) throws Exception {
         JsonNode payload = RuntimePayloads.readJson(objectMapper, delivery.payloadJson());
-        String requestId = payload.path("requestId").textValue();
-        String answerText = payload.path("answerText").textValue();
+        String requestId = payload == null ? null : payload.path("requestId").textValue();
+        String answerText = payload == null ? null : payload.path("answerText").textValue();
         if (requestId == null || requestId.isBlank() || answerText == null) {
             admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
-            retry(commandId, token, delivery.attempts(), "INVALID_PAYLOAD");
+            fail(commandId, token, delivery.attempts(), "INVALID_PAYLOAD");
             return;
         }
         if (delivery.taskId() != null) {
@@ -278,7 +356,10 @@ public class CommandDeliveryService {
     }
 
     private void fail(String commandId, String token, int attempts, String errorCode) {
-        retry(commandId, token, Math.max(attempts, 8), errorCode);
+        int blocked = deliveryMapper.blockInvalid(commandId, token, errorCode);
+        if (blocked == 1) {
+            log.warn("非法命令已阻断 commandId={} errorCode={} attempts={}", commandId, errorCode, attempts);
+        }
     }
 
     private LocalDateTime now() {

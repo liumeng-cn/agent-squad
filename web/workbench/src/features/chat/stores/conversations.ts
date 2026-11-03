@@ -169,6 +169,22 @@ export const useConversationsStore = defineStore('conversations', {
         }
       }, 80)
     },
+    /** 完整消息只更新已知身份；缺字段或新消息仍读取权威快照。 */
+    applyEventPayload(event: ConversationEvent): boolean {
+      const payload = event.payload
+      if (event.type !== 'message.completed') return false
+      if (typeof payload.messageId !== 'string' || typeof payload.text !== 'string'
+          || !Number.isSafeInteger(payload.revision)) return false
+      const index = this.messages.findIndex(item => item.messageId === payload.messageId)
+      if (index < 0) return false
+      const previous = this.messages[index]!
+      const revision = payload.revision as number
+      if (revision < previous.revision) return true
+      const updated = { ...previous, text: payload.text, revision, completed: true }
+      this.messages[index] = updated
+      if (this.snapshot) this.snapshot.messages = this.snapshot.messages.map(item => item.messageId === updated.messageId ? updated : item)
+      return true
+    },
     connect() {
       stream?.close()
       const snapshot = this.snapshot; const id = this.activeConversationId; const current = epoch
@@ -180,12 +196,17 @@ export const useConversationsStore = defineStore('conversations', {
         if (current !== epoch || id !== this.activeConversationId) return
         try {
           const event = JSON.parse(message.data) as ConversationEvent
-          if (event.conversationId !== id || event.generation !== this.snapshot?.conversation.generation) return
+          if (event.conversationId !== id) return
+          if (event.generation !== this.snapshot?.conversation.generation) {
+            source.close(); this.connection = 'connecting'; this.scheduleReconnect(); return
+          }
+          if (!Number.isSafeInteger(event.sequence) || event.sequence < 0) throw new Error('无效事件序号')
           if (event.sequence <= seenSequence) return
           if (event.sequence !== seenSequence + 1) {
             source.close(); this.connection = 'connecting'; this.scheduleReconnect(); return
           }
           seenSequence = event.sequence
+          this.applyEventPayload(event)
           this.queueRefresh()
           if (['conversation.title_updated', 'message.accepted', 'message.completed'].includes(event.type)) void this.refreshList()
         } catch { source.close(); this.scheduleReconnect() }

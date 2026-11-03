@@ -36,6 +36,9 @@ import java.util.UUID;
 public class MessageAcceptanceWriter {
 
     @Resource
+    private FinalDeliveryService finalDeliveries;
+
+    @Resource
     private ConversationMapper conversations;
 
     @Resource
@@ -99,6 +102,7 @@ public class MessageAcceptanceWriter {
         bindings.insertResponse(bindingId, userId, scopeId, MasterAgentIdentity.AGENT_ID,
                 UUID.randomUUID().toString(), now);
         messages.insertExecution(executionId, userId, conversationId, messageId, scopeId, bindingId);
+        finalDeliveries.initialize(userId, messageId, executionId);
         artifacts.attachScope(userId, scopeId, request.artifactIds());
         for (String artifactId : request.artifactIds()) {
             artifactMapper.attachMessage(userId, messageId, artifactId);

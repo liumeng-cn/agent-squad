@@ -29,6 +29,25 @@
         公平发现：每名用户按最早到期命令排序，先轮询各用户第1条，再轮询第2条。
         这里仅筛选候选命令，最终权限、会话顺序与租约仍由 claim 事务校验。
     -->
+    <select id="findDueControlIds" resultType="java.lang.String">
+        SELECT c.command_id
+        FROM sq_command c
+        WHERE c.action IN ('STOP', 'RESPOND')
+          AND (
+              (c.status = 'PENDING' AND c.due_at &lt;= #{now})
+              OR (c.status = 'DELIVERING' AND c.delivery_lease_until &lt; #{now})
+          )
+          AND NOT EXISTS (
+              SELECT 1
+              FROM sq_user blocked_user
+              WHERE blocked_user.user_id = c.user_id
+                AND blocked_user.status = 'DISABLED'
+                AND blocked_user.del_flag = '0'
+          )
+        ORDER BY c.due_at, c.id
+        LIMIT 20
+    </select>
+
     <select id="findDueIds" resultType="java.lang.String">
         SELECT due.command_id
         FROM (
@@ -235,6 +254,29 @@
             due_at = #{dueAt},
             last_error_code = #{errorCode}
         WHERE command_id = #{commandId} AND delivery_token = #{token}
+          AND status = 'DELIVERING'
+    </update>
+
+    <update id="blockUnknownPending">
+        UPDATE sq_command
+        SET status = 'BLOCKED',
+            last_error_code = 'UNKNOWN_ACTION'
+        WHERE status = 'PENDING'
+          AND due_at &lt;= #{now}
+          AND action NOT IN ('SUBMIT', 'MESSAGE_SUBMIT', 'MASTER_SIGNAL',
+                             'TASK_DIRECTIVE', 'STOP', 'RESUME', 'RESPOND', 'DELETE_CONVERSATION')
+        ORDER BY id
+        LIMIT 100
+    </update>
+
+    <update id="blockInvalid">
+        UPDATE sq_command
+        SET status               = 'BLOCKED',
+            delivery_token       = NULL,
+            delivery_lease_until = NULL,
+            last_error_code      = #{errorCode}
+        WHERE command_id = #{commandId}
+          AND delivery_token = #{token}
           AND status = 'DELIVERING'
     </update>
 

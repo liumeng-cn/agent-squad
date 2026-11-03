@@ -39,9 +39,9 @@ agentsquad:
     master-key:
     master-key-id: local-v1
   budget:
-    max-microunits-per-response: 5000000
-    max-microunits-per-user: 50000000
-    max-microunits-per-task: 5000000
+    max-microunits-per-response: ${SQUAD_BUDGET_MAX_MICROUNITS_PER_RESPONSE:5000000}
+    max-microunits-per-user: ${SQUAD_BUDGET_MAX_MICROUNITS_PER_USER:50000000}
+    max-microunits-per-task: ${SQUAD_BUDGET_MAX_MICROUNITS:5000000}
   delivery:
     enabled: false
     poll-delay-ms: 1000

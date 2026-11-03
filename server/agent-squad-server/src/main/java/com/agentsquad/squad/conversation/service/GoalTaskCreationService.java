@@ -45,6 +45,9 @@ import java.util.UUID;
 @Slf4j
 public class GoalTaskCreationService {
     @Resource
+    private FinalDeliveryService finalDeliveries;
+
+    @Resource
     private ExecutionScopeService scopes;
 
     @Resource
@@ -150,6 +153,7 @@ public class GoalTaskCreationService {
                 || origins.linkSource(userId, taskId, message.messageId(), reply.executionId()) != 1) {
             throw new IllegalStateException("目标来源或执行归属绑定失败");
         }
+        finalDeliveries.transfer(userId, message.messageId(), reply.executionId(), taskId);
         artifacts.attach(userId, taskId, message.artifactIds());
         bindings.insertMaster(bindingId, userId, taskId, MasterAgentIdentity.AGENT_ID, UUID.randomUUID().toString(), now);
         String initialMessage = "请推进已经建立的独立目标，可使用计划与Worker能力。不要再次创建目标。"

@@ -26,3 +26,15 @@ npm --prefix web/workbench run build
 python3 tools/check_design.py
 ```
 先隔离 MySQL 验证 V1→V4 parity、账户安全回归和持久 Slot 多实例恢复，再评估是否合并 main 或上线。
+
+## 本轮修复后的本地验证
+
+当前修复分支：`codex/parallel-runtime-fixes-20261103`。上文 NOT_RUN 仅代表最初整合时点。
+
+- 全量 Gateway 12 + Server 174 = 186 项测试实际通过，0失败/错误/跳过；包括显式启用的 MySQL 与 Docker 沙箱测试。
+- 交叉审查补修后定向30项通过，最终 Maven 报告汇总193项全部通过。
+- 前端15项测试与生产构建通过，设计检查与 OpenSpec strict 通过。
+- schema parity 已在隔离 MySQL 验证 baseline 与 V1→V5 的51张表一致。
+- 远程 CI、Docker staging、真实 HTTPS、真实模型流式、完整跨进程接管、压测及灾备仍未验收；保持单业务执行实例与容量控制默认关闭。
+
+最新发布状态见 `openspec/changes/multiuser-04-release-readiness/evidence/release-gate.md`。

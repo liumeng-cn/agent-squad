@@ -13,6 +13,12 @@ import java.time.LocalDateTime;
 @Mapper
 public interface AuthMapper {
 
+    int ensureLoginBucket(@Param("bucketKey") String bucketKey, @Param("now") LocalDateTime now);
+
+    int recordLoginFailure(@Param("bucketKey") String bucketKey, @Param("now") LocalDateTime now);
+
+    int resetLoginFailures(@Param("bucketKey") String bucketKey, @Param("now") LocalDateTime now);
+
     AuthAccount findAccountByUsername(@Param("username") String username);
 
     AuthSessionRow findSessionByTokenHash(@Param("tokenHash") String tokenHash);
@@ -26,16 +32,7 @@ public interface AuthMapper {
 
     int revokeUserSessions(@Param("userId") String userId, @Param("now") LocalDateTime now);
 
-    LocalDateTime findLockedUntil(@Param("bucketKey") String bucketKey);
-
     RateBucket findBucketForUpdate(@Param("bucketKey") String bucketKey);
-
-    int insertBucket(@Param("bucketKey") String bucketKey, @Param("now") LocalDateTime now);
-
-    int updateBucket(@Param("bucketKey") String bucketKey, @Param("windowStart") LocalDateTime windowStart,
-                     @Param("failures") int failures, @Param("lockedUntil") LocalDateTime lockedUntil);
-
-    int deleteBucket(@Param("bucketKey") String bucketKey);
 
     int insertAudit(@Param("eventId") String eventId, @Param("userId") String userId,
                     @Param("actorUserId") String actorUserId, @Param("eventType") String eventType,

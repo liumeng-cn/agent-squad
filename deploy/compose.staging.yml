@@ -21,13 +21,14 @@ services:
       dockerfile: deploy/Dockerfile.server
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      SQUAD_DB_URL: jdbc:mysql://db:3306/agent_squad
-      SQUAD_DB_USER: squad
-      SQUAD_DB_PASSWORD: ${SQUAD_DB_PASSWORD:?数据库密码}
-      SQUAD_IDENTITY_HMAC_KEY: ${SQUAD_IDENTITY_HMAC_KEY:?必须配置至少32字节随机密钥}
-      SQUAD_IDENTITY_STRICT: "true"
-      SQUAD_IDENTITY_ENFORCE_USER_STATUS: "true"
-      SQUAD_CONNECTION_SECRET_KEY: ${SQUAD_CONNECTION_SECRET_KEY:?须配置 Vault 主密钥}
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/agent_squad
+      SPRING_DATASOURCE_USERNAME: squad
+      SPRING_DATASOURCE_PASSWORD: ${SQUAD_DB_PASSWORD:?数据库密码}
+      AGENTSQUAD_IDENTITY_HMACKEY: ${SQUAD_IDENTITY_HMAC_KEY:?必须配置至少32字节随机密钥}
+      AGENTSQUAD_IDENTITY_STRICT: "true"
+      AGENTSQUAD_IDENTITY_ENFORCEUSERSTATUS: "true"
+      AGENTSQUAD_VAULT_MASTERKEY: ${SQUAD_CONNECTION_SECRET_KEY:?须配置 Vault 主密钥}
+    stop_grace_period: 30s
     depends_on:
       db: {condition: service_healthy}
     networks: [private]
@@ -37,16 +38,17 @@ services:
       dockerfile: deploy/Dockerfile.gateway
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      SQUAD_DB_URL: jdbc:mysql://db:3306/agent_squad
-      SQUAD_DB_USER: squad
-      SQUAD_DB_PASSWORD: ${SQUAD_DB_PASSWORD:?数据库密码}
-      SQUAD_AUTH_MODE: database
-      SQUAD_AUTH_SECURE_COOKIE: "true"
-      SQUAD_IDENTITY_HMAC_KEY: ${SQUAD_IDENTITY_HMAC_KEY:?内部断言密钥}
-      SQUAD_BUSINESS_SERVICE_URL: http://server:18080
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/agent_squad
+      SPRING_DATASOURCE_USERNAME: squad
+      SPRING_DATASOURCE_PASSWORD: ${SQUAD_DB_PASSWORD:?数据库密码}
+      AGENTSQUAD_AUTH_SECURECOOKIE: "true"
+      AGENTSQUAD_IDENTITY_HMACKEY: ${SQUAD_IDENTITY_HMAC_KEY:?内部断言密钥}
+      GATEWAY_BUSINESSSERVICEURL: http://server:18080
     ports:
       - "127.0.0.1:18081:18081"
-    depends_on: [server]
+    stop_grace_period: 30s
+    depends_on:
+      server: {condition: service_healthy}
     networks: [private]
 networks:
   private:

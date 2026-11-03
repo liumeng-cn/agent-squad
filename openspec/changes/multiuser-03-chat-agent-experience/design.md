@@ -71,7 +71,7 @@ ChatGPT 式用户体验 ≠ 公开 Agent 的每次思考。`MasterAgent` 同时�
 
 ## 6. 修复“首次规划期间早到 Directive”
 
-真实 E2E 记录 `openspec/changes/archive/2026-11-02-conversation-first-experience/evidence/e2e-2026-11-02.md:24-32` 已明确案例：Master 首次计划发布前收到用户补充，`PlanService.publish` 因 `pending` 拒绝；模型错误使用 sourceMessageId 调用 `apply_task_directive`，导致 MAX_ITERATIONS。解决的方向不是加一句提示词，而是让任务协调有确定性 ID 与安全状态：
+历史 E2E 曾记录以下案例（归档材料已从工作区移除，可在 Git 历史查阅）：Master 首次计划发布前收到用户补充，`PlanService.publish` 因 `pending` 拒绝；模型错误使用 sourceMessageId 调用 `apply_task_directive`，导致 MAX_ITERATIONS。解决的方向不是加一句提示词，而是让任务协调有确定性 ID 与安全状态：
 
 - `TaskDirectiveMapper.pending(userId, taskId)` 已能返回 ACСEPTED 指令；提供受控只读工具/执行上下文 `list_pending_task_directives`（或者在 `publish_plan` 的业务错误结果中返回**当前归属任务的**指令 `directiveId/expectedVersion/kind/content`，不得暴露他人），以便 Master 使用真实 UUID；只读查询仍验证 Task Scope。
 - `publish_plan` 发现 pending 时返回结构化 `PENDING_DIRECTIVE`（包含仅属于当前 Task 的待处理 ID），不允许造成无限模型循环；平台也可以在首次规划运行结束后创建 `TASK_DIRECTIVE` 的协调命令。**任何决定由真实 ID 和 CAS 版本驱动，不让模型凭 sourceMessageId 猜。**

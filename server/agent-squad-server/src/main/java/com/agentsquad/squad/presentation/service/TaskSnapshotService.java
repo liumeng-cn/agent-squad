@@ -60,7 +60,7 @@ public class TaskSnapshotService {
     /**
      * 读取当前用户单个任务快照；任务不存在时统一按 NOT_FOUND 处理。
      *
-     * <p>答案文本取最新的 answer.completed 公开事件；无该事件时返回未完成的占位视图。
+     * <p>答案文本取当前权威修订的首个公开答案事件；无该事件时返回未完成的占位视图。
      * pending 取开放的持久交互，供详情页渲染追问卡与审批卡。</p>
      */
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
@@ -142,7 +142,7 @@ public class TaskSnapshotService {
     }
 
     private AnswerView buildAnswer(String userId, String taskId, long answerRevision) {
-        EventRow event = taskEventMapper.findLatestAnswerEvent(userId, taskId);
+        EventRow event = taskEventMapper.findLatestAnswerEvent(userId, taskId, answerRevision);
         if (event == null) {
             return new AnswerView(answerRevision, "", false);
         }
