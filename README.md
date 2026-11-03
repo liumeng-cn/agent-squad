@@ -18,7 +18,7 @@ Agent Squad 是一个面向 Web 的多智能体运行底座。用户发送消息
 
 新版页面已接入连续会话：普通交流不创建 GoalTask，Master 按需建立后台工作；任务在途可继续提问或补充要求。追问、审批、分级故障、允许的重试与下载均留在对话中，停止回答与停止工作分别控制。侧栏支持安全标题、改名与历史分页，空态及附件布局按用户参考调整。
 
-本轮功能、回归结果与验证边界见 [对话体验验收记录](openspec/changes/archive/2026-11-02-conversation-first-experience/evidence/ui-regression-2026-10-29.md) 与 [端到端验收](openspec/changes/archive/2026-11-02-conversation-first-experience/evidence/e2e-2026-11-02.md)。仓库已将历史迁移合并为单一 `V1__baseline.sql`，本机开发库重建后由启动流程生成 48 张表（含身份四表）。D3 原基线仍见 [D3 验收记录](openspec/changes/archive/2026-11-02-d3-multi-worker/evidence/progress.md)；D4–D6 已有本地验收证据，但 Java 21 运行时、完整备份还原与真实负载压测仍属发布门槛，不能将本轮对话优化计作这些门槛已验证。原 SDK 故障窗口、确定性模型协议测试、真实 DeepSeek 检查分别记载。
+本轮功能、回归结果与验证边界见 [对话体验验收记录](openspec/changes/archive/2026-11-02-conversation-first-experience/evidence/ui-regression-2026-10-29.md) 与 [端到端验收](openspec/changes/archive/2026-11-02-conversation-first-experience/evidence/e2e-2026-11-02.md)。仓库已将历史迁移合并为单一 `V1__baseline.sql`，本机开发库重建后由启动流程生成 50 张表（含身份四表及 C2 两张运行准入表）。D3 原基线仍见 [D3 验收记录](openspec/changes/archive/2026-11-02-d3-multi-worker/evidence/progress.md)；D4–D6 已有本地验收证据，但 Java 21 运行时、完整备份还原与真实负载压测仍属发布门槛，不能将本轮对话优化计作这些门槛已验证。原 SDK 故障窗口、确定性模型协议测试、真实 DeepSeek 检查分别记载。
 
 ### 已知缺陷与延后事项
 
@@ -99,3 +99,7 @@ Mapper XML 按能力放在 `server/agent-squad-server/src/main/resources/mapper/
 每个能力包内部按 controller → service → repository 分层；domain 放持久行对象，dto 放请求/响应 record，与持久对象分离。注入统一使用 `@Resource` 字段注入，不使用构造方法注入。
 
 继续阅读：[规划与设计](openspec/README.md) · [接口契约](api/openapi.json)。
+
+### 2026-11-03 多用户集成说明
+
+集成分支 `feature/multiuser-integration-20261103` 汇总 C1 与 C2–C4 代码。保留 C1 的 MyBatis 身份实现和 `web/workbench`；C2 运行容量默认关闭。集成后测试尚未重新执行，详见 `docs/architecture/MULTIUSER_INTEGRATION_20261103.md`。

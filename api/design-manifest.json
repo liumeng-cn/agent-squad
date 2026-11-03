@@ -32,7 +32,9 @@
       "sq_runtime_binding",
       "sq_command",
       "sq_execution_scope",
-      "sq_response_execution"
+      "sq_response_execution",
+      "sq_runtime_admission_counter",
+      "sq_runtime_admission_slot"
     ],
     "M03": [
       "sq_plan",
@@ -82,5 +84,5 @@
   },
   "plannedOperationCount": 52,
   "plannedSchemaCount": 83,
-  "plannedBusinessTableCount": 45
+  "plannedBusinessTableCount": 47
 }

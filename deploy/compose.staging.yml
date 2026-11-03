@@ -41,7 +41,7 @@ services:
       SQUAD_DB_USER: squad
       SQUAD_DB_PASSWORD: ${SQUAD_DB_PASSWORD:?数据库密码}
       SQUAD_AUTH_MODE: database
-      SQUAD_AUTH_COOKIE_SECURE: "true"
+      SQUAD_AUTH_SECURE_COOKIE: "true"
       SQUAD_IDENTITY_HMAC_KEY: ${SQUAD_IDENTITY_HMAC_KEY:?内部断言密钥}
       SQUAD_BUSINESS_SERVICE_URL: http://server:18080
     ports:

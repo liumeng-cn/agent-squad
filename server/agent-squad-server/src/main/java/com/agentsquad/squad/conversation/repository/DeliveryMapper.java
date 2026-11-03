@@ -42,6 +42,11 @@ public interface DeliveryMapper {
               ))
             """;
 
+    /**
+     * 按用户轮次发现到期命令，避免单用户积压占满整个扫描窗口。
+     *
+     * 返回仅代表候选集合；领取事务仍负责校验权限、消息顺序和租约。
+     */
     List<String> findDueIds(@Param("now") LocalDateTime now);
 
     int claim(@Param("commandId") String commandId, @Param("token") String token,

@@ -1,6 +1,9 @@
 package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.conversation.domain.DeliveryRow;
+import com.agentsquad.squad.conversation.domain.CommandClaimContext;
+import com.agentsquad.squad.conversation.service.RuntimeAdmissionService;
+import com.agentsquad.squad.conversation.service.RuntimeAdmissionBusyException;
 import com.agentsquad.squad.conversation.domain.RuntimeCommandAction;
 import com.agentsquad.squad.conversation.repository.DeliveryMapper;
 import com.agentsquad.squad.conversation.service.TaskControlService;
@@ -58,6 +61,9 @@ public class CommandDeliveryService {
     private DeliveryMapper deliveryMapper;
 
     @Resource
+    private RuntimeAdmissionService admission;
+
+    @Resource
     private NativeSessionGateway nativeSessionGateway;
 
     @Resource
@@ -79,7 +85,13 @@ public class CommandDeliveryService {
     public void deliverDue() {
         List<String> commandIds = deliveryMapper.findDueIds(now());
         for (String commandId : commandIds) {
-            deliver(commandId);
+            try {
+                deliver(commandId);
+            } catch (Exception exception) {
+                // 单条命令异常不得阻断同批其他用户的命令；本次未领取成功的命令由下轮扫描重试。
+                log.warn("持久命令调度异常 commandId={} errorType={}",
+                        commandId, exception.getClass().getSimpleName(), exception);
+            }
         }
     }
 
@@ -89,11 +101,26 @@ public class CommandDeliveryService {
     public void deliver(String commandId) {
         String token = UUID.randomUUID().toString();
         LocalDateTime claimedAt = now();
-        if (!claims.claim(commandId, token, claimedAt, claimedAt.plusSeconds(LEASE_SECONDS))) {
+        try {
+            if (!claims.claim(commandId, token, claimedAt, claimedAt.plusSeconds(LEASE_SECONDS))) {
+                return;
+            }
+        } catch (RuntimeAdmissionBusyException exception) {
+            // 等待下次公平扫描；领取事务回滚后命令仍处于原待领取状态。
+            return;
+        } catch (org.springframework.web.server.ResponseStatusException exception) {
+            // 用户被禁用后不应停止整个投递轮询；受理记录与原命令保持不变。
+            log.debug("命令领取因用户状态被拒绝 commandId={} status={}",
+                    commandId, exception.getStatusCode().value());
             return;
         }
         DeliveryRow delivery = deliveryMapper.findClaimed(commandId, token);
         if (delivery == null) {
+            // 尚未调用原生 SDK，缺失 Binding 不可能产生本次原生运行。
+            CommandClaimContext context = deliveryMapper.claimContext(commandId);
+            if (context != null) {
+                admission.releaseUnsubmitted(context.userId(), context.bindingId(), commandId);
+            }
             retry(commandId, token, 1, "BINDING_MISSING");
             return;
         }
@@ -102,6 +129,7 @@ public class CommandDeliveryService {
             try {
                 action = RuntimeCommandAction.valueOf(delivery.action());
             } catch (IllegalArgumentException exception) {
+                admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
                 fail(commandId, token, delivery.attempts(), "UNKNOWN_ACTION");
                 return;
             }
@@ -114,7 +142,10 @@ public class CommandDeliveryService {
                 case STOP -> deliverStop(commandId, token, delivery);
                 case RESUME -> deliverResume(commandId, token, delivery);
                 case RESPOND -> deliverRespond(commandId, token, delivery);
-                case DELETE_CONVERSATION -> fail(commandId, token, delivery.attempts(), "UNDELIVERABLE_ACTION");
+                case DELETE_CONVERSATION -> {
+                    admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
+                    fail(commandId, token, delivery.attempts(), "UNDELIVERABLE_ACTION");
+                }
             }
         } catch (com.agentsquad.squad.runtime.domain.ExecutionContextInvalidatedException exception) {
             restrictions.restrict(delivery.userId(), scopes.scopeForSession(delivery.userId(), delivery.sessionId()), delivery.bindingId());
@@ -129,6 +160,7 @@ public class CommandDeliveryService {
         JsonNode payload = RuntimePayloads.readJson(objectMapper, delivery.payloadJson());
         String message = payload.path("message").textValue();
         if (message == null || message.isBlank()) {
+            admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
             retry(commandId, token, delivery.attempts(), "INVALID_PAYLOAD");
             return;
         }
@@ -162,6 +194,8 @@ public class CommandDeliveryService {
         String turnId = deliveryMapper.findSubmitTurnId(delivery.userId(), delivery.taskId(),
                 delivery.bindingId());
         if (turnId == null) {
+            // 未进入 SDK，恢复命令确定没有启动新的原生 Run。
+            admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
             retry(commandId, token, delivery.attempts(), "NATIVE_TURN_MISSING");
             return;
         }
@@ -207,6 +241,7 @@ public class CommandDeliveryService {
         String requestId = payload.path("requestId").textValue();
         String answerText = payload.path("answerText").textValue();
         if (requestId == null || requestId.isBlank() || answerText == null) {
+            admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
             retry(commandId, token, delivery.attempts(), "INVALID_PAYLOAD");
             return;
         }
@@ -221,6 +256,13 @@ public class CommandDeliveryService {
                              String turnId, String runId, String nativeStatus) {
         int saved = deliveryMapper.saveReceipt(commandId, token, turnId, runId, nativeStatus, now());
         if (saved == 1) {
+            if ("rejected".equals(nativeStatus)) {
+                // SDK 已明确拒绝受理，未生成新的原生运行。
+                admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
+            } else {
+                admission.bindReceipt(delivery.userId(), delivery.bindingId(),
+                        commandId, delivery.action(), turnId);
+            }
             log.info("原生命令已投递 commandId={} taskId={} action={} nativeStatus={}",
                     commandId, delivery.taskId(), delivery.action(), nativeStatus);
         } else {

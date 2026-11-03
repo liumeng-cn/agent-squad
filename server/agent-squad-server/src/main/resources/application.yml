@@ -45,9 +45,15 @@ agentsquad:
   delivery:
     enabled: ${SQUAD_DELIVERY_ENABLED:false}
     poll-delay-ms: ${SQUAD_DELIVERY_POLL_DELAY_MS:1000}
+    admission:
+      # C2 持久运行容量默认关闭，启用前必须验证 V3/V4 与 SDK 回收。
+      enabled: ${SQUAD_ADMISSION_ENABLED:false}
+      global-limit: ${SQUAD_ADMISSION_GLOBAL_LIMIT:12}
+      per-user-limit: ${SQUAD_ADMISSION_PER_USER_LIMIT:2}
   events:
     poll-threads: ${SQUAD_EVENT_POLL_THREADS:4}
     max-connections: ${SQUAD_EVENT_MAX_CONNECTIONS:100}
+    max-connections-per-user: ${SQUAD_EVENT_MAX_CONNECTIONS_PER_USER:5}
   model:
     api-key: ${SQUAD_MODEL_API_KEY:}
     base-url: ${SQUAD_MODEL_BASE_URL:}

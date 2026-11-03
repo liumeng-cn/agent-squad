@@ -5,6 +5,7 @@ import com.agentsquad.squad.presentation.service.TaskEventPublishingService;
 import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
 import com.agentsquad.squad.conversation.domain.ExecutionScopeRow;
 import com.agentsquad.squad.conversation.service.ResponseExecutionService;
+import com.agentsquad.squad.conversation.service.RuntimeAdmissionService;
 import com.agentsquad.squad.conversation.service.ConversationEventWriter;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
@@ -91,6 +92,9 @@ public class NativeProjectionService {
     @Resource
     private ObjectMapper objectMapper;
 
+    @Resource
+    private RuntimeAdmissionService admission;
+
     /**
      * 重复事件只跳过；缺少前序事件则回滚并等待重新读取完整前缀。
      */
@@ -144,13 +148,22 @@ public class NativeProjectionService {
                     && !"FAILED".equals(scopeMapper.lockTaskOwner(target.userId(), target.taskId(), scope.scopeId()).status())) {
                 failures.resolve(target.userId(), target.bindingId());
             }
-            projectionMapper.recordEndedTurn(target.userId(), target.bindingId(), event.turnId());
             projectionMapper.settleControls(target.userId(), target.bindingId());
             masterSignalService.onMasterTurnEnded(target.userId(), target.taskId(), event.turnId());
         } else if ("interaction/requested".equals(event.type())) {
             bindInteraction(target, event);
         } else if ("interaction/resolved".equals(event.type())) {
             resolveInteraction(target, event);
+        }
+        if ("run/start".equals(event.type())) {
+            // 新 Run 必须在本次领取的原生水位之后出现；恢复和答复不复用旧 Turn 身份。
+            admission.recordRunStarted(target.userId(), target.bindingId(), event.runId(), event.sequence());
+        }
+        if ("run/end".equals(event.type())) {
+            if (event.turnId() != null && !event.turnId().isBlank()) {
+                projectionMapper.recordEndedTurn(target.userId(), target.bindingId(), event.turnId());
+            }
+            admission.releaseEnded(target.userId(), target.bindingId(), event.turnId(), event.runId());
         }
         if (projectionMapper.advanceCursor(target.userId(), target.bindingId(), cursor, event.sequence()) != 1) {
             throw new IllegalStateException("原生日志投影水位竞争");

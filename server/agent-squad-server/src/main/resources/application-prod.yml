@@ -8,5 +8,22 @@ agentsquad:
   identity:
     strict: true
     enforce-user-status: true
+    allow-unsigned-local: false
+  delivery:
+    admission:
+      # 完成独立迁移、SDK 回归与多用户容量验收后才由运维显式启用。
+      enabled: ${SQUAD_ADMISSION_ENABLED:false}
   fault:
     after-inflight-exit: false
+
+management:
+  server:
+    port: 18083
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true

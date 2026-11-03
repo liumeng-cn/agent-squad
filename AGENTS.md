@@ -18,6 +18,7 @@
 - 运行权威、对象映射与故障窗口以 openspec/specs/runtime 与 openspec/config.yaml 的运行权威约束为准；设计检查覆盖不等于行为/生产验证。
 
 - Web工作台是一期交付，路由/交互/API对应以 openspec/specs/web-console 和 api/ui-manifest.json 为准；不与暂缓的Skill生成页面混淆。开发顺序见 openspec/changes/（d3–d6）。
+- 提交代码时，必须写简体中文的注释信息
 
 ## Spring代码约定（用户明确要求）
 
