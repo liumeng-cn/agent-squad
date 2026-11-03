@@ -1,9 +1,35 @@
+# 本机验证配置，直接填写实际值，不依赖环境变量。
 spring:
   datasource:
-    url: ${SQUAD_DB_URL:jdbc:mysql://127.0.0.1:13306/agent_squad}
-    username: ${SQUAD_DB_USER:squad}
-    password: ${SQUAD_DB_PASSWORD:}
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:db/migration/V1__baseline.sql
+    url: jdbc:mysql://127.0.0.1:13306/agent_squad
+    username: root
+    password: test
+
+server:
+  address: 127.0.0.1
+  port: 18080
+agentsquad:
+  identity:
+    key-id: local-v1
+    hmac-key: q3ISUBkKP7Eub+umOnOlnbVq8a4ANeOBFVexjBdeNeVx+d7jykoXj/HF7+t5RuNC
+    strict: true
+    enforce-user-status: true
+    allow-unsigned-local: false
+  vault:
+    master-key: TOpBBhWipDtR7HgEEQXfF8xw05aghC9xzoE6jk0bKjM=
+    master-key-id: local-v1
+  delivery:
+    enabled: true
+    admission:
+      enabled: false
+  model:
+    api-key: sk-89735e14e94c43f69fa7e458c9fb8509
+    base-url: https://api.deepseek.com
+    name: deepseek-chat
+  worker:
+    model-profiles:
+      default:
+        provider: OPENAI_COMPATIBLE
+        api-key: sk-89735e14e94c43f69fa7e458c9fb8509
+        base-url: https://api.deepseek.com
+        model-name: deepseek-chat

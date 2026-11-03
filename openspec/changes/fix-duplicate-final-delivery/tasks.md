@@ -8,7 +8,7 @@
 
 ## 2. 持久交付权与最终结果裁决
 - [ ] **FD.2.1 固化交付权数据契约**：确定 `(userId, sourceMessageId, deliveryGeneration)` 的交付位、`RESPONSE/TASK` 所有者、状态、`publishedMessageId`、唯一约束与版本语义；区分 `ACK/PROGRESS/FINAL`。**涉及**：`openspec/specs/master`、`runtime`、`events-artifacts` 和必要的 `api/openapi.json`；**验证**：直接答复/委派/显式重做场景均有唯一可判定最终所有者。
-- [ ] **FD.2.2 实现原子创建与转移**：普通消息默认归属 RESPONSE，`create_goal_task` 成功时与 Task 受理在同一事务转交；与已发布 FINAL 的竞态按 CAS/锁结果拒绝。**涉及**：`MessageAcceptanceWriter`、`GoalTaskCreationService`、Mapper/存储及必要的 `V1__baseline.sql`；**验证**：并发、重投、崩溃恢复不会出现双重持有或无主交付。
+- [ ] **FD.2.2 实现原子创建与转移**：普通消息默认归属 RESPONSE，`create_goal_task` 成功时与 Task 受理在同一事务转交；与已发布 FINAL 的竞态按 CAS/锁结果拒绝。**涉及**：`MessageAcceptanceWriter`、`GoalTaskCreationService`、Mapper/存储及必要的 `schema.sql`；**验证**：并发、重投、崩溃恢复不会出现双重持有或无主交付。
 - [ ] **FD.2.3 统一完成发布**：`ResponseExecutionService.finish` 只在持有权时发布 FINAL；已委派 RESPONSE 仅完成自身状态并发表可识别的简短受理通知或复用任务状态；`TaskFinalizerService` / `TaskEventPublishingService` 按交付位幂等发布 Task FINAL。**涉及**：服务层、事件映射和消息投影；**验证**：故意让 Master 在建 Task 后仍提交两篇完整作文，Web 最终只出现一份完整终稿，且 Task 仍正常执行。
 - [ ] **FD.2.4 处理失败及显式重做边界**：覆盖任务取消/失败、旧代际迟到、重试不同 `executionId`、公开事件重复回放；明确显式重新生成如何创建新代际及前端展示。**验证**：没有无声吞掉失败或把自动重试变成第二份终稿，已有任务不会被普通 Response 误终结。
 

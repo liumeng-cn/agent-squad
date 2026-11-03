@@ -1,3 +1,8 @@
+-- Agent Squad 唯一完整建表文件（MySQL 8.4）。
+-- 在目标空库执行：包含当前51张业务/框架表和admin/demo本地测试账号。
+-- 不删除数据库或已有表，不执行历史迁移，不覆盖已有账号密码。
+-- 如需刷库，请由操作员先处理原有数据，再在空库执行本文件。
+
 CREATE TABLE IF NOT EXISTS `agentscope_sessions`
 (
     `session_id` varchar(255) NOT NULL COMMENT '框架会话标识',
@@ -1121,4 +1126,142 @@ CREATE TABLE IF NOT EXISTS `sq_worker_job`
     KEY `fk_worker_job_task` (`user_id`, `task_id`)
 ) ENGINE = InnoDB
     COMMENT ='有界委派节点';
+
+
+-- C1：真实多用户账号与跨网关会话。生产数据库由独立受控迁移操作执行。
+CREATE TABLE IF NOT EXISTS sq_user
+(
+    id                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '存储主键',
+    user_id              CHAR(36)        NOT NULL COMMENT '用户业务ID',
+    username             VARCHAR(64)     NOT NULL COMMENT '归一化登录名',
+    display_name         VARCHAR(100)    NOT NULL DEFAULT '' COMMENT '展示名称',
+    password_hash        VARCHAR(255)    NOT NULL COMMENT 'BCrypt密码摘要',
+    role                 VARCHAR(16)     NOT NULL DEFAULT 'USER' COMMENT 'USER或ADMIN',
+    status               VARCHAR(16)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE或DISABLED',
+    auth_version         BIGINT          NOT NULL DEFAULT 0 COMMENT '认证撤销代际',
+    version              BIGINT          NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
+    must_change_password TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '首次需修改密码',
+    creator_id           VARCHAR(36)     NOT NULL DEFAULT '' COMMENT '创建者',
+    creator_name         VARCHAR(50)     NOT NULL DEFAULT '' COMMENT '创建者名',
+    create_time          DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    last_updater_id      VARCHAR(36)     NOT NULL DEFAULT '' COMMENT '修改者',
+    last_updater_name    VARCHAR(50)     NOT NULL DEFAULT '' COMMENT '修改者名',
+    last_update_time     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '修改时间',
+    del_flag             CHAR(1)         NOT NULL DEFAULT '0' COMMENT '删除标记',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_user_user_id (user_id),
+    UNIQUE KEY uk_user_username (username)
+) ENGINE = InnoDB COMMENT ='账号表';
+
+CREATE TABLE IF NOT EXISTS sq_auth_session
+(
+    id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '存储主键',
+    session_id          CHAR(36)        NOT NULL COMMENT '登录会话ID',
+    user_id             CHAR(36)        NOT NULL COMMENT '账号ID',
+    token_hash          CHAR(64)        NOT NULL COMMENT 'Token SHA256 摘要',
+    csrf_hash           CHAR(64)        NOT NULL COMMENT 'CSRF SHA256 摘要',
+    issued_auth_version BIGINT          NOT NULL COMMENT '颁发时认证版本',
+    created_at          DATETIME(3)     NOT NULL COMMENT '创建时间',
+    last_seen_at        DATETIME(3)     NOT NULL COMMENT '最近访问',
+    idle_expires_at     DATETIME(3)     NOT NULL COMMENT '空闲过期时间',
+    absolute_expires_at DATETIME(3)     NOT NULL COMMENT '绝对过期时间',
+    revoked_at          DATETIME(3)     NULL COMMENT '撤销时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_auth_session_id (session_id),
+    UNIQUE KEY uk_auth_token_hash (token_hash),
+    KEY idx_auth_session_user (user_id, revoked_at),
+    KEY idx_auth_session_expiry (idle_expires_at)
+) ENGINE = InnoDB COMMENT ='认证持久会话';
+
+CREATE TABLE IF NOT EXISTS sq_auth_rate_bucket
+(
+    id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '存储主键',
+    bucket_key   CHAR(64)        NOT NULL COMMENT '归一化身份标识摘要',
+    window_start DATETIME(3)     NOT NULL COMMENT '窗口开始',
+    failures     INT             NOT NULL DEFAULT 0 COMMENT '失败次数',
+    locked_until DATETIME(3)     NULL COMMENT '封禁到期',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_auth_bucket (bucket_key)
+) ENGINE = InnoDB COMMENT ='认证失败节流';
+
+CREATE TABLE IF NOT EXISTS sq_auth_audit
+(
+    id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '存储主键',
+    event_id      CHAR(36)        NOT NULL COMMENT '事件ID',
+    user_id       CHAR(36)        NULL COMMENT '受影响用户',
+    actor_user_id CHAR(36)        NULL COMMENT '操作用户',
+    event_type    VARCHAR(48)     NOT NULL COMMENT '事件类型',
+    result        VARCHAR(16)     NOT NULL COMMENT '操作结果',
+    occurred_at   DATETIME(3)     NOT NULL COMMENT '事件时间',
+    request_id    VARCHAR(64)     NOT NULL DEFAULT '' COMMENT '请求关联ID',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_auth_audit_id (event_id),
+    KEY idx_auth_audit_user (user_id, occurred_at)
+) ENGINE = InnoDB COMMENT ='认证安全审计';
+
+-- C2：跨实例持久原生运行配额。完成 SDK 与并发验收后才能启用 admission。
+-- 全局和用户计数在同一事务锁定；无法确认结束的原生运行必须保留 ACTIVE 占位。
+
+CREATE TABLE IF NOT EXISTS sq_runtime_admission_counter
+(
+    pool_key     VARCHAR(80) NOT NULL COMMENT 'GLOBAL或USER:<user_id>',
+    active_count INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '当前活跃占位数量',
+    PRIMARY KEY (pool_key)
+) ENGINE = InnoDB COMMENT = '运行准入持久配额计数';
+
+CREATE TABLE IF NOT EXISTS sq_runtime_admission_slot
+(
+    binding_id   CHAR(36)    NOT NULL COMMENT '固定原生会话绑定标识',
+    user_id      CHAR(36)    NOT NULL COMMENT '归属用户标识',
+    command_id   CHAR(36)    NOT NULL COMMENT '持有占位的原始命令标识',
+    action       VARCHAR(32) NOT NULL COMMENT '原始命令动作',
+    turn_id      VARCHAR(64)          DEFAULT NULL COMMENT '原生执行回合ID',
+    run_id       VARCHAR(64)          DEFAULT NULL COMMENT '恢复命令的新原生Run标识',
+    claim_cursor BIGINT NOT NULL DEFAULT 0 COMMENT '领取时已投影原生事件序号',
+    status       VARCHAR(16) NOT NULL COMMENT 'ACTIVE或RELEASED',
+    acquired_at  DATETIME(3) NOT NULL COMMENT '占位获取时间UTC',
+    released_at  DATETIME(3)          DEFAULT NULL COMMENT '占位释放时间UTC',
+    PRIMARY KEY (binding_id),
+    KEY idx_admission_slot_user (user_id, status),
+    KEY idx_admission_slot_command (command_id)
+) ENGINE = InnoDB COMMENT = '绑定级原生执行容量占位';
+
+CREATE TABLE IF NOT EXISTS `sq_final_delivery`
+(
+    `id`                   bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
+    `delivery_id`          char(36)    NOT NULL COMMENT '最终交付业务ID',
+    `user_id`              char(36)    NOT NULL COMMENT '归属用户ID',
+    `source_message_id`    char(36)    NOT NULL COMMENT '原始用户消息ID',
+    `delivery_generation` bigint      NOT NULL COMMENT '显式重做交付代际',
+    `owner_type`           varchar(16) NOT NULL COMMENT '权威所有者类型RESPONSE或TASK',
+    `owner_id`             char(36)    NOT NULL COMMENT '权威回复执行或目标ID',
+    `state`                varchar(16) NOT NULL COMMENT '交付状态OWNED或PUBLISHED或CLOSED',
+    `published_message_id` char(36)    NULL COMMENT '已发布最终消息ID',
+    `creator_id`           varchar(36) NOT NULL DEFAULT '' COMMENT '创建人ID',
+    `creator_name`         varchar(50) NOT NULL DEFAULT '' COMMENT '创建人姓名',
+    `create_time`          datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    `last_updater_id`      varchar(36) NOT NULL DEFAULT '' COMMENT '最后更新人ID',
+    `last_updater_name`    varchar(50) NOT NULL DEFAULT '' COMMENT '最后更新人姓名',
+    `last_update_time`     datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '最后更新时间',
+    `del_flag`             char(1)     NOT NULL DEFAULT '0' COMMENT '删除标志[0-否,1-是]',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_final_delivery` (`delivery_id`),
+    UNIQUE KEY `uk_final_delivery_generation` (`user_id`, `source_message_id`, `delivery_generation`),
+    UNIQUE KEY `uk_final_delivery_owner` (`user_id`, `owner_type`, `owner_id`),
+    UNIQUE KEY `uk_final_delivery_message` (`published_message_id`)
+) ENGINE = InnoDB COMMENT ='同源请求最终交付权';
+
+-- 本地测试账号，密码只以BCrypt摘要保存：
+-- admin / admin-password（管理员）；demo / demo-password（普通用户）。
+START TRANSACTION;
+INSERT IGNORE INTO sq_user (
+    user_id, username, display_name, password_hash, role, status,
+    auth_version, must_change_password, version,
+    creator_id, creator_name, last_updater_id, last_updater_name
+) VALUES
+    ('10000000-0000-0000-0000-000000000001', 'admin', 'admin', '$2a$10$7qNJyG0DkqrjkW9telHIJOMseipAcvS.kTaUWLjSLV9pmI.86XIw2', 'ADMIN', 'ACTIVE',
+     0, 0, 0, 'local-seed', '本地初始化', 'local-seed', '本地初始化'),
+    ('10000000-0000-0000-0000-000000000002', 'demo', 'demo', '$2a$10$dfGin3LTzMOEj0lR81x.I.9p7CYDJLXUwPqXTMe/qlszJwnXxJBcy', 'USER', 'ACTIVE',
+     0, 0, 0, 'local-seed', '本地初始化', 'local-seed', '本地初始化');
+COMMIT;
 

@@ -8,7 +8,7 @@
 - openspec/specs/ 定义能力与行为（R01–R12），api/openapi.json 定义传输结构，server/agent-squad-server/src/main/resources/db/migration/ 定义实际存储。变更时同步检查，不复制多套现行方案。
 - 旧项目只读参考；没有兼容义务。不自动迁入其服务、迁移、界面、私有配置或未提交改动。
 - Java 采用可读的 Controller → Service → Repository/Mapper 分层，DTO 与持久对象分离；功能类和关键方法写中文职责注释，四空格缩进，控制语句有花括号，不用通配符导入。
-- 表与字段有中文注释，业务 ID 与存储主键分离，公共审计字段统一；不因当前为开发期就自动清理任何实际数据库。本地开发库可直接修改表结构，修改后须同步 `V1__baseline.sql`；生产与共享数据库仍由用户独立管理。
+- 表与字段有中文注释，业务 ID 与存储主键分离，公共审计字段统一；不因当前为开发期就自动清理任何实际数据库。本地开发库可直接修改表结构，修改后须同步 `schema.sql`；生产与共享数据库仍由用户独立管理。
 - 本地实现与验证已获授权；真实模型、外部发布和生产系统操作仍按对应任务范围执行。
 
 - 整体技术基线、目标源码与部署结构以 openspec/config.yaml 的 context 约束与 openspec/specs/ 为准；目前均为待验证的设计，不提前创建应用。
@@ -28,3 +28,11 @@
 - 功能类注释说明职责、所属模块与关键边界；核心方法注释说明业务步骤、事务/副作用、幂等及失败恢复要点。避免只翻译方法名，不为机械访问器堆注释。
 - 关键日志说明操作、阶段、结果及原因，按需带traceId/taskId/jobId/operationId/commandId；异常保留必要堆栈，避免各层重复记录同一异常。
 - 不输出密钥、Cookie、密码、完整Prompt/上下文、模型内部推理；入参和工具结果只记录允许字段、摘要及大小。正常等待/取消不是ERROR，恢复重试要有次数和原因，避免轮询/续租刷屏。
+
+## 数据访问统一约定（用户明确要求）
+
+- 项目生产代码的数据库读写统一使用 MyBatis Mapper 接口与 Mapper XML，业务服务、Repository 和配置校验不得直接使用 JDBC、JdbcTemplate、NamedParameterJdbcTemplate、DriverManager、Connection、Statement 或 ResultSet 执行 SQL。
+- SQL 只放在对应模块 Mapper XML，Service 负责业务步骤和事务；不得同时保留 JDBC 与 MyBatis 两套现行实现。
+- 官方 AgentScope 持久化只通过其公开 SDK 接口接入；向 SDK 提供 DataSource 不代表允许项目自行编写 JDBC SQL。测试建库、DDL执行及结构对比夹具与生产访问链路分开。
+- 登录账号以 sq_user 为权威，密码只存 BCrypt 摘要；配置文件中的数据库连接账号不是网页登录账号。预置测试账号通过显式 SQL 或账号管理服务写入数据库，不在正常启动时反复覆盖。
+- 数据结构变更先同步最终 schema.sql、Mapper XML 和验证。用户要求提供刷库 SQL 时，只生成、校验文件；未经用户明确要求，不执行真实库的删除、重建或清空。

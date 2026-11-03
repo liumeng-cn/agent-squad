@@ -4,7 +4,7 @@
 
 ### Requirement: 最终表结构与数据库管理边界
 
-开发及测试环境 MUST 以完整 `V1__baseline.sql` 保持可重建最终结构；本地开发库可直接修改表结构，修改后 MUST 同步回 baseline。生产环境 MUST 使用显式版本化受控迁移作业，业务服务 `spring.sql.init.mode=never`，启动不得自动执行 DDL。两个路径的最终表/列/索引 MUST 通过 schema-parity 自动校验。现有真实数据库必须先备份/验证再升级，生产数据库变更仅在用户批准后执行。
+开发及测试环境 MUST 以完整 `schema.sql` 保持可重建最终结构；本地开发库可直接修改表结构，修改后 MUST 同步回 baseline。生产环境 MUST 使用显式版本化受控迁移作业，业务服务 `spring.sql.init.mode=never`，启动不得自动执行 DDL。两个路径的最终表/列/索引 MUST 通过 schema-parity 自动校验。现有真实数据库必须先备份/验证再升级，生产数据库变更仅在用户批准后执行。
 
 #### Scenario: 应用启动
 - **WHEN** 应用连接已配置的数据库启动

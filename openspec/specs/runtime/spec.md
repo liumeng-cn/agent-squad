@@ -8,7 +8,7 @@
 
 ### Requirement: 最终表结构与数据库管理边界
 
-项目 MUST 以 `server/agent-squad-server/src/main/resources/db/migration/V1__baseline.sql` 维护唯一最终表结构；开发环境由应用启动时重放该 baseline 建表，不维护迁移版本链与历史数据回填。本地开发库可直接修改表结构，修改后 MUST 同步回 baseline；生产与共享数据库的创建、变更与数据处理由用户独立管理。
+项目 MUST 以 `server/agent-squad-server/src/main/resources/db/schema.sql` 维护唯一最终表结构；开发环境由应用启动时重放该 baseline 建表，不维护迁移版本链与历史数据回填。本地开发库可直接修改表结构，修改后 MUST 同步回 baseline；生产与共享数据库的创建、变更与数据处理由用户独立管理。
 
 #### Scenario: 应用启动
 - **WHEN** 应用连接已配置的数据库启动

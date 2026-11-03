@@ -227,12 +227,12 @@ class MemoryIntegrationTest {
         JdbcTemplate beforeUpgrade = new JdbcTemplate(dataSource);
         org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(
                 beforeUpgrade.getDataSource().getConnection(),
-                new org.springframework.core.io.ClassPathResource("db/migration/V1__baseline.sql"));
+                new org.springframework.core.io.ClassPathResource("db/schema.sql"));
         String user = UUID.randomUUID().toString();
         String oldId = UUID.randomUUID().toString();
         beforeUpgrade.update("INSERT INTO sq_memory (memory_id,user_id,memory_key,content,status,version) VALUES (?,?,?,'','DELETED',1)",
                 oldId, user, "可重新使用的键");
-        try (var context = start(url, "classpath:db/migration/V1__baseline.sql")) {
+        try (var context = start(url, "classpath:db/schema.sql")) {
             MemoryService service = context.getBean(MemoryService.class);
             String newId = service.create(user, new MemoryCreate("可重新使用的键", "升级后明确重新创建", null)).memory().memoryId();
             assertThat(newId).isNotEqualTo(oldId);
@@ -254,7 +254,7 @@ class MemoryIntegrationTest {
     }
 
     private ConfigurableApplicationContext start(String database) {
-        return start(database, "classpath:db/migration/V1__baseline.sql");
+        return start(database, "classpath:db/schema.sql");
     }
 
     private ConfigurableApplicationContext start(String database, String locations) {

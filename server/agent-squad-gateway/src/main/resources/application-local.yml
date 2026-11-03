@@ -1,5 +1,18 @@
+# 本机验证配置，直接填写实际值，不依赖环境变量。
 spring:
   datasource:
-    url: ${SQUAD_DB_URL:jdbc:mysql://127.0.0.1:13306/agent_squad}
-    username: ${SQUAD_DB_USER:squad}
-    password: ${SQUAD_DB_PASSWORD:}
+    url: jdbc:mysql://127.0.0.1:13306/agent_squad
+    username: root
+    password: test
+server:
+  address: 127.0.0.1
+  port: 18081
+agentsquad:
+  identity:
+    key-id: local-v1
+    hmac-key: q3ISUBkKP7Eub+umOnOlnbVq8a4ANeOBFVexjBdeNeVx+d7jykoXj/HF7+t5RuNC
+    strict: true
+  auth:
+    secure-cookie: false
+gateway:
+  business-service-url: http://127.0.0.1:18080

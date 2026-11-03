@@ -16,7 +16,7 @@
 | 项目 | 已核实源码情况 | 对方案的意义 |
 |---|---|---|
 | 形态 | Gateway(Spring Cloud Gateway WebFlux) + Server(Spring MVC + AgentScope) + Vue3/Pinia；MySQL 8.4 | 保持模块化单体，避免新的微服务拆分 |
-| 数据库 | 44 张表的 `V1__baseline.sql`；`spring.sql.init.mode=always` | 生产必须增加受控迁移与只校验配置 |
+| 数据库 | 44 张表的 `schema.sql`；`spring.sql.init.mode=always` | 生产必须增加受控迁移与只校验配置 |
 | 认证 | 单配置账号，Token + CSRF 内存 Map | C1 建立真正用户身份和跨实例会话 |
 | 信任 | Server 读取未签名 `X-User-Id/X-User-Role` | C1 必须建立内部认证断言 |
 | 身份隔离 | 多数业务资源含 `user_id`，已有跨用户安全测试 | 复用现有归属模型并扩大负面测试 |
@@ -65,7 +65,7 @@ flowchart TB
 
 1. `openspec/specs/` 是稳定行为契约；在途 delta 放 `openspec/changes/<change>/specs/`，通过验收后按 OpenSpec 归档流程合并为稳定规范。
 2. `api/openapi.json` 是 HTTP 正式契约；修改 Java DTO/接口时同步调整契约和前端类型，不可以“编译通过”等于接口兼容。
-3. `V1__baseline.sql` 目前包含 44 表；本方案 C1 增 4 表，基线预期 48 表。若实际引入 C2 slot、C3 draft/summary，最终表数会继续增加；**表数只是验收清单，按真实表/列/索引核验，不把预期表数写死为最终结果**。
+3. `schema.sql` 目前包含 44 表；本方案 C1 增 4 表，基线预期 48 表。若实际引入 C2 slot、C3 draft/summary，最终表数会继续增加；**表数只是验收清单，按真实表/列/索引核验，不把预期表数写死为最终结果**。
 4. 当前 OpenSpec `config.yaml` 及部分 `runtime` 文字对数据库“只 baseline/no migrator”和“启动不 DDL”存在与现实配置矛盾。C1 必须主动修订，以 local/test baseline + prod 显式版本迁移形成一致约束；`openspec/README.md` 的过期 Flyway 陈述同步修订。
 5. `AGENTS.md` 已规定 `@Resource` 字段注入、不能在 Spring 类声明内部类、中文说明、mapper XML、ID/审计字段规范，执行体继续遵守；同时更新项目定位为“Web 连续对话为产品入口、Agent 编排为技术核心”，避免后续 AI 误判。
 6. 不同变更之间不迁移/复用已变更代码的旧 line number；报告应使用最新分支路径/提交 SHA。

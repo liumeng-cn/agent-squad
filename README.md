@@ -95,6 +95,7 @@ com.agentsquad.squad
 ```
 
 Mapper XML 按能力放在 `server/agent-squad-server/src/main/resources/mapper/<模块>/` 下，不增加 `repository/` 中间目录；XML namespace 对应 Java Mapper 接口的完整包名。
+传输结构以 [OpenAPI](api/openapi.json) 为准；最终数据库结构以 [V1 baseline](server/agent-squad-server/src/main/resources/db/schema.sql) 为准。生产迁移链位于 [deploy/db/migrations](deploy/db/migrations/)，必须与 baseline 通过结构一致性校验。
 
 每个能力包内部按 controller → service → repository 分层；domain 放持久行对象，dto 放请求/响应 record，与持久对象分离。注入统一使用 `@Resource` 字段注入，不使用构造方法注入。
 

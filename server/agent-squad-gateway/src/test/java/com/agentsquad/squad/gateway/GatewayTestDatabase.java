@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * 网关测试的隔离 MySQL 库。
  *
- * <p>创建 as_test_ 前缀的独立 schema，执行多用户身份迁移并播种测试账号；
+ * <p>创建 as_test_ 前缀的独立 schema，加载唯一完整 schema.sql 并播种测试账号；
  * JVM 退出时只清理本次创建的测试库，不触碰开发库。</p>
  */
 final class GatewayTestDatabase {
@@ -36,10 +36,11 @@ final class GatewayTestDatabase {
     static String create(String label) {
         String admin = System.getenv().getOrDefault("SQUAD_TEST_MYSQL_ADMIN_URL",
                 "jdbc:mysql://127.0.0.1:13306/mysql?serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true");
-        String name = "as_test_gw_" + Integer.toHexString(label.hashCode());
+        String name = "as_test_gw_" + Integer.toHexString(label.hashCode()) + "_"
+                + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         try (Connection connection = DriverManager.getConnection(admin, username(), password());
              Statement statement = connection.createStatement()) {
-            statement.executeUpdate("CREATE DATABASE IF NOT EXISTS `" + name
+            statement.executeUpdate("CREATE DATABASE `" + name
                     + "` CHARACTER SET utf8mb4 COLLATE utf8mb4_bin");
         } catch (SQLException exception) {
             throw new IllegalStateException("无法创建网关测试库，请检查 MySQL 测试变量", exception);
@@ -47,7 +48,7 @@ final class GatewayTestDatabase {
         ADMIN_URL.compareAndSet(null, admin);
         CREATED.add(name);
         String url = admin.replaceFirst("/mysql(?=\\?|$)", "/" + name);
-        applyMigration(url);
+        applySchema(url, name);
         return url;
     }
 
@@ -96,26 +97,38 @@ final class GatewayTestDatabase {
         }
     }
 
-    private static void applyMigration(String url) {
+    /** 只在本次刚创建的随机测试库加载结构并移除样例账号，禁止作用于开发库。 */
+    private static void applySchema(String url, String schemaName) {
+        if (!schemaName.matches("as_test_gw_[a-f0-9]+_[a-f0-9]{12}") || !CREATED.contains(schemaName)) {
+            throw new IllegalStateException("拒绝初始化非本次创建的网关测试库");
+        }
         try (Connection connection = DriverManager.getConnection(url, username(), password())) {
+            if (!schemaName.equals(connection.getCatalog())) {
+                throw new IllegalStateException("网关测试连接与新建库不匹配");
+            }
             ScriptUtils.executeSqlScript(connection,
-                    new org.springframework.core.io.FileSystemResource(migrationDir()
-                            .resolve("V2__multiuser_identity.sql")));
+                    new org.springframework.core.io.FileSystemResource(schemaFile()));
+            try (Statement statement = connection.createStatement()) {
+                statement.executeUpdate("DELETE FROM sq_auth_session");
+                statement.executeUpdate("DELETE FROM sq_auth_rate_bucket");
+                statement.executeUpdate("DELETE FROM sq_auth_audit");
+                statement.executeUpdate("DELETE FROM sq_user");
+            }
         } catch (SQLException exception) {
-            throw new IllegalStateException("执行网关测试迁移失败", exception);
+            throw new IllegalStateException("加载网关测试完整表结构失败", exception);
         }
     }
 
-    private static Path migrationDir() {
+    private static Path schemaFile() {
         Path current = Path.of("").toAbsolutePath();
         for (int depth = 0; depth < 4 && current != null; depth++) {
-            Path candidate = current.resolve("deploy").resolve("db").resolve("migrations");
-            if (Files.isDirectory(candidate)) {
+            Path candidate = current.resolve("server/agent-squad-server/src/main/resources/db/schema.sql");
+            if (Files.isRegularFile(candidate)) {
                 return candidate;
             }
             current = current.getParent();
         }
-        throw new IllegalStateException("未找到 deploy/db/migrations");
+        throw new IllegalStateException("未找到唯一完整 db/schema.sql");
     }
 
     private static void dropCreated() {

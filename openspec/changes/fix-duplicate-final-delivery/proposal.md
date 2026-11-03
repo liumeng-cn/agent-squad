@@ -18,7 +18,7 @@
 - 基于真实会话的 `sq_message / sq_response_execution / sq_goal_task` 与事件证据定位重复来源，写入脱敏诊断记录。
 - 明确“直接回复”与“委派 GoalTask”之间的最终交付权归属及原子转移规则；最终交付裁决由平台事务执行，而不是仅依赖 Prompt。
 - 统一 RESPONSE 与 TASK 两条完成投影的幂等、重试、终态及恢复约束；受理/进度通知和最终结果采用可判定的不同语义。
-- 在现有 `openspec/specs/master`、`runtime`、`events-artifacts` 的 delta 中补充验收场景；按需要同步 `api/openapi.json` 与 `V1__baseline.sql`。
+- 在现有 `openspec/specs/master`、`runtime`、`events-artifacts` 的 delta 中补充验收场景；按需要同步 `api/openapi.json` 与 `schema.sql`。
 - 添加服务端集成测试与 Web SSE/快照回归，验证用户实际看不到双份最终成果。
 
 ## Non-goals
