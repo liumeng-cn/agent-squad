@@ -16,7 +16,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 
 /**
- * 按持久水位从原生 Journal 读取稳定前缀，逐条交给事务投影器。
+ * 从上次处理到的事件序号继续读取 AgentScope 执行事件，并依次更新业务状态。
  */
 @Component
 @Slf4j
@@ -51,7 +51,7 @@ public class NativeProjectionPoller {
     private WorkerRecoveryService workerRecoveryService;
 
     /**
-     * 每个 Binding 独立失败与退避，不阻塞其他原生会话。
+     * 每个 Agent 会话各自处理失败和重试，不影响其他会话。
      */
     @Scheduled(fixedDelayString = "${agentsquad.projection.poll-delay-ms:1000}")
     public void projectDue() {
@@ -91,7 +91,7 @@ public class NativeProjectionPoller {
                 restrictions.restrict(target.userId(), scopeMapper.findScopeByBinding(target.userId(), target.bindingId()), target.bindingId());
             } catch (Exception exception) {
                 projectionMapper.defer(target.userId(), target.bindingId(), now().plusSeconds(10));
-                log.warn("原生日志投影待重试 bindingId={} taskId={} errorType={}",
+                log.warn("Agent执行事件同步失败，稍后重试 bindingId={} taskId={} errorType={}",
                         target.bindingId(), target.taskId(), exception.getClass().getSimpleName(), exception);
             }
         }

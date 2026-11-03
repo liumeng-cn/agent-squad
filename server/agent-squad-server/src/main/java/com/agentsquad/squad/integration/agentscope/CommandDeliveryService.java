@@ -37,9 +37,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 持久命令投递器。领取和提交分属两个持久系统，故任何失败都用相同命令 ID 与输入重试。
+ * 后台命令派发服务。数据库接手命令和 AgentScope 开始运行分属两个系统；失败重试时保持命令 ID 和输入不变，避免重复执行。
  *
- * <p>投递租约只控制平台记录更新；AgentScope 原生日志自己负责 writer lease 和原生幂等。
+ * <p>命令的限时执行资格只控制数据库里的派发记录；AgentScope 自己负责协调写入权限和防止同一命令被重复执行。
  * SUBMIT 投递新回合，STOP 投递中断意图，RESUME 投递恢复意图。</p>
  */
 @Service
@@ -98,7 +98,7 @@ public class CommandDeliveryService {
     private ThreadPoolExecutor controlExecutor;
     private final Set<String> scheduledCommands = ConcurrentHashMap.newKeySet();
 
-    /** 初始化无等待队列的投递池；线程容量不足时不领取数据库命令。 */
+    /** 初始化后台执行线程池；线程不够用时不接手新的数据库命令。 */
     @PostConstruct
     public void initializeDelivery() {
         if (workers < 1 || controlWorkers < 1) {
@@ -229,7 +229,7 @@ public class CommandDeliveryService {
             restrictions.restrict(delivery.userId(), scopes.scopeForSession(delivery.userId(), delivery.sessionId()), delivery.bindingId());
         } catch (Exception exception) {
             retry(commandId, token, delivery.attempts(), "NATIVE_SUBMIT_FAILED");
-            log.warn("原生命令提交失败，稍后按原键重试 commandId={} taskId={} errorType={}",
+            log.warn("AgentScope命令提交失败，将使用同一命令编号重试 commandId={} taskId={} errorType={}",
                     commandId, delivery.taskId(), exception.getClass().getSimpleName());
         }
     }

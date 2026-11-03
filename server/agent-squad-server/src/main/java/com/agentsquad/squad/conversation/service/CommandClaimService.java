@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 /**
- * Bridge命令领取的短事务边界。
+ * 后台执行器接手待处理命令的短事务边界。
  * <p>
  * 会话→所有者→命令锁序下复核消息顺序，避免并发扫描、取消与恢复产生倒序或反向锁；事务内不调用SDK。
  */
@@ -42,7 +42,7 @@ public class CommandClaimService {
             return false;
         }
 
-        // 原领取更新与全局/用户容量占位在同一 MySQL 事务提交。
+        // 将命令标记为已接手和预留执行容量时，在同一 MySQL 事务中完成。
         // 配额不足时抛出异常，回滚命令领取，不丢失已受理的用户命令。
         admission.acquire(context.userId(), context.bindingId(), commandId, context.action());
         return true;

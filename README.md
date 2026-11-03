@@ -2,6 +2,12 @@
 
 Agent Squad 是以 Web 会话为入口的多智能体运行底座。Master 可以直接回答，也可以创建目标任务、发布执行计划并委派 Worker。平台负责持久受理、权限隔离、工具授权、预算、执行恢复和产物交付；AgentScope Harness 提供原生 Session、Turn、Run 执行事实。
 
+## 日志追踪与 Agent 测评设计
+
+- [全链路日志追踪与 Agent 测评方案](docs/agent-observability-design.md)：从用户请求、Master/Worker、模型和工具，到后台恢复与答案交付，预留以后的评测。
+- [具体开发任务](docs/agent-observability-tasks.md)：分阶段落地；目前是设计，尚未实现全部追踪功能。
+- [项目术语说明](docs/terminology-guide.md)：用容易理解的描述解释“事件序号”“后台接手命令”“Agent 执行事件”等概念。
+
 ## 当前能力与边界
 
 - 连续会话、普通回复与后台目标任务；支持补充要求、追问、审批、取消和受控重试。

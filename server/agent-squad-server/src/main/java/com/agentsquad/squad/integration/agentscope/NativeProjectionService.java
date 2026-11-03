@@ -37,9 +37,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 原生事件到业务进度的事务投影。按 Binding 行锁串行化水位和公开事件序号。
+ * 根据 AgentScope 执行事件更新业务状态。同一 Agent 会话按事件序号依次处理，避免重复更新。
  *
- * <p>仅发布运行生命周期与受控交互：interaction/requested 绑定持久交互，
+ * <p>只把运行开始、结束和用户交互通知页面：interaction/requested 关联已保存的交互记录，
  * run/end 挂起时按开放交互裁决等待态；不把框架消息或单次 Run 完成直接裁决为目标成功。</p>
  */
 @Service
@@ -110,7 +110,7 @@ public class NativeProjectionService {
             return;
         }
         if (event.sequence() != cursor + 1) {
-            throw new IllegalStateException("原生日志事件序号不连续");
+            throw new IllegalStateException("Agent执行事件中间有缺失，等待补齐后继续处理");
         }
         if ("RESPONSE".equals(scope.kind())) {
             responses.accept(scope, target, event);
@@ -156,7 +156,7 @@ public class NativeProjectionService {
             resolveInteraction(target, event);
         }
         if ("run/start".equals(event.type())) {
-            // 新 Run 必须在本次领取的原生水位之后出现；恢复和答复不复用旧 Turn 身份。
+            // 新一轮 Agent 执行必须在这次接手后产生；恢复和用户答复不能当作旧回合重新开始。
             admission.recordRunStarted(target.userId(), target.bindingId(), event.runId(), event.sequence());
         }
         if ("run/end".equals(event.type())) {
@@ -166,17 +166,17 @@ public class NativeProjectionService {
             admission.releaseEnded(target.userId(), target.bindingId(), event.turnId(), event.runId());
         }
         if (projectionMapper.advanceCursor(target.userId(), target.bindingId(), cursor, event.sequence()) != 1) {
-            throw new IllegalStateException("原生日志投影水位竞争");
+            throw new IllegalStateException("Agent执行事件处理位置已被其他线程更新");
         }
         if ("run/start".equals(event.type()) || "run/end".equals(event.type())) {
-            log.info("原生持久事件投影完成 taskId={} bindingId={} sourceSeq={} nativeEventId={} type={} turnId={} outcome={}",
+            log.info("Agent执行事件已更新到业务状态 taskId={} bindingId={} sourceSeq={} nativeEventId={} type={} turnId={} outcome={}",
                     target.taskId(), target.bindingId(), event.sequence(), event.eventId(),
                     event.type(), event.turnId(), event.outcome());
         }
     }
 
     /**
-     * Worker 原生回合只裁决对应 Job；不能触发父目标完成流程。
+     * Worker 一次执行结束只更新自己负责的工作节点，不能直接认定整个用户任务完成。
      */
     private void acceptWorker(ProjectionTarget target, NativeEventView event) {
         WorkerLaunchRow job = workerDispatchMapper.findByBinding(target.userId(), target.bindingId());
@@ -227,12 +227,12 @@ public class NativeProjectionService {
     }
 
     /**
-     * 绑定框架挂起请求并发布公开事件；非受控工具挂起不产生交互。
+     * 将 AgentScope 暂停执行时的交互请求关联到已保存的用户交互，并通知页面；未经过平台管理的工具暂停不产生用户交互。
      */
     private void bindInteraction(ProjectionTarget target, NativeEventView event) {
         Map<String, Object> data = event.data() == null ? Map.of() : event.data();
         if (!(data.get("requestId") instanceof String requestId) || requestId.isBlank()) {
-            log.warn("挂起请求缺少 requestId，跳过绑定 bindingId={} event={}",
+            log.warn("暂停请求缺少 requestId，无法关联用户交互 bindingId={} event={}",
                     target.bindingId(), event.eventId());
             return;
         }

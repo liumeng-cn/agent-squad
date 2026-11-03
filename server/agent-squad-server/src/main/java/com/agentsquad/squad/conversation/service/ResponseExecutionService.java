@@ -32,9 +32,9 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * 普通回复的生命周期与原生结果裁决服务。
+ * 负责管理一次普通回复的开始、等待、恢复、完成和取消状态。
  * <p>
- * 来源、绑定和预算独立于目标；完成候选与同Turn成功证据一起发布，取消优先且不释放未知副作用。
+ * 普通回复有独立的消息来源、Agent 会话和预算。只有同一次 Agent 回合成功且答案有效时才发布；取消优先，外部操作结果不明时不能当作已安全结束。
  */
 @Service
 @Slf4j
@@ -72,7 +72,7 @@ public class ResponseExecutionService {
     private ObjectMapper json;
 
     /**
-     * 模型只能为当前受权绑定提交候选；同Turn同正文重放返回原工具回执，未成功结束前不公开。
+     * 只允许当前有权限的 Agent 会话提交答案；同一回合重复提交相同内容时返回原结果，执行真正成功前不向用户发布。
      */
     @Transactional
     public CompletionProposalReceipt propose(String userId, String bindingId, String turnId, String callId,
@@ -109,7 +109,7 @@ public class ResponseExecutionService {
     }
 
     /**
-     * 与原生投影水位同事务裁决状态、纠正命令及助手消息；重复原生事件由Binding水位过滤。
+     * 更新回复状态、纠正命令、助手消息时，同时保存本次处理到的 Agent 执行事件序号；失败则一起回滚，已处理的事件不再重复执行。
      */
     @Transactional
     public void accept(ExecutionScopeRow scope, ProjectionTarget target, NativeEventView event) {
@@ -178,7 +178,7 @@ public class ResponseExecutionService {
     }
 
     /**
-     * 原Turn被SDK确认中断后持久恢复，同一原生run只生成一个RESUME；不以新SUBMIT重做用户输入。
+     * AgentScope 确认原回合中断后安排恢复；同一次运行只安排一次恢复，不重新提交用户消息。
      */
     @Transactional
     public void recover(ProjectionTarget target, NativeSubmissionReceipt receipt) {
