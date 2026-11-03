@@ -1,6 +1,10 @@
 package com.agentsquad.squad.gateway;
 
 import com.agentsquad.squad.bootstrap.BootstrapAdminApplication;
+import com.agentsquad.squad.gateway.config.GatewayAuthConfiguration;
+import com.agentsquad.squad.gateway.auth.AuthProperties;
+import org.springframework.mock.env.MockEnvironment;
+import org.springframework.test.util.ReflectionTestUtils;
 import com.agentsquad.squad.gateway.admin.UserAccountService;
 import com.agentsquad.squad.gateway.auth.AuthService;
 import com.agentsquad.squad.gateway.exception.StateConflictException;
@@ -43,6 +47,16 @@ class BootstrapAdminServiceTest {
         registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
         registry.add("agentsquad.auth.mode", () -> "database");
         registry.add("agentsquad.auth.cleanup-initial-delay-ms", () -> "3600000");
+    }
+
+    @Test
+    void productionRejectsAuthenticationDowngrade() {
+        GatewayAuthConfiguration configuration = new GatewayAuthConfiguration();
+        MockEnvironment environment = new MockEnvironment();
+        environment.setActiveProfiles("prod");
+        ReflectionTestUtils.setField(configuration, "environment", environment);
+        ReflectionTestUtils.setField(configuration, "authProperties", new AuthProperties());
+        assertThrows(IllegalStateException.class, configuration::validateProductionAuthentication);
     }
 
     @Test

@@ -4,16 +4,15 @@
       "M01"
     ],
     "schemas": [
-      "AdminUserCreateRequest",
-      "AdminUserCreateResult",
+      "UserCreateRequest",
+      "UserCreateReceipt",
       "AdminUserPage",
-      "AdminUserUpdateRequest",
-      "AdminUserView",
+      "UserUpdateRequest",
+      "AdminUserSummary",
       "AuthView",
       "Conversation",
       "ConversationView",
-      "PasswordChangeRequest",
-      "ResetPasswordResult"
+      "PasswordChangeRequest"
     ],
     "operations": [
       "changePassword",

@@ -28,7 +28,9 @@ function tableCells(line: string): string[] {
 function isTableSeparator(line: string): boolean {
   return /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line)
 }
-function blocks(text: string): VNode[] {
+function blocks(text: string, depth = 0): VNode[] {
+  // 嵌套引用设定上限，恶意深层输入降级为转义文本。
+  if (depth >= 32) return [h('p', text)]
   const lines = text.replace(/\r\n/g, '\n').split('\n')
   const result: VNode[] = []
   let index = 0
@@ -36,16 +38,26 @@ function blocks(text: string): VNode[] {
     const line = lines[index]!
     if (!line.trim()) { index++; continue }
     if (/^\s*```/.test(line)) {
+      const language = line.trim().slice(3).trim().slice(0, 40)
       const code: string[] = []; index++
       while (index < lines.length && !/^\s*```/.test(lines[index]!)) code.push(lines[index++]!)
-      result.push(h('pre', [h('code', code.join('\n'))])); index++; continue
+      const content = code.join('\n')
+      result.push(h('div', { class: 'markdown-code-block' }, [
+        h('span', { class: 'markdown-code-language' }, language || '代码'),
+        h('button', { type: 'button', onClick: async (event: MouseEvent) => {
+          const button = event.currentTarget as HTMLButtonElement
+          try { await navigator.clipboard.writeText(content); button.textContent = '已复制' }
+          catch { button.textContent = '复制失败，请手动选择' }
+        } }, '复制代码'),
+        h('pre', [h('code', content)]),
+      ])); index++; continue
     }
     if (line.trim().startsWith('>')) {
       const quote: string[] = []
       while (index < lines.length && /^\s*>/.test(lines[index]!)) {
         quote.push(lines[index++]!.replace(/^\s*> ?/, ''))
       }
-      result.push(h('blockquote', blocks(quote.join('\n'))))
+      result.push(h('blockquote', blocks(quote.join('\n'), depth + 1)))
       continue
     }
     if (index + 1 < lines.length && line.includes('|') && isTableSeparator(lines[index + 1]!)) {

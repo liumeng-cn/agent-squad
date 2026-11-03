@@ -21,6 +21,7 @@ import com.agentsquad.squad.runtime.domain.WorkerJobRow;
 import com.agentsquad.squad.runtime.dto.PlanNode;
 import com.agentsquad.squad.runtime.dto.PlanPublish;
 import com.agentsquad.squad.runtime.dto.PlanReceipt;
+import com.agentsquad.squad.runtime.dto.PendingDirectiveFeedback;
 import com.agentsquad.squad.runtime.repository.PlanMapper;
 import com.agentsquad.squad.runtime.repository.ProjectionMapper;
 import com.agentsquad.squad.runtime.repository.ContextSnapshotMapper;
@@ -30,6 +31,7 @@ import com.agentsquad.squad.common.util.JsonSchemaValidator;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionResponse;
 import com.agentsquad.squad.worker.profile.WorkerModelProfile;
 import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;
+import com.agentsquad.squad.conversation.repository.TaskMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
@@ -73,6 +75,9 @@ public class PlanService {
 
     @Resource
     private TaskDirectiveMapper directives;
+
+    @Resource
+    private TaskMapper tasks;
 
     @Resource
     private ExecutionScopeService executionScopes;
@@ -146,12 +151,18 @@ public class PlanService {
         long goalRevision = directives.goalState(userId, context.taskId()).goalRevision();
         List<String> pendingDirectives = directives.pending(userId, context.taskId());
         if (!pendingDirectives.isEmpty()) {
-            // 规划中插入的用户补充不能让模型猜测 directiveId；
-            // 必须提供同一目标的真实指令ID，让 Master 先完成确定性的修改协调。
-            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
-                    "尚有目标修改待处理；请使用 directiveId=" + pendingDirectives.getFirst()
-                    + " 调用 apply_task_directive（不是 sourceMessageId），"
-                    + "完成 APPLY/REJECT 后重新 prepare_context 和 publish_plan");
+            // 在已锁定的目标范围内返回全部真实标识，避免模型猜测来源消息 ID。
+            long expectedVersion = tasks.lockOwnedRow(userId, context.taskId()).version();
+            List<PendingDirectiveFeedback> pending = new ArrayList<>();
+            for (String directiveId : pendingDirectives) {
+                var directive = directives.lock(userId, directiveId);
+                if (directive != null && context.taskId().equals(directive.taskId())
+                        && "ACCEPTED".equals(directive.status())) {
+                    pending.add(new PendingDirectiveFeedback(
+                            directive.directiveId(), expectedVersion, directive.kind(), directive.content()));
+                }
+            }
+            throw new PendingDirectivesException(context.taskId(), pending);
         }
         PlanRow existing = planMapper.findLatestByLogicalKey(context.taskId(), publish.logicalKey());
         if (existing != null) {

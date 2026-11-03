@@ -1,0 +1,72 @@
+name: Release verification
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: isolated-ci-only
+          MYSQL_DATABASE: squad_ci
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pisolated-ci-only"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    env:
+      SQUAD_TEST_MYSQL_ADMIN_URL: jdbc:mysql://127.0.0.1:3306/mysql?serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
+      SQUAD_TEST_MYSQL_USER: root
+      SQUAD_TEST_MYSQL_PASSWORD: isolated-ci-only
+      SQUAD_DB_URL: jdbc:mysql://127.0.0.1:3306/squad_ci?serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
+      SQUAD_DB_USER: root
+      SQUAD_DB_PASSWORD: isolated-ci-only
+      SQUAD_DELIVERY_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "27"
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/workbench/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Prepare isolated test dependencies
+        run: |
+          python -m pip install jsonschema
+          docker pull python:3.12-slim
+          echo "SQUAD_SANDBOX_TEST_IMAGE=$(docker image inspect python:3.12-slim --format '{{.Id}}')" >> "$GITHUB_ENV"
+          for prefix in MESSAGE SCOPE D45; do
+            echo "SQUAD_${prefix}_TEST_URL=$SQUAD_DB_URL" >> "$GITHUB_ENV"
+            echo "SQUAD_${prefix}_TEST_USER=$SQUAD_DB_USER" >> "$GITHUB_ENV"
+            echo "SQUAD_${prefix}_TEST_PASSWORD=$SQUAD_DB_PASSWORD" >> "$GITHUB_ENV"
+          done
+      - name: Frontend verification
+        run: |
+          npm --prefix web/workbench ci
+          npm --prefix web/workbench test
+          npm --prefix web/workbench run build
+      - name: Static contracts and runtime safety
+        run: |
+          python tools/check_design.py
+          python tools/check_runtime_safety.py
+      - name: Backend full verification
+        run: mvn -f server/pom.xml -B -ntp clean verify
+      - name: Reject failed or skipped tests
+        if: always()
+        run: python tools/audit_test_reports.py
+      - name: Preserve verification reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: server/*/target/surefire-reports/

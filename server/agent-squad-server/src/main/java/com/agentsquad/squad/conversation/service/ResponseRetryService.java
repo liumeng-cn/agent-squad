@@ -33,6 +33,9 @@ import java.util.UUID;
 @Service
 public class ResponseRetryService {
     @Resource
+    private FinalDeliveryService finalDeliveries;
+
+    @Resource
     private ExecutionScopeService scopes;
 
     @Resource
@@ -100,6 +103,7 @@ public class ResponseRetryService {
         bindings.insertResponse(binding, userId, nextScope, MasterAgentIdentity.AGENT_ID, UUID.randomUUID().toString(), now);
         messages.insertExecution(next, userId, scope.conversationId(), original.sourceMessageId(), nextScope, binding);
         messages.reserveMessage(userId, scope.conversationId(), now);
+        finalDeliveries.retry(userId, original.sourceMessageId(), executionId, next);
         failures.linkRetry(userId, next, executionId);
         artifacts.attachScope(userId, nextScope, material.artifactIds(userId, original.sourceMessageId()));
         String payload = RuntimePayloads.toJson(json, Map.of("message", "重新回答原用户消息，保留已有事实。", "sourceMessageId", original.sourceMessageId(), "retryOfExecutionId", executionId));

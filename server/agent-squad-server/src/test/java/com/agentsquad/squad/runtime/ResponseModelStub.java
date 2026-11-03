@@ -23,6 +23,8 @@ class ResponseModelStub implements AutoCloseable {
     final List<String> requests = new CopyOnWriteArrayList<>();
     final CountDownLatch blocked = new CountDownLatch(1);
     final CountDownLatch release = new CountDownLatch(1);
+    final java.util.concurrent.atomic.AtomicBoolean concurrencyTimedOut = new java.util.concurrent.atomic.AtomicBoolean();
+    final CountDownLatch concurrentUsers = new CountDownLatch(2);
     private final ExecutorService threads = Executors.newFixedThreadPool(4);
     private final HttpServer server;
 
@@ -31,6 +33,10 @@ class ResponseModelStub implements AutoCloseable {
     }
 
     ResponseModelStub(boolean blockFinal) throws Exception {
+        this(blockFinal, false);
+    }
+
+    ResponseModelStub(boolean blockFinal, boolean isolatedUsers) throws Exception {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.setExecutor(threads);
         server.createContext("/v1/chat/completions", exchange -> {
@@ -46,8 +52,21 @@ class ResponseModelStub implements AutoCloseable {
                 }
             }
             String response;
-            if (call % 2 == 1) {
-                String answer = request.contains("他叫什么") ? "他叫小明。" : "记住了，小明。";
+            boolean proposal = isolatedUsers ? !request.contains("tool_call_id") : call % 2 == 1;
+            if (isolatedUsers && proposal) {
+                concurrentUsers.countDown();
+                try {
+                    if (!concurrentUsers.await(5, TimeUnit.SECONDS)) {
+                        concurrencyTimedOut.set(true);
+                    }
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+            if (proposal) {
+                String answer = isolatedUsers
+                        ? (request.contains("隔离标记甲") ? "甲用户专属结果" : "乙用户专属结果")
+                        : (request.contains("他叫什么") ? "他叫小明。" : "记住了，小明。");
                 String arguments = new ObjectMapper().valueToTree("{\"outcome\":\"SUCCEEDED\",\"finalAnswer\":\"" + answer + "\"}").toString();
                 response = """
                         {"id":"reply-%s","object":"chat.completion","created":1,"model":"test-model",

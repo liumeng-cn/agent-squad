@@ -40,8 +40,6 @@ agentsquad:
     max-microunits-per-response: ${SQUAD_BUDGET_MAX_MICROUNITS_PER_RESPONSE:5000000}
     max-microunits-per-user: ${SQUAD_BUDGET_MAX_MICROUNITS_PER_USER:50000000}
     max-microunits-per-task: ${SQUAD_BUDGET_MAX_MICROUNITS:5000000}
-  fault:
-    after-inflight-exit: ${SQUAD_FAULT_AFTER_INFLIGHT_EXIT:false}
   delivery:
     enabled: ${SQUAD_DELIVERY_ENABLED:false}
     poll-delay-ms: ${SQUAD_DELIVERY_POLL_DELAY_MS:1000}

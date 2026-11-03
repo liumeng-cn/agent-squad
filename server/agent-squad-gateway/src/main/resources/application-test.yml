@@ -1,0 +1,9 @@
+# 仅使用调用方显式传入的隔离数据库，不读取应用私有配置。
+spring:
+  datasource:
+    url: ${SQUAD_TEST_MYSQL_URL}
+    username: ${SQUAD_TEST_MYSQL_USER}
+    password: ${SQUAD_TEST_MYSQL_PASSWORD}
+  sql:
+    init:
+      mode: never

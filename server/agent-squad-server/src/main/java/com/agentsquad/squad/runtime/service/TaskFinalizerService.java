@@ -128,7 +128,7 @@ public class TaskFinalizerService {
         }
         String producerPrefix = "completion:" + row.taskId() + ":" + event.turnId();
         publish(row, producerPrefix + ":answer.completed", "answer.completed",
-                Map.of("text", answer, "evidenceRefs", List.of()));
+                Map.of("text", answer, "revision", row.answerRevision() + 1, "evidenceRefs", List.of()));
         publish(row, producerPrefix + ":task.completed", "task.completed",
                 Map.of("status", outcome, "version", row.version() + 1));
         log.info("目标已终结 taskId={} bindingId={} turnId={} outcome={}",
@@ -211,7 +211,7 @@ public class TaskFinalizerService {
                         "本次未能形成有效的完整结果，已保留你的内容。"));
         String producerPrefix = "completion:" + row.taskId() + ":" + event.turnId();
         publish(row, producerPrefix + ":answer.completed", "answer.completed",
-                Map.of("text", MISSING_PROPOSAL_ANSWER, "evidenceRefs", List.of()));
+                Map.of("text", MISSING_PROPOSAL_ANSWER, "revision", row.answerRevision() + 1, "evidenceRefs", List.of()));
         publish(row, producerPrefix + ":task.completed", "task.completed",
                 Map.of("status", GoalTaskStatus.FAILED.name(), "version", row.version() + 1));
         log.warn("纠正后仍无完成候选，目标已失败 taskId={} bindingId={} turnId={}",

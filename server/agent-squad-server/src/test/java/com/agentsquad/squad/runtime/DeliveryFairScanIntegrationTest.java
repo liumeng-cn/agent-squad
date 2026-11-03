@@ -28,6 +28,78 @@ class DeliveryFairScanIntegrationTest {
     private static final LocalDateTime NOW = BASE.plusDays(1);
 
     @Test
+    void controlScanFindsStopOutsideOrdinaryWindow(@TempDir Path directory) {
+        try (ConfigurableApplicationContext context = start(directory)) {
+            JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
+            for (int index = 0; index < 30; index++) {
+                command(jdbc, UUID.randomUUID().toString(), "PENDING", BASE, null);
+            }
+            String stop = command(jdbc, UUID.randomUUID().toString(), "PENDING", BASE.plusHours(1), null);
+            jdbc.update("UPDATE sq_command SET action = 'STOP' WHERE command_id = ?", stop);
+            DeliveryMapper mapper = context.getBean(DeliveryMapper.class);
+            assertThat(mapper.findDueIds(NOW)).doesNotContain(stop);
+            assertThat(mapper.findDueControlIds(NOW)).containsExactly(stop);
+        }
+    }
+
+    @Test
+    void runtimeSlotsEnforceGlobalCapacityAndReleaseIdempotently(@TempDir Path directory) {
+        try (ConfigurableApplicationContext context = start(directory)) {
+            JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
+            var admission = context.getBean(com.agentsquad.squad.conversation.service.RuntimeAdmissionService.class);
+            org.springframework.test.util.ReflectionTestUtils.setField(admission, "enabled", true);
+            org.springframework.test.util.ReflectionTestUtils.setField(admission, "globalLimit", 1);
+            org.springframework.test.util.ReflectionTestUtils.setField(admission, "perUserLimit", 1);
+            var transaction = new org.springframework.transaction.support.TransactionTemplate(
+                    context.getBean(org.springframework.transaction.PlatformTransactionManager.class));
+            String userA = UUID.randomUUID().toString();
+            String userB = UUID.randomUUID().toString();
+            String bindingA = UUID.randomUUID().toString();
+            String bindingB = UUID.randomUUID().toString();
+            for (String[] pair : List.of(new String[]{userA, bindingA}, new String[]{userB, bindingB})) {
+                jdbc.update("""
+                        INSERT INTO sq_runtime_binding
+                            (binding_id, user_id, role, agent_id, framework_session_id, status)
+                        VALUES (?, ?, 'MASTER', 'master', ?, 'ACTIVE')
+                        """, pair[1], pair[0], UUID.randomUUID().toString());
+            }
+            String commandA = UUID.randomUUID().toString();
+            String commandB = UUID.randomUUID().toString();
+            transaction.executeWithoutResult(status -> admission.acquire(userA, bindingA, commandA, "SUBMIT"));
+            transaction.executeWithoutResult(status -> admission.acquire(userA, bindingA, commandA, "SUBMIT"));
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> transaction.executeWithoutResult(
+                    status -> admission.acquire(userB, bindingB, commandB, "SUBMIT")))
+                    .isInstanceOf(com.agentsquad.squad.conversation.service.RuntimeAdmissionBusyException.class);
+            admission.releaseUnsubmitted(userA, bindingA, "stale-command");
+            assertThat(jdbc.queryForObject("SELECT active_count FROM sq_runtime_admission_counter WHERE pool_key = 'GLOBAL'",
+                    Integer.class)).isEqualTo(1);
+            admission.releaseUnsubmitted(userA, bindingA, commandA);
+            admission.releaseUnsubmitted(userA, bindingA, commandA);
+            assertThat(jdbc.queryForObject("SELECT active_count FROM sq_runtime_admission_counter WHERE pool_key = 'GLOBAL'",
+                    Integer.class)).isZero();
+            transaction.executeWithoutResult(status -> admission.acquire(userB, bindingB, commandB, "SUBMIT"));
+        }
+    }
+
+    @Test
+    void invalidCommandIsBlockedOnlyByCurrentDeliveryOwner(@TempDir Path directory) {
+        try (ConfigurableApplicationContext context = start(directory)) {
+            JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
+            String user = UUID.randomUUID().toString();
+            String id = command(jdbc, user, "DELIVERING", BASE, NOW.plusHours(1));
+            jdbc.update("UPDATE sq_command SET delivery_token = ? WHERE command_id = ?", "owner", id);
+            DeliveryMapper mapper = context.getBean(DeliveryMapper.class);
+
+            assertThat(mapper.blockInvalid(id, "stale-owner", "UNKNOWN_ACTION")).isZero();
+            assertThat(mapper.blockInvalid(id, "owner", "UNKNOWN_ACTION")).isEqualTo(1);
+            assertThat(mapper.blockInvalid(id, "owner", "UNKNOWN_ACTION")).isZero();
+            assertThat(mapper.findDueIds(NOW.plusDays(1))).doesNotContain(id);
+            assertThat(jdbc.queryForObject("SELECT last_error_code FROM sq_command WHERE command_id = ?",
+                    String.class, id)).isEqualTo("UNKNOWN_ACTION");
+        }
+    }
+
+    @Test
     void singleBacklogUserDoesNotStarveSmallUser(@TempDir Path directory) {
         try (ConfigurableApplicationContext context = start(directory)) {
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);

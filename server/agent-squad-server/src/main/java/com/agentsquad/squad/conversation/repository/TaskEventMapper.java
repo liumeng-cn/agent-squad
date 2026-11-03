@@ -27,5 +27,6 @@ public interface TaskEventMapper {
 
     long maxSeq(@Param("userId") String userId, @Param("taskId") String taskId);
 
-    EventRow findLatestAnswerEvent(@Param("userId") String userId, @Param("taskId") String taskId);
+    EventRow findLatestAnswerEvent(@Param("userId") String userId, @Param("taskId") String taskId,
+                                   @Param("revision") long revision);
 }

@@ -47,6 +47,9 @@ public interface DeliveryMapper {
      *
      * 返回仅代表候选集合；领取事务仍负责校验权限、消息顺序和租约。
      */
+    /** 控制命令独立扫描，避免普通候选窗口被积压占满。 */
+    List<String> findDueControlIds(@Param("now") LocalDateTime now);
+
     List<String> findDueIds(@Param("now") LocalDateTime now);
 
     int claim(@Param("commandId") String commandId, @Param("token") String token,
@@ -67,6 +70,13 @@ public interface DeliveryMapper {
 
     int retry(@Param("commandId") String commandId, @Param("token") String token,
               @Param("dueAt") LocalDateTime dueAt, @Param("errorCode") String errorCode);
+
+    /** 将永不合法的命令收敛为阻断态，保留错误码供人工核对。 */
+    /** 仅阻断未领取且不支持的命令，不扩大SDK执行动作白名单。 */
+    int blockUnknownPending(@Param("now") LocalDateTime now);
+
+    int blockInvalid(@Param("commandId") String commandId, @Param("token") String token,
+                     @Param("errorCode") String errorCode);
 
     int blockRejectedResume(@Param("commandId") String commandId, @Param("token") String token,
                             @Param("errorCode") String errorCode);

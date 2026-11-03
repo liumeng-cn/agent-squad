@@ -85,6 +85,19 @@
         FROM sq_task_event
         WHERE user_id = #{userId} AND task_id = #{taskId} AND event_type IN ('answer.completed',
             'answer.replaced')
-        ORDER BY event_seq DESC LIMIT 1
+          AND COALESCE(
+              JSON_EXTRACT(payload_json, '$.revision'),
+              (SELECT m.revision
+               FROM sq_message m
+               WHERE m.user_id = #{userId}
+                 AND m.task_id = #{taskId}
+                 AND m.role = 'ASSISTANT'
+                 AND m.del_flag = '0'
+                 AND BINARY m.content = BINARY JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.text'))
+               ORDER BY m.message_seq DESC
+               LIMIT 1),
+              0
+          ) = #{revision}
+        ORDER BY event_seq ASC LIMIT 1
     </select>
 </mapper>

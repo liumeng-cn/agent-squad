@@ -48,14 +48,24 @@ class SchemaVersionGateTest {
                 statement.executeUpdate("INSERT INTO flyway_schema_history (installed_rank, version, description, "
                         + "type, script, installed_by, execution_time, success) VALUES "
                         + "(1, '1', 'initial', 'SQL', 'V1__initial_44_tables.sql', 'test', 0, 1), "
-                        + "(2, '2', 'multiuser identity', 'SQL', 'V2__multiuser_identity.sql', 'test', 0, 1)");
+                        + "(2, '2', 'multiuser identity', 'SQL', 'V2__multiuser_identity.sql', 'test', 0, 1), "
+                        + "(3, '3', 'admission', 'SQL', 'V3__runtime_admission.sql', 'test', 0, 1), "
+                        + "(4, '4', 'run identity', 'SQL', 'V4__admission_run_identity.sql', 'test', 0, 1), "
+                        + "(5, '5', 'final delivery', 'SQL', 'V5__final_delivery.sql', 'test', 0, 1)");
             }
         }
 
         try (ConfigurableApplicationContext context = start(url)) {
             assertTrue(context.isActive(), "版本已应用时生产上下文应正常启动");
         }
-        assertEquals(49, countTables(url), "生产启动只校验版本，不得创建额外业务表");
+        assertEquals(52, countTables(url), "生产启动只校验版本，不得创建额外业务表");
+        try (Connection connection = DriverManager.getConnection(url, MySqlTestDatabase.username(),
+                MySqlTestDatabase.password()); Statement statement = connection.createStatement()) {
+            statement.executeUpdate("DELETE FROM flyway_schema_history WHERE version = '3'");
+        }
+        Exception missingVersion = assertThrows(Exception.class, () -> start(url));
+        assertTrue(messageChain(missingVersion).contains("生产数据库迁移版本落后"));
+        assertEquals(52, countTables(url), "中间版本缺失时也不能执行 DDL");
     }
 
     private ConfigurableApplicationContext start(String url) {

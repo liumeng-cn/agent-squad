@@ -46,6 +46,114 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ResponseNativeExecutionIntegrationTest {
     private static final String USER = "00000000-0000-0000-0000-000000000001";
 
+    @ParameterizedTest
+    @ValueSource(strings = {"{}", "null", "\"{\""})
+    void invalidSubmitPayloadIsBlockedThroughRealDelivery(String payload, @TempDir Path directory) throws Exception {
+        try (ResponseModelStub model = new ResponseModelStub();
+             ConfigurableApplicationContext context = start(directory, model, false)) {
+            MessageReceipt receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "invalid",
+                    new MessageCreateRequest("不会发给模型", List.of()));
+            JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
+            jdbc.update("UPDATE sq_command SET payload_json=?, due_at='2000-01-01' WHERE command_id=?",
+                    payload, receipt.commandId());
+            context.getBean(CommandDeliveryService.class).deliver(receipt.commandId());
+            assertThat(jdbc.queryForObject("SELECT status FROM sq_command WHERE command_id=?",
+                    String.class, receipt.commandId())).isEqualTo("BLOCKED");
+            assertThat(jdbc.queryForObject("SELECT last_error_code FROM sq_command WHERE command_id=?",
+                    String.class, receipt.commandId())).isEqualTo("INVALID_PAYLOAD");
+            assertThat(model.calls.get()).isZero();
+        }
+    }
+
+    @Test
+    void platformDeletionIntentIsNotBlockedOrExecutedByNativePoller(@TempDir Path directory) throws Exception {
+        try (ResponseModelStub model = new ResponseModelStub();
+             ConfigurableApplicationContext context = start(directory, model, false)) {
+            MessageReceipt receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "platform-delete",
+                    new MessageCreateRequest("平台删除意图", List.of()));
+            JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
+            jdbc.update("UPDATE sq_command SET action='DELETE_CONVERSATION', due_at='2000-01-01' WHERE command_id=?",
+                    receipt.commandId());
+            CommandDeliveryService service = context.getBean(CommandDeliveryService.class);
+            service.deliverDue();
+            service.deliver(receipt.commandId());
+            assertThat(jdbc.queryForObject("SELECT status FROM sq_command WHERE command_id=?",
+                    String.class, receipt.commandId())).isEqualTo("PENDING");
+            assertThat(jdbc.queryForObject("SELECT last_error_code FROM sq_command WHERE command_id=?",
+                    String.class, receipt.commandId())).isNull();
+            assertThat(model.calls.get()).isZero();
+        }
+    }
+
+    @Test
+    void invalidRespondPayloadIsBlockedBeforeCallingSdk(@TempDir Path directory) throws Exception {
+        try (ResponseModelStub model = new ResponseModelStub();
+             ConfigurableApplicationContext context = start(directory, model, false)) {
+            MessageReceipt receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "invalid-respond",
+                    new MessageCreateRequest("不会发给模型", List.of()));
+            JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
+            jdbc.update("UPDATE sq_command SET action='RESPOND', payload_json='{}', due_at='2000-01-01' WHERE command_id=?",
+                    receipt.commandId());
+            context.getBean(CommandDeliveryService.class).deliver(receipt.commandId());
+            assertThat(jdbc.queryForObject("SELECT status FROM sq_command WHERE command_id=?",
+                    String.class, receipt.commandId())).isEqualTo("BLOCKED");
+            assertThat(model.calls.get()).isZero();
+        }
+    }
+
+    @Test
+    void unknownPendingActionIsBlockedWithoutExpandingExecutableWhitelist(@TempDir Path directory) throws Exception {
+        try (ResponseModelStub model = new ResponseModelStub();
+             ConfigurableApplicationContext context = start(directory, model, false)) {
+            MessageReceipt receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "unknown-action",
+                    new MessageCreateRequest("不会发给模型", List.of()));
+            JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
+            jdbc.update("UPDATE sq_command SET action='UNSUPPORTED', due_at='2000-01-01' WHERE command_id=?",
+                    receipt.commandId());
+            context.getBean(CommandDeliveryService.class).deliverDue();
+            assertThat(jdbc.queryForObject("SELECT status FROM sq_command WHERE command_id=?",
+                    String.class, receipt.commandId())).isEqualTo("BLOCKED");
+            assertThat(jdbc.queryForObject("SELECT last_error_code FROM sq_command WHERE command_id=?",
+                    String.class, receipt.commandId())).isEqualTo("UNKNOWN_ACTION");
+            assertThat(model.calls.get()).isZero();
+        }
+    }
+
+    @Test
+    void concurrentSdkSessionsKeepUserMessagesAndCompletionToolsIsolated(@TempDir Path directory) throws Exception {
+        String otherUser = "00000000-0000-0000-0000-000000000002";
+        try (ResponseModelStub model = new ResponseModelStub(false, true);
+             ConfigurableApplicationContext context = start(directory, model, true)) {
+            MessageAcceptanceService messages = context.getBean(MessageAcceptanceService.class);
+            MessageReceipt first = messages.accept(USER, null, "same-idempotency",
+                    new MessageCreateRequest("隔离标记甲：只处理我的请求", List.of()));
+            MessageReceipt second = messages.accept(otherUser, null, "same-idempotency",
+                    new MessageCreateRequest("隔离标记乙：只处理我的请求", List.of()));
+            assertThat(model.concurrentUsers.await(8, TimeUnit.SECONDS)).isTrue();
+            assertThat(model.concurrencyTimedOut.get()).isFalse();
+            await(context, first, "SUCCEEDED");
+            await(context, second, "SUCCEEDED");
+            JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
+            assertThat(jdbc.queryForList("SELECT content FROM sq_message WHERE user_id=? AND role='ASSISTANT'",
+                    String.class, USER)).containsExactly("甲用户专属结果");
+            assertThat(jdbc.queryForList("SELECT content FROM sq_message WHERE user_id=? AND role='ASSISTANT'",
+                    String.class, otherUser)).containsExactly("乙用户专属结果");
+            assertThat(jdbc.queryForObject("SELECT COUNT(DISTINCT framework_session_id) FROM sq_runtime_binding",
+                    Long.class)).isEqualTo(2);
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_goal_task", Long.class)).isZero();
+            assertThat(model.calls.get()).isEqualTo(4);
+            for (String request : model.requests) {
+                boolean firstUser = request.contains("隔离标记甲");
+                assertThat(request).contains(firstUser ? "隔离标记甲" : "隔离标记乙")
+                        .doesNotContain(firstUser ? "隔离标记乙" : "隔离标记甲");
+                if (request.contains("tool_call_id")) {
+                    assertThat(request).contains(firstUser ? "甲用户专属结果" : "乙用户专属结果")
+                            .doesNotContain(firstUser ? "乙用户专属结果" : "甲用户专属结果");
+                }
+            }
+        }
+    }
+
     @Test
     void answersFollowUpWithoutCreatingTasks(@TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub()) {

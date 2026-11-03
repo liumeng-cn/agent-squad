@@ -4,6 +4,7 @@ import com.agentsquad.squad.gateway.config.GatewayAuthConfiguration;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.gateway.config.GatewayAutoConfiguration;
+import org.springframework.cloud.gateway.config.GatewayMetricsAutoConfiguration;
 import org.springframework.context.annotation.Import;
 
 /**
@@ -14,7 +15,7 @@ import org.springframework.context.annotation.Import;
  */
 @SpringBootApplication(
         scanBasePackages = {"com.agentsquad.squad.gateway.admin", "com.agentsquad.squad.gateway.auth"},
-        exclude = GatewayAutoConfiguration.class)
+        exclude = {GatewayAutoConfiguration.class, GatewayMetricsAutoConfiguration.class})
 @MapperScan({"com.agentsquad.squad.gateway.admin", "com.agentsquad.squad.gateway.auth"})
 @Import(GatewayAuthConfiguration.class)
 public class BootstrapAdminApplication {
