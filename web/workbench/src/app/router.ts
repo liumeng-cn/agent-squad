@@ -28,6 +28,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../features/skills/views/SkillsView.vue'),
   },
   {
+    path: '/app/settings/connections',
+    name: 'connections',
+    component: () => import('../features/connections/views/ConnectionsView.vue'),
+  },
+  {
     path: '/app/settings/memory',
     name: 'memory',
     component: () => import('../features/memory/views/MemorySettingsView.vue'),
