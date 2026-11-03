@@ -10,47 +10,6 @@ export interface AuthView {
   mustChangePassword: boolean
 }
 
-export type AccountRole = 'USER' | 'ADMIN'
-export type AccountStatus = 'ACTIVE' | 'DISABLED'
-
-export interface AdminUserView {
-  userId: string
-  username: string
-  displayName: string
-  role: AccountRole
-  status: AccountStatus
-  version: number
-  mustChangePassword: boolean
-  createTime: string
-}
-
-export interface AdminUserPage {
-  items: AdminUserView[]
-  nextCursor: string | null
-}
-
-export interface AdminUserCreateRequest {
-  username: string
-  displayName?: string
-  role?: AccountRole
-}
-
-export interface AdminUserUpdateRequest {
-  expectedVersion: number
-  displayName?: string
-  role?: AccountRole
-  status?: AccountStatus
-}
-
-export interface AdminUserCreateResult {
-  userId: string
-  temporaryPassword: string
-}
-
-export interface ResetPasswordResult {
-  temporaryPassword: string
-}
-
 export interface ConversationResponse {
   conversationId: string
   title: string

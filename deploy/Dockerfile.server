@@ -1,0 +1,8 @@
+FROM eclipse-temurin:27-jre
+RUN useradd --system --uid 10001 squad
+WORKDIR /srv
+COPY server/agent-squad-server/target/agent-squad-server-0.1.0-SNAPSHOT.jar app.jar
+USER 10001
+EXPOSE 18080
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75"
+ENTRYPOINT ["java","-jar","/srv/app.jar"]

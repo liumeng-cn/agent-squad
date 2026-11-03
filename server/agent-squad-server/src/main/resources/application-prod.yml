@@ -1,15 +1,12 @@
 spring:
-  datasource:
-    url: ${SQUAD_DB_URL}
-    username: ${SQUAD_DB_USER}
-    password: ${SQUAD_DB_PASSWORD}
-    hikari:
-      maximum-pool-size: ${SQUAD_DB_POOL_SIZE:10}
-      minimum-idle: ${SQUAD_DB_MIN_IDLE:2}
   sql:
     init:
       mode: never
-
+server:
+  address: 0.0.0.0
 agentsquad:
-  schema:
-    expected-version: ${SQUAD_SCHEMA_EXPECTED_VERSION:2}
+  identity:
+    strict: true
+    enforce-user-status: true
+  fault:
+    after-inflight-exit: false

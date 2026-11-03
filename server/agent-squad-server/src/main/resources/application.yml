@@ -3,15 +3,21 @@ spring:
     name: agent-squad-server
   main:
     web-application-type: servlet
-  profiles:
-    default: local
+  datasource:
+    url: ${SQUAD_DB_URL:jdbc:mysql://127.0.0.1:13306/agent_squad}
+    username: ${SQUAD_DB_USER:squad}
+    password: ${SQUAD_DB_PASSWORD:}
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/migration/V1__baseline.sql
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 11MB
 
 server:
-  address: ${SQUAD_SERVER_ADDRESS:127.0.0.1}
+  address: 127.0.0.1
   port: 18080
 
 logging:
@@ -19,15 +25,13 @@ logging:
     io.agentscope.harness.agent.middleware.AgentTraceMiddleware: OFF
 
 agentsquad:
-  assertion:
-    issuer: ${SQUAD_ASSERTION_ISSUER:agent-squad-gateway}
-    audience: ${SQUAD_ASSERTION_AUDIENCE:agent-squad-server}
-    ttl-seconds: ${SQUAD_ASSERTION_TTL_SECONDS:30}
-    clock-skew-seconds: ${SQUAD_ASSERTION_CLOCK_SKEW_SECONDS:5}
-    current-kid: ${SQUAD_ASSERTION_CURRENT_KID:k1}
-    current-secret: ${SQUAD_ASSERTION_CURRENT_SECRET:}
-    previous-kid: ${SQUAD_ASSERTION_PREVIOUS_KID:}
-    previous-secret: ${SQUAD_ASSERTION_PREVIOUS_SECRET:}
+  identity:
+    hmac-key: ${SQUAD_IDENTITY_HMAC_KEY:}
+    key-id: ${SQUAD_IDENTITY_KEY_ID:local-v1}
+    previous-hmac-key: ${SQUAD_IDENTITY_PREVIOUS_HMAC_KEY:}
+    previous-key-id: ${SQUAD_IDENTITY_PREVIOUS_KEY_ID:}
+    strict: ${SQUAD_IDENTITY_STRICT:false}
+    enforce-user-status: ${SQUAD_IDENTITY_ENFORCE_USER_STATUS:false}
   vault:
     master-key: ${SQUAD_CONNECTION_SECRET_KEY:}
     master-key-id: ${SQUAD_CONNECTION_KEY_ID:local-v1}

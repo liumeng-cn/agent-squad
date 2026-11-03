@@ -2,7 +2,6 @@ package com.agentsquad.squad.sandbox.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.identity.UserStatusGuard;
 import com.agentsquad.squad.sandbox.domain.SandboxPolicy;
 import com.agentsquad.squad.sandbox.dto.SandboxExecuteRequest;
 import com.agentsquad.squad.sandbox.dto.SandboxExecutionResult;
@@ -11,6 +10,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.agentsquad.squad.artifact.domain.ArtifactContentPolicy;
 import jakarta.annotation.Resource;
+import com.agentsquad.squad.identity.UserStatusGuard;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 @Service
 @Slf4j
 public class SandboxExecutionService {
+    @Resource private UserStatusGuard userStatus;
     @Resource
     private com.agentsquad.squad.artifact.service.ArtifactService artifacts;
 
@@ -42,12 +43,9 @@ public class SandboxExecutionService {
     @Resource
     private ObjectMapper json;
 
-    @Resource
-    private UserStatusGuard userStatusGuard;
-
     public SandboxExecutionResult execute(String userId, String sessionId, String guardToken,
                                           String turnId, String toolCallId, SandboxExecuteRequest request) {
-        userStatusGuard.requireActive(userId);
+        userStatus.requireActive(userId);
         driver.requireAvailable();
         SandboxPolicy.validate(request);
         var context = access.resolve(userId, sessionId, guardToken, turnId, toolCallId);

@@ -38,15 +38,6 @@
                 "schema": {
                   "type": "string"
                 }
-              },
-              "Cache-Control": {
-                "description": "认证响应不得缓存。",
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
               }
             }
           },
@@ -284,17 +275,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuthView"
-                }
-              }
-            },
-            "headers": {
-              "Cache-Control": {
-                "description": "认证响应不得缓存。",
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
                 }
               }
             }
@@ -1828,6 +1808,16 @@
               }
             }
           },
+          "410": {
+            "description": "错误语义见 contracts/README.md",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "422": {
             "description": "错误语义见 contracts/README.md",
             "content": {
@@ -1849,16 +1839,6 @@
             }
           },
           "503": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "410": {
             "description": "错误语义见 contracts/README.md",
             "content": {
               "application/json": {
@@ -4251,6 +4231,16 @@
         ],
         "x-design-status": "planned-v0.2",
         "responses": {
+          "200": {
+            "description": "记忆变更已提交，受影响的旧上下文进入受限状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryMutationResult"
+                }
+              }
+            }
+          },
           "400": {
             "description": "错误语义见 contracts/README.md",
             "content": {
@@ -4327,16 +4317,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "记忆变更已提交，受影响的旧上下文进入受限状态",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MemoryMutationResult"
                 }
               }
             }
@@ -6265,111 +6245,11 @@
     },
     "/api/v1/auth/password": {
       "post": {
-        "operationId": "changePassword",
         "tags": [
-          "public"
+          "auth"
         ],
-        "summary": "changePassword",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 256
-            }
-          }
-        ],
-        "security": [
-          {
-            "CookieAuth": []
-          }
-        ],
-        "x-design-status": "planned-v0.2",
-        "responses": {
-          "204": {
-            "description": "成功",
-            "headers": {
-              "Cache-Control": {
-                "description": "认证响应不得缓存。",
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              },
-              "Set-Cookie": {
-                "description": "撤销当前会话并清除 Cookie。",
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        },
+        "summary": "登录用户主动修改密码并撤销旧会话",
+        "operationId": "changePassword",
         "requestBody": {
           "required": true,
           "content": {
@@ -6379,45 +6259,45 @@
               }
             }
           }
+        },
+        "responses": {
+          "204": {
+            "description": "已接受，空响应"
+          },
+          "401": {
+            "description": "无效凭据或会话"
+          }
         }
       }
     },
     "/api/v1/admin/users": {
       "get": {
-        "operationId": "listUsers",
         "tags": [
-          "public"
+          "admin"
         ],
-        "summary": "listUsers",
+        "operationId": "listUsers",
+        "summary": "管理员列出用户（仅公开摘要）",
         "parameters": [
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 2048
-            }
-          },
           {
             "name": "limit",
             "in": "query",
-            "required": false,
             "schema": {
               "type": "integer",
               "minimum": 1,
               "maximum": 100,
               "default": 20
             }
-          }
-        ],
-        "security": [
+          },
           {
-            "CookieAuth": []
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "default": 0
+            }
           }
         ],
-        "x-design-status": "planned-v0.2",
         "responses": {
           "200": {
             "description": "成功",
@@ -6429,184 +6309,54 @@
               }
             }
           },
-          "400": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
           "403": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
+            "description": "权限不足"
           }
         }
       },
       "post": {
-        "operationId": "createUser",
         "tags": [
-          "public"
+          "admin"
         ],
-        "summary": "createUser",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 256
-            }
-          }
-        ],
-        "security": [
-          {
-            "CookieAuth": []
-          }
-        ],
-        "x-design-status": "planned-v0.2",
-        "responses": {
-          "201": {
-            "description": "创建成功，临时密码仅返回一次",
-            "headers": {
-              "Cache-Control": {
-                "description": "认证响应不得缓存。",
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminUserCreateResult"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        },
+        "operationId": "createUser",
+        "summary": "管理员邀请用户并返回一次性临时密码",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AdminUserCreateRequest"
+                "$ref": "#/components/schemas/UserCreateRequest"
               }
             }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserCreateReceipt"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "权限不足"
+          },
+          "409": {
+            "description": "用户名重复"
           }
         }
       }
     },
     "/api/v1/admin/users/{userId}": {
       "patch": {
-        "operationId": "updateUser",
         "tags": [
-          "public"
+          "admin"
         ],
-        "summary": "updateUser",
+        "operationId": "updateUser",
+        "summary": "管理员修改状态或角色并撤销旧会话",
         "parameters": [
           {
             "name": "userId",
@@ -6616,135 +6366,38 @@
               "type": "string",
               "format": "uuid"
             }
-          },
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 256
-            }
           }
         ],
-        "security": [
-          {
-            "CookieAuth": []
-          }
-        ],
-        "x-design-status": "planned-v0.2",
-        "responses": {
-          "200": {
-            "description": "成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminUserView"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        },
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AdminUserUpdateRequest"
+                "$ref": "#/components/schemas/UserUpdateRequest"
               }
             }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "已接受，空响应"
+          },
+          "403": {
+            "description": "权限不足"
+          },
+          "409": {
+            "description": "版本冲突"
           }
         }
       }
     },
     "/api/v1/admin/users/{userId}/reset-password": {
       "post": {
-        "operationId": "resetUserPassword",
         "tags": [
-          "public"
+          "admin"
         ],
-        "summary": "resetUserPassword",
+        "operationId": "resetUserPassword",
+        "summary": "管理员重置临时密码",
         "parameters": [
           {
             "name": "userId",
@@ -6754,115 +6407,21 @@
               "type": "string",
               "format": "uuid"
             }
-          },
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 256
-            }
           }
         ],
-        "security": [
-          {
-            "CookieAuth": []
-          }
-        ],
-        "x-design-status": "planned-v0.2",
         "responses": {
           "200": {
-            "description": "重置成功，临时密码仅返回一次；旧会话全部失效",
-            "headers": {
-              "Cache-Control": {
-                "description": "认证响应不得缓存。",
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
+            "description": "成功",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResetPasswordResult"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "$ref": "#/components/schemas/UserCreateReceipt"
                 }
               }
             }
           },
           "403": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "错误语义见 contracts/README.md",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
+            "description": "权限不足"
           }
         }
       }
@@ -6974,7 +6533,7 @@
           },
           "mustChangePassword": {
             "type": "boolean",
-            "description": "是否必须先修改临时密码；为 true 时仅允许改密、查询当前主体与登出。"
+            "description": "首次登录或管理员重置后必须修改密码"
           }
         },
         "required": [
@@ -10911,14 +10470,11 @@
         "additionalProperties": false,
         "properties": {
           "currentPassword": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 256
+            "type": "string"
           },
           "newPassword": {
             "type": "string",
-            "minLength": 12,
-            "maxLength": 128
+            "minLength": 12
           }
         },
         "required": [
@@ -10926,7 +10482,7 @@
           "newPassword"
         ]
       },
-      "AdminUserView": {
+      "AdminUserSummary": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -10935,13 +10491,10 @@
             "format": "uuid"
           },
           "username": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 64
+            "type": "string"
           },
           "displayName": {
-            "type": "string",
-            "maxLength": 100
+            "type": "string"
           },
           "role": {
             "type": "string",
@@ -10957,16 +10510,12 @@
               "DISABLED"
             ]
           },
-          "version": {
-            "type": "integer",
-            "minimum": 0
-          },
           "mustChangePassword": {
             "type": "boolean"
           },
-          "createTime": {
-            "type": "string",
-            "format": "date-time"
+          "version": {
+            "type": "integer",
+            "format": "int64"
           }
         },
         "required": [
@@ -10975,11 +10524,9 @@
           "displayName",
           "role",
           "status",
-          "version",
           "mustChangePassword",
-          "createTime"
-        ],
-        "description": "管理员可见的账号摘要；不包含密码摘要与会话令牌。"
+          "version"
+        ]
       },
       "AdminUserPage": {
         "type": "object",
@@ -10988,59 +10535,70 @@
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/AdminUserView"
-            },
-            "maxItems": 100
+              "$ref": "#/components/schemas/AdminUserSummary"
+            }
           },
           "nextCursor": {
             "type": "string",
-            "minLength": 1,
-            "maxLength": 2048,
             "nullable": true
           }
         },
         "required": [
-          "items"
+          "items",
+          "nextCursor"
         ]
       },
-      "AdminUserCreateRequest": {
+      "UserCreateRequest": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
           "username": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 64
+            "type": "string"
           },
           "displayName": {
-            "type": "string",
-            "maxLength": 100
+            "type": "string"
           },
           "role": {
             "type": "string",
             "enum": [
               "USER",
               "ADMIN"
-            ],
-            "default": "USER"
+            ]
           }
         },
         "required": [
-          "username"
+          "username",
+          "role"
         ]
       },
-      "AdminUserUpdateRequest": {
+      "UserCreateReceipt": {
         "type": "object",
         "additionalProperties": false,
-        "minProperties": 2,
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "temporaryPassword": {
+            "type": "string",
+            "description": "只在本次响应返回，禁止缓存"
+          }
+        },
+        "required": [
+          "userId",
+          "temporaryPassword"
+        ]
+      },
+      "UserUpdateRequest": {
+        "type": "object",
+        "additionalProperties": false,
         "properties": {
           "expectedVersion": {
             "type": "integer",
-            "minimum": 0
+            "format": "int64"
           },
           "displayName": {
-            "type": "string",
-            "maxLength": 100
+            "type": "string"
           },
           "role": {
             "type": "string",
@@ -11058,44 +10616,11 @@
           }
         },
         "required": [
-          "expectedVersion"
-        ],
-        "description": "按 expectedVersion 做 CAS；角色或状态变化会提升 authVersion 并撤销该用户全部会话。"
-      },
-      "AdminUserCreateResult": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "userId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "temporaryPassword": {
-            "type": "string",
-            "minLength": 20,
-            "maxLength": 128
-          }
-        },
-        "required": [
-          "userId",
-          "temporaryPassword"
-        ],
-        "description": "临时密码仅在此响应出现一次，不得记录日志或再次查询。"
-      },
-      "ResetPasswordResult": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "temporaryPassword": {
-            "type": "string",
-            "minLength": 20,
-            "maxLength": 128
-          }
-        },
-        "required": [
-          "temporaryPassword"
-        ],
-        "description": "临时密码仅在此响应出现一次，不得记录日志或再次查询。"
+          "expectedVersion",
+          "displayName",
+          "role",
+          "status"
+        ]
       }
     }
   }

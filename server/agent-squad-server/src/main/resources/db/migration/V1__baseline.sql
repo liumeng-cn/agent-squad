@@ -1122,100 +1122,64 @@ CREATE TABLE IF NOT EXISTS `sq_worker_job`
 ) ENGINE = InnoDB
     COMMENT ='有界委派节点';
 
-CREATE TABLE IF NOT EXISTS `sq_user`
-(
-    `id`                   bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
-    `user_id`              char(36)    NOT NULL COMMENT '用户业务ID',
-    `username`             varchar(64) NOT NULL COMMENT '规范化用户名（小写）',
-    `display_name`         varchar(100) NOT NULL DEFAULT '' COMMENT '显示名称',
-    `password_hash`        varchar(255) NOT NULL COMMENT 'BCrypt密码哈希',
-    `role`                 varchar(16) NOT NULL DEFAULT 'USER' COMMENT '角色[USER,ADMIN]',
-    `status`               varchar(16) NOT NULL DEFAULT 'ACTIVE' COMMENT '状态[ACTIVE,DISABLED]',
-    `auth_version`         bigint      NOT NULL DEFAULT '0' COMMENT '授权撤销代际',
-    `must_change_password` tinyint(1)  NOT NULL DEFAULT '1' COMMENT '是否必须首次登录修改密码',
-    `version`              bigint      NOT NULL DEFAULT '0' COMMENT '状态乐观版本',
-    `creator_id`           varchar(36) NOT NULL DEFAULT '' COMMENT '创建人ID',
-    `creator_name`         varchar(50) NOT NULL DEFAULT '' COMMENT '创建人姓名',
-    `create_time`          datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
-    `last_updater_id`      varchar(36) NOT NULL DEFAULT '' COMMENT '最后更新人ID',
-    `last_updater_name`    varchar(50) NOT NULL DEFAULT '' COMMENT '最后更新人姓名',
-    `last_update_time`     datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '最后更新时间',
-    `del_flag`             char(1)     NOT NULL DEFAULT '0' COMMENT '删除标志[0-否,1-是]',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_user_id` (`user_id`),
-    UNIQUE KEY `uk_user_username` (`username`),
-    KEY `idx_user_role_status` (`role`, `status`, `id`)
-) ENGINE = InnoDB
-    COMMENT ='用户身份';
 
-CREATE TABLE IF NOT EXISTS `sq_auth_session`
-(
-    `id`                  bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
-    `session_id`          char(36)    NOT NULL COMMENT '会话业务ID',
-    `user_id`             char(36)    NOT NULL COMMENT '所属用户ID',
-    `token_hash`          char(64)    NOT NULL COMMENT '会话令牌SHA256摘要',
-    `csrf_hash`           char(64)    NOT NULL COMMENT 'CSRF令牌SHA256摘要',
-    `issued_auth_version` bigint      NOT NULL COMMENT '签发时会话授权代际',
-    `last_seen_at`        datetime(3) NOT NULL COMMENT '最近活跃时间',
-    `idle_expires_at`     datetime(3) NOT NULL COMMENT '空闲过期时间',
-    `absolute_expires_at` datetime(3) NOT NULL COMMENT '绝对过期时间',
-    `revoked_at`          datetime(3)          DEFAULT NULL COMMENT '撤销时间',
-    `creator_id`          varchar(36) NOT NULL DEFAULT '' COMMENT '创建人ID',
-    `creator_name`        varchar(50) NOT NULL DEFAULT '' COMMENT '创建人姓名',
-    `create_time`         datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
-    `last_updater_id`     varchar(36) NOT NULL DEFAULT '' COMMENT '最后更新人ID',
-    `last_updater_name`   varchar(50) NOT NULL DEFAULT '' COMMENT '最后更新人姓名',
-    `last_update_time`    datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '最后更新时间',
-    `del_flag`            char(1)     NOT NULL DEFAULT '0' COMMENT '删除标志[0-否,1-是]',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_auth_session_id` (`session_id`),
-    UNIQUE KEY `uk_auth_session_token` (`token_hash`),
-    KEY `idx_auth_session_user` (`user_id`, `revoked_at`),
-    KEY `idx_auth_session_idle` (`idle_expires_at`),
-    KEY `idx_auth_session_absolute` (`absolute_expires_at`)
-) ENGINE = InnoDB
-    COMMENT ='持久登录会话';
+-- C1：真实多用户账号与跨网关会话。生产数据库由独立受控迁移操作执行。
+CREATE TABLE IF NOT EXISTS sq_user (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '存储主键',
+ user_id CHAR(36) NOT NULL COMMENT '用户业务ID',
+ username VARCHAR(64) NOT NULL COMMENT '归一化登录名',
+ display_name VARCHAR(100) NOT NULL DEFAULT '' COMMENT '展示名称',
+ password_hash VARCHAR(255) NOT NULL COMMENT 'BCrypt密码摘要',
+ role VARCHAR(16) NOT NULL DEFAULT 'USER' COMMENT 'USER或ADMIN',
+ status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE或DISABLED',
+ auth_version BIGINT NOT NULL DEFAULT 0 COMMENT '认证撤销代际',
+ version BIGINT NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
+ must_change_password TINYINT(1) NOT NULL DEFAULT 1 COMMENT '首次需修改密码',
+ creator_id VARCHAR(36) NOT NULL DEFAULT '' COMMENT '创建者',
+ creator_name VARCHAR(50) NOT NULL DEFAULT '' COMMENT '创建者名',
+ create_time DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+ last_updater_id VARCHAR(36) NOT NULL DEFAULT '' COMMENT '修改者',
+ last_updater_name VARCHAR(50) NOT NULL DEFAULT '' COMMENT '修改者名',
+ last_update_time DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '修改时间',
+ del_flag CHAR(1) NOT NULL DEFAULT '0' COMMENT '删除标记',
+ PRIMARY KEY (id), UNIQUE KEY uk_user_user_id(user_id), UNIQUE KEY uk_user_username(username)
+) ENGINE=InnoDB COMMENT='账号表';
 
-CREATE TABLE IF NOT EXISTS `sq_auth_rate_bucket`
-(
-    `id`               bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
-    `bucket_key`       char(64)    NOT NULL COMMENT '用户名与来源派生的不可逆限流键',
-    `window_start`     datetime(3) NOT NULL COMMENT '当前失败窗口开始时间',
-    `failures`         int         NOT NULL DEFAULT '0' COMMENT '窗口内失败次数',
-    `locked_until`     datetime(3)          DEFAULT NULL COMMENT '锁定截止时间',
-    `creator_id`       varchar(36) NOT NULL DEFAULT '' COMMENT '创建人ID',
-    `creator_name`     varchar(50) NOT NULL DEFAULT '' COMMENT '创建人姓名',
-    `create_time`      datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
-    `last_updater_id`  varchar(36) NOT NULL DEFAULT '' COMMENT '最后更新人ID',
-    `last_updater_name` varchar(50) NOT NULL DEFAULT '' COMMENT '最后更新人姓名',
-    `last_update_time` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '最后更新时间',
-    `del_flag`         char(1)     NOT NULL DEFAULT '0' COMMENT '删除标志[0-否,1-是]',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_auth_rate_bucket` (`bucket_key`),
-    KEY `idx_auth_rate_locked` (`locked_until`)
-) ENGINE = InnoDB
-    COMMENT ='登录失败限流状态';
+CREATE TABLE IF NOT EXISTS sq_auth_session (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '存储主键',
+ session_id CHAR(36) NOT NULL COMMENT '登录会话ID',
+ user_id CHAR(36) NOT NULL COMMENT '账号ID',
+ token_hash CHAR(64) NOT NULL COMMENT 'Token SHA256 摘要',
+ csrf_hash CHAR(64) NOT NULL COMMENT 'CSRF SHA256 摘要',
+ issued_auth_version BIGINT NOT NULL COMMENT '颁发时认证版本',
+ created_at DATETIME(3) NOT NULL COMMENT '创建时间',
+ last_seen_at DATETIME(3) NOT NULL COMMENT '最近访问',
+ idle_expires_at DATETIME(3) NOT NULL COMMENT '空闲过期时间',
+ absolute_expires_at DATETIME(3) NOT NULL COMMENT '绝对过期时间',
+ revoked_at DATETIME(3) NULL COMMENT '撤销时间',
+ PRIMARY KEY(id), UNIQUE KEY uk_auth_session_id(session_id),
+ UNIQUE KEY uk_auth_token_hash(token_hash), KEY idx_auth_session_user(user_id,revoked_at),
+ KEY idx_auth_session_expiry(idle_expires_at)
+) ENGINE=InnoDB COMMENT='认证持久会话';
 
-CREATE TABLE IF NOT EXISTS `sq_auth_audit`
-(
-    `id`               bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
-    `event_id`         char(36)    NOT NULL COMMENT '审计事件业务ID',
-    `user_id`          char(36)             DEFAULT NULL COMMENT '目标用户ID',
-    `actor_user_id`    char(36)             DEFAULT NULL COMMENT '操作者用户ID',
-    `event_type`       varchar(48) NOT NULL COMMENT '事件类型',
-    `result`           varchar(16) NOT NULL COMMENT '结果[SUCCESS,FAILURE,DENIED]',
-    `occurred_at`      datetime(3) NOT NULL COMMENT '事件发生时间',
-    `request_id`       varchar(64) NOT NULL DEFAULT '' COMMENT '请求追踪ID',
-    `creator_id`       varchar(36) NOT NULL DEFAULT '' COMMENT '创建人ID',
-    `creator_name`     varchar(50) NOT NULL DEFAULT '' COMMENT '创建人姓名',
-    `create_time`      datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
-    `last_updater_id`  varchar(36) NOT NULL DEFAULT '' COMMENT '最后更新人ID',
-    `last_updater_name` varchar(50) NOT NULL DEFAULT '' COMMENT '最后更新人姓名',
-    `last_update_time` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '最后更新时间',
-    `del_flag`         char(1)     NOT NULL DEFAULT '0' COMMENT '删除标志[0-否,1-是]',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_auth_audit_event` (`event_id`),
-    KEY `idx_auth_audit_user` (`user_id`, `occurred_at`),
-    KEY `idx_auth_audit_type` (`event_type`, `occurred_at`)
-) ENGINE = InnoDB
-    COMMENT ='认证安全审计（不存令牌、明文密码和完整IP）';
+CREATE TABLE IF NOT EXISTS sq_auth_rate_bucket (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '存储主键',
+ bucket_key CHAR(64) NOT NULL COMMENT '归一化身份标识摘要',
+ window_start DATETIME(3) NOT NULL COMMENT '窗口开始',
+ failures INT NOT NULL DEFAULT 0 COMMENT '失败次数',
+ locked_until DATETIME(3) NULL COMMENT '封禁到期',
+ PRIMARY KEY(id), UNIQUE KEY uk_auth_bucket(bucket_key)
+) ENGINE=InnoDB COMMENT='认证失败节流';
+
+CREATE TABLE IF NOT EXISTS sq_auth_audit (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '存储主键',
+ event_id CHAR(36) NOT NULL COMMENT '事件ID',
+ user_id CHAR(36) NULL COMMENT '受影响用户',
+ actor_user_id CHAR(36) NULL COMMENT '操作用户',
+ event_type VARCHAR(48) NOT NULL COMMENT '事件类型',
+ result VARCHAR(16) NOT NULL COMMENT '操作结果',
+ occurred_at DATETIME(3) NOT NULL COMMENT '事件时间',
+ request_id VARCHAR(64) NOT NULL DEFAULT '' COMMENT '请求关联ID',
+ PRIMARY KEY(id), UNIQUE KEY uk_auth_audit_id(event_id),
+ KEY idx_auth_audit_user(user_id, occurred_at)
+) ENGINE=InnoDB COMMENT='认证安全审计';

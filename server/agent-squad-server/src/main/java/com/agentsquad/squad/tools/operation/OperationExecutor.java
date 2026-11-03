@@ -8,6 +8,7 @@ import com.agentsquad.squad.tools.operation.domain.OperationStatus;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
+import com.agentsquad.squad.identity.UserStatusGuard;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ import java.util.UUID;
 @Service
 @Slf4j
 public class OperationExecutor {
+    @Resource private UserStatusGuard userStatus;
 
     private static final long LEASE_SECONDS = 60;
 
@@ -53,6 +55,7 @@ public class OperationExecutor {
      */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public String execute(OperationRow operation, ExternalCall externalCall) {
+        userStatus.requireActive(operation.userId());
         String externalKey = "mock:" + operation.operationId();
         markInFlight(operation, externalKey);
         if (faultAfterInflightExit) {

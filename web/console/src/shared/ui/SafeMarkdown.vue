@@ -18,6 +18,16 @@ function inline(text: string): (string | VNode)[] {
   if (previous < text.length) pieces.push(text.slice(previous))
   return pieces
 }
+/**
+ * 仅解析结构化文本为 Vue VNode，不使用 innerHTML/v-html。
+ * 表格、引用和代码围栏的内容最终仍由 Vue 做文本转义。
+ */
+function tableCells(line: string): string[] {
+  return line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(cell => cell.trim())
+}
+function isTableSeparator(line: string): boolean {
+  return /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line)
+}
 function blocks(text: string): VNode[] {
   const lines = text.replace(/\r\n/g, '\n').split('\n')
   const result: VNode[] = []
@@ -30,6 +40,27 @@ function blocks(text: string): VNode[] {
       while (index < lines.length && !/^\s*```/.test(lines[index]!)) code.push(lines[index++]!)
       result.push(h('pre', [h('code', code.join('\n'))])); index++; continue
     }
+    if (line.trim().startsWith('>')) {
+      const quote: string[] = []
+      while (index < lines.length && /^\s*>/.test(lines[index]!)) {
+        quote.push(lines[index++]!.replace(/^\s*> ?/, ''))
+      }
+      result.push(h('blockquote', blocks(quote.join('\n'))))
+      continue
+    }
+    if (index + 1 < lines.length && line.includes('|') && isTableSeparator(lines[index + 1]!)) {
+      const headers = tableCells(line)
+      index += 2
+      const rows: VNode[] = []
+      while (index < lines.length && lines[index]!.includes('|') && lines[index]!.trim()) {
+        const values = tableCells(lines[index++]!)
+        rows.push(h('tr', headers.map((_, i) => h('td', inline(values[i] ?? '')))))
+      }
+      result.push(h('div', { class: 'markdown-table-scroll', style: 'overflow-x:auto' }, [
+        h('table', [h('thead', [h('tr', headers.map(cell => h('th', inline(cell))))]), h('tbody', rows)]),
+      ]))
+      continue
+    }
     const heading = /^(#{1,4})\s+(.+)$/.exec(line)
     if (heading) { result.push(h(`h${heading[1]!.length + 1}`, inline(heading[2]!))); index++; continue }
     if (/^\s*(?:[-*]|\d+\.)\s+\S/.test(line)) {
@@ -40,7 +71,7 @@ function blocks(text: string): VNode[] {
       result.push(h(ordered ? 'ol' : 'ul', children)); continue
     }
     const paragraph = [line]; index++
-    while (index < lines.length && lines[index]!.trim() && !/^\s*(?:```|#{1,4}\s|[-*]\s|\d+\.\s)/.test(lines[index]!)) paragraph.push(lines[index++]!)
+    while (index < lines.length && lines[index]!.trim() && !/^\s*(?:```|>|#{1,4}\s|[-*]\s|\d+\.\s)/.test(lines[index]!)) paragraph.push(lines[index++]!)
     result.push(h('p', inline(paragraph.join('\n'))))
   }
   return result

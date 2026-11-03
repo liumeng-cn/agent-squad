@@ -2,8 +2,8 @@ package com.agentsquad.squad.conversation.service;
 
 import com.agentsquad.squad.conversation.domain.CommandClaimContext;
 import com.agentsquad.squad.conversation.repository.DeliveryMapper;
-import com.agentsquad.squad.identity.UserStatusGuard;
 import jakarta.annotation.Resource;
+import com.agentsquad.squad.identity.UserStatusGuard;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,14 +16,12 @@ import java.time.LocalDateTime;
  */
 @Service
 public class CommandClaimService {
+    @Resource private UserStatusGuard userStatus;
     @Resource
     private DeliveryMapper deliveries;
 
     @Resource
     private ExecutionScopeService scopes;
-
-    @Resource
-    private UserStatusGuard userStatusGuard;
 
     @Transactional
     public boolean claim(String commandId, String token, LocalDateTime now, LocalDateTime leaseUntil) {
@@ -31,7 +29,7 @@ public class CommandClaimService {
         if (context == null) {
             return false;
         }
-        userStatusGuard.requireActive(context.userId());
+        userStatus.requireActive(context.userId());
         scopes.lockOwned(context.userId(), context.scopeId(), false);
         if ("MESSAGE_SUBMIT".equals(context.action())
                 && !deliveries.earlierBlockingReplies(context.userId(), context.bindingId()).isEmpty()) {

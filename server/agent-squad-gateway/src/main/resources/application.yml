@@ -14,6 +14,12 @@ server:
 gateway:
   business-service-url: ${SQUAD_BUSINESS_SERVICE_URL:http://127.0.0.1:18080}
 
+spring:
+  datasource:
+    url: ${SQUAD_DB_URL:jdbc:mysql://127.0.0.1:13306/agent_squad}
+    username: ${SQUAD_DB_USER:squad}
+    password: ${SQUAD_DB_PASSWORD:}
+
 agentsquad:
   assertion:
     issuer: ${SQUAD_ASSERTION_ISSUER:agent-squad-gateway}
@@ -24,7 +30,24 @@ agentsquad:
     current-secret: ${SQUAD_ASSERTION_CURRENT_SECRET:}
     previous-kid: ${SQUAD_ASSERTION_PREVIOUS_KID:}
     previous-secret: ${SQUAD_ASSERTION_PREVIOUS_SECRET:}
+  identity:
+    hmac-key: ${SQUAD_IDENTITY_HMAC_KEY:}
+    key-id: ${SQUAD_IDENTITY_KEY_ID:local-v1}
+    strict: ${SQUAD_IDENTITY_STRICT:false}
   auth:
+    # 显式设置 database 启用多用户持久会话；旧 local 模式仅供单机本地开发。
+    mode: ${SQUAD_AUTH_MODE:local}
+    bootstrap:
+      enabled: ${SQUAD_BOOTSTRAP_ADMIN_ENABLED:false}
+      username: ${SQUAD_BOOTSTRAP_ADMIN_USER:}
+      password: ${SQUAD_BOOTSTRAP_ADMIN_PASSWORD:}
+      user-id: ${SQUAD_BOOTSTRAP_ADMIN_USER_ID:}
+    username: ${SQUAD_LOCAL_USER:}
+    password: ${SQUAD_LOCAL_PASSWORD:}
+    user-id: ${SQUAD_LOCAL_USER_ID:00000000-0000-0000-0000-000000000001}
+    role: ${SQUAD_LOCAL_ROLE:ADMIN}
+    # 生产 HTTPS 部署必须设置 SQUAD_AUTH_COOKIE_SECURE=true；本地 HTTP 调试默认关闭。
+    cookie-secure: ${SQUAD_AUTH_COOKIE_SECURE:false}
     bcrypt-strength: ${SQUAD_AUTH_BCRYPT_STRENGTH:10}
     idle-timeout: ${SQUAD_AUTH_IDLE_TIMEOUT:24h}
     absolute-timeout: ${SQUAD_AUTH_ABSOLUTE_TIMEOUT:7d}
