@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,7 +41,7 @@ class TaskSnapshotHttpTest {
 
 
             var conversation = mvc.perform(post("/api/v1/conversations")
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"title\":\"快照测试\"}"))
                     .andExpect(status().isCreated()).andReturn();
@@ -48,7 +49,7 @@ class TaskSnapshotHttpTest {
                     .get("conversationId").asText();
 
             var receipt = mvc.perform(post("/api/v1/conversations/{conversationId}/tasks", conversationId)
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
                             .header("Idempotency-Key", "snapshot-test-1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"message\":\"检查快照字段\"}"))
@@ -56,7 +57,7 @@ class TaskSnapshotHttpTest {
             String taskId = mapper.readTree(receipt.getResponse().getContentAsString()).get("taskId").asText();
 
             MvcResult result = mvc.perform(get("/api/v1/tasks/{taskId}/snapshot", taskId)
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN"))
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN")))
                     .andExpect(status().isOk()).andReturn();
             JsonNode snapshot = mapper.readTree(result.getResponse().getContentAsString());
 

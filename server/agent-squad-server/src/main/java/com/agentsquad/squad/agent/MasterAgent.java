@@ -169,6 +169,9 @@ public class MasterAgent implements NativeSessionGateway {
                         + "用户补充或替换在途要求时，回复会话通过submit_task_directive提交，查询进度只读。"
                         + "是否补充、替换或需要澄清由你理解，不将用户每次发言当成修改。ACCEPTED只表示收到。"
                         + "收到TASK_DIRECTIVE时先由目标协调会话调用apply_task_directive应用或明确拒绝；"
+                        + "如果 publish_plan 因待处理修改被阻断，错误信息中的 directiveId 才是协调工具入参，"
+                        + "绝不能把 sourceMessageId 当成 directiveId；处理后重新准备上下文与计划。"
+
                         + "应用后使用新逻辑键准备上下文并发布新计划，USER_ORIGIN_REFERENCE仅为旧目标参考，"
                         + "以最新USER_GOAL_REPLACEMENT与后续USER_SUPPLEMENT为准，旧结果不能作为新目标交付。"
                         + "用户只与你这一位助手对话。回答围绕用户目标，直接交付可使用的内容，写作任务优先给出正文。"

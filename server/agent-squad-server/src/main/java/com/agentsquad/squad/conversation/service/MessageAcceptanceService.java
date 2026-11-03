@@ -11,6 +11,7 @@ import com.agentsquad.squad.conversation.dto.MessageReceipt;
 import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
+import com.agentsquad.squad.identity.UserStatusGuard;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ import java.util.UUID;
 @Service
 @Slf4j
 public class MessageAcceptanceService {
+    @Resource private UserStatusGuard userStatus;
 
     @Resource
     private MessageAcceptanceWriter writer;
@@ -45,6 +47,7 @@ public class MessageAcceptanceService {
      * 先持久消息与回复命令；同键同规范化输入只返回原身份，在途目标不阻断新消息。
      */
     public MessageReceipt accept(String userId, String conversationId, String key, MessageCreateRequest request) {
+        userStatus.requireActive(userId);
         if (key == null || key.isBlank() || key.length() > 160) {
             throw invalid("消息幂等键长度必须为1到160");
         }

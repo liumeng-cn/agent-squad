@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.artifact.service.ArtifactService;
 import com.agentsquad.squad.conversation.dto.MessageReceipt;
@@ -75,13 +76,15 @@ class MessageAcceptanceHttpTest {
     }
 
     static ConfigurableApplicationContext start(String url, String username, String password, String ownerId) {
-        return SpringApplication.run(AgentSquadApplication.class, "--server.port=0",
+        ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class, "--server.port=0",
                 "--spring.datasource.url=" + url, "--spring.datasource.username=" + username,
                 "--spring.datasource.password=" + password,
                 "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.delivery.enabled=false", "--agentsquad.auth.username=tester",
                 "--agentsquad.auth.password=test-only", "--agentsquad.auth.role=USER",
                 "--agentsquad.auth.user-id=" + ownerId);
+        com.agentsquad.squad.testsupport.TestUserDirectory.activate(context, ownerId);
+        return context;
     }
 
     static void verifyFirstSend(ConfigurableApplicationContext context) throws Exception {
@@ -93,7 +96,10 @@ class MessageAcceptanceHttpTest {
                 .content("{\"text\":\"你好\"}")).andExpect(status().isUnauthorized());
         mvc.perform(post(path).header("Idempotency-Key", "no-identity")
                 .contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"你好\"}")).andExpect(status().isUnauthorized());
-        mvc.perform(post(path).header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER")
+        mvc.perform(post(path).header("Idempotency-Key", "raw-identity")
+                .header("X-User-Id", actor.view().userId()).header("X-User-Role", "ADMIN")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"你好\"}")).andExpect(status().isUnauthorized());
+        mvc.perform(post(path).with(TestAssertion.as(actor.view().userId(), "USER"))
                 .header("Idempotency-Key", "identity-injection").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"text\":\"你好\",\"taskId\":\"forged\"}")).andExpect(status().isBadRequest());
         assertThat(count(context, "sq_conversation", actor.view().userId())).isZero();
@@ -121,16 +127,17 @@ class MessageAcceptanceHttpTest {
         assertThat(jdbc.queryForObject("SELECT action FROM sq_command WHERE command_id = ?", String.class, first.commandId()))
                 .isEqualTo("MESSAGE_SUBMIT");
         assertThat(jdbc.queryForObject("SELECT native_turn_id FROM sq_command WHERE command_id = ?", String.class, first.commandId())).isNull();
-        mvc.perform(post(path).header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER")
+        mvc.perform(post(path).with(TestAssertion.as(actor.view().userId(), "USER"))
                 .header("Idempotency-Key", "concurrent-first").contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(Map.of("text", "变更内容")))).andExpect(status().isConflict());
         MessageTestActor other = new MessageTestActor(new com.agentsquad.squad.identity.AuthView(UUID.randomUUID().toString(), "other", java.util.List.of("USER"), null));
-        mvc.perform(post("/api/v1/conversations/{id}/messages", first.conversationId()).header("X-User-Id", other.view().userId()).header("X-User-Role", "USER")
+        com.agentsquad.squad.testsupport.TestUserDirectory.activate(context, other.view().userId());
+        mvc.perform(post("/api/v1/conversations/{id}/messages", first.conversationId()).with(TestAssertion.as(other.view().userId(), "USER"))
                         .header("Idempotency-Key", "foreign")
                         .contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"不能读写别人的对话\"}"))
                 .andExpect(status().isNotFound());
         jdbc.update("UPDATE sq_conversation SET status = 'DELETING', generation = generation + 1 WHERE user_id = ?", actor.view().userId());
-        mvc.perform(post(path).header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER")
+        mvc.perform(post(path).with(TestAssertion.as(actor.view().userId(), "USER"))
                 .header("Idempotency-Key", "concurrent-first").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"text\":\"你好，介绍一下能力\"}")).andExpect(status().isNotFound());
     }
@@ -140,7 +147,7 @@ class MessageAcceptanceHttpTest {
         MockMvc mvc = mvc(context);
         ObjectMapper json = context.getBean(ObjectMapper.class);
         String owner = actor.view().userId();
-        mvc.perform(post("/api/v1/conversations/messages").header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER")
+        mvc.perform(post("/api/v1/conversations/messages").with(TestAssertion.as(actor.view().userId(), "USER"))
                         .header("Idempotency-Key", "attachment-first")
                         .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(
                                 Map.of("text", "分析材料", "artifactIds", List.of(UUID.randomUUID().toString())))))
@@ -152,13 +159,13 @@ class MessageAcceptanceHttpTest {
         String file = artifacts.upload(owner, "message-file", "material.txt", "事实材料".getBytes(StandardCharsets.UTF_8)).artifactId();
         String expired = artifacts.upload(owner, "expired-file", "expired.txt", "过期材料".getBytes(StandardCharsets.UTF_8)).artifactId();
         context.getBean(JdbcTemplate.class).update("UPDATE sq_artifact SET expires_at = '2000-01-01' WHERE artifact_id = ?", expired);
-        mvc.perform(post("/api/v1/conversations/messages").header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER")
+        mvc.perform(post("/api/v1/conversations/messages").with(TestAssertion.as(actor.view().userId(), "USER"))
                         .header("Idempotency-Key", "expired-file").contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(Map.of("text", "分析", "artifactIds", List.of(expired)))))
                 .andExpect(status().isNotFound());
         assertThat(count(context, "sq_conversation", owner)).isZero();
         String foreign = artifacts.upload(UUID.randomUUID().toString(), "foreign-file", "other.txt", "不能引用".getBytes(StandardCharsets.UTF_8)).artifactId();
-        mvc.perform(post("/api/v1/conversations/messages").header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER")
+        mvc.perform(post("/api/v1/conversations/messages").with(TestAssertion.as(actor.view().userId(), "USER"))
                         .header("Idempotency-Key", "foreign-file").contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(Map.of("text", "分析", "artifactIds", List.of(foreign)))))
                 .andExpect(status().isNotFound());
@@ -198,7 +205,7 @@ class MessageAcceptanceHttpTest {
     static MessageReceipt send(ConfigurableApplicationContext context, MessageTestActor actor, String path,
                                String key, Map<String, Object> body) throws Exception {
         ObjectMapper json = context.getBean(ObjectMapper.class);
-        String response = mvc(context).perform(post(path).header("X-User-Id", actor.view().userId()).header("X-User-Role", "USER")
+        String response = mvc(context).perform(post(path).with(TestAssertion.as(actor.view().userId(), "USER"))
                         .header("Idempotency-Key", key)
                         .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(body)))
                 .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString();

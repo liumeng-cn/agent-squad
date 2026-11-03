@@ -2,6 +2,7 @@ package com.agentsquad.squad.gateway.filter;
 
 import com.agentsquad.squad.gateway.auth.AuthService;
 import com.agentsquad.squad.gateway.auth.AuthView;
+import com.agentsquad.squad.gateway.auth.InternalIdentitySigner;
 import jakarta.annotation.Resource;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -10,6 +11,7 @@ import org.springframework.http.HttpCookie;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.Set;
 
@@ -24,18 +26,31 @@ public class GatewayAuthenticationFilter implements GlobalFilter, Ordered {
     @Resource
     private AuthService authService;
 
+    @Resource
+    private InternalIdentitySigner signer;
+
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        return Mono.defer(() -> {
+        return Mono.fromCallable(() -> {
             HttpCookie cookie = exchange.getRequest().getCookies().getFirst("SQUAD_SESSION");
             String token = cookie == null ? null : cookie.getValue();
             boolean read = Set.of("GET", "HEAD", "OPTIONS").contains(exchange.getRequest().getMethod().name());
-            AuthView user = read ? authService.authenticate(token) : authService.authenticateWrite(token,
-                    exchange.getRequest().getHeaders().getFirst("X-CSRF-Token"));
-            var request = exchange.getRequest().mutate().headers(headers -> {
-                headers.set("X-User-Id", user.userId());
-                headers.set("X-User-Role", String.join(",", user.roles()));
-                headers.set("X-User-Name", user.username());
+            return read ? authService.authenticate(token)
+                    : authService.authenticateWrite(token,exchange.getRequest().getHeaders().getFirst("X-CSRF-Token"));
+        }).subscribeOn(Schedulers.boundedElastic()).flatMap(user -> {
+            if (user.mustChangePassword()) return Mono.error(new com.agentsquad.squad.gateway.auth.AuthForbiddenException());
+            String assertion=signer.sign(user,exchange.getRequest().getMethod().name(),
+                    exchange.getRequest().getURI().getRawPath());
+            var request=exchange.getRequest().mutate().headers(headers -> {
+                // 防止来自浏览器的内部身份头透传。
+                headers.remove("X-User-Id");
+                headers.remove("X-User-Role");
+                headers.remove("X-User-Name");
+                headers.remove("X-Squad-Assertion");
+                if(assertion != null) headers.set("X-Squad-Assertion",assertion);
+                headers.set("X-User-Id",user.userId());
+                headers.set("X-User-Role",String.join(",",user.roles()));
+                headers.set("X-User-Name",user.username());
                 headers.remove("Cookie");
                 headers.remove("X-CSRF-Token");
             }).build();

@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,12 +43,12 @@ class RuntimeHttpSecurityTest {
 
 
             mvc.perform(post("/api/v1/conversations")
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN")
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"title\":\"test\"}"))
                     .andExpect(status().isCreated());
             mvc.perform(get("/api/v1/commands/00000000-0000-0000-0000-000000000000")
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", "ADMIN"))
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN")))
                     .andExpect(status().isNotFound());
         }
     }

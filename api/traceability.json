@@ -4,16 +4,30 @@
       "M01"
     ],
     "schemas": [
+      "AdminUserCreateRequest",
+      "AdminUserCreateResult",
+      "AdminUserPage",
+      "AdminUserUpdateRequest",
+      "AdminUserView",
       "AuthView",
       "Conversation",
-      "ConversationView"
+      "ConversationView",
+      "PasswordChangeRequest",
+      "ResetPasswordResult"
     ],
     "operations": [
+      "changePassword",
+      "createUser",
+      "currentUser",
+      "getConversation",
+      "listUsers",
       "login",
-      "getConversation"
+      "resetUserPassword",
+      "updateUser"
     ],
     "cases": [
-      "A14"
+      "A14",
+      "B14"
     ]
   },
   "R02": {

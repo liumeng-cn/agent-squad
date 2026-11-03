@@ -9,8 +9,8 @@
 __pycache__/
 *.pyc
 target/
-node_modules/
-web/console/dist/
+web/workbench/node_modules/
+web/workbench/dist
 .agentscope/
 .claude
 .codegraph

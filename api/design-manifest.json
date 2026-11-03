@@ -21,14 +21,20 @@
     "M01": [
       "sq_conversation",
       "sq_message",
-      "sq_message_artifact"
+      "sq_message_artifact",
+      "sq_user",
+      "sq_auth_session",
+      "sq_auth_rate_bucket",
+      "sq_auth_audit"
     ],
     "M02": [
       "sq_goal_task",
       "sq_runtime_binding",
       "sq_command",
       "sq_execution_scope",
-      "sq_response_execution"
+      "sq_response_execution",
+      "sq_runtime_admission_counter",
+      "sq_runtime_admission_slot"
     ],
     "M03": [
       "sq_plan",
@@ -76,7 +82,7 @@
       "sq_artifact_stage"
     ]
   },
-  "plannedOperationCount": 47,
-  "plannedSchemaCount": 76,
-  "plannedBusinessTableCount": 41
+  "plannedOperationCount": 52,
+  "plannedSchemaCount": 83,
+  "plannedBusinessTableCount": 47
 }

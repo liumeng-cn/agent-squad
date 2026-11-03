@@ -3,6 +3,7 @@ package com.agentsquad.squad.integration.agentscope;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
+import com.agentsquad.squad.identity.UserStatusGuard;
 import com.agentsquad.squad.runtime.domain.ExecutionContextInvalidatedException;
 import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
 import com.agentsquad.squad.runtime.service.ExecutionAuthorizationService;
@@ -60,6 +61,9 @@ public class ExecutionContextMiddleware implements MiddlewareBase {
     @Resource
     private ObjectMapper json;
 
+    @Resource
+    private UserStatusGuard userStatusGuard;
+
     @Override
     public Set<ExtensionPoint> activePoints() {
         return EnumSet.of(ExtensionPoint.ON_AGENT, ExtensionPoint.ON_MODEL_CALL, ExtensionPoint.ON_ACTING);
@@ -89,6 +93,7 @@ public class ExecutionContextMiddleware implements MiddlewareBase {
                                         Function<ModelCallInput, Flux<AgentEvent>> next) {
         return Mono.fromCallable(() -> {
                     String userId = context.getUserId();
+                    userStatusGuard.requireActive(userId);
                     String scopeId = scopes.scopeForSession(userId, context.getSessionId());
                     String bindingId = bindings.findBindingBySession(userId, context.getSessionId());
                     var worker = workers.findByBinding(userId, bindingId);
@@ -128,6 +133,7 @@ public class ExecutionContextMiddleware implements MiddlewareBase {
     public Flux<AgentEvent> onActing(Agent agent, RuntimeContext context, ActingInput input,
                                      Function<ActingInput, Flux<AgentEvent>> next) {
         return Mono.fromRunnable(() -> {
+                    userStatusGuard.requireActive(context.getUserId());
                     authorization.requireSessionCurrent(context.getUserId(), context.getSessionId());
                     for (var call : input.toolCalls()) {
                         if (!"load_skill_through_path".equals(call.getName())) {

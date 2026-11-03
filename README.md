@@ -18,7 +18,7 @@ Agent Squad 是一个面向 Web 的多智能体运行底座。用户发送消息
 
 新版页面已接入连续会话：普通交流不创建 GoalTask，Master 按需建立后台工作；任务在途可继续提问或补充要求。追问、审批、分级故障、允许的重试与下载均留在对话中，停止回答与停止工作分别控制。侧栏支持安全标题、改名与历史分页，空态及附件布局按用户参考调整。
 
-本轮功能、回归结果与验证边界见 [对话体验验收记录](openspec/changes/archive/2026-11-02-conversation-first-experience/evidence/ui-regression-2026-10-29.md) 与 [端到端验收](openspec/changes/archive/2026-11-02-conversation-first-experience/evidence/e2e-2026-11-02.md)。仓库已将历史迁移合并为单一 `V1__baseline.sql`，本机开发库重建后由启动流程生成 44 张表。D3 原基线仍见 [D3 验收记录](openspec/changes/archive/2026-11-02-d3-multi-worker/evidence/progress.md)；D4–D6 已有本地验收证据，但 Java 21 运行时、完整备份还原与真实负载压测仍属发布门槛，不能将本轮对话优化计作这些门槛已验证。原 SDK 故障窗口、确定性模型协议测试、真实 DeepSeek 检查分别记载。
+本轮功能、回归结果与验证边界见 [对话体验验收记录](openspec/changes/archive/2026-11-02-conversation-first-experience/evidence/ui-regression-2026-10-29.md) 与 [端到端验收](openspec/changes/archive/2026-11-02-conversation-first-experience/evidence/e2e-2026-11-02.md)。仓库已将历史迁移合并为单一 `V1__baseline.sql`，本机开发库重建后由启动流程生成 50 张表（含身份四表及 C2 两张运行准入表）。D3 原基线仍见 [D3 验收记录](openspec/changes/archive/2026-11-02-d3-multi-worker/evidence/progress.md)；D4–D6 已有本地验收证据，但 Java 21 运行时、完整备份还原与真实负载压测仍属发布门槛，不能将本轮对话优化计作这些门槛已验证。原 SDK 故障窗口、确定性模型协议测试、真实 DeepSeek 检查分别记载。
 
 ### 已知缺陷与延后事项
 
@@ -29,7 +29,7 @@ Agent Squad 是一个面向 Web 的多智能体运行底座。用户发送消息
 
 当前 Maven 构建使用 JDK 27（Java 21 运行兼容性仍需单独验证）。准备 Maven、Docker MySQL 8.4，以及 Node.js 20.19+ 或 22.12+。MySQL 需监听 `127.0.0.1:13306`，预建 `agent_squad` 数据库和可访问该库的账号；应用启动时由 `spring.sql.init` 重放 `V1__baseline.sql` 建表。已有同名容器和数据库时直接复用，不要为启动服务清空数据。本地开发库可直接修改表结构，修改后同步回 `V1__baseline.sql`，保证空库重建结果一致。
 
-1. 在仓库根目录复制 [环境变量示例](.env.example) 为 `.env.local`，填写 MySQL 账号、本地登录账号及模型配置。`.env.local` 已被 Git 忽略。若希望提问得到模型回答，设置 `SQUAD_DELIVERY_ENABLED=true` 并填写 `SQUAD_MODEL_API_KEY`、`SQUAD_MODEL_BASE_URL`、`SQUAD_MODEL_NAME`；保持 `false` 时只会受理消息，不会投递执行。
+1. 在仓库根目录复制 [环境变量示例](.env.example) 为 `.env.local`，填写 MySQL 账号、网关断言密钥及模型配置。`.env.local` 已被 Git 忽略。账号与会话持久化在 MySQL，首个管理员通过一次性 `bootstrap-admin` 命令创建（`SQUAD_BOOTSTRAP_ADMIN_USERNAME` / `SQUAD_BOOTSTRAP_ADMIN_PASSWORD`，首次登录强制改密）；没有公开注册入口。若希望提问得到模型回答，设置 `SQUAD_DELIVERY_ENABLED=true` 并填写 `SQUAD_MODEL_API_KEY`、`SQUAD_MODEL_BASE_URL`、`SQUAD_MODEL_NAME`；保持 `false` 时只会受理消息，不会投递执行。
 2. 在一个终端启动业务服务：
 
    ```bash
@@ -51,18 +51,18 @@ Agent Squad 是一个面向 Web 的多智能体运行底座。用户发送消息
 4. 在第三个终端启动页面：
 
    ```bash
-   cd web/console
+   cd web/workbench
    npm ci
    npm run dev
    ```
 
-默认打开 [http://127.0.0.1:5173/login](http://127.0.0.1:5173/login)，页面代理到网关 `127.0.0.1:18081`，业务服务监听 `127.0.0.1:18080`。使用 `.env.local` 中的 `SQUAD_LOCAL_USER` 和 `SQUAD_LOCAL_PASSWORD` 登录；本地单账号默认具有 `ADMIN` 角色，可用 `SQUAD_LOCAL_ROLE=USER` 改为普通角色。自定义网关地址时设置 `VITE_API_TARGET`，网关的业务服务地址通过 `SQUAD_BUSINESS_SERVICE_URL` 配置；页面端口可用 `npm run dev -- --port 5174` 调整。
+默认打开 [http://127.0.0.1:5173/login](http://127.0.0.1:5173/login)，页面代理到网关 `127.0.0.1:18081`，业务服务监听 `127.0.0.1:18080`。登录使用 MySQL 中已创建的账号；管理员可在 `/app/admin/users` 创建、停用、重置账号，临时密码账号首次登录只能进入改密页。自定义网关地址时设置 `VITE_API_TARGET`，网关的业务服务地址通过 `SQUAD_BUSINESS_SERVICE_URL` 配置；页面端口可用 `npm run dev -- --port 5174` 调整。
 
 运行测试时使用**未加载 `.env.local` 的独立终端**，避免测试任务进入正在使用的 MySQL：
 
 ```bash
 mvn -f server/pom.xml -B -ntp test
-npm --prefix web/console run build
+npm --prefix web/workbench run build
 ```
 
 后端集成测试使用独立 MySQL schema，需显式设置 `SQUAD_TEST_MYSQL_ADMIN_URL`（指向 `mysql` 系统库）、`SQUAD_TEST_MYSQL_USER` 与 `SQUAD_TEST_MYSQL_PASSWORD`；测试只创建 `as_test_` 前缀的隔离库，不读取应用私有配置；测试 JVM 正常退出时会自动删除本次创建的库，异常终止可能残留，可手动清理 `as_test_%`。部分故障或多实例专项测试还需单独开启。另可在装有 Python 3.10+ 和 `jsonschema` 的设计工具环境运行 `python3 tools/check_design.py`；Python 不参与服务运行。
@@ -75,7 +75,7 @@ npm --prefix web/console run build
 原生持久事件 → 平台投影 → 会话消息/状态快照与 SSE → 当前对话
 ```
 
-`server/pom.xml` 聚合 `agent-squad-gateway`（认证与 Spring Cloud Gateway 内置路由）和 `agent-squad-server`（运行底座）两个 Java 模块，`web/console/` 是 Vue 工作台，`api/` 放接口契约（OpenAPI 与配置 Schema），`openspec/` 放能力 spec、变更计划与稳定约束。数据库结构以 `server/agent-squad-server/src/main/resources/db/migration/V1__baseline.sql` 为唯一权威。
+`server/pom.xml` 聚合 `agent-squad-gateway`（认证与 Spring Cloud Gateway 内置路由）和 `agent-squad-server`（运行底座）两个 Java 模块，`web/workbench/` 是 Vue 工作台，`api/` 放接口契约（OpenAPI 与配置 Schema），`openspec/` 放能力 spec、变更计划与稳定约束。数据库结构以 `server/agent-squad-server/src/main/resources/db/migration/V1__baseline.sql` 为唯一权威。
 
 ### Java 服务包结构
 
@@ -95,7 +95,12 @@ com.agentsquad.squad
 ```
 
 Mapper XML 按能力放在 `server/agent-squad-server/src/main/resources/mapper/<模块>/` 下，不增加 `repository/` 中间目录；XML namespace 对应 Java Mapper 接口的完整包名。
+传输结构以 [OpenAPI](api/openapi.json) 为准；最终数据库结构以 [V1 baseline](server/agent-squad-server/src/main/resources/db/schema.sql) 为准。生产迁移链位于 [deploy/db/migrations](deploy/db/migrations/)，必须与 baseline 通过结构一致性校验。
 
 每个能力包内部按 controller → service → repository 分层；domain 放持久行对象，dto 放请求/响应 record，与持久对象分离。注入统一使用 `@Resource` 字段注入，不使用构造方法注入。
 
 继续阅读：[规划与设计](openspec/README.md) · [接口契约](api/openapi.json)。
+
+### 2026-11-03 多用户集成说明
+
+集成分支 `feature/multiuser-integration-20261103` 汇总 C1 与 C2–C4 代码。保留 C1 的 MyBatis 身份实现和 `web/workbench`；C2 运行容量默认关闭。集成后测试尚未重新执行，详见 `docs/architecture/MULTIUSER_INTEGRATION_20261103.md`。

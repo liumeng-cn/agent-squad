@@ -94,11 +94,15 @@ class GatewayProxyHttpTest {
                         .POST(HttpRequest.BodyPublishers.ofString("{\"username\":\"test\",\"password\":\"test\"}")).build(),
                 HttpResponse.BodyHandlers.ofString());
         assertEquals(200, login.statusCode());
+        assertEquals("no-store", login.headers().firstValue("Cache-Control").orElseThrow());
+        assertTrue(login.headers().firstValue("Set-Cookie").orElseThrow().contains("HttpOnly"));
         String cookie = login.headers().firstValue("Set-Cookie").orElseThrow().split(";", 2)[0];
         var json = new com.fasterxml.jackson.databind.ObjectMapper().readTree(login.body());
         String csrf = json.get("csrfToken").asText();
-        assertEquals(200, client.send(HttpRequest.newBuilder(URI.create(base + "/api/v1/auth/me"))
-                .header("Cookie", cookie).build(), HttpResponse.BodyHandlers.ofString()).statusCode());
+        var me = client.send(HttpRequest.newBuilder(URI.create(base + "/api/v1/auth/me"))
+                .header("Cookie", cookie).build(), HttpResponse.BodyHandlers.ofString());
+        assertEquals(200, me.statusCode());
+        assertEquals("no-store", me.headers().firstValue("Cache-Control").orElseThrow());
         assertEquals(401, client.send(HttpRequest.newBuilder(URI.create(base + "/api/echo"))
                         .header("Cookie", cookie).POST(HttpRequest.BodyPublishers.ofString("blocked")).build(),
                 HttpResponse.BodyHandlers.ofString()).statusCode());

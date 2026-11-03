@@ -4,6 +4,7 @@ import com.agentsquad.squad.runtime.service.ExecutionFailureService;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.governance.service.BudgetService;
 import com.agentsquad.squad.governance.repository.BudgetMapper;
+import com.agentsquad.squad.identity.UserStatusGuard;
 import com.agentsquad.squad.worker.profile.WorkerModelProfile;
 import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -39,7 +40,6 @@ import java.util.function.Function;
 @Slf4j
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class ModelBudgetMiddleware implements MiddlewareBase {
-
     @Resource
     private ExecutionFailureService failures;
 
@@ -54,6 +54,9 @@ public class ModelBudgetMiddleware implements MiddlewareBase {
 
     @Resource
     private ObjectMapper objectMapper;
+
+    @Resource
+    private UserStatusGuard userStatusGuard;
 
     @Override
     public Set<ExtensionPoint> activePoints() {
@@ -82,6 +85,7 @@ public class ModelBudgetMiddleware implements MiddlewareBase {
             if (userId == null || sessionId == null || turnId == null || turnId.isBlank()) {
                 return Flux.error(new IllegalStateException("模型调用缺少固定会话或原生回合"));
             }
+            userStatusGuard.requireActive(userId);
             WorkerModelProfile profile = profileRegistry.requireExecutableModel(profileKey);
             String requestHash = requestHash(input, profileKey);
             return Mono.fromCallable(() -> failures.modelRetrySuffix(userId, sessionId))
@@ -89,6 +93,7 @@ public class ModelBudgetMiddleware implements MiddlewareBase {
                         String usageKey = "model:" + turnId + ":" + requestHash + retrySuffix;
                         AtomicBoolean settled = new AtomicBoolean(false);
                         return Mono.fromCallable(() -> {
+                                    userStatusGuard.requireActive(userId);
                                     failures.requireModelAllowed(userId, sessionId);
                                     String scopeId = budgetMapper.findScopeBySession(userId, sessionId);
                                     if (scopeId == null) {

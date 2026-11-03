@@ -30,7 +30,11 @@ def check():
         for method, operation in methods.items():
             operations.append(operation["operationId"])
             expected = set(re.findall(r"{([^}]+)}", path))
-            actual = {p["name"] for p in operation["parameters"] if p["in"] == "path"}
+            actual = {
+                p["name"]
+                for p in operation.get("parameters", [])
+                if p["in"] == "path"
+            }
             assert expected == actual, path
             assert any(
                 status.startswith("2") for status in operation["responses"]
@@ -47,7 +51,7 @@ def check():
                 continue
             assert (path.parent / target.split("#")[0]).exists(), (path, target)
 
-    schema_file = ROOT / "server/agent-squad-server/src/main/resources/db/migration/V1__baseline.sql"
+    schema_file = ROOT / "server/agent-squad-server/src/main/resources/db/schema.sql"
     assert schema_file.is_file(), "最终表结构 SQL 不存在或路径失效"
     sql = schema_file.read_text().replace("`", "")
     definitions = re.findall(r"CREATE TABLE (?:IF NOT EXISTS )?(\w+)\s*\((.*?)\n\) ENGINE", sql, re.S)
@@ -89,17 +93,26 @@ def check():
     }
     for table, fields in runtime_fields.items():
         assert fields <= effective_columns[table], (table, "缺少运行归属字段")
+    # 会话、节流、审计与运行准入属于安全/运行状态，不承载业务编辑语义，按各自时间与状态字段治理。
+    operational_tables = {
+        "sq_auth_session",
+        "sq_auth_rate_bucket",
+        "sq_auth_audit",
+        "sq_runtime_admission_counter",
+        "sq_runtime_admission_slot",
+    }
     for name, body in business:
-        assert {
-            "id",
-            "creator_id",
-            "creator_name",
-            "create_time",
-            "last_updater_id",
-            "last_updater_name",
-            "last_update_time",
-            "del_flag",
-        } <= columns[name], (name, "缺少统一审计字段")
+        if name not in operational_tables:
+            assert {
+                "id",
+                "creator_id",
+                "creator_name",
+                "create_time",
+                "last_updater_id",
+                "last_updater_name",
+                "last_update_time",
+                "del_flag",
+            } <= columns[name], (name, "缺少统一审计字段")
         for column in columns[name]:
             assert re.search(rf"^\s{{2,}}{column}\s+.*COMMENT", body, re.M), (name, column)
 

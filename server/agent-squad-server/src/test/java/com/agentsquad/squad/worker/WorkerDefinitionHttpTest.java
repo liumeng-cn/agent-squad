@@ -1,5 +1,6 @@
 package com.agentsquad.squad.worker;
 
+import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;
@@ -46,7 +47,7 @@ class WorkerDefinitionHttpTest {
             String role = context.getEnvironment().getProperty("agentsquad.auth.role", "ADMIN");
 
             String createdBody = mvc.perform(post("/api/v1/worker-definitions")
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", role)
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
                             .header("Idempotency-Key", "publish-1")
                             .contentType(MediaType.APPLICATION_JSON).content(DEFINITION))
                     .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
@@ -61,27 +62,27 @@ class WorkerDefinitionHttpTest {
                     .isEqualTo(definitionId);
 
             String repeatedBody = mvc.perform(post("/api/v1/worker-definitions")
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", role)
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
                             .header("Idempotency-Key", "publish-1")
                             .contentType(MediaType.APPLICATION_JSON).content(DEFINITION))
                     .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
             assertThat(mapper.readTree(repeatedBody).get("definitionId").asText()).isEqualTo(definitionId);
 
             mvc.perform(post("/api/v1/worker-definitions")
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", role)
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
                             .header("Idempotency-Key", "publish-1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(DEFINITION.replace("日志分析", "其他描述")))
                     .andExpect(status().isConflict());
 
             mvc.perform(post("/api/v1/worker-definitions")
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", role)
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
                             .header("Idempotency-Key", "publish-2")
                             .contentType(MediaType.APPLICATION_JSON).content(DEFINITION))
                     .andExpect(status().isConflict());
 
             mvc.perform(post("/api/v1/worker-definitions")
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", role)
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
                             .header("Idempotency-Key", "publish-review")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(DEFINITION.replace("log-analysis", "draft-review")
@@ -92,12 +93,12 @@ class WorkerDefinitionHttpTest {
             assertThat(definitions.requireEnabled("draft-review", "1.0.0").description())
                     .isEqualTo("草稿审阅");
 
-            String listBody = mvc.perform(get("/api/v1/worker-definitions").header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", role))
+            String listBody = mvc.perform(get("/api/v1/worker-definitions").with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role)))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
             assertThat(mapper.readTree(listBody).get("items").size()).isEqualTo(2);
 
             String disabledBody = mvc.perform(patch("/api/v1/worker-definitions/{id}", definitionId)
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", role)
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
                             .header("Idempotency-Key", "status-1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"expectedVersion\":0,\"status\":\"DISABLED\"}"))
@@ -109,7 +110,7 @@ class WorkerDefinitionHttpTest {
                     .isInstanceOf(RuntimeBusinessException.class);
 
             String repeatedStatus = mvc.perform(patch("/api/v1/worker-definitions/{id}", definitionId)
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", role)
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
                             .header("Idempotency-Key", "status-1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"expectedVersion\":0,\"status\":\"DISABLED\"}"))
@@ -117,21 +118,21 @@ class WorkerDefinitionHttpTest {
             assertThat(mapper.readTree(repeatedStatus).get("version").asLong()).isEqualTo(1);
 
             mvc.perform(patch("/api/v1/worker-definitions/{id}", definitionId)
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", role)
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
                             .header("Idempotency-Key", "status-2")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"expectedVersion\":0,\"status\":\"ENABLED\"}"))
                     .andExpect(status().isConflict());
 
             mvc.perform(patch("/api/v1/worker-definitions/{id}", definitionId)
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", role)
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
                             .header("Idempotency-Key", "status-3")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"expectedVersion\":1,\"status\":\"REVOKED\"}"))
                     .andExpect(status().isOk());
 
             mvc.perform(patch("/api/v1/worker-definitions/{id}", definitionId)
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", role)
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
                             .header("Idempotency-Key", "status-4")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"expectedVersion\":2,\"status\":\"ENABLED\"}"))
@@ -147,7 +148,7 @@ class WorkerDefinitionHttpTest {
             String role = context.getEnvironment().getProperty("agentsquad.auth.role", "ADMIN");
 
             mvc.perform(post("/api/v1/worker-definitions")
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", role)
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
                             .header("Idempotency-Key", "publish-1")
                             .contentType(MediaType.APPLICATION_JSON).content(DEFINITION))
                     .andExpect(status().isForbidden());
@@ -175,7 +176,7 @@ class WorkerDefinitionHttpTest {
             String reviewDefinition = DEFINITION.replace("default", "review");
 
             mvc.perform(post("/api/v1/worker-definitions")
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", role)
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
                             .header("Idempotency-Key", "review-profile")
                             .contentType(MediaType.APPLICATION_JSON).content(reviewDefinition))
                     .andExpect(status().isCreated());
@@ -185,7 +186,7 @@ class WorkerDefinitionHttpTest {
             assertThat(profiles.requireRuntime("review").getMaxModelCalls()).isEqualTo(5);
 
             mvc.perform(post("/api/v1/worker-definitions")
-                            .header("X-User-Id", "20000000-0000-0000-0000-000000000001").header("X-User-Role", role)
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
                             .header("Idempotency-Key", "unknown-profile")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(DEFINITION.replace("default", "missing")))

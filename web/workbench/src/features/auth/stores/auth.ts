@@ -1,0 +1,94 @@
+import { defineStore } from 'pinia'
+import { changePasswordApi, loginApi, logoutApi, meApi } from '../../../shared/api/authApi'
+import { clearCsrfToken, setCsrfToken } from '../../../shared/api/csrf'
+import { errorMessage } from '../../../shared/api/http'
+import type { AuthView } from '../../../shared/api/types'
+
+interface AuthState {
+  user: AuthView | null
+  /** 是否已做过首次会话探测；守卫据此避免重复 /me。 */
+  ready: boolean
+  loginError: string | null
+}
+
+export const useAuthStore = defineStore('auth', {
+  state: (): AuthState => ({
+    user: null,
+    ready: false,
+    loginError: null,
+  }),
+
+  getters: {
+    loggedIn: (state) => state.user !== null,
+    /** 临时密码状态下服务端只允许改密、查询主体与登出。 */
+    mustChangePassword: (state) => state.user?.mustChangePassword === true,
+  },
+
+  actions: {
+    /** 首次进入应用时探测会话；返回是否已登录。 */
+    async ensureSession(): Promise<boolean> {
+      if (this.ready) {
+        return this.loggedIn
+      }
+      try {
+        this.applyUser(await meApi())
+      } catch {
+        this.clearUser()
+      } finally {
+        this.ready = true
+      }
+      return this.loggedIn
+    },
+
+    async login(username: string, password: string): Promise<boolean> {
+      this.loginError = null
+      try {
+        this.applyUser(await loginApi(username, password))
+        this.ready = true
+        return true
+      } catch (error) {
+        this.loginError = errorMessage(error)
+        return false
+      }
+    },
+
+    async logout(): Promise<void> {
+      try {
+        await logoutApi()
+      } catch {
+        // 会话可能已失效，本地状态照常清理
+      }
+      try {
+        const prefix = 'agentsquad:draft:' + (this.user?.userId || 'anonymous') + ':'
+        for (let i = sessionStorage.length - 1; i >= 0; i--) {
+          const key = sessionStorage.key(i)
+          if (key?.startsWith(prefix)) sessionStorage.removeItem(key)
+        }
+      } catch { /* 私密浏览模式 */ }
+      this.clearUser()
+    },
+
+    /** 改密会导致服务端撤销全部会话；成功后本地状态一并清空。 */
+    async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+      await changePasswordApi(currentPassword, newPassword)
+      this.clearUser()
+    },
+
+    applyUser(user: AuthView): void {
+      this.user = user
+      setCsrfToken(user.csrfToken)
+    },
+
+    clearUser(): void {
+      try {
+        const prefix = 'agentsquad:draft:' + (this.user?.userId || 'anonymous') + ':'
+        for (let i = sessionStorage.length - 1; i >= 0; i--) {
+          const key = sessionStorage.key(i)
+          if (key?.startsWith(prefix)) sessionStorage.removeItem(key)
+        }
+      } catch { /* 可能不支持 sessionStorage */ }
+      this.user = null
+      clearCsrfToken()
+    },
+  },
+})
