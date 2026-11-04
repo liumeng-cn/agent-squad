@@ -72,7 +72,7 @@ public class MessageAcceptanceWriter {
     private long responseBudgetLimit;
 
     /**
-     * 独立受理边界保证并发唯一键失败可先回滚，再由外层补查胜出收据，避免在失败事务中继续读写。
+     * 独立受理事务保证并发唯一键失败可先回滚，再由外层补查胜出收据，避免在失败事务中继续读写
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public MessageSubmissionRow accept(String userId, String conversationId, String scopeKey, String key,

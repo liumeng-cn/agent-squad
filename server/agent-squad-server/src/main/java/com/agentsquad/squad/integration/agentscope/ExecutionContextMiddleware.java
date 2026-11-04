@@ -30,7 +30,7 @@ import java.util.concurrent.CancellationException;
 import java.util.function.Function;
 
 /**
- * 模型与工具调用的执行资料边界。
+ * 为模型与工具调用准备执行资料
  * <p>
  * 每次真实调用前复验固定资料；记忆是用户资料而非系统指令，Worker资料由局部快照提供。
  */

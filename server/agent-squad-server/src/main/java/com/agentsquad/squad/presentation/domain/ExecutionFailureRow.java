@@ -1,7 +1,7 @@
 package com.agentsquad.squad.presentation.domain;
 
 /**
- * 执行故障的持久投影。
+ * 执行故障的数据库记录
  * <p>
  * 只保存稳定分类与安全说明，不存储异常原文、密钥或模型上下文。
  */

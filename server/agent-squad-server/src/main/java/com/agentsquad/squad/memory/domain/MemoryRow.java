@@ -1,7 +1,7 @@
 package com.agentsquad.squad.memory.domain;
 
 /**
- * 记忆持久事实。
+ * 记忆存储记录。
  * <p>
  * 保存用户显式内容、来源、乐观版本与删除墓碑；不直接作为接口响应。
  */

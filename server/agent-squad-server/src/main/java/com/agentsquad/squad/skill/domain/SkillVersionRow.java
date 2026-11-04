@@ -2,7 +2,7 @@ package com.agentsquad.squad.skill.domain;
 
 
 /**
- * 技能版本持久投影。
+ * 技能版本数据库记录
  * <p>
  * 记录用户归属、不可变元数据与安全撤销代际，不能当作接口 DTO。
  */

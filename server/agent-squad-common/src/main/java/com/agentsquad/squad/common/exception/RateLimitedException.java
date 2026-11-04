@@ -3,7 +3,6 @@ package com.agentsquad.squad.common.exception;
 /**
  * 登录失败次数超出窗口阈值，账号或来源被临时锁定。
  */
-@org.springframework.web.bind.annotation.ResponseStatus(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS)
 public class RateLimitedException extends RuntimeException {
 
     public RateLimitedException() {

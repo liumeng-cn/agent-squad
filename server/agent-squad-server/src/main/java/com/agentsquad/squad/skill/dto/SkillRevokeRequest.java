@@ -13,7 +13,7 @@ import jakarta.validation.constraints.NotNull;
 public record SkillRevokeRequest(
         @NotNull @JsonProperty(value = "expectedVersion", required = true) Long expectedVersion) {
     /**
-     * 传输边界拒绝模型或客户端附加身份、链接及未声明字段。
+     * 请求校验时拒绝模型或客户端附加的身份、链接及未声明字段
      */
     @JsonAnySetter
     public void rejectUnknownField(String name, Object value) {

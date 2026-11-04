@@ -8,7 +8,7 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
- * 账号生命周期 SQL 边界。
+ * 账号生命周期 数据访问
  *
  * <p>行锁与 CAS 更新用于保护最后管理员约束和并发修改；SQL 见 mapper/admin/AdminUserMapper.xml。</p>
  */

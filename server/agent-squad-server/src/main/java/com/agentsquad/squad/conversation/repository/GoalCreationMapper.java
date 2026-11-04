@@ -4,7 +4,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * 独立目标来源关系的持久边界。
+ * 独立目标来源关系的数据访问
  * <p>
  * 创建事务中固定来源消息和回复执行，后续目标推进不依赖原回复保持运行。
  */

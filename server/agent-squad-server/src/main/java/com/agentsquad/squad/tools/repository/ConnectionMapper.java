@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
- * 连接凭据引用 SQL 边界；全部查询按归属用户限定，密文不在本表。
+ * 连接凭据引用 数据访问；全部查询按归属用户限定，密文不在本表
  */
 @Mapper
 public interface ConnectionMapper {

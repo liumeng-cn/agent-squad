@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * 执行归属查询边界。
+ * 执行范围数据访问：维护执行关联，并校验数据归属和关联有效性
  * <p>
  * 必须连同会话归属、代际和删除状态读取，不能仅凭客户端提供的 scopeId 获得执行权限。
  */

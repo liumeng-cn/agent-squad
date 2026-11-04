@@ -1,12 +1,8 @@
 package com.agentsquad.squad.common.exception;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseStatus;
-
 /**
  * 目标资源不存在或对当前操作者不可见。
  */
-@ResponseStatus(HttpStatus.NOT_FOUND)
 public class ResourceNotFoundException extends RuntimeException {
 
     public ResourceNotFoundException(String message) {

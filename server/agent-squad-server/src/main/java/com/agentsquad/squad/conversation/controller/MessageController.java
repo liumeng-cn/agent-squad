@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 对话消息提交HTTP边界。
+ * 对话消息提交接口
  * <p>
  * 首发可原子创建会话，后续按归属会话受理；用户身份只取登录态，不从请求接受任务或Scope身份。
  */

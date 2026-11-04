@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 原生会话投影水位与任务进度的数据库访问边界。
+ * 原生会话投影水位与任务进度的数据访问
  */
 @Mapper
 public interface ProjectionMapper {

@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 操作账本 HTTP 边界。查询公开给属主；核对是唯一的账本状态人工入口。
+ * 操作账本接口。查询公开给属主；核对是唯一的账本状态人工入口
  */
 @RestController
 @RequestMapping("/api/v1")

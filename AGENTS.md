@@ -37,7 +37,7 @@
 
 ## HTTP 响应约定
 
-- 所有业务 JSON 接口统一返回 `ApiResult<T>`（`code`、`data`、`msg`），成功码为 `0`，错误码取自 `ApiCode` 并沿用 HTTP 状态码。
+- 所有业务 JSON 接口统一返回 `ApiResult<T>`（`code`、`data`、`msg`），成功码为 `0`，业务拒绝统一使用 HTTP 200，错误码取自 `ApiCode`，前端通过 `code` 判断业务结果；HTTP 错误状态用于协议或服务故障。
 - 控制器直接返回 `ApiResult.success(data)`，异常处理返回 `ApiResult.error(ApiCode..., msg)`；不使用 `ResponseBodyAdvice` 自动包装，避免遗漏与重复包装。
 - 仅 SSE 事件流与文件下载保持原始结构；新增业务接口不得直接返回裸 DTO、临时 `Map` 或无内容响应。
 - 前端统一通过 `shared/api/http.ts` 解包 `data`，按 `code` 判断成功与失败，业务代码不直接读取响应包装字段。

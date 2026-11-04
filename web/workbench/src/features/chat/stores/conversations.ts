@@ -148,7 +148,7 @@ export const useConversationsStore = defineStore('conversations', {
       } catch (cause) {
         if (current !== epoch || id !== this.activeConversationId) return false
         this.error = errorMessage(cause)
-        if (cause instanceof ApiError && [401, 403, 404].includes(cause.status)) {
+        if (cause instanceof ApiError && [401, 403, 404].includes(cause.code)) {
           this.unavailable = true; this.snapshot = null; this.messages = []; this.executionHistory = []; this.taskHistory = []; stream?.close()
         }
         return false

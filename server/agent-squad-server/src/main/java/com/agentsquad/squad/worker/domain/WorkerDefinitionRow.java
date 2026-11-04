@@ -3,7 +3,7 @@ package com.agentsquad.squad.worker.domain;
 import com.agentsquad.squad.common.enums.worker.WorkerDefinitionStatus;
 
 /**
- * Worker 能力定义持久投影。
+ * Worker 能力定义数据库记录
  * <p>
  * 定义正文发布后不可修改；状态和乐观版本可单独变更。
  */

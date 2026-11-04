@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * 沙箱执行与固定会话身份的持久边界。
+ * 沙箱执行与固定会话身份的数据访问
  * <p>
  * 原生调用和业务键分别去重；运行失联不自动回到待执行状态。
  */

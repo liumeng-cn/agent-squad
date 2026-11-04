@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Param;
 import java.time.LocalDateTime;
 
 /**
- * 用户消息受理的事务持久边界。
+ * 用户消息受理的事务数据写入
  * <p>
  * 会话行锁下分配消息与公开水位；命令唯一键裁决首发并发，不在此调用模型。
  */

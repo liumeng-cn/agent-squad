@@ -27,7 +27,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * 产物 HTTP 传输边界。
+ * 产物接口
  * <p>
  * 下载始终使用附件响应与 nosniff，归属与内容完整性由应用服务重新校验。
  */

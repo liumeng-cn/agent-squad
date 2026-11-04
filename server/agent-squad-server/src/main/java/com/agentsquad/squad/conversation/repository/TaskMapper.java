@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 用户目标 SQL 边界，不将框架执行记录伪装成任务状态。
+ * 用户目标 数据访问，不将框架执行记录伪装成任务状态
  */
 @Mapper
 public interface TaskMapper {

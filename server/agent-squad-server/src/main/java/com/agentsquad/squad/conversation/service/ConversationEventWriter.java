@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 
 /**
- * 执行事实到会话事件的事务写入边界。
+ * 在事务中将执行结果写入会话事件
  * <p>
  * 调用方先持有会话锁；删除期间仍可结算运行事实，但不重新公开会话内容。
  */

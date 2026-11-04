@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 会话读投影与任务交付消息的持久边界。
+ * 会话读投影与任务交付消息的数据访问
  * <p>
  * 查询始终按用户与会话限定，写入由持有会话锁的公开事件服务调用。
  */

@@ -73,7 +73,7 @@ public class ModelBudgetMiddleware implements MiddlewareBase {
     }
 
     /**
-     * WorkerFactory 可用固定 Definition 的模型 Profile 复用同一预留边界。
+     * WorkerFactory 可用固定 Definition 的模型 Profile 复用同一预算预留流程
      */
     public Flux<AgentEvent> onModelCallForProfile(String profileKey, RuntimeContext context,
                                                    ModelCallInput input,

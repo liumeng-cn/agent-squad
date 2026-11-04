@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
  * 附件材料正文格式化工具。
  * <p>
  * 按媒体类型规范化用户材料：JSON 美化、CSV 结构化、Markdown 与纯文本保留原文。
- * 截断时追加明确标记，供审计与模型理解边界。
+ * 截断时追加明确标记，说明内容已被截断，便于审计和模型识别。
  */
 public final class MaterialFormatter {
 

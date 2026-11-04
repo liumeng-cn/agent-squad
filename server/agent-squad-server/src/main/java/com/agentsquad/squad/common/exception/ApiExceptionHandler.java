@@ -19,7 +19,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import java.util.Map;
 
 /**
- * 将身份和业务错误统一转换为 HTTP 状态，不向客户端返回数据库或模型异常细节。
+ * 将身份和业务错误统一转换为 ApiResult 业务码，不向客户端返回数据库或模型异常细节。
  * <p>
  * 未单独处理的异常只记录受限字段与错误分类，响应体保持通用提示。
  */
@@ -32,21 +32,46 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(AuthenticationRequiredException.class)
     public ResponseEntity<ApiResult<Void>> unauthenticated(AuthenticationRequiredException exception) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+        return ResponseEntity.ok()
                 .body(ApiResult.error(ApiCode.UNAUTHORIZED, exception.getMessage()));
     }
 
     @ExceptionHandler(RuntimeBusinessException.class)
     public ResponseEntity<ApiResult<Void>> businessError(RuntimeBusinessException exception) {
-        HttpStatus status = switch (exception.code()) {
-            case EXPIRED -> HttpStatus.GONE;
-            case NOT_FOUND -> HttpStatus.NOT_FOUND;
-            case FORBIDDEN -> HttpStatus.FORBIDDEN;
-            case CONFLICT -> HttpStatus.CONFLICT;
-            case VALIDATION -> HttpStatus.BAD_REQUEST;
+        ApiCode code = switch (exception.code()) {
+            case EXPIRED -> ApiCode.GONE;
+            case NOT_FOUND -> ApiCode.NOT_FOUND;
+            case FORBIDDEN -> ApiCode.FORBIDDEN;
+            case CONFLICT -> ApiCode.CONFLICT;
+            case VALIDATION -> ApiCode.BAD_REQUEST;
         };
-        return ResponseEntity.status(status)
-                .body(ApiResult.error(ApiCode.fromCode(status.value()), exception.getMessage()));
+        return ResponseEntity.ok()
+                .body(ApiResult.error(code, exception.getMessage()));
+    }
+
+    /**
+     * 已识别的业务拒绝使用 HTTP 200，具体原因由响应业务码表达。
+     */
+    @ExceptionHandler({ AuthConflictException.class, AuthForbiddenException.class, InvalidRequestException.class,
+            PasswordChangeRequiredException.class, PermissionDeniedException.class, RateLimitedException.class,
+            ResourceNotFoundException.class, StateConflictException.class, ValidationFailedException.class })
+    public ResponseEntity<ApiResult<Void>> rejected(RuntimeException exception) {
+        ApiCode code;
+        if (exception instanceof AuthConflictException || exception instanceof StateConflictException) {
+            code = ApiCode.CONFLICT;
+        } else if (exception instanceof AuthForbiddenException || exception instanceof PermissionDeniedException
+                || exception instanceof PasswordChangeRequiredException) {
+            code = ApiCode.FORBIDDEN;
+        } else if (exception instanceof ResourceNotFoundException) {
+            code = ApiCode.NOT_FOUND;
+        } else if (exception instanceof RateLimitedException) {
+            code = ApiCode.TOO_MANY_REQUESTS;
+        } else if (exception instanceof ValidationFailedException) {
+            code = ApiCode.VALIDATION_FAILED;
+        } else {
+            code = ApiCode.BAD_REQUEST;
+        }
+        return ResponseEntity.ok(ApiResult.error(code, exception.getMessage()));
     }
 
     /**

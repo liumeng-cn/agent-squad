@@ -13,7 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 连接管理 HTTP 边界。归属取认证会话；密钥只在请求体出现，任何响应不回显。
+ * 连接管理接口。归属取认证会话；密钥只在请求体出现，任何响应不回显
  */
 @RestController
 @RequestMapping("/api/v1")

@@ -57,7 +57,7 @@ async function save(): Promise<void> {
     await load()
   } catch (cause) {
     error.value = errorMessage(cause)
-    if (cause instanceof ApiError && cause.status === 409) {
+    if (cause instanceof ApiError && cause.code === 409) {
       error.value = '记忆版本或状态已变化。你的草稿已保留，请重新选择最新记录后核对保存。'
       await load()
     }
@@ -74,7 +74,7 @@ async function remove(memory: Memory): Promise<void> {
     await load()
   } catch (cause) {
     error.value = errorMessage(cause)
-    if (cause instanceof ApiError && cause.status === 409) await load()
+    if (cause instanceof ApiError && cause.code === 409) await load()
   } finally { saving.value = false }
 }
 </script>

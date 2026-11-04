@@ -81,7 +81,7 @@ async function apply(update: Omit<ConnectionUpdate, 'expectedVersion'>) {
     await load()
   } catch (cause) {
     error.value = errorMessage(cause)
-    if (cause instanceof ApiError && cause.status === 409) {
+    if (cause instanceof ApiError && cause.code === 409) {
       error.value = '连接版本已变化，已刷新到最新版本；你的草稿仍在，请核对后重新提交。'
       await load()
       const latest = items.value.find(item => item.connectionId === connectionId)

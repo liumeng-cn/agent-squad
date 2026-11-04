@@ -5,9 +5,10 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * 最终交付位持久边界。
+ * 用户请求的最终答复记录读写
  * <p>
- * 所有修改由业务事务持锁执行，不按模型正文推断交付归属。
+ * 记录由回复执行或目标任务负责发布最终答复，以及答复是否已发布或关闭。
+ * 修改时由业务事务持有行锁；负责发布的执行记录由数据库关联确定，不从模型正文推断。
  */
 @Mapper
 public interface FinalDeliveryMapper {

@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 持久交互 HTTP 边界。用户归属只取认证会话；答复受理返回命令回执，不代表模型已收到。
+ * 持久交互接口。用户归属只取认证会话；答复受理返回命令回执，不代表模型已收到
  * 交互仅在投递启用时存在，接口随投递开关启用。
  */
 @RestController

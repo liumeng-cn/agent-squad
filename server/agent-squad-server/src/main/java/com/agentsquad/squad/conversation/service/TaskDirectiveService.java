@@ -43,7 +43,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * 用户目标修改的受理、协调与应用边界。
+ * 受理用户目标修改请求，协调执行并应用修改
  * <p>
  * 回复Master只保存建议，任务Master在安全点作出决定；原预算与SDK绑定不更换，旧计划在应用事务中失效。
  */

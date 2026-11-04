@@ -1,12 +1,8 @@
 package com.agentsquad.squad.common.exception;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseStatus;
-
 /**
  * 已认证但无目标操作权限。
  */
-@ResponseStatus(HttpStatus.FORBIDDEN)
 public class PermissionDeniedException extends RuntimeException {
 
     public PermissionDeniedException() {

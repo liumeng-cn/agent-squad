@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 当前用户的技能导入、查询与授权 HTTP 边界。
+ * 当前用户的技能导入、查询与授权接口
  * <p>
  * 身份只来自服务端 Cookie；写请求验证 CSRF，业务事务与不可变规则交由技能服务。
  */

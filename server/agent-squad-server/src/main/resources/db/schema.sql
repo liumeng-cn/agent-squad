@@ -222,8 +222,8 @@ CREATE TABLE IF NOT EXISTS `sq_context_snapshot`
     `task_id`                 char(36)     NOT NULL COMMENT '所属目标ID',
     `target_node_key`         varchar(80)  NOT NULL COMMENT '目标计划节点键',
     `logical_key`             varchar(160) NOT NULL COMMENT '快照幂等逻辑键',
-    `conversation_generation` bigint       NOT NULL COMMENT '冻结时的对话代际',
-    `memory_revision`         bigint       NOT NULL DEFAULT '0' COMMENT '记忆授权代际；D3 无长期记忆时为0',
+    `conversation_generation` bigint       NOT NULL COMMENT '上下文固定时的对话版本号',
+    `memory_revision`         bigint       NOT NULL DEFAULT '0' COMMENT '上下文固定时的记忆授权版本号；未使用长期记忆时为0',
     `items_json`              json         NOT NULL COMMENT '经平台验证的局部材料及来源',
     `token_estimate`          bigint       NOT NULL COMMENT '局部材料令牌估算',
     `content_hash`            char(64)     NOT NULL COMMENT '局部材料规范化SHA256摘要',
@@ -262,7 +262,7 @@ CREATE TABLE IF NOT EXISTS `sq_conversation`
     `last_update_time`       datetime(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '最后更新时间',
     `del_flag`               char(1)      NOT NULL DEFAULT '0' COMMENT '删除标志[0-否,1-是]',
     `message_seq`            bigint       NOT NULL DEFAULT '0' COMMENT '已分配的会话消息序号',
-    `conversation_event_seq` bigint       NOT NULL DEFAULT '0' COMMENT '会话公开事件水位',
+    `conversation_event_seq` bigint       NOT NULL DEFAULT '0' COMMENT '会话最新公开事件序号',
     `title_source`           varchar(20)  NOT NULL DEFAULT 'LEGACY' COMMENT '标题来源[LEGACY,FALLBACK,AUTO_PENDING,AUTO,MANUAL]',
     `title_version`          bigint       NOT NULL DEFAULT '0' COMMENT '标题独立乐观版本',
     `last_activity_at`       datetime(3)           DEFAULT NULL COMMENT '最后用户交流或助手交付时间',
@@ -276,7 +276,7 @@ CREATE TABLE IF NOT EXISTS `sq_conversation_event`
     `id`                bigint       NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `user_id`           char(36)     NOT NULL COMMENT '资源归属用户ID',
     `conversation_id`   char(36)     NOT NULL COMMENT '所属会话ID',
-    `generation`        bigint       NOT NULL COMMENT '事件所属会话代际',
+    `generation`        bigint       NOT NULL COMMENT '事件所属会话版本号',
     `event_seq`         bigint       NOT NULL COMMENT '会话内递增公开事件序号',
     `producer_key`      varchar(200) NOT NULL COMMENT '稳定生产事件键',
     `event_type`        varchar(64)  NOT NULL COMMENT '公开事件类型',
@@ -322,7 +322,7 @@ CREATE TABLE IF NOT EXISTS `sq_execution_failure`
     UNIQUE KEY `uk_execution_failure_source` (`user_id`, `scope_id`, `failure_key`),
     KEY `idx_failure_scope` (`user_id`, `scope_id`, `id`)
 ) ENGINE = InnoDB
-    COMMENT ='执行的结构化故障事实';
+    COMMENT ='执行故障记录';
 
 CREATE TABLE IF NOT EXISTS `sq_execution_scope`
 (
@@ -330,7 +330,7 @@ CREATE TABLE IF NOT EXISTS `sq_execution_scope`
     `scope_id`                 char(36)    NOT NULL COMMENT '执行作用域业务ID',
     `user_id`                  char(36)    NOT NULL COMMENT '资源归属用户ID',
     `conversation_id`          char(36)    NOT NULL COMMENT '所属会话ID',
-    `conversation_generation`  bigint      NOT NULL COMMENT '受理时会话代际',
+    `conversation_generation`  bigint      NOT NULL COMMENT '请求受理时的会话版本号',
     `kind`                     varchar(16) NOT NULL COMMENT '归属类型[RESPONSE,TASK]',
     `owner_id`                 char(36)    NOT NULL COMMENT '回复执行或目标业务ID',
     `account_id`               char(36)    NOT NULL COMMENT '共享预算账户ID',
@@ -350,7 +350,7 @@ CREATE TABLE IF NOT EXISTS `sq_execution_scope`
     KEY `fk_scope_conversation` (`user_id`, `conversation_id`),
     KEY `fk_scope_account` (`user_id`, `account_id`)
 ) ENGINE = InnoDB
-    COMMENT ='统一执行归属与授权边界';
+    COMMENT ='执行范围与用户、会话、回复或目标任务的关联';
 
 CREATE TABLE IF NOT EXISTS `sq_goal_task`
 (
@@ -360,11 +360,11 @@ CREATE TABLE IF NOT EXISTS `sq_goal_task`
     `conversation_id`             char(36)    NOT NULL COMMENT '所属对话ID',
     `status`                      varchar(24) NOT NULL COMMENT '产品状态',
     `version`                     bigint      NOT NULL DEFAULT '0' COMMENT '业务版本',
-    `event_seq`                   bigint      NOT NULL DEFAULT '0' COMMENT '公开事件水位',
+    `event_seq`                   bigint      NOT NULL DEFAULT '0' COMMENT '最新公开事件序号',
     `input_json`                  json        NOT NULL COMMENT '规范化用户输入',
     `plan_version`                bigint      NOT NULL DEFAULT '0' COMMENT '计划版本',
     `answer_revision`             bigint      NOT NULL DEFAULT '0' COMMENT '用户可见最终答案版本',
-    `cancel_requested_at`         datetime(3)          DEFAULT NULL COMMENT '取消意图时间，完成裁决屏障',
+    `cancel_requested_at`         datetime(3)          DEFAULT NULL COMMENT '取消请求时间，用于判断是否允许提交完成结果',
     `completion_proposal_json`    json                 DEFAULT NULL COMMENT 'Master 提交的完成候选，非最终结果',
     `proposal_binding_id`         char(36)             DEFAULT NULL COMMENT '候选来源绑定ID',
     `proposal_turn_id`            varchar(64)          DEFAULT NULL COMMENT '候选来源原生TurnID',
@@ -460,7 +460,7 @@ CREATE TABLE IF NOT EXISTS `sq_memory_revision`
 (
     `id`                bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `user_id`           char(36)    NOT NULL COMMENT '归属用户ID',
-    `revision`          bigint      NOT NULL DEFAULT '0' COMMENT '纠正和删除推进的上下文失效代际',
+    `revision`          bigint      NOT NULL DEFAULT '0' COMMENT '记忆纠正或删除时递增的版本号，用于使旧上下文失效',
     `creator_id`        varchar(36) NOT NULL DEFAULT '' COMMENT '创建人ID',
     `creator_name`      varchar(50) NOT NULL DEFAULT '' COMMENT '创建人姓名',
     `create_time`       datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
@@ -471,15 +471,15 @@ CREATE TABLE IF NOT EXISTS `sq_memory_revision`
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_memory_revision_user` (`user_id`)
 ) ENGINE = InnoDB
-    COMMENT ='用户记忆失效代际';
+    COMMENT ='用户记忆版本记录，用于判断旧上下文是否失效';
 
 CREATE TABLE IF NOT EXISTS `sq_memory_scope`
 (
     `id`                bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
     `user_id`           char(36)    NOT NULL COMMENT '归属用户ID',
     `scope_id`          char(36)    NOT NULL COMMENT '受权执行作用域业务ID',
-    `memory_revision`   bigint      NOT NULL COMMENT '冻结时用户记忆失效代际',
-    `barrier_status`    varchar(16) NOT NULL DEFAULT 'CURRENT' COMMENT '上下文屏障[CURRENT,BLOCKED]',
+    `memory_revision`   bigint      NOT NULL COMMENT '上下文固定时的用户记忆版本号',
+    `barrier_status`    varchar(16) NOT NULL DEFAULT 'CURRENT' COMMENT '上下文可用状态[CURRENT-可用,BLOCKED-禁止使用]',
     `creator_id`        varchar(36) NOT NULL DEFAULT '' COMMENT '创建人ID',
     `creator_name`      varchar(50) NOT NULL DEFAULT '' COMMENT '创建人姓名',
     `create_time`       datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
@@ -648,7 +648,7 @@ CREATE TABLE IF NOT EXISTS `sq_operation`
     `executor_fence`      bigint       NOT NULL DEFAULT '0' COMMENT '独立执行器栅栏',
     `executor_until`      datetime(3)           DEFAULT NULL COMMENT '执行器租约',
     `external_key`        varchar(200)          DEFAULT NULL COMMENT '外部幂等或查询关联号',
-    `result_json`         json                  DEFAULT NULL COMMENT '可信连接器结果或核对事实',
+    `result_json`         json                  DEFAULT NULL COMMENT '可信连接器返回结果或人工核对结果',
     `creator_id`          varchar(36)  NOT NULL DEFAULT '' COMMENT '创建人ID',
     `creator_name`        varchar(50)  NOT NULL DEFAULT '' COMMENT '创建人姓名',
     `create_time`         datetime(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
@@ -728,7 +728,7 @@ CREATE TABLE IF NOT EXISTS `sq_response_execution`
     `version`                  bigint      NOT NULL DEFAULT '0' COMMENT '业务乐观版本',
     `answer_message_id`        char(36)             DEFAULT NULL COMMENT '授权助手回答消息ID',
     `cancel_requested_at`      datetime(3)          DEFAULT NULL COMMENT '停止回答意图时间',
-    `completion_proposal_json` json                 DEFAULT NULL COMMENT '待原生成功后裁决的完成候选',
+    `completion_proposal_json` json                 DEFAULT NULL COMMENT '待 AgentScope 执行成功后确认的完成结果',
     `proposal_turn_id`         varchar(64)          DEFAULT NULL COMMENT '完成候选来源原生TurnID',
     `proposal_hash`            char(64)             DEFAULT NULL COMMENT '完成候选规范化摘要',
     `correction_count`         int         NOT NULL DEFAULT '0' COMMENT '无效完成候选纠正次数',
@@ -766,7 +766,7 @@ CREATE TABLE IF NOT EXISTS `sq_runtime_binding`
     `agent_id`             char(32)    NOT NULL COMMENT '固定能力版本标识',
     `framework_session_id` char(36)    NOT NULL COMMENT '原生会话ID',
     `status`               varchar(24) NOT NULL COMMENT '生命周期状态',
-    `native_event_cursor`  bigint      NOT NULL DEFAULT '0' COMMENT '已投影的 AgentScope 日志序号',
+    `native_event_cursor`  bigint      NOT NULL DEFAULT '0' COMMENT '已同步到业务记录的 AgentScope 日志序号',
     `next_projection_at`   datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '下次读取原生日志时间',
     `creator_id`           varchar(36) NOT NULL DEFAULT '' COMMENT '创建人ID',
     `creator_name`         varchar(50) NOT NULL DEFAULT '' COMMENT '创建人姓名',
@@ -776,7 +776,7 @@ CREATE TABLE IF NOT EXISTS `sq_runtime_binding`
     `last_update_time`     datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '最后更新时间',
     `del_flag`             char(1)     NOT NULL DEFAULT '0' COMMENT '删除标志[0-否,1-是]',
     `scope_id`             char(36)             DEFAULT NULL COMMENT '统一执行作用域ID',
-    `last_ended_turn_id`   varchar(64)          DEFAULT NULL COMMENT '已完成业务投影的最近原生TurnID',
+    `last_ended_turn_id`   varchar(64)          DEFAULT NULL COMMENT '最近已同步到业务记录的 AgentScope 回合ID',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_owner_binding` (`user_id`, `binding_id`),
     KEY `fk_binding_task` (`user_id`, `task_id`),
@@ -859,7 +859,7 @@ CREATE TABLE IF NOT EXISTS `sq_scope_skill_ref`
     `scope_id`               char(36)    NOT NULL COMMENT '固定引用执行作用域ID',
     `skill_version_id`       char(36)    NOT NULL COMMENT '固定技能版本ID',
     `content_hash`           char(64)    NOT NULL COMMENT '固定技能内容摘要',
-    `authorization_revision` bigint      NOT NULL COMMENT '固定时的安全授权代际',
+    `authorization_revision` bigint      NOT NULL COMMENT '执行所用的安全授权版本号',
     `creator_id`             varchar(36) NOT NULL DEFAULT '' COMMENT '创建人ID',
     `creator_name`           varchar(50) NOT NULL DEFAULT '' COMMENT '创建人姓名',
     `create_time`            datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
@@ -945,7 +945,7 @@ CREATE TABLE IF NOT EXISTS `sq_skill_version`
     `content_hash`           char(64)      NOT NULL COMMENT '规范化文本包SHA256摘要',
     `required_tools_json`    json          NOT NULL COMMENT '使用技能所需工具名称列表',
     `status`                 varchar(20)   NOT NULL DEFAULT 'ENABLED' COMMENT '版本状态[ENABLED,REVOKED]',
-    `authorization_revision` bigint        NOT NULL DEFAULT '0' COMMENT '安全授权代际',
+    `authorization_revision` bigint        NOT NULL DEFAULT '0' COMMENT '安全授权版本号',
     `creator_id`             varchar(36)   NOT NULL DEFAULT '' COMMENT '创建人ID',
     `creator_name`           varchar(50)   NOT NULL DEFAULT '' COMMENT '创建人姓名',
     `create_time`            datetime(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
@@ -985,7 +985,7 @@ CREATE TABLE IF NOT EXISTS `sq_task_directive`
     `directive_id`            char(36)     NOT NULL COMMENT '目标修订指令业务ID',
     `user_id`                 char(36)     NOT NULL COMMENT '归属用户ID',
     `conversation_id`         char(36)     NOT NULL COMMENT '归属会话ID',
-    `conversation_generation` bigint       NOT NULL COMMENT '受理时会话代际',
+    `conversation_generation` bigint       NOT NULL COMMENT '请求受理时的会话版本号',
     `source_message_id`       char(36)     NOT NULL COMMENT '受权用户消息ID',
     `source_scope_id`         char(36)     NOT NULL COMMENT '来源回复执行作用域ID',
     `task_id`                 char(36)     NOT NULL COMMENT '当前受权目标ID',
@@ -1019,7 +1019,7 @@ CREATE TABLE IF NOT EXISTS `sq_task_directive`
     KEY `fk_directive_conversation` (`user_id`, `conversation_id`),
     KEY `fk_directive_source` (`user_id`, `source_message_id`)
 ) ENGINE = InnoDB
-    COMMENT ='用户目标修改的持久受理与应用事实';
+    COMMENT ='用户目标修改请求及处理结果';
 
 CREATE TABLE IF NOT EXISTS `sq_task_event`
 (
@@ -1138,7 +1138,7 @@ CREATE TABLE IF NOT EXISTS sq_user
     password_hash        VARCHAR(255)    NOT NULL COMMENT 'BCrypt密码摘要',
     role                 VARCHAR(16)     NOT NULL DEFAULT 'USER' COMMENT 'USER或ADMIN',
     status               VARCHAR(16)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE或DISABLED',
-    auth_version         BIGINT          NOT NULL DEFAULT 0 COMMENT '认证撤销代际',
+    auth_version         BIGINT          NOT NULL DEFAULT 0 COMMENT '认证版本号，用于使旧登录会话失效',
     version              BIGINT          NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
     must_change_password TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '首次需修改密码',
     creator_id           VARCHAR(36)     NOT NULL DEFAULT '' COMMENT '创建者',
@@ -1217,7 +1217,7 @@ CREATE TABLE IF NOT EXISTS sq_runtime_admission_slot
     action       VARCHAR(32) NOT NULL COMMENT '原始命令动作',
     turn_id      VARCHAR(64)          DEFAULT NULL COMMENT '原生执行回合ID',
     run_id       VARCHAR(64)          DEFAULT NULL COMMENT '恢复命令的新原生Run标识',
-    claim_cursor BIGINT NOT NULL DEFAULT 0 COMMENT '领取时已投影原生事件序号',
+    claim_cursor BIGINT NOT NULL DEFAULT 0 COMMENT '领取命令时已同步到业务记录的 AgentScope 事件序号',
     status       VARCHAR(16) NOT NULL COMMENT 'ACTIVE或RELEASED',
     acquired_at  DATETIME(3) NOT NULL COMMENT '占位获取时间UTC',
     released_at  DATETIME(3)          DEFAULT NULL COMMENT '占位释放时间UTC',
@@ -1229,14 +1229,14 @@ CREATE TABLE IF NOT EXISTS sq_runtime_admission_slot
 CREATE TABLE IF NOT EXISTS `sq_final_delivery`
 (
     `id`                   bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
-    `delivery_id`          char(36)    NOT NULL COMMENT '最终交付业务ID',
+    `delivery_id`          char(36)    NOT NULL COMMENT '最终答复记录业务ID',
     `user_id`              char(36)    NOT NULL COMMENT '归属用户ID',
     `source_message_id`    char(36)    NOT NULL COMMENT '原始用户消息ID',
-    `delivery_generation` bigint      NOT NULL COMMENT '显式重做交付代际',
-    `owner_type`           varchar(16) NOT NULL COMMENT '权威所有者类型RESPONSE或TASK',
-    `owner_id`             char(36)    NOT NULL COMMENT '权威回复执行或目标ID',
-    `state`                varchar(16) NOT NULL COMMENT '交付状态OWNED或PUBLISHED或CLOSED',
-    `published_message_id` char(36)    NULL COMMENT '已发布最终消息ID',
+    `delivery_generation` bigint      NOT NULL COMMENT '用户明确要求重新生成答复时的版本号',
+    `owner_type`           varchar(16) NOT NULL COMMENT '负责发布答复的类型[RESPONSE-回复执行,TASK-目标任务]',
+    `owner_id`             char(36)    NOT NULL COMMENT '负责发布答复的回复执行ID或目标任务ID',
+    `state`                varchar(16) NOT NULL COMMENT '答复状态[OWNED-已指定负责人,PUBLISHED-已发布,CLOSED-已关闭]',
+    `published_message_id` char(36)    NULL COMMENT '已发布的最终答复消息ID',
     `creator_id`           varchar(36) NOT NULL DEFAULT '' COMMENT '创建人ID',
     `creator_name`         varchar(50) NOT NULL DEFAULT '' COMMENT '创建人姓名',
     `create_time`          datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
@@ -1249,7 +1249,7 @@ CREATE TABLE IF NOT EXISTS `sq_final_delivery`
     UNIQUE KEY `uk_final_delivery_generation` (`user_id`, `source_message_id`, `delivery_generation`),
     UNIQUE KEY `uk_final_delivery_owner` (`user_id`, `owner_type`, `owner_id`),
     UNIQUE KEY `uk_final_delivery_message` (`published_message_id`)
-) ENGINE = InnoDB COMMENT ='同源请求最终交付权';
+) ENGINE = InnoDB COMMENT ='用户请求的最终答复负责人及发布记录';
 
 -- 本地测试账号，密码只以BCrypt摘要保存：
 -- admin / admin-password（管理员）；demo / demo-password（普通用户）。

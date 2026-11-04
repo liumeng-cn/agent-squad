@@ -40,7 +40,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
- * 目标受理和查询 HTTP 边界。用户归属只取认证会话，不接受可伪造的身份请求头。
+ * 目标受理和查询接口。用户归属只取认证会话，不接受可伪造的身份请求头
  *
  * <p>Controller 负责参数和协议；事务、幂等、归属与持久事件由 GoalTaskService 负责。</p>
  */

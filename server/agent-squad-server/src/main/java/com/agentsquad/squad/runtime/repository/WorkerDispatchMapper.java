@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Param;
 import java.time.LocalDateTime;
 
 /**
- * Worker Binding、业务 guard 和结果候选的数据库访问边界。
+ * Worker Binding、业务 guard 和结果候选的数据访问
  */
 @Mapper
 public interface WorkerDispatchMapper {

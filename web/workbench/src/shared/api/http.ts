@@ -3,14 +3,15 @@ import type { ApiResult } from './types'
 
 /**
  * 统一 HTTP 出口：同源 Cookie、写请求自动附 CSRF、幂等键与版本头；
- * 401 触发注册的跳转回调，错误统一收敛为 ApiError。
+ * 业务码 401 触发注册的跳转回调，错误统一收敛为 ApiError。
  *
  * 后端业务接口统一返回 {@link ApiResult}，本层负责解包 data 并在业务码非成功时抛出。
  */
 export class ApiError extends Error {
   constructor(
-    readonly status: number,
+    readonly code: number,
     message: string,
+    readonly status: number = 0,
   ) {
     super(message)
     this.name = 'ApiError'
@@ -91,25 +92,26 @@ async function request<T>(method: string, path: string, options: RequestOptions 
     throw new ApiError(0, '暂时无法确认请求结果，请检查连接后重试')
   } finally { clearTimeout(timeout) }
 
-  if (response.status === 401) {
-    clearCsrfToken()
-    unauthorizedHandler?.()
-  }
-  if (!response.ok) {
-    throw new ApiError(response.status, await readErrorMessage(response))
-  }
-  if (response.status === 204) {
-    return undefined as T
-  }
-  if (options.blob) return (await response.blob()) as T
-  const result: unknown = await response.json()
-  if (isApiResult(result) && result.code !== 0) {
-    throw new ApiError(response.status, result.msg || `请求失败（${response.status}）`)
+  // 下载成功时保留二进制响应；业务拒绝仍按 JSON 中的 code 处理。
+  const jsonResponse = response.headers.get('content-type')?.includes('json')
+  if (options.blob && response.ok && !jsonResponse) return (await response.blob()) as T
+  let result: unknown
+  try {
+    result = await response.json()
+  } catch {
+    throw new ApiError(0, `响应格式错误（HTTP ${response.status}）`, response.status)
   }
   if (isApiResult(result)) {
-    return result.data as T
+    if (result.code !== 0) {
+      if (result.code === 401) {
+        clearCsrfToken()
+        unauthorizedHandler?.()
+      }
+      throw new ApiError(result.code, result.msg || `操作失败（${result.code}）`, response.status)
+    }
+    if (response.ok) return result.data as T
   }
-  return result as T
+  throw new ApiError(0, `请求失败（HTTP ${response.status}）`, response.status)
 }
 
 function isApiResult(value: unknown): value is ApiResult<unknown> {
@@ -117,21 +119,6 @@ function isApiResult(value: unknown): value is ApiResult<unknown> {
       && 'code' in value && typeof (value as ApiResult<unknown>).code === 'number'
       && 'data' in value
       && 'msg' in value
-}
-
-async function readErrorMessage(response: Response): Promise<string> {
-  try {
-    const data: unknown = await response.json()
-    if (isApiResult(data) && typeof data.msg === 'string') {
-      return data.msg
-    }
-    if (data && typeof data === 'object' && typeof (data as { message?: unknown }).message === 'string') {
-      return (data as { message: string }).message
-    }
-  } catch {
-    // 非 JSON 错误体，回退到状态码文案
-  }
-  return `请求失败（${response.status}）`
 }
 
 export function errorMessage(error: unknown): string {

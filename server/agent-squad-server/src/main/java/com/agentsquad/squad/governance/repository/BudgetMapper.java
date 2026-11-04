@@ -8,7 +8,7 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
- * 预算预留 SQL 边界；usage_key 同键幂等，UNKNOWN 只能由核对流程出账。
+ * 预算预留 数据访问；usage_key 同键幂等，UNKNOWN 只能由核对流程出账
  */
 @Mapper
 public interface BudgetMapper {

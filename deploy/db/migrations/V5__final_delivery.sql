@@ -1,14 +1,14 @@
 CREATE TABLE IF NOT EXISTS `sq_final_delivery`
 (
     `id`                   bigint      NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
-    `delivery_id`          char(36)    NOT NULL COMMENT '最终交付业务ID',
+    `delivery_id`          char(36)    NOT NULL COMMENT '最终答复记录业务ID',
     `user_id`              char(36)    NOT NULL COMMENT '归属用户ID',
     `source_message_id`    char(36)    NOT NULL COMMENT '原始用户消息ID',
-    `delivery_generation` bigint      NOT NULL COMMENT '显式重做交付代际',
-    `owner_type`           varchar(16) NOT NULL COMMENT '权威所有者类型RESPONSE或TASK',
-    `owner_id`             char(36)    NOT NULL COMMENT '权威回复执行或目标ID',
-    `state`                varchar(16) NOT NULL COMMENT '交付状态OWNED或PUBLISHED或CLOSED',
-    `published_message_id` char(36)    NULL COMMENT '已发布最终消息ID',
+    `delivery_generation` bigint      NOT NULL COMMENT '用户明确要求重新生成答复时的版本号',
+    `owner_type`           varchar(16) NOT NULL COMMENT '负责发布答复的类型[RESPONSE-回复执行,TASK-目标任务]',
+    `owner_id`             char(36)    NOT NULL COMMENT '负责发布答复的回复执行ID或目标任务ID',
+    `state`                varchar(16) NOT NULL COMMENT '答复状态[OWNED-已指定负责人,PUBLISHED-已发布,CLOSED-已关闭]',
+    `published_message_id` char(36)    NULL COMMENT '已发布的最终答复消息ID',
     `creator_id`           varchar(36) NOT NULL DEFAULT '' COMMENT '创建人ID',
     `creator_name`         varchar(50) NOT NULL DEFAULT '' COMMENT '创建人姓名',
     `create_time`          datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
@@ -21,4 +21,4 @@ CREATE TABLE IF NOT EXISTS `sq_final_delivery`
     UNIQUE KEY `uk_final_delivery_generation` (`user_id`, `source_message_id`, `delivery_generation`),
     UNIQUE KEY `uk_final_delivery_owner` (`user_id`, `owner_type`, `owner_id`),
     UNIQUE KEY `uk_final_delivery_message` (`published_message_id`)
-) ENGINE = InnoDB COMMENT ='同源请求最终交付权';
+) ENGINE = InnoDB COMMENT ='用户请求的最终答复负责人及发布记录';

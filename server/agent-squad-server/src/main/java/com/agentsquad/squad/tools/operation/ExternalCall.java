@@ -1,7 +1,7 @@
 package com.agentsquad.squad.tools.operation;
 
 /**
- * 外部连接器调用边界。
+ * 外部连接器调用接口
  * <p>
  * 接收操作账本分配的幂等键，并返回可持久化的执行结果 JSON。
  */

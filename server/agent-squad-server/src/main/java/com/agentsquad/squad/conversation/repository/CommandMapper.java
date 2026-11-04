@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Param;
 import java.time.LocalDateTime;
 
 /**
- * 持久命令和幂等收据 SQL 边界；按归属、作用域与调用键定位原命令。
+ * 持久命令和幂等收据 数据访问；按归属、作用域与调用键定位原命令
  */
 @Mapper
 public interface CommandMapper {

@@ -1,7 +1,7 @@
 package com.agentsquad.squad.conversation.domain;
 
 /**
- * 回复生命周期的持久裁决事实。
+ * 回复生命周期状态记录。
  * <p>
  * 与绑定、来源和完成候选同读，原生成功前不将候选正文公开。
  */

@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
 
 /**
- * 外部未知结果的持久公开边界。
+ * 保存结果未知的外部操作，并更新用户可见状态
  * <p>
  * CAS账本与结构化故障同事务写入，持有归属锁，不把发送异常判断为未执行，也不自动重发。
  */

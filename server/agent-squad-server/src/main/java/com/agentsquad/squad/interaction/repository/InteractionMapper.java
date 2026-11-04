@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 持久交互 SQL 边界；框架请求按 (user, binding, requestId) 唯一绑定，答复带版本 CAS。
+ * 持久交互 数据访问；框架请求按 (user, binding, requestId) 唯一绑定，答复带版本 CAS
  */
 @Mapper
 public interface InteractionMapper {

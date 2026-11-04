@@ -97,7 +97,7 @@ async function changeGrant(enabled: boolean) {
     await inspect(selected.skill.skillVersionId); await load()
   } catch (cause) {
     error.value = errorMessage(cause)
-    if (cause instanceof ApiError && cause.status === 409) {
+    if (cause instanceof ApiError && cause.code === 409) {
       const message = error.value; await inspect(selected.skill.skillVersionId); error.value = message
     }
   } finally { saving.value = false }

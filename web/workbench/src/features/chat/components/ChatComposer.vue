@@ -106,7 +106,7 @@ async function send() {
     resize(); emit('accepted', receipt)
   } catch (cause) {
     if (current !== generation) return
-    uncertain.value = cause instanceof ApiError && (cause.status === 0 || cause.status >= 500)
+    uncertain.value = cause instanceof ApiError && (cause.code === 0 || cause.code >= 500)
     saveDraft(previousKey)
     error.value = uncertain.value ? '暂时还未确认是否收到。内容已保留，请点击发送按钮确认，重复确认不会重复发送。' : errorMessage(cause)
   }

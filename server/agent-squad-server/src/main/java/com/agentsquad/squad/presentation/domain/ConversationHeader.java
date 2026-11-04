@@ -1,7 +1,7 @@
 package com.agentsquad.squad.presentation.domain;
 
 /**
- * 会话头与一致水位的持久读取投影。
+ * 会话头与一致水位的数据库查询结果
  * <p>
  * 字段只取同用户、同会话的已提交事实，不包含原生内部推理或运行候选。
  */

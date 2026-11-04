@@ -43,7 +43,7 @@ async function submit(approve?: boolean): Promise<void> {
     emit('refresh')
   } catch (cause) {
     error.value = errorMessage(cause)
-    if (cause instanceof ApiError && cause.status === 409) emit('refresh')
+    if (cause instanceof ApiError && cause.code === 409) emit('refresh')
   } finally { pending.value = false }
 }
 </script>

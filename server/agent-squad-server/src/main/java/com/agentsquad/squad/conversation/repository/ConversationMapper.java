@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
- * 对话 SQL 边界；任务受理时用行锁串行化同一会话。
+ * 对话 数据访问；任务受理时用行锁串行化同一会话
  */
 @Mapper
 public interface ConversationMapper {

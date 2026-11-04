@@ -5,7 +5,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * 隔离产物暂存与发布关联的持久边界。
+ * 隔离产物暂存与发布关联的数据访问
  * <p>
  * 暂存内容不通过下载入口公开，提交后记录唯一已发布产物ID。
  */

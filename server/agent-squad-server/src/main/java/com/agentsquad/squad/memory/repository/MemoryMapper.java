@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 显式记忆、授权代际及执行引用的持久边界。
+ * 显式记忆、授权代际及执行引用的数据访问
  * <p>
  * 不做SDK调用；写入方先锁用户记忆代际，再修改记忆与引用屏障，避免纠正与冻结交错。
  */
