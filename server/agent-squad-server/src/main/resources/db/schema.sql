@@ -1204,7 +1204,7 @@ CREATE TABLE IF NOT EXISTS sq_auth_audit
 
 CREATE TABLE IF NOT EXISTS sq_runtime_admission_counter
 (
-    pool_key     VARCHAR(80) NOT NULL COMMENT 'GLOBAL或USER:<user_id>',
+    pool_key     VARCHAR(80)  NOT NULL COMMENT 'GLOBAL或USER:<user_id>',
     active_count INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '当前活跃占位数量',
     PRIMARY KEY (pool_key)
 ) ENGINE = InnoDB COMMENT = '运行准入持久配额计数';
@@ -1217,7 +1217,7 @@ CREATE TABLE IF NOT EXISTS sq_runtime_admission_slot
     action       VARCHAR(32) NOT NULL COMMENT '原始命令动作',
     turn_id      VARCHAR(64)          DEFAULT NULL COMMENT '原生执行回合ID',
     run_id       VARCHAR(64)          DEFAULT NULL COMMENT '恢复命令的新原生Run标识',
-    claim_cursor BIGINT NOT NULL DEFAULT 0 COMMENT '领取命令时已同步到业务记录的 AgentScope 事件序号',
+    claim_cursor BIGINT      NOT NULL DEFAULT 0 COMMENT '领取命令时已同步到业务记录的 AgentScope 事件序号',
     status       VARCHAR(16) NOT NULL COMMENT 'ACTIVE或RELEASED',
     acquired_at  DATETIME(3) NOT NULL COMMENT '占位获取时间UTC',
     released_at  DATETIME(3)          DEFAULT NULL COMMENT '占位释放时间UTC',
@@ -1232,7 +1232,7 @@ CREATE TABLE IF NOT EXISTS `sq_final_delivery`
     `delivery_id`          char(36)    NOT NULL COMMENT '最终答复记录业务ID',
     `user_id`              char(36)    NOT NULL COMMENT '归属用户ID',
     `source_message_id`    char(36)    NOT NULL COMMENT '原始用户消息ID',
-    `delivery_generation` bigint      NOT NULL COMMENT '用户明确要求重新生成答复时的版本号',
+    `delivery_generation`  bigint      NOT NULL COMMENT '用户明确要求重新生成答复时的版本号',
     `owner_type`           varchar(16) NOT NULL COMMENT '负责发布答复的类型[RESPONSE-回复执行,TASK-目标任务]',
     `owner_id`             char(36)    NOT NULL COMMENT '负责发布答复的回复执行ID或目标任务ID',
     `state`                varchar(16) NOT NULL COMMENT '答复状态[OWNED-已指定负责人,PUBLISHED-已发布,CLOSED-已关闭]',
@@ -1254,15 +1254,15 @@ CREATE TABLE IF NOT EXISTS `sq_final_delivery`
 -- 本地测试账号，密码只以BCrypt摘要保存：
 -- admin / admin-password（管理员）；demo / demo-password（普通用户）。
 START TRANSACTION;
-INSERT IGNORE INTO sq_user (
-    user_id, username, display_name, password_hash, role, status,
-    auth_version, must_change_password, version,
-    creator_id, creator_name, last_updater_id, last_updater_name
-) VALUES
-    ('10000000-0000-0000-0000-000000000001', 'admin', 'admin', '$2a$10$7qNJyG0DkqrjkW9telHIJOMseipAcvS.kTaUWLjSLV9pmI.86XIw2', 'ADMIN', 'ACTIVE',
-     0, 0, 0, 'local-seed', '本地初始化', 'local-seed', '本地初始化'),
-    ('10000000-0000-0000-0000-000000000002', 'demo', 'demo', '$2a$10$dfGin3LTzMOEj0lR81x.I.9p7CYDJLXUwPqXTMe/qlszJwnXxJBcy', 'USER', 'ACTIVE',
-     0, 0, 0, 'local-seed', '本地初始化', 'local-seed', '本地初始化');
+INSERT IGNORE INTO sq_user (user_id, username, display_name, password_hash, role, status,
+                            auth_version, must_change_password, version,
+                            creator_id, creator_name, last_updater_id, last_updater_name)
+VALUES ('10000000-0000-0000-0000-000000000001', 'admin', 'admin',
+        '$2a$10$7qNJyG0DkqrjkW9telHIJOMseipAcvS.kTaUWLjSLV9pmI.86XIw2', 'ADMIN', 'ACTIVE',
+        0, 0, 0, 'local-seed', '本地初始化', 'local-seed', '本地初始化'),
+       ('10000000-0000-0000-0000-000000000002', 'demo', 'demo',
+        '$2a$10$dfGin3LTzMOEj0lR81x.I.9p7CYDJLXUwPqXTMe/qlszJwnXxJBcy', 'USER', 'ACTIVE',
+        0, 0, 0, 'local-seed', '本地初始化', 'local-seed', '本地初始化');
 COMMIT;
 
 
