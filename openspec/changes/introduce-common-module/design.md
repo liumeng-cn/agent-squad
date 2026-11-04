@@ -14,7 +14,7 @@
 **Non-Goals：**
 - 不在 common 模块中引入 Spring Boot、MyBatis、AgentScope 等重型依赖。
 - 不将仅在一个模块内使用的业务枚举（如 `GoalTaskStatus`）移入 common。
-- common 模块不直接对外暴露 HTTP 接口或数据库访问。
+- common 模块不直接对外暴露接口或数据库访问。
 
 ## Decisions
 

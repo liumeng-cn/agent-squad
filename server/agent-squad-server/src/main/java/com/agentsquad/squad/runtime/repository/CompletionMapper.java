@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * Master 完成候选和最终状态裁决的 数据访问
+ * Master 完成候选和最终状态裁决的 
  */
 @Mapper
 public interface CompletionMapper {

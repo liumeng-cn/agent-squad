@@ -35,7 +35,7 @@ Gateway 使用 Spring Cloud Gateway 的 Reactor 模型，Server 使用 Spring MV
 
 ### 2. 三类编号职责分离
 
-- `requestId`：一次 HTTP 接口请求，用于页面报错和历史日志查找。
+- `requestId`：一次接口请求，用于页面报错和历史日志查找。
 - `traceId/spanId`：一次技术调用链路；后台任务不能保持一个 HTTP Span 运行数小时。
 - `scopeId`：一次回复或目标任务的统一执行范围，跨越恢复；`executionId/taskId`、`commandId`、`jobId`、`bindingId/runId/turnId` 各自保持业务语义。
 

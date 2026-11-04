@@ -21,7 +21,7 @@
 - 关键日志说明操作、阶段、结果及原因，按需带traceId/taskId/jobId/operationId/commandId；异常保留必要堆栈，避免各层重复记录同一异常。
 - 不输出密钥、Cookie、密码、完整Prompt/上下文、模型内部推理；入参和工具结果只记录允许字段、摘要及大小。正常等待/取消不是ERROR，恢复重试要有次数和原因，避免轮询/续租刷屏。
 
-## 数据访问统一约定（用户明确要求）
+## 统一约定（用户明确要求）
 
 - 项目生产代码的数据库读写统一使用 MyBatis Mapper 接口与 Mapper XML，业务服务、Repository。
 - SQL 只放在对应模块 Mapper XML，Service 负责业务步骤和事务；

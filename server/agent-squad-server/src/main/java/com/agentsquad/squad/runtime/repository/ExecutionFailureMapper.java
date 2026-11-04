@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 结构化故障与有界恢复次数的数据访问
+ * 结构化故障与有界恢复次数的
  * <p>
  * 调用方持有会话及所有者锁，次数和排队命令同事务提交，不因进程重启或更换回合清零。
  */

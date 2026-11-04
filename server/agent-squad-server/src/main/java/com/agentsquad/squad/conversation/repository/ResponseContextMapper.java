@@ -8,7 +8,7 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
- * 回复消息前缀的数据访问
+ * 回复消息前缀的
  * <p>
  * 所有查询限制用户、会话和来源序号，快照只允许首次写入。
  */

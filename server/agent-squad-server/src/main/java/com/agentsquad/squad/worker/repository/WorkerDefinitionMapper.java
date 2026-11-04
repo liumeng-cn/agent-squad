@@ -8,7 +8,7 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
- * Worker 能力定义的数据访问
+ * Worker 能力定义的
  * <p>
  * 发布只插入不可变正文；状态通过乐观版本单独更新。
  */

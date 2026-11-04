@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Param;
 import java.time.LocalDateTime;
 
 /**
- * 网关认证 数据访问
+ * 网关认证 
  *
  * <p>用户、会话、限流与审计全部通过 MyBatis 访问；SQL 见 mapper/auth/AuthMapper.xml。</p>
  */

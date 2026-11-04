@@ -22,7 +22,7 @@
 
 ## 4. 规范补充与验收
 
-- [ ] 4.1 在 `AGENTS.md` 数据访问约定中补充：生产代码仅通过 MyBatis Mapper/XML 访问数据库；测试夹具、DDL 执行与结构对比工具可例外使用 JDBC。
+- [ ] 4.1 在 `AGENTS.md` 约定中补充：生产代码仅通过 MyBatis Mapper/XML 访问数据库；测试夹具、DDL 执行与结构对比工具可例外使用 JDBC。
 - [ ] 4.2 运行 `mvn -pl server/agent-squad-server,server/agent-squad-gateway test` 验证新增 ArchUnit 测试与既有测试均通过。
 - [ ] 4.3 运行 `mvn -pl server verify`（或等效命令）验证无回归。
 

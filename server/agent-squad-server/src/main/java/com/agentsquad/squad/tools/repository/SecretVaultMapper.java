@@ -4,7 +4,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * 本地密钥保险库 数据访问；只存 AES-GCM 密文与密钥版本，解密在内存完成
+ * 本地密钥保险库 ；只存 AES-GCM 密文与密钥版本，解密在内存完成
  */
 @Mapper
 public interface SecretVaultMapper {

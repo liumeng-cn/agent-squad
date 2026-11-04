@@ -16,7 +16,7 @@
 ## Capabilities
 
 ### New Capabilities
-- `http-response-format`：所有 HTTP 接口统一返回 `ApiResult<T>` 结构；业务成功时 `code` 为约定成功码 0，`data` 为实际载荷；业务失败或系统异常时返回对应 `code` 与 `message`。
+- `http-response-format`：所有接口统一返回 `ApiResult<T>` 结构；业务成功时 `code` 为约定成功码 0，`data` 为实际载荷；业务失败或系统异常时返回对应 `code` 与 `message`。
 
 ### Modified Capabilities
 - 无现有能力变更。

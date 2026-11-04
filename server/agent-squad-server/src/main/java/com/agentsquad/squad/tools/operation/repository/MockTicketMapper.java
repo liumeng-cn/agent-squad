@@ -4,7 +4,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * 本地模拟外部工单系统 数据访问；只用于 D2 受控写入与故障注入验证
+ * 本地模拟外部工单系统 ；只用于 D2 受控写入与故障注入验证
  */
 @Mapper
 public interface MockTicketMapper {

@@ -10,7 +10,7 @@
 - 确认并验证生产代码无直接 JDBC 使用。
 - 在构建阶段增加静态检查，禁止生产包引入 JDBC 核心类。
 - 评估 MyBatis-Plus 是否适合当前项目，并给出结论。
-- 更新 `AGENTS.md` 数据访问约定。
+- 更新 `AGENTS.md` 约定。
 
 **Non-Goals：**
 - 不改造测试夹具中的 JDBC 使用（测试建库、DDL 校验属于合法场景）。
@@ -47,5 +47,5 @@
 2. 编写 `MyBatisOnlyAccessTest`，断言生产包（`com.agentsquad.squad..`）不依赖 `java.sql.Connection`、`java.sql.Statement`、`java.sql.ResultSet`、`org.springframework.jdbc.core.JdbcTemplate`、`org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate`。
 3. 允许 `javax.sql.DataSource`、MyBatis 类型处理器及 SDK 公开接口的依赖。
 4. 运行测试确认当前代码通过。
-5. 在 `AGENTS.md` 中补充数据访问约定条目，明确生产代码仅通过 MyBatis Mapper/XML，测试夹具可例外。
+5. 在 `AGENTS.md` 中补充约定条目，明确生产代码仅通过 MyBatis Mapper/XML，测试夹具可例外。
 6. 在 `verify-mybatis-only-access` 的任务中记录 MyBatis-Plus 评估结论。

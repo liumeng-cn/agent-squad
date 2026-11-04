@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 公开事件 数据访问；事件与受理命令在同一业务事务中提交
+ * 公开事件 ；事件与受理命令在同一业务事务中提交
  */
 @Mapper
 public interface TaskEventMapper {

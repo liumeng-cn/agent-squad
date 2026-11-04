@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * 局部上下文快照的数据访问
+ * 局部上下文快照的
  *
  * 准备入口只读取受控 Master 绑定的用户目标；快照按用户和目标复合归属查找。
  */

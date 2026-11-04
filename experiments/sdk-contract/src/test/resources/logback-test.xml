@@ -1,0 +1,4 @@
+<configuration>
+    <!-- SDK 默认日志可能包含实验原文；证据只由测试写入受控摘要。 -->
+    <root level="OFF"/>
+</configuration>

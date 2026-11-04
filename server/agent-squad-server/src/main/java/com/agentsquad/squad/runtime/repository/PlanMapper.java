@@ -9,7 +9,7 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
- * 协作计划与委派节点的 数据访问
+ * 协作计划与委派节点的 
  * <p>
  * 计划头与全部节点在同一平台事务内插入；重放按 taskId + logicalKey 定位原计划。
  */

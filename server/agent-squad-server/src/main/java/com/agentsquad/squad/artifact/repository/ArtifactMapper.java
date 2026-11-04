@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 产物元数据与内容的数据访问
+ * 产物元数据与内容的
  * <p>
  * 所有读取按服务端用户归属过滤；目标附件同时受会话删除屏障限制。
  */

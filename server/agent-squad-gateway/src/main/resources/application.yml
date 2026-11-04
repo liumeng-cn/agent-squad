@@ -67,7 +67,8 @@ management:
 
 logging:
   structured:
+    # 默认使用 Spring Boot 原生控制台格式；设置 SQUAD_LOG_FORMAT=logstash|ecs|gelf 可切换为结构化 JSON。
     format:
-      console: ${SQUAD_LOG_FORMAT:logstash}
+      console: ${SQUAD_LOG_FORMAT:}
   level:
     com.agentsquad.squad.gateway: INFO

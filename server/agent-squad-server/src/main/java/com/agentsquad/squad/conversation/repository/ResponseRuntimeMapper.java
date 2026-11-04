@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 回复生命周期、完成候选及公开消息的数据访问
+ * 回复生命周期、完成候选及公开消息的
  * <p>
  * 调用方先持有会话和回复所有者锁，再维护候选、命令与消息，保证重投幂等。
  */

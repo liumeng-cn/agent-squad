@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Param;
 import java.time.LocalDateTime;
 
 /**
- * AgentScope 会话发现目录 数据访问；固定标识由后续 Bridge 使用
+ * AgentScope 会话发现目录 ；固定标识由后续 Bridge 使用
  */
 @Mapper
 public interface BindingMapper {

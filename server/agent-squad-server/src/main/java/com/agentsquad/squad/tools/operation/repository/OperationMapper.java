@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 外部操作账本 数据访问；按原生调用键与业务意图键双路幂等，状态推进全部带版本 CAS
+ * 外部操作账本 ；按原生调用键与业务意图键双路幂等，状态推进全部带版本 CAS
  */
 @Mapper
 public interface OperationMapper {
