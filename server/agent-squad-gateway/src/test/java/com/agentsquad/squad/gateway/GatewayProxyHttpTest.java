@@ -9,11 +9,13 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.autoconfigure.actuate.observability.AutoConfigureObservability;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -28,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * 通过独立上游服务器验证身份覆盖、状态保留与上游结束前事件帧可见。
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureObservability(tracing = true)
 class GatewayProxyHttpTest {
 
     private static final String DB_URL = createDatabase();
@@ -54,6 +57,9 @@ class GatewayProxyHttpTest {
         registry.add("spring.datasource.password", GatewayTestDatabase::password);
         registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
         registry.add("gateway.business-service-url", () -> "http://127.0.0.1:" + UPSTREAM.getAddress().getPort());
+        // 指向不可达的 Collector：导出失败只能记录日志，请求仍须正常完成。
+        registry.add("management.otlp.tracing.export.enabled", () -> "true");
+        registry.add("management.otlp.tracing.endpoint", () -> "http://127.0.0.1:1/v1/traces");
     }
 
     private static HttpServer startUpstream() {
@@ -65,6 +71,14 @@ class GatewayProxyHttpTest {
                         + new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
                 byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().add("X-Upstream", "echo");
+                String requestId = exchange.getRequestHeaders().getFirst("X-Request-Id");
+                if (requestId != null) {
+                    exchange.getResponseHeaders().add("X-Upstream-Request-Id", requestId);
+                }
+                String traceparent = exchange.getRequestHeaders().getFirst("traceparent");
+                if (traceparent != null) {
+                    exchange.getResponseHeaders().add("X-Upstream-Traceparent", traceparent);
+                }
                 exchange.sendResponseHeaders(422, bytes.length);
                 exchange.getResponseBody().write(bytes);
                 exchange.close();
@@ -136,6 +150,37 @@ class GatewayProxyHttpTest {
         assertEquals(422, response.statusCode());
         assertEquals("echo", response.headers().firstValue("X-Upstream").orElseThrow());
         assertEquals(authService.authenticate(token).userId() + ":ADMIN:payload", response.body());
+    }
+
+    @Test
+    void propagateRequestIdAndW3cTraceContext() throws Exception {
+        String token = authService.login("test", "test");
+        String requestId = UUID.randomUUID().toString();
+        String traceId = "4bf92f3577b34da6a3ce929d0e0e4736";
+        var request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/echo"))
+                .header("Cookie", "SQUAD_SESSION=" + token)
+                .header("X-Request-Id", requestId)
+                .header("traceparent", "00-" + traceId + "-00f067aa0ba902b7-01")
+                .build();
+        var response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(requestId, response.headers().firstValue("X-Request-Id").orElseThrow());
+        assertEquals(requestId, response.headers().firstValue("X-Upstream-Request-Id").orElseThrow());
+        String upstreamTraceparent = response.headers().firstValue("X-Upstream-Traceparent").orElseThrow();
+        assertTrue(upstreamTraceparent.startsWith("00-" + traceId + "-"));
+    }
+
+    @Test
+    void replacesInvalidTraceparent() throws Exception {
+        String token = authService.login("test", "test");
+        var request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/echo"))
+                .header("Cookie", "SQUAD_SESSION=" + token)
+                .header("traceparent", "00-not-a-trace-id-zzzz")
+                .build();
+        var response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+        String upstreamTraceparent = response.headers().firstValue("X-Upstream-Traceparent").orElseThrow();
+        assertTrue(upstreamTraceparent.matches("00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}"),
+                "upstream traceparent=" + upstreamTraceparent);
+        assertFalse(upstreamTraceparent.contains("not-a-trace-id"));
     }
 
     @Test

@@ -1,0 +1,27 @@
+schema: spec-driven
+
+context: |
+  Language: zh-CN
+  All artifacts must be written in zh-CN.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+
+  agent-squad 是 Java + AgentScope 的多智能体运行技术底座（模块化单体）。
+  技术基线：Java 21 编译目标，当前验证运行环境为 JDK 27；Spring Boot MVC + Spring Security + MyBatis + MySQL 8.4；前端 Vue 3 + TypeScript + Vite + Vue Router + Pinia。
+  Agent 框架固定评估候选 v2.1.0-BETA1（commit 5451c73abe47053340683a1cc6d67b290b056648），不使用 main；嵌入 Harness SDK，不整套引入 AgentScope Service。
+  运行权威：GoalTask 是用户目标，WorkerJob 是有界委派节点，AgentScope Session/Turn/Run 是执行事实；平台事务与 SDK journal 不原子，以持久 Command、稳定 SDK submit key、原生日志导出幂等与未知结果核对跨越崩溃窗口。
+  存储结构权威：server/agent-squad-server/src/main/resources/db/migration/V1__baseline.sql 是最终表结构；生产版本迁移位于 deploy/db/migrations 并须通过 schema parity，业务服务生产启动不执行 DDL。
+  数据访问约束：项目生产代码统一使用 MyBatis Mapper/XML；业务服务、Repository 和配置校验不得直接使用 JDBC/JdbcTemplate；官方 AgentScope 持久化通过 SDK 公开接口接入。
+  Java 代码约束：功能类与关键业务方法写中文职责注释；Spring 类不声明内部类或嵌套 DTO/record；统一 jakarta.annotation.Resource 字段注入，不使用构造方法注入或 Lombok 隐式注入构造器；日志使用 @Slf4j，记录操作/阶段/结果/原因并携带适用的 traceId/taskId/jobId/operationId/commandId。
+  安全约束：不输出密钥、Cookie、密码、完整 Prompt/上下文或模型内部推理；入参和工具结果只记录允许字段、摘要及大小。
+  提交约束：提交信息使用简体中文；未经用户明确要求，不执行真实数据库的删除、重建或清空，不执行生产迁移或推送。
+
+rules:
+  proposal:
+    - 用中文撰写；先说明 Why、明确范围与不做什么。
+    - 涉及观测数据时区分业务事实、Trace 和测评数据，不把采样 Trace 当作成功率。
+  design:
+    - 用中文撰写；每个设计决策给出理由与替代方案（why X over Y）。
+    - AgentScope BETA 能力先验证再接入，取不到的字段标 UNKNOWN，不伪造。
+  tasks:
+    - 用中文撰写；按“目标场景 + 修改模块 + 输入输出 + 状态与事务 + 验收”拆分。
+    - 每个任务写明验证方式（测试、命令、可观察行为或交付物）。

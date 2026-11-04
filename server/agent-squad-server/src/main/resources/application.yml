@@ -23,8 +23,34 @@ server:
   port: 18080
 
 logging:
+  structured:
+    format:
+      console: ${SQUAD_LOG_FORMAT:logstash}
   level:
     io.agentscope.harness.agent.middleware.AgentTraceMiddleware: OFF
+
+management:
+  tracing:
+    enabled: ${SQUAD_TRACING_ENABLED:true}
+    propagation:
+      type: w3c
+    sampling:
+      probability: ${SQUAD_TRACING_SAMPLE_RATE:0.1}
+    opentelemetry:
+      export:
+        # 有界队列加异步批量导出，队列满时丢弃新 Span，不阻塞业务线程。
+        max-queue-size: ${SQUAD_OTLP_MAX_QUEUE_SIZE:2048}
+        max-batch-size: 512
+        schedule-delay: 1s
+        timeout: 3s
+  otlp:
+    tracing:
+      endpoint: ${SQUAD_OTLP_TRACES_ENDPOINT:http://127.0.0.1:4318/v1/traces}
+      connect-timeout: 1s
+      timeout: 3s
+      export:
+        # 默认不导出，未部署 Collector 时启动与业务不受影响。
+        enabled: ${SQUAD_OTLP_TRACES_EXPORT_ENABLED:false}
 
 agentsquad:
   identity:

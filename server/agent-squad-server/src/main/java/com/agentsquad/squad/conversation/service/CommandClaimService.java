@@ -1,19 +1,23 @@
 package com.agentsquad.squad.conversation.service;
 
+import com.agentsquad.squad.common.observability.ObservationSupport;
 import com.agentsquad.squad.conversation.domain.CommandClaimContext;
 import com.agentsquad.squad.conversation.repository.DeliveryMapper;
 import jakarta.annotation.Resource;
 import com.agentsquad.squad.identity.UserStatusGuard;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * 后台执行器接手待处理命令的短事务边界。
  * <p>
  * 会话→所有者→命令锁序下复核消息顺序，避免并发扫描、取消与恢复产生倒序或反向锁；事务内不调用SDK。
  */
+@Slf4j
 @Service
 public class CommandClaimService {
     @Resource private UserStatusGuard userStatus;
@@ -25,6 +29,9 @@ public class CommandClaimService {
 
     @Resource
     private RuntimeAdmissionService admission;
+
+    @Resource
+    private ObservationSupport observations;
 
     @Transactional
     public boolean claim(String commandId, String token, LocalDateTime now, LocalDateTime leaseUntil) {
@@ -45,6 +52,9 @@ public class CommandClaimService {
         // 将命令标记为已接手和预留执行容量时，在同一 MySQL 事务中完成。
         // 配额不足时抛出异常，回滚命令领取，不丢失已受理的用户命令。
         admission.acquire(context.userId(), context.bindingId(), commandId, context.action());
+        log.info("命令已接手 {}", observations.logFields(Map.of(
+                "commandId", commandId, "scopeId", context.scopeId(), "bindingId", context.bindingId(),
+                "action", context.action())));
         return true;
     }
 }

@@ -1,5 +1,6 @@
 package com.agentsquad.squad.integration.agentscope;
 
+import com.agentsquad.squad.common.observability.ObservationSupport;
 import com.agentsquad.squad.conversation.domain.DeliveryRow;
 import com.agentsquad.squad.conversation.domain.CommandClaimContext;
 import com.agentsquad.squad.conversation.service.RuntimeAdmissionService;
@@ -33,7 +34,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -87,6 +90,9 @@ public class CommandDeliveryService {
 
     @Resource
     private ObjectMapper objectMapper;
+
+    @Resource
+    private ObservationSupport observations;
 
     @Value("${agentsquad.delivery.workers:4}")
     private int workers;
@@ -229,8 +235,9 @@ public class CommandDeliveryService {
             restrictions.restrict(delivery.userId(), scopes.scopeForSession(delivery.userId(), delivery.sessionId()), delivery.bindingId());
         } catch (Exception exception) {
             retry(commandId, token, delivery.attempts(), "NATIVE_SUBMIT_FAILED");
-            log.warn("AgentScope命令提交失败，将使用同一命令编号重试 commandId={} taskId={} errorType={}",
-                    commandId, delivery.taskId(), exception.getClass().getSimpleName());
+            Map<String, Object> fields = commandFields(commandId, delivery);
+            fields.put("errorType", observations.classify(exception));
+            log.warn("AgentScope命令提交失败，将使用同一命令编号重试 {}", observations.logFields(fields));
         }
     }
 
@@ -341,24 +348,42 @@ public class CommandDeliveryService {
                 admission.bindReceipt(delivery.userId(), delivery.bindingId(),
                         commandId, delivery.action(), turnId);
             }
-            log.info("原生命令已投递 commandId={} taskId={} action={} nativeStatus={}",
-                    commandId, delivery.taskId(), delivery.action(), nativeStatus);
+            Map<String, Object> fields = commandFields(commandId, delivery);
+            fields.put("nativeStatus", nativeStatus);
+            log.info("原生命令已投递 {}", observations.logFields(fields));
         } else {
-            log.warn("命令收据写入时投递租约已失效 commandId={} taskId={}", commandId, delivery.taskId());
+            log.warn("命令收据写入时投递租约已失效 {}",
+                    observations.logFields(commandFields(commandId, delivery)));
         }
+    }
+
+    /**
+     * 组装命令投递日志的公共字段；未关联任务的命令不输出空 taskId。
+     */
+    private Map<String, Object> commandFields(String commandId, DeliveryRow delivery) {
+        Map<String, Object> fields = new LinkedHashMap<>();
+        fields.put("commandId", commandId);
+        if (delivery.taskId() != null) {
+            fields.put("taskId", delivery.taskId());
+        }
+        fields.put("action", delivery.action());
+        fields.put("attempt", delivery.attempts());
+        return fields;
     }
 
     private void retry(String commandId, String token, int attempts, String errorCode) {
         long delaySeconds = Math.min(300, 1L << Math.min(Math.max(attempts, 1), 8));
         deliveryMapper.retry(commandId, token, now().plusSeconds(delaySeconds), errorCode);
-        log.warn("命令投递待重试 commandId={} errorCode={} delaySeconds={}",
-                commandId, errorCode, delaySeconds);
+        log.warn("命令投递待重试 {}", observations.logFields(Map.of(
+                "commandId", commandId, "errorCode", errorCode,
+                "attempt", attempts, "delayMs", delaySeconds * 1000)));
     }
 
     private void fail(String commandId, String token, int attempts, String errorCode) {
         int blocked = deliveryMapper.blockInvalid(commandId, token, errorCode);
         if (blocked == 1) {
-            log.warn("非法命令已阻断 commandId={} errorCode={} attempts={}", commandId, errorCode, attempts);
+            log.warn("非法命令已阻断 {}", observations.logFields(Map.of(
+                    "commandId", commandId, "errorCode", errorCode, "attempt", attempts)));
         }
     }
 

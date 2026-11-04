@@ -4,6 +4,7 @@ import com.agentsquad.squad.artifact.repository.ArtifactMapper;
 import com.agentsquad.squad.artifact.service.ArtifactService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.common.observability.ObservationSupport;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.conversation.domain.ConversationRow;
 import com.agentsquad.squad.conversation.domain.MessageSubmissionRow;
@@ -16,6 +17,7 @@ import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
 import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -32,8 +34,12 @@ import java.util.UUID;
  * <p>
  * 写入会话、消息、独立回复、绑定、命令及事件；不创建GoalTask或调用SDK，任何失败整体回滚。
  */
+@Slf4j
 @Service
 public class MessageAcceptanceWriter {
+
+    @Resource
+    private ObservationSupport observations;
 
     @Resource
     private FinalDeliveryService finalDeliveries;
@@ -121,7 +127,11 @@ public class MessageAcceptanceWriter {
                 Map.of("messageId", messageId, "executionId", executionId, "sequence", sequence), now);
         appendEvent(userId, conversation, commandId, "execution.queued",
                 Map.of("executionId", executionId, "status", "QUEUED"), now);
-        return messages.findSubmission(userId, scopeKey, key);
+        MessageSubmissionRow submission = messages.findSubmission(userId, scopeKey, key);
+        log.info("用户消息已受理 {}", observations.logFields(Map.of(
+                "conversationId", conversationId, "messageId", messageId, "executionId", executionId,
+                "scopeId", scopeId, "commandId", commandId, "sequence", sequence)));
+        return submission;
     }
 
     private ConversationRow lockConversation(String userId, String conversationId) {
