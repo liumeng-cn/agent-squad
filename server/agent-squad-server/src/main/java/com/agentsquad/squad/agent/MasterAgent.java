@@ -1,10 +1,24 @@
 package com.agentsquad.squad.agent;
 
-import com.agentsquad.squad.agent.tool.*;
+import com.agentsquad.squad.agent.tool.ApplyTaskDirectiveTool;
+import com.agentsquad.squad.agent.tool.CreateGoalTaskTool;
+import com.agentsquad.squad.agent.tool.ListWorkerCapabilitiesTool;
+import com.agentsquad.squad.agent.tool.PrepareContextTool;
+import com.agentsquad.squad.agent.tool.ProposeCompletionTool;
+import com.agentsquad.squad.agent.tool.PublishPlanTool;
+import com.agentsquad.squad.agent.tool.RequestInputTool;
+import com.agentsquad.squad.agent.tool.SubmitTaskDirectiveTool;
 import com.agentsquad.squad.conversation.domain.DeliveryRow;
 import com.agentsquad.squad.conversation.service.ResponseContextService;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.integration.agentscope.*;
+import com.agentsquad.squad.integration.agentscope.ExecutionContextMiddleware;
+import com.agentsquad.squad.integration.agentscope.ModelBudgetMiddleware;
+import com.agentsquad.squad.integration.agentscope.NativeEventView;
+import com.agentsquad.squad.integration.agentscope.NativeSessionGateway;
+import com.agentsquad.squad.integration.agentscope.NativeSubmissionReceipt;
+import com.agentsquad.squad.integration.agentscope.PlatformSkillVisibility;
+import com.agentsquad.squad.integration.agentscope.ScopedMasterToolsMiddleware;
+import com.agentsquad.squad.integration.agentscope.WorkerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
 import com.agentsquad.squad.runtime.domain.ProjectionTarget;
@@ -12,6 +26,8 @@ import com.agentsquad.squad.tools.mock.MockLookupTool;
 import com.agentsquad.squad.tools.mock.MockTicketCreateTool;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.session.SessionEvent;
+import io.agentscope.harness.agent.session.WorkspaceSessionLogStore;
+import com.agentsquad.squad.integration.agentscope.journal.CommittedSessionReader;
 import io.agentscope.core.tool.Toolkit;
 import io.agentscope.extensions.jdbc.JdbcDistributedStore;
 import io.agentscope.extensions.jdbc.dialect.AbstractJdbcDialect;
@@ -127,6 +143,8 @@ public class MasterAgent implements NativeSessionGateway {
 
     private HarnessAgent master;
 
+    private CommittedSessionReader committedReader;
+
     /**
      * 启用投递前检查模型配置和数据库表结构，再创建长生命周期 Master。
      */
@@ -213,6 +231,7 @@ public class MasterAgent implements NativeSessionGateway {
                 .disableMemoryHooks()
                 .disableDefaultWorkspaceSkills()
                 .build();
+        committedReader = new CommittedSessionReader(new WorkspaceSessionLogStore(master.getWorkspaceManager()));
     }
 
     /**
@@ -292,13 +311,17 @@ public class MasterAgent implements NativeSessionGateway {
     }
 
     private AgentSession sessionFor(DeliveryRow delivery) {
-        if (!MasterAgentIdentity.AGENT_ID.equals(delivery.agentId())) {
-            return workerFactory.sessionFor(delivery.userId(), delivery.bindingId(),
-                    delivery.sessionId(), delivery.agentId());
+        return sessionFor(delivery.userId(), delivery.bindingId(), delivery.sessionId(), delivery.agentId());
+    }
+
+    private AgentSession sessionFor(String userId, String bindingId, String sessionId, String agentId) {
+        if (!MasterAgentIdentity.AGENT_ID.equals(agentId)) {
+            return workerFactory.sessionFor(userId, bindingId,
+                    sessionId, agentId);
         }
         RuntimeContext context = RuntimeContext.builder()
-                .userId(delivery.userId())
-                .sessionId(delivery.sessionId())
+                .userId(userId)
+                .sessionId(sessionId)
                 .build();
         java.util.Set<String> allowedTools = new java.util.HashSet<>(java.util.Set.of(
                 "load_skill_through_path", "request_input", "propose_completion", "list_worker_capabilities",
@@ -311,44 +334,29 @@ public class MasterAgent implements NativeSessionGateway {
     }
 
     /**
-     * 读取固定会话的已提交原生前缀，并在重启后重新启动其待执行命令调度。
+     * 纯读已提交日志；Master和Worker共用现有workspace后端，读取Worker不会创建Agent或领取业务guard。
      */
     @Override
     public List<NativeEventView> readEvents(ProjectionTarget target, long after, int limit) {
-        AgentSession session;
-        if (MasterAgentIdentity.AGENT_ID.equals(target.agentId())) {
-            RuntimeContext context = RuntimeContext.builder()
-                    .userId(target.userId())
-                    .sessionId(target.sessionId())
-                    .build();
-            session = master.session(context);
-        } else {
-            session = workerFactory.sessionFor(target.userId(), target.bindingId(),
-                    target.sessionId(), target.agentId());
-        }
-        session.start();
-        return session.log().readAfter(after, limit).stream()
-                .map(this::toEventView)
-                .toList();
+        return readCommittedEvents(target, after, limit)
+                .stream().map(this::toEventView).toList();
+    }
+
+    @Override
+    public List<SessionEvent> readCommittedEvents(ProjectionTarget target, long after, int limit) {
+        return committedReader.read(target.userId(), target.agentId(), target.sessionId(), after, limit);
+    }
+
+    /** 后台恢复显式启动调度，保留原有授权、Worker领取和续租检查，不由读接口触发。 */
+    @Override
+    public void startPending(ProjectionTarget target) {
+        sessionFor(target.userId(), target.bindingId(), target.sessionId(), target.agentId()).start();
     }
 
     @Override
     public NativeSubmissionReceipt inspectTask(ProjectionTarget target, String commandId) {
-        AgentSession session;
-        if (MasterAgentIdentity.AGENT_ID.equals(target.agentId())) {
-            RuntimeContext context = RuntimeContext.builder()
-                    .userId(target.userId()).sessionId(target.sessionId()).build();
-            session = master.session(context);
-        } else {
-            session = workerFactory.sessionFor(target.userId(), target.bindingId(),
-                    target.sessionId(), target.agentId());
-        }
-        AgentSession.Task original = session.task(commandId);
-        AgentSession.Task task = session.tasks().stream()
-                .filter(item -> original.turnId().equals(item.turnId()))
-                .findFirst().orElse(original);
-        return new NativeSubmissionReceipt(commandId, task.turnId(),
-                task.runId(), task.status());
+        AgentSession.Task task = committedReader.inspect(target.userId(), target.agentId(), target.sessionId(), commandId);
+        return new NativeSubmissionReceipt(commandId, task.turnId(), task.runId(), task.status());
     }
 
     private NativeEventView toEventView(SessionEvent event) {
@@ -359,7 +367,7 @@ public class MasterAgent implements NativeSessionGateway {
     }
 
     /**
-     * 关闭本进程持有的原生会话调度器；日志保留在 MySQL。
+     * 关闭本进程持有的原生会话调度器；既有workspace日志原位保留。
      */
     @PreDestroy
     public void close() {

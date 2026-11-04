@@ -26,7 +26,7 @@ class CompleteSchemaIntegrationTest {
             try (var statement = connection.createStatement();
                  var rows = statement.executeQuery("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE()")) {
                 assertTrue(rows.next());
-                assertEquals(51, rows.getInt(1));
+                assertEquals(52, rows.getInt(1));
             }
             try (var statement = connection.createStatement();
                  var rows = statement.executeQuery("SELECT COUNT(*) FROM sq_user WHERE (username='admin' AND user_id='10000000-0000-0000-0000-000000000001') OR (username='demo' AND user_id='10000000-0000-0000-0000-000000000002')")) {

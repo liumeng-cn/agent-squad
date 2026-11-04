@@ -133,8 +133,13 @@ class SdkExecutionContractTest {
     }
 
     static HarnessAgent agent(ScriptedModelServer model, Path workspace, Toolkit tools, int maxIters, boolean streaming) {
+        return agent(model, workspace, tools, maxIters, streaming, new InMemorySessionLogStore());
+    }
+
+    static HarnessAgent agent(ScriptedModelServer model, Path workspace, Toolkit tools, int maxIters,
+                              boolean streaming, io.agentscope.core.session.SessionLogStore store) {
         return HarnessAgent.builder().name("契约实验").agentId("probe-agent")
-                .workspace(workspace).sessionLogStore(new InMemorySessionLogStore())
+                .workspace(workspace).sessionLogStore(store)
                 .model(OpenAIChatModel.builder().apiKey("local-probe-only").baseUrl(model.baseUrl())
                         .modelName("probe").stream(streaming).build())
                 .modelExecutionConfig(ExecutionConfig.builder().timeout(Duration.ofSeconds(5)).maxAttempts(1).build())

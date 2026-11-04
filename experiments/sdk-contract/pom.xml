@@ -17,6 +17,22 @@
     </properties>
     <dependencies>
         <dependency>
+            <groupId>org.mybatis.spring.boot</groupId>
+            <artifactId>mybatis-spring-boot-starter</artifactId>
+            <version>3.0.4</version>
+        </dependency>
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-extensions-jdbc</artifactId>
+            <version>2.1.0-BETA1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>9.4.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-core</artifactId>
             <version>2.1.0-BETA1</version>
@@ -25,7 +41,6 @@
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-harness</artifactId>
             <version>2.1.0-BETA1</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.agentscope</groupId>
@@ -46,6 +61,21 @@
     </dependencies>
     <build>
         <!-- 直接编译业务适配层源码，避免实验复制一份算法而验证错对象。 -->
-        <sourceDirectory>${project.basedir}/../../server/agent-squad-server/src/main/java/com/agentsquad/squad/integration/agentscope/completion</sourceDirectory>
+        <sourceDirectory>${project.basedir}/../../server/agent-squad-server/src/main/java</sourceDirectory>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <includes>
+                        <include>**/integration/agentscope/completion/*.java</include>
+                        <include>**/integration/agentscope/inbox/*.java</include>
+                        <include>**/integration/agentscope/journal/*.java</include>
+                        <include>**/runtime/domain/ProjectionTarget.java</include>
+                        <include>**/integration/agentscope/RuntimeEventConsumptionException.java</include>
+                    </includes>
+                </configuration>
+            </plugin>
+        </plugins>
     </build>
 </project>

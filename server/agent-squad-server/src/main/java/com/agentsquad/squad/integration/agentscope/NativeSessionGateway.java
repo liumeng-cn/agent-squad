@@ -2,6 +2,7 @@ package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.conversation.domain.DeliveryRow;
 import com.agentsquad.squad.runtime.domain.ProjectionTarget;
+import io.agentscope.core.session.SessionEvent;
 
 import java.util.List;
 
@@ -29,6 +30,12 @@ public interface NativeSessionGateway {
     String respond(DeliveryRow delivery, String requestId, String answerText);
 
     List<NativeEventView> readEvents(ProjectionTarget target, long after, int limit);
+
+    /** 内部收件读取完整已提交信封，只在内存校验，不写原始载荷到平台表。 */
+    List<SessionEvent> readCommittedEvents(ProjectionTarget target, long after, int limit);
+
+    /** 后台恢复明确启动已获授权绑定的待执行调度；查询入口不得隐式调用。 */
+    void startPending(ProjectionTarget target);
 
     /**
      * 读取原命令的 SDK 持久收据，用于区分仍在运行与 writer 租约失效的未完成回合。

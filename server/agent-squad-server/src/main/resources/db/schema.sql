@@ -1,5 +1,5 @@
 -- Agent Squad 唯一完整建表文件（MySQL 8.4）。
--- 在目标空库执行：包含当前51张业务/框架表和admin/demo本地测试账号。
+-- 在目标空库执行：包含当前52张业务/框架表和admin/demo本地测试账号。
 -- 不删除数据库或已有表，不执行历史迁移，不覆盖已有账号密码。
 -- 如需刷库，请由操作员先处理原有数据，再在空库执行本文件。
 
@@ -1265,3 +1265,38 @@ INSERT IGNORE INTO sq_user (
      0, 0, 0, 'local-seed', '本地初始化', 'local-seed', '本地初始化');
 COMMIT;
 
+
+CREATE TABLE IF NOT EXISTS `sq_runtime_event_inbox`
+(
+    `id`                    bigint       NOT NULL AUTO_INCREMENT COMMENT '存储主键ID',
+    `inbox_id`              char(36)     NOT NULL COMMENT '原生收件业务ID',
+    `user_id`               char(36)     NOT NULL COMMENT '归属用户ID',
+    `binding_id`            char(36)     NOT NULL COMMENT '原生会话绑定业务ID',
+    `session_id`            char(36)     NOT NULL COMMENT '官方日志会话ID',
+    `native_seq`            bigint       NOT NULL COMMENT '绑定内原生日志序号',
+    `native_event_id`       varchar(160) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT '原生事件ID',
+    `native_type`           varchar(160) NOT NULL COMMENT 'SDK原生事件类型，保留未知类型供消费核对',
+    `run_id`                varchar(160)          DEFAULT NULL COMMENT '原生运行ID',
+    `turn_id`               varchar(160)          DEFAULT NULL COMMENT '原生回合ID',
+    `occurred_at_millis`    bigint       NOT NULL COMMENT '原生事件UTC毫秒时间，非平台收件时间',
+    `native_required`       tinyint(1)   NOT NULL COMMENT 'SDK事件是否必须理解后才能消费',
+    `native_schema_version` int          NOT NULL COMMENT '原生信封版本',
+    `payload_digest`        char(64)     NOT NULL COMMENT '完整原生信封及载荷的SHA256摘要，不保存原始载荷',
+    `mapping_version`       int          NOT NULL COMMENT '平台固定映射版本',
+    `status`                varchar(16)  NOT NULL COMMENT '消费状态[RECEIVED,APPLIED,RETRY,BLOCKED]',
+    `attempts`              int          NOT NULL DEFAULT '0' COMMENT '消费失败重试次数',
+    `next_attempt_at`       datetime(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '下次允许消费时间',
+    `error_code`            varchar(64)           DEFAULT NULL COMMENT '消费受阻的安全错误码',
+    `creator_id`            varchar(36)  NOT NULL DEFAULT '' COMMENT '创建人ID',
+    `creator_name`          varchar(50)  NOT NULL DEFAULT '' COMMENT '创建人姓名',
+    `create_time`           datetime(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    `last_updater_id`       varchar(36)  NOT NULL DEFAULT '' COMMENT '最后更新人ID',
+    `last_updater_name`     varchar(50)  NOT NULL DEFAULT '' COMMENT '最后更新人姓名',
+    `last_update_time`      datetime(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '最后更新时间',
+    `del_flag`              char(1)      NOT NULL DEFAULT '0' COMMENT '删除标志[0-否,1-是]',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_runtime_inbox_id` (`inbox_id`),
+    UNIQUE KEY `uk_runtime_inbox_seq` (`user_id`, `binding_id`, `native_seq`),
+    UNIQUE KEY `uk_runtime_inbox_event` (`user_id`, `binding_id`, `native_event_id`),
+    KEY `idx_runtime_inbox_due` (`status`, `next_attempt_at`, `id`)
+) ENGINE = InnoDB COMMENT ='官方已提交日志的安全收件定位与消费进度';

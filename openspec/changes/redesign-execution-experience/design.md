@@ -69,6 +69,8 @@ P03 是接入准入条件；失败则暂停该适配任务并修订设计，不�
 
 ### 3. 将读取、启动与上下文装配分开
 
+2026-11-04存储核对修订：固定SDK的CompositeFilesystem.sessionStorage路由`agents/`时落到默认本地后端；仅配置JdbcDistributedStore和RemoteFilesystemSpec不能证明journal已入数据库。v2必须在Master/Worker构建时显式注入同一RuntimeJournalStore（官方WorkspaceSessionLogStore + RemoteFilesystem + JDBC BaseStore），使用固定平台/版本/用户namespace，再由SessionKey区分Agent与会话。禁止把新后端直接套到旧Binding而假定历史自动存在；旧本地journal保持原路径，Binding持久记录协议与日志后端，切换、排空或受控迁移由10.1/10.2负责，不按进程环境猜测。此约束属于3.2接入前置，当前旧入口未切换。
+
 新 RuntimeSessionProvider 统一创建 Master/Worker 首发、resume、respond、恢复用上下文，注入 sink、OwnerRef、attempt、追踪关联与固定权限引用。业务身份只来自数据库。
 
 readCommittedEvents/inspectReceipt 不调用 session.start、不领取 Job、不续租 guard；恢复协调器明确调用 startPending，并受当前计划、取消、授权和租约约束。WorkerFactory 拆出能力构建/运行资格与纯会话读取，避免页面/补偿查询间接启动推理。
@@ -177,6 +179,8 @@ MODEL_CALL 的显示阶段取可信命令 purpose：首次回复理解、资料�
 高频模型增量先按 binding/输出有界聚合，已提交原生事件按批次推进，不逐 token 锁会话。每次处理有事件数/字节数/耗时预算，到达边界提交后继续。统一锁序用于实现审查及死锁测试，不能依赖注释使不同路径自动安全。
 
 ### 9. 及时唤醒与低延迟输出
+
+2026-11-04按用户方向纳入Redis：允许用于调度协调、限流、幂等与事件流，不限于缓存。当前优先以Streams承载跨实例的命令/绑定唤醒引用，以Pub/Sub广播会话有更新的即时通知；不将原始Prompt、工具参数或模型内部思考送入通知。Streams消息包含环境、userId、bindingId、commandId或已提交事件水位，消费仍经过已有授权与业务幂等检查；确认与失败转移、积压及保留窗口在3.5实现时验证。MySQL提交后发布Redis存在跨存储窗口，命令/收件记录保留为补偿依据，扫描补发可重复，不靠双写同时成功假装原子。Pub/Sub通知可丢，断线以已提交水位补读。用户将自行安装Redis，本轮未安装、连接或声称该路径已通过联调；缓存、执行容量和其他权威状态是否放Redis按各自恢复约束决定，不强制同一种存储。
 
 平台 Command 事务提交后通知有界 dispatcher，保留公平领取、独立控制容量和稳定提交键；扫描仅补偿遗漏。SDK 内部100ms调度仍保留，不能绕开其持久 inbox。
 

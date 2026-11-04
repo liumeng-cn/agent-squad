@@ -29,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -169,9 +170,7 @@ public class NativeProjectionService {
             throw new IllegalStateException("Agent执行事件处理位置已被其他线程更新");
         }
         if ("run/start".equals(event.type()) || "run/end".equals(event.type())) {
-            log.info("Agent执行事件已更新到业务状态 taskId={} bindingId={} sourceSeq={} nativeEventId={} type={} turnId={} outcome={}",
-                    target.taskId(), target.bindingId(), event.sequence(), event.eventId(),
-                    event.type(), event.turnId(), event.outcome());
+            TransactionSynchronizationManager.registerSynchronization(new NativeProjectionCommitLog(target, event));
         }
     }
 

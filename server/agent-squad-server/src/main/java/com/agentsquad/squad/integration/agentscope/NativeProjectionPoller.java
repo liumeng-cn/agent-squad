@@ -4,6 +4,12 @@ import com.agentsquad.squad.runtime.domain.ProjectionTarget;
 import com.agentsquad.squad.runtime.repository.ProjectionMapper;
 import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
 import com.agentsquad.squad.runtime.service.WorkerRecoveryService;
+import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventConsumptionService;
+import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventReceiptService;
+import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource;
+import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventFailureService;
+import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventFailureCode;
+import io.agentscope.core.session.SessionEvent;
 import jakarta.annotation.Resource;
 import com.agentsquad.squad.conversation.service.ResponseExecutionService;
 import lombok.extern.slf4j.Slf4j;
@@ -45,7 +51,13 @@ public class NativeProjectionPoller {
     private NativeSessionGateway nativeSessionGateway;
 
     @Resource
-    private NativeProjectionService projectionService;
+    private RuntimeEventReceiptService receipts;
+
+    @Resource
+    private RuntimeEventConsumptionService consumption;
+
+    @Resource
+    private RuntimeEventFailureService consumptionFailures;
 
     @Resource
     private WorkerRecoveryService workerRecoveryService;
@@ -56,12 +68,18 @@ public class NativeProjectionPoller {
     @Scheduled(fixedDelayString = "${agentsquad.projection.poll-delay-ms:1000}")
     public void projectDue() {
         for (ProjectionTarget target : projectionMapper.findDueTargets(now())) {
+            List<SessionEvent> events = List.of();
             try {
                 authorization.requireBindingCurrent(target.userId(), target.bindingId());
-                List<NativeEventView> events = nativeSessionGateway.readEvents(target, target.cursor(), 100);
-                for (NativeEventView event : events) {
-                    projectionService.accept(target, event);
+                // 恢复属于后台执行步骤，不能藏在读取日志或检查收据的方法里。
+                nativeSessionGateway.startPending(target);
+                events = nativeSessionGateway.readCommittedEvents(target, target.cursor(), 100);
+                var source = new RuntimeEventSource(target.userId(), target.bindingId(), target.sessionId(),
+                        RuntimeEventSource.CURRENT_MAPPING_VERSION);
+                for (SessionEvent event : events) {
+                    receipts.receive(source, event);
                 }
+                consumption.consume(target, events);
                 if (target.taskId() == null) {
                     String commandId = responses.originalCommand(target);
                     if (commandId != null) {
@@ -90,10 +108,30 @@ public class NativeProjectionPoller {
             } catch (com.agentsquad.squad.runtime.domain.ExecutionContextInvalidatedException exception) {
                 restrictions.restrict(target.userId(), scopeMapper.findScopeByBinding(target.userId(), target.bindingId()), target.bindingId());
             } catch (Exception exception) {
+                recordConsumptionFailure(target, events, exception);
                 projectionMapper.defer(target.userId(), target.bindingId(), now().plusSeconds(10));
                 log.warn("Agent执行事件同步失败，稍后重试 bindingId={} taskId={} errorType={}",
                         target.bindingId(), target.taskId(), exception.getClass().getSimpleName(), exception);
             }
+        }
+    }
+
+    private void recordConsumptionFailure(ProjectionTarget target, List<SessionEvent> events, Exception failure) {
+        if (events.isEmpty()) {
+            return;
+        }
+        long sequence = events.getFirst().seq();
+        RuntimeEventFailureCode code = RuntimeEventFailureCode.BUSINESS_RETRY;
+        if (failure instanceof RuntimeEventConsumptionException consumptionFailure) {
+            sequence = consumptionFailure.sequence();
+            code = consumptionFailure.code();
+        }
+        try {
+            consumptionFailures.record(new RuntimeEventSource(target.userId(), target.bindingId(), target.sessionId(),
+                    RuntimeEventSource.CURRENT_MAPPING_VERSION), sequence, code);
+        } catch (Exception persistenceFailure) {
+            log.warn("原生事件失败记录暂未保存 bindingId={} sourceSeq={} errorType={}", target.bindingId(), sequence,
+                    persistenceFailure.getClass().getSimpleName(), persistenceFailure);
         }
     }
 

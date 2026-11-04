@@ -24,13 +24,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * 开发 baseline 与生产版本迁移的结构一致性校验。
- * <p>在隔离 MySQL schema 上分别执行开发单文件 baseline 与 deploy 下 V1→V5 迁移，
+ * <p>在隔离 MySQL schema 上分别执行开发单文件 baseline 与 deploy 下 V1→V6 迁移，
  * 比较最终表、列和索引；防止两套 DDL 漂移。不读取或修改开发库。</p>
  */
 class SchemaParityTest {
 
     private static final String DEV_LABEL = "dev-baseline";
-    private static final String PROD_LABEL = "prod-v1-v5";
+    private static final String PROD_LABEL = "prod-v1-v6";
 
     @Test
     void productionRejectsDdlAndUnsignedIdentityBeforeDatabaseAccess() {
@@ -66,12 +66,14 @@ class SchemaParityTest {
                     new FileSystemResource(migrationDir.resolve("V4__admission_run_identity.sql")));
             ScriptUtils.executeSqlScript(prod,
                     new FileSystemResource(migrationDir.resolve("V5__final_delivery.sql")));
+            ScriptUtils.executeSqlScript(prod,
+                    new FileSystemResource(migrationDir.resolve("V6__runtime_event_inbox.sql")));
 
             Map<String, Map<String, String>> devSchema = readSchema(dev);
             Map<String, Map<String, String>> prodSchema = readSchema(prod);
 
-            assertEquals(51, devSchema.size(), "开发 baseline 应包含 51 张表");
-            assertEquals(51, prodSchema.size(), "生产 V1→V5 应包含 51 张表");
+            assertEquals(52, devSchema.size(), "开发 baseline 应包含 52 张表");
+            assertEquals(52, prodSchema.size(), "生产 V1→V6 应包含 52 张表");
             assertEquals(devSchema.keySet(), prodSchema.keySet(), "两套 DDL 的表集合不一致");
             devSchema.forEach((table, devDefinition) -> {
                 Map<String, String> prodDefinition = prodSchema.get(table);
