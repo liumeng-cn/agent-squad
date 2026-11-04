@@ -1,6 +1,6 @@
 package com.agentsquad.squad.identity;
 
-import com.agentsquad.squad.common.identity.AccountRole;
+import com.agentsquad.squad.common.enums.identity.AccountRole;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

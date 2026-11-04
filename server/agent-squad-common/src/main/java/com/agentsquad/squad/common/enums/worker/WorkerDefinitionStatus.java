@@ -1,4 +1,4 @@
-package com.agentsquad.squad.common.worker;
+package com.agentsquad.squad.common.enums.worker;
 
 /**
  * Worker 能力版本状态。

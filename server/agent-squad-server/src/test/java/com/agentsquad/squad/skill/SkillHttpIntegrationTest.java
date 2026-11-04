@@ -1,5 +1,6 @@
 package com.agentsquad.squad.skill;
 
+import com.agentsquad.squad.testsupport.ApiResultJson;
 import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
@@ -70,7 +71,7 @@ class SkillHttpIntegrationTest {
             String imported = mvc.perform(post("/api/v1/skills").with(TestAssertion.as(USER, "ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(request("1.0.0", "旧资源"))))
                     .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-            JsonNode created = json.readTree(imported);
+            JsonNode created = ApiResultJson.data(json, imported);
             String versionId = created.get("skillVersionId").asText();
             assertThat(created.get("status").asText()).isEqualTo("DISABLED");
             assertThat(skills.importPackage(USER, request("1.0.0", "旧资源")).skillVersionId()).isEqualTo(versionId);

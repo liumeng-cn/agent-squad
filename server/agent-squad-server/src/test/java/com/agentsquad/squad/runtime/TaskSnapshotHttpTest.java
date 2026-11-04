@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.testsupport.ApiResultJson;
 import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -45,7 +46,7 @@ class TaskSnapshotHttpTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"title\":\"快照测试\"}"))
                     .andExpect(status().isCreated()).andReturn();
-            String conversationId = mapper.readTree(conversation.getResponse().getContentAsString())
+            String conversationId = ApiResultJson.data(mapper, conversation.getResponse().getContentAsString())
                     .get("conversationId").asText();
 
             var receipt = mvc.perform(post("/api/v1/conversations/{conversationId}/tasks", conversationId)
@@ -54,12 +55,12 @@ class TaskSnapshotHttpTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"message\":\"检查快照字段\"}"))
                     .andExpect(status().isAccepted()).andReturn();
-            String taskId = mapper.readTree(receipt.getResponse().getContentAsString()).get("taskId").asText();
+            String taskId = ApiResultJson.data(mapper, receipt.getResponse().getContentAsString()).get("taskId").asText();
 
             MvcResult result = mvc.perform(get("/api/v1/tasks/{taskId}/snapshot", taskId)
                             .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN")))
                     .andExpect(status().isOk()).andReturn();
-            JsonNode snapshot = mapper.readTree(result.getResponse().getContentAsString());
+            JsonNode snapshot = ApiResultJson.data(mapper, result.getResponse().getContentAsString());
 
             JsonNode task = snapshot.get("task");
             assertThat(task.get("taskId").asText()).isEqualTo(taskId);

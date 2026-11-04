@@ -1,7 +1,9 @@
 package com.agentsquad.squad.gateway.exception;
 
+import com.agentsquad.squad.common.exception.*;
+import com.agentsquad.squad.common.model.ApiCode;
+import com.agentsquad.squad.common.model.ApiResult;
 import org.springframework.http.CacheControl;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -9,53 +11,53 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 /**
  * 认证与账号接口的统一错误出口。
  *
- * <p>状态码由异常类型决定，响应体只包含可理解原因；认证相关响应禁止缓存。</p>
+ * <p>状态码由异常类型决定，响应体使用 {@link ApiResult} 包装；认证相关响应禁止缓存。</p>
  */
 @RestControllerAdvice
 public class GatewayExceptionHandler {
 
     @ExceptionHandler(AuthenticationRequiredException.class)
-    public ResponseEntity<ErrorView> handleUnauthenticated(AuthenticationRequiredException exception) {
-        return response(HttpStatus.UNAUTHORIZED, exception.getMessage());
+    public ResponseEntity<ApiResult<Void>> handleUnauthenticated(AuthenticationRequiredException exception) {
+        return response(ApiCode.UNAUTHORIZED, exception.getMessage());
     }
 
     @ExceptionHandler(PasswordChangeRequiredException.class)
-    public ResponseEntity<ErrorView> handlePasswordChangeRequired(PasswordChangeRequiredException exception) {
-        return response(HttpStatus.FORBIDDEN, exception.getMessage());
+    public ResponseEntity<ApiResult<Void>> handlePasswordChangeRequired(PasswordChangeRequiredException exception) {
+        return response(ApiCode.FORBIDDEN, exception.getMessage());
     }
 
     @ExceptionHandler(PermissionDeniedException.class)
-    public ResponseEntity<ErrorView> handlePermissionDenied(PermissionDeniedException exception) {
-        return response(HttpStatus.FORBIDDEN, exception.getMessage());
+    public ResponseEntity<ApiResult<Void>> handlePermissionDenied(PermissionDeniedException exception) {
+        return response(ApiCode.FORBIDDEN, exception.getMessage());
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorView> handleNotFound(ResourceNotFoundException exception) {
-        return response(HttpStatus.NOT_FOUND, exception.getMessage());
+    public ResponseEntity<ApiResult<Void>> handleNotFound(ResourceNotFoundException exception) {
+        return response(ApiCode.NOT_FOUND, exception.getMessage());
     }
 
     @ExceptionHandler(StateConflictException.class)
-    public ResponseEntity<ErrorView> handleConflict(StateConflictException exception) {
-        return response(HttpStatus.CONFLICT, exception.getMessage());
+    public ResponseEntity<ApiResult<Void>> handleConflict(StateConflictException exception) {
+        return response(ApiCode.CONFLICT, exception.getMessage());
     }
 
     @ExceptionHandler(InvalidRequestException.class)
-    public ResponseEntity<ErrorView> handleInvalidRequest(InvalidRequestException exception) {
-        return response(HttpStatus.BAD_REQUEST, exception.getMessage());
+    public ResponseEntity<ApiResult<Void>> handleInvalidRequest(InvalidRequestException exception) {
+        return response(ApiCode.BAD_REQUEST, exception.getMessage());
     }
 
     @ExceptionHandler(ValidationFailedException.class)
-    public ResponseEntity<ErrorView> handleValidation(ValidationFailedException exception) {
-        return response(HttpStatus.UNPROCESSABLE_ENTITY, exception.getMessage());
+    public ResponseEntity<ApiResult<Void>> handleValidation(ValidationFailedException exception) {
+        return response(ApiCode.VALIDATION_FAILED, exception.getMessage());
     }
 
     @ExceptionHandler(RateLimitedException.class)
-    public ResponseEntity<ErrorView> handleRateLimited(RateLimitedException exception) {
-        return response(HttpStatus.TOO_MANY_REQUESTS, exception.getMessage());
+    public ResponseEntity<ApiResult<Void>> handleRateLimited(RateLimitedException exception) {
+        return response(ApiCode.TOO_MANY_REQUESTS, exception.getMessage());
     }
 
-    private static ResponseEntity<ErrorView> response(HttpStatus status, String message) {
-        return ResponseEntity.status(status).cacheControl(CacheControl.noStore())
-                .body(new ErrorView(message));
+    private static ResponseEntity<ApiResult<Void>> response(ApiCode apiCode, String message) {
+        return ResponseEntity.status(apiCode.getCode()).cacheControl(CacheControl.noStore())
+                .body(ApiResult.error(apiCode, message));
     }
 }

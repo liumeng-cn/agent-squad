@@ -30,7 +30,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import com.agentsquad.squad.common.identity.AccountRole;
+import com.agentsquad.squad.common.enums.identity.AccountRole;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

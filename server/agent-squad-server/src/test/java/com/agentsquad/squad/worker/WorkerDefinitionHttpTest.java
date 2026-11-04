@@ -1,5 +1,6 @@
 package com.agentsquad.squad.worker;
 
+import com.agentsquad.squad.testsupport.ApiResultJson;
 import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
@@ -51,7 +52,7 @@ class WorkerDefinitionHttpTest {
                             .header("Idempotency-Key", "publish-1")
                             .contentType(MediaType.APPLICATION_JSON).content(DEFINITION))
                     .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-            JsonNode created = mapper.readTree(createdBody);
+            JsonNode created = ApiResultJson.data(mapper, createdBody);
             String definitionId = created.get("definitionId").asText();
             assertThat(created.get("status").asText()).isEqualTo("ENABLED");
             assertThat(created.get("version").asLong()).isZero();
@@ -66,7 +67,7 @@ class WorkerDefinitionHttpTest {
                             .header("Idempotency-Key", "publish-1")
                             .contentType(MediaType.APPLICATION_JSON).content(DEFINITION))
                     .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-            assertThat(mapper.readTree(repeatedBody).get("definitionId").asText()).isEqualTo(definitionId);
+            assertThat(ApiResultJson.data(mapper, repeatedBody).get("definitionId").asText()).isEqualTo(definitionId);
 
             mvc.perform(post("/api/v1/worker-definitions")
                             .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
@@ -95,7 +96,7 @@ class WorkerDefinitionHttpTest {
 
             String listBody = mvc.perform(get("/api/v1/worker-definitions").with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role)))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-            assertThat(mapper.readTree(listBody).get("items").size()).isEqualTo(2);
+            assertThat(ApiResultJson.data(mapper, listBody).get("items").size()).isEqualTo(2);
 
             String disabledBody = mvc.perform(patch("/api/v1/worker-definitions/{id}", definitionId)
                             .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
@@ -103,7 +104,7 @@ class WorkerDefinitionHttpTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"expectedVersion\":0,\"status\":\"DISABLED\"}"))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-            assertThat(mapper.readTree(disabledBody).get("version").asLong()).isEqualTo(1);
+            assertThat(ApiResultJson.data(mapper, disabledBody).get("version").asLong()).isEqualTo(1);
             assertThat(definitions.listEnabled(null, 10).items())
                     .extracting("workerKey").containsExactly("draft-review");
             assertThatThrownBy(() -> definitions.requireEnabled("log-analysis", "1.0.0"))
@@ -115,7 +116,7 @@ class WorkerDefinitionHttpTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"expectedVersion\":0,\"status\":\"DISABLED\"}"))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-            assertThat(mapper.readTree(repeatedStatus).get("version").asLong()).isEqualTo(1);
+            assertThat(ApiResultJson.data(mapper, repeatedStatus).get("version").asLong()).isEqualTo(1);
 
             mvc.perform(patch("/api/v1/worker-definitions/{id}", definitionId)
                             .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
@@ -151,7 +152,7 @@ class WorkerDefinitionHttpTest {
                             .header("Idempotency-Key", "invalid-status")
                             .contentType(MediaType.APPLICATION_JSON).content(DEFINITION))
                     .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-            String definitionId = context.getBean(ObjectMapper.class).readTree(createdBody).get("definitionId").asText();
+            String definitionId = ApiResultJson.data(context.getBean(ObjectMapper.class), createdBody).get("definitionId").asText();
 
             mvc.perform(patch("/api/v1/worker-definitions/{id}", definitionId)
                             .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))

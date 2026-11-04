@@ -1,5 +1,6 @@
 package com.agentsquad.squad.presentation.controller;
 
+import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.conversation.dto.ConversationTitleUpdate;
 import com.agentsquad.squad.conversation.dto.ConversationView;
 import com.agentsquad.squad.conversation.service.ConversationTitleService;
@@ -39,10 +40,10 @@ public class ConversationReadController {
     private ConversationEventStreamer events;
 
     @GetMapping("/snapshot")
-    public ConversationSnapshot snapshot(HttpServletRequest servletRequest,
-                                         @PathVariable String conversationId, @RequestParam(required = false) Long beforeMessageSeq,
-                                         @RequestParam(defaultValue = "40") int limit) {
-        return queries.snapshot(UserContext.current(servletRequest).userId(), conversationId, beforeMessageSeq, limit);
+    public ApiResult<ConversationSnapshot> snapshot(HttpServletRequest servletRequest,
+                                                    @PathVariable String conversationId, @RequestParam(required = false) Long beforeMessageSeq,
+                                                    @RequestParam(defaultValue = "40") int limit) {
+        return ApiResult.success(queries.snapshot(UserContext.current(servletRequest).userId(), conversationId, beforeMessageSeq, limit));
     }
 
     @GetMapping(value = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -54,9 +55,9 @@ public class ConversationReadController {
     }
 
     @PatchMapping("/title")
-    public ConversationView rename(
+    public ApiResult<ConversationView> rename(
             HttpServletRequest servletRequest, @PathVariable String conversationId,
             @Valid @RequestBody ConversationTitleUpdate request) {
-        return titles.rename(UserContext.current(servletRequest).userId(), conversationId, request);
+        return ApiResult.success(titles.rename(UserContext.current(servletRequest).userId(), conversationId, request));
     }
 }

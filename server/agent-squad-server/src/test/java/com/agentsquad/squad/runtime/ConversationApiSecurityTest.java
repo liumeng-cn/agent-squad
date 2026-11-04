@@ -1,6 +1,6 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.common.identity.AccountRole;
+import com.agentsquad.squad.common.enums.identity.AccountRole;
 
 
 import com.agentsquad.squad.testsupport.TestAssertion;

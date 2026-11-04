@@ -1,5 +1,6 @@
 package com.agentsquad.squad.gateway.admin;
 
+import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.gateway.auth.AuthService;
 import com.agentsquad.squad.gateway.auth.SessionRequestSupport;
 import com.agentsquad.squad.gateway.common.BlockingCalls;
@@ -35,45 +36,46 @@ public class AdminUserController {
     private UserAccountService userAccountService;
 
     @GetMapping
-    public Mono<AdminUserPage> list(@RequestParam(required = false) String cursor,
-                                    @RequestParam(required = false) Integer limit,
-                                    ServerHttpRequest request, ServerHttpResponse response) {
+    public Mono<ApiResult<AdminUserPage>> list(@RequestParam(required = false) String cursor,
+                                               @RequestParam(required = false) Integer limit,
+                                               ServerHttpRequest request, ServerHttpResponse response) {
         response.getHeaders().setCacheControl("no-store");
         String token = SessionRequestSupport.readToken(request);
-        return BlockingCalls.mono(() -> userAccountService.list(authService.authenticate(token), cursor, limit));
+        return BlockingCalls.mono(() -> userAccountService.list(authService.authenticate(token), cursor, limit))
+                .map(ApiResult::success);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Mono<AdminUserCreateResult> create(@RequestBody AdminUserCreateRequest body,
-                                              ServerHttpRequest request, ServerHttpResponse response) {
+    public Mono<ApiResult<AdminUserCreateResult>> create(@RequestBody AdminUserCreateRequest body,
+                                                         ServerHttpRequest request, ServerHttpResponse response) {
         response.getHeaders().setCacheControl("no-store");
         String requestId = SessionRequestSupport.requestId(request);
         return BlockingCalls.mono(() -> userAccountService.create(
                 authService.authenticateWrite(SessionRequestSupport.readToken(request),
                         SessionRequestSupport.csrfToken(request)),
-                body, requestId));
+                body, requestId)).map(ApiResult::success);
     }
 
     @PatchMapping("/{userId}")
-    public Mono<AdminUserView> update(@PathVariable String userId, @RequestBody AdminUserUpdateRequest body,
-                                      ServerHttpRequest request, ServerHttpResponse response) {
+    public Mono<ApiResult<AdminUserView>> update(@PathVariable String userId, @RequestBody AdminUserUpdateRequest body,
+                                                 ServerHttpRequest request, ServerHttpResponse response) {
         response.getHeaders().setCacheControl("no-store");
         String requestId = SessionRequestSupport.requestId(request);
         return BlockingCalls.mono(() -> userAccountService.update(
                 authService.authenticateWrite(SessionRequestSupport.readToken(request),
                         SessionRequestSupport.csrfToken(request)),
-                userId, body, requestId));
+                userId, body, requestId)).map(ApiResult::success);
     }
 
     @PostMapping("/{userId}/reset-password")
-    public Mono<ResetPasswordResult> resetPassword(@PathVariable String userId,
-                                                   ServerHttpRequest request, ServerHttpResponse response) {
+    public Mono<ApiResult<ResetPasswordResult>> resetPassword(@PathVariable String userId,
+                                                              ServerHttpRequest request, ServerHttpResponse response) {
         response.getHeaders().setCacheControl("no-store");
         String requestId = SessionRequestSupport.requestId(request);
         return BlockingCalls.mono(() -> userAccountService.resetPassword(
                 authService.authenticateWrite(SessionRequestSupport.readToken(request),
                         SessionRequestSupport.csrfToken(request)),
-                userId, requestId));
+                userId, requestId)).map(ApiResult::success);
     }
 }

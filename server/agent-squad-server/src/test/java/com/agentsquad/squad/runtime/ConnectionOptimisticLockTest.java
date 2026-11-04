@@ -14,7 +14,7 @@ import com.agentsquad.squad.tools.connection.LocalSecretVault;
 import java.nio.file.Path;
 import java.util.Base64;
 import java.util.List;
-import com.agentsquad.squad.common.identity.AccountRole;
+import com.agentsquad.squad.common.enums.identity.AccountRole;
 import java.util.Map;
 import java.util.UUID;
 

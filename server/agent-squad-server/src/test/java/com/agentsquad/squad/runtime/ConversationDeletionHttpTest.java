@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.testsupport.ApiResultJson;
 import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -43,7 +44,7 @@ class ConversationDeletionHttpTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"title\":\"待删除\"}"))
                     .andExpect(status().isCreated()).andReturn();
-            JsonNode conversationJson = mapper.readTree(conversation.getResponse().getContentAsString());
+            JsonNode conversationJson = ApiResultJson.data(mapper, conversation.getResponse().getContentAsString());
             String conversationId = conversationJson.get("conversationId").asText();
 
             mvc.perform(delete("/api/v1/conversations/{conversationId}", conversationId)
@@ -59,7 +60,7 @@ class ConversationDeletionHttpTest {
             var list = mvc.perform(get("/api/v1/conversations")
                             .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN")))
                     .andExpect(status().isOk()).andReturn();
-            JsonNode items = mapper.readTree(list.getResponse().getContentAsString()).get("items");
+            JsonNode items = ApiResultJson.data(mapper, list.getResponse().getContentAsString()).get("items");
             assertThat(items).isEmpty();
 
             mvc.perform(post("/api/v1/conversations/{conversationId}/tasks", conversationId)
@@ -90,7 +91,7 @@ class ConversationDeletionHttpTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"title\":\"幂等删除\"}"))
                     .andExpect(status().isCreated()).andReturn();
-            String conversationId = mapper.readTree(conversation.getResponse().getContentAsString())
+            String conversationId = ApiResultJson.data(mapper, conversation.getResponse().getContentAsString())
                     .get("conversationId").asText();
 
             mvc.perform(delete("/api/v1/conversations/{conversationId}", conversationId)
@@ -109,7 +110,7 @@ class ConversationDeletionHttpTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"title\":\"版本冲突\"}"))
                     .andExpect(status().isCreated()).andReturn();
-            String otherId = mapper.readTree(other.getResponse().getContentAsString())
+            String otherId = ApiResultJson.data(mapper, other.getResponse().getContentAsString())
                     .get("conversationId").asText();
             mvc.perform(delete("/api/v1/conversations/{conversationId}", otherId)
                             .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))

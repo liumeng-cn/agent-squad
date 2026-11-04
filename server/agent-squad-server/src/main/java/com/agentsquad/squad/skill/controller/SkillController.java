@@ -1,5 +1,6 @@
 package com.agentsquad.squad.skill.controller;
 
+import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.identity.UserContext;
 import jakarta.servlet.http.HttpServletRequest;
 import com.agentsquad.squad.skill.dto.SkillDetail;
@@ -36,35 +37,35 @@ public class SkillController {
     private SkillService skills;
 
     @GetMapping
-    public SkillPage list(HttpServletRequest servletRequest,
-                          @RequestParam(required = false) String cursor,
-                          @RequestParam(defaultValue = "20") int limit) {
-        return skills.list(UserContext.current(servletRequest).userId(), cursor, limit);
+    public ApiResult<SkillPage> list(HttpServletRequest servletRequest,
+                                     @RequestParam(required = false) String cursor,
+                                     @RequestParam(defaultValue = "20") int limit) {
+        return ApiResult.success(skills.list(UserContext.current(servletRequest).userId(), cursor, limit));
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public SkillVersionView importPackage(HttpServletRequest servletRequest,
-                                          @RequestBody SkillImportRequest request) {
-        return skills.importPackage(UserContext.current(servletRequest).userId(), request);
+    public ApiResult<SkillVersionView> importPackage(HttpServletRequest servletRequest,
+                                                     @RequestBody SkillImportRequest request) {
+        return ApiResult.success(skills.importPackage(UserContext.current(servletRequest).userId(), request));
     }
 
     @GetMapping("/{versionId}")
-    public SkillDetail detail(HttpServletRequest servletRequest,
-                              @PathVariable String versionId) {
-        return skills.detail(UserContext.current(servletRequest).userId(), versionId);
+    public ApiResult<SkillDetail> detail(HttpServletRequest servletRequest,
+                                         @PathVariable String versionId) {
+        return ApiResult.success(skills.detail(UserContext.current(servletRequest).userId(), versionId));
     }
 
     @PutMapping("/{versionId}/grant")
-    public SkillGrantView grant(HttpServletRequest servletRequest,
-                                @PathVariable String versionId, @Valid @RequestBody SkillGrantRequest request) {
-        return skills.changeGrant(UserContext.current(servletRequest).userId(), versionId, request);
+    public ApiResult<SkillGrantView> grant(HttpServletRequest servletRequest,
+                                           @PathVariable String versionId, @Valid @RequestBody SkillGrantRequest request) {
+        return ApiResult.success(skills.changeGrant(UserContext.current(servletRequest).userId(), versionId, request));
     }
 
     @PostMapping("/{versionId}/revoke")
-    public SkillDetail revoke(HttpServletRequest servletRequest,
-                              @PathVariable String versionId, @Valid @RequestBody SkillRevokeRequest request) {
-        return skills.revoke(UserContext.current(servletRequest).userId(), versionId,
-                request.expectedVersion());
+    public ApiResult<SkillDetail> revoke(HttpServletRequest servletRequest,
+                                         @PathVariable String versionId, @Valid @RequestBody SkillRevokeRequest request) {
+        return ApiResult.success(skills.revoke(UserContext.current(servletRequest).userId(), versionId,
+                request.expectedVersion()));
     }
 }

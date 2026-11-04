@@ -2,6 +2,7 @@ package com.agentsquad.squad.conversation.controller;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.common.model.ApiResult;
 
 import com.agentsquad.squad.identity.UserContext;
 import jakarta.servlet.http.HttpServletRequest;
@@ -69,9 +70,9 @@ public class RuntimeController {
      * 查询当前计划的归属子任务；不把 Worker 当作可由用户独立启动的目标。
      */
     @GetMapping("/tasks/{taskId}/jobs")
-    public WorkerJobPage listJobs(HttpServletRequest servletRequest,
-                                  @PathVariable String taskId) {
-        return taskSnapshotService.listJobs(UserContext.current(servletRequest).userId(), taskId);
+    public ApiResult<WorkerJobPage> listJobs(HttpServletRequest servletRequest,
+                                             @PathVariable String taskId) {
+        return ApiResult.success(taskSnapshotService.listJobs(UserContext.current(servletRequest).userId(), taskId));
     }
 
     /**
@@ -79,31 +80,31 @@ public class RuntimeController {
      */
     @PostMapping("/conversations")
     @ResponseStatus(HttpStatus.CREATED)
-    public ConversationResponse createConversation(
+    public ApiResult<ConversationResponse> createConversation(
             HttpServletRequest servletRequest,
             @Valid @RequestBody ConversationCreateRequest request) {
-        return goalTaskService.createConversation(UserContext.current(servletRequest).userId(), request.title());
+        return ApiResult.success(goalTaskService.createConversation(UserContext.current(servletRequest).userId(), request.title()));
     }
 
     /**
      * 列出当前用户的会话，cursor 为存储主键 id。
      */
     @GetMapping("/conversations")
-    public com.agentsquad.squad.presentation.dto.ConversationListPage listConversations(
+    public ApiResult<com.agentsquad.squad.presentation.dto.ConversationListPage> listConversations(
             HttpServletRequest servletRequest,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit) {
-        return conversationTitles.list(UserContext.current(servletRequest).userId(), cursor, limit);
+        return ApiResult.success(conversationTitles.list(UserContext.current(servletRequest).userId(), cursor, limit));
     }
 
     /**
      * 读取当前用户单个会话快照。
      */
     @GetMapping("/conversations/{conversationId}")
-    public ConversationResponse getConversation(
+    public ApiResult<ConversationResponse> getConversation(
             HttpServletRequest servletRequest,
             @PathVariable String conversationId) {
-        return goalTaskService.getConversation(UserContext.current(servletRequest).userId(), conversationId);
+        return ApiResult.success(goalTaskService.getConversation(UserContext.current(servletRequest).userId(), conversationId));
     }
 
     /**
@@ -111,13 +112,14 @@ public class RuntimeController {
      */
     @DeleteMapping("/conversations/{conversationId}")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public void deleteConversation(
+    public ApiResult<Void> deleteConversation(
             HttpServletRequest servletRequest,
             @PathVariable String conversationId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @RequestHeader("If-Match") String ifMatch) {
         conversationDeletionService.delete(UserContext.current(servletRequest).userId(),
                 conversationId, idempotencyKey, parseVersion(ifMatch));
+        return ApiResult.success(null);
     }
 
     private long parseVersion(String ifMatch) {
@@ -135,12 +137,12 @@ public class RuntimeController {
      * 列出一个会话下的目标。
      */
     @GetMapping("/conversations/{conversationId}/tasks")
-    public GoalTaskPage listConversationTasks(
+    public ApiResult<GoalTaskPage> listConversationTasks(
             HttpServletRequest servletRequest,
             @PathVariable String conversationId,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit) {
-        return goalTaskService.listConversationTasks(UserContext.current(servletRequest).userId(), conversationId, cursor, limit);
+        return ApiResult.success(goalTaskService.listConversationTasks(UserContext.current(servletRequest).userId(), conversationId, cursor, limit));
     }
 
     /**
@@ -148,31 +150,31 @@ public class RuntimeController {
      */
     @PostMapping("/conversations/{conversationId}/tasks")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public TaskReceipt createTask(
+    public ApiResult<TaskReceipt> createTask(
             HttpServletRequest servletRequest,
             @PathVariable String conversationId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody TaskCreateRequest request) {
-        return goalTaskService.submit(UserContext.current(servletRequest).userId(),
-                conversationId, idempotencyKey, request.message(), request.artifactIds());
+        return ApiResult.success(goalTaskService.submit(UserContext.current(servletRequest).userId(),
+                conversationId, idempotencyKey, request.message(), request.artifactIds()));
     }
 
     /**
      * 查询当前用户的目标状态。
      */
     @GetMapping("/tasks/{taskId}")
-    public TaskResponse getTask(HttpServletRequest servletRequest,
-                                @PathVariable String taskId) {
-        return goalTaskService.findTask(UserContext.current(servletRequest).userId(), taskId);
+    public ApiResult<TaskResponse> getTask(HttpServletRequest servletRequest,
+                                           @PathVariable String taskId) {
+        return ApiResult.success(goalTaskService.findTask(UserContext.current(servletRequest).userId(), taskId));
     }
 
     /**
      * 查询当前用户的目标详情快照。
      */
     @GetMapping("/tasks/{taskId}/snapshot")
-    public TaskSnapshot getTaskSnapshot(HttpServletRequest servletRequest,
-                                        @PathVariable String taskId) {
-        return taskSnapshotService.snapshot(UserContext.current(servletRequest).userId(), taskId);
+    public ApiResult<TaskSnapshot> getTaskSnapshot(HttpServletRequest servletRequest,
+                                                   @PathVariable String taskId) {
+        return ApiResult.success(taskSnapshotService.snapshot(UserContext.current(servletRequest).userId(), taskId));
     }
 
     /**
@@ -180,13 +182,13 @@ public class RuntimeController {
      */
     @PostMapping("/tasks/{taskId}/cancel")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public CommandReceipt cancelTask(
+    public ApiResult<CommandReceipt> cancelTask(
             HttpServletRequest servletRequest,
             @PathVariable String taskId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody ControlRequest request) {
-        return taskControlService.cancel(UserContext.current(servletRequest).userId(),
-                taskId, idempotencyKey, request.expectedVersion());
+        return ApiResult.success(taskControlService.cancel(UserContext.current(servletRequest).userId(),
+                taskId, idempotencyKey, request.expectedVersion()));
     }
 
     /**
@@ -194,13 +196,13 @@ public class RuntimeController {
      */
     @PostMapping("/tasks/{taskId}/resume")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public CommandReceipt resumeTask(
+    public ApiResult<CommandReceipt> resumeTask(
             HttpServletRequest servletRequest,
             @PathVariable String taskId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody ControlRequest request) {
-        return taskControlService.resume(UserContext.current(servletRequest).userId(),
-                taskId, idempotencyKey, request.expectedVersion());
+        return ApiResult.success(taskControlService.resume(UserContext.current(servletRequest).userId(),
+                taskId, idempotencyKey, request.expectedVersion()));
     }
 
     /**
@@ -246,9 +248,9 @@ public class RuntimeController {
      * 查询当前用户的命令回执，不能通过命令 ID 枚举他人目标。
      */
     @GetMapping("/commands/{commandId}")
-    public CommandResponse getCommand(HttpServletRequest servletRequest,
-                                      @PathVariable String commandId) {
-        return goalTaskService.findCommand(UserContext.current(servletRequest).userId(), commandId);
+    public ApiResult<CommandResponse> getCommand(HttpServletRequest servletRequest,
+                                                 @PathVariable String commandId) {
+        return ApiResult.success(goalTaskService.findCommand(UserContext.current(servletRequest).userId(), commandId));
     }
 
 }

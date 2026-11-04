@@ -34,7 +34,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
-import com.agentsquad.squad.common.identity.AccountRole;
+import com.agentsquad.squad.common.enums.identity.AccountRole;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;

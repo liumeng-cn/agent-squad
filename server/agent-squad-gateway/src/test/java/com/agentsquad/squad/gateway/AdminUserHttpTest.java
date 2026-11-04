@@ -97,14 +97,14 @@ class AdminUserHttpTest {
         HttpResponse<String> list = get(client, "/api/v1/admin/users", admin);
         assertEquals(200, list.statusCode());
         assertTrue(list.headers().firstValue("Cache-Control").orElse("").contains("no-store"));
-        JsonNode page = JSON.readTree(list.body());
+        JsonNode page = JSON.readTree(list.body()).get("data");
         assertEquals(ADMIN_ID, page.get("items").get(0).get("userId").asText());
         assertTrue(page.get("items").size() >= 2);
 
         HttpResponse<String> created = post(client, "/api/v1/admin/users",
                 "{\"username\":\"new-user\",\"displayName\":\"新用户\",\"role\":\"USER\"}", admin);
         assertEquals(201, created.statusCode());
-        JsonNode createdBody = JSON.readTree(created.body());
+        JsonNode createdBody = JSON.readTree(created.body()).get("data");
         String newUserId = createdBody.get("userId").asText();
         String temporaryPassword = createdBody.get("temporaryPassword").asText();
         assertTrue(temporaryPassword.length() >= 20);
@@ -118,7 +118,7 @@ class AdminUserHttpTest {
         HttpResponse<String> updated = patch(client, "/api/v1/admin/users/" + newUserId,
                 "{\"expectedVersion\":0,\"displayName\":\"新用户改名\"}", admin);
         assertEquals(200, updated.statusCode());
-        assertEquals(1, JSON.readTree(updated.body()).get("version").asLong());
+        assertEquals(1, JSON.readTree(updated.body()).get("data").get("version").asLong());
         assertEquals(409, patch(client, "/api/v1/admin/users/" + newUserId,
                 "{\"expectedVersion\":0,\"displayName\":\"过期更新\"}", admin).statusCode());
         assertEquals(404, patch(client, "/api/v1/admin/users/not-exist",
@@ -131,7 +131,7 @@ class AdminUserHttpTest {
         assertEquals(400, post(client, "/api/v1/auth/password",
                 "{\"currentPassword\":\"wrong-password\",\"newPassword\":\"brand-new-password\"}",
                 newUser).statusCode());
-        assertEquals(204, post(client, "/api/v1/auth/password",
+        assertEquals(200, post(client, "/api/v1/auth/password",
                 "{\"currentPassword\":\"" + temporaryPassword + "\",\"newPassword\":\"brand-new-password\"}",
                 newUser).statusCode());
         assertEquals(401, get(client, "/api/v1/auth/me", newUser).statusCode());
@@ -143,7 +143,7 @@ class AdminUserHttpTest {
         HttpResponse<String> reset = post(client,
                 "/api/v1/admin/users/" + newUserId + "/reset-password", "", admin);
         assertEquals(200, reset.statusCode());
-        String resetPassword = JSON.readTree(reset.body()).get("temporaryPassword").asText();
+        String resetPassword = JSON.readTree(reset.body()).get("data").get("temporaryPassword").asText();
         assertEquals(401, loginStatus(client, "new-user", "brand-new-password"));
         assertTrue(login(client, "new-user", resetPassword).mustChangePassword());
     }
@@ -196,7 +196,7 @@ class AdminUserHttpTest {
         HttpResponse<String> created = post(client, "/api/v1/admin/users",
                 "{\"username\":\"enum-test\",\"role\":\"USER\"}", admin);
         assertEquals(201, created.statusCode());
-        String userId = JSON.readTree(created.body()).get("userId").asText();
+        String userId = JSON.readTree(created.body()).get("data").get("userId").asText();
 
         assertEquals(400, patch(client, "/api/v1/admin/users/" + userId,
                 "{\"expectedVersion\":0,\"status\":\"LOCKED\"}", admin).statusCode());
@@ -218,7 +218,7 @@ class AdminUserHttpTest {
                                 "{\"username\":\"" + username + "\",\"password\":\"" + password + "\"}")).build(),
                 HttpResponse.BodyHandlers.ofString());
         assertEquals(200, response.statusCode());
-        JsonNode body = JSON.readTree(response.body());
+        JsonNode body = JSON.readTree(response.body()).get("data");
         String cookie = response.headers().firstValue("Set-Cookie").orElseThrow().split(";", 2)[0];
         return new AdminSession(cookie, body.get("csrfToken").asText(),
                 body.get("mustChangePassword").asBoolean());

@@ -69,7 +69,7 @@ class SessionPolicyHttpTest {
         assertTrue(setCookie.contains("Path=/"));
         assertTrue(login.headers().firstValue("Cache-Control").orElse("").contains("no-store"));
         String cookie = setCookie.split(";", 2)[0];
-        String csrf = JSON.readTree(login.body()).get("csrfToken").asText();
+        String csrf = JSON.readTree(login.body()).get("data").get("csrfToken").asText();
 
         assertEquals(401, myStatus(client, cookie), "CSRF 不匹配的写请求必须 401");
         HttpResponse<String> me = get(client, "/api/v1/auth/me", cookie);

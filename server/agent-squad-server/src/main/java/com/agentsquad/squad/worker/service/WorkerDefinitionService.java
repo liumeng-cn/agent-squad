@@ -2,11 +2,11 @@ package com.agentsquad.squad.worker.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.common.identity.AccountRole;
+import com.agentsquad.squad.common.enums.identity.AccountRole;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.JsonSchemaValidator;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.common.worker.WorkerDefinitionStatus;
+import com.agentsquad.squad.common.enums.worker.WorkerDefinitionStatus;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.worker.domain.WorkerDefinitionRow;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionCreateRequest;

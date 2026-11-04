@@ -1,7 +1,7 @@
 package com.agentsquad.squad.gateway.auth;
 
-import com.agentsquad.squad.common.identity.AccountRole;
-import com.agentsquad.squad.common.identity.AccountStatus;
+import com.agentsquad.squad.common.enums.identity.AccountRole;
+import com.agentsquad.squad.common.enums.identity.AccountStatus;
 
 /**
  * 认证所需的账号投影；密码摘要只用于服务端校验，不进入响应。

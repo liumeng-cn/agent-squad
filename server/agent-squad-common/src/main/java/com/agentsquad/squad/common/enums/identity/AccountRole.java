@@ -1,4 +1,4 @@
-package com.agentsquad.squad.common.identity;
+package com.agentsquad.squad.common.enums.identity;
 
 /**
  * 账号角色。

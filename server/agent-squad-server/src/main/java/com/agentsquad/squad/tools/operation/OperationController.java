@@ -1,5 +1,6 @@
 package com.agentsquad.squad.tools.operation;
 
+import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.identity.UserContext;
 import jakarta.servlet.http.HttpServletRequest;
 import com.agentsquad.squad.tools.operation.dto.OperationPage;
@@ -35,23 +36,23 @@ public class OperationController {
      * 列出当前用户目标的操作账本；用于操作详情列表与核对。
      */
     @GetMapping("/tasks/{taskId}/operations")
-    public OperationPage listByTask(
+    public ApiResult<OperationPage> listByTask(
             HttpServletRequest servletRequest,
             @PathVariable String taskId,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit) {
-        return operationService.listPage(UserContext.current(servletRequest).userId(),
-                taskId, cursor, limit);
+        return ApiResult.success(operationService.listPage(UserContext.current(servletRequest).userId(),
+                taskId, cursor, limit));
     }
 
     /**
      * 读取当前用户单个操作；含参数摘要、确认摘要与执行结果。
      */
     @GetMapping("/operations/{operationId}")
-    public OperationDetail getOwned(
+    public ApiResult<OperationDetail> getOwned(
             HttpServletRequest servletRequest,
             @PathVariable String operationId) {
-        return operationService.detail(UserContext.current(servletRequest), operationId);
+        return ApiResult.success(operationService.detail(UserContext.current(servletRequest), operationId));
     }
 
     /**
@@ -59,11 +60,11 @@ public class OperationController {
      */
     @PostMapping("/operations/{operationId}/reconcile")
     @ResponseStatus(HttpStatus.OK)
-    public OperationView reconcile(
+    public ApiResult<OperationView> reconcile(
             HttpServletRequest servletRequest,
             @PathVariable String operationId,
             @Valid @RequestBody OperationReconcileRequest request) {
-        return operationReconcileService.reconcile(
-                UserContext.current(servletRequest), operationId, request);
+        return ApiResult.success(operationReconcileService.reconcile(
+                UserContext.current(servletRequest), operationId, request));
     }
 }

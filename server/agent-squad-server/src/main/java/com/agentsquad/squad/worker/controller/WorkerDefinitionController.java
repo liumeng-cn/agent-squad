@@ -1,5 +1,6 @@
 package com.agentsquad.squad.worker.controller;
 
+import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.identity.UserContext;
 import jakarta.servlet.http.HttpServletRequest;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
@@ -29,36 +30,36 @@ public class WorkerDefinitionController {
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public WorkerDefinitionResponse publish(
+    public ApiResult<WorkerDefinitionResponse> publish(
             HttpServletRequest servletRequest,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody WorkerDefinitionCreateRequest request) {
-        return definitionService.publish(UserContext.current(servletRequest),
-                idempotencyKey, request);
+        return ApiResult.success(definitionService.publish(UserContext.current(servletRequest),
+                idempotencyKey, request));
     }
 
     /**
      * 查询已发布能力，不触发 Worker 执行。
      */
     @GetMapping
-    public WorkerDefinitionPage list(
+    public ApiResult<WorkerDefinitionPage> list(
             HttpServletRequest servletRequest,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit) {
         UserContext.current(servletRequest);
-        return definitionService.list(cursor, limit);
+        return ApiResult.success(definitionService.list(cursor, limit));
     }
 
     /**
      * 按状态版本启停或撤销能力，避免并发管理决定互相覆盖。
      */
     @PatchMapping("/{definitionId}")
-    public WorkerDefinitionResponse changeStatus(
+    public ApiResult<WorkerDefinitionResponse> changeStatus(
             HttpServletRequest servletRequest,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @PathVariable String definitionId,
             @Valid @RequestBody WorkerStatusUpdateRequest request) {
-        return definitionService.changeStatus(UserContext.current(servletRequest),
-                definitionId, idempotencyKey, request);
+        return ApiResult.success(definitionService.changeStatus(UserContext.current(servletRequest),
+                definitionId, idempotencyKey, request));
     }
 }

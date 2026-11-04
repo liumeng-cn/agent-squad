@@ -3,6 +3,7 @@ package com.agentsquad.squad.artifact.controller;
 import com.agentsquad.squad.artifact.domain.ArtifactRow;
 import com.agentsquad.squad.artifact.dto.ArtifactView;
 import com.agentsquad.squad.artifact.service.ArtifactService;
+import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.identity.UserContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.annotation.Resource;
@@ -38,22 +39,22 @@ public class ArtifactController {
 
     @PostMapping("/artifacts")
     @ResponseStatus(HttpStatus.CREATED)
-    public ArtifactView upload(HttpServletRequest servletRequest,
-                               @RequestHeader("Idempotency-Key") String key, @RequestParam("file") MultipartFile file) throws IOException {
+    public ApiResult<ArtifactView> upload(HttpServletRequest servletRequest,
+                                          @RequestHeader("Idempotency-Key") String key, @RequestParam("file") MultipartFile file) throws IOException {
         String userId = UserContext.current(servletRequest).userId();
-        return artifactService.upload(userId, key, file.getOriginalFilename(), file.getBytes());
+        return ApiResult.success(artifactService.upload(userId, key, file.getOriginalFilename(), file.getBytes()));
     }
 
     @GetMapping("/artifacts/{artifactId}")
-    public ArtifactView get(HttpServletRequest servletRequest,
-                            @PathVariable String artifactId) {
-        return artifactService.get(UserContext.current(servletRequest).userId(), artifactId);
+    public ApiResult<ArtifactView> get(HttpServletRequest servletRequest,
+                                       @PathVariable String artifactId) {
+        return ApiResult.success(artifactService.get(UserContext.current(servletRequest).userId(), artifactId));
     }
 
     @GetMapping("/tasks/{taskId}/artifacts")
-    public List<ArtifactView> list(HttpServletRequest servletRequest,
-                                   @PathVariable String taskId) {
-        return artifactService.listTask(UserContext.current(servletRequest).userId(), taskId);
+    public ApiResult<List<ArtifactView>> list(HttpServletRequest servletRequest,
+                                              @PathVariable String taskId) {
+        return ApiResult.success(artifactService.listTask(UserContext.current(servletRequest).userId(), taskId));
     }
 
     @GetMapping("/artifacts/{artifactId}/content")

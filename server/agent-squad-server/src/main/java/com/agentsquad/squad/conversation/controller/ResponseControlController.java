@@ -1,5 +1,6 @@
 package com.agentsquad.squad.conversation.controller;
 
+import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.conversation.dto.CommandReceipt;
 import com.agentsquad.squad.conversation.dto.ControlRequest;
 import com.agentsquad.squad.conversation.dto.MessageReceipt;
@@ -32,15 +33,15 @@ public class ResponseControlController {
 
     @PostMapping("/api/v1/executions/{executionId}/cancel")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public CommandReceipt cancel(HttpServletRequest servletRequest, @PathVariable String executionId,
-                                 @RequestHeader("Idempotency-Key") String key, @Valid @RequestBody ControlRequest request) {
-        return controls.cancel(UserContext.current(servletRequest).userId(), executionId, key, request.expectedVersion());
+    public ApiResult<CommandReceipt> cancel(HttpServletRequest servletRequest, @PathVariable String executionId,
+                                            @RequestHeader("Idempotency-Key") String key, @Valid @RequestBody ControlRequest request) {
+        return ApiResult.success(controls.cancel(UserContext.current(servletRequest).userId(), executionId, key, request.expectedVersion()));
     }
 
     @PostMapping("/api/v1/executions/{executionId}/retry")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public MessageReceipt retry(HttpServletRequest servletRequest, @PathVariable String executionId,
-            @RequestHeader("Idempotency-Key") String key, @Valid @RequestBody ControlRequest request) {
-        return retries.retry(UserContext.current(servletRequest).userId(), executionId, key, request.expectedVersion());
+    public ApiResult<MessageReceipt> retry(HttpServletRequest servletRequest, @PathVariable String executionId,
+                                           @RequestHeader("Idempotency-Key") String key, @Valid @RequestBody ControlRequest request) {
+        return ApiResult.success(retries.retry(UserContext.current(servletRequest).userId(), executionId, key, request.expectedVersion()));
     }
 }

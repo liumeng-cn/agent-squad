@@ -42,3 +42,10 @@
 - 业务上取值有限的字段（角色、状态、类型等）在 Java 后端使用枚举，在 TypeScript 前端使用字面量联合类型，不直接用魔法字符串比较或传递。
 - 跨模块共享的枚举、异常、错误码统一放在 `agent-squad-common` 模块；仅模块内部使用的枚举可留在原模块。
 - `api/openapi.json` 中对应字段使用 `enum` 约束，与 Java/TypeScript 枚举取值保持一致；新增取值时三端同步修改。
+
+## HTTP 响应约定
+
+- 所有业务 JSON 接口统一返回 `ApiResult<T>`（`code`、`data`、`msg`），成功码为 `0`，错误码取自 `ApiCode` 并沿用 HTTP 状态码。
+- 控制器直接返回 `ApiResult.success(data)`，异常处理返回 `ApiResult.error(ApiCode..., msg)`；不使用 `ResponseBodyAdvice` 自动包装，避免遗漏与重复包装。
+- 仅 SSE 事件流与文件下载保持原始结构；新增业务接口不得直接返回裸 DTO、临时 `Map` 或无内容响应。
+- 前端统一通过 `shared/api/http.ts` 解包 `data`，按 `code` 判断成功与失败，业务代码不直接读取响应包装字段。

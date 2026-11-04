@@ -1,8 +1,11 @@
 import { getCsrfToken, clearCsrfToken } from './csrf'
+import type { ApiResult } from './types'
 
 /**
  * 统一 HTTP 出口：同源 Cookie、写请求自动附 CSRF、幂等键与版本头；
  * 401 触发注册的跳转回调，错误统一收敛为 ApiError。
+ *
+ * 后端业务接口统一返回 {@link ApiResult}，本层负责解包 data 并在业务码非成功时抛出。
  */
 export class ApiError extends Error {
   constructor(
@@ -99,12 +102,29 @@ async function request<T>(method: string, path: string, options: RequestOptions 
     return undefined as T
   }
   if (options.blob) return (await response.blob()) as T
-  return (await response.json()) as T
+  const result: unknown = await response.json()
+  if (isApiResult(result) && result.code !== 0) {
+    throw new ApiError(response.status, result.msg || `请求失败（${response.status}）`)
+  }
+  if (isApiResult(result)) {
+    return result.data as T
+  }
+  return result as T
+}
+
+function isApiResult(value: unknown): value is ApiResult<unknown> {
+  return value !== null && typeof value === 'object'
+      && 'code' in value && typeof (value as ApiResult<unknown>).code === 'number'
+      && 'data' in value
+      && 'msg' in value
 }
 
 async function readErrorMessage(response: Response): Promise<string> {
   try {
     const data: unknown = await response.json()
+    if (isApiResult(data) && typeof data.msg === 'string') {
+      return data.msg
+    }
     if (data && typeof data === 'object' && typeof (data as { message?: unknown }).message === 'string') {
       return (data as { message: string }).message
     }

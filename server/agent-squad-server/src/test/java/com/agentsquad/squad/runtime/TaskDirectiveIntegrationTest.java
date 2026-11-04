@@ -30,7 +30,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.file.Path;
 import java.util.List;
-import com.agentsquad.squad.common.identity.AccountRole;
+import com.agentsquad.squad.common.enums.identity.AccountRole;
 import java.util.Map;
 import java.util.UUID;
 

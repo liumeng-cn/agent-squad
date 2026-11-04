@@ -8,7 +8,7 @@
             <arg column="definition_id" javaType="java.lang.String"/>
             <arg column="worker_key" javaType="java.lang.String"/>
             <arg column="worker_version" javaType="java.lang.String"/>
-            <arg column="status" javaType="com.agentsquad.squad.common.worker.WorkerDefinitionStatus"/>
+            <arg column="status" javaType="com.agentsquad.squad.common.enums.worker.WorkerDefinitionStatus"/>
             <arg column="version" javaType="_long"/>
             <arg column="definition_json" javaType="java.lang.String"/>
             <arg column="publish_key" javaType="java.lang.String"/>
@@ -25,7 +25,7 @@
             <arg column="definition_id" javaType="java.lang.String"/>
             <arg column="worker_key" javaType="java.lang.String"/>
             <arg column="worker_version" javaType="java.lang.String"/>
-            <arg column="status" javaType="com.agentsquad.squad.common.worker.WorkerDefinitionStatus"/>
+            <arg column="status" javaType="com.agentsquad.squad.common.enums.worker.WorkerDefinitionStatus"/>
             <arg column="version" javaType="_long"/>
             <arg column="definition_json" javaType="java.lang.String"/>
             <arg column="publish_key" javaType="java.lang.String"/>
@@ -42,7 +42,7 @@
             <arg column="definition_id" javaType="java.lang.String"/>
             <arg column="worker_key" javaType="java.lang.String"/>
             <arg column="worker_version" javaType="java.lang.String"/>
-            <arg column="status" javaType="com.agentsquad.squad.common.worker.WorkerDefinitionStatus"/>
+            <arg column="status" javaType="com.agentsquad.squad.common.enums.worker.WorkerDefinitionStatus"/>
             <arg column="version" javaType="_long"/>
             <arg column="definition_json" javaType="java.lang.String"/>
             <arg column="publish_key" javaType="java.lang.String"/>
@@ -59,7 +59,7 @@
             <arg column="definition_id" javaType="java.lang.String"/>
             <arg column="worker_key" javaType="java.lang.String"/>
             <arg column="worker_version" javaType="java.lang.String"/>
-            <arg column="status" javaType="com.agentsquad.squad.common.worker.WorkerDefinitionStatus"/>
+            <arg column="status" javaType="com.agentsquad.squad.common.enums.worker.WorkerDefinitionStatus"/>
             <arg column="version" javaType="_long"/>
             <arg column="definition_json" javaType="java.lang.String"/>
             <arg column="publish_key" javaType="java.lang.String"/>
@@ -76,7 +76,7 @@
             <arg column="definition_id" javaType="java.lang.String"/>
             <arg column="worker_key" javaType="java.lang.String"/>
             <arg column="worker_version" javaType="java.lang.String"/>
-            <arg column="status" javaType="com.agentsquad.squad.common.worker.WorkerDefinitionStatus"/>
+            <arg column="status" javaType="com.agentsquad.squad.common.enums.worker.WorkerDefinitionStatus"/>
             <arg column="version" javaType="_long"/>
             <arg column="definition_json" javaType="java.lang.String"/>
             <arg column="publish_key" javaType="java.lang.String"/>
@@ -93,7 +93,7 @@
             <arg column="definition_id" javaType="java.lang.String"/>
             <arg column="worker_key" javaType="java.lang.String"/>
             <arg column="worker_version" javaType="java.lang.String"/>
-            <arg column="status" javaType="com.agentsquad.squad.common.worker.WorkerDefinitionStatus"/>
+            <arg column="status" javaType="com.agentsquad.squad.common.enums.worker.WorkerDefinitionStatus"/>
             <arg column="version" javaType="_long"/>
             <arg column="definition_json" javaType="java.lang.String"/>
             <arg column="publish_key" javaType="java.lang.String"/>

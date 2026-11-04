@@ -1,7 +1,6 @@
 package com.agentsquad.squad.gateway.auth;
 
-import com.agentsquad.squad.common.identity.AccountRole;
-import com.agentsquad.squad.common.identity.AccountStatus;
+import com.agentsquad.squad.common.enums.identity.AccountStatus;
 import com.agentsquad.squad.common.exception.AuthenticationRequiredException;
 import jakarta.annotation.Resource;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;

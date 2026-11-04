@@ -1,5 +1,6 @@
 package com.agentsquad.squad.conversation.controller;
 
+import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
 import com.agentsquad.squad.conversation.dto.MessageReceipt;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
@@ -30,18 +31,18 @@ public class MessageController {
 
     @PostMapping("/messages")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public MessageReceipt first(HttpServletRequest servletRequest,
-                                @RequestHeader("Idempotency-Key") String key,
-                                @Valid @RequestBody MessageCreateRequest request) {
-        return messages.accept(UserContext.current(servletRequest).userId(), null, key, request);
+    public ApiResult<MessageReceipt> first(HttpServletRequest servletRequest,
+                                           @RequestHeader("Idempotency-Key") String key,
+                                           @Valid @RequestBody MessageCreateRequest request) {
+        return ApiResult.success(messages.accept(UserContext.current(servletRequest).userId(), null, key, request));
     }
 
     @PostMapping("/{conversationId}/messages")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public MessageReceipt append(HttpServletRequest servletRequest,
-                                 @PathVariable String conversationId,
-                                 @RequestHeader("Idempotency-Key") String key,
-                                 @Valid @RequestBody MessageCreateRequest request) {
-        return messages.accept(UserContext.current(servletRequest).userId(), conversationId, key, request);
+    public ApiResult<MessageReceipt> append(HttpServletRequest servletRequest,
+                                            @PathVariable String conversationId,
+                                            @RequestHeader("Idempotency-Key") String key,
+                                            @Valid @RequestBody MessageCreateRequest request) {
+        return ApiResult.success(messages.accept(UserContext.current(servletRequest).userId(), conversationId, key, request));
     }
 }

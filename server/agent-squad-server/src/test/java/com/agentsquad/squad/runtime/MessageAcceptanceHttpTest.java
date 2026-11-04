@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.testsupport.ApiResultJson;
 import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.artifact.service.ArtifactService;
@@ -20,7 +21,7 @@ import org.springframework.web.context.WebApplicationContext;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
-import com.agentsquad.squad.common.identity.AccountRole;
+import com.agentsquad.squad.common.enums.identity.AccountRole;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -210,7 +211,7 @@ class MessageAcceptanceHttpTest {
                         .header("Idempotency-Key", key)
                         .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(body)))
                 .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString();
-        return json.readValue(response, MessageReceipt.class);
+        return ApiResultJson.readData(json, response, MessageReceipt.class);
     }
 
     private static MessageReceipt concurrentSend(ConfigurableApplicationContext context, MessageTestActor actor,

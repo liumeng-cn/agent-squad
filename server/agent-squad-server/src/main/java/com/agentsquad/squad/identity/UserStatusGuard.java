@@ -2,7 +2,7 @@ package com.agentsquad.squad.identity;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.common.identity.AccountStatus;
+import com.agentsquad.squad.common.enums.identity.AccountStatus;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

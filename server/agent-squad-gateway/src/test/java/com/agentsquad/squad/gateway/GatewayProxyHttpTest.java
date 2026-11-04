@@ -123,7 +123,7 @@ class GatewayProxyHttpTest {
         assertTrue(login.headers().firstValue("Set-Cookie").orElseThrow().contains("HttpOnly"));
         String cookie = login.headers().firstValue("Set-Cookie").orElseThrow().split(";", 2)[0];
         var json = new com.fasterxml.jackson.databind.ObjectMapper().readTree(login.body());
-        String csrf = json.get("csrfToken").asText();
+        String csrf = json.get("data").get("csrfToken").asText();
         var me = client.send(HttpRequest.newBuilder(URI.create(base + "/api/v1/auth/me"))
                 .header("Cookie", cookie).build(), HttpResponse.BodyHandlers.ofString());
         assertEquals(200, me.statusCode());
@@ -131,7 +131,7 @@ class GatewayProxyHttpTest {
         assertEquals(401, client.send(HttpRequest.newBuilder(URI.create(base + "/api/echo"))
                         .header("Cookie", cookie).POST(HttpRequest.BodyPublishers.ofString("blocked")).build(),
                 HttpResponse.BodyHandlers.ofString()).statusCode());
-        assertEquals(204, client.send(HttpRequest.newBuilder(URI.create(base + "/api/v1/auth/logout"))
+        assertEquals(200, client.send(HttpRequest.newBuilder(URI.create(base + "/api/v1/auth/logout"))
                 .header("Cookie", cookie).header("X-CSRF-Token", csrf)
                 .POST(HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.ofString()).statusCode());
         assertEquals(401, client.send(HttpRequest.newBuilder(URI.create(base + "/api/v1/auth/me"))

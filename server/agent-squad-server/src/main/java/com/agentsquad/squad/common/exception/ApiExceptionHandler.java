@@ -1,5 +1,7 @@
 package com.agentsquad.squad.common.exception;
 
+import com.agentsquad.squad.common.model.ApiCode;
+import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.common.observability.ObservationSupport;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,12 +31,13 @@ public class ApiExceptionHandler {
     private ObservationSupport observations;
 
     @ExceptionHandler(AuthenticationRequiredException.class)
-    public ResponseEntity<Map<String, String>> unauthenticated(AuthenticationRequiredException exception) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", exception.getMessage()));
+    public ResponseEntity<ApiResult<Void>> unauthenticated(AuthenticationRequiredException exception) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResult.error(ApiCode.UNAUTHORIZED, exception.getMessage()));
     }
 
     @ExceptionHandler(RuntimeBusinessException.class)
-    public ResponseEntity<Map<String, String>> businessError(RuntimeBusinessException exception) {
+    public ResponseEntity<ApiResult<Void>> businessError(RuntimeBusinessException exception) {
         HttpStatus status = switch (exception.code()) {
             case EXPIRED -> HttpStatus.GONE;
             case NOT_FOUND -> HttpStatus.NOT_FOUND;
@@ -42,7 +45,8 @@ public class ApiExceptionHandler {
             case CONFLICT -> HttpStatus.CONFLICT;
             case VALIDATION -> HttpStatus.BAD_REQUEST;
         };
-        return ResponseEntity.status(status).body(Map.of("message", exception.getMessage()));
+        return ResponseEntity.status(status)
+                .body(ApiResult.error(ApiCode.fromCode(status.value()), exception.getMessage()));
     }
 
     /**
@@ -50,11 +54,12 @@ public class ApiExceptionHandler {
      */
     @ExceptionHandler({ MethodArgumentNotValidException.class, ConstraintViolationException.class,
             MethodArgumentTypeMismatchException.class, HttpMessageNotReadableException.class })
-    public ResponseEntity<Map<String, String>> validationError(Exception exception, HttpServletRequest request) {
+    public ResponseEntity<ApiResult<Void>> validationError(Exception exception, HttpServletRequest request) {
         log.warn("请求参数错误 {}", observations.logFields(Map.of(
                 "method", request.getMethod(), "path", request.getRequestURI(),
                 "statusCode", HttpStatus.BAD_REQUEST.value(), "errorType", observations.classify(exception))));
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "请求参数错误"));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResult.error(ApiCode.BAD_REQUEST));
     }
 
     /**
@@ -62,11 +67,9 @@ public class ApiExceptionHandler {
      * 4xx 客户端错误只记录 WARN，避免未认证等正常情况刷 ERROR。
      */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, String>> unexpected(Exception exception, HttpServletRequest request) {
+    public ResponseEntity<ApiResult<Void>> unexpected(Exception exception, HttpServletRequest request) {
         int statusCode = exception instanceof ErrorResponse response
                 ? response.getStatusCode().value() : HttpStatus.INTERNAL_SERVER_ERROR.value();
-        String message = statusCode >= HttpStatus.INTERNAL_SERVER_ERROR.value()
-                ? "服务暂时不可用" : "请求无法处理";
         if (statusCode >= HttpStatus.INTERNAL_SERVER_ERROR.value()) {
             log.error("请求处理失败 {}", observations.logFields(Map.of(
                     "method", request.getMethod(), "path", request.getRequestURI(),
@@ -76,6 +79,7 @@ public class ApiExceptionHandler {
                     "method", request.getMethod(), "path", request.getRequestURI(),
                     "statusCode", statusCode, "errorType", observations.classify(exception))));
         }
-        return ResponseEntity.status(statusCode).body(Map.of("message", message));
+        return ResponseEntity.status(statusCode)
+                .body(ApiResult.error(ApiCode.fromCode(statusCode)));
     }
 }

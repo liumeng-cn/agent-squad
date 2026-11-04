@@ -1,6 +1,6 @@
 package com.agentsquad.squad.identity;
 
-import com.agentsquad.squad.common.identity.AccountStatus;
+import com.agentsquad.squad.common.enums.identity.AccountStatus;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

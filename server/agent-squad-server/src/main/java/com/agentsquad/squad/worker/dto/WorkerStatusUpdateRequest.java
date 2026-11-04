@@ -1,6 +1,6 @@
 package com.agentsquad.squad.worker.dto;
 
-import com.agentsquad.squad.common.worker.WorkerDefinitionStatus;
+import com.agentsquad.squad.common.enums.worker.WorkerDefinitionStatus;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 

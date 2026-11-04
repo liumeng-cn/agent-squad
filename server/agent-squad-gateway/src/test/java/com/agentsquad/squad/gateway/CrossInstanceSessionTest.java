@@ -62,13 +62,13 @@ class CrossInstanceSessionTest {
                 HttpResponse.BodyHandlers.ofString());
         assertEquals(200, login.statusCode());
         String cookie = login.headers().firstValue("Set-Cookie").orElseThrow().split(";", 2)[0];
-        String csrf = JSON.readTree(login.body()).get("csrfToken").asText();
+        String csrf = JSON.readTree(login.body()).get("data").get("csrfToken").asText();
 
         assertEquals(200, client.send(HttpRequest.newBuilder(URI.create(base(second) + "/api/v1/auth/me"))
                         .header("Cookie", cookie).GET().build(),
                 HttpResponse.BodyHandlers.ofString()).statusCode());
 
-        assertEquals(204, client.send(HttpRequest.newBuilder(URI.create(base(second) + "/api/v1/auth/logout"))
+        assertEquals(200, client.send(HttpRequest.newBuilder(URI.create(base(second) + "/api/v1/auth/logout"))
                         .header("Cookie", cookie).header("X-CSRF-Token", csrf)
                         .POST(HttpRequest.BodyPublishers.noBody()).build(),
                 HttpResponse.BodyHandlers.ofString()).statusCode());

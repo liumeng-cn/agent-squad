@@ -1,6 +1,6 @@
 package com.agentsquad.squad.worker.dto;
 
-import com.agentsquad.squad.common.worker.WorkerDefinitionStatus;
+import com.agentsquad.squad.common.enums.worker.WorkerDefinitionStatus;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.List;

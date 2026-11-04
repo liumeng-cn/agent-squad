@@ -1,6 +1,6 @@
 package com.agentsquad.squad.worker.domain;
 
-import com.agentsquad.squad.common.worker.WorkerDefinitionStatus;
+import com.agentsquad.squad.common.enums.worker.WorkerDefinitionStatus;
 
 /**
  * Worker 能力定义持久投影。

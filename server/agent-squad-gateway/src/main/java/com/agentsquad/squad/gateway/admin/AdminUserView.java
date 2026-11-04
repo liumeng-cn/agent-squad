@@ -1,7 +1,7 @@
 package com.agentsquad.squad.gateway.admin;
 
-import com.agentsquad.squad.common.identity.AccountRole;
-import com.agentsquad.squad.common.identity.AccountStatus;
+import com.agentsquad.squad.common.enums.identity.AccountRole;
+import com.agentsquad.squad.common.enums.identity.AccountStatus;
 
 import java.time.LocalDateTime;
 
