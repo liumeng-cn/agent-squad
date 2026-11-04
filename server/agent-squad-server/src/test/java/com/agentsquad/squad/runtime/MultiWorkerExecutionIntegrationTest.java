@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
+import com.agentsquad.squad.common.identity.AccountRole;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -118,7 +119,7 @@ class MultiWorkerExecutionIntegrationTest {
                 taskId = task.taskId();
                 JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
                 jdbc.update("UPDATE sq_command SET status = 'CANCELLED' WHERE command_id = ?", task.commandId());
-                context.getBean(WorkerDefinitionService.class).publish(new AuthView(userId, "tester", List.of("ADMIN"), "csrf"),
+                context.getBean(WorkerDefinitionService.class).publish(new AuthView(userId, "tester", List.of(AccountRole.ADMIN), "csrf"),
                         "writer", new WorkerDefinitionCreateRequest("writer", "1.0.0", "撰写局部内容",
                                 json.readTree("{}"), json.readTree("{\"type\":\"object\",\"required\":[\"text\"]}"),
                                 List.of(), "default", "default"));

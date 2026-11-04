@@ -1,13 +1,14 @@
 package com.agentsquad.squad.worker.service;
 
-import com.agentsquad.squad.common.util.JsonSchemaValidator;
-import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.common.identity.AccountRole;
 import com.agentsquad.squad.common.util.ContentDigests;
+import com.agentsquad.squad.common.util.JsonSchemaValidator;
 import com.agentsquad.squad.common.util.RuntimePayloads;
+import com.agentsquad.squad.common.worker.WorkerDefinitionStatus;
+import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.worker.domain.WorkerDefinitionRow;
-import com.agentsquad.squad.worker.domain.WorkerDefinitionStatus;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionCreateRequest;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionPage;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionResponse;
@@ -153,7 +154,7 @@ public class WorkerDefinitionService {
             }
             return toResponse(current);
         }
-        WorkerDefinitionStatus status = WorkerDefinitionStatus.valueOf(current.status());
+        WorkerDefinitionStatus status = current.status();
         if (!status.canChangeTo(request.status())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "已撤销的 Worker 版本不能重新启用");
         }
@@ -161,7 +162,7 @@ public class WorkerDefinitionService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "Worker 状态版本已变化");
         }
         int updated = definitionMapper.updateStatus(definitionId, request.expectedVersion(),
-                request.status().name(), idempotencyKey, hash, actor.userId(), actor.username());
+                request.status(), idempotencyKey, hash, actor.userId(), actor.username());
         if (updated != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "Worker 状态版本已变化");
         }
@@ -277,7 +278,7 @@ public class WorkerDefinitionService {
     }
 
     private void requireAdmin(AuthView actor) {
-        if (actor == null || !actor.roles().contains("ADMIN")) {
+        if (actor == null || !actor.roles().contains(AccountRole.ADMIN)) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "需要管理员权限");
         }
     }

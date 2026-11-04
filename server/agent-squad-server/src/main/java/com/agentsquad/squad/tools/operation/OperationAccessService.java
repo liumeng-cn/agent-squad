@@ -1,5 +1,6 @@
 package com.agentsquad.squad.tools.operation;
 
+import com.agentsquad.squad.common.identity.AccountRole;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.tools.operation.repository.OperationAccessMapper;
 import jakarta.annotation.Resource;
@@ -16,7 +17,7 @@ public class OperationAccessService {
     private OperationAccessMapper mapper;
 
     public boolean canReconcile(AuthView actor, String scopeId, String status) {
-        return "UNKNOWN".equals(status) && actor.roles().contains("OPERATOR")
+        return "UNKNOWN".equals(status) && actor.roles().contains(AccountRole.OPERATOR)
                 && mapper.countGrant(actor.userId(), scopeId) > 0;
     }
 }

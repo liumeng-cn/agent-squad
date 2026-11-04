@@ -30,6 +30,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.file.Path;
 import java.util.List;
+import com.agentsquad.squad.common.identity.AccountRole;
 import java.util.Map;
 import java.util.UUID;
 
@@ -65,7 +66,7 @@ class TaskDirectiveIntegrationTest {
                 new GoalTaskCreate("goal", "介绍", "写介绍", source.messageId()));
         String targetSession = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE task_id=? AND role='MASTER'", String.class, task.taskId());
         ObjectMapper json = context.getBean(ObjectMapper.class);
-        context.getBean(WorkerDefinitionService.class).publish(new AuthView(user, "admin", List.of("ADMIN"), "csrf"), "writer-" + user,
+        context.getBean(WorkerDefinitionService.class).publish(new AuthView(user, "admin", List.of(AccountRole.ADMIN), "csrf"), "writer-" + user,
                 new WorkerDefinitionCreateRequest("writer-" + user, "1.0.0", "写作", json.readTree("{}"), json.readTree("{}"), List.of(), "default", "default"));
         var snapshots = context.getBean(ContextSnapshotService.class);
         String snapshot = snapshots.prepare(user, targetSession, "draft", "before").snapshotId();

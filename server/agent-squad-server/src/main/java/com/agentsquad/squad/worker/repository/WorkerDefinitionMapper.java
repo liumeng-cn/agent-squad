@@ -1,5 +1,6 @@
 package com.agentsquad.squad.worker.repository;
 
+import com.agentsquad.squad.common.worker.WorkerDefinitionStatus;
 import com.agentsquad.squad.worker.domain.WorkerDefinitionRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -29,7 +30,7 @@ public interface WorkerDefinitionMapper {
     List<WorkerDefinitionRow> listAfter(@Param("afterId") long afterId, @Param("limit") int limit);
 
     int updateStatus(@Param("definitionId") String definitionId, @Param("expectedVersion") long expectedVersion,
-                     @Param("status") String status, @Param("idempotencyKey") String idempotencyKey,
+                     @Param("status") WorkerDefinitionStatus status, @Param("idempotencyKey") String idempotencyKey,
                      @Param("payloadHash") String payloadHash, @Param("actorId") String actorId,
                      @Param("actorName") String actorName);
 

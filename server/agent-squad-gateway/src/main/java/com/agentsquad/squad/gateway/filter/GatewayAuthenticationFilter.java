@@ -38,7 +38,7 @@ public class GatewayAuthenticationFilter implements GlobalFilter, Ordered {
             return read ? authService.authenticate(token)
                     : authService.authenticateWrite(token,exchange.getRequest().getHeaders().getFirst("X-CSRF-Token"));
         }).subscribeOn(Schedulers.boundedElastic()).flatMap(user -> {
-            if (user.mustChangePassword()) return Mono.error(new com.agentsquad.squad.gateway.auth.AuthForbiddenException());
+            if (user.mustChangePassword()) return Mono.error(new com.agentsquad.squad.common.exception.AuthForbiddenException());
             String assertion=signer.sign(user,exchange.getRequest().getMethod().name(),
                     exchange.getRequest().getURI().getRawPath());
             var request=exchange.getRequest().mutate().headers(headers -> {
@@ -49,7 +49,7 @@ public class GatewayAuthenticationFilter implements GlobalFilter, Ordered {
                 headers.remove("X-Squad-Assertion");
                 if(assertion != null) headers.set("X-Squad-Assertion",assertion);
                 headers.set("X-User-Id",user.userId());
-                headers.set("X-User-Role",String.join(",",user.roles()));
+                headers.set("X-User-Role", user.roles().stream().map(Enum::name).collect(java.util.stream.Collectors.joining(",")));
                 headers.set("X-User-Name",user.username());
                 headers.remove("Cookie");
                 headers.remove("X-CSRF-Token");

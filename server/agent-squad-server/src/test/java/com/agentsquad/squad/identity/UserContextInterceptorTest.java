@@ -7,6 +7,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import com.agentsquad.squad.common.identity.AccountRole;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -27,7 +28,7 @@ class UserContextInterceptorTest {
     void signedAssertionTakesPrecedenceAndChecksUserStatus() {
         SignedIdentityVerifier verifier = mock(SignedIdentityVerifier.class);
         UserStatusGuard status = mock(UserStatusGuard.class);
-        AuthView view = new AuthView(USER_ID, "alice", List.of("USER"), null);
+        AuthView view = new AuthView(USER_ID, "alice", List.of(AccountRole.USER), null);
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/conversations");
         when(verifier.verify(request)).thenReturn(view);
         UserContextInterceptor interceptor = interceptor(verifier, status, false, true);
@@ -79,7 +80,7 @@ class UserContextInterceptorTest {
 
         assertThat(interceptor.preHandle(request, new MockHttpServletResponse(), new Object())).isTrue();
         assertThat(((AuthView) request.getAttribute(UserContext.ATTRIBUTE)).roles())
-                .containsExactly("OPERATOR");
+                .containsExactly(AccountRole.OPERATOR);
     }
 
     @Test

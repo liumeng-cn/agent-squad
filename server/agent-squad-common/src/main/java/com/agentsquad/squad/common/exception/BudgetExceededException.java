@@ -1,7 +1,5 @@
 package com.agentsquad.squad.common.exception;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
 /**
  * 处理额度不足的明确业务异常。

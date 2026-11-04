@@ -1,7 +1,7 @@
 package com.agentsquad.squad.gateway;
 
 import com.agentsquad.squad.gateway.admin.UserAccountService;
-import com.agentsquad.squad.gateway.exception.StateConflictException;
+import com.agentsquad.squad.common.exception.StateConflictException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
@@ -183,6 +183,25 @@ class AdminUserHttpTest {
                 "{\"expectedVersion\":1,\"status\":\"DISABLED\"}", admin).statusCode());
         assertEquals(409, patch(client, "/api/v1/admin/users/" + ADMIN_ID,
                 "{\"expectedVersion\":0,\"status\":\"DISABLED\"}", admin).statusCode());
+    }
+
+    @Test
+    void rejectsInvalidEnumValues() throws Exception {
+        HttpClient client = HttpClient.newHttpClient();
+        AdminSession admin = login(client, "admin", "admin-password");
+
+        assertEquals(400, post(client, "/api/v1/admin/users",
+                "{\"username\":\"bad-role\",\"role\":\"SUPERADMIN\"}", admin).statusCode());
+
+        HttpResponse<String> created = post(client, "/api/v1/admin/users",
+                "{\"username\":\"enum-test\",\"role\":\"USER\"}", admin);
+        assertEquals(201, created.statusCode());
+        String userId = JSON.readTree(created.body()).get("userId").asText();
+
+        assertEquals(400, patch(client, "/api/v1/admin/users/" + userId,
+                "{\"expectedVersion\":0,\"status\":\"LOCKED\"}", admin).statusCode());
+        assertEquals(400, patch(client, "/api/v1/admin/users/" + userId,
+                "{\"expectedVersion\":0,\"role\":\"GUEST\"}", admin).statusCode());
     }
 
     @Test

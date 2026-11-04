@@ -30,6 +30,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import com.agentsquad.squad.common.identity.AccountRole;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -114,7 +115,7 @@ class WorkerCrashRecoveryIntegrationTest {
                     AgentSquadApplication.class, slow)) {
                 JdbcTemplate jdbc = first.getBean(JdbcTemplate.class);
                 WorkerDefinitionService definitions = first.getBean(WorkerDefinitionService.class);
-                definitions.publish(new AuthView(userId, "admin", List.of("ADMIN"), "csrf"),
+                definitions.publish(new AuthView(userId, "admin", List.of(AccountRole.ADMIN), "csrf"),
                         "crash-writer", new WorkerDefinitionCreateRequest(
                                 "crash-writer", "1.0.0", "写摘要",
                                 json.readTree("{}"), json.readTree("{}"),

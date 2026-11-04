@@ -1,5 +1,6 @@
 package com.agentsquad.squad.testsupport;
 
+import com.agentsquad.squad.common.identity.AccountStatus;
 import com.agentsquad.squad.identity.UserStatusMapper;
 import jakarta.annotation.Resource;
 import org.springframework.context.annotation.Primary;
@@ -22,9 +23,9 @@ public class TestUserStatusMapper implements UserStatusMapper {
     private JdbcTemplate jdbcTemplate;
 
     @Override
-    public String findStatus(String userId) {
+    public AccountStatus findStatus(String userId) {
         List<String> statuses = jdbcTemplate.queryForList(
                 "SELECT status FROM sq_user WHERE user_id = ? AND del_flag = '0'", String.class, userId);
-        return statuses.isEmpty() ? "ACTIVE" : statuses.getFirst();
+        return statuses.isEmpty() ? AccountStatus.ACTIVE : AccountStatus.valueOf(statuses.getFirst());
     }
 }

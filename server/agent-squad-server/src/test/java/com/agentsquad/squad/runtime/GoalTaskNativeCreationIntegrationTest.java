@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
+import com.agentsquad.squad.common.identity.AccountRole;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.CountDownLatch;
@@ -202,7 +203,7 @@ class GoalTaskNativeCreationIntegrationTest {
                 JdbcTemplate jdbc = spring.getBean(JdbcTemplate.class);
                 jdbcRef.set(jdbc);
                 WorkerDefinitionService definitions = spring.getBean(WorkerDefinitionService.class);
-                definitions.publish(new AuthView(userId, "admin", List.of("ADMIN"), "csrf"),
+                definitions.publish(new AuthView(userId, "admin", List.of(AccountRole.ADMIN), "csrf"),
                         "draft-writer", new WorkerDefinitionCreateRequest(
                                 "draft-writer", "1.0.0", "写作短文",
                                 json.readTree("{}"), json.readTree("""

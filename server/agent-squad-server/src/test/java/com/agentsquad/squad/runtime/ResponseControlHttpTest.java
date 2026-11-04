@@ -1,5 +1,7 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.common.identity.AccountRole;
+
 import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.conversation.service.ConversationCleanupScheduler;
 import com.agentsquad.squad.conversation.service.ConversationDeletionService;
@@ -54,7 +56,7 @@ class ResponseControlHttpTest {
             assertThat(again).isEqualTo(first);
             assertThat(tasks.getConversation(user, conversation).activeTaskId()).isEqualTo(task);
             assertThat(tasks.findTask(user, task).status()).isEqualTo("QUEUED");
-            MessageTestActor other = new MessageTestActor(new com.agentsquad.squad.identity.AuthView(UUID.randomUUID().toString(), "other", java.util.List.of("USER"), null));
+            MessageTestActor other = new MessageTestActor(new com.agentsquad.squad.identity.AuthView(UUID.randomUUID().toString(), "other", java.util.List.of(AccountRole.USER), null));
             mvc.perform(post(path).with(TestAssertion.as(other.view().userId(), "USER")).header("Idempotency-Key", "foreign")
                     .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")).andExpect(status().isNotFound());
         }

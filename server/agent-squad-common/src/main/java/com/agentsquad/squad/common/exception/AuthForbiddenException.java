@@ -1,4 +1,4 @@
-package com.agentsquad.squad.gateway.auth;
+package com.agentsquad.squad.common.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;

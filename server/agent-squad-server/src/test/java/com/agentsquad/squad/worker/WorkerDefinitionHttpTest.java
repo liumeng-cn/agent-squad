@@ -141,6 +141,28 @@ class WorkerDefinitionHttpTest {
     }
 
     @Test
+    void rejectsInvalidStatusValue(@TempDir Path tempDirectory) throws Exception {
+        try (ConfigurableApplicationContext context = start(tempDirectory, "ADMIN")) {
+            MockMvc mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();
+            String role = context.getEnvironment().getProperty("agentsquad.auth.role", "ADMIN");
+
+            String createdBody = mvc.perform(post("/api/v1/worker-definitions")
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
+                            .header("Idempotency-Key", "invalid-status")
+                            .contentType(MediaType.APPLICATION_JSON).content(DEFINITION))
+                    .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+            String definitionId = context.getBean(ObjectMapper.class).readTree(createdBody).get("definitionId").asText();
+
+            mvc.perform(patch("/api/v1/worker-definitions/{id}", definitionId)
+                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
+                            .header("Idempotency-Key", "invalid-status-patch")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"expectedVersion\":0,\"status\":\"FROZEN\"}"))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Test
     void rejectsPublicationFromNonAdmin(@TempDir Path tempDirectory) throws Exception {
         try (ConfigurableApplicationContext context = start(tempDirectory, "USER")) {
             MockMvc mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();

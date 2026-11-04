@@ -14,6 +14,7 @@ import com.agentsquad.squad.tools.connection.LocalSecretVault;
 import java.nio.file.Path;
 import java.util.Base64;
 import java.util.List;
+import com.agentsquad.squad.common.identity.AccountRole;
 import java.util.Map;
 import java.util.UUID;
 
@@ -38,7 +39,7 @@ class ConnectionOptimisticLockTest {
                     Base64.getEncoder().encodeToString(key));
             ConnectionService service = context.getBean(ConnectionService.class);
             ConnectionMapper mapper = context.getBean(ConnectionMapper.class);
-            AuthView actor = new AuthView(owner, "tester", List.of("USER"), null);
+            AuthView actor = new AuthView(owner, "tester", List.of(AccountRole.USER), null);
             var created = service.create(actor, "create", new ConnectionCreateRequest(
                     "隔离连接", "mock", "test", Map.of("scope", "test"), "test-only-secret"));
             String id = created.connectionId();

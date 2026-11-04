@@ -30,6 +30,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import com.agentsquad.squad.common.identity.AccountRole;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -63,7 +64,7 @@ class WorkerGuardIntegrationTest {
             ConversationResponse conversation = tasks.createConversation(userId, "Worker guard");
             TaskReceipt task = tasks.submit(userId, conversation.conversationId(),
                     "worker-guard", "写一段摘要");
-            definitions.publish(new AuthView(userId, "admin", List.of("ADMIN"), "csrf"),
+            definitions.publish(new AuthView(userId, "admin", List.of(AccountRole.ADMIN), "csrf"),
                     "guard-definition", new WorkerDefinitionCreateRequest(
                             "writer", "1.0.0", "写摘要",
                             json.readTree("{}"),

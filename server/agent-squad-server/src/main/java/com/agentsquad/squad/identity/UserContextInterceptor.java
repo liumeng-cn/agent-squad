@@ -1,5 +1,6 @@
 package com.agentsquad.squad.identity;
 
+import com.agentsquad.squad.common.identity.AccountRole;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -47,9 +48,14 @@ public class UserContextInterceptor implements HandlerInterceptor {
 
         String userId = request.getHeader("X-User-Id");
         String role = request.getHeader("X-User-Role");
-        if (userId == null || role == null
-                || (!"ADMIN".equals(role) && !"USER".equals(role) && !"OPERATOR".equals(role))) {
+        if (userId == null || role == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "缺少有效的本地开发身份");
+        }
+        final AccountRole accountRole;
+        try {
+            accountRole = AccountRole.valueOf(role);
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "本地开发角色无效");
         }
         try {
             userId = UUID.fromString(userId).toString();
@@ -60,7 +66,7 @@ public class UserContextInterceptor implements HandlerInterceptor {
         userStatus.requireActive(userId);
         String username = request.getHeader("X-User-Name");
         request.setAttribute(UserContext.ATTRIBUTE,
-                new AuthView(userId, username == null ? userId : username, List.of(role), null));
+                new AuthView(userId, username == null ? userId : username, List.of(accountRole), null));
         return true;
     }
 }

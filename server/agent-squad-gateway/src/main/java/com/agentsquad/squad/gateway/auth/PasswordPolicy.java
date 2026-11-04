@@ -1,6 +1,6 @@
 package com.agentsquad.squad.gateway.auth;
 
-import com.agentsquad.squad.gateway.exception.ValidationFailedException;
+import com.agentsquad.squad.common.exception.ValidationFailedException;
 
 import java.nio.charset.StandardCharsets;
 

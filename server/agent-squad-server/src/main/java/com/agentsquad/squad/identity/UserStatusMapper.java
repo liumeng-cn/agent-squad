@@ -1,5 +1,6 @@
 package com.agentsquad.squad.identity;
 
+import com.agentsquad.squad.common.identity.AccountStatus;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -11,5 +12,5 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface UserStatusMapper {
 
-    String findStatus(@Param("userId") String userId);
+    AccountStatus findStatus(@Param("userId") String userId);
 }

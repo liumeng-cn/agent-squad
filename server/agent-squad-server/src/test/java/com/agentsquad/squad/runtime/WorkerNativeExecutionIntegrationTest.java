@@ -24,6 +24,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
+import com.agentsquad.squad.common.identity.AccountRole;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -102,7 +103,7 @@ class WorkerNativeExecutionIntegrationTest {
                 TaskReceipt task = tasks.submit(userId, conversation.conversationId(),
                         "native-worker", "写一段摘要");
                 taskId = task.taskId();
-                definitions.publish(new AuthView(userId, "admin", List.of("ADMIN"), "csrf"),
+                definitions.publish(new AuthView(userId, "admin", List.of(AccountRole.ADMIN), "csrf"),
                         "new-writer", new WorkerDefinitionCreateRequest(
                                 "new-writer", "1.0.0", "写简短摘要",
                                 json.readTree("{}"),

@@ -1,4 +1,4 @@
-package com.agentsquad.squad.worker.domain;
+package com.agentsquad.squad.common.worker;
 
 /**
  * Worker 能力版本状态。

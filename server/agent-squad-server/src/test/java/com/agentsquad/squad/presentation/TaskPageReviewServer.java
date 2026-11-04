@@ -21,6 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
+import com.agentsquad.squad.common.identity.AccountRole;
 import java.util.UUID;
 
 /**
@@ -49,7 +50,7 @@ public final class TaskPageReviewServer {
         var task = tasks.submit(userId, conversation.conversationId(), "review-goal", "撰写文章并完成审阅（页面状态夹具）", List.of(file.artifactId()));
         String master = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE task_id = ?", String.class, task.taskId());
         String binding = jdbc.queryForObject("SELECT binding_id FROM sq_runtime_binding WHERE task_id = ?", String.class, task.taskId());
-        context.getBean(WorkerDefinitionService.class).publish(new AuthView(userId, "review", List.of("ADMIN"), "fixture"),
+        context.getBean(WorkerDefinitionService.class).publish(new AuthView(userId, "review", List.of(AccountRole.ADMIN), "fixture"),
                 "review-writer", new WorkerDefinitionCreateRequest("writer", "1.0.0", "局部内容写作", json.readTree("{}"), json.readTree("{}"), List.of(), "default", "default"));
         var snapshots = context.getBean(ContextSnapshotService.class);
         String first = snapshots.prepare(userId, master, "draft", "review-draft").snapshotId();

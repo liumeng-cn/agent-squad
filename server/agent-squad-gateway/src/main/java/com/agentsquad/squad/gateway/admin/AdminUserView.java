@@ -1,5 +1,8 @@
 package com.agentsquad.squad.gateway.admin;
 
+import com.agentsquad.squad.common.identity.AccountRole;
+import com.agentsquad.squad.common.identity.AccountStatus;
+
 import java.time.LocalDateTime;
 
 /**
@@ -7,7 +10,7 @@ import java.time.LocalDateTime;
  *
  * <p>不包含密码摘要、会话令牌或来源 IP。</p>
  */
-public record AdminUserView(String userId, String username, String displayName, String role, String status,
+public record AdminUserView(String userId, String username, String displayName, AccountRole role, AccountStatus status,
                             long version, boolean mustChangePassword, LocalDateTime createTime) {
 
     public static AdminUserView from(UserAccountRow row) {

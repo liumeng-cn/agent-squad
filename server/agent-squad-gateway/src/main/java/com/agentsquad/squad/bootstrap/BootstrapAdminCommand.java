@@ -1,8 +1,8 @@
 package com.agentsquad.squad.bootstrap;
 
 import com.agentsquad.squad.gateway.admin.UserAccountService;
-import com.agentsquad.squad.gateway.exception.StateConflictException;
-import com.agentsquad.squad.gateway.exception.ValidationFailedException;
+import com.agentsquad.squad.common.exception.StateConflictException;
+import com.agentsquad.squad.common.exception.ValidationFailedException;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;

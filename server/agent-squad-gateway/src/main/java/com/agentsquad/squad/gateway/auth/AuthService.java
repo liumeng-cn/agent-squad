@@ -1,6 +1,8 @@
 package com.agentsquad.squad.gateway.auth;
 
-import com.agentsquad.squad.gateway.exception.AuthenticationRequiredException;
+import com.agentsquad.squad.common.identity.AccountRole;
+import com.agentsquad.squad.common.identity.AccountStatus;
+import com.agentsquad.squad.common.exception.AuthenticationRequiredException;
 import jakarta.annotation.Resource;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -77,7 +79,7 @@ public class AuthService {
         }
         AuthAccount account = repository.findAccountByUsername(name).orElse(null);
         boolean ok = account != null && password != null && passwordEncoder.matches(password, account.passwordHash());
-        if (!ok || !"ACTIVE".equals(account.status())) {
+        if (!ok || account.status() != AccountStatus.ACTIVE) {
             repository.recordLoginFailure(bucket, time);
             throw new AuthenticationRequiredException();
         }
@@ -102,7 +104,7 @@ public class AuthService {
         AuthSessionRow session = repository.findSessionByTokenHash(digest(token))
                 .orElseThrow(AuthenticationRequiredException::new);
         LocalDateTime time = now();
-        if (session.revokedAt() != null || !"ACTIVE".equals(session.accountStatus())
+        if (session.revokedAt() != null || session.accountStatus() != AccountStatus.ACTIVE
                 || session.accountAuthVersion() != session.issuedAuthVersion()
                 || !session.idleExpiresAt().isAfter(time) || !session.absoluteExpiresAt().isAfter(time)) {
             throw new AuthenticationRequiredException();

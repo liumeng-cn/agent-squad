@@ -2,10 +2,12 @@
  * 后端公开 DTO 的 TypeScript 镜像；字段名与 api/openapi.json 保持一致。
  */
 
+export type AccountRole = 'USER' | 'ADMIN' | 'OPERATOR'
+
 export interface AuthView {
   userId: string
   username: string
-  roles: string[]
+  roles: AccountRole[]
   csrfToken: string
   mustChangePassword: boolean
 }
@@ -136,8 +138,6 @@ export interface TaskEvent {
   payloadJson: string
   occurredAt: string
 }
-
-export type AccountRole = 'USER' | 'ADMIN'
 
 export type AccountStatus = 'ACTIVE' | 'DISABLED'
 

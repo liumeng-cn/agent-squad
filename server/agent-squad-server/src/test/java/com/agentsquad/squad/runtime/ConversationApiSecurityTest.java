@@ -1,5 +1,7 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.common.identity.AccountRole;
+
 
 import com.agentsquad.squad.testsupport.TestAssertion;
 import org.junit.jupiter.api.Test;
@@ -40,7 +42,7 @@ class ConversationApiSecurityTest {
             String retry = "/api/v1/executions/" + receipt.executionId() + "/retry";
             mvc.perform(post(retry).header("Idempotency-Key", "retry").contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")).andExpect(status().isUnauthorized());
             mvc.perform(post(retry).with(TestAssertion.as(actor.view().userId(), "USER")).header("Idempotency-Key", "retry").contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")).andExpect(status().isConflict());
-            var other = new MessageTestActor(new com.agentsquad.squad.identity.AuthView(UUID.randomUUID().toString(), "other", java.util.List.of("USER"), null));
+            var other = new MessageTestActor(new com.agentsquad.squad.identity.AuthView(UUID.randomUUID().toString(), "other", java.util.List.of(AccountRole.USER), null));
             mvc.perform(get(base + "/snapshot").with(TestAssertion.as(other.view().userId(), "USER"))).andExpect(status().isNotFound());
             mvc.perform(get(base + "/snapshot").with(TestAssertion.as(other.view().userId(), "ADMIN"))).andExpect(status().isNotFound());
             mvc.perform(get(base + "/events").with(TestAssertion.as(other.view().userId(), "USER")).param("after", receipt.conversationId() + ":1:0")).andExpect(status().isNotFound());

@@ -7,7 +7,7 @@ import org.springframework.mock.env.MockEnvironment;
 import org.springframework.test.util.ReflectionTestUtils;
 import com.agentsquad.squad.gateway.admin.UserAccountService;
 import com.agentsquad.squad.gateway.auth.AuthService;
-import com.agentsquad.squad.gateway.exception.StateConflictException;
+import com.agentsquad.squad.common.exception.StateConflictException;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -88,7 +88,7 @@ class BootstrapAdminServiceTest {
         assertTrue(principal.mustChangePassword());
         assertEquals(userId, principal.userId());
         assertEquals(userId, authService.authenticateWrite(token, principal.csrfToken()).userId());
-        assertThrows(com.agentsquad.squad.gateway.exception.AuthenticationRequiredException.class,
+        assertThrows(com.agentsquad.squad.common.exception.AuthenticationRequiredException.class,
                 () -> authService.authenticateWrite(token, "invalid-csrf"));
         try (Connection connection = DriverManager.getConnection(DB_URL, GatewayTestDatabase.username(),
                 GatewayTestDatabase.password());
@@ -100,7 +100,7 @@ class BootstrapAdminServiceTest {
             assertTrue(result.getTimestamp("last_seen_at") != null);
         }
         authService.logout(token);
-        assertThrows(com.agentsquad.squad.gateway.exception.AuthenticationRequiredException.class,
+        assertThrows(com.agentsquad.squad.common.exception.AuthenticationRequiredException.class,
                 () -> authService.authenticate(token));
     }
 

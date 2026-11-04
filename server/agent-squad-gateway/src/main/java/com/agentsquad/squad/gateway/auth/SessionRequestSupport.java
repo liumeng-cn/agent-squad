@@ -1,6 +1,6 @@
 package com.agentsquad.squad.gateway.auth;
 
-import com.agentsquad.squad.gateway.exception.AuthenticationRequiredException;
+import com.agentsquad.squad.common.exception.AuthenticationRequiredException;
 import org.springframework.http.HttpCookie;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 

@@ -34,6 +34,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
+import com.agentsquad.squad.common.identity.AccountRole;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -135,7 +136,7 @@ class ScopeRuntimeOwnershipIntegrationTest {
         var approval = interactions.bindFrameworkRequest(userId, null, execution.bindingId(), null,
                 "fixed-scope-turn", "approve-1", Map.of("name", "mock_ticket_create"));
         jdbc.update("UPDATE sq_response_execution SET status = 'WAITING_APPROVAL' WHERE execution_id = ?", execution.executionId());
-        AuthView actor = new AuthView(userId, "tester", List.of("USER"), "csrf");
+        AuthView actor = new AuthView(userId, "tester", List.of(AccountRole.USER), "csrf");
         var approved = interactions.respond(actor, approval.interactionId(), "approval-key", 0,
                 "APPROVAL", true, write.requestHash(), null);
         assertThat(approved.taskId()).isNull();

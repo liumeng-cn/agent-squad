@@ -1,4 +1,4 @@
-package com.agentsquad.squad.gateway.exception;
+package com.agentsquad.squad.common.exception;
 
 /**
  * 账号仍使用临时密码，除改密、当前主体与退出外的请求被拒绝。

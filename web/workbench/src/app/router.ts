@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '../features/auth/stores/auth'
+import type { AccountRole } from '../shared/api/types'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -86,7 +87,8 @@ router.beforeEach(async (to) => {
   if (loggedIn && to.name === 'login') {
     return { name: 'workspace' }
   }
-  if (loggedIn && to.meta.role && !auth.user?.roles.includes(String(to.meta.role))) {
+  const requiredRole = to.meta.role as AccountRole | undefined
+  if (loggedIn && requiredRole && !auth.user?.roles.includes(requiredRole)) {
     return { name: 'workspace' }
   }
   return true

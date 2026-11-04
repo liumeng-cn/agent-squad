@@ -1,16 +1,18 @@
 package com.agentsquad.squad.gateway.admin;
 
+import com.agentsquad.squad.common.identity.AccountRole;
+import com.agentsquad.squad.common.identity.AccountStatus;
 import com.agentsquad.squad.gateway.auth.AuthRepository;
 import com.agentsquad.squad.gateway.auth.AuthView;
 import com.agentsquad.squad.gateway.auth.PasswordChangeRequest;
 import com.agentsquad.squad.gateway.auth.PasswordPolicy;
 import com.agentsquad.squad.gateway.auth.SessionSecrets;
-import com.agentsquad.squad.gateway.exception.InvalidRequestException;
-import com.agentsquad.squad.gateway.exception.PasswordChangeRequiredException;
-import com.agentsquad.squad.gateway.exception.PermissionDeniedException;
-import com.agentsquad.squad.gateway.exception.ResourceNotFoundException;
-import com.agentsquad.squad.gateway.exception.StateConflictException;
-import com.agentsquad.squad.gateway.exception.ValidationFailedException;
+import com.agentsquad.squad.common.exception.InvalidRequestException;
+import com.agentsquad.squad.common.exception.PasswordChangeRequiredException;
+import com.agentsquad.squad.common.exception.PermissionDeniedException;
+import com.agentsquad.squad.common.exception.ResourceNotFoundException;
+import com.agentsquad.squad.common.exception.StateConflictException;
+import com.agentsquad.squad.common.exception.ValidationFailedException;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -38,8 +40,8 @@ public class UserAccountService {
     private static final int DEFAULT_PAGE_SIZE = 50;
     private static final int MAX_PAGE_SIZE = 100;
     private static final int MAX_DISPLAY_NAME = 100;
-    private static final Set<String> ROLES = Set.of("USER", "ADMIN");
-    private static final Set<String> STATUSES = Set.of("ACTIVE", "DISABLED");
+    private static final Set<AccountRole> ROLES = Set.of(AccountRole.USER, AccountRole.ADMIN);
+    private static final Set<AccountStatus> STATUSES = Set.of(AccountStatus.ACTIVE, AccountStatus.DISABLED);
     private static final Pattern USERNAME = Pattern.compile("^[a-z0-9][a-z0-9._-]{2,63}$");
 
     @Resource
@@ -79,7 +81,7 @@ public class UserAccountService {
         }
         String username = normalizeUsername(request.username());
         String displayName = normalizeDisplayName(request.displayName(), username);
-        String role = normalizeRole(request.role(), "USER");
+        AccountRole role = normalizeRole(request.role(), AccountRole.USER);
         String temporaryPassword = SessionSecrets.randomToken();
         String userId = UUID.randomUUID().toString();
         try {
@@ -115,13 +117,13 @@ public class UserAccountService {
         if (target.version() != request.expectedVersion()) {
             throw new StateConflictException("数据已发生变化，请刷新后重试");
         }
-        String role = request.role() == null ? target.role() : normalizeRole(request.role(), target.role());
-        String status = request.status() == null ? target.status() : normalizeStatus(request.status(), target.status());
+        AccountRole role = request.role() == null ? target.role() : normalizeRole(request.role(), target.role());
+        AccountStatus status = request.status() == null ? target.status() : normalizeStatus(request.status(), target.status());
         String displayName = request.displayName() == null
                 ? target.displayName() : normalizeDisplayName(request.displayName(), target.displayName());
-        boolean authorizationChanged = !role.equals(target.role()) || !status.equals(target.status());
-        boolean demotingActiveAdmin = "ADMIN".equals(target.role()) && "ACTIVE".equals(target.status())
-                && (!"ADMIN".equals(role) || !"ACTIVE".equals(status));
+        boolean authorizationChanged = role != target.role() || status != target.status();
+        boolean demotingActiveAdmin = target.role() == AccountRole.ADMIN && target.status() == AccountStatus.ACTIVE
+                && (role != AccountRole.ADMIN || status != AccountStatus.ACTIVE);
         if (demotingActiveAdmin && activeAdmins.size() <= 1) {
             throw new StateConflictException("不能停用或降级最后一个活动管理员");
         }
@@ -200,7 +202,7 @@ public class UserAccountService {
             }
             String userId = UUID.randomUUID().toString();
             adminUserMapper.insertUser(userId, normalized, normalized, passwordEncoder.encode(rawPassword),
-                    "ADMIN", true, userId, normalized);
+                    AccountRole.ADMIN, true, userId, normalized);
             authRepository.insertAudit(userId, userId, "BOOTSTRAP_ADMIN", "SUCCESS", "bootstrap");
             log.info("初始管理员已创建 userId={}", userId);
             return userId;
@@ -216,7 +218,7 @@ public class UserAccountService {
         if (actor.mustChangePassword()) {
             throw new PasswordChangeRequiredException();
         }
-        if (!actor.roles().contains("ADMIN")) {
+        if (!actor.roles().contains(AccountRole.ADMIN)) {
             throw new PermissionDeniedException();
         }
     }
@@ -240,25 +242,23 @@ public class UserAccountService {
         return value;
     }
 
-    private static String normalizeRole(String role, String fallback) {
-        if (role == null || role.isBlank()) {
+    private static AccountRole normalizeRole(AccountRole role, AccountRole fallback) {
+        if (role == null) {
             return fallback;
         }
-        String value = role.trim().toUpperCase(Locale.ROOT);
-        if (!ROLES.contains(value)) {
+        if (!ROLES.contains(role)) {
             throw new ValidationFailedException("角色只能为 USER 或 ADMIN");
         }
-        return value;
+        return role;
     }
 
-    private static String normalizeStatus(String status, String fallback) {
-        if (status == null || status.isBlank()) {
+    private static AccountStatus normalizeStatus(AccountStatus status, AccountStatus fallback) {
+        if (status == null) {
             return fallback;
         }
-        String value = status.trim().toUpperCase(Locale.ROOT);
-        if (!STATUSES.contains(value)) {
+        if (!STATUSES.contains(status)) {
             throw new ValidationFailedException("状态只能为 ACTIVE 或 DISABLED");
         }
-        return value;
+        return status;
     }
 }

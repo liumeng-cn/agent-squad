@@ -19,12 +19,13 @@
     <description>Agent Squad multi-agent runtime foundation (parent pom)</description>
 
     <modules>
+        <module>agent-squad-common</module>
         <module>agent-squad-gateway</module>
         <module>agent-squad-server</module>
     </modules>
 
     <properties>
-        <java.version>27</java.version>
+        <java.version>21</java.version>
         <maven.compiler.release>21</maven.compiler.release>
         <agentscope.version>2.1.0-BETA1</agentscope.version>
         <lombok.version>1.18.48</lombok.version>

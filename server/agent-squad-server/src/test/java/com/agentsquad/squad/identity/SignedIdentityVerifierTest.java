@@ -1,5 +1,7 @@
 package com.agentsquad.squad.identity;
 
+import com.agentsquad.squad.common.identity.AccountRole;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -55,7 +57,7 @@ class SignedIdentityVerifierTest {
 
         assertThat(actor).isNotNull();
         assertThat(actor.userId()).isEqualTo(USER_ID);
-        assertThat(actor.roles()).containsExactly("OPERATOR");
+        assertThat(actor.roles()).containsExactly(AccountRole.OPERATOR);
     }
 
     @Test
@@ -64,7 +66,7 @@ class SignedIdentityVerifierTest {
         MockHttpServletRequest request = request("GET", PATH);
         request.addHeader(HEADER, assertion(PREVIOUS_KID, PREVIOUS_SECRET, "USER", "GET", PATH, now, now + 30));
 
-        assertThat(verifier.verify(request).roles()).containsExactly("USER");
+        assertThat(verifier.verify(request).roles()).containsExactly(AccountRole.USER);
     }
 
     @Test

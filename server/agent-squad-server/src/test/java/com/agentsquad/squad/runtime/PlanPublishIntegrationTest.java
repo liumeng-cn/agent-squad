@@ -26,6 +26,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.nio.file.Path;
 import java.util.List;
+import com.agentsquad.squad.common.identity.AccountRole;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -58,7 +59,7 @@ class PlanPublishIntegrationTest {
             ConversationResponse conversation = tasks.createConversation(userId, "复用测试");
             TaskReceipt task = tasks.submit(userId, conversation.conversationId(),
                     "reuse-goal", "写一段摘要");
-            definitions.publish(new AuthView(userId, "admin", List.of("ADMIN"), "csrf"),
+            definitions.publish(new AuthView(userId, "admin", List.of(AccountRole.ADMIN), "csrf"),
                     "reuse-writer", new WorkerDefinitionCreateRequest(
                             "reuse-writer", "1.0.0", "写摘要", json.readTree("{}"),
                             json.readTree("{}"), List.of(), "default", "default"));
@@ -179,7 +180,7 @@ class PlanPublishIntegrationTest {
             TaskReceipt task = goalTaskService.submit(userId, conversation.conversationId(),
                     "request-1", "排查错误日志");
 
-            AuthView admin = new AuthView(userId, "admin", List.of("ADMIN"), "csrf");
+            AuthView admin = new AuthView(userId, "admin", List.of(AccountRole.ADMIN), "csrf");
             workerDefinitionService.publish(admin, "wd-1", new WorkerDefinitionCreateRequest(
                     "log-analysis", "1.0.0", "日志分析",
                     mapper.readTree("{}"), mapper.readTree("{}"),

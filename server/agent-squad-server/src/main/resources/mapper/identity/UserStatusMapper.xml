@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.identity.UserStatusMapper">
 
-    <select id="findStatus" resultType="java.lang.String">
+    <select id="findStatus" resultType="com.agentsquad.squad.common.identity.AccountStatus">
         SELECT status
         FROM sq_user
         WHERE user_id = #{userId}

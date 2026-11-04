@@ -11,6 +11,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import com.agentsquad.squad.common.identity.AccountRole;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
@@ -32,7 +33,7 @@ class InteractionServiceTest {
         ReflectionTestUtils.setField(service, "objectMapper", new ObjectMapper());
         ReflectionTestUtils.setField(service, "scopeService", mock(com.agentsquad.squad.conversation.service.ExecutionScopeService.class));
 
-        AuthView actor = new AuthView("user-1", "tester", List.of("USER"), "csrf");
+        AuthView actor = new AuthView("user-1", "tester", List.of(AccountRole.USER), "csrf");
         InteractionRow row = new InteractionRow("interaction-1", actor.userId(), "task-1",
                 "job-1", "binding-1", "operation-1", "FRAMEWORK", "request-1",
                 "APPROVAL", "确认执行", "{}", 0L, "hash-1", 0L,

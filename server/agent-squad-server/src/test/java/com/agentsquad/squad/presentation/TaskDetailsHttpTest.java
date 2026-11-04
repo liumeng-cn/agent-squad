@@ -26,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
+import com.agentsquad.squad.common.identity.AccountRole;
 import java.util.Map;
 import java.util.UUID;
 
@@ -53,7 +54,7 @@ class TaskDetailsHttpTest {
                 "--agentsquad.projection.poll-delay-ms=600000")) {
             MockMvc mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();
             String userId = "00000000-0000-0000-0000-000000000001";
-            AuthView actor = new AuthView(userId, "tester", java.util.List.of("USER"), null);
+            AuthView actor = new AuthView(userId, "tester", java.util.List.of(AccountRole.USER), null);
             ObjectMapper json = context.getBean(ObjectMapper.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             byte[] bytes = "验收证据：本地验证".getBytes(StandardCharsets.UTF_8);

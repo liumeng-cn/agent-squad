@@ -1,9 +1,11 @@
 package com.agentsquad.squad.gateway.auth;
 
+import com.agentsquad.squad.common.identity.AccountRole;
+
 import java.util.List;
 
 /**
  * 当前认证主体的最小公开信息。
  */
-public record AuthView(String userId, String username, List<String> roles, String csrfToken, boolean mustChangePassword) {
+public record AuthView(String userId, String username, List<AccountRole> roles, String csrfToken, boolean mustChangePassword) {
 }

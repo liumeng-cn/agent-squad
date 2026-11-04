@@ -2,6 +2,7 @@ package com.agentsquad.squad.identity;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.common.identity.AccountStatus;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,8 +32,8 @@ public class UserStatusGuard {
         if (!enabled) {
             return;
         }
-        String status = userId == null || userId.isBlank() ? null : mapper.findStatus(userId);
-        if (!"ACTIVE".equals(status)) {
+        AccountStatus status = userId == null || userId.isBlank() ? null : mapper.findStatus(userId);
+        if (status != AccountStatus.ACTIVE) {
             log.warn("账号状态阻止新的受控动作 userId={} status={}", userId, status == null ? "MISSING" : status);
             throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "账号已停用或不可用");
         }

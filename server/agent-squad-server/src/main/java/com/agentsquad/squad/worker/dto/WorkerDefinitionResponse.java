@@ -1,5 +1,6 @@
 package com.agentsquad.squad.worker.dto;
 
+import com.agentsquad.squad.common.worker.WorkerDefinitionStatus;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.List;
@@ -13,5 +14,5 @@ public record WorkerDefinitionResponse(String definitionId, String workerKey,
                                        String workerVersion, String description,
                                        JsonNode inputSchema, JsonNode outputSchema,
                                        List<String> toolAllowlist, String modelProfileKey,
-                                       String runtimeProfileKey, String status, long version) {
+                                       String runtimeProfileKey, WorkerDefinitionStatus status, long version) {
 }

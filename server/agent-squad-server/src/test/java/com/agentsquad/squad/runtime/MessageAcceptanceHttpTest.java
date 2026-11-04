@@ -20,6 +20,7 @@ import org.springframework.web.context.WebApplicationContext;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
+import com.agentsquad.squad.common.identity.AccountRole;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -130,7 +131,7 @@ class MessageAcceptanceHttpTest {
         mvc.perform(post(path).with(TestAssertion.as(actor.view().userId(), "USER"))
                 .header("Idempotency-Key", "concurrent-first").contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(Map.of("text", "变更内容")))).andExpect(status().isConflict());
-        MessageTestActor other = new MessageTestActor(new com.agentsquad.squad.identity.AuthView(UUID.randomUUID().toString(), "other", java.util.List.of("USER"), null));
+        MessageTestActor other = new MessageTestActor(new com.agentsquad.squad.identity.AuthView(UUID.randomUUID().toString(), "other", java.util.List.of(AccountRole.USER), null));
         com.agentsquad.squad.testsupport.TestUserDirectory.activate(context, other.view().userId());
         mvc.perform(post("/api/v1/conversations/{id}/messages", first.conversationId()).with(TestAssertion.as(other.view().userId(), "USER"))
                         .header("Idempotency-Key", "foreign")
@@ -199,7 +200,7 @@ class MessageAcceptanceHttpTest {
 
     static MessageTestActor actor(ConfigurableApplicationContext context) {
         String userId = context.getEnvironment().getProperty("agentsquad.auth.user-id");
-        return new MessageTestActor(new com.agentsquad.squad.identity.AuthView(userId, "tester", java.util.List.of("USER"), null));
+        return new MessageTestActor(new com.agentsquad.squad.identity.AuthView(userId, "tester", java.util.List.of(AccountRole.USER), null));
     }
 
     static MessageReceipt send(ConfigurableApplicationContext context, MessageTestActor actor, String path,

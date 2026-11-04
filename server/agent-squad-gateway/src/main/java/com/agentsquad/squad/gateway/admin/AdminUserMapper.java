@@ -1,5 +1,7 @@
 package com.agentsquad.squad.gateway.admin;
 
+import com.agentsquad.squad.common.identity.AccountRole;
+import com.agentsquad.squad.common.identity.AccountStatus;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -29,11 +31,11 @@ public interface AdminUserMapper {
 
     int insertUser(@Param("userId") String userId, @Param("username") String username,
                    @Param("displayName") String displayName, @Param("passwordHash") String passwordHash,
-                   @Param("role") String role, @Param("mustChangePassword") boolean mustChangePassword,
+                   @Param("role") AccountRole role, @Param("mustChangePassword") boolean mustChangePassword,
                    @Param("actorId") String actorId, @Param("actorName") String actorName);
 
     int updateProfile(@Param("userId") String userId, @Param("displayName") String displayName,
-                      @Param("role") String role, @Param("status") String status,
+                      @Param("role") AccountRole role, @Param("status") AccountStatus status,
                       @Param("expectedVersion") long expectedVersion, @Param("authBump") long authBump,
                       @Param("actorId") String actorId, @Param("actorName") String actorName);
 
