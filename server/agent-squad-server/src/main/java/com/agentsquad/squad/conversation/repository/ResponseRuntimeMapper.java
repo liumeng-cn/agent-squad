@@ -15,6 +15,18 @@ import java.util.List;
 @Mapper
 public interface ResponseRuntimeMapper {
 
+    String modelChoiceByBinding(@Param("userId") String userId, @Param("bindingId") String bindingId);
+
+    String modelChoiceBySession(@Param("userId") String userId, @Param("sessionId") String sessionId);
+
+    com.agentsquad.squad.conversation.domain.ReplyPreviewTarget previewTarget(@Param("userId") String userId, @Param("sessionId") String sessionId);
+
+    com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol completionProtocol(
+            @Param("userId") String userId, @Param("bindingId") String bindingId);
+
+    com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol completionProtocolBySession(
+            @Param("userId") String userId, @Param("sessionId") String sessionId);
+
     ResponseRuntimeRow lockByBinding(@Param("userId") String userId, @Param("bindingId") String bindingId);
 
     String bindingForExecution(@Param("userId") String userId, @Param("executionId") String executionId);

@@ -42,6 +42,12 @@ public class NativeProjectionPoller {
     private com.agentsquad.squad.runtime.service.ExecutionFailureService failures;
 
     @Resource
+    private NaturalReplyOutputReader naturalOutputs;
+
+    @Resource
+    private com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper replies;
+
+    @Resource
     private ResponseExecutionService responses;
 
     @Resource
@@ -85,7 +91,11 @@ public class NativeProjectionPoller {
                     if (commandId != null) {
                         NativeSubmissionReceipt receipt = nativeSessionGateway.inspectTask(target, commandId);
                         if (commandId.equals(receipt.commandId())) {
-                            responses.recover(target, receipt);
+                            var evidence = "completed".equals(receipt.status())
+                                    && replies.completionProtocol(target.userId(), target.bindingId())
+                                    == com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol.NATURAL
+                                    ? naturalOutputs.readCompleted(target, receipt) : null;
+                            responses.recover(target, receipt, evidence);
                         }
                     }
                 } else if (!MasterAgentIdentity.AGENT_ID.equals(target.agentId())) {

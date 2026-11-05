@@ -33,6 +33,8 @@ Agent Squad 是以 Web 会话为入口的多智能体运行底座。Master 可�
 
 Java 服务和页面可在本机运行，Docker 提供 MySQL 与受控沙箱依赖。Python 仅用于静态设计检查，不是业务服务。
 
+模型与推理模式的即时选择见[会话模型选择](docs/model-selection.md)。Worker按业务自动选模尚未实现。
+
 ## 本地启动
 
 ### 1. 本地配置

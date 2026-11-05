@@ -40,7 +40,7 @@ public class WorkerProfileRegistry {
      */
     public WorkerModelProfile requireExecutableModel(String key) {
         WorkerModelProfile profile = requirePricedModel(key);
-        if (isBlank(profile.getModelName()) || isBlank(profile.getBaseUrl())
+        if (!profile.isEnabled() || isBlank(profile.getModelName()) || isBlank(profile.getBaseUrl())
                 || isBlank(profile.getApiKey())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
                     "Worker 模型 Profile 不可执行");

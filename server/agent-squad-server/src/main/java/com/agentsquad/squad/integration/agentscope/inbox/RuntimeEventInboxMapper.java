@@ -15,6 +15,8 @@ import java.time.LocalDateTime;
 public interface RuntimeEventInboxMapper {
     String lockBoundSession(@Param("source") RuntimeEventSource source);
 
+    List<RuntimeEventSource> pendingSources(@Param("now") LocalDateTime now);
+
     String lockBoundAgent(@Param("source") RuntimeEventSource source);
 
     int insertIfAbsent(@Param("event") RuntimeEventInboxRow event);

@@ -22,6 +22,9 @@ public class RuntimeEventReceiptService {
     private static final int MAX_NATIVE_HEADER_LENGTH = 160;
 
     @Resource
+    private org.springframework.context.ApplicationEventPublisher signals;
+
+    @Resource
     private RuntimeEventInboxMapper inboxMapper;
 
     /**
@@ -41,10 +44,13 @@ public class RuntimeEventReceiptService {
                 source.bindingId(), source.sessionId(), event.seq(), event.eventId(), event.type(),
                 event.executionRunId(), event.turnId(), event.occurredAt(), event.required(),
                 event.schemaVersion(), RuntimeEventFingerprint.of(event), source.mappingVersion(), RuntimeEventInboxStatus.RECEIVED);
-        inboxMapper.insertIfAbsent(incoming);
+        int inserted = inboxMapper.insertIfAbsent(incoming);
         var collisions = inboxMapper.findCollisions(incoming);
         if (collisions.size() != 1 || !sameFact(collisions.getFirst(), incoming)) {
             throw new IllegalStateException("原生事件身份或内容冲突，需核对日志");
+        }
+        if (inserted == 1) {
+            signals.publishEvent(new RuntimeJournalReadySignal(source));
         }
     }
 

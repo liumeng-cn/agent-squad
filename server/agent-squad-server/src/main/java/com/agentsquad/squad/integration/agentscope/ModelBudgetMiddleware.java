@@ -69,7 +69,8 @@ public class ModelBudgetMiddleware implements MiddlewareBase {
     @Override
     public Flux<AgentEvent> onModelCall(Agent agent, RuntimeContext context, ModelCallInput input,
                                         Function<ModelCallInput, Flux<AgentEvent>> next) {
-        return onModelCallForProfile("default", context, input, next);
+        var choice = context.get(com.agentsquad.squad.model.domain.AcceptedModelChoice.class);
+        return onModelCallForProfile(choice == null ? "default" : choice.modelId(), context, input, next);
     }
 
     /**

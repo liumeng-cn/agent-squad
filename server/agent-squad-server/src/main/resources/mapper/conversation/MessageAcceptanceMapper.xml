@@ -80,6 +80,7 @@
             scope_id,
             binding_id,
             status,
+            completion_protocol,
             dispatch_sequence,
             creator_id,
             last_updater_id)
@@ -90,10 +91,18 @@
             #{scopeId},
             #{bindingId},
             'QUEUED',
+            #{completionProtocol},
             (SELECT message_seq FROM sq_message WHERE user_id = #{userId} AND message_id = #{messageId}),
             #{userId},
             #{userId})
     </insert>
+
+    <update id="setModelChoice">
+        UPDATE sq_response_execution
+        SET model_selection_json = #{choice}
+        WHERE user_id = #{userId}
+          AND execution_id = #{executionId}
+    </update>
 
     <update id="markFallbackTitle">
         UPDATE sq_conversation SET title_source = 'FALLBACK'

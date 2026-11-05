@@ -1,6 +1,8 @@
+import type { ModelSelection } from './modelsApi'
 import { apiGet, apiPatch, apiPost } from './http'
 import type { Artifact } from './taskDetailsApi'
 import type { ConversationResponse, Interaction, TaskResponse } from './types'
+import type { ChatExecutionStatus, ChatExecutionAction } from './chatTypes'
 
 export interface ConversationHeader extends ConversationResponse {
   titleSource: string
@@ -23,9 +25,11 @@ export interface ChatMessage {
 export interface ChatExecution {
   executionId: string
   sourceMessageId: string
-  status: string
+  status: ChatExecutionStatus
   version: number
-  allowedActions: string[]
+  answerMessageId: string | null
+  failureId: string | null
+  allowedActions: ChatExecutionAction[]
 }
 export interface ExecutionFailure {
   failureId: string
@@ -85,8 +89,8 @@ export function chatSnapshot(id: string, before?: number): Promise<ChatSnapshot>
   if (before !== undefined) query.set('beforeMessageSeq', String(before))
   return apiGet(`/api/v1/conversations/${encodeURIComponent(id)}/snapshot?${query}`)
 }
-export function sendMessage(id: string | null, text: string, artifactIds: string[], key: string): Promise<MessageReceipt> {
-  return apiPost(id ? `/api/v1/conversations/${encodeURIComponent(id)}/messages` : '/api/v1/conversations/messages', { text, artifactIds }, { idempotencyKey: key })
+export function sendMessage(id: string | null, text: string, artifactIds: string[], key: string, selection?: ModelSelection): Promise<MessageReceipt> {
+  return apiPost(id ? `/api/v1/conversations/${encodeURIComponent(id)}/messages` : '/api/v1/conversations/messages', { text, artifactIds, ...selection }, { idempotencyKey: key })
 }
 export function renameConversation(id: string, title: string, expectedTitleVersion: number): Promise<ConversationHeader> {
   return apiPatch(`/api/v1/conversations/${encodeURIComponent(id)}/title`, { title, expectedTitleVersion })

@@ -7,6 +7,8 @@ import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.conversation.domain.ConversationRow;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
+import org.springframework.context.ApplicationEventPublisher;
+import com.agentsquad.squad.presentation.service.ConversationCommittedSignal;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +23,9 @@ import java.time.ZoneOffset;
  */
 @Service
 public class ConversationEventWriter {
+    @Resource
+    private ApplicationEventPublisher committedEvents;
+
     @Resource
     private ConversationMapper conversations;
 
@@ -43,5 +48,6 @@ public class ConversationEventWriter {
         messages.insertEvent(scope.userId(), scope.conversationId(), scope.conversationGeneration(),
                 messages.eventSequence(scope.userId(), scope.conversationId()), key, type,
                 RuntimePayloads.toJson(json, payload), LocalDateTime.now(ZoneOffset.UTC));
+        committedEvents.publishEvent(new ConversationCommittedSignal(scope.userId(), scope.conversationId()));
     }
 }

@@ -32,6 +32,9 @@ import java.util.UUID;
  */
 @Service
 public class ResponseRetryService {
+    @org.springframework.beans.factory.annotation.Value("${agentsquad.response.completion-protocol:NATURAL}")
+    private com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol completionProtocol;
+
     @Resource
     private FinalDeliveryService finalDeliveries;
 
@@ -90,7 +93,7 @@ public class ResponseRetryService {
             return new MessageReceipt(prior.conversationId(), prior.messageId(), prior.executionId(), prior.commandId(), ResponseExecutionStatus.valueOf(prior.status()), prior.conversationId() + ":" + prior.generation() + ":" + prior.receiptSequence());
         }
         var failure = failures.latest(userId, scope.scopeId(), oldBinding);
-        if (original.version() != expectedVersion || failure == null || !"SERVICE_TRANSIENT".equals(failure.category())
+        if (original.version() != expectedVersion || failure == null
                 || !failures.retryAllowed(userId, executionId)) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "当前状态不允许重试，请刷新对话");
         }
@@ -101,7 +104,11 @@ public class ResponseRetryService {
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         scopeMapper.insertScope(nextScope, userId, scope.conversationId(), scope.conversationGeneration(), "RESPONSE", next, scope.accountId());
         bindings.insertResponse(binding, userId, nextScope, MasterAgentIdentity.AGENT_ID, UUID.randomUUID().toString(), now);
-        messages.insertExecution(next, userId, scope.conversationId(), original.sourceMessageId(), nextScope, binding);
+        messages.insertExecution(next, userId, scope.conversationId(), original.sourceMessageId(), nextScope, binding, completionProtocol);
+        var previousModel = responses.modelChoiceByBinding(userId, oldBinding);
+        if (previousModel != null) {
+            messages.setModelChoice(userId, next, previousModel);
+        }
         messages.reserveMessage(userId, scope.conversationId(), now);
         finalDeliveries.retry(userId, original.sourceMessageId(), executionId, next);
         failures.linkRetry(userId, next, executionId);

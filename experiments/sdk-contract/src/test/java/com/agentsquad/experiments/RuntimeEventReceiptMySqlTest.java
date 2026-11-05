@@ -490,6 +490,7 @@ class RuntimeEventReceiptMySqlTest {
 
     private static RuntimeEventReceiptService transactionalService(RuntimeEventInboxMapper repository) {
         var service = new RuntimeEventReceiptService();
+        ReflectionTestUtils.setField(service, "signals", (org.springframework.context.ApplicationEventPublisher) event -> { });
         ReflectionTestUtils.setField(service, "inboxMapper", repository);
         var advice = new TransactionInterceptor(new DataSourceTransactionManager(source),
                 new AnnotationTransactionAttributeSource());

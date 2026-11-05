@@ -129,6 +129,27 @@
         LIMIT #{limit}
     </select>
 
+    <select id="execution" resultMap="activeExecutionsResult">
+        SELECT r.execution_id,
+            r.source_message_id,
+            r.status,
+            r.version,
+            (r.cancel_requested_at IS NOT NULL) AS cancelled,
+            r.answer_message_id,
+            r.failure_id
+        FROM sq_response_execution r
+        JOIN sq_execution_scope s ON s.user_id = r.user_id
+            AND s.scope_id = r.scope_id
+        JOIN sq_conversation c ON c.user_id = s.user_id
+            AND c.conversation_id = s.conversation_id
+            AND c.generation = s.conversation_generation
+        WHERE r.user_id = #{userId}
+          AND r.conversation_id = #{conversationId}
+          AND r.execution_id = #{executionId}
+          AND r.del_flag = '0'
+        ORDER BY r.id
+    </select>
+
     <select id="activeExecutions" resultMap="activeExecutionsResult">
         SELECT r.execution_id,
             r.source_message_id,

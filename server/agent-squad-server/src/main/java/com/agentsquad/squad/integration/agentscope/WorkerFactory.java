@@ -55,6 +55,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class WorkerFactory {
 
     @Resource
+    private com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSinkFactory eventSinks;
+
+    @Resource
     private DataSource dataSource;
 
     @Resource
@@ -137,6 +140,11 @@ public class WorkerFactory {
         }
         dispatchService.renew(userId, bindingId, handle.guardToken());
         RuntimeContext context = RuntimeContext.builder().userId(userId).sessionId(sessionId).build();
+        context.put(io.agentscope.core.session.SessionExportSink.CONTEXT_KEY,
+                eventSinks.bind(new com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource(
+                        userId, bindingId, sessionId,
+                        com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource.CURRENT_MAPPING_VERSION)));
+
         context.put(com.agentsquad.squad.runtime.domain.WorkerExecutionIdentity.class,
                 new com.agentsquad.squad.runtime.domain.WorkerExecutionIdentity(bindingId, handle.guardToken()));
         WorkerLaunchRow job = dispatchMapper.findByBinding(userId, bindingId);

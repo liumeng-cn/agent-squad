@@ -13,6 +13,8 @@ import com.agentsquad.squad.presentation.repository.ConversationReadMapper;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
+import org.springframework.context.ApplicationEventPublisher;
+import com.agentsquad.squad.presentation.service.ConversationCommittedSignal;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,9 @@ import java.util.Map;
  */
 @Service
 public class ConversationTitleService {
+    @Resource
+    private ApplicationEventPublisher committedEvents;
+
     @Resource
     private ConversationMapper conversations;
 
@@ -57,6 +62,7 @@ public class ConversationTitleService {
         var updated = reads.header(userId, conversationId);
         events.reserveEvent(userId, conversationId);
         events.insertEvent(userId, conversationId, row.generation(), events.eventSequence(userId, conversationId), "title:" + conversationId + ":" + updated.titleVersion(), "conversation.title_updated", RuntimePayloads.toJson(json, Map.of("title", title, "titleVersion", updated.titleVersion())), LocalDateTime.now(ZoneOffset.UTC));
+        committedEvents.publishEvent(new ConversationCommittedSignal(userId, conversationId));
         return ConversationView.from(updated);
     }
 

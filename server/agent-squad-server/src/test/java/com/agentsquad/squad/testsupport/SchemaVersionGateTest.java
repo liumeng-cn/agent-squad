@@ -58,7 +58,9 @@ class SchemaVersionGateTest {
                         + "(3, '3', 'admission', 'SQL', 'V3__runtime_admission.sql', 'test', 0, 1), "
                         + "(4, '4', 'run identity', 'SQL', 'V4__admission_run_identity.sql', 'test', 0, 1), "
                         + "(5, '5', 'final delivery', 'SQL', 'V5__final_delivery.sql', 'test', 0, 1), "
-                        + "(6, '6', 'event inbox', 'SQL', 'V6__runtime_event_inbox.sql', 'test', 0, 1)");
+                        + "(6, '6', 'event inbox', 'SQL', 'V6__runtime_event_inbox.sql', 'test', 0, 1), "
+                        + "(7, '7', 'natural reply', 'SQL', 'V7__natural_reply_protocol.sql', 'test', 0, 1), "
+                        + "(8, '8', 'model choice', 'SQL', 'V8__accepted_model_selection.sql', 'test', 0, 1)");
             }
         }
 
@@ -80,11 +82,11 @@ class SchemaVersionGateTest {
         SchemaInspectionMapper mapper = mock(SchemaInspectionMapper.class);
         SchemaVersionGate gate = new SchemaVersionGate();
         ReflectionTestUtils.setField(gate, "schemaInspection", mapper);
-        ReflectionTestUtils.setField(gate, "expectedVersion", 6);
+        ReflectionTestUtils.setField(gate, "expectedVersion", 8);
         ReflectionTestUtils.setField(gate, "sqlInitMode", "never");
         ReflectionTestUtils.setField(gate, "strictIdentity", true);
         ReflectionTestUtils.setField(gate, "enforceUserStatus", true);
-        when(mapper.countAppliedVersions(6)).thenReturn(6);
+        when(mapper.countAppliedVersions(8)).thenReturn(8);
         when(mapper.countRequiredTables(anyList())).thenReturn(6);
         assertTrue(assertThrows(IllegalStateException.class, gate::afterPropertiesSet)
                 .getMessage().contains("缺少必需业务表"));

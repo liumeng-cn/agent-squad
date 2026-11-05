@@ -29,7 +29,10 @@ public interface MessageAcceptanceMapper {
 
     int insertExecution(@Param("executionId") String executionId, @Param("userId") String userId,
                         @Param("conversationId") String conversationId, @Param("messageId") String messageId,
-                        @Param("scopeId") String scopeId, @Param("bindingId") String bindingId);
+                        @Param("scopeId") String scopeId, @Param("bindingId") String bindingId,
+                        @Param("completionProtocol") com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol completionProtocol);
+
+    int setModelChoice(@Param("userId") String userId, @Param("executionId") String executionId, @Param("choice") String choice);
 
     int markFallbackTitle(@Param("userId") String userId, @Param("conversationId") String conversationId);
 

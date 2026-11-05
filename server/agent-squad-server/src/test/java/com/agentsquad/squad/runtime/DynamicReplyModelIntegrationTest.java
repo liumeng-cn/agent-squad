@@ -1,0 +1,92 @@
+package com.agentsquad.squad.runtime;
+
+import com.agentsquad.squad.AgentSquadApplication;
+import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
+import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
+import com.agentsquad.squad.model.domain.ReasoningMode;
+import com.agentsquad.squad.model.service.ModelCatalogService;
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.springframework.boot.SpringApplication;
+import org.springframework.jdbc.core.JdbcTemplate;
+
+import java.nio.file.Path;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+/**
+ * 动态模型选择的真实SDK集成验证
+ * <p>
+ * 两个独立本地HTTP模型端点证明切换实际执行路由而非只改页面文案；在途回复固定选择并使用对应预算Profile。
+ */
+class DynamicReplyModelIntegrationTest {
+    @Test
+    void freezesSelectionWhileQueuedAndCallsChosenModel(@TempDir Path directory) throws Exception {
+        String user = "00000000-0000-0000-0000-000000000001";
+        try (var firstModel = new NaturalReplyModelStub(); var secondModel = new NaturalReplyModelStub();
+             var context = SpringApplication.run(AgentSquadApplication.class,
+                     "--spring.main.web-application-type=none", "--spring.datasource.url=" + MySqlTestDatabase.url(directory),
+                     "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
+                     "--agentsquad.delivery.enabled=true", "--agentsquad.delivery.poll-delay-ms=100",
+                     "--agentsquad.projection.poll-delay-ms=100", "--agentsquad.model.api-key=first-only",
+                     "--agentsquad.model.base-url=" + firstModel.baseUrl(), "--agentsquad.model.name=first-model",
+                     "--agentsquad.worker.model-profiles.default.api-key=first-only",
+                     "--agentsquad.worker.model-profiles.default.base-url=" + firstModel.baseUrl(),
+                     "--agentsquad.worker.model-profiles.default.model-name=first-model",
+                     "--agentsquad.worker.model-profiles.default.reasoning-adapter=SPARK_THINKING",
+                     "--agentsquad.worker.model-profiles.default.reasoning-modes=OFF,AUTO,ON",
+                     "--agentsquad.worker.model-profiles.default.default-reasoning-mode=AUTO",
+                     "--agentsquad.worker.model-profiles.second.provider=OPENAI_COMPATIBLE",
+                     "--agentsquad.worker.model-profiles.second.api-key=second-only",
+                     "--agentsquad.worker.model-profiles.second.base-url=" + secondModel.baseUrl(),
+                     "--agentsquad.worker.model-profiles.second.model-name=second-model",
+                     "--agentsquad.worker.model-profiles.second.reasoning-adapter=SPARK_THINKING",
+                     "--agentsquad.worker.model-profiles.second.reasoning-modes=DEFAULT,ON",
+                     "--agentsquad.worker.model-profiles.second.default-reasoning-mode=ON",
+                     "--agentsquad.worker.model-profiles.second.pricing-version=test-v1",
+                     "--agentsquad.worker.model-profiles.second.input-microunits-per-million-tokens=1000000",
+                     "--agentsquad.worker.model-profiles.second.output-microunits-per-million-tokens=1000000",
+                     "--agentsquad.worker.model-profiles.second.max-input-tokens=8192",
+                     "--agentsquad.worker.model-profiles.second.max-output-tokens=2048")) {
+            var messages = context.getBean(MessageAcceptanceService.class);
+            var catalog = context.getBean(ModelCatalogService.class);
+            var json = new ObjectMapper();
+            assertThat(catalog.list()).hasSize(2);
+            assertThat(json.writeValueAsString(catalog.list())).doesNotContain("first-only", "second-only", firstModel.baseUrl());
+            var first = messages.accept(user, null, "first-choice", new MessageCreateRequest("第一条", List.of(), "default", ReasoningMode.OFF));
+            assertThat(firstModel.entered.await(10, TimeUnit.SECONDS)).isTrue();
+            var next = messages.accept(user, first.conversationId(), "next-choice", new MessageCreateRequest("第二条", List.of(), "second", ReasoningMode.ON));
+            var jdbc = context.getBean(JdbcTemplate.class);
+            assertThat(jdbc.queryForObject("SELECT model_selection_json FROM sq_response_execution WHERE execution_id=?", String.class, first.executionId())).contains("default", "OFF").doesNotContain("second-only", "first-only");
+            firstModel.firstChunk.countDown();
+            firstModel.release.countDown();
+            secondModel.firstChunk.countDown();
+            secondModel.release.countDown();
+            ResponseNativeExecutionIntegrationTest.await(context, first, "SUCCEEDED");
+            ResponseNativeExecutionIntegrationTest.await(context, next, "SUCCEEDED");
+            assertThat(firstModel.calls.get()).isEqualTo(1);
+            assertThat(secondModel.calls.get()).isEqualTo(1);
+            var firstRequest = json.readTree(firstModel.requests.getFirst());
+            var secondRequest = json.readTree(secondModel.requests.getFirst());
+            assertThat(firstRequest.path("model").asText()).isEqualTo("first-model");
+            assertThat(firstRequest.path("thinking").path("type").asText()).isEqualTo("disabled");
+            assertThat(secondRequest.path("model").asText()).isEqualTo("second-model");
+            assertThat(secondRequest.path("thinking").path("type").asText()).isEqualTo("enabled");
+            assertThat(jdbc.queryForList("SELECT DISTINCT model_profile_key FROM sq_budget_reservation WHERE user_id=?", String.class, user)).containsExactlyInAnyOrder("default", "second");
+            assertThatThrownBy(() -> messages.accept(user, first.conversationId(), "next-choice", new MessageCreateRequest("第二条", List.of(), "default", ReasoningMode.OFF))).isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
+            assertThatThrownBy(() -> catalog.accept("second", ReasoningMode.HIGH)).isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
+            assertThatThrownBy(() -> catalog.accept("missing", ReasoningMode.DEFAULT)).isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
+            var choice = catalog.accept("second", ReasoningMode.DEFAULT);
+            var registry = context.getBean(com.agentsquad.squad.worker.profile.WorkerProfileRegistry.class);
+            registry.getModelProfiles().get("second").setApiKey("rotated-key");
+            assertThat(catalog.resolve(choice).getModelName()).isEqualTo("second-model");
+            registry.getModelProfiles().get("second").setModelName("silently-replaced");
+            assertThatThrownBy(() -> catalog.resolve(choice)).isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
+        }
+    }
+}

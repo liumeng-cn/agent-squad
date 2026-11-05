@@ -68,12 +68,16 @@ class SchemaParityTest {
                     new FileSystemResource(migrationDir.resolve("V5__final_delivery.sql")));
             ScriptUtils.executeSqlScript(prod,
                     new FileSystemResource(migrationDir.resolve("V6__runtime_event_inbox.sql")));
+            ScriptUtils.executeSqlScript(prod,
+                    new FileSystemResource(migrationDir.resolve("V7__natural_reply_protocol.sql")));
+            ScriptUtils.executeSqlScript(prod,
+                    new FileSystemResource(migrationDir.resolve("V8__accepted_model_selection.sql")));
 
             Map<String, Map<String, String>> devSchema = readSchema(dev);
             Map<String, Map<String, String>> prodSchema = readSchema(prod);
 
             assertEquals(52, devSchema.size(), "开发 baseline 应包含 52 张表");
-            assertEquals(52, prodSchema.size(), "生产 V1→V6 应包含 52 张表");
+            assertEquals(52, prodSchema.size(), "生产 V1→V7 应包含 52 张表");
             assertEquals(devSchema.keySet(), prodSchema.keySet(), "两套 DDL 的表集合不一致");
             devSchema.forEach((table, devDefinition) -> {
                 Map<String, String> prodDefinition = prodSchema.get(table);

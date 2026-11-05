@@ -21,10 +21,22 @@ public class NativeEventBusinessWriter implements RuntimeEventBusinessWriter {
     @Resource
     private NativeProjectionService projections;
 
+    @Resource
+    private NaturalReplyOutputReader naturalOutputs;
+
+    @Resource
+    private com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper replies;
+
     @Override
     public void apply(ProjectionTarget target, SessionEvent event) {
         Map<String, Object> data = SessionEventTypes.BUILTIN.contains(event.type()) ? event.data() : Map.of();
         Object status = "run/end".equals(event.type()) ? data.get("status") : null;
+        if (target.taskId() == null && "run/end".equals(event.type()) && "completed".equals(status)
+                && replies.completionProtocol(target.userId(), target.bindingId())
+                == com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol.NATURAL) {
+            data = new java.util.LinkedHashMap<>(data);
+            data.put("naturalOutput", naturalOutputs.read(target, event));
+        }
         projections.accept(target, new NativeEventView(event.seq(), event.eventId(), event.type(),
                 event.executionRunId(), event.turnId(), status == null ? null : status.toString(),
                 event.occurredAt(), data));

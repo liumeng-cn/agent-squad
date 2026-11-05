@@ -22,6 +22,9 @@ public interface ConversationReadMapper {
 
     List<ConversationMessageRow> messages(@Param("userId") String userId, @Param("conversationId") String conversationId, @Param("before") Long before, @Param("limit") int limit);
 
+    ConversationExecution execution(@Param("userId") String userId, @Param("conversationId") String conversationId,
+                                     @Param("executionId") String executionId);
+
     List<ConversationExecution> activeExecutions(@Param("userId") String userId, @Param("conversationId") String conversationId);
 
     List<ConversationEventRow> events(@Param("userId") String userId, @Param("conversationId") String conversationId, @Param("generation") long generation, @Param("after") long after);

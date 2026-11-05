@@ -32,6 +32,9 @@ public class ScopedMasterToolsMiddleware implements MiddlewareBase {
     private static final Set<String> RESPONSE_ONLY = Set.of("create_goal_task", "submit_task_directive", "write_explicit_memory");
 
     @Resource
+    private com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper replies;
+
+    @Resource
     private ExecutionScopeService scopes;
 
     @Resource
@@ -52,7 +55,12 @@ public class ScopedMasterToolsMiddleware implements MiddlewareBase {
                     String scopeId = scopes.scopeForSession(context.getUserId(), context.getSessionId());
                     var scope = scopeMapper.findOwned(context.getUserId(), scopeId);
                     boolean response = "RESPONSE".equals(scope.kind());
-                    var hidden = response ? TASK_ONLY : RESPONSE_ONLY;
+                    boolean natural = response && replies.completionProtocolBySession(context.getUserId(), context.getSessionId())
+                            == com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol.NATURAL;
+                    var hidden = new java.util.HashSet<>(response ? TASK_ONLY : RESPONSE_ONLY);
+                    if (natural) {
+                        hidden.add("propose_completion");
+                    }
                     String roleInstruction = response
                             ? "当前职责是回复这条用户消息。如果已用create_goal_task接下独立工作，本次只用一两句话确认正在处理；"
                             + "等待后台工作是正常过程，不要称为失败、缺口或尚不能交付，不解释执行状态细节。"
@@ -62,6 +70,9 @@ public class ScopedMasterToolsMiddleware implements MiddlewareBase {
                             + "完成时finalAnswer默认只放可直接使用的成品，不要放任务受理、两步协作、执行说明或验收报告。"
                             + "原始用户未明确要求展示提纲或过程时，不公开内部提纲，也不解释如何依据提纲。"
                             + "交付前检查篇幅和内容要求，超长则压缩。不要擅自添加用户未要求的成果。";
+                    if (natural) {
+                        roleInstruction += "当前回复采用自然输出协议，直接给出面向用户的答案正文，不调用完成声明工具，也不解释系统回执。";
+                    }
                     var messages = new ArrayList<>(input.messages());
                     int position = 0;
                     while (position < messages.size() && messages.get(position).getRole() == MsgRole.SYSTEM) {

@@ -346,6 +346,8 @@ class ResponseNativeExecutionIntegrationTest {
         return SpringApplication.run(AgentSquadApplication.class, "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("reply")),
                 "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--agentsquad.response.completion-protocol=PROPOSAL",
+                "--agentsquad.delivery.wakeup-enabled=false", "--agentsquad.projection.wakeup-enabled=false",
                 "--agentsquad.delivery.enabled=true", "--agentsquad.delivery.poll-delay-ms=" + (fast ? 100 : 3600000),
                 "--agentsquad.projection.poll-delay-ms=" + (fast ? 100 : 3600000), "--agentsquad.model.api-key=test-only",
                 "--agentsquad.model.base-url=" + model.baseUrl(), "--agentsquad.model.name=test-model",

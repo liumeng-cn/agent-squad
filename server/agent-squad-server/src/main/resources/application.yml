@@ -1,4 +1,10 @@
 spring:
+  data:
+    redis:
+      timeout: 300ms
+      connect-timeout: 300ms
+      repositories:
+        enabled: false
   application:
     name: agent-squad-server
   profiles:
@@ -31,6 +37,10 @@ logging:
     io.agentscope.harness.agent.middleware.AgentTraceMiddleware: OFF
 
 management:
+  health:
+    redis:
+      # Redis是唤醒加速器，故障时数据库补偿继续，不阻断业务健康检查。
+      enabled: false
   tracing:
     enabled: ${SQUAD_TRACING_ENABLED:true}
     propagation:
@@ -69,6 +79,14 @@ agentsquad:
     max-microunits-per-response: ${SQUAD_BUDGET_MAX_MICROUNITS_PER_RESPONSE:5000000}
     max-microunits-per-user: ${SQUAD_BUDGET_MAX_MICROUNITS_PER_USER:50000000}
     max-microunits-per-task: ${SQUAD_BUDGET_MAX_MICROUNITS:5000000}
+  redis-wakeup:
+    enabled: false
+    namespace: squad:local
+    poll-delay-ms: 200
+    # 其他目标/Worker入口尚未全部发提交后通知，暂保留原扫描周期。
+    compensation-delay-ms: 1000
+    reclaim-idle-ms: 90000
+    capacity: 10000
   delivery:
     enabled: false
     poll-delay-ms: 1000

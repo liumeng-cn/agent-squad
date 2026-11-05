@@ -30,7 +30,7 @@ public class SchemaVersionGate implements InitializingBean {
     @Resource
     private SchemaInspectionMapper schemaInspection;
 
-    @Value("${agentsquad.schema.expected-version:6}")
+    @Value("${agentsquad.schema.expected-version:8}")
     private int expectedVersion;
 
     @Value("${spring.sql.init.mode:always}")

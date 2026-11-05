@@ -30,6 +30,12 @@ public class ApiExceptionHandler {
     @Resource
     private ObservationSupport observations;
 
+    /** 浏览器断开后的异步响应已不可写；结束请求，不包装JSON或记录业务失败。 */
+    @ExceptionHandler(org.springframework.web.context.request.async.AsyncRequestNotUsableException.class)
+    public void disconnected() {
+        log.debug("页面异步连接已断开");
+    }
+
     @ExceptionHandler(AuthenticationRequiredException.class)
     public ResponseEntity<ApiResult<Void>> unauthenticated(AuthenticationRequiredException exception) {
         return ResponseEntity.ok()

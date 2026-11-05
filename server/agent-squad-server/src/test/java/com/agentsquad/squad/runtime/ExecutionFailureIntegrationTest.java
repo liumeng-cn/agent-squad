@@ -39,9 +39,42 @@ class ExecutionFailureIntegrationTest {
         assertThat(auth.category()).isEqualTo("AUTH_REQUIRED");
         assertThat(auth.actor()).isEqualTo("SYSTEM");
         assertThat(auth.safeMessage()).doesNotContain("secret");
+        var billing = ModelFailureClassifier.classify(new RuntimeException("wrapped",
+                new OpenAIException("private-secret", 402, "secret-code", "secret-body")));
+        assertThat(billing.category()).isEqualTo("ENVIRONMENT");
+        assertThat(billing.code()).isEqualTo("MODEL_BILLING_UNAVAILABLE");
+        assertThat(billing.actor()).isEqualTo("SYSTEM");
+        assertThat(billing.safeMessage()).contains("服务暂时异常").doesNotContain("secret", "余额", "计费", "校验");
         assertThat(ModelFailureClassifier.classify(new OpenAIException("x", 503, "x", "x")).category()).isEqualTo("SERVICE_TRANSIENT");
         assertThat(ModelFailureClassifier.classify(new OpenAIException("x", 404, "x", "x")).category()).isEqualTo("ENVIRONMENT");
         assertThat(ModelFailureClassifier.classify(new OpenAIException("x", 422, "x", "x")).category()).isEqualTo("LOGIC_INVALID");
+    }
+
+    @Test
+    void billingFailureOffersManualRetryButDoesNotAutomaticallyRetry(@TempDir Path directory) {
+        try (var context = start(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory))) {
+            String user = UUID.randomUUID().toString();
+            var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "billing", new MessageCreateRequest("你好", List.of()));
+            var jdbc = context.getBean(JdbcTemplate.class);
+            String session = session(jdbc, receipt.executionId());
+            String scopeId = context.getBean(ExecutionScopeService.class).scopeForSession(user, session);
+            String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
+            var service = context.getBean(ExecutionFailureService.class);
+            service.reportModel(user, session, "billing-call", new OpenAIException("private-secret", 402, "hidden", "hidden"));
+            var scope = context.getBean(ExecutionScopeMapper.class).findOwned(user, scopeId);
+            assertThat(service.queueTransientRetry(scope, binding, "billing-event", "turn")).isFalse();
+            jdbc.update("UPDATE sq_response_execution SET status='FAILED' WHERE execution_id=?", receipt.executionId());
+            jdbc.update("UPDATE sq_command SET status='APPLIED' WHERE user_id=?", user);
+            var failure = service.list(user, receipt.conversationId()).getFirst();
+            assertThat(failure.allowedActions()).containsExactly("RETRY");
+            assertThat(failure.safeMessage()).contains("服务暂时异常").doesNotContain("余额", "计费", "private-secret");
+            var retry = context.getBean(ResponseRetryService.class).retry(user, receipt.executionId(), "billing-retry", failure.expectedVersion());
+            assertThat(retry.messageId()).isEqualTo(receipt.messageId());
+            assertThat(retry.executionId()).isNotEqualTo(receipt.executionId());
+            assertThat(jdbc.queryForObject("SELECT model_selection_json FROM sq_response_execution WHERE execution_id=?", String.class, retry.executionId()))
+                    .isEqualTo(jdbc.queryForObject("SELECT model_selection_json FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId()));
+            assertThat(service.canRetry(user, receipt.executionId())).isFalse();
+        }
     }
 
     @Test

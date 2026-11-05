@@ -27,6 +27,10 @@ public final class ModelFailureClassifier {
                 if (status == 401 || status == 403) {
                     return new FailureClassification("AUTH_REQUIRED", "MODEL_CREDENTIALS_INVALID", "SYSTEM", "回答服务的授权暂时不可用，已保留你的内容。这个问题需要由系统处理。");
                 }
+                if (status == 402) {
+                    return new FailureClassification("ENVIRONMENT", "MODEL_BILLING_UNAVAILABLE", "SYSTEM",
+                            "回答服务暂时异常，未能完成这次回答。你的消息已保留。");
+                }
                 if (status == 404) {
                     return new FailureClassification("ENVIRONMENT", "MODEL_UNAVAILABLE", "SYSTEM", "当前所需的回答能力暂不可用，已保留你的内容。");
                 }

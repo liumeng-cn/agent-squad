@@ -12,7 +12,13 @@ import java.util.List;
  * 只接受正文与就绪附件引用；用户、执行作用域和任务由服务端决定。
  */
 public record MessageCreateRequest(@NotBlank @Size(max = 20000) String text,
-                                   @Size(max = 20) List<@NotBlank String> artifactIds) {
+                                   @Size(max = 20) List<@NotBlank String> artifactIds,
+                                   @Size(max = 100) String modelId,
+                                   com.agentsquad.squad.model.domain.ReasoningMode reasoningMode) {
+    public MessageCreateRequest(String text, List<String> artifactIds) {
+        this(text, artifactIds, null, null);
+    }
+
     /**
      * 消息入口不接受调用方注入用户、任务或执行身份；未知字段按传输契约拒绝。
      */

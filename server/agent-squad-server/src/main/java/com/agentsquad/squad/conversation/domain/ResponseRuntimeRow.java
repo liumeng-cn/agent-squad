@@ -9,5 +9,5 @@ public record ResponseRuntimeRow(String executionId, String userId, String conve
                                  String sourceMessageId, String scopeId, String bindingId, String status, long version,
                                  boolean cancellationRequested, String proposalJson, String proposalTurnId,
                                  String proposalHash,
-                                 int correctionCount, int recoveryAttempts, String answerMessageId) {
+                                 int correctionCount, int recoveryAttempts, String answerMessageId, ResponseCompletionProtocol completionProtocol) {
 }

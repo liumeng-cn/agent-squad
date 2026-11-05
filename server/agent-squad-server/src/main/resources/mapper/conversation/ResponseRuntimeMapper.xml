@@ -19,6 +19,7 @@
             <arg column="correction_count" javaType="_int"/>
             <arg column="recovery_attempts" javaType="_int"/>
             <arg column="answer_message_id" javaType="java.lang.String"/>
+            <arg column="completion_protocol" javaType="com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol"/>
         </constructor>
     </resultMap>
 
@@ -37,7 +38,8 @@
             proposal_hash,
             correction_count,
             recovery_attempts,
-            answer_message_id
+            answer_message_id,
+            completion_protocol
         FROM sq_response_execution WHERE user_id=#{userId} AND binding_id=#{bindingId} FOR UPDATE
     </select>
 
@@ -175,5 +177,45 @@
             'PARTIAL',
             'FAILED',
             'CANCELLED') ORDER BY id
+    </select>
+    <select id="completionProtocol" resultType="com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol">
+        SELECT completion_protocol
+        FROM sq_response_execution
+        WHERE user_id = #{userId} AND binding_id = #{bindingId} AND del_flag = '0'
+    </select>
+
+    <select id="completionProtocolBySession" resultType="com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol">
+        SELECT r.completion_protocol
+        FROM sq_response_execution r
+        JOIN sq_runtime_binding b ON b.user_id = r.user_id AND b.binding_id = r.binding_id
+        WHERE r.user_id = #{userId} AND b.framework_session_id = #{sessionId}
+          AND r.del_flag = '0' AND b.del_flag = '0'
+    </select>
+    <select id="previewTarget" resultType="com.agentsquad.squad.conversation.domain.ReplyPreviewTarget">
+        SELECT r.user_id AS userId,
+               r.conversation_id AS conversationId,
+               r.execution_id AS executionId,
+               r.source_message_id AS sourceMessageId
+        FROM sq_response_execution r
+        JOIN sq_runtime_binding b ON b.user_id = r.user_id AND b.binding_id = r.binding_id
+        WHERE r.user_id = #{userId}
+          AND b.framework_session_id = #{sessionId}
+          AND r.completion_protocol = 'NATURAL'
+          AND r.cancel_requested_at IS NULL
+          AND r.status NOT IN ('SUCCEEDED', 'PARTIAL', 'FAILED', 'CANCELLED')
+    </select>
+    <select id="modelChoiceByBinding" resultType="java.lang.String">
+        SELECT model_selection_json
+        FROM sq_response_execution
+        WHERE user_id = #{userId}
+          AND binding_id = #{bindingId}
+    </select>
+
+    <select id="modelChoiceBySession" resultType="java.lang.String">
+        SELECT r.model_selection_json
+        FROM sq_response_execution r
+        JOIN sq_runtime_binding b ON b.user_id = r.user_id AND b.binding_id = r.binding_id
+        WHERE r.user_id = #{userId}
+          AND b.framework_session_id = #{sessionId}
     </select>
 </mapper>

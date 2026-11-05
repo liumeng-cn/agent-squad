@@ -673,7 +673,7 @@ textarea.input {
 .welcome-heading h2 { margin: 0; color: #242b36; font-size: 24px; letter-spacing: -.6px; font-weight: 600; }
 .chat-composer-area { flex-shrink: 0; width: 100%; max-width: 820px; margin: 0 auto; padding: 12px 30px 14px; }
 .chat-welcome .chat-composer-area { max-width: none; padding: 0; }
-.chat-composer { background: #fff; border: 1px solid #e1e5ec; border-radius: 22px; box-shadow: 0 5px 20px #233b6210; overflow: hidden; transition: border-color .15s, box-shadow .15s; }
+.chat-composer { background: #fff; border: 1px solid #e1e5ec; border-radius: 22px; box-shadow: 0 5px 20px #233b6210; overflow: visible; transition: border-color .15s, box-shadow .15s; }
 .chat-composer:focus-within { border-color: #bfcdfb; box-shadow: 0 4px 20px #416af310; }
 .chat-textarea { display: block; width: 100%; resize: none; min-height: 78px; max-height: 240px; border: 0; outline: 0; background: transparent; font: inherit; color: #28303c; line-height: 1.75; padding: 17px 18px 8px; box-shadow: none; }
 .chat-textarea:focus-visible { outline: none; }
@@ -759,3 +759,28 @@ textarea.input {
 .chat-workspace .spacer { flex: 1; }
 
 .stopped-note { color: #9aa2ae; font-size: 11px; padding: 0 5px; }
+
+/* 服务故障只使用轻量行内反馈，不绘制消息卡片。 */
+.chat-service-feedback { margin: 14px 0; color: #697588; font-size: 13px; line-height: 1.7; }
+.chat-service-feedback p { margin: 0 0 3px; }
+.chat-service-feedback .text-button + .text-button { margin-left: 12px; }
+
+.model-selector { position: relative; max-width: min(55vw, 300px); }
+.model-selector-trigger { display: flex; align-items: center; gap: 6px; border: 0; border-radius: 18px; padding: 7px 12px; background: #f4f5f7; color: #626975; font: inherit; font-size: 12px; cursor: pointer; }
+.model-selector-chevron { width: 14px; height: 14px; flex-shrink: 0; color: #9197a1; transition: transform .15s; }
+.model-selector-trigger[aria-expanded=true] .model-selector-chevron { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .model-selector-chevron { transition: none; } }
+.model-selector-trigger:disabled { opacity: .5; cursor: default; }
+.model-selector-popup { position: absolute; bottom: calc(100% + 12px); left: 0; width: min(310px, 80vw); padding: 12px; border: 1px solid #e2e4e8; border-radius: 20px; background: #fff; box-shadow: 0 8px 30px #18202c1c; z-index: 30; }
+.model-choice-list { display: grid; gap: 3px; max-height: 220px; overflow-y: auto; }
+.model-choice-list button { display: flex; justify-content: space-between; border: 0; border-radius: 10px; background: transparent; text-align: left; padding: 10px; color: #525e70; font: inherit; font-size: 13px; cursor: pointer; }
+.model-choice-list button[aria-pressed=true] { background: #f3f5ff; color: #4b63cf; }
+.model-reasoning-control { padding: 12px 8px 6px; border-top: 1px solid #eef0f3; margin-top: 8px; }
+.model-reasoning-control > div { display: flex; justify-content: space-between; font-size: 12px; color: #8b919c; }
+.model-reasoning-control strong { color: #657bd4; font-weight: 500; }
+.model-reasoning-control input { width: 100%; margin: 14px 0 8px; accent-color: #8295ed; cursor: pointer; }
+.model-reasoning-labels { font-size: 11px !important; }
+.model-selector-help { margin: 8px 8px 0; font-size: 11px; color: #9ca2ad; }
+
+.model-choice-list button { flex-wrap: wrap; }
+.model-choice-list small { width: 100%; color: #9ca2ad; font-size: 10px; margin-top: 3px; order: 1; }

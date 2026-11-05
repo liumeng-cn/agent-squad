@@ -100,9 +100,15 @@ public class CommandDeliveryService {
     @Value("${agentsquad.delivery.control-workers:2}")
     private int controlWorkers;
 
+    @Value("${agentsquad.delivery.wakeup-enabled:true}")
+    private boolean wakeupEnabled;
+
     private ThreadPoolExecutor deliveryExecutor;
     private ThreadPoolExecutor controlExecutor;
     private final Set<String> scheduledCommands = ConcurrentHashMap.newKeySet();
+
+    @Resource
+    private org.springframework.beans.factory.ObjectProvider<RedisCommandWakeup> redisWakeups;
 
     /** 初始化后台执行线程池；线程不够用时不接手新的数据库命令。 */
     @PostConstruct
@@ -143,36 +149,62 @@ public class CommandDeliveryService {
     }
 
     /** 公平候选扫描后按容量派发；控制命令拥有独立容量，不被慢提交占满。 */
-    @Scheduled(fixedDelayString = "${agentsquad.delivery.poll-delay-ms:1000}")
+    @Scheduled(fixedDelayString = "#{${agentsquad.redis-wakeup.enabled:false} ? ${agentsquad.redis-wakeup.compensation-delay-ms:1000} : ${agentsquad.delivery.poll-delay-ms:1000}}")
     public void deliverDue() {
         LocalDateTime scannedAt = now();
         deliveryMapper.blockUnknownPending(scannedAt);
         Set<String> commandIds = new LinkedHashSet<>(deliveryMapper.findDueControlIds(scannedAt));
         commandIds.addAll(deliveryMapper.findDueIds(scannedAt));
-        for (String commandId : commandIds) {
-            if (!scheduledCommands.add(commandId)) {
-                continue;
-            }
-            try {
-                CommandClaimContext context = deliveryMapper.claimContext(commandId);
-                boolean control = context != null && ("STOP".equals(context.action())
-                        || "RESPOND".equals(context.action()));
-                (control ? controlExecutor : deliveryExecutor).execute(() -> {
-                    try {
-                        deliver(commandId);
-                    } catch (Exception exception) {
-                        log.warn("持久命令调度异常 commandId={} errorType={}",
-                                commandId, exception.getClass().getSimpleName(), exception);
-                    } finally {
-                        scheduledCommands.remove(commandId);
-                    }
-                });
-            } catch (RejectedExecutionException exception) {
-                scheduledCommands.remove(commandId);
-            } catch (Exception exception) {
-                scheduledCommands.remove(commandId);
-                log.warn("命令候选读取失败 commandId={}", commandId, exception);
-            }
+        commandIds.forEach(this::notifyOrSchedule);
+    }
+
+    /** 只在受理事务提交后异步领取，扫描保留为通知丢失与容量不足的补偿。 */
+    @org.springframework.transaction.event.TransactionalEventListener(phase = org.springframework.transaction.event.TransactionPhase.AFTER_COMMIT)
+    public void ready(com.agentsquad.squad.conversation.domain.CommandReadySignal signal) {
+        if (wakeupEnabled) {
+            notifyOrSchedule(signal.commandId());
+        }
+    }
+
+    private void notifyOrSchedule(String commandId) {
+        RedisCommandWakeup wakeup = redisWakeups.getIfAvailable();
+        if (wakeup == null || !wakeup.publish(commandId)) {
+            schedule(commandId);
+        }
+    }
+
+    private void schedule(String commandId) {
+        scheduleFromQueue(commandId, () -> { });
+    }
+
+    /**
+     * 就绪引用复用原投递入口；成功完成一次持久领取/投递尝试后才确认通知。
+     * 容量不足或异常时不确认，Redis pending接管和数据库扫描均可恢复。
+     */
+    public void scheduleFromQueue(String commandId, Runnable acknowledged) {
+        if (!scheduledCommands.add(commandId)) {
+            return;
+        }
+        try {
+            CommandClaimContext context = deliveryMapper.claimContext(commandId);
+            boolean control = context != null && ("STOP".equals(context.action())
+                    || "RESPOND".equals(context.action()));
+            (control ? controlExecutor : deliveryExecutor).execute(() -> {
+                try {
+                    deliver(commandId);
+                    acknowledged.run();
+                } catch (Exception exception) {
+                    log.warn("持久命令调度异常 commandId={} errorType={}",
+                            commandId, exception.getClass().getSimpleName(), exception);
+                } finally {
+                    scheduledCommands.remove(commandId);
+                }
+            });
+        } catch (RejectedExecutionException exception) {
+            scheduledCommands.remove(commandId);
+        } catch (Exception exception) {
+            scheduledCommands.remove(commandId);
+            log.warn("命令候选读取失败 commandId={}", commandId, exception);
         }
     }
 

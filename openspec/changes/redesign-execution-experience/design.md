@@ -8,6 +8,10 @@
 
 ## Goals / Non-Goals
 
+2026-11-04用户明确的首批交付边界：正常交互必须改为“提交消息→独立执行→事件主动推进→SSE携带可直接应用的进度/正文→前端增量更新”。页面只在首次进入、重连、游标缺口/过期或协议不兼容时读取快照；正常事件不得再以“有更新”为由反复请求完整快照。SseEmitter、页面挂载或连接状态都不拥有Worker生命周期。持久化、消费游标和恢复底座复用，只调整必要协议，不把整个底座重建当作页面改造前提。
+
+首批必须贯通一条普通聊天链路：受理消息、执行状态和答案均由事件直接更新；公开正文按已验证内容通道逐段展示；关闭页面后执行继续，刷新/另一设备可接续已提交答案。仅后端实验、Redis接入、SSE接口存在或单独reducer测试通过都不能称该链路完成，须本地桩环境通过真实HTTP/SSE及浏览器验收。
+
 **Goals:**
 
 - 简单回复不需要完成声明工具和回执解释回合；复杂目标严格验收。
@@ -39,33 +43,31 @@
 | 输出/交付 | 新 OutputService、既有 FinalDeliveryService | 草稿与唯一正式答案 |
 | 活动 | 新 ActivityProjectionService | 真实步骤时间线，不反向裁决操作成功 |
 
-### 2. 通过已提交事件驱动业务，采用持久收件确认
+### 2. 已提交日志、事务消费与Redis唤醒分工
 
-选择官方 SessionExportSink + 平台持久事件收件记录。sink.name 固定为 `squad-execution-v2`，不包含实例、用户或每次启动 UUID；SDK 自身按 Session 隔离其导出序号。
+官方journal是原生事件的补读来源；MySQL记录业务状态、正式输出、关键活动、幂等及业务消费游标；Redis组织待处理工作和可重建的实时读模型。Scope授权、外部操作账本、预算结算和唯一交付继续由原业务服务裁决，Redis消息不能直接授权执行或宣告成功。
 
-sink 绑定服务端 userId/bindingId/sessionId 与映射版本，不能信任模型自报归属。收到事件后用短事务插入唯一收件记录，确认落库后返回；记录主要保存原生日志定位、类型、摘要及必要的受控业务字段，不整包复制 request/prepared、模型消息和工具参数。未知必需类型先保留定位并阻塞该绑定消费，不能确认为处理完成。不可安全映射的载荷仍通过 SDK 公开接口读取。
+**阶段A：先加速已验证路径。** 保留已提交的SQL收件与事务消费者，官方sink或Command事务提交后向Redis发送引用唤醒。消费者按Binding从持久业务游标连续读取journal，而非按消息携带的事件顺序盲目执行。Redis先改善触发与通知，不把既有测试结果套到新链路。
 
-选择持久收件而非在 SDK 导出线程直接执行完整业务事务，避免父任务锁、会话锁和慢消费占用导出工作。相比只发内存通知，多一次短写入换取明确确认与重启可调度；不是引入 Kafka 等新基础设施。
+**阶段B：候选收件瘦身。** P08比较“每条事件SQL收件”和“Redis绑定引用＋journal补读＋批次消费确认”。只有证明Redis丢失后仍能补齐、同序号异内容仍能检测、毒事件有持久定位、终态尾部不遗漏，以及旧路径可排空后，才修改sq_runtime_event_inbox的用途或退出全量逐条收件。批次摘要、来源核对等替代证据须明确实现和验证；本轮不删表、不删已完成代码，不将候选当成已通过决策。
 
 ```text
-SDK committed journal
-        --> official export sink
-        --> durable inbox commit --> ACK native export
-                    |
-                    v
-             per-binding consumer
-                    |
-        business + activity + public events + cursor commit
-                    |
-                    v
-               notify SSE
+committed Command / official journal
+                |
+      Redis reference wakeup
+                |
+      per-binding bounded reader
+                |
+   business + activity + public event + cursor commit
+                |
+      Redis current view + notify hub --> SSE
 ```
 
-消费同 binding 串行、不同 binding 可并行，按 nativeSeq 连续处理。同序号不同 eventId/digest 是数据冲突，不覆盖；缺号从已提交日志补齐。单个绑定毒事件不停止其他绑定。消费失败不推进业务游标，按分类限速重试并显示消费受阻；不可恢复必需事件进入需核对状态。
+同Binding的并发唤醒可以合并，但业务仍按nativeSeq连续消费并CAS推进。Stream消费组分发消息本身不保证同Binding只被一个执行器同时处理，仍须依赖业务锁/租约与游标屏障；不同Binding的错误互不传播。未知必需事件阻塞消费并保存安全诊断，可选未知事件依契约推进，不能伪造已理解。
 
-原生 head、收件最大连续序号、业务消费序号分别记录。补偿扫描比较这些事实，不按业务终态过滤；已结束运行仍补齐尾部。即使 SDK 导出确认丢失，重复插入和业务 producerKey 均幂等。收件记录清理必须晚于业务消费、恢复窗口及诊断保留；日志引用仍待消费时不得清理 SDK 数据。
+必须区分SDK导出游标、Redis消息确认、业务消费游标。阶段A的固定sink.name为squad-execution-v2，收件事务提交后返回；若阶段B改变sink返回的含义，必须持久固定transportVersion和sinkName，不能复用旧确认位置假定业务已完成。Redis XACK在业务提交后；提交后崩溃重投由业务游标/producerKey幂等。SDK导出已确认但Redis数据丢失时，补偿必须比较官方head和业务applied，不从SDK导出游标开始补读。
 
-P03 是接入准入条件；失败则暂停该适配任务并修订设计，不悄悄切到内存通知。
+补偿扫描覆盖登记Binding，包括业务终态，不依赖Redis枚举或仅查询活跃任务；journal保留不得早于对应业务消费、故障恢复和诊断窗口。P03的SQL/journal实验是阶段A已有证据，Redis交付与候选瘦身需P07/P08另行准入。
 
 ### 3. 将读取、启动与上下文装配分开
 
@@ -75,7 +77,7 @@ P03 是接入准入条件；失败则暂停该适配任务并修订设计，不�
 
 readCommittedEvents/inspectReceipt 不调用 session.start、不领取 Job、不续租 guard；恢复协调器明确调用 startPending，并受当前计划、取消、授权和租约约束。WorkerFactory 拆出能力构建/运行资格与纯会话读取，避免页面/补偿查询间接启动推理。
 
-原因：当前 readEvents 有恢复副作用；统一 Provider 优于在每个入口复制 sink/trace 注入。Java 回调对象只在进程中装配，不写命令 JSON。
+当前实现已将旧readEvents/inspectTask改为纯读，后台显式startPending；Provider的sink、attempt、trace与新旧后端全面装配仍未完成。统一Provider避免在每个入口复制注入。Java 回调对象只在进程中装配，不写命令 JSON。
 
 ### 4. 普通回复自然结束，目标工具终结
 
@@ -143,11 +145,11 @@ MODEL_CALL 的显示阶段取可信命令 purpose：首次回复理解、资料�
 
 ### 7. 数据结构变更清单与约束
 
-本节是建模契约，DDL 在 apply 时生成到最终 baseline 与部署迁移文件，必须带中文注释及统一审计字段；本次不修改 schema。时间统一 UTC datetime(3)，业务 ID 与自增存储键分开。
+本节是建模契约。收件表V6已实现，其余DDL在对应apply任务中生成并同步最终baseline与部署文件；本次Redis计划修订不修改schema。时间统一 UTC datetime(3)，业务 ID 与自增存储键分开。
 
 | 表/改动 | 关键字段与约束 | 所有权/事务 |
 | --- | --- | --- |
-| 新 sq_runtime_event_inbox | user_id、binding_id、session_id、native_seq、native_event_id、native_type、payload_digest、mapping_version、必要脱敏载荷/引用、status、attempts、next_attempt_at、error_code；唯一(user_id,binding_id,native_seq) 与 (user_id,binding_id,native_event_id)，相同键异摘要报冲突；索引(status,next_attempt_at,id) | sink 短事务确认；不保存完整 Prompt |
+| 已实现 sq_runtime_event_inbox（阶段A保留，阶段B待P08） | user_id、binding_id、session_id、native_seq、native_event_id、native_type、payload_digest、mapping_version、必要脱敏载荷/引用、status、attempts、next_attempt_at、error_code；唯一(user_id,binding_id,native_seq) 与 (user_id,binding_id,native_event_id)，相同键异摘要报冲突；索引(status,next_attempt_at,id) | sink 短事务确认；不保存完整 Prompt |
 | 新 sq_execution_attempt | attempt_id、owner_type/id、scope_id、binding_id、command_id、turn_id、run_id、attempt_no、protocol_version、traceparent/tracestate、root_trace_id、status、started_at/ended_at；唯一(user_id,binding_id,run_id)，运行未分配时按command+pending身份再绑定 | 运行事实及投递服务；业务恢复与新回答分开 |
 | 新 sq_execution_activity | activity_id、owner_type/id、source_message_id、task_id/job_id、plan_version、parent_activity_id、activity_type/group、status、wait_reason、version、source_key、resource_id、safe_summary；唯一(user_id,source_key)，索引(owner_type,owner_id,id) | 投影短事务写；权威业务结果仅引用 |
 | 新 sq_activity_attempt | activity_id、attempt_no、execution_attempt_id、status、start/end、error_code、tool_call_id/model_call_id、operation_id/sandbox_execution_id；唯一(user_id,activity_id,attempt_no) | 运行映射及投影；缺少起止值为 NULL |
@@ -156,10 +158,10 @@ MODEL_CALL 的显示阶段取可信命令 purpose：首次回复理解、资料�
 | 新 sq_acceptance_result | task_id、goal_revision、plan_version、criterion_id、verification_type、result、verifier_ref、evidence_refs、reason_code；唯一(user_id,task_id,goal_revision,plan_version,criterion_id) | 验收更新与完成锁协调 |
 | 新 sq_interaction_decision | decision_id、interaction_id、expected_version、request_hash、decision_hash、safe_payload、status、command_id；唯一(user_id,interaction_id)，同幂等键异内容拒绝 | 决定受理与处理命令原子提交 |
 | 修改回复/目标/命令 | protocol_version；命令增加追踪上下文、ownerRef、等待原因；回复v2不再写候选/纠正字段 | v1保留至耗尽，v2单写 |
-| 修改 runtime_binding | received_cursor、native_event_cursor、last_known_head、terminal_applied_seq、mapping_version；next_projection_at 用于补偿；索引补偿到期和差异状态 | 收件与业务确认分离，不用业务终态排除尾部 |
+| 修改 runtime_binding | protocol_version、journal_backend、transport_version、sink_name、received_cursor（SQL模式）、native_event_cursor、last_known_head、terminal_applied_seq、mapping_version；next_projection_at 用于补偿；索引补偿到期和差异状态 | 收件与业务确认分离，不用业务终态排除尾部 |
 | 修改 sq_message、sq_artifact | 消息 output_id/purpose；产物来源 scope/binding/job/plan/output，用途 | 上传附件与生成产物分开 |
 
-既有 sq_command 是平台 outbox，不再复制一张命令 outbox。收件确认和业务消费独立的代价是两次持久写；收益是 SDK 导出不被父任务锁拖住。活动规模通过只记录边界与合并进度控制，不逐 token 建 Activity。
+既有sq_command继续是持久命令来源，不另复制命令outbox。阶段A保留收件与消费两次持久写；阶段B是否减少逐事件写入由P08决定。活动只记录实际边界，不逐token建Activity；Redis热状态缓存可重建，不能成为唯一业务完成证据。
 
 数据库有限值均 VARCHAR+枚举映射，不引入 MySQL ENUM。跨模块枚举在 common，内部状态留所属模块；SDK 原始字符串仅在适配层解析。生成 TypeScript/OpenAPI 或做一致性校验，禁止继续 status:string。
 
@@ -170,7 +172,7 @@ MODEL_CALL 的显示阶段取可信命令 purpose：首次回复理解、资料�
 | 操作 | 锁/事务 | 崩溃恢复 |
 | --- | --- | --- |
 | 消息受理 | 会话、源消息/Reply、Scope与账户、Command、ACK/公开事件一次提交 | 同幂等键返回原身份，提交后通知可丢 |
-| 原生收件 | 仅 inbox 唯一插入和连续 received_cursor | 已落库未 ACK 可重复；序号缺口不推进连续游标 |
+| 原生收件（阶段A） | 仅inbox唯一插入及SQL收件位置 | 已落库未ACK可重复；业务applied仍独立。Redis引用候选须P08通过再定义对应确认语义 |
 | 业务事件应用 | conversation→owner(Task→Plan→Job适用时)→binding cursor→activity/output→公开序号；一个连续批次全部提交 | 失败整批回滚，重投无副作用 |
 | 交互决定 | 归属与版本校验、决定 CAS、处理命令与公开事件一次提交 | 执行外部 I/O 不持有该事务 |
 | 外部派发 | 固定 operationId，短事务取得资格→无事务外部I/O→短事务CAS结果 | 结果未知保留账本，重投先查权威结果 |
@@ -180,9 +182,26 @@ MODEL_CALL 的显示阶段取可信命令 purpose：首次回复理解、资料�
 
 ### 9. 及时唤醒与低延迟输出
 
-2026-11-04按用户方向纳入Redis：允许用于调度协调、限流、幂等与事件流，不限于缓存。当前优先以Streams承载跨实例的命令/绑定唤醒引用，以Pub/Sub广播会话有更新的即时通知；不将原始Prompt、工具参数或模型内部思考送入通知。Streams消息包含环境、userId、bindingId、commandId或已提交事件水位，消费仍经过已有授权与业务幂等检查；确认与失败转移、积压及保留窗口在3.5实现时验证。MySQL提交后发布Redis存在跨存储窗口，命令/收件记录保留为补偿依据，扫描补发可重复，不靠双写同时成功假装原子。Pub/Sub通知可丢，断线以已提交水位补读。用户将自行安装Redis，本轮未安装、连接或声称该路径已通过联调；缓存、执行容量和其他权威状态是否放Redis按各自恢复约束决定，不强制同一种存储。
+Redis职责与业务边界：
 
-平台 Command 事务提交后通知有界 dispatcher，保留公平领取、独立控制容量和稳定提交键；扫描仅补偿遗漏。SDK 内部100ms调度仍保留，不能绕开其持久 inbox。
+| 内容 | 位置与用途 | 重启及一致性规则 |
+| --- | --- | --- |
+| 命令、回复/目标/Job、审批决定、操作效果、预算结算、正式交付 | MySQL业务记录 | 原事务与幂等规则继续生效 |
+| 原生执行历史 | 显式官方数据库journal；旧绑定保持原后端 | 通过固定Binding定位，按持久applied补读 |
+| 命令/绑定就绪引用 | Redis Streams，独立COMMAND/PROJECTION/CONTROL通道 | 消费确认、pending接管；缺消息由业务记录和head核对补发 |
+| 当前活动摘要与有界preview | Redis Hash/有界流＋进程内聚合 | 带generation/planVersion/attempt/version/asOf；过期或丢失后重建，TTL不裁决任务失败 |
+| 重试到期引用 | Redis Sorted Set | 原子转入就绪通道；持久nextAttemptAt及SDK挂起/答复就绪条件才允许执行 |
+| 会话有更新提示 | Redis Pub/Sub＋每会话共享hub | 提示可以丢失，按持久公开sequence补读；每批重新验证权限 |
+
+**引用格式与队列。** 消息至少包含schemaVersion、kind、userId、bindingId、commandId（适用时）、headHint/dirtyVersion及traceparent/tracestate/rootTraceId。只传服务端可信身份和定位，不复制Prompt、内部思考、工具参数或凭据。消费前从数据库核对当前归属、计划、授权和取消状态；Stream ID不替代业务ID、journal序号或公开sequence。COMMAND、PROJECTION、CONTROL分开配置消费者组与处理容量，取消/用户答复不能排在长模型任务后。
+
+**合并与不丢唤醒。** 每个Binding维护dirtyVersion与queued标记；生产Lua递增版本，未排队时XADD一个引用，已排队时只推进版本。消费者有界补读后先提交业务，再以Lua核对观察到的版本：期间有新更新则继续排队；达到条数、字节或耗时预算后若journal仍有未消费前缀，即使版本未变也必须续排。只有业务applied已追上核对的head且dirtyVersion无新变化，才清理标记并确认当前消息。清理与新到达必须原子竞态测试，不能仅SETNX一个长期标记。相关Lua key使用同一hash tag，Binding固定分区，初始单分区；扩分区须受控，避免因消费组本身而假定业务有序。Redis或处理器中断时用pending接管及独立补偿核对恢复，禁止持数据库事务等待Redis网络调用。
+
+**提交/通知间隙。** Command和业务事件先持久提交，再发Redis引用；发布失败记录可补偿的落后位置，低频扫描补发并允许重复。Redis不可用时阶段A以已验证扫描路径降低即时性，不改变已接受命令和正式结果；恢复后重建就绪引用和热状态。AOF配置、Stream保留/内存上限和消费者接管参数必须显式管理；AOF everysec并不消除故障丢最近写入的窗口。
+
+**页面读模型。** 当前摘要缓存按用户/会话/代际隔离，携带asOf sequence和实体版本；缓存回写CAS禁止旧快照覆盖新状态。API服务先检查访问权限，再读取热摘要；缓存缺失从业务记录与关键活动重建，历史明细仍分页读取。模型与工具回调只能更新有真实依据的阶段；心跳消失或缓存过期不改成FAILED。Pub/Sub只通知有更新，共享hub按公开游标补读后扇出到连接，每连接不再500ms独立查库；低频活跃会话核对补漏、心跳独立。慢连接队列有界，超限要求resync，重连依据已提交快照恢复，preview不宣告完成。
+
+平台dispatcher保留公平领取、稳定SDK提交键及独立控制容量；Sorted Set只安排到期机会，审批恢复仍验证外部效果账本、原请求挂起和必要答复齐备。移除RESPOND固定5s等待以条件成立为依据。SDK内部100ms调度保留，不绕开其持久inbox。
 
 模型公开文本通过生命周期中间件/公开回调生成可丢的 preview；只对回复/指定最终输出通道打开，Worker 内部文本、reasoning及工具参数全部不推送。任务协调内部回合不开放预览。P04 需证明区块身份及渠道可判定，否则保持活动即时、正文仅用可靠已提交批次，禁止降级为转发原始块。
 
@@ -210,7 +229,7 @@ ProgressGroup={sourceMessageId,ownerRef,phase,summary,counts,allowedActions,plan
 
 sequence 先检连续，实体 version/revision再防回退。未知可选事件推进sequence，必需事件不兼容则断流重取受支持快照。过期游标使用既有 EXPIRED，前端重建快照。打开连接期间禁止 snapshot旧响应覆盖后来事件：以快照cursor作为基线缓冲再重放，或丢弃早于已应用水位的同代际快照。翻页只合并历史，不修改实时水位。
 
-SSE通知改为每会话共享 hub+提交后唤醒读取，避免每连接500ms查库；单实例进程通知足够，多实例由平台事件补偿读取保证正确性，短周期共享尾读按活跃会话而非按连接。队列字节/条数有界，慢连接发 resync_required 后关闭；重连按快照恢复。每次发送批次重验用户/会话权限，并对禁用/删除事件主动关闭订阅。
+SSE采用每会话共享hub，提交后经Redis Pub/Sub跨实例唤醒并按持久游标补读；移除每连接500ms独立查库，以低频活跃会话核对补漏。队列字节/条数有界，慢连接发 resync_required 后关闭；重连按快照恢复。每次发送批次重验用户/会话权限，并对禁用/删除事件主动关闭订阅。
 
 ### 11. 追踪与日志
 
@@ -223,6 +242,12 @@ INFO保留入口完成、命令接手、活动起止摘要、重试决定、发�
 与 add-agent-observability 的关系：本变更拥有活动、尝试和生命周期上下文接入；原变更保留OTel基础与导出故障隔离。apply前逐条对齐任务，不能同时由两套组件建立重复根span或重复消费；原变更勾选项须按当前端到端证据复核。
 
 ### 12. 验证准入和实现顺序
+
+本轮先做小范围Redis验证并交付可感知改进，不重新开展harness大调研：
+1. P07：固定官方镜像与配置，验证合并唤醒竞态、MySQL提交后发布失败、业务提交后未XACK、消费者崩溃接管、Redis重启/通知数据丢失后的独立补齐，以及同绑定并发和CONTROL容量隔离。
+2. 先落地3.5主动唤醒与7.1/7.2活动读模型，再落地8.3共享hub和8.4页面增量；简单聊天自然完成4.1独立推进，不把Redis当成减少模型回合的替代品。
+3. P08：同批官方journal对比逐条SQL收件与引用消费的正确性、冲突证据、读写量和恢复窗口。通过后才决定是否瘦身sq_runtime_event_inbox；未通过则保留已验证路径。
+4. P09：复用8.6同桩对比，测受理到接手、原生提交到业务应用、提交到浏览器可见的p50/p95/p99，以及查询/写入和Redis积压；先测基线再设阈值。
 
 P01/P02/P03先于v2运行接入，P04先于预览上线；P05先于控制/汇合切换，P06先于去掉旧前端刷新路径。实验具体输入和断言见proposal，结果保存为独立验证记录，不以文档存在代替通过。
 
@@ -242,14 +267,46 @@ P01/P02/P03先于v2运行接入，P04先于预览上线；P05先于控制/汇合
 
 ## Migration Plan
 
-1. 先完成P01-P04及契约评审，生成baseline、部署迁移与schema parity验证；不自动执行真实库DDL。
-2. 增量建表加字段，既有记录protocolVersion=1，新路径先关闭；保留旧消费者处理在途运行。
+1. 补齐必要P01-P04与P07，按优先顺序实现唤醒和进度；各能力保留自身准入，不等待无关控制/预览验收才开发。生成对应baseline、部署迁移与schema parity验证，不自动执行真实库DDL。
+2. 持久固定Binding的protocolVersion、日志后端与transportVersion；部署Redis的认证、持久卷、AOF及容量配置，新通道先关闭，旧在途保持原协议。
 3. 从同一已提交日志影子构建活动和输出摘要，对比业务结果，不触发模型/工具。历史缺字段为NULL/UNKNOWN；禁用“重放=重新执行”。
 4. 新受理固定v2；原v1按旧规则耗尽。显式重新回答是新受理并固定新版本；自动恢复沿用原版本、账户、业务键。
 5. 上线v2快照/reducer，兼容读取v1历史。导出、控制、输出按准入依赖开启，去掉固定RESPOND延时前验证恢复条件。
-6. 对账终稿、预算、操作账本、事件消费与产物引用；确认无v1在途后删除普通回复强制候选/纠正及旧刷新/正常轮询路径，不永久保留无价值兼容层。
+6. 对账终稿、预算、操作账本、事件消费与产物引用；P07/P09通过且无对应在途后移除正常轮询及旧刷新，仅留低频补偿。逐事件收件路径还必须通过P08及新旧transport排空后才可删除或瘦身，不因Redis上线自动删除V6表。
 7. 回退关闭新v2受理，兼容消费者继续完成已有v2或安全暂停；不得用旧二进制处理不兼容新数据。已发生外部操作、交付和下载不能靠回退撤销。
 
 ## Open Questions
 
 仅部署参数可后续定量：批量大小、活动/收件/输出保留天数、hub容量与补偿周期由P03/P06测量决定，不改变上述确认边界和协议。默认沿用现有产物保留策略，任何延长或缩短需说明影响；SDK行为不确定性已列为准入实验，不作为可跳过的开放问题。
+
+## Environment Preparation
+
+2026-11-04已按用户要求拉取官方`redis:8.2-alpine`，实际镜像环境版本为8.2.11、架构arm64；仓库摘要为`redis@sha256:489a769e0a54dc245896132a15c72d2bc7296719954da99398f43a3877e5f8eb`。首次Docker Hub匿名鉴权连接EOF，重试成功，已用image inspect确认本地存在。部署/实验固定此digest，后续升级重新核对并验证。
+
+本轮只拉镜像，没有创建或启动Redis容器，没有开放端口、设置密码、挂载持久卷或验证PING。0.1实施时先提供仅回环访问、显式认证、持久卷和AOF的本地配置，在独立实验数据上测试故障；不得将镜像已下载写成Redis已经接入项目。
+
+
+## 2026-11-05 普通聊天实现细化
+
+首批正文预览采用单次模型调用累计替换协议，字段为schemaVersion=2、executionId、sourceMessageId、runId、streamId、revision、offset=0、text、replace=true、preview=true。此首批协议不虚构尚未持久化的Activity/Attempt/Output身份；后续完整输出模型需显式演进契约。公开TextBlockDelta才进入预览，Worker与目标协调不启用；推理与工具参数不解析、不推送。每调用最多65536个UTF-16单元，不拆代理对，50ms合并，同一连接每执行只保留最新预览且最多8个执行；预览无持久id，断线清空，终稿替换。
+
+新受理与显式重答从受控枚举配置固化完成协议，默认NATURAL，旧行与旧在途为PROPOSAL；自然回复不进入旧候选纠正分支。外部效果未知时保持核对，核对完成后从同一Run已提交journal重新取证，不重新调用模型。
+
+官方SessionRecorder的exporting标记会合并并发flush；exporter按一次head水位扫描，终结flush可能发生在扫描之后且close停止heartbeat。组合回归复现了模型完成、业务仍RUNNING，故实时sink只负责及时性，必须保留独立终态尾部核对。当前先按15秒和最多20个绑定补读，不依赖页面、业务仍活动或收件尚有RECEIVED，后续容量与保留策略仍按P07/P09验证。不得把扩大等待时间当作此缺口已消失。
+
+
+## 2026-11-05 即时模型选择补充
+
+用户在输入框旁选择模型及思考模式，点击后立即更新下一条消息设置；不修改已经排队或生成中的执行。多个模型指可用目录供逐条选择，不默认并行发送同一问题。能力标签REASONING/TEXT_GENERATION等由配置声明，供未来Worker按业务筛选，不宣称为自动评测或自动路由结果。
+
+复用WorkerProfileRegistry.modelProfiles作为共用目录，新增displayName/enabled/capabilities/reasoningAdapter/reasoningModes/defaultReasoningMode；密钥仍按用户要求放既有application-local.yml。GET /api/v1/models经现有身份拦截器鉴权，只返回已启用且具备必要配置的公开模型信息。目录配置变更需重新加载服务，页面切换已注册模型不需重启。首批为共享配置目录，不提供用户自建供应商/密钥管理界面。
+
+POST消息增加可选modelId/reasoningMode；省略ID为default，省略模式采用该Profile默认值。受理事务写sq_response_execution.model_selection_json={modelId,configurationVersion,reasoningMode}，不存密钥。非空选择参与幂等摘要；旧无选择请求保留原摘要形状，原有在途NULL沿原路径。显式重新回答复制原选择，不读取当前页面选项。配置指纹包含提供方、模型名、地址、价格版本/单位、额度和思考适配器，不包含密钥；允许轮换密钥，其他配置变更拒绝旧执行调用，不静默回退到另一模型。
+
+SelectedReplyModelMiddleware只对回复从持久选择恢复配置并替换ModelCallInput.model，设置RuntimeContext中的固定选择；预算中间件使用同一个Profile。SDK公开实现preparedModelCallStream使用mci.model()，通过两台独立本地HTTP服务验证实际路由，避免只修改文案或参数却仍请求固定Master模型。Worker仍遵守Definition的modelProfileKey；后续业务能力路由在此目录上扩展，当前未实现自动按能力挑选。
+
+思考模式采用后端枚举/TS联合/OpenAPI enum三端一致：DEFAULT/OFF/AUTO/ON/LOW/MEDIUM/HIGH。Spark适配OFF=disabled、AUTO=auto、ON=enabled；OpenAI Effort仅LOW/MEDIUM/HIGH，NONE仅DEFAULT。不为只有开关的模型制造五档强度；界面滑块仅显示目录的真实档位。思考参数只是请求设置，不推送模型内部推理。
+
+模型选择按用户与会话保存在本机草稿设置，新建会话首发后转存新会话键。发送结果未知时冻结整个原始发送尝试（正文、附件、模型、模式、幂等键），恢复确认不因目录异步加载而换键或换模型。
+
+V8新增可空JSON列；旧数据不回填猜测模型，最终baseline/schema同步，结构门禁版本8。仅在局部验证通过后按用户已授权的本地验收环境补列，不执行共享/生产迁移。

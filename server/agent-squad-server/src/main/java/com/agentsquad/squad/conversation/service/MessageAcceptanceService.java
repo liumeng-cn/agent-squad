@@ -54,7 +54,11 @@ public class MessageAcceptanceService {
         MessageCreateRequest normalized = normalize(request);
         String scopeKey = conversationId == null ? "message.create:first" : "message.create:" + conversationId;
         String hash = CanonicalJson.sha256(objectMapper, RuntimePayloads.toJson(objectMapper,
-                Map.of("text", normalized.text(), "artifactIds", normalized.artifactIds())));
+                normalized.modelId() == null && normalized.reasoningMode() == null
+                        ? Map.of("text", normalized.text(), "artifactIds", normalized.artifactIds())
+                        : Map.of("text", normalized.text(), "artifactIds", normalized.artifactIds(),
+                        "modelId", normalized.modelId() == null ? "" : normalized.modelId(),
+                        "reasoningMode", normalized.reasoningMode() == null ? "" : normalized.reasoningMode().name())));
         MessageSubmissionRow row;
         try {
             row = writer.accept(userId, conversationId, scopeKey, key, normalized, hash);
@@ -97,7 +101,7 @@ public class MessageAcceptanceService {
         if (ids.stream().distinct().count() != ids.size()) {
             throw invalid("附件不能重复");
         }
-        return new MessageCreateRequest(request.text(), List.copyOf(ids));
+        return new MessageCreateRequest(request.text(), List.copyOf(ids), request.modelId(), request.reasoningMode());
     }
 
     private RuntimeBusinessException invalid(String message) {

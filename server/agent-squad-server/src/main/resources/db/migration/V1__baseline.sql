@@ -741,6 +741,8 @@ CREATE TABLE IF NOT EXISTS `sq_response_execution`
     `context_json`             longtext COMMENT '冻结的授权会话消息前缀',
     `context_hash`             char(64)             DEFAULT NULL COMMENT '冻结前缀SHA256摘要',
     `dispatch_sequence`        bigint               DEFAULT NULL COMMENT '回复领取顺序，显式重试排在已受理执行之后',
+    `model_selection_json` json DEFAULT NULL COMMENT '受理时固定模型引用、配置指纹及推理模式，不含密钥',
+    `completion_protocol` varchar(16) NOT NULL DEFAULT 'PROPOSAL' COMMENT '回复完成协议[PROPOSAL-旧候选,NATURAL-自然输出]',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_response_execution` (`user_id`, `execution_id`),
     UNIQUE KEY `uk_response_scope` (`user_id`, `scope_id`),

@@ -5,6 +5,7 @@ import SafeMarkdown from '../../../shared/ui/SafeMarkdown.vue'
 import InteractionCard from '../../tasks/components/InteractionCard.vue'
 import OperationCard from './OperationCard.vue'
 import { apiDownload, errorMessage } from '../../../shared/api/http'
+import type { ExecutionFailure } from '../../../shared/api/chatApi'
 import type { Artifact } from '../../../shared/api/taskDetailsApi'
 import { statusText } from '../../../shared/lib/taskStatus'
 const chat = useConversationsStore()
@@ -14,6 +15,19 @@ const downloadError = ref('')
 const downloading = ref<string | null>(null)
 const copied = ref<string | null>(null)
 const allFiles = computed(() => [...new Map([...chat.messages.flatMap(message => message.artifacts), ...(chat.snapshot?.deliverables ?? [])].map(file => [file.artifactId, file])).values()])
+// 失败属于执行反馈，不再把系统失败占位正文同时当作助手答案展示。
+const visibleMessages = computed(() => chat.messages.filter(message => {
+  if (message.role !== 'ASSISTANT' || !message.executionId) return true
+  return !chat.snapshot?.failures.some(failure => failure.executionId === message.executionId)
+    || !chat.executionHistory.some(execution => execution.executionId === message.executionId && execution.status === 'FAILED')
+}))
+function failureText(failure: ExecutionFailure) {
+  if (failure.status === 'RETRYING' || failure.actor !== 'SYSTEM' || failure.category === 'EXTERNAL_UNKNOWN') return failure.safeMessage
+  return '回答服务暂时异常，未能完成这次回答。你的消息已保留。'
+}
+function originalText(failure: ExecutionFailure) {
+  return chat.messages.find(message => message.messageId === failure.sourceMessageId && message.role === 'USER')?.text
+}
 const working = computed(() => chat.snapshot?.activeTask)
 const workText = computed(() => {
   if (working.value?.status === 'RECOVERY_BLOCKED') return '这项工作暂未完成，已保留当前内容'
@@ -21,7 +35,7 @@ const workText = computed(() => {
 })
 function onScroll() { const node = scroller.value; if (node) pinned.value = node.scrollHeight - node.scrollTop - node.clientHeight < 110 }
 watch(() => chat.activeConversationId, () => { pinned.value = true; downloadError.value = '' })
-watch(() => [chat.messages.length, chat.snapshot?.cursor, chat.loading], async () => { await nextTick(); if (pinned.value && scroller.value) scroller.value.scrollTop = scroller.value.scrollHeight })
+watch(() => [chat.messages.length, chat.snapshot?.cursor, chat.loading, Object.values(chat.previews).map(item => item.revision).join()], async () => { await nextTick(); if (pinned.value && scroller.value) scroller.value.scrollTop = scroller.value.scrollHeight })
 async function older() {
   const node = scroller.value; const height = node?.scrollHeight ?? 0
   pinned.value = false; await chat.loadOlder(); await nextTick()
@@ -49,7 +63,7 @@ function answerStatus(status: string) {
     <div class="chat-messages">
       <button v-if="chat.nextBeforeSeq" class="load-history-button" :disabled="chat.loadingHistory" @click="older">{{ chat.loadingHistory ? '正在读取…' : '查看更早的消息' }}</button>
       <p v-if="chat.loading" class="chat-loading" role="status">正在读取对话…</p>
-      <article v-for="message in chat.messages" :key="message.messageId" class="chat-message" :class="message.role === 'USER' ? 'from-user' : 'from-assistant'">
+      <article v-for="message in visibleMessages" :key="message.messageId" class="chat-message" :class="message.role === 'USER' ? 'from-user' : 'from-assistant'">
         <template v-if="message.role === 'USER'">
           <div class="user-message-text">{{ message.text }}</div>
           <small v-if="chat.executionHistory.some(item => item.sourceMessageId === message.messageId && item.status === 'CANCELLED')" class="stopped-note">回答已停止</small>
@@ -60,10 +74,17 @@ function answerStatus(status: string) {
           <span class="assistant-avatar" aria-hidden="true">✦</span><div class="assistant-body"><SafeMarkdown :text="message.text" /><button class="copy-answer-button" :aria-label="copied === message.messageId ? '已复制回答' : '复制回答'" @click="copy(message.messageId, message.text)">{{ copied === message.messageId ? '已复制' : '复制' }}</button></div>
         </template>
       </article>
+      <article v-for="preview in Object.values(chat.previews)" :key="preview.executionId" class="chat-message from-assistant" aria-label="正在生成回答">
+        <span class="assistant-avatar" aria-hidden="true">✦</span><div class="assistant-body"><SafeMarkdown :text="preview.text" /><small class="stopped-note">正在生成…</small></div>
+      </article>
       <div v-for="execution in chat.snapshot?.activeExecutions ?? []" :key="execution.executionId" class="answer-state" role="status"><span class="state-indicator" :class="{ running: ['RUNNING', 'RECOVERING'].includes(execution.status) }"></span>{{ answerStatus(execution.status) }}</div>
       <div v-if="working" class="active-work-bar" role="status"><div><span class="work-mark" aria-hidden="true">✦</span><span>{{ workText }}</span><small v-if="!['CANCELLING', 'RECONCILING'].includes(working.status)">你可以继续在这里补充或提问</small></div><button v-if="working.status !== 'CANCELLING'" class="text-button" :disabled="!!chat.controlling" @click="chat.stop('task', working.taskId, working.version)">停止工作</button></div>
       <InteractionCard v-for="interaction in chat.snapshot?.interactions ?? []" :key="`${interaction.interactionId}:${interaction.version}`" :interaction="interaction" @refresh="chat.refreshSnapshot()" />
-      <section v-for="failure in chat.snapshot?.failures ?? []" :key="failure.failureId" class="conversation-notice" :class="{ 'is-recovering': failure.status === 'RETRYING' }" role="status"><p>{{ failure.safeMessage }}</p><button v-if="failure.allowedActions.includes('RETRY') && failure.executionId && failure.expectedVersion !== null" class="text-button" :disabled="!!chat.controlling" @click="chat.retry(failure.executionId, failure.expectedVersion)">重新回答</button><small v-if="failure.status !== 'RETRYING' && !failure.allowedActions.length && failure.category !== 'EXTERNAL_UNKNOWN'">内容已保留，你可以继续交流。<span class="diagnostic-reference">问题编号 {{ failure.diagnosticId.slice(0, 8) }}</span></small></section>
+      <section v-for="failure in chat.snapshot?.failures ?? []" :key="failure.failureId" class="chat-service-feedback" role="status">
+        <p>{{ failureText(failure) }}</p>
+        <button v-if="failure.allowedActions.includes('RETRY') && failure.executionId && failure.expectedVersion !== null" class="text-button" :disabled="!!chat.controlling" @click="chat.retry(failure.executionId, failure.expectedVersion)">{{ chat.controlling === failure.executionId ? '正在重试…' : '重新尝试' }}</button>
+        <button v-if="failure.status !== 'RETRYING' && originalText(failure)" class="text-button" @click="copy(failure.failureId, originalText(failure)!)">{{ copied === failure.failureId ? '已复制' : '复制原消息' }}</button>
+      </section>
       <OperationCard v-for="id in chat.snapshot?.operationIds ?? []" :key="id" :operation-id="id" :revision="chat.snapshot?.cursor ?? ''" :artifacts="allFiles" @refresh="chat.refreshSnapshot()" />
       <section v-if="chat.snapshot?.deliverables.length" class="delivery-files" aria-label="已交付文件"><h2>文件已就绪</h2><button v-for="file in chat.snapshot.deliverables" :key="file.artifactId" class="message-file" :disabled="downloading === file.artifactId" @click="download(file)"><span aria-hidden="true">▤</span>{{ file.fileName }}<span class="file-download" aria-hidden="true">↓</span></button></section>
       <p v-if="downloadError" class="chat-inline-error" role="alert">{{ downloadError }}</p>

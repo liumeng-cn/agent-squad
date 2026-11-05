@@ -15,8 +15,16 @@ import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
 import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
+import com.agentsquad.squad.conversation.domain.ResponseExecutionStatus;
+import com.agentsquad.squad.conversation.dto.MessageView;
+import com.agentsquad.squad.conversation.dto.ResponseExecutionView;
+import com.agentsquad.squad.presentation.dto.MessageAcceptedPayload;
+import com.agentsquad.squad.presentation.dto.ExecutionChangedPayload;
+import com.agentsquad.squad.presentation.domain.ConversationDeltaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
+import org.springframework.context.ApplicationEventPublisher;
+import com.agentsquad.squad.presentation.service.ConversationCommittedSignal;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -37,6 +45,15 @@ import java.util.UUID;
 @Slf4j
 @Service
 public class MessageAcceptanceWriter {
+
+    @org.springframework.beans.factory.annotation.Value("${agentsquad.response.completion-protocol:NATURAL}")
+    private com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol completionProtocol;
+
+    @Resource
+    private com.agentsquad.squad.model.service.ModelCatalogService modelCatalog;
+
+    @Resource
+    private ApplicationEventPublisher committedEvents;
 
     @Resource
     private ObservationSupport observations;
@@ -107,7 +124,9 @@ public class MessageAcceptanceWriter {
         messages.insertMessage(messageId, userId, conversationId, sequence, request.text(), executionId, now);
         bindings.insertResponse(bindingId, userId, scopeId, MasterAgentIdentity.AGENT_ID,
                 UUID.randomUUID().toString(), now);
-        messages.insertExecution(executionId, userId, conversationId, messageId, scopeId, bindingId);
+        messages.insertExecution(executionId, userId, conversationId, messageId, scopeId, bindingId, completionProtocol);
+        var selectedModel = modelCatalog.accept(request.modelId(), request.reasoningMode());
+        messages.setModelChoice(userId, executionId, modelCatalog.encode(selectedModel));
         finalDeliveries.initialize(userId, messageId, executionId);
         artifacts.attachScope(userId, scopeId, request.artifactIds());
         for (String artifactId : request.artifactIds()) {
@@ -123,14 +142,21 @@ public class MessageAcceptanceWriter {
         payload.put("artifactIds", request.artifactIds());
         commands.insertControl(commandId, userId, scopeKey, key, payloadHash, null, bindingId,
                 "MESSAGE_SUBMIT", RuntimePayloads.toJson(objectMapper, payload), now);
-        appendEvent(userId, conversation, commandId, "message.accepted",
-                Map.of("messageId", messageId, "executionId", executionId, "sequence", sequence), now);
-        appendEvent(userId, conversation, commandId, "execution.queued",
-                Map.of("executionId", executionId, "status", "QUEUED"), now);
+        var execution = new ResponseExecutionView(executionId, messageId, ResponseExecutionStatus.QUEUED,
+                0, null, null, java.util.List.of("STOP"));
+        var message = new MessageView(messageId, sequence, "USER", request.text(), 0, true,
+                null, executionId, null, now.atOffset(ZoneOffset.UTC).toString(),
+                request.artifactIds().stream().map(id -> artifacts.get(userId, id)).toList());
+        appendEvent(userId, conversation, commandId, ConversationDeltaType.MESSAGE_ACCEPTED.code(),
+                new MessageAcceptedPayload(ConversationDeltaType.SCHEMA_VERSION, message, execution), now);
+        appendEvent(userId, conversation, commandId, ConversationDeltaType.EXECUTION_QUEUED.code(),
+                new ExecutionChangedPayload(ConversationDeltaType.SCHEMA_VERSION, execution), now);
+        committedEvents.publishEvent(new com.agentsquad.squad.conversation.domain.CommandReadySignal(commandId));
         MessageSubmissionRow submission = messages.findSubmission(userId, scopeKey, key);
         log.info("用户消息已受理 {}", observations.logFields(Map.of(
                 "conversationId", conversationId, "messageId", messageId, "executionId", executionId,
-                "scopeId", scopeId, "commandId", commandId, "sequence", sequence)));
+                "scopeId", scopeId, "commandId", commandId, "sequence", sequence,
+                "modelId", selectedModel.modelId(), "reasoningMode", selectedModel.reasoningMode().name())));
         return submission;
     }
 
@@ -143,13 +169,14 @@ public class MessageAcceptanceWriter {
     }
 
     private void appendEvent(String userId, ConversationRow conversation, String commandId, String type,
-                             Map<String, Object> payload, LocalDateTime now) {
+                             Object payload, LocalDateTime now) {
         if (messages.reserveEvent(userId, conversation.conversationId()) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "会话公开水位已失效");
         }
         messages.insertEvent(userId, conversation.conversationId(), conversation.generation(),
                 messages.eventSequence(userId, conversation.conversationId()), "command:" + commandId + ":" + type,
                 type, RuntimePayloads.toJson(objectMapper, payload), now);
+        committedEvents.publishEvent(new ConversationCommittedSignal(userId, conversation.conversationId()));
     }
 
     private String fallbackTitle(String text) {

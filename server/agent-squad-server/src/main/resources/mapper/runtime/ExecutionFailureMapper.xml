@@ -220,7 +220,7 @@
             AND a.account_id = s.account_id
         JOIN sq_execution_failure f ON f.user_id = r.user_id
             AND f.failure_id = r.failure_id
-            AND f.category = 'SERVICE_TRANSIENT'
+            AND (f.category = 'SERVICE_TRANSIENT' OR f.code = 'MODEL_BILLING_UNAVAILABLE')
         WHERE r.user_id = #{userId}
           AND r.execution_id = #{executionId}
           AND r.status = 'FAILED'

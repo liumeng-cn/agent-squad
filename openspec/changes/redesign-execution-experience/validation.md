@@ -243,3 +243,105 @@ actual: null
 - 保留失败测试，后续应另测规范化后结果，不要求原SDK突然满足并不存在的契约。
 - 任务1.1-1.4当前只完成部分证据，所有准入任务暂不勾选；不以19个通过换算方案完成百分比。
 - 本轮只新增独立实验和记录；无生产代码、业务schema、远程Git或真实库变更。
+
+
+## 2026-11-04 普通聊天事件直达实施检查点
+
+本节是早期实验记录之后的增量。任务0.3仍未完成整体验收，不勾选完成。
+
+已实现但未完成整体验收：
+
+- 接收消息、排队、执行状态、最终消息使用schemaVersion=2完整增量；前端按消息revision和执行version归并，已支持事件不再触发全量快照。未知事件或序号缺口进入重连恢复。
+- 事务提交后唤醒会话级共享读取与推送；有界发送队列隔离慢订阅者，断开只清理订阅。移除逐连接500ms数据库读取，保留15秒补偿核对。唤醒目前仅限当前进程，Redis跨实例分发尚未接入。
+- 新受理回复标记NATURAL，旧数据默认PROPOSAL；新增V7脚本与schema/baseline列，启动门禁同步版本7，未对真实库执行DDL。自然输出收口仍需模型替身集成验证。
+
+局部验证证据：前端store测试8项通过，生产构建通过；ApiResultTest 4项与ConversationStreamHubTest 5项通过，后端测试源码可编译。Hub覆盖共享读取、读取期间新唤醒、慢订阅者边界、断开清理与序号缺口。common补齐的依赖仅为测试作用域。
+
+尚待实施或验证：真实HTTP/SSE与浏览器断线重连、自然回答单次模型调用、真实正文分块预览、运行事件主动唤醒投影、OpenAPI同步、V7隔离MySQL结构比对、取消重试与任务协作事件、Redis故障恢复与跨实例分发。不得将本轮单测通过描述成以上项目已完成。
+
+
+## 2026-11-05 普通聊天主动推送与自然输出验证
+
+### 实现与范围
+
+默认新受理与显式重新回答固化NATURAL协议，旧行保持PROPOSAL。自然回复隐藏并拒绝完成候选工具，以当前Run已提交turn/output与规范化模型结束原因发布。普通回复开启真实模型流，只选公开TextBlockDelta，临时正文与持久消息分开，终稿覆盖预览。命令受理提交后投递；Master/Worker上下文接入官方持久sink，收件提交后合并唤醒独立投影；会话公开事件提交后唤醒共享hub。前端普通已支持事件直接归并，不每事件重拉快照。进程内通知已接通，Redis跨实例尚未接入。
+
+### 已通过证据
+
+- 隔离MySQL后端组合回归26项通过：旧协议ResponseNativeExecutionIntegrationTest 14、真实HTTP/SSE 1、V7结构与旧行默认1、结构门禁3、共享hub5、预览UTF-16/容量2。旧协议夹具明确关闭主动唤醒并固定PROPOSAL，不修改原断言来宣称新协议通过。
+- 独立官方SDK/MySQL与持久收件实验19项通过，包含SdkMySqlContractTest 1和RuntimeEventReceiptMySqlTest 18。
+- 前端全量23项通过，生产构建通过；包含预览替换、重复/迟到版本、旧流、未知身份、终稿覆盖、断线清理与正常事件不刷快照。
+- ConversationSsePushIntegrationTest使用真实HTTP、真实SSE、真实SDK与本地流式模型桩；命令扫描、普通投影扫描、SSE补偿均设为一小时。先看到第一段正文且模型仍被阻塞，再关闭连接，按Last-Event-ID重新订阅后释放模型，观察同一终稿；整个过程只调用模型一次，只有一条助手消息，快照读取没有再次推理。推理标记TEST_PRIVATE_REASONING未出现在公开预览。
+- 追加隔离夹具：终稿已发布后删除末条收件并回退测试游标，独立尾部核对重新收件并补齐；助手消息仍一条，模型调用仍一次。此为尾部恢复输入模拟，不声称真实进程崩溃。
+- V7仅在隔离库执行，确认最终列定义匹配baseline，旧RUNNING行默认为PROPOSAL且状态不改。OpenAPI已同步普通事件独立DTO和临时正文；JSON语法检查与OpenSpec严格校验通过。
+
+### 实际发现与修复
+
+1. 收件与投影同时重复INSERT引发死锁：绑定收件短事务改为独占锁序；主动补读优先复用已有收件，只对尚未收到的已提交事件补收，消费继续核对摘要。
+2. 空SSE没有事件时HTTP响应头迟迟不返回：订阅后立即发心跳建立连接，不等待后续业务事件。
+3. 页面断开触发AsyncRequestNotUsableException被全局包装为JSON并刷ERROR：单独结束已不可写响应，正常断线不记录业务失败。
+4. 组合回归复现SDK末次导出遗漏：SessionRecorder.exporting合并并发flush，exporter只读取一次head水位，终结flush晚于该水位且close停止heartbeat。独立15秒尾部核对按所有已投递绑定的持久游标恢复，包含业务终态、不要求尚有RECEIVED；只读日志、幂等收件与投影，不构造/启动Worker或模型。仍需P07/P09进一步测故障与容量，不能据局部通过删除补偿。
+
+### 未通过、受限与未执行
+
+- 真实浏览器已实际提交消息，并见到排队、正在回复和第一段正文；截图/tmp/squad-chat-preview.png。浏览器后半段截图/关闭操作连续两次自动权限审核超时，未判定操作不安全，但未获继续操作许可；没有绕过检查。人工浏览器夹具因未能及时释放而失败，不能标为完整端到端通过。真实HTTP的断线、续读与终稿恢复已独立通过。浏览器登录身份由仅回环测试代理提供，未验证真实网关登录。
+- 旧SchemaParityTest因仓库缺少deploy/db/migrations/V1至V4失败，完整历史迁移链未通过。本次不补造旧迁移，不把V7局部验证替代完整链。
+- 未执行真实模型、外部发布、现有开发库DDL或生产操作，未提交推送当前工作。应用既有库前需审查V7列变更。
+- Redis跨实例、全工具活动分类、任务计划步骤UI、完整Trace跨线程/跨服务、取消/重试/审批完整新协议、所有有限值清理与全项目回归仍未完成。任务0.3保留未勾选，原3/45不以局部单测扩大。
+
+
+### 最终增补检查
+
+真实HTTP/SSE现有2个参数化分支均通过：全部订阅关闭后让模型完成再重连，以及运行中重新订阅并收到终稿。两分支都核对公开首段、一次模型调用、一条终稿和终态尾部补齐。先前26项组合回归之后新增此分支，当前后端针对性覆盖合计27项（不是全项目测试）；末次HTTP2项通过，前端23项与build保持通过。OpenAPI内部引用解析检查通过。
+
+浏览器夹具与仅回环的合成身份代理已保存至experiments/chat-browser/，复现步骤见README。临时验证容器均已停止，Vite已停止；没有遗留运行中的专用MySQL容器。当前变更未提交、未推送，真实库未执行V7。
+
+
+### 2026-11-05 用户验收启动
+
+按用户“服务启动，我验收一下”的要求，核对本地squad-mysql/agent_squad，补齐缺失V6收件表与V7协议列；现有账号、会话与业务数据保留，表数51变52，旧回复协议默认为PROPOSAL，新受理默认NATURAL。此记录更新前文“尚未对开发库执行V7”的历史状态；没有删除、重建或清空数据库。
+
+使用JDK27构建当前代码并启动Server 18080、Gateway 18081、Vite 5173。两个后端health均UP，页面与同源认证路由可访问；未代用户发送真实模型请求。验收地址http://127.0.0.1:5173/login，沿用现有数据库账号。
+
+
+### 2026-11-05 讯飞接入与异常反馈调整
+
+验收中两次DeepSeek请求实际为HTTP402余额不足，先前被误归类为请求校验失败。新增MODEL_BILLING_UNAVAILABLE安全分类，后端按模型失败记录ERROR和业务身份/问题编号；前端只显示通用服务异常，不显示账户余额、供应商原始响应或密钥。去掉异常卡片边框、问题编号和重复失败答案，仅留轻量提示及后端允许的重新尝试/复制原消息；余额类错误不自动重试，显式重试仍受预算、版本、幂等及未知副作用屏障约束。
+
+使用官方OpenAI兼容地址https://maas-api.cn-huabei-1.xf-yun.com/v2，模型spark-x2.6。用户提供的密钥直接存于本地application-spark-local.yml（600权限、Git忽略、未打包或提交），Master和Worker共同覆盖；启动参数加载该文件。没有用环境变量占位，也没有操作讯飞账号授权或验证码。
+
+真实最小供应商请求HTTP200，stop结束且带usage。通过本地demo账号、真实Gateway、SDK和该供应商完成一个新的测试会话，状态SUCCEEDED、一条助手答案、无故障；只发送受控测试问候，不将旧业务会话作为探针材料。后端异常专项5项、前端26项及生产构建通过。当前Server18080/Gateway18081/Vite5173运行。
+
+
+### 本地模型配置位置更正
+
+按用户明确要求，将讯飞Master/Worker的API Key、base-url和模型名直接写入既有server/agent-squad-server/src/main/resources/application-local.yml；删除单独的application-spark-local.yml及其忽略规则。当前业务服务已重启并显式读取既有源配置文件，健康检查UP。密钥未写入文档、日志或提交，未重新打包该密钥。
+
+
+### 2026-11-05 模型选择交付与回归边界
+
+模型目录、受理时固定选择、SDK路由、预算Profile和重试沿用选择已实现，新增V8列并同步baseline/schema/OpenAPI。当前真实授权可用目录仅Spark-X2.6；其他模型配置后可进入目录，Worker自动按业务选模尚未实现。既有真实页面OFF/ON两次回复均成功，V8已用于本地库，无清空数据。
+
+本次重新运行前端29项组件/Store测试、2项Node测试及生产构建通过。真实页面重新展开选择框，将自动切换为深入后标签立即更新；修复composer裁切后弹层完整可见，截图/tmp/squad-model-selector-final.png。没有为本次视觉检查发送额外模型请求。已有DynamicReplyModelIntegrationTest与ExecutionFailureIntegrationTest报告分别1项、5项通过，不能作为全量回归。0.4完成，0.3与其他整体任务不随之勾选。
+
+并行问题按用户要求转入最终验收：本次隔离MySQL重新运行MultiWorkerExecutionIntegrationTest，串行、真并行和失败分支共3项通过；该测试直接发布计划，不证明聊天入口端到端。GoalTaskNativeCreationIntegrationTest的4个入口分支全部失败，第一轮报“模型响应缺少可信用量”，任务未创建；本地JSON模型桩与当前自然回复流式请求的协议是否匹配仍待检查，不将该结果直接认定为真实供应商故障。最终必须覆盖从页面消息建立目标、实际并行、汇总、公开答案和断线恢复。
+
+本地业务库只读核对：当前目标/WorkerJob/WorkerDefinition均为0，检索到两首诗的来源消息有成功回复执行及answer_message_id，不存在可据此归因为Worker汇合卡住的证据。未改动该会话或重试历史，按用户要求暂不扩大专项排查。
+
+### 2026-11-05 P07 Redis 唤醒协议第一阶段
+
+新增experiments/redis-wakeup，固定官方Redis镜像digest，使用独立容器、认证、无网络、无映射端口、AOF always与noeviction，不连接现有Redis或业务库。enqueue/finish Lua验证dirtyVersion合并、原子续排与ACK、迟到确认隔离及容量拒绝。命令python3 experiments/redis-wakeup/run_probe.py本地8组通过，原始摘要/tmp/squad-redis-p07.log。初次测试对redis-cli RESP3返回格式读取错误，在测试适配后完整重跑通过，未改弱断言。
+
+实际验证32并发生产者、生产确认8轮竞态、未ACK接管、重启pending保留及CONTROL独立通道。实验容器已清理，既有squad-mysql保留运行，未创建业务常驻Redis。
+
+这只是Redis协议层证据，不证明业务幂等或完整故障恢复。MySQL提交/Redis发布间隙、业务提交后未ACK、完全丢失后的journal尾部补齐、同绑定业务互斥和真实取消优先级仍待联测；AOF always同容器重启不覆盖everysec断电或持久卷重建。任务0.1继续未完成，整体保持4/46，不移除旧消费和补偿路径。详见experiments/redis-wakeup/README.md。
+
+### 2026-11-05 Redis命令唤醒实际接入
+
+生产增加RedisCommandWakeup、独立配置与COMMAND/CONTROL通道。消息受理提交后优先发布引用；消费者复用原命令授权/租约/SDK幂等入口；ACK在持久领取/投递尝试结束后，容量不足不ACK；发布故障直接本地派发，扫描保留。其他目标与Worker入口尚未全部发提交后事件，补偿周期维持1秒，不能宣称数据库查询已减少。
+
+隔离MySQL+Redis业务回归5项通过：RedisCommandWakeupIntegrationTest两分支验证实际Redis接手、重复引用不重复模型、pending接管和连接停用降级；DynamicReplyModelIntegrationTest一项；ConversationSsePushIntegrationTest两分支。Redis业务测试将定时补偿延长到十分钟，验证不依赖周期扫描启动模型。新Java均用IDEA明确路径格式化后编译；Maven package成功，git diff --check通过。Redis Lua协议实验与业务联测是不同证据层级。
+
+本地`squad-redis`已按固定官方镜像启动，仅回环16379、认证、持久卷、AOF everysec及noeviction；密钥仅写既有本地配置，不输出或提交。Server已启用该链路并重启，health UP；Redis PING及两通道消费者组正常、pending为0。没有新增真实模型调用或数据库结构变更。
+
+尚未完成的故障注入和跨实例通知见docs/redis-command-wakeup.md。任务0.1及3.5保留未完成，整体4/46，不把一条生产链路交付当作整个调度架构完成。

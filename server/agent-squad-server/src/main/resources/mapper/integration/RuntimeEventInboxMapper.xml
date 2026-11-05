@@ -8,7 +8,22 @@
           AND binding_id = #{source.bindingId}
           AND framework_session_id = #{source.sessionId}
           AND del_flag = '0'
-        FOR SHARE
+        FOR UPDATE
+    </select>
+
+    <select id="pendingSources" resultType="com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource">
+        SELECT i.user_id AS userId,
+               i.binding_id AS bindingId,
+               i.session_id AS sessionId,
+               i.mapping_version AS mappingVersion
+        FROM sq_runtime_event_inbox i
+        JOIN sq_runtime_binding b ON b.user_id = i.user_id AND b.binding_id = i.binding_id
+        WHERE b.del_flag = '0'
+          AND i.native_seq &gt; b.native_event_cursor
+          AND (i.status = 'RECEIVED' OR (i.status = 'RETRY' AND i.next_attempt_at &lt;= #{now}))
+        GROUP BY i.user_id, i.binding_id, i.session_id, i.mapping_version
+        ORDER BY MIN(i.id)
+        LIMIT 100
     </select>
 
     <select id="lockBoundAgent" resultType="java.lang.String">

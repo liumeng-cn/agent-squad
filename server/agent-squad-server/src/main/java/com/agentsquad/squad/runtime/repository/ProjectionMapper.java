@@ -15,6 +15,10 @@ public interface ProjectionMapper {
 
     List<ProjectionTarget> findDueTargets(@Param("now") LocalDateTime now);
 
+    List<ProjectionTarget> findReconciliationTargets(@Param("now") LocalDateTime now);
+
+    ProjectionTarget findTarget(@Param("userId") String userId, @Param("bindingId") String bindingId);
+
     Long lockCursor(@Param("userId") String userId, @Param("bindingId") String bindingId);
 
     int advanceCursor(@Param("userId") String userId, @Param("bindingId") String bindingId,

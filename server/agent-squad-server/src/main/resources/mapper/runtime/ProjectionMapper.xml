@@ -50,6 +50,36 @@
             b.id LIMIT 20
     </select>
 
+    <select id="findReconciliationTargets" resultMap="findDueTargetsResult">
+        SELECT b.user_id,
+               b.task_id,
+               b.binding_id,
+               b.agent_id,
+               b.framework_session_id,
+               b.native_event_cursor
+        FROM sq_runtime_binding b
+        WHERE b.del_flag = '0'
+          AND b.next_projection_at &lt;= #{now}
+          AND EXISTS (SELECT 1 FROM sq_command c
+                      WHERE c.user_id = b.user_id
+                        AND c.binding_id = b.binding_id
+                        AND c.status IN ('DELIVERED', 'APPLIED'))
+        ORDER BY b.next_projection_at, b.id
+        LIMIT 20
+    </select>
+
+    <select id="findTarget" resultMap="findDueTargetsResult">
+        SELECT user_id,
+               task_id,
+               binding_id,
+               agent_id,
+               framework_session_id,
+               native_event_cursor
+        FROM sq_runtime_binding
+        WHERE user_id = #{userId}
+          AND binding_id = #{bindingId}
+    </select>
+
     <select id="lockCursor" resultType="java.lang.Long">
         SELECT native_event_cursor FROM sq_runtime_binding
         WHERE user_id = #{userId} AND binding_id = #{bindingId} FOR UPDATE

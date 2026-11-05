@@ -7,6 +7,8 @@ import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.conversation.domain.ExecutionScopeRow;
 import com.agentsquad.squad.conversation.domain.ResponseRuntimeRow;
+import com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol;
+import com.agentsquad.squad.conversation.domain.NaturalReplyEvidence;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
@@ -16,6 +18,13 @@ import com.agentsquad.squad.integration.agentscope.NativeEventView;
 import com.agentsquad.squad.integration.agentscope.NativeSubmissionReceipt;
 import com.agentsquad.squad.conversation.domain.ConversationRow;
 import com.agentsquad.squad.presentation.dto.CompletionProposalReceipt;
+import com.agentsquad.squad.presentation.dto.MessageCompletedPayload;
+import com.agentsquad.squad.presentation.dto.ExecutionChangedPayload;
+import com.agentsquad.squad.presentation.domain.ConversationDeltaType;
+import com.agentsquad.squad.presentation.repository.ConversationReadMapper;
+import com.agentsquad.squad.conversation.dto.MessageView;
+import com.agentsquad.squad.conversation.dto.ResponseExecutionView;
+import com.agentsquad.squad.conversation.domain.ResponseExecutionStatus;
 import com.agentsquad.squad.runtime.domain.NativeRunOutcome;
 import com.agentsquad.squad.runtime.domain.ProjectionTarget;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -69,6 +78,9 @@ public class ResponseExecutionService {
     private ConversationEventWriter events;
 
     @Resource
+    private ConversationReadMapper conversationReads;
+
+    @Resource
     private ObjectMapper json;
 
     /**
@@ -84,7 +96,8 @@ public class ResponseExecutionService {
         }
         ExecutionScopeRow scope = lock(userId, bindingId, true);
         ResponseRuntimeRow row = replies.lockByBinding(userId, bindingId);
-        if (!"RESPONSE".equals(scope.kind()) || row.cancellationRequested() || TERMINAL.contains(row.status())) {
+        if (!"RESPONSE".equals(scope.kind()) || row.cancellationRequested() || TERMINAL.contains(row.status())
+                || row.completionProtocol() == ResponseCompletionProtocol.NATURAL) {
             throw conflict("回复已不能提交完成候选");
         }
         if (replies.uncertain(userId, scope.scopeId()) > 0 || replies.openInteractions(userId, scope.scopeId()) > 0) {
@@ -162,6 +175,21 @@ public class ResponseExecutionService {
             finish(scope, row, "FAILED", "本次回答暂未完成，请稍后重试。");
             return;
         }
+        if (row.completionProtocol() == ResponseCompletionProtocol.NATURAL) {
+            if (replies.openInteractions(scope.userId(), scope.scopeId()) > 0) {
+                state(scope, row, waiting(scope), "native:" + event.eventId());
+                return;
+            }
+            if (!(event.data().get("naturalOutput") instanceof NaturalReplyEvidence output)) {
+                throw new IllegalStateException("自然回复缺少已提交输出证据");
+            }
+            String text = output.text();
+            if (output.notice() != null) {
+                text = text == null ? output.notice() : text + "\n\n" + output.notice();
+            }
+            finish(scope, row, output.status().name(), text);
+            return;
+        }
         JsonNode proposal = row.proposalJson() == null ? null : read(row.proposalJson());
         if (validProposal(row, target, event, proposal)) {
             if (replies.uncertain(scope.userId(), scope.scopeId()) > 0) {
@@ -182,6 +210,12 @@ public class ResponseExecutionService {
      */
     @Transactional
     public void recover(ProjectionTarget target, NativeSubmissionReceipt receipt) {
+        recover(target, receipt, null);
+    }
+
+    /** 核对结束后仅使用持久原生日志恢复自然答案；缺少证据保持核对，不转入旧候选纠正回合。 */
+    @Transactional
+    public void recover(ProjectionTarget target, NativeSubmissionReceipt receipt, NaturalReplyEvidence evidence) {
         ExecutionScopeRow scope = lock(target.userId(), target.bindingId(), false);
         ResponseRuntimeRow row = replies.lockByBinding(target.userId(), target.bindingId());
         if (row == null || TERMINAL.contains(row.status())) {
@@ -196,6 +230,16 @@ public class ResponseExecutionService {
         if ("completed".equals(receipt.status()) && "RECONCILING".equals(row.status())
                 && replies.uncertain(scope.userId(), scope.scopeId()) == 0
                 && replies.openInteractions(scope.userId(), scope.scopeId()) == 0) {
+            if (row.completionProtocol() == ResponseCompletionProtocol.NATURAL) {
+                if (evidence != null) {
+                    String text = evidence.text();
+                    if (evidence.notice() != null) {
+                        text = text == null ? evidence.notice() : text + "\n\n" + evidence.notice();
+                    }
+                    finish(scope, row, evidence.status().name(), text);
+                }
+                return;
+            }
             JsonNode proposal = row.proposalJson() == null ? null : read(row.proposalJson());
             NativeEventView completed = new NativeEventView(0, "receipt", "run/end", receipt.runId(), receipt.turnId(),
                     "completed", 0, Map.of());
@@ -313,10 +357,14 @@ public class ResponseExecutionService {
         }
         if (answerId != null) {
             messages.reserveMessage(scope.userId(), scope.conversationId(), now());
-            replies.answer(answerId, scope.userId(), scope.conversationId(), messages.messageSequence(scope.userId(), scope.conversationId()),
-                    row.sourceMessageId(), row.executionId(), answer, now());
-            events.publish(scope, "response:" + row.executionId() + ":answer", "message.completed",
-                    Map.of("messageId", answerId, "executionId", row.executionId(), "text", answer, "revision", 0));
+            long answerSequence = messages.messageSequence(scope.userId(), scope.conversationId());
+            LocalDateTime answerTime = now();
+            replies.answer(answerId, scope.userId(), scope.conversationId(), answerSequence,
+                    row.sourceMessageId(), row.executionId(), answer, answerTime);
+            var message = new MessageView(answerId, answerSequence, "ASSISTANT", answer, 0, true,
+                    row.sourceMessageId(), row.executionId(), null, answerTime.atOffset(ZoneOffset.UTC).toString(), java.util.List.of());
+            events.publish(scope, "response:" + row.executionId() + ":answer", ConversationDeltaType.MESSAGE_COMPLETED.code(),
+                    new MessageCompletedPayload(ConversationDeltaType.SCHEMA_VERSION, message));
         }
         if ("CANCELLED".equals(status)) {
             finalDeliveries.close(scope.userId(), row.sourceMessageId(), "RESPONSE", row.executionId());
@@ -336,8 +384,18 @@ public class ResponseExecutionService {
     }
 
     private void publishState(ExecutionScopeRow scope, ResponseRuntimeRow row, String status, String producer) {
-        events.publish(scope, "response:" + row.executionId() + ":" + producer, "execution.status_changed",
-                Map.of("executionId", row.executionId(), "status", status, "version", row.version() + 1));
+        var current = conversationReads.execution(scope.userId(), scope.conversationId(), row.executionId());
+        if (current == null) {
+            return;
+        }
+        boolean terminal = TERMINAL.contains(current.status());
+        var allowed = "FAILED".equals(current.status()) && failures.canRetry(scope.userId(), current.executionId())
+                ? java.util.List.of("RETRY") : current.cancellationRequested() || terminal || "CANCELLING".equals(current.status())
+                ? java.util.List.<String>of() : java.util.List.of("STOP");
+        var execution = new ResponseExecutionView(current.executionId(), current.sourceMessageId(),
+                ResponseExecutionStatus.valueOf(current.status()), current.version(), current.answerMessageId(), current.failureId(), allowed);
+        events.publish(scope, "response:" + row.executionId() + ":" + producer, ConversationDeltaType.EXECUTION_STATUS_CHANGED.code(),
+                new ExecutionChangedPayload(ConversationDeltaType.SCHEMA_VERSION, execution));
     }
 
     private void command(ExecutionScopeRow scope, ResponseRuntimeRow row, String scopeKey, String key, String action, Object payload) {

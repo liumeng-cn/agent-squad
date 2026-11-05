@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import ModelSelector from './ModelSelector.vue'
+import type { ModelSelection } from '../../../shared/api/modelsApi'
 import { shouldSendOnEnter } from '../../../shared/lib/chatKeyboard'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useConversationsStore } from '../stores/conversations'
@@ -13,6 +15,7 @@ const emit = defineEmits<{ accepted: [receipt: MessageReceipt] }>()
 const chat = useConversationsStore()
 const auth = useAuthStore()
 interface Upload { id: string; file: File; key: string; status: 'uploading' | 'ready' | 'failed'; artifact?: Artifact; error?: string }
+const selectedModel = ref<ModelSelection | null>(null)
 const draft = ref('')
 const uploads = ref<Upload[]>([])
 const error = ref('')
@@ -21,7 +24,7 @@ const composing = ref(false)
 const input = ref<HTMLInputElement | null>(null)
 const textarea = ref<HTMLTextAreaElement | null>(null)
 let generation = 0
-let attempt: { text: string; files: string[]; key: string } | null = null
+let attempt: { text: string; files: string[]; key: string; selection?: ModelSelection } | null = null
 const blocked = computed(() => chat.submitting || chat.unavailable || uploads.value.some(item => item.status !== 'ready'))
 const canSend = computed(() => !blocked.value && !!draft.value.trim() && draft.value.length <= 20000)
 const activeAnswer = computed(() => chat.latestExecution)
@@ -40,15 +43,20 @@ function saveDraft(key: string) {
   } catch { /* 隐私模式或容量不足时仅保存在组件内存 */ }
 }
 function restoreDraft(key: string) {
-  draft.value = ''; attempt = null; uncertain.value = false
+  draft.value = ''; attempt = null; uncertain.value = false; selectedModel.value = null
+  try {
+    const choice = JSON.parse(sessionStorage.getItem(key + ':model') ?? 'null') as ModelSelection | null
+    if (choice && typeof choice.modelId === 'string' && ['DEFAULT', 'OFF', 'AUTO', 'ON', 'LOW', 'MEDIUM', 'HIGH'].includes(choice.reasoningMode)) selectedModel.value = choice
+  } catch { /* 模型目录加载后重新选择默认项 */ }
   try {
     const raw = sessionStorage.getItem(key)
     if (!raw) return
-    const saved = JSON.parse(raw) as { text?: unknown; attempt?: { text: string; files: string[]; key: string } }
+    const saved = JSON.parse(raw) as { text?: unknown; attempt?: { text: string; files: string[]; key: string; selection?: ModelSelection } }
     if (typeof saved.text === 'string') draft.value = saved.text.slice(0, 20000)
     if (saved.attempt && typeof saved.attempt.key === 'string' && saved.attempt.text === draft.value
         && Array.isArray(saved.attempt.files) && saved.attempt.files.length === 0) {
       attempt = saved.attempt
+      if (attempt.selection) selectedModel.value = attempt.selection
       uncertain.value = true
     }
   } catch { /* 无效草稿记录不阻断聊天 */ }
@@ -63,6 +71,9 @@ watch(() => [props.conversationId, props.draftRevision, auth.user?.userId], () =
   void nextTick(resize)
 })
 watch(draft, () => saveDraft(previousKey))
+watch(selectedModel, selection => {
+  try { if (selection) sessionStorage.setItem(previousKey + ':model', JSON.stringify(selection)) } catch { /* 不影响当前发送 */ }
+}, { deep: true })
 
 function resize() { if (textarea.value) { textarea.value.style.height = 'auto'; textarea.value.style.height = `${Math.min(240, textarea.value.scrollHeight)}px` } }
 async function upload(id: string) {
@@ -97,10 +108,12 @@ async function send() {
   error.value = ''
   const text = draft.value.trim()
   const files = uploads.value.flatMap(item => item.artifact ? [item.artifact.artifactId] : [])
-  if (!attempt || attempt.text !== text || JSON.stringify(attempt.files) !== JSON.stringify(files)) attempt = { text, files, key: newIdempotencyKey() }
+  const changed = attempt?.text !== text || JSON.stringify(attempt?.files) !== JSON.stringify(files) || JSON.stringify(attempt?.selection) !== JSON.stringify(selectedModel.value ?? undefined)
+  if (!attempt || (!uncertain.value && changed)) attempt = { text, files, key: newIdempotencyKey(), selection: selectedModel.value ?? undefined }
   try {
-    const receipt = await chat.send(attempt.text, attempt.files, attempt.key)
+    const receipt = await chat.send(attempt.text, attempt.files, attempt.key, attempt.selection)
     if (current !== generation) return
+    try { if (attempt.selection) sessionStorage.setItem(draftKey(receipt.conversationId) + ':model', JSON.stringify(attempt.selection)) } catch { /* 不影响持久受理 */ }
     draft.value = ''; uploads.value = []; uncertain.value = false; attempt = null
     try { sessionStorage.removeItem(previousKey) } catch { /* 私密模式 */ }
     resize(); emit('accepted', receipt)
@@ -136,6 +149,7 @@ onBeforeUnmount(() => {
       <div class="chat-composer-toolbar">
         <input ref="input" class="visually-hidden" type="file" accept=".txt,.md,.json,.csv" multiple tabindex="-1" aria-hidden="true" @change="selectFiles" />
         <button class="icon-button attach-button" type="button" title="添加附件" aria-label="添加附件" :disabled="chat.submitting || uncertain || chat.unavailable || uploads.length >= 20" @click="input?.click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m8 12 6-6a3 3 0 0 1 4 4l-8 8a5 5 0 0 1-7-7l8-8"/><path d="m7 13 7-7"/></svg></button>
+        <ModelSelector v-model="selectedModel" :disabled="chat.submitting || uncertain || chat.unavailable" />
         <span v-if="draft.length > 18000" class="composer-count">{{ draft.length }}/20000</span>
         <span v-if="chat.submitting" class="composer-sending" role="status">正在确认接收…</span>
         <span class="spacer"></span>

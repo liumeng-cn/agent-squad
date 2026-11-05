@@ -12,6 +12,18 @@ import lombok.Setter;
 @Setter
 public class WorkerModelProfile {
 
+    private boolean enabled = true;
+
+    private String displayName;
+
+    private java.util.List<com.agentsquad.squad.model.domain.ModelCapability> capabilities = java.util.List.of();
+
+    private com.agentsquad.squad.model.domain.ReasoningAdapter reasoningAdapter = com.agentsquad.squad.model.domain.ReasoningAdapter.NONE;
+
+    private java.util.List<com.agentsquad.squad.model.domain.ReasoningMode> reasoningModes = java.util.List.of(com.agentsquad.squad.model.domain.ReasoningMode.DEFAULT);
+
+    private com.agentsquad.squad.model.domain.ReasoningMode defaultReasoningMode = com.agentsquad.squad.model.domain.ReasoningMode.DEFAULT;
+
     private String provider;
 
     private String modelName;

@@ -224,8 +224,7 @@ public class ExecutionFailureService {
             String source = failures.sourceMessage(userId, scope.scopeId());
             int attempt = failures.serviceAttemptsView(userId, scope.scopeId());
             var next = failures.nextAttempt(userId, scope.scopeId());
-            List<String> actions = executionId != null && "SERVICE_TRANSIENT".equals(row.category())
-                    && failures.retryAllowed(userId, executionId) ? List.of("RETRY") : List.of();
+            List<String> actions = executionId != null && failures.retryAllowed(userId, executionId) ? List.of("RETRY") : List.of();
             if ("USER".equals(row.actor()) && "INPUT_REQUIRED".equals(row.category())
                     && failures.userActionAvailable(userId, row.bindingId(), "INPUT", LocalDateTime.now(ZoneOffset.UTC))) {
                 actions = List.of("PROVIDE_INPUT");
@@ -359,6 +358,13 @@ public class ExecutionFailureService {
             failures.linkFailure(scope.userId(), bindingId, row.failureId());
         }
         events.publish(scope, "failure:" + row.failureId(), "failure.updated", Map.of("failureId", row.failureId(), "category", row.category(), "actor", row.actor(), "safeMessage", row.safeMessage(), "diagnosticId", row.diagnosticId()));
-        log.warn("执行故障已记录 scopeId={} bindingId={} category={} code={} diagnosticId={}", scope.scopeId(), bindingId, row.category(), row.code(), row.diagnosticId());
+        if (key.startsWith("model:")) {
+            // 记录安全错误码与关联身份，不把供应商原始响应或密钥写入日志。
+            log.error("模型调用失败 scopeId={} bindingId={} category={} code={} diagnosticId={}",
+                    scope.scopeId(), bindingId, row.category(), row.code(), row.diagnosticId());
+        } else {
+            log.warn("执行故障已记录 scopeId={} bindingId={} category={} code={} diagnosticId={}",
+                    scope.scopeId(), bindingId, row.category(), row.code(), row.diagnosticId());
+        }
     }
 }

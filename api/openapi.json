@@ -7272,6 +7272,62 @@
           }
         }
       }
+    },
+    "/api/v1/models": {
+      "get": {
+        "operationId": "listSelectableModels",
+        "tags": [
+          "public"
+        ],
+        "summary": "列出当前用户可选的已配置模型与实际支持的思考模式",
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "可选择模型，不含地址、密钥或定价内部字段",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "$ref": "#/components/schemas/ApiCode"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ModelOption"
+                      }
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要登录",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResult"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -10497,12 +10553,27 @@
             },
             "maxItems": 20,
             "nullable": true
+          },
+          "modelId": {
+            "type": "string",
+            "maxLength": 100,
+            "nullable": true,
+            "description": "模型目录的模型标识；省略为default，受理后固定选择，不改变正在执行的回答。"
+          },
+          "reasoningMode": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReasoningMode"
+              }
+            ],
+            "nullable": true,
+            "description": "省略采用模型默认模式；不支持的组合拒绝。"
           }
         },
         "required": [
           "text"
         ],
-        "description": "用户消息输入；不接受用户、Scope、Task 或预算账户字段。",
+        "description": "用户消息输入；不接受用户、Scope、Task 或预算账户字段。 模型与推理模式计入幂等摘要，同键改变选择返回409。",
         "x-implementation-status": "implemented-message-acceptance-and-response-runtime; UI integration pending task 4.1"
       },
       "MessageReceipt": {
@@ -11068,7 +11139,7 @@
           "occurredAt",
           "payload"
         ],
-        "description": "统一会话事件，事件名message，ID为conversationId:generation:sequence；只公开持久事实。"
+        "description": "统一会话事件，事件名message，ID为conversationId:generation:sequence；只公开持久事实。 新普通聊天载荷见OrdinaryConversationEvent；schemaVersion位于payload。断开只释放订阅，不取消执行；Last-Event-ID按持久序号续读。"
       },
       "ConversationTitleUpdate": {
         "type": "object",
@@ -11465,6 +11536,299 @@
           503
         ],
         "description": "统一业务码：0 表示成功，其余与 HTTP 状态码一致。"
+      },
+      "MessageAcceptedPayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "enum": [
+              2
+            ]
+          },
+          "message": {
+            "$ref": "#/components/schemas/MessageView"
+          },
+          "execution": {
+            "$ref": "#/components/schemas/ResponseExecutionView"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "message",
+          "execution"
+        ]
+      },
+      "MessageCompletedPayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "enum": [
+              2
+            ]
+          },
+          "message": {
+            "$ref": "#/components/schemas/MessageView"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "message"
+        ]
+      },
+      "ExecutionChangedPayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "enum": [
+              2
+            ]
+          },
+          "execution": {
+            "$ref": "#/components/schemas/ResponseExecutionView"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "execution"
+        ]
+      },
+      "MessageAcceptedEvent": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ConversationEvent"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "message.accepted"
+                ]
+              },
+              "payload": {
+                "$ref": "#/components/schemas/MessageAcceptedPayload"
+              }
+            }
+          }
+        ]
+      },
+      "ExecutionQueuedEvent": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ConversationEvent"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "execution.queued"
+                ]
+              },
+              "payload": {
+                "$ref": "#/components/schemas/ExecutionChangedPayload"
+              }
+            }
+          }
+        ]
+      },
+      "ExecutionStatusChangedEvent": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ConversationEvent"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "execution.status_changed"
+                ]
+              },
+              "payload": {
+                "$ref": "#/components/schemas/ExecutionChangedPayload"
+              }
+            }
+          }
+        ]
+      },
+      "MessageCompletedEvent": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ConversationEvent"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "message.completed"
+                ]
+              },
+              "payload": {
+                "$ref": "#/components/schemas/MessageCompletedPayload"
+              }
+            }
+          }
+        ]
+      },
+      "OrdinaryConversationEvent": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/MessageAcceptedEvent"
+          },
+          {
+            "$ref": "#/components/schemas/ExecutionQueuedEvent"
+          },
+          {
+            "$ref": "#/components/schemas/ExecutionStatusChangedEvent"
+          },
+          {
+            "$ref": "#/components/schemas/MessageCompletedEvent"
+          }
+        ],
+        "description": "新受理普通聊天的完整增量。先校验连续sequence，再按消息revision或执行version合并；正常事件不触发全量快照。旧历史和其他业务事件仍使用ConversationEvent，无法识别的必需载荷通过快照恢复。"
+      },
+      "ReplyPreview": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "enum": [
+              2
+            ]
+          },
+          "executionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceMessageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "streamId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "enum": [
+              0
+            ]
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 65536
+          },
+          "replace": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "preview": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "executionId",
+          "sourceMessageId",
+          "runId",
+          "streamId",
+          "revision",
+          "offset",
+          "text",
+          "replace",
+          "preview"
+        ],
+        "description": "event: output.preview，无SSE id，不推进持久sequence。按streamId/revision全文替换临时正文；offset固定0，文本上限65536个UTF-16单元。切换会话或断线清空，正式答案覆盖；不含推理、工具参数或Worker内部文本。当前仅同进程通知。"
+      },
+      "ReasoningMode": {
+        "type": "string",
+        "enum": [
+          "DEFAULT",
+          "OFF",
+          "AUTO",
+          "ON",
+          "LOW",
+          "MEDIUM",
+          "HIGH"
+        ],
+        "description": "只接受所选模型目录声明的模式；Spark映射OFF/ON/AUTO为thinking.disabled/enabled/auto，DEFAULT不发送参数。"
+      },
+      "ModelCapability": {
+        "type": "string",
+        "enum": [
+          "REASONING",
+          "TEXT_GENERATION",
+          "CODING",
+          "TOOL_USE",
+          "VISION"
+        ],
+        "description": "配置声明的能力标签，不是评测评分。"
+      },
+      "ModelOption": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "modelId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "modelName": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModelCapability"
+            }
+          },
+          "reasoningModes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReasoningMode"
+            }
+          },
+          "defaultReasoningMode": {
+            "$ref": "#/components/schemas/ReasoningMode"
+          }
+        },
+        "required": [
+          "modelId",
+          "displayName",
+          "modelName",
+          "capabilities",
+          "reasoningModes",
+          "defaultReasoningMode"
+        ]
       }
     }
   }

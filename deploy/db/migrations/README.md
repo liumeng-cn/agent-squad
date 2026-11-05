@@ -21,3 +21,17 @@
 `../local-rebuild.sql` 从最终 `V1__baseline.sql` 整理，包含51张表的删除/建表及admin、demo的BCrypt测试账号。该脚本只供用户手动重建本地验证库，不属于生产迁移链；不能在生产/共享库执行，也不由应用自动运行。
 
 - `V6__runtime_event_inbox.sql` 新增官方事件安全收件表，与最终baseline、schema.sql一致。现有后台事件处理已接入该收件表，启用投递前必须应用V6；生产结构门禁期望版本6，不自动迁移既有库。V6单表已通过隔离MySQL验证；当前目录缺少历史V1-V4文件，完整升级链不得据此宣布通过。
+
+
+## V7 自然回复协议
+
+V7为回复执行增加完成协议。旧行默认PROPOSAL；新受理与显式重答默认固化NATURAL，不强制提交完成候选。agentsquad.response.completion-protocol控制后续新受理，变更配置不改变已受理行。启动结构门禁期望版本7；既有库必须先审查并应用列变更，本次未执行真实库DDL。
+
+本次V7可在隔离库验证列结构与旧行默认值；目录缺少V1至V4的完整迁移链问题仍存在，不能据V7通过宣称完整升级链已通过。
+
+默认开启agentsquad.delivery.wakeup-enabled与agentsquad.projection.wakeup-enabled的进程内提交通知，扫描保留为补偿及旧控制路径。投影保留独立15秒尾部核对，覆盖SDK终结flush与导出并发造成的漏通知；核对包含终态绑定，只读日志、幂等收件与业务投影，不启动Worker或模型。Redis跨实例通道尚未接入。
+
+
+## V8 会话模型选择
+
+V8新增sq_response_execution.model_selection_json可空列，保存已受理的模型引用、配置指纹与思考模式，不含密钥。旧行NULL保留原路径；显式重新回答复制原选择。最终baseline/schema同步，结构门禁期望版本8。用户授权的本地验收库已补此列，保留原账号及会话数据；未执行生产或共享库迁移。

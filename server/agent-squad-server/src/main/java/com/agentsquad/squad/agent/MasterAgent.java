@@ -61,6 +61,9 @@ import java.time.Duration;
 public class MasterAgent implements NativeSessionGateway {
 
     @Resource
+    private com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSinkFactory eventSinks;
+
+    @Resource
     private SubmitTaskDirectiveTool submitTaskDirectiveTool;
 
     @Resource
@@ -98,6 +101,12 @@ public class MasterAgent implements NativeSessionGateway {
 
     @Resource
     private ListWorkerCapabilitiesTool listWorkerCapabilitiesTool;
+
+    @Resource
+    private com.agentsquad.squad.integration.agentscope.ReplyPreviewMiddleware replyPreview;
+
+    @Resource
+    private com.agentsquad.squad.integration.agentscope.SelectedReplyModelMiddleware selectedModel;
 
     @Resource
     private ModelBudgetMiddleware modelBudgetMiddleware;
@@ -218,6 +227,8 @@ public class MasterAgent implements NativeSessionGateway {
                 .skillRepository(scopeSkillRepository)
                 .enableSkillPromotionGate(null, skillVisibility)
                 .middleware(scopedTools)
+                .middleware(selectedModel)
+                .middleware(replyPreview)
                 .middleware(modelBudgetMiddleware)
                 .toolkit(toolkit)
                 .distributedStore(JdbcDistributedStore.create(dataSource, dialect))
@@ -323,6 +334,11 @@ public class MasterAgent implements NativeSessionGateway {
                 .userId(userId)
                 .sessionId(sessionId)
                 .build();
+        context.put(io.agentscope.core.session.SessionExportSink.CONTEXT_KEY,
+                eventSinks.bind(new com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource(
+                        userId, bindingId, sessionId,
+                        com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource.CURRENT_MAPPING_VERSION)));
+
         java.util.Set<String> allowedTools = new java.util.HashSet<>(java.util.Set.of(
                 "load_skill_through_path", "request_input", "propose_completion", "list_worker_capabilities",
                 "create_goal_task", "submit_task_directive", "prepare_context", "publish_plan", "apply_task_directive",
