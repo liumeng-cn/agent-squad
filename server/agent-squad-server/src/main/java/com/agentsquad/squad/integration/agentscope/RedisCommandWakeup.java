@@ -41,7 +41,7 @@ public class RedisCommandWakeup {
     private static final String GROUP = "command-delivery-v1";
     private final String consumer = UUID.randomUUID().toString();
     private final AtomicBoolean unavailable = new AtomicBoolean();
-    private final java.util.Set<RedisCommandChannel> initializedGroups = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final java.util.Set<RedisWakeupChannel> initializedGroups = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private final DefaultRedisScript<List> enqueue = new DefaultRedisScript<>();
     private final DefaultRedisScript<String> finish = new DefaultRedisScript<>();
 
@@ -79,7 +79,7 @@ public class RedisCommandWakeup {
             if (owner == null) {
                 return false;
             }
-            RedisCommandChannel channel = channel(owner);
+            RedisWakeupChannel channel = channel(owner);
             redis.execute(enqueue, List.of(state(channel, commandId), stream(channel)),
                     String.valueOf(properties.getCapacity()), "1", channel.name(),
                     owner.userId(), owner.bindingId(), commandId, "");
@@ -100,7 +100,7 @@ public class RedisCommandWakeup {
             return;
         }
         try {
-            for (RedisCommandChannel channel : List.of(RedisCommandChannel.CONTROL, RedisCommandChannel.COMMAND)) {
+            for (RedisWakeupChannel channel : List.of(RedisWakeupChannel.CONTROL, RedisWakeupChannel.COMMAND)) {
                 ensureGroup(channel);
                 var pending = streams().pending(stream(channel), GROUP, Range.unbounded(), 16);
                 for (var item : pending) {
@@ -122,7 +122,7 @@ public class RedisCommandWakeup {
         }
     }
 
-    private void dispatch(RedisCommandChannel channel, MapRecord<String, String, String> record) {
+    private void dispatch(RedisWakeupChannel channel, MapRecord<String, String, String> record) {
         String commandId = record.getValue().get("commandId");
         if (commandId == null || !commandId.matches("[A-Za-z0-9-]{1,100}")) {
             log.warn("Redis命令引用无效 streamId={} channel={}", record.getId(), channel);
@@ -143,7 +143,7 @@ public class RedisCommandWakeup {
                 () -> acknowledge(channel, commandId, record, observed == null ? "0" : observed.toString()));
     }
 
-    private void acknowledge(RedisCommandChannel channel, String commandId,
+    private void acknowledge(RedisWakeupChannel channel, String commandId,
                              MapRecord<String, String, String> record, String observed) {
         try {
             var body = record.getValue();
@@ -156,7 +156,7 @@ public class RedisCommandWakeup {
         }
     }
 
-    private void ensureGroup(RedisCommandChannel channel) {
+    private void ensureGroup(RedisWakeupChannel channel) {
         if (initializedGroups.contains(channel)) {
             return;
         }
@@ -184,16 +184,16 @@ public class RedisCommandWakeup {
         return redis.opsForStream();
     }
 
-    private RedisCommandChannel channel(CommandClaimContext owner) {
+    private RedisWakeupChannel channel(CommandClaimContext owner) {
         return RuntimeCommandAction.STOP.name().equals(owner.action()) || RuntimeCommandAction.RESPOND.name().equals(owner.action())
-                ? RedisCommandChannel.CONTROL : RedisCommandChannel.COMMAND;
+                ? RedisWakeupChannel.CONTROL : RedisWakeupChannel.COMMAND;
     }
 
-    private String stream(RedisCommandChannel channel) {
+    private String stream(RedisWakeupChannel channel) {
         return properties.getNamespace() + ":{p0}:" + channel.name() + ":ready";
     }
 
-    private String state(RedisCommandChannel channel, String commandId) {
+    private String state(RedisWakeupChannel channel, String commandId) {
         return properties.getNamespace() + ":{p0}:" + channel.name() + ":command:" + commandId;
     }
 

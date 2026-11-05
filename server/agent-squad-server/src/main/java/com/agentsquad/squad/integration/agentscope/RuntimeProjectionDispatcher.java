@@ -63,6 +63,9 @@ public class RuntimeProjectionDispatcher {
     @Resource
     private RuntimeEventConsumptionService consumption;
 
+    @Resource
+    private org.springframework.beans.factory.ObjectProvider<RedisProjectionWakeup> redisWakeups;
+
     /**
      * 提交线程只合并唤醒，所有日志读取和业务事务在独立有界线程池执行。
      */
@@ -72,6 +75,10 @@ public class RuntimeProjectionDispatcher {
             return;
         }
         RuntimeEventSource source = signal.source();
+        var redis = redisWakeups.getIfAvailable();
+        if (redis != null && redis.publish(source)) {
+            return;
+        }
         if (dirty.size() >= MAX_DIRTY_BINDINGS && !dirty.contains(source)) {
             return;
         }
@@ -84,13 +91,25 @@ public class RuntimeProjectionDispatcher {
             return;
         }
         try {
-            executor.execute(() -> drain(source));
+            executor.execute(() -> drain(source, null));
         } catch (RejectedExecutionException busy) {
             scheduled.remove(source);
         }
     }
 
-    private void drain(RuntimeEventSource source) {
+    /** Redis引用不作为消费游标；业务批次成功提交后才通知确认，失败或容量不足保留pending。 */
+    public void scheduleFromQueue(RuntimeEventSource source, java.util.function.Consumer<Boolean> acknowledged) {
+        if (!scheduled.add(source)) {
+            return;
+        }
+        try {
+            executor.execute(() -> drain(source, acknowledged));
+        } catch (RejectedExecutionException busy) {
+            scheduled.remove(source);
+        }
+    }
+
+    private void drain(RuntimeEventSource source, java.util.function.Consumer<Boolean> acknowledged) {
         boolean failed = false;
         try {
             dirty.remove(source);
@@ -133,7 +152,9 @@ public class RuntimeProjectionDispatcher {
                     source.bindingId(), failure.getClass().getSimpleName(), failure);
         } finally {
             scheduled.remove(source);
-            if (!failed && dirty.contains(source)) {
+            if (!failed && acknowledged != null) {
+                acknowledged.accept(dirty.remove(source));
+            } else if (!failed && dirty.contains(source)) {
                 schedule(source);
             }
         }

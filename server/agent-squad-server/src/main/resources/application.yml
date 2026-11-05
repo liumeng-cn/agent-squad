@@ -83,6 +83,7 @@ agentsquad:
     enabled: false
     namespace: squad:local
     poll-delay-ms: 200
+    projection-poll-delay-ms: 200
     # 其他目标/Worker入口尚未全部发提交后通知，暂保留原扫描周期。
     compensation-delay-ms: 1000
     reclaim-idle-ms: 90000

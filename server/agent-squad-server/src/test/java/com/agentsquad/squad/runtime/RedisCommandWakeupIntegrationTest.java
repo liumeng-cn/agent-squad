@@ -36,7 +36,9 @@ class RedisCommandWakeupIntegrationTest {
                      "--spring.datasource.username=" + MySqlTestDatabase.username(),
                      "--spring.datasource.password=" + MySqlTestDatabase.password(),
                      "--agentsquad.delivery.enabled=true", "--agentsquad.delivery.poll-delay-ms=600000",
-                     "--agentsquad.projection.poll-delay-ms=100", "--agentsquad.redis-wakeup.enabled=true",
+                     "--agentsquad.projection.poll-delay-ms=600000", "--agentsquad.redis-wakeup.enabled=true",
+                     "--agentsquad.projection.wakeup-retry-delay-ms=15000",
+                     "--agentsquad.redis-wakeup.projection-poll-delay-ms=100",
                      "--agentsquad.redis-wakeup.namespace=" + namespace,
                      "--agentsquad.redis-wakeup.poll-delay-ms=" + (abandonedPending ? 600000 : 100),
                      "--agentsquad.redis-wakeup.compensation-delay-ms=600000",
@@ -75,6 +77,9 @@ class RedisCommandWakeupIntegrationTest {
             model.firstChunk.countDown();
             model.release.countDown();
             ResponseNativeExecutionIntegrationTest.await(context, accepted, "SUCCEEDED");
+            var projectionGroup = redis.opsForStream().groups(namespace + ":{p0}:PROJECTION:ready").iterator().next();
+            assertThat(projectionGroup.groupName()).isEqualTo("projection-v1");
+            assertThat(projectionGroup.lastDeliveredId()).isNotEqualTo("0-0");
             assertThat(model.calls.get()).isEqualTo(1);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_message WHERE role='ASSISTANT'", Integer.class)).isEqualTo(1);
 

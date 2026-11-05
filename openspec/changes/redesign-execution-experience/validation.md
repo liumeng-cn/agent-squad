@@ -345,3 +345,31 @@ actual: null
 本地`squad-redis`已按固定官方镜像启动，仅回环16379、认证、持久卷、AOF everysec及noeviction；密钥仅写既有本地配置，不输出或提交。Server已启用该链路并重启，health UP；Redis PING及两通道消费者组正常、pending为0。没有新增真实模型调用或数据库结构变更。
 
 尚未完成的故障注入和跨实例通知见docs/redis-command-wakeup.md。任务0.1及3.5保留未完成，整体4/46，不把一条生产链路交付当作整个调度架构完成。
+
+### 2026-11-05 Redis原生投影接入
+
+新增RedisProjectionWakeup；通道枚举统一为RedisWakeupChannel。原生收件事务提交后按Binding发布合并引用，携带sessionId/mappingVersion；消费重新核对数据库身份，复用RuntimeProjectionDispatcher及原连续消费事务。每批有界，尾部和dirtyVersion推进均原子续排；失败不确认，Redis不可用时退避并交回本地调度。没有改变SDK sink确认语义，没有删除持久收件或独立终态尾部核对。
+
+RedisCommandWakeupIntegrationTest两分支、DynamicReplyModelIntegrationTest一项、ConversationSsePushIntegrationTest两分支共5项通过，0失败/错误/跳过。Redis业务用例将高频投影扫描设为十分钟，并断言projection-v1消费者组实际推进；验证正常回复与连接故障本地收尾。日志/tmp/squad-projection-regression.log。新增Java用IDEA明确路径格式化后编译；枚举仅重命名与调整说明，未整体格式化既有文件。
+
+完整业务提交后未ACK崩溃、Redis数据完全丢失、多实例竞争和跨实例SSE通知仍未验收，0.1和3.5不勾选。模型/工具调用数、公开结果与恢复边界仍以专项断言为准，不把5项扩大为全量通过。
+
+本地Server已打包重启并启用该通道，health UP；squad-redis中projection-v1组已建立、pending为0。运行核对没有发送真实模型请求，既有数据库和会话未清理。
+
+### 2026-11-05 跨实例持久会话通知
+
+新增RedisConversationNotifications及内部通知模型，提交后有界异步发布Redis Pub/Sub提示。接收方忽略自身提示，只唤醒本机hub，由原查询授权及持久sequence读取事件，不回环广播、不转发正文。订阅故障不阻断启动，通知丢失仍可定期核对或重连补读。
+
+CrossInstanceSseIntegrationTest两项通过：同一JVM中两个独立Spring容器，一个执行、另一个真实HTTP/SSE订阅，关闭周期核对后仍能跨实例收到终稿；主动停止订阅丢通知后由显式核对恢复同一答案。两分支均一次模型调用、一条正式答案。证据不等于两个进程/机器部署，不包含跨实例逐字预览。首次编译遗漏listener.destroy的受检异常声明，补齐关闭资源的finally后重新运行通过。
+
+跨实例持久通知已实现，但8.3还包含完整权限变更、慢连接、共享查询量、Redis故障等准入，保持未完成；跨实例预览、完整Trace及任务进度展示仍待后续实现，不据两项通过扩大整体完成度。
+
+组合回归CrossInstanceSseIntegrationTest 2项、RedisCommandWakeupIntegrationTest 2项、ConversationSsePushIntegrationTest 2项、DynamicReplyModelIntegrationTest 1项共7项通过，0失败/错误/跳过；日志/tmp/squad-cross-sse-regression.log。Maven package及OpenSpec严格校验通过。
+
+### 2026-11-05 跨实例公开预览与普通聊天浏览器闭环
+
+ConversationPreviewNotice和独立Pub/Sub通道转发有界公开正文，验证身份、版本、偏移/替换/修订及大小；仅消费ReplyPreviewSignal，不解析原始模型响应。预览发布队列与持久提示独立，发送失败允许丢失，不影响模型或终稿。CrossInstanceSseIntegrationTest验证模型尚未释放完成时另一实例先收到准确首段，且没有内部推理标记；再接收唯一正式答案。首次断言错误地要求所有可替换预览等于首段，后续完整预览导致失败；已改为仅严格校验第一段，终稿和禁止内容断言保留，重新运行两项通过。7项组合回归在此基础上通过，日志/tmp/squad-preview-final-regression.log；分离发布容量后再针对跨实例两项复核。
+
+浏览器隔离夹具本轮实际完成：受理→首段生成→关闭标签→释放模型→后台SUCCEEDED→新标签重开原会话→刷新。新标签和刷新均只有一条完整终稿，BrowserChatProbeTest 1项通过且仅一次模型调用。截图/tmp/squad-browser-generating-final.png、/tmp/squad-browser-restored-final.png；夹具容器与5199代理已停止。浏览器使用合成身份，不证明真实网关登录；跨实例测试是同JVM独立Spring实例，不证明多机部署。
+
+任务0.3的实际关闭/重开缺口补齐，按原任务验收范围勾选；CLI复核为5/46。0.1、3.5、8.1、8.3等完整故障/并发/迁移条件不因本次预览与浏览器通过而自动完成。

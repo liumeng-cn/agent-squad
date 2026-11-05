@@ -12,7 +12,8 @@ local result = 'CLEARED'
 if ARGV[4] ~= 'DROP' and (version > tonumber(ARGV[3]) or ARGV[4] == '1') then
     result = redis.call('XADD', KEYS[2], '*',
         'schemaVersion', ARGV[5], 'kind', ARGV[6], 'userId', ARGV[7],
-        'bindingId', ARGV[8], 'commandId', ARGV[9], 'traceparent', ARGV[10])
+        'bindingId', ARGV[8], 'commandId', ARGV[9], 'traceparent', ARGV[10],
+        'sessionId', ARGV[11] or '', 'mappingVersion', ARGV[12] or '')
     redis.call('HSET', KEYS[1], 'queued', result)
 else
     redis.call('DEL', KEYS[1])

@@ -122,6 +122,11 @@ public class ConversationEventStreamer {
     /** 业务事务已提交才唤醒读取；提交线程不执行网络发送，不依赖是否存在页面连接。 */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void committed(ConversationCommittedSignal signal) {
+        wake(signal);
+    }
+
+    /** 本地提交和跨实例提示共用读取入口；每批仍由查询服务验证用户及会话归属。 */
+    public void wake(ConversationCommittedSignal signal) {
         var hub = hubs.get(new ConversationStreamKey(signal.userId(), signal.conversationId()));
         if (hub != null) {
             hub.wake();

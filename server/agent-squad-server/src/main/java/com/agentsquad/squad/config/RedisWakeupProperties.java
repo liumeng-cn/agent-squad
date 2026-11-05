@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * Redis命令唤醒配置
+ * Redis执行唤醒配置
  * <p>
  * 仅控制可重建的就绪引用；数据库仍负责命令身份、授权、租约和执行结果。
  */

@@ -9,7 +9,8 @@ local version = redis.call('HINCRBY', KEYS[1], 'dirtyVersion', 1)
 if not queued then
     queued = redis.call('XADD', KEYS[2], '*',
         'schemaVersion', ARGV[2], 'kind', ARGV[3], 'userId', ARGV[4],
-        'bindingId', ARGV[5], 'commandId', ARGV[6], 'traceparent', ARGV[7])
+        'bindingId', ARGV[5], 'commandId', ARGV[6], 'traceparent', ARGV[7],
+        'sessionId', ARGV[8] or '', 'mappingVersion', ARGV[9] or '')
     redis.call('HSET', KEYS[1], 'queued', queued)
 end
 return {tostring(version), queued}
