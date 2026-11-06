@@ -66,6 +66,20 @@ describe('真实工作步骤', () => {
     expect(wrapper.text()).not.toContain('旧安排')
     expect(wrapper.text()).toContain('1/1 项已完成')
   })
+  it('终态且没有任何步骤与检查时不渲染步骤区块', async () => {
+    getJobs.mockResolvedValue({ items: [], nextCursor: null, acceptanceChecks: [] })
+    const wrapper = mount(TaskSteps, { props: { taskId: 'task', status: 'SUCCEEDED', revision: '1' } })
+    await flushPromises()
+    expect(wrapper.find('details').exists()).toBe(false)
+    expect(getJobs).toHaveBeenCalledWith('task', undefined)
+  })
+  it('终态但有步骤时保留区块，便于回看历史安排', async () => {
+    getJobs.mockResolvedValue({ items: [job('one', 'SUCCEEDED', '整理结果')], nextCursor: null })
+    const wrapper = mount(TaskSteps, { props: { taskId: 'task', status: 'SUCCEEDED', revision: '1' } })
+    await flushPromises()
+    expect(wrapper.find('details').exists()).toBe(true)
+    expect(wrapper.text()).toContain('1/1 项已完成')
+  })
   it('读取失败可重试，不编造步骤', async () => {
     getJobs.mockRejectedValueOnce(new Error('offline'))
     const wrapper = mount(TaskSteps, { props: { taskId: 'task', status: 'RUNNING', revision: '1' } })

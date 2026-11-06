@@ -46,4 +46,21 @@ describe('服务异常的用户反馈', () => {
     await wrapper.findAll('button').find(button => button.text() === '复制原消息')!.trigger('click')
     expect(writeText).toHaveBeenCalledWith('原问题')
   })
+  it('失败提示跟随来源消息，目标失败与回答失败使用不同说明', () => {
+    const store = fixture()
+    store.snapshot = {
+      failures: [
+        { failureId: 'reply-failure', executionId: 'execution', sourceMessageId: 'user', category: 'INTERNAL', actor: 'SYSTEM', status: 'ACTIVE', safeMessage: '内部原因', allowedActions: [] },
+        { failureId: 'task-failure', executionId: null, taskId: 'task', sourceMessageId: 'user', category: 'LOGIC_INVALID', actor: 'SYSTEM', status: 'ACTIVE', safeMessage: '内部原因', allowedActions: [] },
+      ],
+      activeExecutions: [], interactions: [], deliverables: [], operationIds: [],
+    } as unknown as ChatSnapshot
+    const wrapper = mount(MessageThread)
+    const notes = wrapper.findAll('.chat-service-feedback')
+    expect(notes).toHaveLength(2)
+    expect(wrapper.findAll('.from-user .chat-service-feedback')).toHaveLength(2)
+    expect(wrapper.find('.from-user').text()).toContain('这项工作未能完成')
+    expect(wrapper.find('.from-user').text()).toContain('回答服务暂时异常')
+    expect(wrapper.text()).not.toContain('内部原因')
+  })
 })

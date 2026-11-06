@@ -216,6 +216,23 @@ public class ExecutionFailureService {
         }
     }
 
+    /**
+     * 同一会话已有新的有效回答，更早回复的失败提示不再指向当前状态。
+     */
+    @Transactional
+    public void resolveSuperseded(ExecutionScopeRow scope) {
+        var superseded = failures.activeResponseFailures(scope.userId(), scope.conversationId(),
+                scope.conversationGeneration(), scope.scopeId());
+        for (String failureId : superseded) {
+            failures.status(scope.userId(), failureId, "RESOLVED");
+        }
+        if (!superseded.isEmpty()) {
+            events.publish(scope, "failures-superseded:" + scope.scopeId() + ":" + UUID.randomUUID(),
+                    "failure.updated", Map.of("status", "RESOLVED"));
+            log.info("历史回复失败已被新回答取代 scopeId={} count={}", scope.scopeId(), superseded.size());
+        }
+    }
+
     public List<ExecutionFailureView> list(String userId, String conversationId) {
         return failures.activeInConversation(userId, conversationId).stream().map(row -> {
             var scope = scopeMapper.findOwned(userId, row.scopeId());
@@ -350,6 +367,10 @@ public class ExecutionFailureService {
     private void register(ExecutionScopeRow scope, String bindingId, String key, FailureClassification classification) {
         String hash = ContentDigests.sha256(key);
         if (failures.byKey(scope.userId(), scope.scopeId(), hash) != null) {
+            return;
+        }
+        // 同一作用域内同一原因只保留一条生效故障：工具校验与模型分类可能先后上报同一次终止。
+        if (failures.countActiveByCode(scope.userId(), scope.scopeId(), classification.code()) > 0) {
             return;
         }
         var row = new ExecutionFailureRow(UUID.randomUUID().toString(), scope.scopeId(), bindingId, classification.category(), classification.code(), classification.actor(), classification.safeMessage(), UUID.randomUUID().toString(), "ACTIVE", 0);

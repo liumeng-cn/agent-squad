@@ -343,7 +343,10 @@ public class ResponseExecutionService {
     }
 
     private void finish(ExecutionScopeRow scope, ResponseRuntimeRow row, String status, String answer) {
-        if ("SUCCEEDED".equals(status) || "PARTIAL".equals(status) || "CANCELLED".equals(status)) {
+        if ("SUCCEEDED".equals(status) || "PARTIAL".equals(status)) {
+            failures.resolve(scope.userId(), row.bindingId());
+            failures.resolveSuperseded(scope);
+        } else if ("CANCELLED".equals(status)) {
             failures.resolve(scope.userId(), row.bindingId());
         }
         if ("FAILED".equals(status)) {

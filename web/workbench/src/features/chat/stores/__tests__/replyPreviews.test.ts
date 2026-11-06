@@ -4,7 +4,7 @@ import { useConversationsStore } from '../conversations'
 import { decodeReplyPreview } from '../replyPreviews'
 import type { ChatSnapshot } from '../../../../shared/api/chatApi'
 
-const preview = (streamId = 'stream-a', revision = 1, text = '第一段') => ({ schemaVersion: 2, executionId: 'reply', sourceMessageId: 'user', runId: 'run', streamId, revision, offset: 0, text, replace: true, preview: true })
+const preview = (streamId = 'stream-a', revision = 1, text = '第一段') => ({ schemaVersion: 2, executionId: 'reply', sourceMessageId: 'user', runId: 'run', streamId, revision, offset: 0, text, phase: 'ANSWERING', replace: true, preview: true })
 describe('临时回答预览', () => {
   beforeEach(() => setActivePinia(createPinia()))
   function active() {
@@ -51,5 +51,15 @@ describe('临时回答预览', () => {
     expect(decodeReplyPreview({ ...preview(), text: 'a'.repeat(65537) })).toBeNull()
     expect(decodeReplyPreview({ ...preview(), offset: 1 })).toBeNull()
     expect(decodeReplyPreview({ ...preview(), preview: false })).toBeNull()
+    expect(decodeReplyPreview({ ...preview(), phase: 'DONE' })).toBeNull()
+  })
+  it('推理阶段只保留阶段心跳，正文到达后按同一流替换', () => {
+    const store = active()
+    store.applyPreview({ ...preview(undefined, 1, ''), phase: 'THINKING' })
+    expect(store.previews.reply?.phase).toBe('THINKING')
+    expect(store.previews.reply?.text).toBe('')
+    store.applyPreview(preview('stream-a', 2, '正文开始'))
+    expect(store.previews.reply?.phase).toBe('ANSWERING')
+    expect(store.previews.reply?.text).toBe('正文开始')
   })
 })

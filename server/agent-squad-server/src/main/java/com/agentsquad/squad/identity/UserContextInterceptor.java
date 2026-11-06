@@ -2,6 +2,7 @@ package com.agentsquad.squad.identity;
 
 import com.agentsquad.squad.common.enums.identity.AccountRole;
 import jakarta.annotation.Resource;
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,6 +37,10 @@ public class UserContextInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        if (request.getDispatcherType() == DispatcherType.ASYNC) {
+            // 异步完成后的再派发沿用首次请求已验证的身份；签名断言可能已过期，不能再次校验。
+            return true;
+        }
         AuthView assertion = verifier.verify(request);
         if (assertion != null) {
             userStatus.requireActive(assertion.userId());

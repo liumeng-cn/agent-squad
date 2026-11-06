@@ -79,6 +79,20 @@
         ORDER BY f.id
     </select>
 
+    <select id="activeResponseFailures" resultType="java.lang.String">
+        SELECT f.failure_id
+        FROM sq_execution_failure f
+        JOIN sq_execution_scope s ON s.user_id = f.user_id
+            AND s.scope_id = f.scope_id
+        WHERE f.user_id = #{userId}
+          AND s.conversation_id = #{conversationId}
+          AND s.conversation_generation = #{generation}
+          AND s.kind = 'RESPONSE'
+          AND s.scope_id &lt;&gt; #{exceptScopeId}
+          AND f.status &lt;&gt; 'RESOLVED'
+          AND f.del_flag = '0'
+    </select>
+
     <select id="byKey" resultType="java.lang.String">
         SELECT failure_id
         FROM sq_execution_failure
@@ -86,6 +100,16 @@
           AND scope_id = #{scopeId}
           AND failure_key = #{key}
         FOR UPDATE
+    </select>
+
+    <select id="countActiveByCode" resultType="java.lang.Integer">
+        SELECT COUNT(1)
+        FROM sq_execution_failure
+        WHERE user_id = #{userId}
+          AND scope_id = #{scopeId}
+          AND code = #{code}
+          AND status &lt;&gt; 'RESOLVED'
+          AND del_flag = '0'
     </select>
 
     <insert id="insert">

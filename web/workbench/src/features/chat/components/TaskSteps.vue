@@ -22,6 +22,9 @@ const labels: Record<WorkerJobStatus, string> = {
 }
 const completed = computed(() => jobs.value.filter(job => job.status === 'SUCCEEDED').length)
 const running = computed(() => jobs.value.filter(job => job.status === 'RUNNING' || job.status === 'RECOVERING').length)
+// 终态且没有任何步骤与检查时不再占用对话空间；运行中与有内容的历史任务保留展示。
+const terminal = computed(() => ['SUCCEEDED', 'PARTIAL', 'FAILED', 'CANCELLED'].includes(props.status))
+const visible = computed(() => loading.value || error.value || !terminal.value || !!jobs.value.length || !!checks.value.length)
 async function load() {
   const current = ++requestVersion
   const taskId = props.taskId
@@ -47,7 +50,7 @@ watch(() => [props.taskId, props.status, props.revision], () => { void load() },
 onBeforeUnmount(() => { requestVersion++ })
 </script>
 <template>
-  <details class="task-steps" open aria-label="工作步骤">
+  <details v-if="visible" class="task-steps" open aria-label="工作步骤">
     <summary>处理步骤<span v-if="jobs.length">{{ completed }}/{{ jobs.length }} 项已完成</span></summary>
     <p v-if="shownVersion" class="task-steps-note">
       {{ shownVersion < latestVersion ? '过去的安排' : '当前安排' }} · 第 {{ shownVersion }} 版

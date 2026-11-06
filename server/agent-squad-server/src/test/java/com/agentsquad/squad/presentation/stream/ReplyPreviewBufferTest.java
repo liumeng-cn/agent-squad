@@ -2,6 +2,7 @@ package com.agentsquad.squad.presentation.stream;
 
 import com.agentsquad.squad.conversation.domain.ReplyPreviewTarget;
 import com.agentsquad.squad.integration.agentscope.ReplyPreviewBuffer;
+import com.agentsquad.squad.presentation.domain.ReplyPreviewPhase;
 import com.agentsquad.squad.presentation.service.ReplyPreviewSignal;
 import org.junit.jupiter.api.Test;
 
@@ -39,5 +40,20 @@ class ReplyPreviewBufferTest {
         buffer.flush();
         assertThat(signals.getLast().preview().text()).hasSize(65535);
         assertThat(Character.isHighSurrogate(signals.getLast().preview().text().charAt(65534))).isFalse();
+    }
+
+    @Test
+    void reportsThinkingPhaseWithoutReasoningTextAndMergesRepeats() {
+        var signals = new ArrayList<ReplyPreviewSignal>();
+        var buffer = new ReplyPreviewBuffer(new ReplyPreviewTarget("u", "c", "e", "m"), "run", signals::add);
+        buffer.thinking();
+        buffer.thinking();
+        assertThat(signals).hasSize(1);
+        assertThat(signals.getFirst().preview().phase()).isEqualTo(ReplyPreviewPhase.THINKING);
+        assertThat(signals.getFirst().preview().text()).isEmpty();
+        buffer.append("正文");
+        buffer.flush();
+        assertThat(signals.getLast().preview().phase()).isEqualTo(ReplyPreviewPhase.ANSWERING);
+        assertThat(signals.getLast().preview().text()).isEqualTo("正文");
     }
 }

@@ -8,6 +8,7 @@ import com.agentsquad.squad.conversation.dto.ConversationSnapshot;
 import com.agentsquad.squad.presentation.service.ConversationQueryService;
 import com.agentsquad.squad.presentation.service.ConversationEventStreamer;
 import com.agentsquad.squad.identity.UserContext;
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
@@ -50,6 +51,10 @@ public class ConversationReadController {
     public SseEmitter stream(HttpServletRequest servletRequest,
                              @PathVariable String conversationId, @RequestParam(required = false) String after,
                              @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId) {
+        if (servletRequest.getDispatcherType() == DispatcherType.ASYNC) {
+            // 连接结束或断开后容器会再派发一次，此时响应已提交，不能再建立订阅。
+            return null;
+        }
         return events.stream(UserContext.current(servletRequest).userId(), conversationId,
                 lastEventId != null && !lastEventId.isBlank() ? lastEventId : after);
     }

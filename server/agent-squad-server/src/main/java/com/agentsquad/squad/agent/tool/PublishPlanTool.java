@@ -47,6 +47,7 @@ public class PublishPlanTool implements AgentTool {
     @Override
     public String getDescription() {
         return "需要多个 Worker 协作时调用。提交不可变的节点图（串行依赖、并行与显式汇合）；"
+                + "每个节点的 goal 是发给该 Worker 的任务说明，需覆盖其输入 Schema 的必填信息；"
                 + "返回 planId 和 jobIds，不等待执行完成。";
     }
 
@@ -58,7 +59,8 @@ public class PublishPlanTool implements AgentTool {
                         "nodeKey", Map.of("type", "string"),
                         "workerKey", Map.of("type", "string"),
                         "workerVersion", Map.of("type", "string"),
-                        "goal", Map.of("type", "string"),
+                        "goal", Map.of("type", "string",
+                                "description", "节点任务说明，作为该 Worker 的输入消息；需写清输入 Schema 要求的字段内容"),
                         "contextSnapshotId", Map.of("type", "string"),
                         "dependsOn", Map.of("type", "array", "items", Map.of("type", "string")),
                         "required", Map.of("type", "boolean"),

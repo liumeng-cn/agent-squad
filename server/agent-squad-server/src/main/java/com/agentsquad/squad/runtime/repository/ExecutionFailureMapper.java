@@ -18,7 +18,12 @@ public interface ExecutionFailureMapper {
 
     List<ExecutionFailureRow> activeInConversation(@Param("userId") String userId, @Param("conversationId") String conversationId);
 
+    List<String> activeResponseFailures(@Param("userId") String userId, @Param("conversationId") String conversationId,
+                                        @Param("generation") long generation, @Param("exceptScopeId") String exceptScopeId);
+
     String byKey(@Param("userId") String userId, @Param("scopeId") String scopeId, @Param("key") String key);
+
+    int countActiveByCode(@Param("userId") String userId, @Param("scopeId") String scopeId, @Param("code") String code);
 
     int insert(@Param("userId") String userId, @Param("row") ExecutionFailureRow row, @Param("key") String key);
 

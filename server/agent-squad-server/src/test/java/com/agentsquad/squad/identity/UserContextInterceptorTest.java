@@ -6,12 +6,16 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
 import com.agentsquad.squad.common.enums.identity.AccountRole;
+import jakarta.servlet.DispatcherType;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -95,6 +99,21 @@ class UserContextInterceptorTest {
         verify(status).requireActive(USER_ID);
         assertThat(((AuthView) request.getAttribute(UserContext.ATTRIBUTE)).username())
                 .isEqualTo("local-user");
+    }
+
+    @Test
+    void asyncDispatchReusesVerifiedIdentityWithoutNewAssertion() {
+        SignedIdentityVerifier verifier = mock(SignedIdentityVerifier.class);
+        UserStatusGuard status = mock(UserStatusGuard.class);
+        AuthView view = new AuthView(USER_ID, "alice", List.of(AccountRole.USER), null);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/conversations/c/events");
+        request.setDispatcherType(DispatcherType.ASYNC);
+        request.setAttribute(UserContext.ATTRIBUTE, view);
+        UserContextInterceptor interceptor = interceptor(verifier, status, true, false);
+
+        assertThat(interceptor.preHandle(request, new MockHttpServletResponse(), new Object())).isTrue();
+        verify(verifier, never()).verify(any());
+        verify(status, never()).requireActive(any());
     }
 
     private void assertUnauthorized(UserContextInterceptor interceptor, MockHttpServletRequest request) {

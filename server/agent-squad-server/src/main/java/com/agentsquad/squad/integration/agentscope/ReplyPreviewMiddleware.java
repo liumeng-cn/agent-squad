@@ -5,6 +5,7 @@ import io.agentscope.core.agent.Agent;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.event.AgentEvent;
 import io.agentscope.core.event.TextBlockDeltaEvent;
+import io.agentscope.core.event.ThinkingBlockDeltaEvent;
 import io.agentscope.core.middleware.MiddlewareBase;
 import io.agentscope.core.middleware.ModelCallInput;
 import io.agentscope.core.model.GenerateOptions;
@@ -25,6 +26,7 @@ import java.util.function.Function;
  * 自然回复的公开正文流适配
  * <p>
  * 只为已持久受理的普通回复开启模型流，不开放Worker或目标协调回合；原始事件原样交还SDK，推送不控制模型订阅。
+ * 推理增量只上报阶段心跳，不上送推理正文。
  */
 @Component
 @lombok.extern.slf4j.Slf4j
@@ -55,6 +57,8 @@ public class ReplyPreviewMiddleware implements MiddlewareBase {
                             .doOnNext(event -> {
                                 if (event instanceof TextBlockDeltaEvent text) {
                                     buffer.append(text.getDelta());
+                                } else if (event instanceof ThinkingBlockDeltaEvent) {
+                                    buffer.thinking();
                                 }
                             }).doOnComplete(buffer::flush);
                 });

@@ -171,8 +171,15 @@ class ExecutionFailureIntegrationTest {
         }
         try (var context = start(database)) {
             assertThat(context.getBean(ExecutionFailureMapper.class).planAttempts(user, scopeId)).isEqualTo(3);
-            assertThatThrownBy(() -> context.getBean(ExecutionFailureService.class).requireModelAllowed(user, session))
+            var service = context.getBean(ExecutionFailureService.class);
+            assertThatThrownBy(() -> service.requireModelAllowed(user, session))
                     .isInstanceOf(com.agentsquad.squad.runtime.domain.PlanCorrectionExhaustedException.class);
+            // 同一原因已由计划纠正记录，模型分类再次上报不能生成第二条用户可见故障。
+            service.reportModel(user, session, "plan-exhausted-call",
+                    new com.agentsquad.squad.runtime.domain.PlanCorrectionExhaustedException());
+            assertThat(context.getBean(JdbcTemplate.class).queryForObject(
+                    "SELECT COUNT(1) FROM sq_execution_failure WHERE user_id=? AND scope_id=? AND code='PLAN_CORRECTION_EXHAUSTED'",
+                    Integer.class, user, scopeId)).isEqualTo(1);
         }
     }
 

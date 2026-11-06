@@ -1,6 +1,7 @@
 package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.conversation.domain.ReplyPreviewTarget;
+import com.agentsquad.squad.presentation.domain.ReplyPreviewPhase;
 import com.agentsquad.squad.presentation.dto.ReplyPreview;
 import com.agentsquad.squad.presentation.service.ReplyPreviewSignal;
 
@@ -10,11 +11,13 @@ import java.util.function.Consumer;
 /**
  * 单次模型调用的有界公开文本缓冲
  * <p>
- * 只接收已判定为TextBlockDelta的公开文本，不解析工具参数或推理；按时间合并并用版本化全文替换防止丢块拼错。
+ * 只接收已判定为公开正文或推理进展的增量，不解析工具参数或推理内容；按时间合并并用版本化全文替换防止丢块拼错。
+ * 推理阶段只上报阶段心跳，推理正文不上送页面。
  */
 public final class ReplyPreviewBuffer {
     private static final int MAX_TEXT_UNITS = 65536;
     private static final long MIN_INTERVAL_NANOS = 50000000;
+    private static final long THINKING_INTERVAL_NANOS = 2000000000;
     private final ReplyPreviewTarget target;
     private final String runId;
     private final String streamId = UUID.randomUUID().toString();
@@ -22,6 +25,7 @@ public final class ReplyPreviewBuffer {
     private final StringBuilder text = new StringBuilder();
     private long revision;
     private long lastSent;
+    private long lastThinkingSent;
     private int sentLength;
 
     public ReplyPreviewBuffer(ReplyPreviewTarget target, String runId, Consumer<ReplyPreviewSignal> publish) {
@@ -44,6 +48,18 @@ public final class ReplyPreviewBuffer {
         }
     }
 
+    /**
+     * 推理增量只表达“仍在处理”，按固定间隔合并；不累计、不转发推理内容。
+     */
+    public void thinking() {
+        long now = System.nanoTime();
+        if (lastThinkingSent != 0 && now - lastThinkingSent < THINKING_INTERVAL_NANOS) {
+            return;
+        }
+        lastThinkingSent = now;
+        emit(ReplyPreviewPhase.THINKING);
+    }
+
     public void flush() {
         int length = text.length();
         if (length > 0 && Character.isHighSurrogate(text.charAt(length - 1))) {
@@ -52,10 +68,18 @@ public final class ReplyPreviewBuffer {
         if (length <= sentLength) {
             return;
         }
-        publish.accept(new ReplyPreviewSignal(target.userId(), target.conversationId(),
-                new ReplyPreview(2, target.executionId(), target.sourceMessageId(), runId, streamId,
-                        ++revision, 0, text.substring(0, length), true, true)));
+        emit(ReplyPreviewPhase.ANSWERING);
         sentLength = length;
         lastSent = System.nanoTime();
+    }
+
+    private void emit(ReplyPreviewPhase phase) {
+        int length = text.length();
+        if (length > 0 && Character.isHighSurrogate(text.charAt(length - 1))) {
+            length--;
+        }
+        publish.accept(new ReplyPreviewSignal(target.userId(), target.conversationId(),
+                new ReplyPreview(2, target.executionId(), target.sourceMessageId(), runId, streamId,
+                        ++revision, 0, text.substring(0, length), phase, true, true)));
     }
 }

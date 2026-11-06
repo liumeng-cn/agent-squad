@@ -11810,6 +11810,13 @@
             "type": "string",
             "maxLength": 65536
           },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "THINKING",
+              "ANSWERING"
+            ]
+          },
           "replace": {
             "type": "boolean",
             "enum": [
@@ -11832,10 +11839,11 @@
           "revision",
           "offset",
           "text",
+          "phase",
           "replace",
           "preview"
         ],
-        "description": "event: output.preview，无SSE id，不推进持久sequence。按streamId/revision全文替换临时正文；offset固定0，文本上限65536个UTF-16单元。切换会话或断线清空，正式答案覆盖；不含推理、工具参数或Worker内部文本。当前仅同进程通知。"
+        "description": "event: output.preview，无SSE id，不推进持久sequence。按streamId/revision全文替换临时正文；offset固定0，文本上限65536个UTF-16单元。phase表达当前处于推理还是正文输出，推理阶段只上报阶段心跳，text保持已公开正文。切换会话或断线清空，正式答案覆盖；不含推理、工具参数或Worker内部文本。当前仅同进程通知。"
       },
       "ReasoningMode": {
         "type": "string",

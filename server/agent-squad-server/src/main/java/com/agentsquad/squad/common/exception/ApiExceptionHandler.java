@@ -7,7 +7,9 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import jakarta.validation.ConstraintViolationException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.ErrorResponse;
@@ -110,7 +112,16 @@ public class ApiExceptionHandler {
                     "method", request.getMethod(), "path", request.getRequestURI(),
                     "statusCode", statusCode, "errorType", observations.classify(exception))));
         }
+        if (isEventStream(request)) {
+            // 事件流已按 text/event-stream 协商，再写 JSON 会二次转换失败。
+            return ResponseEntity.status(statusCode).build();
+        }
         return ResponseEntity.status(statusCode)
                 .body(ApiResult.error(ApiCode.fromCode(statusCode)));
+    }
+
+    private boolean isEventStream(HttpServletRequest request) {
+        String accept = request.getHeader(HttpHeaders.ACCEPT);
+        return accept != null && accept.contains(MediaType.TEXT_EVENT_STREAM_VALUE);
     }
 }

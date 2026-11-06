@@ -27,7 +27,6 @@ import com.agentsquad.squad.runtime.repository.ProjectionMapper;
 import com.agentsquad.squad.runtime.repository.ContextSnapshotMapper;
 import com.agentsquad.squad.worker.repository.WorkerDefinitionMapper;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
-import com.agentsquad.squad.common.util.JsonSchemaValidator;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionResponse;
 import com.agentsquad.squad.worker.profile.WorkerModelProfile;
 import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;
@@ -92,9 +91,6 @@ public class PlanService {
 
     @Resource
     private WorkerDefinitionService workerDefinitionService;
-
-    @Resource
-    private JsonSchemaValidator schemaValidator;
 
     @Resource
     private WorkerResultReuseService reuseService;
@@ -408,11 +404,6 @@ public class PlanService {
                         "计划节点的局部上下文未准备或已失效");
             }
             authorization.requireScopeCurrent(context.userId(), executionScopes.scopeForTask(context.userId(), context.taskId()));
-            WorkerDefinitionResponse definition = workerDefinitionService.requireEnabled(
-                    node.workerKey(), node.workerVersion());
-            schemaValidator.requireMatches(objectMapper.valueToTree(Map.of(
-                    "goal", node.goal(), "contextSnapshotId", node.contextSnapshotId())),
-                    definition.inputSchema(), "Worker 输入");
         }
     }
 

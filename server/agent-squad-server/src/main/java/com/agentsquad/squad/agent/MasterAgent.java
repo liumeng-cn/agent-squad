@@ -157,6 +157,10 @@ public class MasterAgent implements NativeSessionGateway {
     @org.springframework.beans.factory.annotation.Value("${agentsquad.sandbox.enabled:false}")
     private boolean sandboxEnabled;
 
+    /** 固定会话日志根目录，避免随启动目录漂移导致投影游标与journal错位。 */
+    @Value("${agentsquad.runtime.workspace:}")
+    private String workspaceRoot;
+
     private HarnessAgent master;
 
     @Resource
@@ -199,13 +203,16 @@ public class MasterAgent implements NativeSessionGateway {
         toolkit.registerAgentTool(readAttachment);
         ToolsConfig toolsConfig = new ToolsConfig();
         toolsConfig.setDeny(List.of("wait_async_results"));
-        master = HarnessAgent.builder()
+        HarnessAgent.Builder masterBuilder = HarnessAgent.builder()
                 .agentId(MasterAgentIdentity.AGENT_ID)
                 .name("Squad Master")
                 .sysPrompt("你是智能任务助手，内部承担 Master 协调职责。"
                         + "普通交流和能直接交付的问答直接回答，不为每条消息建立目标。"
                         + "当前消息需要独立持续推进或委派时，先用create_goal_task建立目标；"
                         + "来源必须是当前sourceMessageId，不扩大用户目标，不把受理说成完成。"
+                        + "不能只用“我会继续推进”“我会重新处理”之类承诺代替当次动作："
+                        + "能直接交付的写作、分析等内容直接给出正文；确需后台推进时必须在当次回复中真正建立目标。"
+                        + "已有目标已终结（FAILED或CANCELLED）时不能再提交修改，用户重新提出要求就直接建立新目标；"
                         + "创建后当前回复提交真实受理说明，不在回复会话调用prepare_context或publish_plan；"
                         + "这些工具只供独立目标协调使用，独立目标不能再调用create_goal_task。"
                         + "用户补充或替换在途要求时，回复会话通过submit_task_directive提交，查询进度只读。"
@@ -255,8 +262,11 @@ public class MasterAgent implements NativeSessionGateway {
                 .disableWebTools()
                 .disableMemoryTools()
                 .disableMemoryHooks()
-                .disableDefaultWorkspaceSkills()
-                .build();
+                .disableDefaultWorkspaceSkills();
+        if (!workspaceRoot.isBlank()) {
+            masterBuilder.workspace(workspaceRoot.strip());
+        }
+        master = masterBuilder.build();
         committedReader = new CommittedSessionReader(new WorkspaceSessionLogStore(master.getWorkspaceManager()));
     }
 

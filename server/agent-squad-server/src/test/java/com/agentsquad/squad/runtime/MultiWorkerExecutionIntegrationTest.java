@@ -135,7 +135,8 @@ class MultiWorkerExecutionIntegrationTest {
                 jdbc.update("UPDATE sq_command SET status = 'CANCELLED' WHERE command_id = ?", task.commandId());
                 context.getBean(WorkerDefinitionService.class).publish(new AuthView(userId, "tester", List.of(AccountRole.ADMIN), "csrf"),
                         "writer", new WorkerDefinitionCreateRequest("writer", "1.0.0", "撰写局部内容",
-                                json.readTree("{}"), json.readTree("{\"type\":\"object\",\"required\":[\"text\"]}"),
+                                json.readTree("{\"type\":\"object\",\"required\":[\"topic\"]}"),
+                                json.readTree("{\"type\":\"object\",\"required\":[\"text\"]}"),
                                 List.of(), "default", "default"));
                 String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE task_id = ?", String.class, taskId);
                 ContextSnapshotService snapshots = context.getBean(ContextSnapshotService.class);
