@@ -31,5 +31,29 @@ describe('受限 Markdown', () => {
     expect(wrapper.findAll('blockquote').length).toBeLessThanOrEqual(32)
     expect(wrapper.text()).toContain('正文')
   })
+  it('流式更新合并渲染，已完成段落保持节点，终稿立即刷新且不被旧定时器覆盖', async () => {
+    vi.useFakeTimers()
+    try {
+      const wrapper = mount(SafeMarkdown, { props: { text: '第一段\n\n第二', streaming: true } })
+      const paragraph = wrapper.find('p').element
+      await wrapper.setProps({ text: '第一段\n\n第二段' })
+      await vi.advanceTimersByTimeAsync(120)
+      expect(wrapper.find('p').element).toBe(paragraph)
+      expect(wrapper.text()).toContain('第二段')
+      await wrapper.setProps({ text: '第一段\n\n第二段正文' })
+      await wrapper.setProps({ text: '第一段\n\n最终正文', streaming: false })
+      expect(wrapper.text()).toContain('最终正文')
+      await vi.advanceTimersByTimeAsync(200)
+      expect(wrapper.text()).not.toContain('第二段正文')
+      wrapper.unmount()
+    } finally { vi.useRealTimers() }
+  })
+  it('代码中的空行不拆围栏，流式完成后仍是同一个代码块', async () => {
+    const wrapper = mount(SafeMarkdown, { props: { text: '```text\n第一行\n\n第二行\n```\n\n结束', streaming: true } })
+    expect(wrapper.findAll('pre')).toHaveLength(1)
+    expect(wrapper.find('pre').text()).toBe('第一行\n\n第二行')
+    await wrapper.setProps({ streaming: false })
+    expect(wrapper.findAll('pre')).toHaveLength(1)
+  })
 
 })

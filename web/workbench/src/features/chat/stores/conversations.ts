@@ -161,8 +161,13 @@ export const useConversationsStore = defineStore('conversations', {
         if (sequence(snapshot.cursor) < seenSequence) return this.snapshot !== null
         if (this.snapshot && snapshot.conversation.generation !== this.snapshot.conversation.generation) {
           this.messages = []; this.directiveHistory = []; this.directiveWatermarks = {}
+          this.previews = {}; this.retiredPreviewStreams = []
         }
         this.snapshot = snapshot; this.mergeMessages(snapshot.messages); this.mergeHistoryStates(snapshot)
+        for (const id of Object.keys(this.previews)) {
+          if (!snapshot.activeExecutions.some(item => item.executionId === id && ['QUEUED', 'RUNNING', 'RECOVERING'].includes(item.status))
+              || snapshot.messages.some(item => item.executionId === id && item.role === 'ASSISTANT' && item.completed)) delete this.previews[id]
+        }
         if (!this.historyExpanded) this.nextBeforeSeq = snapshot.nextBeforeSeq
         seenSequence = Math.max(seenSequence, sequence(snapshot.cursor))
         this.error = ''; this.unavailable = false
@@ -174,6 +179,7 @@ export const useConversationsStore = defineStore('conversations', {
         this.error = errorMessage(cause)
         if (cause instanceof ApiError && [401, 403, 404].includes(cause.code)) {
           this.unavailable = true; this.snapshot = null; this.messages = []; this.executionHistory = []; this.taskHistory = []; this.directiveHistory = []; this.directiveWatermarks = {}; stream?.close()
+          this.previews = {}; this.retiredPreviewStreams = []
         }
         return false
       }
@@ -278,7 +284,6 @@ export const useConversationsStore = defineStore('conversations', {
     },
     connect() {
       stream?.close()
-      this.previews = {}; this.retiredPreviewStreams = []
       const snapshot = this.snapshot; const id = this.activeConversationId; const current = epoch
       if (!snapshot || !id || this.unavailable) return
       const source = new EventSource(`/api/v1/conversations/${encodeURIComponent(id)}/events?after=${encodeURIComponent(snapshot.cursor)}`)
@@ -310,11 +315,10 @@ export const useConversationsStore = defineStore('conversations', {
       })
       source.onerror = () => {
         if (current !== epoch || stream !== source) return
-        source.close(); this.previews = {}; this.connection = 'offline'; this.scheduleReconnect()
+        source.close(); this.connection = 'offline'; this.scheduleReconnect()
       }
     },
     scheduleReconnect() {
-      this.previews = {}
       if (timer || this.unavailable) return
       const current = epoch
       timer = setTimeout(async () => {

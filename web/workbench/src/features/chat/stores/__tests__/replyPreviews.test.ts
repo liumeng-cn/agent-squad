@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useConversationsStore } from '../conversations'
 import { decodeReplyPreview } from '../replyPreviews'
@@ -63,6 +63,23 @@ describe('临时回答预览', () => {
     store.applyPreview(preview('stream-b', 1, '恢复后文本'))
     store.applyPreview({ ...preview('stream-a', 4, ''), phase: 'ABORTED' })
     expect(store.previews.reply?.text).toBe('恢复后文本')
+  })
+  it('连接中断及重新连接保留草稿，切换会话仍清理', () => {
+    const store = active()
+    store.activeConversationId = 'one'
+    let source: { close: () => void; addEventListener: () => void; onerror?: () => void }
+    vi.stubGlobal('EventSource', function () { source = { close: vi.fn(), addEventListener: vi.fn() }; return source })
+    vi.spyOn(store, 'scheduleReconnect').mockImplementation(() => {})
+    try {
+      store.connect()
+      store.applyPreview(preview())
+      source!.onerror!()
+      expect(store.previews.reply?.text).toBe('第一段')
+      store.connect()
+      expect(store.previews.reply?.text).toBe('第一段')
+      store.startDraft()
+      expect(store.previews).toEqual({})
+    } finally { store.dispose(); vi.unstubAllGlobals() }
   })
   it('推理阶段只保留阶段心跳，正文到达后按同一流替换', () => {
     const store = active()

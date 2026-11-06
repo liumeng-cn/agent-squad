@@ -82,4 +82,48 @@ describe('服务异常的用户反馈', () => {
       '第一个要求', 'task', expect.stringContaining('第一份结果'), '第二个要求', 'task2', expect.stringContaining('第二份结果'),
     ])
   })
+  it('预览切换终稿复用回答及Markdown节点', async () => {
+    const store = fixture()
+    store.snapshot = { messages: [], failures: [], activeExecutions: [{ executionId: 'execution', sourceMessageId: 'user', status: 'RUNNING' }], interactions: [], deliverables: [], operationIds: [] } as unknown as ChatSnapshot
+    store.messages = [store.messages[0]!]
+    store.executionHistory = []
+    store.applyPreview({ schemaVersion: 2, executionId: 'execution', sourceMessageId: 'user', runId: 'run', streamId: 'stream', revision: 1, offset: 0, text: '正在生成的正文', phase: 'ANSWERING', replace: true, preview: true })
+    const wrapper = mount(MessageThread)
+    const article = wrapper.find('.from-assistant').element
+    const markdown = wrapper.find('.answer-markdown').element
+    store.applyEventPayload({ type: 'message.completed', payload: { schemaVersion: 2, message: { messageId: 'answer', sequence: 2, role: 'ASSISTANT', text: '正式正文', revision: 0, completed: true, sourceMessageId: 'user', executionId: 'execution', taskId: null, occurredAt: '2026-11-06T13:00:00Z', artifacts: [] } } } as never)
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.from-assistant').element).toBe(article)
+    expect(wrapper.find('.answer-markdown').element).toBe(markdown)
+    expect(wrapper.text()).toContain('正式正文')
+    expect(wrapper.text()).not.toContain('正在生成…')
+  })
+  it('实际内容增长时合并自动滚动，用户向上查看后不抢回位置', async () => {
+    fixture()
+    let notify!: () => void
+    const frames: FrameRequestCallback[] = []
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: () => void) { notify = callback }
+      observe() {}
+      disconnect() {}
+    })
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { frames.push(callback); return frames.length })
+    vi.stubGlobal('cancelAnimationFrame', vi.fn())
+    const wrapper = mount(MessageThread)
+    try {
+      const scroller = wrapper.find('.chat-scroll').element as HTMLElement
+      let height = 1000
+      Object.defineProperty(scroller, 'scrollHeight', { get: () => height })
+      Object.defineProperty(scroller, 'clientHeight', { get: () => 200 })
+      notify(); notify()
+      expect(frames).toHaveLength(1)
+      frames.shift()!(0)
+      expect(scroller.scrollTop).toBe(1000)
+      scroller.scrollTop = 100
+      await wrapper.find('.chat-scroll').trigger('scroll')
+      height = 1500; notify()
+      expect(frames).toHaveLength(0)
+      expect(scroller.scrollTop).toBe(100)
+    } finally { wrapper.unmount(); vi.unstubAllGlobals() }
+  })
 })

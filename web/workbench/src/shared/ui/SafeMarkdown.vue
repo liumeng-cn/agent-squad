@@ -1,5 +1,5 @@
 <script lang="ts">
-import { defineComponent, h, type VNode } from 'vue'
+import { defineComponent, Fragment, h, onBeforeUnmount, ref, watch, type VNode } from 'vue'
 
 /** 只构造文本和受限元素；原始 HTML、脚本及非 HTTP 链接始终作为文本处理。 */
 function inline(text: string): (string | VNode)[] {
@@ -89,7 +89,35 @@ function blocks(text: string, depth = 0): VNode[] {
   return result
 }
 export default defineComponent({
-  props: { text: { type: String, required: true } },
-  setup: props => () => h('div', { class: 'answer-markdown' }, blocks(props.text)),
+  props: { text: { type: String, required: true }, streaming: { type: Boolean, default: false } },
+  setup(props) {
+    const displayed = ref(props.text)
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let lastRender = -Infinity
+    let cache: { source: string; nodes: VNode[] }[] = []
+    function flush() {
+      if (timer) clearTimeout(timer)
+      timer = undefined; displayed.value = props.text; lastRender = performance.now()
+    }
+    watch(() => [props.text, props.streaming], () => {
+      const elapsed = performance.now() - lastRender
+      if (!props.streaming || !displayed.value || elapsed >= 100) flush()
+      else if (!timer) timer = setTimeout(flush, 100 - elapsed)
+    }, { immediate: true })
+    onBeforeUnmount(() => { if (timer) clearTimeout(timer) })
+    return () => {
+      // 空行且不在代码围栏内才切分；已完成段落复用VNode，仅重算变化的尾段。
+      const parts: string[] = []
+      let current: string[] = []; let fenced = false
+      for (const line of displayed.value.replace(/\r\n/g, '\n').split('\n')) {
+        if (/^\s*```/.test(line)) fenced = !fenced
+        current.push(line)
+        if (!fenced && !line.trim() && current.length > 1) { parts.push(current.join('\n')); current = [] }
+      }
+      if (current.length) parts.push(current.join('\n'))
+      cache = parts.map((source, index) => cache[index]?.source === source ? cache[index]! : { source, nodes: blocks(source) })
+      return h('div', { class: 'answer-markdown' }, cache.map((part, index) => h(Fragment, { key: index }, part.nodes)))
+    }
+  },
 })
 </script>
