@@ -14,6 +14,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class AgentSquadApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(AgentSquadApplication.class, args);
+        var context = SpringApplication.run(AgentSquadApplication.class, args);
+        if (context.getEnvironment().getProperty("agentsquad.runtime.import-local-journal", Boolean.class, false)) {
+            context.close();
+        }
     }
 }

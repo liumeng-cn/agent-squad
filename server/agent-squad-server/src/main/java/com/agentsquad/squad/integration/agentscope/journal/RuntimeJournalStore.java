@@ -4,6 +4,7 @@ import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.session.SessionKey;
 import io.agentscope.core.session.SessionLog;
 import io.agentscope.core.session.SessionLogStore;
+import io.agentscope.core.session.AtomicSessionStorage;
 import io.agentscope.harness.agent.filesystem.remote.RemoteFilesystem;
 import io.agentscope.harness.agent.filesystem.remote.store.BaseStore;
 import io.agentscope.harness.agent.session.WorkspaceSessionLogStore;
@@ -21,10 +22,17 @@ public final class RuntimeJournalStore implements SessionLogStore {
     private static final String JOURNAL_NAMESPACE = "native-journal-v2";
 
     private final SessionLogStore delegate;
+    private final RemoteFilesystem filesystem;
 
     public RuntimeJournalStore(BaseStore store) {
-        delegate = new WorkspaceSessionLogStore(new RemoteFilesystem(Objects.requireNonNull(store),
-                RuntimeJournalStore::namespace));
+        filesystem = new RemoteFilesystem(Objects.requireNonNull(store), RuntimeJournalStore::namespace);
+        delegate = new WorkspaceSessionLogStore(filesystem);
+    }
+
+    /** 离线导入只通过SDK原子存储搬运日志对象，不自行访问SDK数据库表。 */
+    public AtomicSessionStorage migrationStorage(RuntimeContext context) {
+        requireUser(context);
+        return filesystem.sessionStorage(context);
     }
 
     @Override

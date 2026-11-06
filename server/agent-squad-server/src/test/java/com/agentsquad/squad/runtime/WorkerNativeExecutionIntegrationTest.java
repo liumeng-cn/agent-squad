@@ -37,6 +37,53 @@ import static org.assertj.core.api.Assertions.assertThat;
 class WorkerNativeExecutionIntegrationTest {
 
     @Test
+    void importsLegacyJournalInboxBlobsAndExportCursorWithoutOverwritingDatabase(@TempDir Path directory) throws Exception {
+        String user = "00000000-0000-0000-0000-000000000001";
+        Path legacy = directory.resolve("legacy");
+        var context = io.agentscope.core.agent.RuntimeContext.builder().userId(user).sessionId("legacy-session").build();
+        var key = new io.agentscope.core.session.SessionKey(user, "legacy-agent", "legacy-session");
+        var local = new io.agentscope.harness.agent.session.WorkspaceSessionLogStore(
+                new io.agentscope.harness.agent.filesystem.local.LocalFilesystem(legacy.resolve(user)));
+        var source = local.open(key, context);
+        var event = new io.agentscope.core.session.SessionEvent(1, "legacy-event", 1, 1000,
+                "state/checkpoint", "run", "turn", true, "{\"data\":\"" + "x".repeat(70000) + "\"}");
+        var writer = source.acquire("old", java.time.Duration.ofSeconds(30));
+        source.commit(writer, "legacy-batch", 0, List.of(event));
+        source.release(writer);
+        source.advanceExportCursor("test-export", 0, 1);
+        var inbox = source.inbox();
+        var inboxWriter = inbox.acquire("input", java.time.Duration.ofSeconds(30));
+        var input = new io.agentscope.core.session.SessionEvent(1, "input-event", 1, 1001,
+                "inbox/submitted", null, "turn", true, "{\"commandId\":\"command\"}");
+        inbox.commit(inboxWriter, "input-batch", 0, List.of(input));
+        inbox.release(inboxWriter);
+        try (var spring = SpringApplication.run(AgentSquadApplication.class,
+                "--spring.main.web-application-type=none",
+                "--spring.datasource.url=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("database")),
+                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(),
+                "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--agentsquad.delivery.enabled=false")) {
+            var importer = spring.getBean(com.agentsquad.squad.integration.agentscope.journal.RuntimeJournalImportService.class);
+            var imported = importer.importWorkspace(legacy);
+            assertThat(imported.sessions()).isEqualTo(1);
+            assertThat(imported.bytes()).isGreaterThan(70000);
+            var store = spring.getBean(com.agentsquad.squad.integration.agentscope.journal.RuntimeSessionProvider.class).logStore();
+            var target = store.open(key, context);
+            assertThat(target.readAfter(0, 10)).containsExactly(event);
+            assertThat(target.inbox().readAfter(0, 10)).containsExactly(input);
+            assertThat(target.exportCursor("test-export")).isEqualTo(1);
+            assertThat(importer.importWorkspace(legacy)).isEqualTo(imported);
+            var nextWriter = target.acquire("new", java.time.Duration.ofSeconds(30));
+            target.commit(nextWriter, "new-batch", 1, List.of(new io.agentscope.core.session.SessionEvent(
+                    1, "new-event", 2, 1002, "run/end", "new-run", "turn", true, "{\"status\":\"completed\"}")));
+            target.release(nextWriter);
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> importer.importWorkspace(legacy))
+                    .isInstanceOf(IllegalStateException.class).hasMessageContaining("拒绝覆盖");
+            assertThat(target.head().seq()).isEqualTo(2);
+        }
+    }
+
+    @Test
     void newlyRegisteredWorkerRunsAndFinalizes(@TempDir Path directory) throws Exception {
         AtomicInteger modelCalls = new AtomicInteger();
         var activeDatabase = new java.util.concurrent.atomic.AtomicReference<JdbcTemplate>();

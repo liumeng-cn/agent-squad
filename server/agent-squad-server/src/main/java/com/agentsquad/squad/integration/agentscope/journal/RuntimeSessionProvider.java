@@ -38,7 +38,7 @@ public class RuntimeSessionProvider {
     @Resource
     private RuntimeEventInboxMapper inboxMapper;
 
-    private SessionLogStore journalStore;
+    private RuntimeJournalStore journalStore;
 
     @PostConstruct
     public void initialize() {
@@ -51,6 +51,11 @@ public class RuntimeSessionProvider {
      */
     public SessionLogStore logStore() {
         return journalStore;
+    }
+
+    /** 仅供停服后的显式导入命令使用，不参与正常运行与自动恢复。 */
+    public io.agentscope.core.session.AtomicSessionStorage migrationStorage(RuntimeContext context) {
+        return journalStore.migrationStorage(context);
     }
 
     /**

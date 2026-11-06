@@ -27,7 +27,6 @@ import com.agentsquad.squad.tools.mock.MockLookupTool;
 import com.agentsquad.squad.tools.mock.MockTicketCreateTool;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.session.SessionEvent;
-import io.agentscope.harness.agent.session.WorkspaceSessionLogStore;
 import com.agentsquad.squad.integration.agentscope.journal.CommittedSessionReader;
 import io.agentscope.core.tool.Toolkit;
 import io.agentscope.extensions.jdbc.JdbcDistributedStore;
@@ -157,9 +156,8 @@ public class MasterAgent implements NativeSessionGateway {
     @org.springframework.beans.factory.annotation.Value("${agentsquad.sandbox.enabled:false}")
     private boolean sandboxEnabled;
 
-    /** 固定会话日志根目录，避免随启动目录漂移导致投影游标与journal错位。 */
-    @Value("${agentsquad.runtime.workspace:}")
-    private String workspaceRoot;
+    @Resource
+    private com.agentsquad.squad.integration.agentscope.RuntimeWorkspace runtimeWorkspace;
 
     private HarnessAgent master;
 
@@ -170,6 +168,9 @@ public class MasterAgent implements NativeSessionGateway {
     private com.agentsquad.squad.conversation.repository.BindingMapper controlBindings;
 
     private CommittedSessionReader committedReader;
+
+    @Resource
+    private com.agentsquad.squad.integration.agentscope.journal.RuntimeSessionProvider runtimeSessions;
 
     /**
      * 启用投递前检查模型配置和数据库表结构，再创建长生命周期 Master。
@@ -254,6 +255,7 @@ public class MasterAgent implements NativeSessionGateway {
                 .middleware(modelBudgetMiddleware)
                 .toolkit(toolkit)
                 .distributedStore(JdbcDistributedStore.create(dataSource, dialect))
+                .sessionLogStore(runtimeSessions.logStore())
                 .filesystem(new RemoteFilesystemSpec().isolationScope(IsolationScope.USER))
                 .toolsConfig(toolsConfig)
                 .disableSubagents()
@@ -263,11 +265,9 @@ public class MasterAgent implements NativeSessionGateway {
                 .disableMemoryTools()
                 .disableMemoryHooks()
                 .disableDefaultWorkspaceSkills();
-        if (!workspaceRoot.isBlank()) {
-            masterBuilder.workspace(workspaceRoot.strip());
-        }
+        masterBuilder.workspace(runtimeWorkspace.path());
         master = masterBuilder.build();
-        committedReader = new CommittedSessionReader(new WorkspaceSessionLogStore(master.getWorkspaceManager()));
+        committedReader = new CommittedSessionReader(runtimeSessions.logStore());
     }
 
     /**
@@ -316,7 +316,8 @@ public class MasterAgent implements NativeSessionGateway {
         // 控制入口不能领取或续租 Worker guard，更不能 start 尚未执行的排队工作。
         try (var controller = HarnessAgent.builder().agentId(delivery.agentId())
                 .model(master.getModel())
-                .sessionLogStore(new WorkspaceSessionLogStore(master.getWorkspaceManager()))
+                .sessionLogStore(runtimeSessions.logStore())
+                .workspace(runtimeWorkspace.path())
                 .disableSubagents().disableFilesystemTools().disableShellTool().disableWebTools()
                 .disableMemoryTools().disableMemoryHooks().disableDefaultWorkspaceSkills().build()) {
             return controller.session(context).interrupt(null);
@@ -386,7 +387,7 @@ public class MasterAgent implements NativeSessionGateway {
     }
 
     /**
-     * 纯读已提交日志；Master和Worker共用现有workspace后端，读取Worker不会创建Agent或领取业务guard。
+     * 纯读数据库中已提交的官方日志；Master和Worker共用后端，读取Worker不会创建Agent或领取业务guard。
      */
     @Override
     public List<NativeEventView> readEvents(ProjectionTarget target, long after, int limit) {

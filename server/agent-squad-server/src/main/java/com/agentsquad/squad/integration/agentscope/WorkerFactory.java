@@ -102,9 +102,8 @@ public class WorkerFactory {
     @org.springframework.beans.factory.annotation.Value("${agentsquad.sandbox.enabled:false}")
     private boolean sandboxEnabled;
 
-    /** 与 Master 共用固定会话日志根目录，避免不同启动方式读到两份journal。 */
-    @org.springframework.beans.factory.annotation.Value("${agentsquad.runtime.workspace:}")
-    private String workspaceRoot;
+    @Resource
+    private RuntimeWorkspace runtimeWorkspace;
 
     private final Map<String, WorkerAgentHandle> active = new ConcurrentHashMap<>();
 
@@ -113,6 +112,9 @@ public class WorkerFactory {
 
     @Resource
     private LocalSessionStopper localSessions;
+
+    @Resource
+    private com.agentsquad.squad.integration.agentscope.journal.RuntimeSessionProvider runtimeSessions;
 
     private AbstractJdbcDialect dialect;
 
@@ -259,6 +261,7 @@ public class WorkerFactory {
                         budgetMiddleware, definition.modelProfileKey()))
                 .toolkit(toolkit)
                 .distributedStore(JdbcDistributedStore.create(dataSource, dialect))
+                .sessionLogStore(runtimeSessions.logStore())
                 .filesystem(new RemoteFilesystemSpec().isolationScope(IsolationScope.USER))
                 .toolsConfig(toolsConfig)
                 .disableSubagents()
@@ -268,9 +271,7 @@ public class WorkerFactory {
                 .disableMemoryTools()
                 .disableMemoryHooks()
                 .disableDefaultWorkspaceSkills();
-        if (!workspaceRoot.isBlank()) {
-            agentBuilder.workspace(workspaceRoot.strip());
-        }
+        agentBuilder.workspace(runtimeWorkspace.path());
         HarnessAgent agent = agentBuilder.build();
         return new WorkerAgentHandle(agent, userId, bindingId, sessionId, agentId, claimed.guardToken());
     }
