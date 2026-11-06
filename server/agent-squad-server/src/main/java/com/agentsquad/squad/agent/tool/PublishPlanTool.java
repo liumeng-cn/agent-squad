@@ -30,6 +30,12 @@ import java.util.Map;
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class PublishPlanTool implements AgentTool {
 
+    /** 计划发布成功后立即交还调度器，Worker完成后另起协调回合，不让模型在当前回合空转。 */
+    @Override
+    public boolean isReturnDirect() {
+        return true;
+    }
+
     @Resource
     private ExecutionFailureService failures;
 

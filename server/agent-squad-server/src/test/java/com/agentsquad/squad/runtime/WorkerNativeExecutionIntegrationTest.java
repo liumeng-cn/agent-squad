@@ -39,13 +39,13 @@ class WorkerNativeExecutionIntegrationTest {
     @Test
     void newlyRegisteredWorkerRunsAndFinalizes(@TempDir Path directory) throws Exception {
         AtomicInteger modelCalls = new AtomicInteger();
+        var activeDatabase = new java.util.concurrent.atomic.AtomicReference<JdbcTemplate>();
         HttpServer model = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         model.createContext("/v1/chat/completions", exchange -> {
             int sequence = modelCalls.incrementAndGet();
             String answer = switch (sequence) {
                 case 1 -> toolCallResponse();
-                case 2 -> finalResponse();
-                case 3 -> completionToolCallResponse();
+                case 2 -> completionToolCallResponse(activeDatabase.get());
                 default -> completionFinalResponse();
             };
             byte[] response = answer
@@ -131,6 +131,7 @@ class WorkerNativeExecutionIntegrationTest {
             try (ConfigurableApplicationContext spring = SpringApplication.run(
                     AgentSquadApplication.class, running)) {
                 JdbcTemplate jdbc = spring.getBean(JdbcTemplate.class);
+                activeDatabase.set(jdbc);
                 String status = null;
                 for (int attempt = 0; attempt < 100; attempt++) {
                     status = jdbc.queryForObject(
@@ -151,13 +152,13 @@ class WorkerNativeExecutionIntegrationTest {
                     Thread.sleep(100);
                 }
                 assertThat(taskStatus).isEqualTo("SUCCEEDED");
-                assertThat(modelCalls.get()).isEqualTo(4);
+                assertThat(modelCalls.get()).isEqualTo(3);
                 assertThat(jdbc.queryForObject("""
                         SELECT COUNT(*) FROM sq_budget_reservation
                         WHERE task_id = (SELECT task_id FROM sq_worker_job WHERE job_id = ?)
                           AND kind = 'MODEL' AND model_profile_key = 'review'
                           AND pricing_version = 'review-v1' AND status = 'SETTLED'
-                        """, Integer.class, jobId)).isEqualTo(2);
+                        """, Integer.class, jobId)).isEqualTo(1);
                 assertThat(jdbc.queryForObject(
                         "SELECT result_json FROM sq_worker_job WHERE job_id = ?",
                         String.class, jobId)).contains("hello");
@@ -193,9 +194,11 @@ class WorkerNativeExecutionIntegrationTest {
                 """;
     }
 
-    private String completionToolCallResponse() {
-        String arguments = new ObjectMapper().valueToTree(
-                "{\"outcome\":\"SUCCEEDED\",\"finalAnswer\":\"摘要已完成：hello\"}").toString();
+    private String completionToolCallResponse(JdbcTemplate jdbc) {
+        var json = new ObjectMapper();
+        String arguments = json.valueToTree(json.valueToTree(
+                com.agentsquad.squad.testsupport.ModelAcceptanceFixture.completion(json, jdbc,
+                        "SUCCEEDED", "摘要已完成：hello")).toString()).toString();
         return """
                 {"id":"chatcmpl-master-1","object":"chat.completion","created":3,"model":"test-model",
                  "choices":[{"index":0,"message":{"role":"assistant","content":null,

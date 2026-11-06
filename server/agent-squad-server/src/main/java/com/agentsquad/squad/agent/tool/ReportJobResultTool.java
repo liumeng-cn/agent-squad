@@ -34,6 +34,8 @@ public class ReportJobResultTool implements AgentTool {
 
     private final String guardToken;
 
+    private Map<String, Object> outputSchema = Map.of();
+
     public ReportJobResultTool(WorkerResultService resultService, ObjectMapper objectMapper,
                                String userId, String sessionId, String bindingId, String guardToken) {
         this.resultService = resultService;
@@ -49,6 +51,12 @@ public class ReportJobResultTool implements AgentTool {
         return "report_job_result";
     }
 
+    /** 候选保存成功即结束当前回合，避免模型继续修改并重复提交已经固定的结果。 */
+    @Override
+    public boolean isReturnDirect() {
+        return true;
+    }
+
     @Override
     public String getDescription() {
         return "完成当前 Worker 节点前必须调用。提交符合输出 Schema 的结构化 result；"
@@ -58,8 +66,15 @@ public class ReportJobResultTool implements AgentTool {
     @Override
     public Map<String, Object> getParameters() {
         return Map.of("type", "object", "properties", Map.of(
-                        "result", Map.of("description", "Worker 输出 Schema 所要求的 JSON 结果")),
+                        "result", outputSchema),
                 "required", List.of("result"), "additionalProperties", false);
+    }
+
+    /** 注册前绑定已发布版本的输出契约，让模型直接提交对应 JSON 类型，仍由服务端再次校验。 */
+    public ReportJobResultTool outputSchema(JsonNode schema) {
+        outputSchema = objectMapper.convertValue(schema,
+                objectMapper.getTypeFactory().constructMapType(Map.class, String.class, Object.class));
+        return this;
     }
 
     /**

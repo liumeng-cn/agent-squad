@@ -6,5 +6,5 @@ package com.agentsquad.squad.model.domain;
  * 同一页面选择通过明确协议映射，不向不支持的供应商发送推理参数。
  */
 public enum ReasoningAdapter {
-    NONE, SPARK_THINKING, OPENAI_EFFORT
+    NONE, SPARK_THINKING, QWEN_THINKING, OPENAI_EFFORT
 }

@@ -63,4 +63,23 @@ describe('服务异常的用户反馈', () => {
     expect(wrapper.find('.from-user').text()).toContain('回答服务暂时异常')
     expect(wrapper.text()).not.toContain('内部原因')
   })
+  it('步骤跟随各自来源消息，始终位于对应最终回答前', () => {
+    const store = fixture()
+    store.snapshot = { failures: [], activeExecutions: [], interactions: [], deliverables: [], operationIds: [] } as unknown as ChatSnapshot
+    store.executionHistory = []
+    store.messages = [
+      { messageId: 'user', role: 'USER', text: '第一个要求', artifacts: [] },
+      { messageId: 'answer', role: 'ASSISTANT', text: '第一份结果', taskId: 'task', completed: true, artifacts: [] },
+      { messageId: 'user2', role: 'USER', text: '第二个要求', artifacts: [] },
+      { messageId: 'answer2', role: 'ASSISTANT', text: '第二份结果', taskId: 'task2', completed: true, artifacts: [] },
+    ] as never
+    store.taskHistory = [
+      { taskId: 'task', sourceMessageId: 'user', status: 'SUCCEEDED', version: 2 },
+      { taskId: 'task2', sourceMessageId: 'user2', status: 'SUCCEEDED', version: 2 },
+    ]
+    const wrapper = mount(MessageThread, { global: { stubs: { TaskSteps: { props: ['taskId'], template: '<section class="steps-marker">{{ taskId }}</section>' } } } })
+    expect(wrapper.findAll('.chat-messages > article, .chat-messages > .steps-marker').map(node => node.text())).toEqual([
+      '第一个要求', 'task', expect.stringContaining('第一份结果'), '第二个要求', 'task2', expect.stringContaining('第二份结果'),
+    ])
+  })
 })

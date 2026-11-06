@@ -51,9 +51,14 @@ function originalText(failure: ExecutionFailure) {
 }
 const working = computed(() => chat.snapshot?.activeTask)
 const stepTasks = computed(() => {
-  const tasks = new Map(chat.taskHistory.map(task => [task.taskId, { taskId: task.taskId, status: task.status }]))
-  if (working.value) tasks.set(working.value.taskId, { taskId: working.value.taskId, status: working.value.status })
-  return [...tasks.values()]
+  const tasks = new Map(chat.taskHistory.map(task => [task.taskId, { taskId: task.taskId, status: task.status, sourceMessageId: task.sourceMessageId }]))
+  if (working.value) tasks.set(working.value.taskId, { taskId: working.value.taskId, status: working.value.status, sourceMessageId: tasks.get(working.value.taskId)?.sourceMessageId ?? null })
+  return [...tasks.values()].map(task => {
+    const source = visibleMessages.value.find(message => message.messageId === task.sourceMessageId)
+    const answer = visibleMessages.value.find(message => message.role === 'ASSISTANT' && message.taskId === task.taskId)
+    return { ...task, afterMessageId: source?.messageId, beforeMessageId: source ? undefined : answer?.messageId,
+      answerCompleted: !!answer?.completed }
+  })
 })
 const workText = computed(() => {
   if (working.value?.status === 'RECOVERY_BLOCKED') return '这项工作暂未完成，已保留当前内容'
@@ -89,7 +94,9 @@ function answerStatus(status: string) {
     <div class="chat-messages">
       <button v-if="chat.nextBeforeSeq" class="load-history-button" :disabled="chat.loadingHistory" @click="older">{{ chat.loadingHistory ? '正在读取…' : '查看更早的消息' }}</button>
       <p v-if="chat.loading" class="chat-loading" role="status">正在读取对话…</p>
-      <article v-for="message in visibleMessages" :key="message.messageId" class="chat-message" :class="message.role === 'USER' ? 'from-user' : 'from-assistant'">
+      <template v-for="message in visibleMessages" :key="message.messageId">
+      <TaskSteps v-for="task in stepTasks.filter(item => item.beforeMessageId === message.messageId)" :key="task.taskId" :task-id="task.taskId" :status="task.status" :answer-completed="task.answerCompleted" :revision="chat.snapshot?.cursor ?? ''" />
+      <article class="chat-message" :class="message.role === 'USER' ? 'from-user' : 'from-assistant'">
         <template v-if="message.role === 'USER'">
           <div class="user-message-text">{{ message.text }}</div>
           <small v-for="directive in chat.directiveHistory.filter(item => item.sourceMessageId === message.messageId)" :key="directive.directiveId" class="stopped-note" role="status">{{ directiveText(directive) }}</small>
@@ -106,13 +113,15 @@ function answerStatus(status: string) {
           <span class="assistant-avatar" aria-hidden="true">✦</span><div class="assistant-body"><SafeMarkdown :text="message.text" /><button class="copy-answer-button" :aria-label="copied === message.messageId ? '已复制回答' : '复制回答'" @click="copy(message.messageId, message.text)">{{ copied === message.messageId ? '已复制' : '复制' }}</button></div>
         </template>
       </article>
+      <TaskSteps v-for="task in stepTasks.filter(item => item.afterMessageId === message.messageId)" :key="task.taskId" :task-id="task.taskId" :status="task.status" :answer-completed="task.answerCompleted" :revision="chat.snapshot?.cursor ?? ''" />
+      </template>
       <article v-for="preview in Object.values(chat.previews)" :key="preview.executionId" class="chat-message from-assistant" aria-label="正在生成回答">
         <span class="assistant-avatar" aria-hidden="true">✦</span><div class="assistant-body"><SafeMarkdown v-if="preview.text" :text="preview.text" /><small class="stopped-note">{{ preview.text ? '正在生成…' : '正在思考…' }}</small></div>
       </article>
       <div v-for="execution in chat.snapshot?.activeExecutions ?? []" :key="execution.executionId" class="answer-state" role="status"><span class="state-indicator" :class="{ running: ['RUNNING', 'RECOVERING'].includes(execution.status) }"></span>{{ answerStatus(execution.status) }}</div>
       <div v-if="working" class="active-work-bar" role="status"><div><span class="work-mark" aria-hidden="true">✦</span><span>{{ workText }}</span><small v-if="!['CANCELLING', 'RECONCILING'].includes(working.status)">你可以继续在这里补充或提问</small></div><button v-if="working.status !== 'CANCELLING'" class="text-button" :disabled="!!chat.controlling" @click="chat.stop('task', working.taskId, working.version)">停止工作</button></div>
       <InteractionCard v-for="interaction in chat.snapshot?.interactions ?? []" :key="`${interaction.interactionId}:${interaction.version}`" :interaction="interaction" @refresh="chat.refreshSnapshot()" />
-      <TaskSteps v-for="task in stepTasks" :key="task.taskId" :task-id="task.taskId" :status="task.status" :revision="chat.snapshot?.cursor ?? ''" />
+      <TaskSteps v-for="task in stepTasks.filter(item => !item.afterMessageId && !item.beforeMessageId)" :key="task.taskId" :task-id="task.taskId" :status="task.status" :answer-completed="task.answerCompleted" :revision="chat.snapshot?.cursor ?? ''" />
       <section v-for="failure in orphanFailures" :key="failure.failureId" class="chat-service-feedback" role="status">
         <p>{{ failureText(failure) }}</p>
         <button v-if="failure.allowedActions.includes('RETRY') && failure.executionId && failure.expectedVersion !== null" class="text-button" :disabled="!!chat.controlling" @click="chat.retry(failure.executionId, failure.expectedVersion)">{{ chat.controlling === failure.executionId ? '正在重试…' : '重新尝试' }}</button>

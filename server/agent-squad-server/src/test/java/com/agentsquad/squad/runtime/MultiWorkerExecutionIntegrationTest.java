@@ -187,8 +187,9 @@ class MultiWorkerExecutionIntegrationTest {
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_worker_job WHERE task_id = ? AND status = 'SUCCEEDED'", Integer.class, taskId)).isEqualTo(failSecond ? 1 : 2);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_command WHERE task_id = ? AND action = 'MASTER_SIGNAL'", Integer.class, taskId)).isEqualTo(1);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_operation WHERE task_id = ?", Integer.class, taskId)).isZero();
-                assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_reservation WHERE task_id = ? AND kind = 'MODEL' AND status = 'SETTLED'", Integer.class, taskId)).isEqualTo(6);
-                assertThat(calls.get()).isEqualTo(6);
+                // 成功节点上报后立即结束；失败分支仍保留原有失败判定和恢复调用。
+                assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_reservation WHERE task_id = ? AND kind = 'MODEL' AND status = 'SETTLED'", Integer.class, taskId)).isEqualTo(failSecond ? 5 : 4);
+                assertThat(calls.get()).isEqualTo(failSecond ? 5 : 4);
                 if (parallel) {
                     assertThat(overlapped.get()).isTrue();
                 } else {

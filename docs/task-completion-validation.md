@@ -56,3 +56,19 @@ GoalTaskNativeCreationIntegrationTest 的 HTTP 桩原先未适配普通回复流
 - 本轮完成进度 10/46，不能宣称主线全完成。真实多进程取消竞争、完整页面核对动作及真实模型复杂场景仍需验收。现有 SSE 异步鉴权、EOF 错误分类、逐字渲染问题保持在问题记录中。
 
 本地验证日志：/tmp/squad-controls-closure.log、/tmp/squad-final-web.log、/tmp/squad-final-web-build.log。完整交互图见 [复杂聊天交互](complex-chat-interaction.md)。当前业务服务未因本轮改动重新启动；不将磁盘代码和隔离测试视为当前页面已经运行新版本。
+
+## 2026-11-06 真实千问模型主线复验
+
+- 本地默认模型改为 `qwen3.8-flash`，普通回复、目标协调和默认 Worker 使用同一模型配置。千问思考参数使用 `enable_thinking`，不再套用讯飞 `thinking.type`；默认关闭思考。已受理旧默认模型只有在显式配置指纹完全匹配时才继续使用原模型，否则拒绝静默换模。
+- 真实接口验收通过普通聊天：会话 `78d34c31-1fe6-45f5-9140-2ca1f8926a9f`，约 1.5 秒产生最终答案，执行 SUCCEEDED。
+- 第一轮真实并行请求复现 Master 只确认受理、不调用计划工具；补强独立协调职责后，第二轮已创建两个并行 Worker。
+- 第二轮复现 Master 在 Worker 尚未结束时反复声明完成，最终 MAX_ITERATIONS 连带阻断目标；按持久任务状态隐藏过早完成入口，并使用 SDK `isReturnDirect` 在计划发布成功后立即结束当前协调轮次，等待后台汇合通知。
+- Worker 结果工具此前没有声明 result 的具体 Schema，真实模型把对象编码成字符串反复被拒绝；现在公开已发布输出契约，仍保留服务端校验。结果候选成功保存后同样通过 SDK 直接结束回合，避免模型修改后重复上报、占用冲突。
+- 上述均保持既有消息提交与会话 SSE 协议，不恢复已舍弃的接口改造方案。真实并行最终交付和修复后的回归结果继续记录在本节，不能把计划发布或候选保存当作完整验收。
+- 最终真实模型验收：会话 `5e0d1593-c0cc-49eb-8474-a26f957ecbb0`，目标 `87a295bd-d6d0-4d6c-83eb-1585415e3701`。从与页面相同的消息接口提交“登高、冬雪两首七言律诗”；Master 自主创建目标、发现既有 `regulated_poet 1.0.0`、发布一个含两个独立节点的计划。两个节点均 SUCCEEDED，目标 SUCCEEDED，planVersion=1、answerRevision=1；页面保持打开，经实时更新收到两首完整诗歌及 2/2 已完成步骤。总耗时约 41 秒（20:45:59.437 至 20:46:40.578）。这是复用已发布能力创建执行节点，尚未证明 Master 可自主发布新的 Worker 能力定义。
+- 诗歌生成与汇总来自真实千问调用，但格律说明仍有明显知识性错误（例如韵部归类）；结构与任务链路通过不代表专业内容质量验收通过，也不将模型自评等同于独立的专业校验。
+- 本轮曾在服务运行期间覆盖同名目标 JAR，导致延迟加载类失败，已停止该进程并改用 `/tmp/squad-server-verify-20261106.jar` 独立副本启动；上述最终成功请求在独立副本上完成，后续构建不覆盖运行包。
+- 相关隔离 MySQL 回归最终共 16 项通过、0失败、0错误、0跳过：DynamicReplyModelIntegrationTest 4项、GoalTaskNativeCreationIntegrationTest 5项、MultiWorkerExecutionIntegrationTest 4项、WorkerGuardIntegrationTest 1项、WorkerNativeExecutionIntegrationTest 1项、WorkerCrashRecoveryIntegrationTest 1项。分批执行日志为 `/tmp/squad-mainline-tests.log`、`/tmp/squad-worker-regression.log`、`/tmp/squad-recovery-regression.log`；前两份保留了修正旧夹具前的失败记录，最终结果以各类最新 Surefire 报告为准。候选后崩溃夹具通过真实 WorkerResultService 写入候选、封存阻塞模型调用的 writer，再由第二实例接管，不再依赖结果上报后的多余模型请求。
+- 最终后端打包、运行安全检查、diff 空白检查通过。未完成专业诗词质量、全量故障矩阵及跨机器部署验收。
+
+- 页面步骤区按来源消息定位，置于对应最终回答之前；执行时展开，最终正文完成后折叠。手动再次展开不被后续事件刷新收回。历史分页缺少来源消息时放在对应答案前，避免步骤挤到整段对话底部。已在真实成功会话浏览器中确认“处理步骤 2/2 项已完成”为折叠状态且位于诗歌正文上方；新增对应布局与状态切换测试。前端本轮 44项 Vitest + 2项 Node 测试通过，TypeScript 检查及生产构建通过。

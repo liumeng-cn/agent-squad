@@ -2,7 +2,8 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { getTaskJobs } from '../../../shared/api/tasksApi'
 import type { AcceptanceCheckView, WorkerJob, WorkerJobStatus } from '../../../shared/api/types'
-const props = defineProps<{ taskId: string; status: string; revision: string }>()
+const props = defineProps<{ taskId: string; status: string; revision: string; answerCompleted?: boolean }>()
+const expanded = ref(true)
 const jobs = ref<WorkerJob[]>([])
 const checks = ref<AcceptanceCheckView[]>([])
 const verdictLabels = { PASS: '符合要求', FAIL: '未达到要求', UNKNOWN: '尚未确认' } as const
@@ -24,6 +25,10 @@ const completed = computed(() => jobs.value.filter(job => job.status === 'SUCCEE
 const running = computed(() => jobs.value.filter(job => job.status === 'RUNNING' || job.status === 'RECOVERING').length)
 // 终态且没有任何步骤与检查时不再占用对话空间；运行中与有内容的历史任务保留展示。
 const terminal = computed(() => ['SUCCEEDED', 'PARTIAL', 'FAILED', 'CANCELLED'].includes(props.status))
+watch(() => [props.taskId, props.answerCompleted ?? terminal.value] as const, () => {
+  expanded.value = !(props.answerCompleted ?? terminal.value)
+}, { immediate: true })
+function toggled(event: Event) { expanded.value = (event.currentTarget as HTMLDetailsElement).open }
 const visible = computed(() => loading.value || error.value || !terminal.value || !!jobs.value.length || !!checks.value.length)
 async function load() {
   const current = ++requestVersion
@@ -50,7 +55,7 @@ watch(() => [props.taskId, props.status, props.revision], () => { void load() },
 onBeforeUnmount(() => { requestVersion++ })
 </script>
 <template>
-  <details v-if="visible" class="task-steps" open aria-label="工作步骤">
+  <details v-if="visible" class="task-steps" :open="expanded" aria-label="工作步骤" @toggle="toggled">
     <summary>处理步骤<span v-if="jobs.length">{{ completed }}/{{ jobs.length }} 项已完成</span></summary>
     <p v-if="shownVersion" class="task-steps-note">
       {{ shownVersion < latestVersion ? '过去的安排' : '当前安排' }} · 第 {{ shownVersion }} 版

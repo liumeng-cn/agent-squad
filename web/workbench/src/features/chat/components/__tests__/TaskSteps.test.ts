@@ -10,6 +10,22 @@ function job(nodeKey: string, status: WorkerJobStatus, title: string): WorkerJob
 }
 beforeEach(() => getJobs.mockReset())
 describe('真实工作步骤', () => {
+  it('最终回答完成后折叠，手动展开后不会被后续进度刷新收回', async () => {
+    getJobs.mockResolvedValue({ items: [job('one', 'SUCCEEDED', '整理结果')] })
+    const wrapper = mount(TaskSteps, { props: { taskId: 'task', status: 'RUNNING', revision: '1', answerCompleted: false } })
+    await flushPromises()
+    expect(wrapper.find('details').element.open).toBe(true)
+    await wrapper.setProps({ status: 'SUCCEEDED' })
+    expect(wrapper.find('details').element.open).toBe(true)
+    await wrapper.setProps({ answerCompleted: true })
+    expect(wrapper.find('details').element.open).toBe(false)
+    wrapper.find('details').element.open = true
+    await wrapper.find('details').trigger('toggle')
+    await wrapper.setProps({ revision: '2' })
+    await flushPromises()
+    expect(wrapper.find('details').element.open).toBe(true)
+  })
+
   it('旧版步骤单独展示，能返回当前安排并保留复用说明', async () => {
     getJobs.mockResolvedValueOnce({ items: [{ ...job('current', 'SUCCEEDED', '当前结果'), planVersion: 2, required: false, reusedFromJobId: 'previous' }],
       planVersion: 2, currentPlanVersion: 2, acceptanceChecks: [] })

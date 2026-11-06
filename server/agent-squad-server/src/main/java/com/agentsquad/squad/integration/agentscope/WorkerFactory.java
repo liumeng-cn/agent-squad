@@ -109,6 +109,9 @@ public class WorkerFactory {
     private final Map<String, WorkerAgentHandle> active = new ConcurrentHashMap<>();
 
     @Resource
+    private com.agentsquad.squad.model.service.ModelCatalogService modelCatalog;
+
+    @Resource
     private LocalSessionStopper localSessions;
 
     private AbstractJdbcDialect dialect;
@@ -222,7 +225,7 @@ public class WorkerFactory {
             toolkit.registerAgentTool(commitArtifact);
         }
         toolkit.registerAgentTool(new ReportJobResultTool(resultService, objectMapper,
-                userId, sessionId, bindingId, claimed.guardToken()));
+                userId, sessionId, bindingId, claimed.guardToken()).outputSchema(definition.outputSchema()));
         String prompt = "你是独立 Worker。能力：" + definition.description()
                 + "。只处理当前节点，不发布计划、不结束父目标、不委派其他 Agent。"
                 + "结果是供统一助手核验的材料，不是直接发给用户的消息。提供实质内容、依据与具体缺口，"
@@ -240,7 +243,8 @@ public class WorkerFactory {
                 .model(OpenAIChatModel.builder().apiKey(model.getApiKey())
                         .baseUrl(model.getBaseUrl()).modelName(model.getModelName())
                         .stream(false).build())
-                .generateOptions(GenerateOptions.builder().maxTokens(model.getMaxOutputTokens()).build())
+                .generateOptions(modelCatalog.applyReasoning(GenerateOptions.builder().maxTokens(model.getMaxOutputTokens()),
+                        model, model.getDefaultReasoningMode()).build())
                 .modelExecutionConfig(ExecutionConfig.builder()
                         .timeout(Duration.ofSeconds(runtime.getModelRequestTimeoutSeconds()))
                         .maxAttempts(1).build())

@@ -260,16 +260,17 @@ class GoalTaskNativeCreationIntegrationTest {
                     return;
                 }
                 assertThat(status).isEqualTo("SUCCEEDED");
-                assertThat(masterCalls.get()).isEqualTo(directive ? 5 : 7);
+                assertThat(masterCalls.get()).isEqualTo(directive ? 4 : 7);
                 assertThat(directiveMasterCalls.get()).isEqualTo(directive ? 7 : 0);
                 assertThat(replyCalls.get()).isEqualTo(2);
-                assertThat(workerCalls.get()).isBetween(directive ? 5 : 4, directive ? 6 : 4);
+                // 每个成功Worker保存结果后直接结束，不再额外调用模型生成确认文案。
+                assertThat(workerCalls.get()).isBetween(directive ? 3 : 2, directive ? 4 : 2);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_account", Long.class)).isEqualTo(queryDuringWork ? 2 : 1);
                 assertThat(jdbc.queryForObject("SELECT COUNT(DISTINCT account_id) FROM sq_budget_reservation WHERE task_id IS NOT NULL", Long.class)).isEqualTo(1);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_worker_job WHERE status='SUCCEEDED'", Long.class)).isEqualTo(2);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_runtime_binding WHERE task_id IS NULL", Long.class)).isEqualTo(queryDuringWork ? 2 : 1);
                 assertThat(jdbc.queryForList("SELECT DISTINCT status FROM sq_response_execution", String.class)).containsExactly("SUCCEEDED");
-                assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_reservation WHERE status='SETTLED'", Long.class)).isGreaterThanOrEqualTo(queryDuringWork ? 14 : 13);
+                assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_reservation WHERE status='SETTLED'", Long.class)).isGreaterThanOrEqualTo(queryDuringWork ? 12 : directive ? 10 : 11);
                 assertThat(progressCalls.get()).isEqualTo("query".equals(mode) ? 1 : 0);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_conversation_event WHERE event_type='task.created'", Long.class)).isEqualTo(1);
                 assertThat(jdbc.queryForObject(

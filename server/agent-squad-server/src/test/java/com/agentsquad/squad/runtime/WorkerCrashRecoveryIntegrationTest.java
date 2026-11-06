@@ -65,20 +65,15 @@ class WorkerCrashRecoveryIntegrationTest {
             }
             String response;
             if (worker) {
-                int call = workerCalls.incrementAndGet();
-                if (call == 1 || call == 3) {
-                    response = reportResponse();
-                } else if (call == 4) {
+                if (workerCalls.incrementAndGet() == 2) {
                     oldRequestBlocked.countDown();
                     try {
                         releaseOldRequest.await(30, TimeUnit.SECONDS);
                     } catch (InterruptedException exception) {
                         Thread.currentThread().interrupt();
                     }
-                    response = workerFinalResponse();
-                } else {
-                    response = workerFinalResponse();
                 }
+                response = reportResponse();
             } else {
                 response = masterCalls.incrementAndGet() == 1
                         ? completionResponse() : masterFinalResponse();
@@ -176,6 +171,11 @@ class WorkerCrashRecoveryIntegrationTest {
                         """, String.class, bindingId);
                 first.getBean(CommandDeliveryService.class).deliver(commandId);
                 assertThat(oldRequestBlocked.await(10, TimeUnit.SECONDS)).isTrue();
+                // 通过真实业务服务建立已提交候选夹具；旧模型调用仍阻塞，保留尚未结束的writer。
+                String guard = jdbc.queryForObject("SELECT guard_token FROM sq_worker_job WHERE job_id = ?", String.class, jobId);
+                String turn = jdbc.queryForObject("SELECT native_turn_id FROM sq_command WHERE command_id = ?", String.class, commandId);
+                first.getBean(com.agentsquad.squad.runtime.service.WorkerResultService.class).propose(
+                        userId, bindingId, guard, turn, json.readTree("{\"text\":\"候选摘要\"}"));
                 for (int attempt = 0; attempt < 100; attempt++) {
                     String candidate = jdbc.queryForObject(
                             "SELECT result_candidate_json FROM sq_worker_job WHERE job_id = ?",
@@ -227,7 +227,7 @@ class WorkerCrashRecoveryIntegrationTest {
                             String.class, successfulJobId)).isEqualTo("SUCCEEDED");
                     assertThat(peer.queryForObject("SELECT COUNT(*) FROM sq_command WHERE binding_id = ?",
                             Integer.class, successfulBinding)).isEqualTo(1);
-                    assertThat(workerCalls.get()).isEqualTo(5);
+                    assertThat(workerCalls.get()).isEqualTo(3);
                 } finally {
                     releaseOldRequest.countDown();
                 }

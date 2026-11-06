@@ -26,6 +26,55 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class DynamicReplyModelIntegrationTest {
     @Test
+    void exposesPublishedWorkerResultSchemaToModel() throws Exception {
+        var json = new ObjectMapper();
+        var schema = json.readTree("{\"type\":\"object\",\"required\":[\"poem\"],\"properties\":{\"poem\":{\"type\":\"string\"}}}");
+        var tool = new com.agentsquad.squad.agent.tool.ReportJobResultTool(null, json,
+                "user", "session", "binding", "guard").outputSchema(schema);
+        assertThat(json.valueToTree(tool.getParameters()).path("properties").path("result")).isEqualTo(schema);
+    }
+
+    @Test
+    void translatesQwenThinkingWithoutSparkParameters() {
+        var catalog = new ModelCatalogService();
+        var profile = new com.agentsquad.squad.worker.profile.WorkerModelProfile();
+        profile.setReasoningAdapter(com.agentsquad.squad.model.domain.ReasoningAdapter.QWEN_THINKING);
+        var off = catalog.applyReasoning(io.agentscope.core.model.GenerateOptions.builder(), profile, ReasoningMode.OFF).build();
+        var on = catalog.applyReasoning(io.agentscope.core.model.GenerateOptions.builder(), profile, ReasoningMode.ON).build();
+        assertThat(off.getAdditionalBodyParams()).containsEntry("enable_thinking", false).doesNotContainKey("thinking");
+        assertThat(on.getAdditionalBodyParams()).containsEntry("enable_thinking", true).doesNotContainKey("thinking");
+        assertThatThrownBy(() -> catalog.applyReasoning(io.agentscope.core.model.GenerateOptions.builder(), profile, ReasoningMode.AUTO))
+                .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
+    }
+
+    @Test
+    void preservesAcceptedDefaultOnlyWhenExplicitAliasMatchesExactly() {
+        var registry = new com.agentsquad.squad.worker.profile.WorkerProfileRegistry();
+        var previous = new com.agentsquad.squad.worker.profile.WorkerModelProfile();
+        previous.setProvider("OPENAI_COMPATIBLE");
+        previous.setModelName("previous");
+        previous.setBaseUrl("http://localhost/model");
+        previous.setApiKey("local-test");
+        previous.setPricingVersion("test-v1");
+        previous.setMaxInputTokens(1024);
+        previous.setMaxOutputTokens(256);
+        registry.getModelProfiles().put("default", previous);
+        var catalog = new ModelCatalogService();
+        org.springframework.test.util.ReflectionTestUtils.setField(catalog, "registry", registry);
+        org.springframework.test.util.ReflectionTestUtils.setField(catalog, "json", new ObjectMapper());
+        var accepted = catalog.accept(null, ReasoningMode.DEFAULT);
+        registry.getModelProfiles().put("previous", previous);
+        var replacement = new ObjectMapper().convertValue(previous, com.agentsquad.squad.worker.profile.WorkerModelProfile.class);
+        replacement.setModelName("replacement");
+        registry.getModelProfiles().put("default", replacement);
+        assertThat(catalog.canonicalize(accepted).modelId()).isEqualTo("previous");
+        assertThat(catalog.resolve(accepted)).isSameAs(previous);
+        previous.setMaxOutputTokens(512);
+        assertThatThrownBy(() -> catalog.resolve(accepted))
+                .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
+    }
+
+    @Test
     void freezesSelectionWhileQueuedAndCallsChosenModel(@TempDir Path directory) throws Exception {
         String user = "00000000-0000-0000-0000-000000000001";
         try (var firstModel = new NaturalReplyModelStub(); var secondModel = new NaturalReplyModelStub();
