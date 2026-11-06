@@ -80,3 +80,7 @@ GoalTaskNativeCreationIntegrationTest 的 HTTP 桩原先未适配普通回复流
 - 导入专项覆盖大载荷、输入队列、导出水位、重复导入、拒绝覆盖已推进历史。切换后动态模型4项、自主目标5项、并行4项、原生Worker及导入2项、崩溃接管1项，共16项通过；额外共享SSE/双实例5项通过。日志 `/tmp/squad-database-journal.log`、`/tmp/squad-journal-import-test.log`、`/tmp/squad-database-cross-instance.log`。
 - 真实千问任务：会话251dece7-792b-48a1-9fba-18c41c144852，目标0b1047f4-01e1-43c3-bb86-69dd66461ecf，两个Worker分别写春雨/秋月，最终SUCCEEDED，已产生完整回答。随后停止并启动另一进程，结果仍可读取。
 - 对旧工作区80359个文件逐一比较大小及修改时间，无变更；新缓存目录内 `.agentscope-runtime` 日志文件数量为0，前一进程临时目录已清理。运行安全检查、打包及diff检查通过。0.5完成；3.2的trace等未完部分不据此勾选。
+
+## 2026-11-06 断流恢复专项
+
+修复模型HTTP传输IO分类遗漏和临时草稿终止生命周期；保持SDK一次请求、平台持久最多两次恢复的单一计数，未知收费占额与未知效果保护不放松。真实EOF在首字前/部分正文后各覆盖成功与耗尽，耗尽后手动重答复用预算且不混入旧片段。后端15项、前端45项Vitest+2项Node及构建通过；详细限制见acceptance-issues.md晚间修复记录。该结果不等同于完整跨服务故障矩阵或任务自动换模型能力完成。

@@ -27,6 +27,7 @@ public final class ReplyPreviewBuffer {
     private long lastSent;
     private long lastThinkingSent;
     private int sentLength;
+    private boolean closed;
 
     public ReplyPreviewBuffer(ReplyPreviewTarget target, String runId, Consumer<ReplyPreviewSignal> publish) {
         this.target = target;
@@ -34,8 +35,8 @@ public final class ReplyPreviewBuffer {
         this.publish = publish;
     }
 
-    public void append(String delta) {
-        if (delta == null || delta.isEmpty() || text.length() >= MAX_TEXT_UNITS) {
+    public synchronized void append(String delta) {
+        if (closed || delta == null || delta.isEmpty() || text.length() >= MAX_TEXT_UNITS) {
             return;
         }
         int count = Math.min(delta.length(), MAX_TEXT_UNITS - text.length());
@@ -51,7 +52,10 @@ public final class ReplyPreviewBuffer {
     /**
      * 推理增量只表达“仍在处理”，按固定间隔合并；不累计、不转发推理内容。
      */
-    public void thinking() {
+    public synchronized void thinking() {
+        if (closed) {
+            return;
+        }
         long now = System.nanoTime();
         if (lastThinkingSent != 0 && now - lastThinkingSent < THINKING_INTERVAL_NANOS) {
             return;
@@ -60,7 +64,10 @@ public final class ReplyPreviewBuffer {
         emit(ReplyPreviewPhase.THINKING);
     }
 
-    public void flush() {
+    public synchronized void flush() {
+        if (closed) {
+            return;
+        }
         int length = text.length();
         if (length > 0 && Character.isHighSurrogate(text.charAt(length - 1))) {
             length--;
@@ -71,6 +78,20 @@ public final class ReplyPreviewBuffer {
         emit(ReplyPreviewPhase.ANSWERING);
         sentLength = length;
         lastSent = System.nanoTime();
+    }
+
+    /** 失败或取消只撤销本次临时流；保留稳定流身份，迟到增量不能重新激活旧草稿。 */
+    public synchronized void abort() {
+        if (!closed) {
+            closed = true;
+            text.setLength(0);
+            emit(ReplyPreviewPhase.ABORTED);
+        }
+    }
+
+    public synchronized void complete() {
+        flush();
+        closed = true;
     }
 
     private void emit(ReplyPreviewPhase phase) {

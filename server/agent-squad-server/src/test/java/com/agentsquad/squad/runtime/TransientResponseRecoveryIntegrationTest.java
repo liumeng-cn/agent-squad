@@ -30,8 +30,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class TransientResponseRecoveryIntegrationTest {
     @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void transientFailureRecoversOrStopsAtPersistentLimit(boolean exhaust, @TempDir Path directory) throws Exception {
+    @ValueSource(strings = {"http", "http-exhaust", "eof", "eof-exhaust", "partial", "partial-exhaust"})
+    void transientFailureRecoversOrStopsAtPersistentLimit(String scenario, @TempDir Path directory) throws Exception {
+        boolean exhaust = scenario.endsWith("-exhaust");
         AtomicInteger calls = new AtomicInteger();
         AtomicBoolean unavailable = new AtomicBoolean(exhaust);
         ObjectMapper json = new ObjectMapper();
@@ -42,6 +43,22 @@ class TransientResponseRecoveryIntegrationTest {
             String body;
             int status;
             if (call == 1 || unavailable.get()) {
+                if (!scenario.startsWith("http")) {
+                    byte[] fragment = (scenario.startsWith("partial") ? "data: {\"id\":\"broken\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"未完成的旧预览\"},\"finish_reason\":null}]}\n\n" : "")
+                            .getBytes(StandardCharsets.UTF_8);
+                    exchange.getResponseHeaders().set("Content-Type", "text/event-stream");
+                    exchange.getResponseHeaders().set("Connection", "close");
+                    exchange.sendResponseHeaders(200, fragment.length + 100);
+                    try (var output = exchange.getResponseBody()) {
+                        output.write(fragment);
+                        output.flush();
+                    } catch (java.io.IOException expectedTruncation) {
+                        // 夹具故意少写声明长度，真实HTTP客户端必须识别传输中断。
+                    } finally {
+                        exchange.close();
+                    }
+                    return;
+                }
                 status = 503;
                 body = "{\"error\":{\"message\":\"private-test-provider-detail\",\"type\":\"server_error\"}}";
             } else {
@@ -104,6 +121,8 @@ class TransientResponseRecoveryIntegrationTest {
             }
             assertThat(reads.snapshot(user, message.conversationId(), null, 40).messages()).anyMatch(item -> "恢复后的回答".equals(item.text()));
             assertThat(reads.snapshot(user, message.conversationId(), null, 40).failures()).isEmpty();
+            assertThat(reads.snapshot(user, message.conversationId(), null, 40).messages())
+                    .noneMatch(item -> item.text().contains("未完成的旧预览"));
         } finally {
             model.stop(0);
         }

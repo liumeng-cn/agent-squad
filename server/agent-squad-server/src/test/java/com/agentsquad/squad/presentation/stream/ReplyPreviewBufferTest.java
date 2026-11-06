@@ -17,6 +17,23 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ReplyPreviewBufferTest {
     @Test
+    void abortRetiresOnlyThisStreamAndNeverPublishesLateText() {
+        var signals = new ArrayList<ReplyPreviewSignal>();
+        var buffer = new ReplyPreviewBuffer(new ReplyPreviewTarget("u", "c", "e", "m"), "run", signals::add);
+        buffer.append("不完整正文");
+        buffer.abort();
+        var aborted = signals.getLast().preview();
+        assertThat(aborted.phase()).isEqualTo(ReplyPreviewPhase.ABORTED);
+        assertThat(aborted.text()).isEmpty();
+        int count = signals.size();
+        buffer.append("迟到正文");
+        buffer.thinking();
+        buffer.flush();
+        buffer.abort();
+        assertThat(signals).hasSize(count);
+    }
+
+    @Test
     void preservesSurrogatePairAcrossChunksAndReplacesWholeText() {
         var signals = new ArrayList<ReplyPreviewSignal>();
         var buffer = new ReplyPreviewBuffer(new ReplyPreviewTarget("u", "c", "e", "m"), "run", signals::add);

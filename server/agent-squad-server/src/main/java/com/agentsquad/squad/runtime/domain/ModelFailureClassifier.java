@@ -2,6 +2,9 @@ package com.agentsquad.squad.runtime.domain;
 
 import com.agentsquad.squad.common.exception.BudgetExceededException;
 import io.agentscope.core.model.ModelHttpException;
+import io.agentscope.core.model.transport.HttpTransportException;
+
+import java.io.IOException;
 
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
@@ -18,7 +21,11 @@ public final class ModelFailureClassifier {
 
     public static FailureClassification classify(Throwable failure) {
         Throwable current = failure;
+        boolean modelTransport = false;
         for (int depth = 0; current != null && depth < 12; depth++, current = current.getCause()) {
+            if (current instanceof HttpTransportException) {
+                modelTransport = true;
+            }
             if (current instanceof ModelHttpException http && http.getStatusCode() != null) {
                 int status = http.getStatusCode();
                 if (status == 429 || status == 408 || status >= 500 && status <= 599) {
@@ -38,6 +45,11 @@ public final class ModelFailureClassifier {
             }
             if (current instanceof ConnectException || current instanceof SocketTimeoutException || current instanceof TimeoutException) {
                 return new FailureClassification("SERVICE_TRANSIENT", "MODEL_CONNECTION_INTERRUPTED", "SYSTEM", "回答服务连接暂时中断，正在尝试恢复。");
+            }
+            // 仅模型HTTP传输链内的IO失败允许恢复，不能把本地文件故障当成模型断流。
+            if (modelTransport && current instanceof IOException) {
+                return new FailureClassification("SERVICE_TRANSIENT", "MODEL_CONNECTION_INTERRUPTED", "SYSTEM",
+                        "回答服务连接暂时中断，正在尝试恢复。");
             }
             if (current instanceof PlanCorrectionExhaustedException) {
                 return new FailureClassification("LOGIC_INVALID", "PLAN_CORRECTION_EXHAUSTED", "SYSTEM", "处理方案未能通过校验，已停止继续尝试并保留你的内容。");

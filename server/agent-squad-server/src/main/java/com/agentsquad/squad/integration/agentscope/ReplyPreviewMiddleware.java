@@ -60,7 +60,8 @@ public class ReplyPreviewMiddleware implements MiddlewareBase {
                                 } else if (event instanceof ThinkingBlockDeltaEvent) {
                                     buffer.thinking();
                                 }
-                            }).doOnComplete(buffer::flush);
+                            }).doOnComplete(buffer::complete)
+                            .doOnError(failure -> buffer.abort()).doOnCancel(buffer::abort);
                 });
     }
 

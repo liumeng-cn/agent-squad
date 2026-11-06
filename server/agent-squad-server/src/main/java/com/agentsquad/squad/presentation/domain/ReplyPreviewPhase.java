@@ -7,5 +7,6 @@ package com.agentsquad.squad.presentation.domain;
  */
 public enum ReplyPreviewPhase {
     THINKING,
-    ANSWERING
+    ANSWERING,
+    ABORTED
 }

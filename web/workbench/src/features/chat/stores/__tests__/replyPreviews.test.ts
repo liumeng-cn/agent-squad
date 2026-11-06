@@ -53,6 +53,17 @@ describe('临时回答预览', () => {
     expect(decodeReplyPreview({ ...preview(), preview: false })).toBeNull()
     expect(decodeReplyPreview({ ...preview(), phase: 'DONE' })).toBeNull()
   })
+  it('断流撤销旧草稿，迟到撤销不能误删新尝试', () => {
+    const store = active()
+    store.applyPreview(preview())
+    store.applyPreview({ ...preview('stream-a', 2, ''), phase: 'ABORTED' })
+    expect(store.previews.reply).toBeUndefined()
+    store.applyPreview(preview('stream-a', 3, '迟到旧文本'))
+    expect(store.previews.reply).toBeUndefined()
+    store.applyPreview(preview('stream-b', 1, '恢复后文本'))
+    store.applyPreview({ ...preview('stream-a', 4, ''), phase: 'ABORTED' })
+    expect(store.previews.reply?.text).toBe('恢复后文本')
+  })
   it('推理阶段只保留阶段心跳，正文到达后按同一流替换', () => {
     const store = active()
     store.applyPreview({ ...preview(undefined, 1, ''), phase: 'THINKING' })

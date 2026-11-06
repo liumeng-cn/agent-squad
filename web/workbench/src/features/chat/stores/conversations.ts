@@ -265,6 +265,11 @@ export const useConversationsStore = defineStore('conversations', {
       if (!execution || !['QUEUED', 'RUNNING', 'RECOVERING'].includes(execution.status)
           || this.messages.some(message => message.executionId === incoming.executionId && message.role === 'ASSISTANT' && message.completed)) return
       const previous = this.previews[incoming.executionId]
+      if (incoming.phase === 'ABORTED') {
+        this.retiredPreviewStreams = [...this.retiredPreviewStreams.slice(-15), incoming.streamId]
+        if (previous?.streamId === incoming.streamId) delete this.previews[incoming.executionId]
+        return
+      }
       if (previous?.streamId === incoming.streamId && incoming.revision <= previous.revision) return
       if (previous && previous.streamId !== incoming.streamId) {
         this.retiredPreviewStreams = [...this.retiredPreviewStreams.slice(-15), previous.streamId]

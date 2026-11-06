@@ -48,6 +48,11 @@ class ExecutionFailureIntegrationTest {
         assertThat(ModelFailureClassifier.classify(new OpenAIException("x", 503, "x", "x")).category()).isEqualTo("SERVICE_TRANSIENT");
         assertThat(ModelFailureClassifier.classify(new OpenAIException("x", 404, "x", "x")).category()).isEqualTo("ENVIRONMENT");
         assertThat(ModelFailureClassifier.classify(new OpenAIException("x", 422, "x", "x")).category()).isEqualTo("LOGIC_INVALID");
+        assertThat(ModelFailureClassifier.classify(new java.io.EOFException("local-file")).category()).isEqualTo("INTERNAL");
+        var interrupted = ModelFailureClassifier.classify(new RuntimeException("wrapper",
+                new io.agentscope.core.model.transport.HttpTransportException("transport", new java.io.EOFException("private"))));
+        assertThat(interrupted.code()).isEqualTo("MODEL_CONNECTION_INTERRUPTED");
+        assertThat(interrupted.safeMessage()).doesNotContain("private");
     }
 
     @Test
