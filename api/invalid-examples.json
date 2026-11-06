@@ -125,6 +125,25 @@
         "content": "询问进度"
       },
       "reason": "查询不能伪装目标修订种类"
+    },
+    {
+      "schema": "PlanAcceptanceCriterion",
+      "reason": "不支持的验收检查方式",
+      "value": {
+        "criterionId": "quality",
+        "text": "检查结果",
+        "required": true,
+        "verificationType": "AUTO_PASS"
+      }
+    },
+    {
+      "schema": "AcceptanceReview",
+      "reason": "不支持的验收结论",
+      "value": {
+        "criterionId": "quality",
+        "verdict": "DONE",
+        "evidenceRefs": []
+      }
     }
   ]
 }

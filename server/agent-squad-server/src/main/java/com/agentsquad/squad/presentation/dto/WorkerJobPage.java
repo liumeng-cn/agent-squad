@@ -7,5 +7,6 @@ import java.util.List;
  * <p>
  * 节点数受计划上限约束，接口保留标准分页结构以供工作台统一消费。
  */
-public record WorkerJobPage(List<WorkerJob> items, String nextCursor) {
+public record WorkerJobPage(List<WorkerJob> items, String nextCursor, List<AcceptanceCheckView> acceptanceChecks,
+                            long planVersion, long currentPlanVersion) {
 }

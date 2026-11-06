@@ -2112,6 +2112,16 @@
               "maximum": 100,
               "default": 20
             }
+          },
+          {
+            "name": "planVersion",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
           }
         ],
         "security": [
@@ -8007,9 +8017,17 @@
           "acceptanceCriteria": {
             "type": "array",
             "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 2000
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/PlanAcceptanceCriterion"
+                },
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000,
+                  "deprecated": true
+                }
+              ]
             },
             "maxItems": 20,
             "minItems": 1
@@ -8157,7 +8175,9 @@
               "SUPERSEDED",
               "SUCCEEDED",
               "PARTIAL",
-              "FAILED"
+              "FAILED",
+              "RECOVERING",
+              "SKIPPED"
             ]
           },
           "version": {
@@ -8177,6 +8197,28 @@
           },
           "result": {
             "description": "已成功节点的最终结果；结构由对应 WorkerDefinition.outputSchema 约束，其他状态不返回"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 160,
+            "description": "当前计划的工作说明摘要，不含内部上下文"
+          },
+          "dependsOn": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "同一计划内前置步骤键"
+          },
+          "skipReason": {
+            "type": "string",
+            "enum": [
+              "DEPENDENCY_FAILED"
+            ],
+            "description": "SKIPPED唯一原因：硬依赖已明确失败"
+          },
+          "required": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -8187,7 +8229,9 @@
           "workerKey",
           "workerVersion",
           "status",
-          "version"
+          "version",
+          "title",
+          "dependsOn"
         ]
       },
       "WorkerJobPage": {
@@ -8206,10 +8250,30 @@
             "minLength": 1,
             "maxLength": 2048,
             "nullable": true
+          },
+          "acceptanceChecks": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/AcceptanceCheckView"
+            }
+          },
+          "planVersion": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "currentPlanVersion": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           }
         },
         "required": [
-          "items"
+          "items",
+          "acceptanceChecks",
+          "planVersion",
+          "currentPlanVersion"
         ]
       },
       "ContextItem": {
@@ -11828,6 +11892,301 @@
           "capabilities",
           "reasoningModes",
           "defaultReasoningMode"
+        ]
+      },
+      "PlanAcceptanceCriterion": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "criterionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "verificationType": {
+            "type": "string",
+            "enum": [
+              "DETERMINISTIC",
+              "MODEL_REVIEW",
+              "USER_REVIEW"
+            ]
+          },
+          "legacy": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "deterministicCheck": {
+            "type": "string",
+            "enum": [
+              "REQUIRED_RESULTS_READY"
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "criterionId",
+          "text",
+          "required",
+          "verificationType"
+        ]
+      },
+      "AcceptanceReview": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "criterionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "PASS",
+              "FAIL",
+              "UNKNOWN"
+            ]
+          },
+          "evidenceRefs": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "maxLength": 80
+            }
+          }
+        },
+        "required": [
+          "criterionId",
+          "verdict",
+          "evidenceRefs"
+        ]
+      },
+      "PlanAcceptanceResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "criterionId": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "verificationType": {
+            "type": "string",
+            "enum": [
+              "DETERMINISTIC",
+              "MODEL_REVIEW",
+              "USER_REVIEW"
+            ]
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "PASS",
+              "FAIL",
+              "UNKNOWN"
+            ]
+          },
+          "verifier": {
+            "type": "string"
+          },
+          "evidenceRefs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "planVersion": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "goalRevision": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "criterionId",
+          "required",
+          "verificationType",
+          "verdict",
+          "verifier",
+          "evidenceRefs",
+          "planVersion",
+          "goalRevision",
+          "text"
+        ]
+      },
+      "AcceptanceCheckView": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "criterionId": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "verificationType": {
+            "type": "string",
+            "enum": [
+              "DETERMINISTIC",
+              "MODEL_REVIEW",
+              "USER_REVIEW"
+            ]
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "PASS",
+              "FAIL",
+              "UNKNOWN"
+            ]
+          }
+        },
+        "required": [
+          "criterionId",
+          "text",
+          "required",
+          "verificationType",
+          "verdict"
+        ]
+      },
+      "PlanPublishedPayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "enum": [
+              2
+            ]
+          },
+          "taskId": {
+            "type": "string"
+          },
+          "planVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "jobIds": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "string"
+            }
+          },
+          "joinPolicy": {
+            "type": "string",
+            "enum": [
+              "ALL_REQUIRED",
+              "BEST_EFFORT"
+            ]
+          },
+          "acceptanceCriteria": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/PlanAcceptanceCriterion"
+            }
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "taskId",
+          "planVersion",
+          "jobIds",
+          "joinPolicy",
+          "acceptanceCriteria"
+        ]
+      },
+      "JobReusedPayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "enum": [
+              2
+            ]
+          },
+          "taskId": {
+            "type": "string"
+          },
+          "planVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "jobId": {
+            "type": "string"
+          },
+          "reusedFromJobId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "taskId",
+          "planVersion",
+          "jobId",
+          "reusedFromJobId"
+        ]
+      },
+      "PlanPublishedEvent": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ConversationEvent"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "plan.published"
+                ]
+              },
+              "payload": {
+                "$ref": "#/components/schemas/PlanPublishedPayload"
+              }
+            }
+          }
+        ]
+      },
+      "JobReusedEvent": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ConversationEvent"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "job.reused"
+                ]
+              },
+              "payload": {
+                "$ref": "#/components/schemas/JobReusedPayload"
+              }
+            }
+          }
         ]
       }
     }

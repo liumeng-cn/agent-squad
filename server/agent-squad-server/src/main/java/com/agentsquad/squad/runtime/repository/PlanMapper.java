@@ -16,6 +16,9 @@ import java.util.List;
 @Mapper
 public interface PlanMapper {
 
+    String completionProposal(@Param("userId") String userId, @Param("taskId") String taskId,
+                              @Param("planVersion") long planVersion);
+
     String PLAN_COLUMNS = "id, plan_id, user_id, task_id, plan_version, status, logical_key, "
             + "definition_json, signal_version, version, goal_revision";
 
@@ -74,6 +77,12 @@ public interface PlanMapper {
 
     int activateBlockedJob(@Param("userId") String userId, @Param("jobId") String jobId,
                            @Param("bindingId") String bindingId);
+
+    int skipBlockedJob(@Param("userId") String userId, @Param("taskId") String taskId,
+                       @Param("planVersion") long planVersion, @Param("jobId") String jobId);
+
+    int abandonBlockedJob(@Param("userId") String userId, @Param("taskId") String taskId,
+                          @Param("planVersion") long planVersion, @Param("jobId") String jobId);
 
     int advanceTaskPlan(@Param("userId") String userId, @Param("taskId") String taskId,
                         @Param("expectedPlanVersion") long expectedPlanVersion,

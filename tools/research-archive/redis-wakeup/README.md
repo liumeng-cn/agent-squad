@@ -3,7 +3,7 @@
 运行：
 
 ```bash
-python3 experiments/redis-wakeup/run_probe.py
+python3 tools/research-archive/redis-wakeup/run_probe.py
 ```
 
 仅使用已安装 Docker 与 Python 标准库。镜像固定为官方 Redis 8.2 Alpine 的 digest，见脚本的 `IMAGE`；不会隐式升级镜像。每次创建独立容器、随机密码、临时配置，使用 `--network none`，不映射端口，不连接项目现有 Redis、MySQL 或模型。结束时清理专用容器和临时配置，测试失败返回非零。

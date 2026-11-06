@@ -131,7 +131,21 @@ public class WorkerResultService {
      */
     @Transactional
     public void markFailed(String userId, String bindingId) {
-        dispatchMapper.markFailed(userId, bindingId);
+        authorization.requireBindingCurrent(userId, bindingId);
+        WorkerLaunchRow job = dispatchMapper.findByBinding(userId, bindingId);
+        if (job == null) {
+            return;
+        }
+        Long version = planMapper.lockTaskPlanVersion(userId, job.taskId());
+        if (version == null || version != job.planVersion()) {
+            return;
+        }
+        PlanRow plan = planMapper.lockPlan(userId, job.taskId(), version);
+        if (plan == null || !"ACTIVE".equals(plan.status()) || dispatchMapper.markFailed(userId, bindingId) != 1) {
+            return;
+        }
+        dependencyService.activateReadyDependents(userId, job.taskId(), version);
+        masterSignalService.onJobStateChanged(plan);
     }
 
     /**

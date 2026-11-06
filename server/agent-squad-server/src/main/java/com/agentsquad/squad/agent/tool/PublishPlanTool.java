@@ -72,7 +72,15 @@ public class PublishPlanTool implements AgentTool {
                         "logicalKey", Map.of("type", "string", "minLength", 1, "maxLength", 160),
                         "expectedPlanVersion", Map.of("type", "integer", "minimum", 0),
                         "joinPolicy", Map.of("type", "string", "enum", List.of("ALL_REQUIRED", "BEST_EFFORT")),
-                        "acceptanceCriteria", Map.of("type", "array", "items", Map.of("type", "string"), "minItems", 1),
+                        "acceptanceCriteria", Map.of("type", "array", "minItems", 1, "maxItems", 20, "items", Map.of(
+                                "type", "object", "properties", Map.of(
+                                        "criterionId", Map.of("type", "string", "minLength", 1, "maxLength", 80),
+                                        "text", Map.of("type", "string", "minLength", 1, "maxLength", 2000),
+                                        "required", Map.of("type", "boolean"),
+                                        "verificationType", Map.of("type", "string", "enum", List.of("DETERMINISTIC", "MODEL_REVIEW", "USER_REVIEW")),
+                                        "deterministicCheck", Map.of("type", "string", "enum", List.of("REQUIRED_RESULTS_READY"),
+                                                "description", "只检查所有必要工作成功且结果已保存，不判断文章质量等自由文字要求")),
+                                "required", List.of("criterionId", "text", "required", "verificationType"), "additionalProperties", false)),
                         "nodes", Map.of("type", "array", "items", node, "maxItems", 16)),
                 "required", List.of("logicalKey", "expectedPlanVersion", "nodes", "joinPolicy", "acceptanceCriteria"),
                 "additionalProperties", false);
@@ -104,6 +112,7 @@ public class PublishPlanTool implements AgentTool {
                     context.getSessionId(), publish);
             return ToolResultBlock.text("计划已发布。planId=" + receipt.planId()
                     + " planVersion=" + receipt.planVersion() + " jobIds=" + receipt.jobIds()
+                    + " acceptanceCriteria=" + RuntimePayloads.toJson(objectMapper, publish.acceptanceCriteria())
                     + "。请直接结束当前协调回合；不要等待后台结果，平台将在汇合后另行通知。");
         } catch (PendingDirectivesException exception) {
             return ToolResultBlock.error(RuntimePayloads.toJson(objectMapper,

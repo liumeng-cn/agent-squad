@@ -28,7 +28,7 @@ import java.util.function.Function;
 @Component
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class ScopedMasterToolsMiddleware implements MiddlewareBase {
-    private static final Set<String> TASK_ONLY = Set.of("prepare_context", "publish_plan", "apply_task_directive");
+    private static final Set<String> TASK_ONLY = Set.of("prepare_context", "publish_plan", "apply_task_directive", "abandon_failed_job", "request_acceptance_review");
     private static final Set<String> RESPONSE_ONLY = Set.of("create_goal_task", "submit_task_directive", "write_explicit_memory");
 
     @Resource

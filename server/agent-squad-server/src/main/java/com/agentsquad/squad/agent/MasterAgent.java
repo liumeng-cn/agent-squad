@@ -1,6 +1,7 @@
 package com.agentsquad.squad.agent;
 
 import com.agentsquad.squad.agent.tool.ApplyTaskDirectiveTool;
+import com.agentsquad.squad.agent.tool.AbandonFailedJobTool;
 import com.agentsquad.squad.agent.tool.CreateGoalTaskTool;
 import com.agentsquad.squad.agent.tool.ListWorkerCapabilitiesTool;
 import com.agentsquad.squad.agent.tool.PrepareContextTool;
@@ -70,6 +71,9 @@ public class MasterAgent implements NativeSessionGateway {
     private ApplyTaskDirectiveTool applyTaskDirectiveTool;
 
     @Resource
+    private AbandonFailedJobTool abandonFailedJobTool;
+
+    @Resource
     private ResponseContextService responseContexts;
 
     @Resource
@@ -92,6 +96,9 @@ public class MasterAgent implements NativeSessionGateway {
 
     @Resource
     private RequestInputTool requestInputTool;
+
+    @Resource
+    private com.agentsquad.squad.agent.tool.RequestAcceptanceReviewTool requestAcceptanceReview;
 
     @Resource
     private PublishPlanTool publishPlanTool;
@@ -174,10 +181,12 @@ public class MasterAgent implements NativeSessionGateway {
         toolkit.registerAgentTool(createGoalTaskTool);
         toolkit.registerAgentTool(submitTaskDirectiveTool);
         toolkit.registerAgentTool(applyTaskDirectiveTool);
+        toolkit.registerAgentTool(abandonFailedJobTool);
         toolkit.registerAgentTool(proposeCompletionTool);
         toolkit.registerAgentTool(mockLookupTool);
         toolkit.registerAgentTool(mockTicketCreateTool);
         toolkit.registerAgentTool(requestInputTool);
+        toolkit.registerAgentTool(requestAcceptanceReview);
         toolkit.registerAgentTool(publishPlanTool);
         toolkit.registerAgentTool(prepareContextTool);
         toolkit.registerAgentTool(listWorkerCapabilitiesTool);
@@ -340,8 +349,8 @@ public class MasterAgent implements NativeSessionGateway {
                         com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource.CURRENT_MAPPING_VERSION)));
 
         java.util.Set<String> allowedTools = new java.util.HashSet<>(java.util.Set.of(
-                "load_skill_through_path", "request_input", "propose_completion", "list_worker_capabilities",
-                "create_goal_task", "submit_task_directive", "prepare_context", "publish_plan", "apply_task_directive",
+                "load_skill_through_path", "request_input", "request_acceptance_review", "propose_completion", "list_worker_capabilities",
+                "create_goal_task", "submit_task_directive", "prepare_context", "publish_plan", "apply_task_directive", "abandon_failed_job",
                 "write_explicit_memory", "mock_lookup", "mock_ticket_create", "read_attachment"));
         if (sandboxEnabled) { allowedTools.addAll(java.util.Set.of("sandbox_python", "commit_artifact")); }
         context.put(com.agentsquad.squad.skill.integration.ScopeSkillCapabilities.class,

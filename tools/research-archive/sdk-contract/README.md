@@ -8,14 +8,14 @@
 
 ```sh
 JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-27.jdk/Contents/Home \
-mvn -o -Daether.syncContext.named.factory=noop -f experiments/sdk-contract/pom.xml test
+mvn -o -Daether.syncContext.named.factory=noop -f tools/research-archive/sdk-contract/pom.xml test
 ```
 
 `noop` 仅用于本轮离线只读依赖缓存，避免在受限的共享 Maven 缓存目录创建锁文件；不要据此认为在线并发下载也无需依赖锁。其他机器可使用常规 Maven 命令解析依赖。
 
-## 本轮结果
+## 历史实验结果
 
-最新：64项非数据库针对性回归通过，专用MySQL容器验证11项收件/journal/Provider测试及1项不同工作目录的SDK崩溃恢复。没有包含原始SDK已知失败，也不等于产品端到端通过。MySQL入口为 `python3 experiments/sdk-contract/run_mysql_probe.py`；读取生产Mapper XML，不复制生产SQL到测试算法。
+历史记录：64项非数据库针对性回归通过，专用MySQL容器验证11项收件/journal/Provider测试及1项不同工作目录的SDK崩溃恢复。没有包含原始SDK已知失败，也不等于产品端到端通过。MySQL入口为 `python3 tools/verification/run_mysql_probe.py`；读取生产Mapper XML，不复制生产SQL到测试算法。
 
 停止原因规范化修复后，针对性回归58项全部通过：33项边界测试、6项真实SDK适配、19项基础回归。明确排除下述已知上游缺陷，未计作跳过或已修复；选择命令见OpenSpec的validation.md。无筛选全实验命令仍保留该SDK契约失败。
 
@@ -31,7 +31,7 @@ mvn -o -Daether.syncContext.named.factory=noop -f experiments/sdk-contract/pom.x
 
 ## 边界
 
-专用MySQL 8.4容器实验已验证收件提交后、SDK确认前halt，以及新JVM重投和重复消费幂等：1项通过、无跳过。运行 `python3 experiments/sdk-contract/run_mysql_probe.py` 自动创建并清理独占容器；直接Maven运行没有专用环境变量时跳过该项。实验收件和效果表仅是夹具，不代表生产消费者已实现。未验证业务预算、审批并发、真实页面和性能。恢复/拒绝工具、并发补充输入及完整输出重连仍需后续实验。
+专用MySQL 8.4容器实验已验证收件提交后、SDK确认前halt，以及新JVM重投和重复消费幂等：1项通过、无跳过。运行 `python3 tools/verification/run_mysql_probe.py` 自动创建并清理独占容器；直接Maven运行没有专用环境变量时跳过该项。实验收件和效果表仅是夹具，不代表生产消费者已实现。未验证业务预算、审批并发、真实页面和性能。恢复/拒绝工具、并发补充输入及完整输出重连仍需后续实验。
 
 ## Journal存储修正
 

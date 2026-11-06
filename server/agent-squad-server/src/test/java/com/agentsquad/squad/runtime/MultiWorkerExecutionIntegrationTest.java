@@ -55,6 +55,7 @@ class MultiWorkerExecutionIntegrationTest {
         AtomicBoolean overlapped = new AtomicBoolean(false);
         AtomicBoolean dependencyVisible = new AtomicBoolean(false);
         AtomicInteger calls = new AtomicInteger();
+        var activeDatabase = new java.util.concurrent.atomic.AtomicReference<JdbcTemplate>();
         var executor = Executors.newFixedThreadPool(4);
         HttpServer model = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         model.setExecutor(executor);
@@ -69,7 +70,7 @@ class MultiWorkerExecutionIntegrationTest {
                 }
             }
             String response;
-            if (hasToolResult) {
+            if (hasToolResult && (worker || request.path("messages").toString().contains("\"name\":\"propose_completion\""))) {
                 response = completion(json, null, null);
             } else if (worker) {
                 if (parallel) {
@@ -87,10 +88,14 @@ class MultiWorkerExecutionIntegrationTest {
                 response = failSecond && request.path("messages").toString().contains("write-node-2")
                         ? completion(json, null, null)
                         : completion(json, "report_job_result", "{\"result\":{\"text\":\"node-result\"}}");
+            } else if (failSecond && !hasToolResult) {
+                String failedJob = activeDatabase.get().queryForObject("SELECT job_id FROM sq_worker_job WHERE status='RECOVERY_BLOCKED'", String.class);
+                response = completion(json, "abandon_failed_job", json.writeValueAsString(java.util.Map.of("jobId", failedJob, "expectedPlanVersion", 1)));
             } else {
-                response = completion(json, "propose_completion", failSecond
-                        ? "{\"outcome\":\"PARTIAL\",\"finalAnswer\":\"草稿已完成；第二项未产生可用结果，需要补充处理\"}"
-                        : "{\"outcome\":\"SUCCEEDED\",\"finalAnswer\":\"两个子任务已汇总\"}");
+                response = completion(json, "propose_completion", json.writeValueAsString(
+                        com.agentsquad.squad.testsupport.ModelAcceptanceFixture.completion(json, activeDatabase.get(),
+                                failSecond ? "PARTIAL" : "SUCCEEDED", failSecond
+                                        ? "草稿已完成；第二项未产生可用结果，需要补充处理" : "两个子任务已汇总")));
             }
             byte[] body = response.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().set("Content-Type", "application/json");
@@ -137,6 +142,7 @@ class MultiWorkerExecutionIntegrationTest {
             running[base.length] = "--agentsquad.delivery.enabled=true";
             try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class, running)) {
                 JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
+                activeDatabase.set(jdbc);
                 String status = null;
                 for (int attempt = 0; attempt < 200; attempt++) {
                     status = jdbc.queryForObject("SELECT status FROM sq_goal_task WHERE task_id = ?", String.class, taskId);
@@ -149,8 +155,8 @@ class MultiWorkerExecutionIntegrationTest {
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_worker_job WHERE task_id = ? AND status = 'SUCCEEDED'", Integer.class, taskId)).isEqualTo(failSecond ? 1 : 2);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_command WHERE task_id = ? AND action = 'MASTER_SIGNAL'", Integer.class, taskId)).isEqualTo(1);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_operation WHERE task_id = ?", Integer.class, taskId)).isZero();
-                assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_reservation WHERE task_id = ? AND kind = 'MODEL' AND status = 'SETTLED'", Integer.class, taskId)).isEqualTo(failSecond ? 5 : 6);
-                assertThat(calls.get()).isEqualTo(failSecond ? 5 : 6);
+                assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_reservation WHERE task_id = ? AND kind = 'MODEL' AND status = 'SETTLED'", Integer.class, taskId)).isEqualTo(6);
+                assertThat(calls.get()).isEqualTo(6);
                 if (parallel) {
                     assertThat(overlapped.get()).isTrue();
                 } else {
@@ -165,7 +171,7 @@ class MultiWorkerExecutionIntegrationTest {
 
     private String completion(ObjectMapper json, String tool, String arguments) {
         String message = tool == null ? "{\"role\":\"assistant\",\"content\":\"本轮处理完成\"}"
-                : "{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"call-1\",\"type\":\"function\",\"function\":{\"name\":\""
+                : "{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"call-" + tool + "\",\"type\":\"function\",\"function\":{\"name\":\""
                 + tool + "\",\"arguments\":" + json.valueToTree(arguments) + "}}]}";
         return """
                 {"id":"completion-1","object":"chat.completion","created":1,"model":"test-model",

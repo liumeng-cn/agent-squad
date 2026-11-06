@@ -2,6 +2,7 @@ package com.agentsquad.squad.runtime.service;
 
 import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
 import com.agentsquad.squad.common.util.ContentDigests;
+import com.agentsquad.squad.common.enums.worker.WorkerJobStatus;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.conversation.domain.RuntimeCommandAction;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
@@ -49,6 +50,12 @@ public class MasterSignalService {
     @Resource
     private ObjectMapper objectMapper;
 
+    @Resource
+    private PlanCompletionEvaluationService planEvaluation;
+
+    @Resource
+    private PlanAcceptanceService acceptance;
+
     /**
      * 调用方已锁定父 Task 和 Plan；结果、信号版本与命令在同一平台事务内提交。
      */
@@ -86,11 +93,10 @@ public class MasterSignalService {
             return;
         }
         List<WorkerJobRow> jobs = planMapper.lockJobs(plan.taskId(), plan.planVersion());
-        boolean allSucceeded = !jobs.isEmpty() && jobs.stream().allMatch(job -> "SUCCEEDED".equals(job.status()));
-        boolean failedBranch = jobs.stream().anyMatch(job -> Set.of("RECOVERY_BLOCKED", "FAILED", "PARTIAL").contains(job.status()));
-        boolean activeBranch = jobs.stream().anyMatch(job -> Set.of("READY", "RUNNING", "WAITING_INPUT",
-                "WAITING_APPROVAL", "RECONCILING", "CANCELLING").contains(job.status()));
-        if (jobs.isEmpty() || !(allSucceeded || (failedBranch && !activeBranch))
+        boolean allSucceeded = !jobs.isEmpty() && jobs.stream().allMatch(job -> WorkerJobStatus.SUCCEEDED.name().equals(job.status()));
+        var stage = planEvaluation.evaluate(plan.userId(), plan.taskId(), plan.planVersion(), List.of()).decision().stage();
+        if (jobs.isEmpty() || !(stage == com.agentsquad.squad.runtime.domain.PlanJoinStage.READY
+                || stage == com.agentsquad.squad.runtime.domain.PlanJoinStage.NEEDS_COORDINATION)
                 || commandMapper.countUnprocessedMasterCommands(plan.userId(), plan.taskId()) > 0) {
             return;
         }
@@ -120,8 +126,13 @@ public class MasterSignalService {
         String message = "内部协作结果，属于当前用户目标的同一次任务，不是新的用户请求。"
                 + "当前计划版本为 " + plan.planVersion() + "。请核对以下固定 Worker 状态与成功结果。"
                 + (allSucceeded ? "完成原目标并调用 propose_completion："
-                : "有分支执行失败或恢复受限；可发布新计划重规划，或以 PARTIAL 明确说明未完成部分，不能声称全部成功：")
-                + RuntimePayloads.toJson(objectMapper, results);
+                : "有工作未完成。RECOVERY_BLOCKED不是最终失败：优先发布新计划重新安排；确认不能继续时先调用abandon_failed_job明确放弃。"
+                + "全部工作明确收尾后可用PARTIAL说明未完成部分，不能把等待恢复的工作直接当作完成：")
+                + RuntimePayloads.toJson(objectMapper, results)
+                + "。当前完成条件：" + RuntimePayloads.toJson(objectMapper, acceptance.definition(plan).acceptanceCriteria())
+                + "。propose_completion必须提供acceptanceReviews，逐项criterionId、PASS/FAIL/UNKNOWN和evidenceRefs。"
+                + "MODEL_REVIEW引用本计划成功jobId并如实评价；USER_REVIEW先调用request_acceptance_review，"
+                + "收到实际答复后引用interactionId；缺少证据不能声明SUCCEEDED。";
         String payload = RuntimePayloads.toJson(objectMapper, Map.of(
                 "message", message,
                 "planVersion", plan.planVersion(),

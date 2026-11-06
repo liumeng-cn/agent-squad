@@ -374,12 +374,18 @@
             t.status,
             t.version
         FROM sq_goal_task t
-        JOIN sq_message m ON m.user_id = t.user_id
-            AND m.message_id = t.origin_message_id
         WHERE t.user_id = #{userId}
           AND t.conversation_id = #{conversationId}
-          AND m.message_seq BETWEEN #{first} AND #{last}
           AND t.del_flag = '0'
+          AND EXISTS (
+              SELECT 1
+              FROM sq_message m
+              WHERE m.user_id = t.user_id
+                AND m.conversation_id = t.conversation_id
+                AND m.message_seq BETWEEN #{first} AND #{last}
+                AND m.del_flag = '0'
+                AND (m.message_id = t.origin_message_id OR m.task_id = t.task_id)
+          )
         ORDER BY t.id
     </select>
 </mapper>

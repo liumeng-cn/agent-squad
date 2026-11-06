@@ -65,7 +65,6 @@ public class PlanService {
 
     private static final int MAX_NODES = 16;
     private static final int MAX_PARALLEL = 4;
-    private static final Set<String> JOIN_POLICIES = Set.of("ALL_REQUIRED", "BEST_EFFORT");
 
     @Resource
     private ExecutionAuthorizationService authorization;
@@ -229,9 +228,10 @@ public class PlanService {
             boolean root = node.dependsOn() == null || node.dependsOn().isEmpty();
             String status = root ? "READY" : "BLOCKED";
             String dependsJson = root ? null : RuntimePayloads.toJson(objectMapper, node.dependsOn());
-            Map<String, String> input = new LinkedHashMap<>();
+            Map<String, Object> input = new LinkedHashMap<>();
             input.put("goal", node.goal());
             input.put("contextSnapshotId", node.contextSnapshotId());
+            input.put("required", node.required());
             planMapper.insertJob(jobId, context.userId(), context.taskId(), newVersion,
                     node.nodeKey(), node.workerKey(), node.workerVersion(), status,
                     dependsJson, RuntimePayloads.toJson(objectMapper, input));
@@ -269,6 +269,8 @@ public class PlanService {
         Map<String, Object> eventPayload = new LinkedHashMap<>();
         eventPayload.put("planVersion", newVersion);
         eventPayload.put("jobIds", jobIds);
+        eventPayload.put("joinPolicy", publish.joinPolicy());
+        eventPayload.put("acceptanceCriteria", publish.acceptanceCriteria());
         if (projectionMapper.reserveEventSequence(context.userId(), context.taskId()) != 1) {
             throw new IllegalStateException("计划事件序号预留失败");
         }
@@ -358,11 +360,28 @@ public class PlanService {
         if (publish.nodes() == null || publish.nodes().isEmpty() || publish.nodes().size() > MAX_NODES) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "节点数量超出范围");
         }
-        if (!JOIN_POLICIES.contains(publish.joinPolicy())) {
+        if (publish.joinPolicy() == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "汇合策略无效");
         }
         if (publish.acceptanceCriteria() == null || publish.acceptanceCriteria().isEmpty()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "缺少完成条件");
+        }
+        if (publish.nodes().stream().noneMatch(PlanNode::required)
+                || publish.acceptanceCriteria().stream().noneMatch(item -> item != null && item.required())) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "计划至少需要一项必要工作和必要完成条件");
+        }
+        var criterionIds = new HashSet<String>();
+        if (publish.acceptanceCriteria().size() > 20) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "完成条件不能超过20项");
+        }
+        for (var criterion : publish.acceptanceCriteria()) {
+            if (criterion == null || isBlank(criterion.criterionId()) || criterion.criterionId().length() > 80
+                    || isBlank(criterion.text()) || criterion.text().length() > 2000
+                    || criterion.verificationType() == null || !criterionIds.add(criterion.criterionId())
+                    || (criterion.deterministicCheck() != null
+                    && criterion.verificationType() != com.agentsquad.squad.common.enums.worker.AcceptanceVerificationType.DETERMINISTIC)) {
+                throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "完成条件内容或标识无效");
+            }
         }
         for (PlanNode node : publish.nodes()) {
             if (isBlank(node.nodeKey()) || node.nodeKey().length() > 80

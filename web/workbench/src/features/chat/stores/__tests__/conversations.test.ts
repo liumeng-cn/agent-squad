@@ -7,6 +7,14 @@ const message = (messageId: string, revision: number, sequence = 1) => ({ messag
 
 describe('权威消息回放', () => {
   beforeEach(() => setActivePinia(createPinia()))
+  it('计划和结果复用通知可直接接收，不要求完整会话刷新', () => {
+    const store = useConversationsStore()
+    expect(store.applyEventPayload({ type: 'plan.published', payload: { schemaVersion: 2, taskId: 'task', planVersion: 2,
+      jobIds: ['one'], joinPolicy: 'BEST_EFFORT', acceptanceCriteria: [] } } as never)).toBe(true)
+    expect(store.applyEventPayload({ type: 'job.reused', payload: { schemaVersion: 2, taskId: 'task', planVersion: 2,
+      jobId: 'one', reusedFromJobId: 'old' } } as never)).toBe(true)
+    expect(store.applyEventPayload({ type: 'job.reused', payload: { schemaVersion: 2, taskId: 'task', planVersion: 2 } } as never)).toBe(false)
+  })
   it('重复最终事件与快照只保留同一 messageId 一份', () => {
     const store = useConversationsStore()
     store.mergeMessages([message('final', 1)])

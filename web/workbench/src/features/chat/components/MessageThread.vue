@@ -4,6 +4,7 @@ import { useConversationsStore } from '../stores/conversations'
 import SafeMarkdown from '../../../shared/ui/SafeMarkdown.vue'
 import InteractionCard from '../../tasks/components/InteractionCard.vue'
 import OperationCard from './OperationCard.vue'
+import TaskSteps from './TaskSteps.vue'
 import { apiDownload, errorMessage } from '../../../shared/api/http'
 import type { ExecutionFailure } from '../../../shared/api/chatApi'
 import type { Artifact } from '../../../shared/api/taskDetailsApi'
@@ -29,6 +30,11 @@ function originalText(failure: ExecutionFailure) {
   return chat.messages.find(message => message.messageId === failure.sourceMessageId && message.role === 'USER')?.text
 }
 const working = computed(() => chat.snapshot?.activeTask)
+const stepTasks = computed(() => {
+  const tasks = new Map(chat.taskHistory.map(task => [task.taskId, { taskId: task.taskId, status: task.status }]))
+  if (working.value) tasks.set(working.value.taskId, { taskId: working.value.taskId, status: working.value.status })
+  return [...tasks.values()]
+})
 const workText = computed(() => {
   if (working.value?.status === 'RECOVERY_BLOCKED') return '这项工作暂未完成，已保留当前内容'
   return statusText(working.value?.status ?? '')
@@ -80,6 +86,7 @@ function answerStatus(status: string) {
       <div v-for="execution in chat.snapshot?.activeExecutions ?? []" :key="execution.executionId" class="answer-state" role="status"><span class="state-indicator" :class="{ running: ['RUNNING', 'RECOVERING'].includes(execution.status) }"></span>{{ answerStatus(execution.status) }}</div>
       <div v-if="working" class="active-work-bar" role="status"><div><span class="work-mark" aria-hidden="true">✦</span><span>{{ workText }}</span><small v-if="!['CANCELLING', 'RECONCILING'].includes(working.status)">你可以继续在这里补充或提问</small></div><button v-if="working.status !== 'CANCELLING'" class="text-button" :disabled="!!chat.controlling" @click="chat.stop('task', working.taskId, working.version)">停止工作</button></div>
       <InteractionCard v-for="interaction in chat.snapshot?.interactions ?? []" :key="`${interaction.interactionId}:${interaction.version}`" :interaction="interaction" @refresh="chat.refreshSnapshot()" />
+      <TaskSteps v-for="task in stepTasks" :key="task.taskId" :task-id="task.taskId" :status="task.status" :revision="chat.snapshot?.cursor ?? ''" />
       <section v-for="failure in chat.snapshot?.failures ?? []" :key="failure.failureId" class="chat-service-feedback" role="status">
         <p>{{ failureText(failure) }}</p>
         <button v-if="failure.allowedActions.includes('RETRY') && failure.executionId && failure.expectedVersion !== null" class="text-button" :disabled="!!chat.controlling" @click="chat.retry(failure.executionId, failure.expectedVersion)">{{ chat.controlling === failure.executionId ? '正在重试…' : '重新尝试' }}</button>

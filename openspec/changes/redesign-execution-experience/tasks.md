@@ -52,10 +52,10 @@
 
 ## 5. 计划、依赖与验收政策
 
-- [ ] 5.1 实现纯 PlanJoinPolicyService，统一ALL_REQUIRED/BEST_EFFORT、必要/可选和无活动分支规则；输入当前版Job/效果/验收，输出汇总或完成决定；验证必要失败不成功、可选失败依验收、全部分支明确收口。
-- [ ] 5.2 WorkerDependencyService 增加当前版依赖失败传播及SKIPPED原因，保留BLOCKED等待与SUPERSEDED区分；验证链式失败、恢复受限协调、并行完成和新计划替换，旧结果不能激活新依赖。
-- [ ] 5.3 结构化acceptanceCriteria与验收结果，按verifier类型和证据推进PASS/FAIL/UNKNOWN；验证旧字符串转换不伪造已验收、必要UNKNOWN阻止完整成功、USER_REVIEW生成明确交互。
-- [ ] 5.4 在MasterSignal/完成服务应用统一政策，plan.published/job.reused保留公开载荷，复用与历史按版本展示；P05验证计划替换、必需/可选失败和结果复用，产出政策用例表；依赖5.1-5.3。
+- [x] 5.1 实现纯 PlanJoinPolicyService，统一ALL_REQUIRED/BEST_EFFORT、必要/可选和无活动分支规则；输入当前版Job/效果/验收，输出汇总或完成决定；验证必要失败不成功、可选失败依验收、全部分支明确收口。
+- [x] 5.2 WorkerDependencyService 增加当前版依赖失败传播及SKIPPED原因，保留BLOCKED等待与SUPERSEDED区分；验证链式失败、恢复受限协调、并行完成和新计划替换，旧结果不能激活新依赖。
+- [x] 5.3 结构化acceptanceCriteria与验收结果，按verifier类型和证据推进PASS/FAIL/UNKNOWN；验证旧字符串转换不伪造已验收、必要UNKNOWN阻止完整成功、USER_REVIEW生成明确交互。
+- [x] 5.4 在MasterSignal/完成服务应用统一政策，plan.published/job.reused保留公开载荷，复用与历史按版本展示；P05验证计划替换、必需/可选失败和结果复用，产出政策用例表；依赖5.1-5.3。
 
 ## 6. 用户修改、异步交互与取消收口
 

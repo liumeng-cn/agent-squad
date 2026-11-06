@@ -90,6 +90,12 @@ public class InteractionService {
     @Resource
     private ObjectMapper objectMapper;
 
+    @Resource
+    private com.agentsquad.squad.runtime.service.PlanAcceptanceService planAcceptance;
+
+    @Resource
+    private com.agentsquad.squad.runtime.repository.ProjectionMapper projections;
+
     @Value("${agentsquad.interaction.ttl-hours:24}")
     private long ttlHours;
 
@@ -126,6 +132,22 @@ public class InteractionService {
             log.info("审批交互已绑定 interactionId={} operationId={} toolKey={}",
                     interactionId, operation.operationId(), operation.toolKey());
             return new BindingResult(interactionId, KIND_APPROVAL);
+        }
+        if ("request_acceptance_review".equals(toolName)) {
+            var target = projections.findTarget(userId, bindingId);
+            if (target == null || jobId != null) {
+                throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "只能由目标协调会话请求用户验收");
+            }
+            var review = planAcceptance.prepareUserReview(userId, target.sessionId(), objectMapper.convertValue(
+                    call.get("input"), com.agentsquad.squad.runtime.dto.AcceptanceReviewRequest.class));
+            String schema = RuntimePayloads.toJson(objectMapper, Map.of("type", "object", "properties",
+                    Map.of("accepted", Map.of("type", "boolean", "title", "这项结果符合要求")),
+                    "required", List.of("accepted"), "additionalProperties", false));
+            interactionMapper.insert(interactionId, userId, taskId, null, bindingId,
+                    null, "FRAMEWORK", frameworkRequestId, KIND_INPUT, review.question(), schema,
+                    review.planVersion(), review.requestHash(), 0L,
+                    LocalDateTime.now().plusHours(ttlHours), userId, "model");
+            return new BindingResult(interactionId, KIND_INPUT);
         }
         if ("request_input".equals(toolName)) {
             String question = extractQuestion(call);
@@ -226,6 +248,10 @@ public class InteractionService {
             }
             answerJson.put("value", inputValue);
             answerText = valueJson;
+            if (row.planVersion() > 0) {
+                answerText = RuntimePayloads.toJson(objectMapper, Map.of("interactionId", row.interactionId(),
+                        "planVersion", row.planVersion(), "value", inputValue));
+            }
         } else {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "未知交互类型");
         }

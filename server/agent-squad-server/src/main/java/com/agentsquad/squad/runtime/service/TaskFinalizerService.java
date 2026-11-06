@@ -45,7 +45,7 @@ import java.util.UUID;
 public class TaskFinalizerService {
 
     private static final Set<String> ALLOWED_OUTCOMES = Set.of(
-            GoalTaskStatus.SUCCEEDED.name(), GoalTaskStatus.PARTIAL.name());
+            GoalTaskStatus.SUCCEEDED.name(), GoalTaskStatus.PARTIAL.name(), GoalTaskStatus.FAILED.name());
     private static final String CORRECTION_MESSAGE = "当前目标尚未提交完成候选。请重新检查用户目标，"
             + "然后调用 propose_completion 提交完整回答；若无法完整回答，可选择 PARTIAL 并说明缺口。";
     private static final String MISSING_PROPOSAL_ANSWER = "本次目标未能生成有效的最终回答，请重新发起。";
@@ -83,6 +83,9 @@ public class TaskFinalizerService {
     @Resource
     private ObjectMapper objectMapper;
 
+    @Resource
+    private PlanCompletionEvaluationService planEvaluation;
+
     /**
      * 原生成功回合只接受当前 Binding、Turn 和版本的候选；失效候选阻塞恢复并推进投影水位。
      */
@@ -98,8 +101,9 @@ public class TaskFinalizerService {
         }
         if (!target.bindingId().equals(row.proposalBindingId())
                 || event.turnId() == null || !event.turnId().equals(row.proposalTurnId())) {
-            blockInvalidProposal(row, target);
-            return true;
+            log.debug("忽略不属于当前完成候选的迟到回合 taskId={} bindingId={} turnId={}",
+                    row.taskId(), target.bindingId(), event.turnId());
+            return false;
         }
         JsonNode proposal;
         try {
@@ -118,6 +122,29 @@ public class TaskFinalizerService {
                 || !event.turnId().equals(proposal.path("sourceTurnId").asText())) {
             blockInvalidProposal(row, target);
             return true;
+        }
+        if (row.planVersion() > 0) {
+            try {
+                List<com.agentsquad.squad.runtime.dto.AcceptanceReview> reviews = objectMapper.convertValue(proposal.path("acceptanceReviews"),
+                        objectMapper.getTypeFactory().constructCollectionType(List.class,
+                                com.agentsquad.squad.runtime.dto.AcceptanceReview.class));
+                var evaluation = planEvaluation.evaluate(row.userId(), row.taskId(), row.planVersion(), reviews);
+                if (evaluation.decision().stage() != com.agentsquad.squad.runtime.domain.PlanJoinStage.READY
+                        || (GoalTaskStatus.SUCCEEDED.name().equals(outcome)
+                        && evaluation.decision().outcome() != GoalTaskStatus.SUCCEEDED)
+                        || (GoalTaskStatus.PARTIAL.name().equals(outcome)
+                        && evaluation.decision().outcome() == GoalTaskStatus.FAILED)) {
+                    blockInvalidProposal(row, target);
+                    return true;
+                }
+            } catch (RuntimeException exception) {
+                if (!(exception instanceof com.agentsquad.squad.common.exception.RuntimeBusinessException)
+                        && !(exception instanceof IllegalArgumentException)) {
+                    throw exception;
+                }
+                blockInvalidProposal(row, target);
+                return true;
+            }
         }
         if (completionMapper.completeTask(row.userId(), row.taskId(), target.bindingId(),
                 event.turnId(), outcome, row.planVersion(), row.answerRevision()) != 1) {

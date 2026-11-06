@@ -2,6 +2,14 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.runtime.repository.PlanMapper">
 
+    <select id="completionProposal" resultType="java.lang.String">
+        SELECT completion_proposal_json
+        FROM sq_goal_task
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+          AND plan_version = #{planVersion}
+    </select>
+
     <resultMap id="lockMasterContextResult" type="com.agentsquad.squad.runtime.domain.PlanContextRow">
         <constructor>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -156,8 +164,11 @@
     <select id="countActiveJobs" resultType="_int">
         SELECT COUNT(*) FROM sq_worker_job
         WHERE user_id = #{userId} AND task_id = #{taskId} AND plan_version = #{planVersion}
-          AND status IN ('READY',
+          AND status IN ('BLOCKED',
+            'READY',
             'RUNNING',
+            'RECOVERING',
+            'RECOVERY_BLOCKED',
             'WAITING_INPUT',
             'WAITING_APPROVAL',
             'RECONCILING',
@@ -307,10 +318,55 @@
                       AND p.plan_version = sq_worker_job.plan_version AND p.status = 'ACTIVE')
     </update>
 
+    <update id="skipBlockedJob">
+        UPDATE sq_worker_job
+        SET status  = 'SKIPPED',
+            version = version + 1
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+          AND plan_version = #{planVersion}
+          AND job_id = #{jobId}
+          AND status = 'BLOCKED'
+          AND binding_id IS NULL
+          AND EXISTS (
+              SELECT 1
+              FROM sq_plan p
+              WHERE p.user_id = sq_worker_job.user_id
+                AND p.task_id = sq_worker_job.task_id
+                AND p.plan_version = sq_worker_job.plan_version
+                AND p.status = 'ACTIVE'
+          )
+    </update>
+
+    <update id="abandonBlockedJob">
+        UPDATE sq_worker_job
+        SET status  = 'FAILED',
+            version = version + 1
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+          AND plan_version = #{planVersion}
+          AND job_id = #{jobId}
+          AND status = 'RECOVERY_BLOCKED'
+          AND EXISTS (
+              SELECT 1
+              FROM sq_plan p
+              WHERE p.user_id = sq_worker_job.user_id
+                AND p.task_id = sq_worker_job.task_id
+                AND p.plan_version = sq_worker_job.plan_version
+                AND p.status = 'ACTIVE'
+          )
+    </update>
+
     <update id="advanceTaskPlan">
         UPDATE sq_goal_task
         SET plan_version = #{planVersion},
             status = 'RUNNING',
+            completion_proposal_json = NULL,
+            proposal_binding_id = NULL,
+            proposal_turn_id = NULL,
+            proposal_tool_call_id = NULL,
+            proposal_hash = NULL,
+            completion_correction_count = 0,
             version = version + 1
         WHERE user_id = #{userId} AND task_id = #{taskId}
           AND plan_version = #{expectedPlanVersion}

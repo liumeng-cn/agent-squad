@@ -37,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class GoalTaskNativeCreationIntegrationTest {
 
     @ParameterizedTest
-    @ValueSource(strings = {"normal", "query", "directive", "exhaust"})
+    @ValueSource(strings = {"normal", "parallel", "query", "directive", "exhaust"})
     void replyCreatesIndependentGoalAndRunsDependentWorkers(String mode, @TempDir Path directory) throws Exception {
         boolean directive = "directive".equals(mode);
         boolean exhaust = "exhaust".equals(mode);
@@ -114,7 +114,8 @@ class GoalTaskNativeCreationIntegrationTest {
                                     "dependsOn", List.of("outline"), "required", true, "maxRecoveryAttempts", 1)),
                             "joinPolicy", "ALL_REQUIRED", "acceptanceCriteria", List.of("活泼短文完成")), 300+call);
                     case 5 -> textResponse("等待更新后的工作完成", 300+call);
-                    case 6 -> toolResponse(json, "propose_completion", Map.of("outcome", "SUCCEEDED", "finalAnswer", "短文已完成：活泼成稿"), 300+call);
+                    case 6 -> toolResponse(json, "propose_completion", com.agentsquad.squad.testsupport.ModelAcceptanceFixture.completion(
+                            json, jdbcRef.get(), "SUCCEEDED", "短文已完成：活泼成稿"), 300+call);
                     default -> textResponse("等待平台发布新答案", 300+call);
                 };
             } else if (request.path("messages").toString().contains("请改成活泼风格")) {
@@ -122,14 +123,11 @@ class GoalTaskNativeCreationIntegrationTest {
                 response = call == 1 ? toolResponse(json, "submit_task_directive", Map.of("logicalKey", "style-change",
                         "taskId", taskIdRef.get(), "expectedVersion", jdbcRef.get().queryForObject("SELECT version FROM sq_goal_task", Long.class),
                         "kind", "SUPPLEMENT", "content", "将文章改成活泼风格"), 400+call)
-                        : call == 2 ? toolResponse(json, "propose_completion", Map.of("outcome", "SUCCEEDED", "finalAnswer", "已收到风格要求，正在调整。"), 400+call)
-                        : textResponse("等待平台发布说明", 400+call);
+                        : textResponse("已收到风格要求，正在调整。", 400+call);
             } else if (request.path("messages").toString().contains("目前做到哪一步了")) {
                 progressRequest.set(request.path("messages").toString());
-                response = progressCalls.incrementAndGet() == 1
-                        ? toolResponse(json, "propose_completion", Map.of("outcome", "SUCCEEDED",
-                                "finalAnswer", "正在拟提纲，成稿尚未开始。"), 201)
-                        : textResponse("等待平台发布进度。", 202);
+                progressCalls.incrementAndGet();
+                response = textResponse("正在拟提纲，成稿尚未开始。", 201);
             } else if (request.path("messages").toString().contains("请回复来源用户消息")) {
                 int call = replyCalls.incrementAndGet();
                 String source = jdbcRef.get().queryForObject("SELECT source_message_id FROM sq_response_execution", String.class);
@@ -137,9 +135,7 @@ class GoalTaskNativeCreationIntegrationTest {
                     case 1 ->
                             toolResponse(json, "create_goal_task", Map.of("logicalKey", "writing-goal", "title", "短文写作",
                                     "objective", "先拟提纲，再写短文", "sourceMessageId", source), 101);
-                    case 2 ->
-                            toolResponse(json, "propose_completion", Map.of("outcome", "SUCCEEDED", "finalAnswer", "已开始处理，完成后给你结果。"), 102);
-                    default -> textResponse("等待平台发布受理说明。", 103);
+                    default -> textResponse("已开始处理，完成后给你结果。", 102);
                 };
             } else {
                 int call = masterCalls.incrementAndGet();
@@ -162,17 +158,18 @@ class GoalTaskNativeCreationIntegrationTest {
                                             "contextSnapshotId", jdbcRef.get().queryForObject(
                                                     "SELECT snapshot_id FROM sq_context_snapshot WHERE target_node_key='draft'",
                                                     String.class),
-                                            "dependsOn", List.of("outline"), "required", true,
+                                            "dependsOn", "parallel".equals(mode) ? List.of() : List.of("outline"), "required", true,
                                             "maxRecoveryAttempts", 1)),
                                     "joinPolicy", "ALL_REQUIRED", "acceptanceCriteria", List.of("短文完成")), call);
                     case 5 -> textResponse("计划已发布，等待 Worker。", call);
                     case 6 -> toolResponse(json, "propose_completion",
-                            Map.of("outcome", "SUCCEEDED", "finalAnswer", "短文已完成：成稿"), call);
+                            com.agentsquad.squad.testsupport.ModelAcceptanceFixture.completion(json, jdbcRef.get(), "SUCCEEDED", "短文已完成：成稿"), call);
                     default -> textResponse("等待平台发布答案。", call);
                 };
             }
-            byte[] body = response.getBytes(StandardCharsets.UTF_8);
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            boolean streaming = request.path("stream").asBoolean();
+            byte[] body = providerResponse(json, response, streaming).getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", streaming ? "text/event-stream" : "application/json");
             exchange.sendResponseHeaders(200, body.length);
             try (var output = exchange.getResponseBody()) {
                 output.write(body);
@@ -265,15 +262,15 @@ class GoalTaskNativeCreationIntegrationTest {
                 assertThat(status).isEqualTo("SUCCEEDED");
                 assertThat(masterCalls.get()).isEqualTo(directive ? 5 : 7);
                 assertThat(directiveMasterCalls.get()).isEqualTo(directive ? 7 : 0);
-                assertThat(replyCalls.get()).isEqualTo(3);
+                assertThat(replyCalls.get()).isEqualTo(2);
                 assertThat(workerCalls.get()).isBetween(directive ? 5 : 4, directive ? 6 : 4);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_account", Long.class)).isEqualTo(queryDuringWork ? 2 : 1);
                 assertThat(jdbc.queryForObject("SELECT COUNT(DISTINCT account_id) FROM sq_budget_reservation WHERE task_id IS NOT NULL", Long.class)).isEqualTo(1);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_worker_job WHERE status='SUCCEEDED'", Long.class)).isEqualTo(2);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_runtime_binding WHERE task_id IS NULL", Long.class)).isEqualTo(queryDuringWork ? 2 : 1);
                 assertThat(jdbc.queryForList("SELECT DISTINCT status FROM sq_response_execution", String.class)).containsExactly("SUCCEEDED");
-                assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_reservation WHERE status='SETTLED'", Long.class)).isGreaterThanOrEqualTo(queryDuringWork ? 16 : 14);
-                assertThat(progressCalls.get()).isEqualTo("query".equals(mode) ? 2 : 0);
+                assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_reservation WHERE status='SETTLED'", Long.class)).isGreaterThanOrEqualTo(queryDuringWork ? 14 : 13);
+                assertThat(progressCalls.get()).isEqualTo("query".equals(mode) ? 1 : 0);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_conversation_event WHERE event_type='task.created'", Long.class)).isEqualTo(1);
                 assertThat(jdbc.queryForObject(
                         "SELECT COUNT(*) FROM sq_goal_task WHERE conversation_id = ?",
@@ -290,9 +287,27 @@ class GoalTaskNativeCreationIntegrationTest {
         }
     }
 
+    /** 按真实请求的stream参数响应，避免把旧JSON桩当成流式供应商并误报缺少用量。 */
+    private String providerResponse(ObjectMapper json, String response, boolean streaming) throws java.io.IOException {
+        if (!streaming) {
+            return response;
+        }
+        var chunk = (com.fasterxml.jackson.databind.node.ObjectNode) json.readTree(response);
+        var choice = (com.fasterxml.jackson.databind.node.ObjectNode) chunk.path("choices").get(0);
+        var message = choice.remove("message");
+        int index = 0;
+        for (var tool : message.path("tool_calls")) {
+            ((com.fasterxml.jackson.databind.node.ObjectNode) tool).put("index", index++);
+        }
+        choice.set("delta", message);
+        chunk.put("object", "chat.completion.chunk");
+        return "data: " + json.writeValueAsString(chunk) + "\n\ndata: [DONE]\n\n";
+    }
+
     private String toolResponse(ObjectMapper json, String toolName,
                                 Map<String, Object> arguments, int sequence) throws java.io.IOException {
-        String encoded = json.writeValueAsString(json.writeValueAsString(arguments));
+        String encoded = json.writeValueAsString(json.writeValueAsString("publish_plan".equals(toolName)
+                ? com.agentsquad.squad.testsupport.ModelAcceptanceFixture.structuredPlan(arguments) : arguments));
         return """
                 {"id":"chatcmpl-%d","object":"chat.completion","created":%d,"model":"test-model",
                  "choices":[{"index":0,"message":{"role":"assistant","content":null,

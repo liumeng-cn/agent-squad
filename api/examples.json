@@ -218,6 +218,24 @@
         "taskStates": [],
         "cursor": "11111111-1111-4111-8111-111111111111:1:0"
       }
+    },
+    {
+      "schema": "PlanAcceptanceCriterion",
+      "value": {
+        "criterionId": "saved-results",
+        "text": "必要工作结果已保存",
+        "required": true,
+        "verificationType": "DETERMINISTIC",
+        "deterministicCheck": "REQUIRED_RESULTS_READY"
+      }
+    },
+    {
+      "schema": "AcceptanceReview",
+      "value": {
+        "criterionId": "quality",
+        "verdict": "UNKNOWN",
+        "evidenceRefs": []
+      }
     }
   ]
 }

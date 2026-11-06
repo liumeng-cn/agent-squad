@@ -107,7 +107,7 @@ NativeProjectionPoller现在只走一条路径：明确启动获授权绑定 →
 - 第三 JVM 再次恢复及重复执行消费，仍为游标3、收件3、效果3、模型0次。
 - `SdkMySqlContractTest`：1项通过，0失败、0错误、0跳过。三个新Java实验文件已用IDEA格式化后编译验证。
 
-复现：`python3 experiments/sdk-contract/run_mysql_probe.py`。脚本只创建和清理自身临时容器，需要Docker及已缓存依赖；普通Maven运行缺少专用环境时会跳过该数据库实验，不能当作通过。
+复现：`python3 tools/verification/run_mysql_probe.py`。脚本只创建和清理自身临时容器，需要Docker及已缓存依赖；普通Maven运行缺少专用环境时会跳过该数据库实验，不能当作通过。
 
 结合先前5项导出实验，任务1.3的SDK/数据库可行性准入通过，可开展第3组实现。这里的收件器、去重表和消费效果是隔离夹具，不是生产Inbox实现；多绑定身份、防毒事件、生产事务和并发消费者仍归第3组验证，不能宣称产品具备可靠消费能力。
 
@@ -141,7 +141,7 @@ NativeProjectionPoller现在只走一条路径：明确启动获授权绑定 →
 
 ```sh
 JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-27.jdk/Contents/Home \
-mvn -o -Daether.syncContext.named.factory=noop -f experiments/sdk-contract/pom.xml \
+mvn -o -Daether.syncContext.named.factory=noop -f tools/research-archive/sdk-contract/pom.xml \
 '-Dtest=ModelCompletionNormalizerTest,SdkNormalizedStreamContractTest,SdkExecutionContractTest,SdkExportContractTest,SdkStreamContractTest#separatesTextThinkingToolArgumentsAndUsageOnlyTail+eofWithoutFinishCanCompletePublisherWithoutProvingAnswerComplete+downstreamCancellationIsObservable' test
 ```
 
@@ -156,7 +156,7 @@ mvn -o -Daether.syncContext.named.factory=noop -f experiments/sdk-contract/pom.x
 ### 环境与范围
 
 - SDK：实际依赖 `2.1.0-BETA1`，项目固定 commit 对应 `5451c73abe47053340683a1cc6d67b290b056648`；本轮未修改 SDK。
-- JDK：本机 JDK 27 运行，实验编译目标21；独立 Maven 项目 `experiments/sdk-contract`，未加入业务 reactor。
+- JDK：本机 JDK 27 运行，实验编译目标21；独立 Maven 项目 `tools/research-archive/sdk-contract`，未加入业务 reactor。
 - 模型：仅 `127.0.0.1` 随机端口 HTTP 桩，固定安全测试文本，无真实模型调用。
 - 存储：SDK内存日志及临时目录文件日志；两个独立 JVM 验证文件序号恢复。未操作实际数据库。
 - 新建 Java 文件已调用 IDEA 2026.2.3 格式化，使用独立临时配置目录与现有默认代码样式；未关闭用户 IDE。
@@ -167,7 +167,7 @@ mvn -o -Daether.syncContext.named.factory=noop -f experiments/sdk-contract/pom.x
 
 ```sh
 JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-27.jdk/Contents/Home \
-mvn -o -Daether.syncContext.named.factory=noop -f experiments/sdk-contract/pom.xml test
+mvn -o -Daether.syncContext.named.factory=noop -f tools/research-archive/sdk-contract/pom.xml test
 ```
 
 该命令本轮预期非零：存在一项真实失败，未通过修改期望值把设计缺口变绿。离线noop仅避免受限Maven缓存的锁文件写入，不作为线上并发依赖下载建议。
@@ -294,7 +294,7 @@ actual: null
 
 真实HTTP/SSE现有2个参数化分支均通过：全部订阅关闭后让模型完成再重连，以及运行中重新订阅并收到终稿。两分支都核对公开首段、一次模型调用、一条终稿和终态尾部补齐。先前26项组合回归之后新增此分支，当前后端针对性覆盖合计27项（不是全项目测试）；末次HTTP2项通过，前端23项与build保持通过。OpenAPI内部引用解析检查通过。
 
-浏览器夹具与仅回环的合成身份代理已保存至experiments/chat-browser/，复现步骤见README。临时验证容器均已停止，Vite已停止；没有遗留运行中的专用MySQL容器。当前变更未提交、未推送，真实库未执行V7。
+浏览器夹具与仅回环的合成身份代理已保存至tools/verification/chat-browser/，复现步骤见README。临时验证容器均已停止，Vite已停止；没有遗留运行中的专用MySQL容器。当前变更未提交、未推送，真实库未执行V7。
 
 
 ### 2026-11-05 用户验收启动
@@ -330,11 +330,11 @@ actual: null
 
 ### 2026-11-05 P07 Redis 唤醒协议第一阶段
 
-新增experiments/redis-wakeup，固定官方Redis镜像digest，使用独立容器、认证、无网络、无映射端口、AOF always与noeviction，不连接现有Redis或业务库。enqueue/finish Lua验证dirtyVersion合并、原子续排与ACK、迟到确认隔离及容量拒绝。命令python3 experiments/redis-wakeup/run_probe.py本地8组通过，原始摘要/tmp/squad-redis-p07.log。初次测试对redis-cli RESP3返回格式读取错误，在测试适配后完整重跑通过，未改弱断言。
+新增tools/research-archive/redis-wakeup，固定官方Redis镜像digest，使用独立容器、认证、无网络、无映射端口、AOF always与noeviction，不连接现有Redis或业务库。enqueue/finish Lua验证dirtyVersion合并、原子续排与ACK、迟到确认隔离及容量拒绝。命令python3 tools/research-archive/redis-wakeup/run_probe.py本地8组通过，原始摘要/tmp/squad-redis-p07.log。初次测试对redis-cli RESP3返回格式读取错误，在测试适配后完整重跑通过，未改弱断言。
 
 实际验证32并发生产者、生产确认8轮竞态、未ACK接管、重启pending保留及CONTROL独立通道。实验容器已清理，既有squad-mysql保留运行，未创建业务常驻Redis。
 
-这只是Redis协议层证据，不证明业务幂等或完整故障恢复。MySQL提交/Redis发布间隙、业务提交后未ACK、完全丢失后的journal尾部补齐、同绑定业务互斥和真实取消优先级仍待联测；AOF always同容器重启不覆盖everysec断电或持久卷重建。任务0.1继续未完成，整体保持4/46，不移除旧消费和补偿路径。详见experiments/redis-wakeup/README.md。
+这只是Redis协议层证据，不证明业务幂等或完整故障恢复。MySQL提交/Redis发布间隙、业务提交后未ACK、完全丢失后的journal尾部补齐、同绑定业务互斥和真实取消优先级仍待联测；AOF always同容器重启不覆盖everysec断电或持久卷重建。任务0.1继续未完成，整体保持4/46，不移除旧消费和补偿路径。详见tools/research-archive/redis-wakeup/README.md。
 
 ### 2026-11-05 Redis命令唤醒实际接入
 
@@ -373,3 +373,43 @@ ConversationPreviewNotice和独立Pub/Sub通道转发有界公开正文，验证
 浏览器隔离夹具本轮实际完成：受理→首段生成→关闭标签→释放模型→后台SUCCEEDED→新标签重开原会话→刷新。新标签和刷新均只有一条完整终稿，BrowserChatProbeTest 1项通过且仅一次模型调用。截图/tmp/squad-browser-generating-final.png、/tmp/squad-browser-restored-final.png；夹具容器与5199代理已停止。浏览器使用合成身份，不证明真实网关登录；跨实例测试是同JVM独立Spring实例，不证明多机部署。
 
 任务0.3的实际关闭/重开缺口补齐，按原任务验收范围勾选；CLI复核为5/46。0.1、3.5、8.1、8.3等完整故障/并发/迁移条件不因本次预览与浏览器通过而自动完成。
+
+### 2026-11-06：当前计划失败收尾（5.2）
+
+明确失败后递归跳过未执行的硬依赖下游，恢复受限保留协调机会；Task Master 明确放弃前核对当前计划、恢复命令、交互、外部效果和用户修改。独立并行工作继续运行，未收尾节点阻止提前完成。步骤接口及简单列表已同步后端、OpenAPI 与前端枚举。
+
+本次隔离 MySQL/SDK 模型桩 16 项全部通过，前端 32 项组件测试与 2 项 Node 测试、构建、后端打包通过。测试命令、历史夹具问题和未验收范围见 docs/task-completion-validation.md；业务规则见 docs/task-completion-progress.md。浏览器外观及真实模型本轮未验收，不宣称全量通过。
+
+5.2 完成，CLI 复核 6/46。统一完成政策、逐项验收和完整活动展示继续保留未完成。
+
+### 2026-11-06：统一完成规则纯计算（5.1）
+
+新增 PlanJoinPolicyService 及独立输入、判断结果与枚举。两种策略都等待全部已接受分支收尾；必要工作失败或必要验收 FAIL/UNKNOWN 不允许 SUCCEEDED。可选失败依必要验收判断，有可信可交付结果才允许 PARTIAL。仍有活跃工作、待核实效果或恢复受限分别给出等待或协调判断，不提供完成结果。拒绝旧版节点、重复节点及没有必要工作的计划；空验收列表不伪造通过。
+
+新 Java 文件已按明确文件列表执行 IDEA 格式化。PlanJoinPolicyTest 的 14 项两策略规则测试与 WorkerDependencyPolicyTest 的 3 项测试通过，失败/错误/跳过均 0，Maven 退出 0；git diff --check 通过。本次无结构变更、无实际库操作、无付费模型调用。
+
+5.1 的纯规则范围完成。5.3 的证据持久化尚未实现，5.4 的实际发布和协调入口尚未切换，不将纯计算测试描述为运行完成判断已整体替换。当前规则与接入边界见 docs/task-completion-progress.md。
+
+### 2026-11-06：调研代码归档与目录迁移验收
+
+按用户要求移除根目录 experiments。SDK 契约和 Redis 协议探针归档到 tools/research-archive；持续使用的隔离 MySQL 入口和浏览器夹具放到 tools/verification。27 个原跟踪文件均核对目标存在，Java/Lua 源码逐字节保持一致；修正 Maven 源目录、Vite 相对导入及文档命令，旧目录不保留兼容入口。归档模块不加入业务 reactor，已知 SDK 失败断言保留。
+
+迁移后验证：后端指定 7 个测试类共 30 项通过，前端 32 项组件测试和 2 项 Node 测试及构建通过。归档 SDK 的 ModelCompletionNormalizerTest/CommittedSessionReaderTest 共 39 项通过；Redis 协议探针 8 组通过（仅协议范围，不代替完整 P07）。Python 编译检查使用临时缓存目录，Node 配置语法检查及 git diff --check 通过。
+
+实际浏览器核对隔离数据库中的 4 个步骤：失败上游显示未完成、两个依赖下游显示“前一步失败，这一步未执行”、独立分支等待开始；0/4 不将跳过算成功。刷新后保持相同结果。截图 /tmp/squad-task-steps-verified.png；浏览器夹具的两项测试退出 0。夹具是人工构造执行状态和合成身份，不证明真实模型规划质量或正常网关登录。临时浏览器、代理和测试容器已回收。
+
+本次清理和针对性验收完成，不把任务 5.3/5.4 或完整活动展示勾选。计划仍为 7/46；实际完成入口接入仍需逐项验收记录。
+
+### 2026-11-06：逐项验收与实际发布闭环（5.3、5.4）
+
+计划保存结构化条件，旧文字明确转换为未结构化 MODEL_REVIEW，不倒推历史通过。平台检查支持 REQUIRED_RESULTS_READY，其他未配置程序检查保持 UNKNOWN；模型评价必须引用当前计划成功结果；用户确认通过 request_acceptance_review 进入 SDK 挂起和持久交互，服务端采用真实 accepted 值，模型 PASS 不能覆盖用户拒绝。结果随完成候选保存 verifier、evidenceRefs、planVersion 和 goalRevision，无新增表列。
+
+MasterSignal、候选提交和正式发布共用 PlanJoinPolicyService 的判断。测试发现并修复换计划后旧候选未失效，以及旧回合迟到会干扰新候选的问题。新计划清理旧候选与版本推进同事务；正式发布再次核对活跃工作、未知效果与验收证据。plan.published/job.reused 的白名单载荷进入会话流，页面可直接接收通知；步骤支持按计划版本查看历史与结果复用，正式结束后才显示结果检查。
+
+49 项后端组合回归全部通过：PlanAcceptanceIntegrationTest 2、RequestAcceptanceReviewToolTest 1、PlanJoinPolicyTest 14、WorkerDependencyPolicyTest 3、WorkerDependencyFailureIntegrationTest 2、PlanPublishIntegrationTest 2、MultiWorkerExecutionIntegrationTest 3、GoalTaskNativeCreationIntegrationTest 5、WorkerGuardIntegrationTest 1、FinalDeliveryIntegrationTest 7、CompletionCorrectionIntegrationTest 6、TaskDirectiveIntegrationTest 2、WorkerCrashRecoveryIntegrationTest 1。失败、错误、跳过均 0，Maven 退出 0。首次扩大回归的交付夹具仍使用旧回复候选协议，5 项错误；改为自然回复可信输出后 7 项交付竞争测试全部通过，没有修改业务成功条件。
+
+前端 35 项组件/状态测试及 2 项 Node 测试、构建通过。浏览器实际确认终稿、真实步骤、程序/模型/用户检查，刷新保留同一结果。首轮发现旧入口任务完成后步骤消失，修复任务历史按正式答案关联读取并增加回归断言后复测通过，截图 /tmp/squad-final-acceptance.png。浏览器夹具使用合成身份和人工执行结果，不证明真实付费模型或正常登录。
+
+政策用例与边界见 docs/task-completion-progress.md，完整验证分层见 docs/task-completion-validation.md。5.3、5.4 勾选，CLI 复核 9/46；8.5 的细分活动和其他剩余阶段仍未完成。整个 check_design.py 因历史表清单数量及已删除旧规范尚未通过；接口正反例和当前 OpenSpec 单独核对，不宣称全量发布验收通过。
+
+末次增加可选工作标记后，针对计划验收、发布、串并行的 7 项再次通过；前端 35 项组件/状态测试与 2 项 Node 测试及构建再次通过。当前后端 package 退出 0；接口 19 正例/13 反例、运行安全、OpenSpec strict 和 git diff --check 通过。新增调研代码仍不留根目录，临时浏览器、代理和隔离容器已回收。全量设计检查的历史问题继续单独保留，不隐藏失败。

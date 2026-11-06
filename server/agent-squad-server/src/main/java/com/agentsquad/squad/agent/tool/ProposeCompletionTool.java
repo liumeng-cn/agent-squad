@@ -16,6 +16,8 @@ import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 import java.util.Map;
+import com.agentsquad.squad.runtime.dto.AcceptanceReview;
+import com.agentsquad.squad.runtime.dto.CompletionSubmission;
 
 /**
  * AgentScope 暴露给 Master 的完成候选工具。工具结果只是持久回执，不能当作用户最终答案。
@@ -28,6 +30,9 @@ public class ProposeCompletionTool implements AgentTool {
 
     @Resource
     private CompletionProposalService completionProposalService;
+
+    @Resource
+    private com.fasterxml.jackson.databind.ObjectMapper mapper;
 
     @Override
     public String getName() {
@@ -46,7 +51,13 @@ public class ProposeCompletionTool implements AgentTool {
                 "properties", Map.of(
                         "outcome", Map.of("type", "string", "enum",
                                 List.of(GoalTaskStatus.SUCCEEDED.name(), GoalTaskStatus.PARTIAL.name())),
-                        "finalAnswer", Map.of("type", "string", "minLength", 1, "maxLength", 200000)),
+                        "finalAnswer", Map.of("type", "string", "minLength", 1, "maxLength", 200000),
+                        "acceptanceReviews", Map.of("type", "array", "maxItems", 20, "items", Map.of(
+                                "type", "object", "properties", Map.of(
+                                        "criterionId", Map.of("type", "string"),
+                                        "verdict", Map.of("type", "string", "enum", List.of("PASS", "FAIL", "UNKNOWN")),
+                                        "evidenceRefs", Map.of("type", "array", "maxItems", 20, "items", Map.of("type", "string"))),
+                                "required", List.of("criterionId", "verdict", "evidenceRefs"), "additionalProperties", false))),
                 "required", List.of("outcome", "finalAnswer"),
                 "additionalProperties", false);
     }
@@ -71,12 +82,17 @@ public class ProposeCompletionTool implements AgentTool {
             return ToolResultBlock.error("完成候选参数必须是字符串");
         }
         try {
-            CompletionProposalReceipt receipt = completionProposalService.propose(
+            List<AcceptanceReview> reviews = param.getInput().get("acceptanceReviews") == null ? List.of()
+                    : mapper.convertValue(param.getInput().get("acceptanceReviews"),
+                    mapper.getTypeFactory().constructCollectionType(List.class, AcceptanceReview.class));
+            CompletionProposalReceipt receipt = completionProposalService.submit(new CompletionSubmission(
                     context.getUserId(), context.getSessionId(), context.get(TURN_ID_KEY, String.class),
-                    param.getToolUseBlock().getId(), outcome, answer);
+                    param.getToolUseBlock().getId(), outcome, answer, reviews));
             return ToolResultBlock.text("完成候选已保存，等待当前回合结束。");
         } catch (RuntimeBusinessException exception) {
             return ToolResultBlock.error(exception.getMessage());
+        } catch (IllegalArgumentException exception) {
+            return ToolResultBlock.error("逐项检查意见格式无效");
         }
     }
 }

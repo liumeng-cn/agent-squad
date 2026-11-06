@@ -71,8 +71,9 @@ public class RuntimeController {
      */
     @GetMapping("/tasks/{taskId}/jobs")
     public ApiResult<WorkerJobPage> listJobs(HttpServletRequest servletRequest,
-                                             @PathVariable String taskId) {
-        return ApiResult.success(taskSnapshotService.listJobs(UserContext.current(servletRequest).userId(), taskId));
+                                            @PathVariable String taskId,
+                                            @org.springframework.web.bind.annotation.RequestParam(required = false) Long planVersion) {
+        return ApiResult.success(taskSnapshotService.listJobs(UserContext.current(servletRequest).userId(), taskId, planVersion));
     }
 
     /**

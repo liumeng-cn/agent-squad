@@ -180,6 +180,10 @@ export const useConversationsStore = defineStore('conversations', {
     applyEventPayload(event: ConversationEvent): boolean {
       const delta = decodeConversationDelta(event)
       if (delta) {
+        if (delta.type === 'plan.published' || delta.type === 'job.reused') {
+          // 连续事件水位会触发对应步骤读取，不为计划通知重读整个会话。
+          return true
+        }
         if (delta.type === 'conversation.title_updated') {
           if (this.snapshot && delta.titleVersion >= this.snapshot.conversation.titleVersion) {
             this.snapshot.conversation.title = delta.title

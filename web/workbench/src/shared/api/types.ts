@@ -75,18 +75,25 @@ export interface CommandResponse {
   nativeStatus: string | null
 }
 
+export const workerJobStatuses = ['BLOCKED', 'READY', 'RUNNING', 'WAITING_INPUT', 'WAITING_APPROVAL', 'RECOVERING', 'RECOVERY_BLOCKED', 'RECONCILING', 'CANCELLING', 'SUCCEEDED', 'PARTIAL', 'FAILED', 'CANCELLED', 'SKIPPED', 'SUPERSEDED'] as const
+export type WorkerJobStatus = typeof workerJobStatuses[number]
+export type WorkerSkipReason = 'DEPENDENCY_FAILED'
 export interface WorkerJob {
+  required?: boolean
   jobId: string
   taskId: string
   nodeKey: string
   planVersion: number
   workerKey: string
   workerVersion: string
-  status: string
+  status: WorkerJobStatus
   version: number
   bindingId?: string
   reusedFromJobId?: string
   result?: unknown
+  title: string
+  dependsOn: string[]
+  skipReason?: WorkerSkipReason
 }
 
 export interface WorkerDefinition {
@@ -185,4 +192,35 @@ export interface AdminUserUpdateRequest {
 
 export interface ResetPasswordResult {
   temporaryPassword: string
+}
+export type AcceptanceVerificationType = 'DETERMINISTIC' | 'MODEL_REVIEW' | 'USER_REVIEW'
+export type PlanAcceptanceVerdict = 'PASS' | 'FAIL' | 'UNKNOWN'
+export type DeterministicAcceptanceCheck = 'REQUIRED_RESULTS_READY'
+export interface PlanAcceptanceCriterion {
+  criterionId: string
+  text: string
+  required: boolean
+  verificationType: AcceptanceVerificationType
+  legacy?: boolean
+  deterministicCheck?: DeterministicAcceptanceCheck | null
+}
+export interface AcceptanceReview {
+  criterionId: string
+  verdict: PlanAcceptanceVerdict
+  evidenceRefs: string[]
+}
+export interface AcceptanceCheckView {
+  criterionId: string
+  text: string
+  required: boolean
+  verificationType: AcceptanceVerificationType
+  verdict: PlanAcceptanceVerdict
+}
+export interface PlanAcceptanceResult extends AcceptanceReview {
+  text: string
+  required: boolean
+  verificationType: AcceptanceVerificationType
+  verifier: string
+  planVersion: number
+  goalRevision: number
 }

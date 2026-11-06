@@ -61,7 +61,7 @@
     </dependencies>
     <build>
         <!-- 直接编译业务适配层源码，避免实验复制一份算法而验证错对象。 -->
-        <sourceDirectory>${project.basedir}/../../server/agent-squad-server/src/main/java</sourceDirectory>
+        <sourceDirectory>${project.basedir}/../../../server/agent-squad-server/src/main/java</sourceDirectory>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

@@ -62,7 +62,7 @@ export interface ChatSnapshot {
   taskStates: ChatTaskState[]
   cursor: string
 }
-export interface ChatTaskState { taskId: string; sourceMessageId: string; status: string; version: number }
+export interface ChatTaskState { taskId: string; sourceMessageId: string | null; status: string; version: number }
 export interface MessageReceipt {
   conversationId: string
   messageId: string

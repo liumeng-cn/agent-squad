@@ -89,13 +89,57 @@ public class TaskSnapshotService {
     /**
      * 子任务列表只读取归属目标当前计划；计划最多 16 个节点，无分页截断。
      */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true,
+            isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
     public WorkerJobPage listJobs(String userId, String taskId) {
+        return listJobs(userId, taskId, null);
+    }
+
+    /** 按真实计划版本读取历史；权限仍以当前会话和目标归属判断，旧节点不混入当前完成数。 */
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public WorkerJobPage listJobs(String userId, String taskId, Long requestedPlanVersion) {
         TaskRow task = taskMapper.findOwned(userId, taskId);
         if (task == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
         }
         scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
-        return new WorkerJobPage(currentJobs(task), null);
+        long version = requestedPlanVersion == null ? task.planVersion() : requestedPlanVersion;
+        if (version < 0 || (requestedPlanVersion != null && version == 0) || version > task.planVersion()) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "这版工作安排不存在");
+        }
+        var jobs = version == 0 ? List.<WorkerJob>of() : planMapper.listJobs(taskId, version).stream().map(this::jobView).toList();
+        return new WorkerJobPage(jobs, null, version == task.planVersion() ? acceptanceChecks(task) : List.of(),
+                version, task.planVersion());
+    }
+
+    /** 只展示正式结束任务的检查结论；候选检查尚未取得发布资格，不提前显示为已完成。 */
+    private List<com.agentsquad.squad.presentation.dto.AcceptanceCheckView> acceptanceChecks(TaskRow task) {
+        if (task.planVersion() == 0 || !java.util.Set.of("SUCCEEDED", "PARTIAL", "FAILED").contains(task.status())) {
+            return List.of();
+        }
+        String proposal = planMapper.completionProposal(task.userId(), task.taskId(), task.planVersion());
+        if (proposal == null) {
+            return List.of();
+        }
+        try {
+            var checks = objectMapper.readTree(proposal).path("acceptanceResults");
+            if (!checks.isArray() || checks.size() > 20) {
+                return List.of();
+            }
+            var views = new java.util.ArrayList<com.agentsquad.squad.presentation.dto.AcceptanceCheckView>();
+            for (var check : checks) {
+                if (check.path("planVersion").asLong(-1) != task.planVersion()) {
+                    return List.of();
+                }
+                views.add(new com.agentsquad.squad.presentation.dto.AcceptanceCheckView(check.path("criterionId").asText(),
+                        check.path("text").asText(), check.path("required").asBoolean(),
+                        com.agentsquad.squad.common.enums.worker.AcceptanceVerificationType.valueOf(check.path("verificationType").asText()),
+                        com.agentsquad.squad.common.enums.worker.PlanAcceptanceVerdict.valueOf(check.path("verdict").asText())));
+            }
+            return List.copyOf(views);
+        } catch (java.io.IOException | IllegalArgumentException exception) {
+            throw new IllegalStateException("已发布任务的检查说明无法解析", exception);
+        }
     }
 
     /**
@@ -120,9 +164,24 @@ public class TaskSnapshotService {
                         row.taskId(), row.jobId(), exception);
             }
         }
-        return new WorkerJob(row.jobId(), row.taskId(), row.nodeKey(), row.planVersion(),
-                row.workerKey(), row.workerVersion(), row.status(), row.version(),
-                row.bindingId(), row.reusedFromJobId(), result);
+        var state = com.agentsquad.squad.common.enums.worker.WorkerJobStatus.valueOf(row.status());
+        try {
+            var input = RuntimePayloads.readJson(objectMapper, row.inputJson());
+            String goal = input.path("goal").asText(row.nodeKey());
+            int end = goal.offsetByCodePoints(0, Math.min(80, goal.codePointCount(0, goal.length())));
+            List<String> dependencies = new java.util.ArrayList<>();
+            if (row.dependsOnJson() != null) {
+                RuntimePayloads.readJson(objectMapper, row.dependsOnJson()).forEach(name -> dependencies.add(name.asText()));
+            }
+            return new WorkerJob(row.jobId(), row.taskId(), row.nodeKey(), row.planVersion(),
+                    row.workerKey(), row.workerVersion(), state, row.version(),
+                    row.bindingId(), row.reusedFromJobId(), result, goal.substring(0, end), List.copyOf(dependencies),
+                    state == com.agentsquad.squad.common.enums.worker.WorkerJobStatus.SKIPPED
+                            ? com.agentsquad.squad.common.enums.worker.WorkerSkipReason.DEPENDENCY_FAILED : null,
+                    input.path("required").isBoolean() ? input.get("required").asBoolean() : null);
+        } catch (JsonProcessingException invalid) {
+            throw new IllegalStateException("工作步骤说明无法读取", invalid);
+        }
     }
 
     /**

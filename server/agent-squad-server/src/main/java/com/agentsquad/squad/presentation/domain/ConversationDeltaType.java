@@ -9,7 +9,9 @@ public enum ConversationDeltaType {
     MESSAGE_ACCEPTED("message.accepted"),
     EXECUTION_QUEUED("execution.queued"),
     EXECUTION_STATUS_CHANGED("execution.status_changed"),
-    MESSAGE_COMPLETED("message.completed");
+    MESSAGE_COMPLETED("message.completed"),
+    PLAN_PUBLISHED("plan.published"),
+    JOB_REUSED("job.reused");
 
     public static final int SCHEMA_VERSION = 2;
     private final String code;

@@ -26,7 +26,7 @@
 
 ## 验证与未完成项
 
-`python3 experiments/sdk-contract/run_mysql_probe.py --with-redis --server-tests RedisCommandWakeupIntegrationTest,DynamicReplyModelIntegrationTest,ConversationSsePushIntegrationTest`
+`python3 tools/verification/run_mysql_probe.py --with-redis --server-tests RedisCommandWakeupIntegrationTest,DynamicReplyModelIntegrationTest,ConversationSsePushIntegrationTest`
 
 使用临时MySQL、临时认证Redis及本地模型，5个针对性用例通过。Redis业务测试有正常消费和遗留pending接管两个分支；均关闭十分钟内的数据库定时扫描，验证Redis实际接手、重复提示仅一次模型调用及一条终稿、通知连接不可用后消息仍成功。另回归双模型路由及真实HTTP/SSE断线续读。临时容器均自动清理，不使用本地业务库作故障实验。
 

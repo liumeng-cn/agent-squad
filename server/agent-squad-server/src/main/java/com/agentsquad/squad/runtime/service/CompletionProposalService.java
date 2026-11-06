@@ -61,6 +61,9 @@ public class CompletionProposalService {
     @Resource
     private ObjectMapper objectMapper;
 
+    @Resource
+    private PlanCompletionEvaluationService planEvaluation;
+
     /**
      * 同一原生 Turn 的相同候选返回原回执；不同内容或不同 Turn 的重复提交拒绝。
      * 事务提交后即使工具回包丢失，重放也不会生成第二个候选。
@@ -68,6 +71,19 @@ public class CompletionProposalService {
     @Transactional
     public CompletionProposalReceipt propose(String userId, String sessionId, String turnId,
                                              String toolCallId, String outcome, String finalAnswer) {
+        return submit(new com.agentsquad.squad.runtime.dto.CompletionSubmission(userId, sessionId, turnId,
+                toolCallId, outcome, finalAnswer, List.of()));
+    }
+
+    /** 保存当前计划逐项检查结果；没有证据的成功声明被拒绝，发布前还需再次核对。 */
+    @Transactional
+    public CompletionProposalReceipt submit(com.agentsquad.squad.runtime.dto.CompletionSubmission submission) {
+        String userId = submission.userId();
+        String sessionId = submission.sessionId();
+        String turnId = submission.turnId();
+        String toolCallId = submission.toolCallId();
+        String outcome = submission.outcome();
+        String finalAnswer = submission.finalAnswer();
         if (isBlank(userId) || isBlank(sessionId) || isBlank(turnId) || isBlank(toolCallId)
                 || turnId.length() > 64 || toolCallId.length() > 128) {
             throw new IllegalStateException("完成候选缺少可信运行身份");
@@ -93,12 +109,19 @@ public class CompletionProposalService {
                 || GoalTaskStatus.RUNNING.name().equals(context.taskStatus()))) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已不能提交完成候选");
         }
-        if (context.planVersion() > 0
-                && (planMapper.countActiveJobs(userId, context.taskId(), context.planVersion()) > 0
-                || (GoalTaskStatus.SUCCEEDED.name().equals(outcome)
-                && planMapper.countUnfinishedJobs(userId, context.taskId(), context.planVersion()) > 0))) {
-            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
-                    "Worker 尚未全部完成，当前不能提交最终回答");
+        var acceptanceResults = List.<com.agentsquad.squad.runtime.domain.PlanAcceptanceResult>of();
+        if (context.planVersion() > 0) {
+            var evaluation = planEvaluation.evaluate(userId, context.taskId(), context.planVersion(), submission.reviews());
+            if (evaluation.decision().stage() != com.agentsquad.squad.runtime.domain.PlanJoinStage.READY
+                    || (GoalTaskStatus.SUCCEEDED.name().equals(outcome)
+                    && evaluation.decision().outcome() != GoalTaskStatus.SUCCEEDED)) {
+                throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
+                        "工作尚未收尾或必要条件没有通过检查，请补充逐项证据，不能直接声明全部完成");
+            }
+            if (evaluation.decision().outcome() == GoalTaskStatus.FAILED) {
+                outcome = GoalTaskStatus.FAILED.name();
+            }
+            acceptanceResults = evaluation.acceptanceResults();
         }
 
         if (completionMapper.countPendingEffects(userId, context.taskId()) > 0) {
@@ -112,6 +135,8 @@ public class CompletionProposalService {
         proposal.put("answerRevision", context.answerRevision());
         proposal.put("sourceBindingId", context.bindingId());
         proposal.put("sourceTurnId", turnId);
+        proposal.put("acceptanceReviews", submission.reviews() == null ? List.of() : submission.reviews());
+        proposal.put("acceptanceResults", acceptanceResults);
         String proposalJson = RuntimePayloads.toJson(objectMapper, proposal);
         String proposalHash = ContentDigests.sha256(proposalJson);
         if (context.proposalJson() != null) {
@@ -125,8 +150,8 @@ public class CompletionProposalService {
                 toolCallId, proposalHash, proposalJson) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "完成候选提交时目标状态已变化");
         }
-        log.info("Master 完成候选已持久化 taskId={} bindingId={} turnId={} outcome={} answerLength={}",
-                context.taskId(), context.bindingId(), turnId, outcome, finalAnswer.length());
+        log.info("最终回答及检查结果已保存 taskId={} bindingId={} turnId={} outcome={} answerLength={} acceptanceChecks={}",
+                context.taskId(), context.bindingId(), turnId, outcome, finalAnswer.length(), acceptanceResults.size());
         return new CompletionProposalReceipt(context.taskId(), context.bindingId(), turnId,
                 toolCallId, "RECORDED");
     }

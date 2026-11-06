@@ -7,6 +7,7 @@ export type ConversationDelta =
   | { type: 'message.completed'; message: ChatMessage }
   | { type: 'execution.queued' | 'execution.status_changed'; execution: ChatExecution }
   | { type: 'conversation.title_updated'; title: string; titleVersion: number }
+  | { type: 'plan.published' | 'job.reused'; taskId: string; planVersion: number }
 
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value)
 const id = (value: unknown): value is string => typeof value === 'string' && value.length > 0
@@ -39,6 +40,20 @@ export function decodeConversationDelta(event: ConversationEvent): ConversationD
   }
   if (payload.schemaVersion !== 2) return
   switch (event.type) {
+    case 'plan.published':
+      if (id(payload.taskId) && version(payload.planVersion) && (payload.planVersion as number) > 0
+          && Array.isArray(payload.jobIds) && payload.jobIds.every(id) && payload.jobIds.length <= 16
+          && (payload.joinPolicy === 'ALL_REQUIRED' || payload.joinPolicy === 'BEST_EFFORT')
+          && Array.isArray(payload.acceptanceCriteria) && payload.acceptanceCriteria.length <= 20) {
+        return { type: event.type, taskId: payload.taskId, planVersion: payload.planVersion as number }
+      }
+      return
+    case 'job.reused':
+      if (id(payload.taskId) && version(payload.planVersion) && (payload.planVersion as number) > 0
+          && id(payload.jobId) && id(payload.reusedFromJobId)) {
+        return { type: event.type, taskId: payload.taskId, planVersion: payload.planVersion as number }
+      }
+      return
     case 'message.accepted':
       if (message(payload.message) && payload.message.role === 'USER' && execution(payload.execution)
           && payload.message.messageId === payload.execution.sourceMessageId

@@ -784,3 +784,14 @@ textarea.input {
 
 .model-choice-list button { flex-wrap: wrap; }
 .model-choice-list small { width: 100%; color: #9ca2ad; font-size: 10px; margin-top: 3px; order: 1; }
+
+.task-steps { margin: 12px 0 16px 32px; color: #525e70; font-size: 13px; }
+.task-steps summary { cursor: pointer; color: #626975; }
+.task-steps summary > span { margin-left: 12px; color: #9299a5; font-size: 12px; }
+.task-steps ol { list-style: none; padding: 8px 0 0; margin: 0; }
+.task-steps li { display: flex; gap: 10px; padding: 7px 0; }
+.task-step-dot { width: 18px; flex-shrink: 0; color: #9aa4b2; text-align: center; }
+.task-steps .finished .task-step-dot { color: #629576; }
+.task-step-title { overflow-wrap: anywhere; }
+.task-steps li small { display: block; color: #9299a5; margin-top: 3px; font-size: 12px; }
+.task-steps-note { margin: 8px 0; color: #9299a5; font-size: 12px; }

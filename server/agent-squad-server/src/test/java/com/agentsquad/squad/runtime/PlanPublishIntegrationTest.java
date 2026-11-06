@@ -278,7 +278,7 @@ class PlanPublishIntegrationTest {
             assertThat(snapshotsView.snapshot(userId, task.taskId()).jobs())
                     .hasSize(2)
                     .anySatisfy(job -> {
-                        assertThat(job.status()).isEqualTo("SUCCEEDED");
+                        assertThat(job.status()).isEqualTo(com.agentsquad.squad.common.enums.worker.WorkerJobStatus.SUCCEEDED);
                         assertThat(job.result().toString()).contains("分析完成");
                     });
             assertThat(jdbc.queryForObject(

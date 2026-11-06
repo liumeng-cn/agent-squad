@@ -1,11 +1,17 @@
 package com.agentsquad.squad.runtime.service;
 
 import com.agentsquad.squad.common.util.ContentDigests;
+import com.agentsquad.squad.common.enums.worker.WorkerJobStatus;
+import com.agentsquad.squad.common.enums.worker.WorkerSkipReason;
+import com.agentsquad.squad.runtime.domain.WorkerDependencyNode;
+import com.agentsquad.squad.runtime.domain.WorkerDependencyPolicy;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.runtime.domain.WorkerJobRow;
 import com.agentsquad.squad.runtime.repository.PlanMapper;
+import com.agentsquad.squad.runtime.repository.ProjectionMapper;
+import com.agentsquad.squad.presentation.service.TaskEventPublishingService;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionResponse;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -26,8 +32,8 @@ import java.util.UUID;
 /**
  * Worker 依赖节点激活服务。
  * <p>
- * 原生成功事实写入 Job 后，在同一事务内检查固定计划的依赖结果，
- * 将满足条件的 BLOCKED 节点与 Binding、SUBMIT 命令一起持久化。
+ * 在同一事务内检查当前计划的依赖结果：前置成功则创建执行绑定和命令，
+ * 前置已明确失败则递归跳过未执行的下游，并保存用户可见原因。
  */
 @Service
 @Slf4j
@@ -48,17 +54,31 @@ public class WorkerDependencyService {
     @Resource
     private ObjectMapper objectMapper;
 
+    @Resource
+    private ProjectionMapper projections;
+
+    @Resource
+    private TaskEventPublishingService events;
+
     /**
      * 调用方已锁定父 Task 和 Plan；依赖读取使用当前读，避免并行分支相互看不到已提交结果。
      */
     public void activateReadyDependents(String userId, String taskId, long planVersion) {
         List<WorkerJobRow> jobs = planMapper.lockJobs(taskId, planVersion);
+        var nodes = jobs.stream().map(job -> new WorkerDependencyNode(job.nodeKey(),
+                WorkerJobStatus.valueOf(job.status()), dependencyNames(job))).toList();
+        var skipped = WorkerDependencyPolicy.failedDependents(nodes);
+        for (var job : jobs) {
+            if (skipped.contains(job.nodeKey())) {
+                skip(job);
+            }
+        }
         Map<String, WorkerJobRow> byNodeKey = new HashMap<>();
         for (WorkerJobRow job : jobs) {
             byNodeKey.put(job.nodeKey(), job);
         }
         for (WorkerJobRow job : jobs) {
-            if (!"BLOCKED".equals(job.status())) {
+            if (!WorkerJobStatus.BLOCKED.name().equals(job.status()) || skipped.contains(job.nodeKey())) {
                 continue;
             }
             List<WorkerJobRow> dependencies = completedDependencies(job, byNodeKey);
@@ -66,6 +86,39 @@ public class WorkerDependencyService {
                 activate(job, dependencies);
             }
         }
+    }
+
+    private List<String> dependencyNames(WorkerJobRow job) {
+        if (job.dependsOnJson() == null) {
+            return List.of();
+        }
+        JsonNode names = readJson(job.dependsOnJson());
+        if (names == null || names.isNull()) {
+            return List.of();
+        }
+        if (!names.isArray()) {
+            throw new IllegalStateException("工作依赖格式无效");
+        }
+        var result = new ArrayList<String>();
+        names.forEach(name -> result.add(name.asText()));
+        return result;
+    }
+
+    /** 调用方持有当前Task/Plan锁；跳过和公开原因一起提交，重复处理不会重复生成事件。 */
+    private void skip(WorkerJobRow job) {
+        if (planMapper.skipBlockedJob(job.userId(), job.taskId(), job.planVersion(), job.jobId()) != 1) {
+            throw new IllegalStateException("依赖失败收尾时计划或节点状态已变化");
+        }
+        if (projections.reserveEventSequence(job.userId(), job.taskId()) != 1) {
+            throw new IllegalStateException("工作跳过事件序号预留失败");
+        }
+        events.insertProjected(job.userId(), job.taskId(), projections.eventSequence(job.userId(), job.taskId()),
+                "dependency-skipped:" + job.jobId(), "job.skipped",
+                RuntimePayloads.toJson(objectMapper, Map.of("jobId", job.jobId(), "planVersion", job.planVersion(),
+                        "status", WorkerJobStatus.SKIPPED, "reason", WorkerSkipReason.DEPENDENCY_FAILED)),
+                LocalDateTime.now(ZoneOffset.UTC));
+        log.info("前置工作失败，未执行后续工作 taskId={} jobId={} planVersion={} reason={}",
+                job.taskId(), job.jobId(), job.planVersion(), WorkerSkipReason.DEPENDENCY_FAILED);
     }
 
     private List<WorkerJobRow> completedDependencies(WorkerJobRow job,

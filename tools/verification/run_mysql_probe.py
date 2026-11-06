@@ -58,7 +58,7 @@ def run():
             env["SQUAD_TEST_MYSQL_PASSWORD"] = password
             return subprocess.run(["mvn", "-o", "-Daether.syncContext.named.factory=noop", "-f", str(root / "server/pom.xml"), "-pl", "agent-squad-server", "-am", "-Dtest=" + args.server_tests, "-Dsurefire.failIfNoSpecifiedTests=false", "test", "-q"], cwd=root, env=env).returncode
         return subprocess.run(["mvn", "-o", "-Daether.syncContext.named.factory=noop", "-f",
-                               str(root / "experiments/sdk-contract/pom.xml"),
+                               str(root / "tools/research-archive/sdk-contract/pom.xml"),
                                "-Dtest=SdkMySqlContractTest,RuntimeEventReceiptMySqlTest", "test", "-q"], cwd=root, env=env).returncode
     finally:
         if redis_started:
