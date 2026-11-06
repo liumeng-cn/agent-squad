@@ -280,6 +280,52 @@
           AND status = 'ACCEPTED'
     </update>
 
+    <update id="waiting">
+        UPDATE sq_task_directive
+        SET reason_code = #{reason},
+            reason_message = NULL
+        WHERE user_id = #{userId}
+          AND directive_id = #{directiveId}
+          AND status = 'ACCEPTED'
+          AND (reason_code IS NULL OR reason_code != #{reason})
+    </update>
+
+    <!-- 只读取本页来源消息的修改记录；不加行锁，也不派发协调命令。 -->
+    <select id="pageInConversation" resultMap="lockResult">
+        SELECT d.directive_id,
+            d.user_id,
+            d.conversation_id,
+            d.conversation_generation,
+            d.source_message_id,
+            d.source_scope_id,
+            d.task_id,
+            d.logical_key,
+            d.payload_hash,
+            d.expected_version,
+            d.expected_goal_revision,
+            d.kind,
+            d.content,
+            d.source_text,
+            d.artifact_ids_json,
+            d.status,
+            d.command_id,
+            d.applied_version,
+            d.applied_goal_revision,
+            d.reason_code,
+            d.reason_message
+        FROM sq_task_directive d
+        JOIN sq_message m ON m.user_id = d.user_id
+            AND m.conversation_id = d.conversation_id
+            AND m.message_id = d.source_message_id
+            AND m.del_flag = '0'
+        WHERE d.user_id = #{userId}
+          AND d.conversation_id = #{conversationId}
+          AND d.conversation_generation = #{generation}
+          AND d.del_flag = '0'
+          AND m.message_seq BETWEEN #{first} AND #{last}
+        ORDER BY d.id
+    </select>
+
     <update id="bindCommand">
         UPDATE sq_task_directive
         SET command_id = #{commandId}

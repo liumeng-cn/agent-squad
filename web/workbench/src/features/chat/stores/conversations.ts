@@ -2,7 +2,7 @@ import type { ModelSelection } from '../../../shared/api/modelsApi'
 import { defineStore } from 'pinia'
 import { decodeReplyPreview, type ReplyPreview } from './replyPreviews'
 import { decodeConversationDelta } from './conversationDeltas'
-import { chatSnapshot, conversationPage, renameConversation, retryAnswer, sendMessage, stopAnswer, type ChatExecution, type ChatTaskState, type ChatMessage, type ChatSnapshot, type ConversationEvent, type ConversationHeader, type MessageReceipt } from '../../../shared/api/chatApi'
+import { chatSnapshot, conversationPage, renameConversation, retryAnswer, sendMessage, stopAnswer, type TaskDirectiveView, type ChatExecution, type ChatTaskState, type ChatMessage, type ChatSnapshot, type ConversationEvent, type ConversationHeader, type MessageReceipt } from '../../../shared/api/chatApi'
 import { ApiError, errorMessage } from '../../../shared/api/http'
 import { deleteConversationApi } from '../../../shared/api/conversationsApi'
 import { cancelTaskApi } from '../../../shared/api/tasksApi'
@@ -22,6 +22,8 @@ const controlKeys = new Map<string, string>()
 const sequence = (cursor: string) => Number(cursor.split(':').at(-1) ?? 0)
 
 interface State {
+  directiveHistory: TaskDirectiveView[]
+  directiveWatermarks: Record<string, number>
   previews: Record<string, ReplyPreview>
   retiredPreviewStreams: string[]
   items: ConversationHeader[]
@@ -50,6 +52,7 @@ interface State {
 /** 会话消息是显示权威，刷新、翻页和断线只读，不重发历史请求。 */
 export const useConversationsStore = defineStore('conversations', {
   state: (): State => ({
+    directiveHistory: [], directiveWatermarks: {},
     previews: {}, retiredPreviewStreams: [],
     items: [], nextCursor: null, listLoading: false, listLoaded: false, listError: '',
     activeConversationId: null, snapshot: null, messages: [], executionHistory: [], taskHistory: [], nextBeforeSeq: null,
@@ -74,7 +77,7 @@ export const useConversationsStore = defineStore('conversations', {
       this.dispose(); listRevision++; this.$reset()
     },
     startDraft() {
-      this.dispose(); this.activeConversationId = null; this.snapshot = null; this.messages = []; this.executionHistory = []; this.taskHistory = []
+      this.dispose(); this.activeConversationId = null; this.snapshot = null; this.messages = []; this.executionHistory = []; this.taskHistory = []; this.directiveHistory = []; this.directiveWatermarks = {}
       this.nextBeforeSeq = null; this.historyExpanded = false; this.error = ''; this.actionError = ''; this.unavailable = false
       this.loading = false; this.submitting = false; this.controlling = null; this.draftRevision++
     },
@@ -103,7 +106,7 @@ export const useConversationsStore = defineStore('conversations', {
       finally { if (current === listRevision) this.listLoading = false }
     },
     async open(id: string) {
-      this.dispose(); this.activeConversationId = id; this.snapshot = null; this.messages = []; this.executionHistory = []; this.taskHistory = []
+      this.dispose(); this.activeConversationId = id; this.snapshot = null; this.messages = []; this.executionHistory = []; this.taskHistory = []; this.directiveHistory = []; this.directiveWatermarks = {}
       this.nextBeforeSeq = null; this.historyExpanded = false; this.error = ''; this.actionError = ''; this.unavailable = false
       this.submitting = false; this.controlling = null; this.loadingHistory = false; this.loading = true
       this.connection = 'connecting'
@@ -122,7 +125,19 @@ export const useConversationsStore = defineStore('conversations', {
       }
       this.messages = [...merged.values()].sort((a, b) => a.sequence - b.sequence)
     },
+    mergeDirectives(incoming: TaskDirectiveView[], watermark: number) {
+      const merged = new Map(this.directiveHistory.map(item => [item.directiveId, item]))
+      for (const item of incoming) {
+        const previous = merged.get(item.directiveId)
+        if ((this.directiveWatermarks[item.directiveId] ?? -1) > watermark) continue
+        // 已决定的要求不能被旧历史或重复受理事件改回等待。
+        if (previous && previous.status !== 'ACCEPTED' && item.status !== previous.status) continue
+        merged.set(item.directiveId, item); this.directiveWatermarks[item.directiveId] = watermark
+      }
+      this.directiveHistory = [...merged.values()]
+    },
     mergeHistoryStates(snapshot: ChatSnapshot) {
+      this.mergeDirectives(snapshot.directives ?? [], sequence(snapshot.cursor))
       const executions = new Map(this.executionHistory.map(item => [item.executionId, item]))
       for (const item of [...snapshot.executions, ...snapshot.activeExecutions]) {
         const previous = executions.get(item.executionId)
@@ -144,7 +159,9 @@ export const useConversationsStore = defineStore('conversations', {
         const snapshot = await chatSnapshot(id)
         if (current !== epoch || request !== snapshotRequest || id !== this.activeConversationId) return false
         if (sequence(snapshot.cursor) < seenSequence) return this.snapshot !== null
-        if (this.snapshot && snapshot.conversation.generation !== this.snapshot.conversation.generation) this.messages = []
+        if (this.snapshot && snapshot.conversation.generation !== this.snapshot.conversation.generation) {
+          this.messages = []; this.directiveHistory = []; this.directiveWatermarks = {}
+        }
         this.snapshot = snapshot; this.mergeMessages(snapshot.messages); this.mergeHistoryStates(snapshot)
         if (!this.historyExpanded) this.nextBeforeSeq = snapshot.nextBeforeSeq
         seenSequence = Math.max(seenSequence, sequence(snapshot.cursor))
@@ -156,7 +173,7 @@ export const useConversationsStore = defineStore('conversations', {
         if (current !== epoch || id !== this.activeConversationId) return false
         this.error = errorMessage(cause)
         if (cause instanceof ApiError && [401, 403, 404].includes(cause.code)) {
-          this.unavailable = true; this.snapshot = null; this.messages = []; this.executionHistory = []; this.taskHistory = []; stream?.close()
+          this.unavailable = true; this.snapshot = null; this.messages = []; this.executionHistory = []; this.taskHistory = []; this.directiveHistory = []; this.directiveWatermarks = {}; stream?.close()
         }
         return false
       }
@@ -180,6 +197,10 @@ export const useConversationsStore = defineStore('conversations', {
     applyEventPayload(event: ConversationEvent): boolean {
       const delta = decodeConversationDelta(event)
       if (delta) {
+        if (delta.type === 'directive.status_changed') {
+          this.mergeDirectives([delta.directive], event.sequence)
+          return true
+        }
         if (delta.type === 'plan.published' || delta.type === 'job.reused') {
           // 连续事件水位会触发对应步骤读取，不为计划通知重读整个会话。
           return true

@@ -11081,6 +11081,12 @@
             "items": {
               "$ref": "#/components/schemas/ConversationTaskState"
             }
+          },
+          "directives": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskDirectiveView"
+            }
           }
         },
         "required": [
@@ -11095,7 +11101,8 @@
           "cursor",
           "operationIds",
           "executions",
-          "taskStates"
+          "taskStates",
+          "directives"
         ],
         "description": "会话一致前缀；cursor 为 conversationId:generation:eventSeq，不能与 Task cursor 混用。",
         "x-implementation-status": "implemented-conversation-first-experience"
@@ -12188,6 +12195,196 @@
             }
           }
         ]
+      },
+      "TaskDirectiveView": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "directiveId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceMessageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACCEPTED",
+              "APPLIED",
+              "REJECTED"
+            ]
+          },
+          "waitReason": {
+            "type": "string",
+            "enum": [
+              "NONE",
+              "WAITING_SAFE_POINT",
+              "WAITING_OPERATION",
+              "WAITING_USER",
+              "WAITING_COORDINATOR",
+              "COORDINATING"
+            ]
+          },
+          "appliedVersion": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "nullable": true
+          },
+          "goalRevision": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "nullable": true
+          },
+          "reasonCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "reasonMessage": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "directiveId",
+          "taskId",
+          "sourceMessageId",
+          "status",
+          "waitReason",
+          "appliedVersion",
+          "goalRevision",
+          "reasonCode",
+          "reasonMessage"
+        ],
+        "description": "任务要求修改的公开处理状态；ACCEPTED尚未应用，等待原因来自实际协调检查。APPLIED才有应用版本。快照按来源消息分页，事件按连续会话sequence归并，不返回内部命令或材料原文。",
+        "oneOf": [
+          {
+            "properties": {
+              "status": {
+                "enum": [
+                  "ACCEPTED"
+                ]
+              },
+              "waitReason": {
+                "enum": [
+                  "WAITING_SAFE_POINT",
+                  "WAITING_OPERATION",
+                  "WAITING_USER",
+                  "WAITING_COORDINATOR",
+                  "COORDINATING"
+                ]
+              },
+              "appliedVersion": {
+                "enum": [
+                  null
+                ]
+              },
+              "goalRevision": {
+                "enum": [
+                  null
+                ]
+              }
+            }
+          },
+          {
+            "properties": {
+              "status": {
+                "enum": [
+                  "APPLIED"
+                ]
+              },
+              "waitReason": {
+                "enum": [
+                  "NONE"
+                ]
+              },
+              "appliedVersion": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "goalRevision": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "status": {
+                "enum": [
+                  "REJECTED"
+                ]
+              },
+              "waitReason": {
+                "enum": [
+                  "NONE"
+                ]
+              },
+              "appliedVersion": {
+                "enum": [
+                  null
+                ]
+              },
+              "goalRevision": {
+                "enum": [
+                  null
+                ]
+              },
+              "reasonCode": {
+                "type": "string",
+                "minLength": 1
+              },
+              "reasonMessage": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        ]
+      },
+      "TaskDirectiveChangedEvent": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ConversationEvent"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "directive.status_changed"
+                ]
+              },
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "schemaVersion": {
+                    "type": "integer",
+                    "enum": [
+                      2
+                    ]
+                  },
+                  "directive": {
+                    "$ref": "#/components/schemas/TaskDirectiveView"
+                  }
+                },
+                "required": [
+                  "schemaVersion",
+                  "directive"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "完整修改状态增量，旧载荷通过一致快照补读；不得将收到修改当成已经应用。"
       }
     }
   }

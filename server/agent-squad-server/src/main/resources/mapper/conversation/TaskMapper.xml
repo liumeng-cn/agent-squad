@@ -176,4 +176,12 @@
           AND (#{cursorId} IS NULL OR id &lt; #{cursorId})
         ORDER BY id DESC LIMIT #{limit}
     </select>
+    <select id="countStartedCommands" resultType="_int">
+        SELECT COUNT(*)
+        FROM sq_command
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+          AND action != 'STOP'
+          AND (delivery_attempts &gt; 0 OR native_turn_id IS NOT NULL)
+    </select>
 </mapper>

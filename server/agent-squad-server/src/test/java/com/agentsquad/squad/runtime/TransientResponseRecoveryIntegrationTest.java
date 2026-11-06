@@ -46,25 +46,27 @@ class TransientResponseRecoveryIntegrationTest {
                 body = "{\"error\":{\"message\":\"private-test-provider-detail\",\"type\":\"server_error\"}}";
             } else {
                 status = 200;
-                boolean hasProposal = request.path("messages").toString().contains("恢复后的回答");
-                if (!hasProposal) {
-                    String arguments = json.writeValueAsString(json.writeValueAsString(Map.of("outcome", "SUCCEEDED", "finalAnswer", "恢复后的回答")));
+                if (request.path("stream").asBoolean()) {
                     body = """
-                            {"id":"completion-%d","object":"chat.completion","created":1,"model":"test-model",
-                             "choices":[{"index":0,"message":{"role":"assistant","content":null,
-                               "tool_calls":[{"id":"call-%d","type":"function","function":{"name":"propose_completion","arguments":%s}}]},"finish_reason":"tool_calls"}],
-                             "usage":{"prompt_tokens":5,"completion_tokens":5,"total_tokens":10}}
-                            """.formatted(call, call, arguments);
+                            data: {"id":"completion-%d","choices":[{"index":0,"delta":{"content":"恢复后的回答"},"finish_reason":null}]}
+
+                            data: {"id":"completion-%d","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+                            data: {"id":"completion-%d","choices":[],"usage":{"prompt_tokens":5,"completion_tokens":5,"total_tokens":10}}
+
+                            data: [DONE]
+
+                            """.formatted(call, call, call);
                 } else {
                     body = """
                             {"id":"completion-%d","object":"chat.completion","created":1,"model":"test-model",
-                             "choices":[{"index":0,"message":{"role":"assistant","content":"回答已提交"},"finish_reason":"stop"}],
+                             "choices":[{"index":0,"message":{"role":"assistant","content":"恢复后的回答"},"finish_reason":"stop"}],
                              "usage":{"prompt_tokens":5,"completion_tokens":5,"total_tokens":10}}
                             """.formatted(call);
                 }
             }
             byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.getResponseHeaders().set("Content-Type", status == 200 && request.path("stream").asBoolean() ? "text/event-stream" : "application/json");
             exchange.sendResponseHeaders(status, bytes.length);
             try (var output = exchange.getResponseBody()) {
                 output.write(bytes);
@@ -83,7 +85,7 @@ class TransientResponseRecoveryIntegrationTest {
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             String status = awaitStatus(jdbc, message.executionId());
             assertThat(status).isEqualTo(exhaust ? "FAILED" : "SUCCEEDED");
-            assertThat(calls.get()).isEqualTo(3);
+            assertThat(calls.get()).isEqualTo(exhaust ? 3 : 2);
             String scope = jdbc.queryForObject("SELECT scope_id FROM sq_response_execution WHERE execution_id=?", String.class, message.executionId());
             assertThat(jdbc.queryForObject("SELECT service_retry_attempts FROM sq_execution_scope WHERE scope_id=?", Integer.class, scope)).isEqualTo(exhaust ? 2 : 1);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_reservation WHERE status='UNKNOWN'", Integer.class)).isEqualTo(exhaust ? 3 : 1);
@@ -98,7 +100,7 @@ class TransientResponseRecoveryIntegrationTest {
                 assertThat(awaitStatus(jdbc, successor.executionId())).isEqualTo("SUCCEEDED");
                 assertThat(jdbc.queryForObject("SELECT status FROM sq_response_execution WHERE execution_id=?", String.class, message.executionId())).isEqualTo("FAILED");
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_account", Integer.class)).isEqualTo(1);
-                assertThat(calls.get()).isEqualTo(5);
+                assertThat(calls.get()).isEqualTo(4);
             }
             assertThat(reads.snapshot(user, message.conversationId(), null, 40).messages()).anyMatch(item -> "恢复后的回答".equals(item.text()));
             assertThat(reads.snapshot(user, message.conversationId(), null, 40).failures()).isEmpty();

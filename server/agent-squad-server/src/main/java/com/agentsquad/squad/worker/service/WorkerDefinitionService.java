@@ -1,20 +1,20 @@
 package com.agentsquad.squad.worker.service;
 
+import com.agentsquad.squad.common.enums.identity.AccountRole;
+import com.agentsquad.squad.common.enums.worker.WorkerDefinitionStatus;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.common.enums.identity.AccountRole;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.JsonSchemaValidator;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.common.enums.worker.WorkerDefinitionStatus;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.worker.domain.WorkerDefinitionRow;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionCreateRequest;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionPage;
 import com.agentsquad.squad.worker.dto.WorkerDefinitionResponse;
 import com.agentsquad.squad.worker.dto.WorkerStatusUpdateRequest;
-import com.agentsquad.squad.worker.repository.WorkerDefinitionMapper;
 import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;
+import com.agentsquad.squad.worker.repository.WorkerDefinitionMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -97,9 +97,9 @@ public class WorkerDefinitionService {
      */
     public WorkerDefinitionPage list(String cursor, int limit) {
         long afterId = parseCursor(cursor);
-        int pageSize = Math.min(Math.max(limit, 1), 100);
+        int pageSize = Math.clamp(limit, 1, 100);
         List<WorkerDefinitionRow> rows = definitionMapper.listAfter(afterId, pageSize);
-        String nextCursor = rows.size() == pageSize ? String.valueOf(rows.get(rows.size() - 1).id()) : null;
+        String nextCursor = rows.size() == pageSize ? String.valueOf(rows.getLast().id()) : null;
         return new WorkerDefinitionPage(rows.stream().map(this::toResponse).toList(), nextCursor);
     }
 
@@ -108,7 +108,7 @@ public class WorkerDefinitionService {
      */
     public WorkerDefinitionPage listEnabled(String cursor, int limit) {
         long afterId = parseCursor(cursor);
-        int pageSize = Math.min(Math.max(limit, 1), 20);
+        int pageSize = Math.clamp(limit, 1, 20);
         List<WorkerDefinitionRow> rows = definitionMapper.listEnabledAfter(afterId, pageSize);
         String nextCursor = rows.size() == pageSize ? String.valueOf(rows.get(rows.size() - 1).id()) : null;
         return new WorkerDefinitionPage(rows.stream().map(this::toResponse).toList(), nextCursor);

@@ -56,4 +56,6 @@ public interface InteractionMapper {
 
     int countOpenByScopeKind(@Param("userId") String userId, @Param("scopeId") String scopeId,
                             @Param("kind") String kind);
+    int cancelOpenByTask(@Param("userId") String userId, @Param("taskId") String taskId);
+    int cancelOpenByScope(@Param("userId") String userId, @Param("scopeId") String scopeId);
 }

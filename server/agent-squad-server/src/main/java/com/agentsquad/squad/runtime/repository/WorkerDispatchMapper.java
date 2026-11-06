@@ -33,6 +33,9 @@ public interface WorkerDispatchMapper {
     int supersedeInFlight(@Param("userId") String userId,
                           @Param("bindingId") String bindingId);
 
+    int requestCancellation(@Param("userId") String userId, @Param("taskId") String taskId,
+                            @Param("now") LocalDateTime now);
+
     int markFailed(@Param("userId") String userId, @Param("bindingId") String bindingId);
 
     int markRecoveryBlocked(@Param("userId") String userId,

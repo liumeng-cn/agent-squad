@@ -6,7 +6,7 @@ import InteractionCard from '../../tasks/components/InteractionCard.vue'
 import OperationCard from './OperationCard.vue'
 import TaskSteps from './TaskSteps.vue'
 import { apiDownload, errorMessage } from '../../../shared/api/http'
-import type { ExecutionFailure } from '../../../shared/api/chatApi'
+import type { TaskDirectiveView, ExecutionFailure } from '../../../shared/api/chatApi'
 import type { Artifact } from '../../../shared/api/taskDetailsApi'
 import { statusText } from '../../../shared/lib/taskStatus'
 const chat = useConversationsStore()
@@ -25,6 +25,19 @@ const visibleMessages = computed(() => chat.messages.filter(message => {
 function failureText(failure: ExecutionFailure) {
   if (failure.status === 'RETRYING' || failure.actor !== 'SYSTEM' || failure.category === 'EXTERNAL_UNKNOWN') return failure.safeMessage
   return '回答服务暂时异常，未能完成这次回答。你的消息已保留。'
+}
+function directiveText(directive: TaskDirectiveView) {
+  if (directive.status === 'APPLIED') return '已应用你的修改，后续按新要求处理'
+  if (directive.status === 'REJECTED') return `这次修改未应用：${directive.reasonMessage || '请确认当前要求后再补充'}`
+  const waiting = {
+    NONE: '已收到修改，等待处理',
+    WAITING_SAFE_POINT: '已收到修改，等待合适的处理时机',
+    WAITING_OPERATION: '已收到修改，正在等待原操作结果，尚未应用',
+    WAITING_USER: '已收到修改，请先处理待确认事项，尚未应用',
+    WAITING_COORDINATOR: '已收到修改，等待当前处理结束后确认',
+    COORDINATING: '修改已排队，等待确认如何应用',
+  }
+  return waiting[directive.waitReason]
 }
 function originalText(failure: ExecutionFailure) {
   return chat.messages.find(message => message.messageId === failure.sourceMessageId && message.role === 'USER')?.text
@@ -72,6 +85,7 @@ function answerStatus(status: string) {
       <article v-for="message in visibleMessages" :key="message.messageId" class="chat-message" :class="message.role === 'USER' ? 'from-user' : 'from-assistant'">
         <template v-if="message.role === 'USER'">
           <div class="user-message-text">{{ message.text }}</div>
+          <small v-for="directive in chat.directiveHistory.filter(item => item.sourceMessageId === message.messageId)" :key="directive.directiveId" class="stopped-note" role="status">{{ directiveText(directive) }}</small>
           <small v-if="chat.executionHistory.some(item => item.sourceMessageId === message.messageId && item.status === 'CANCELLED')" class="stopped-note">回答已停止</small>
           <small v-if="chat.taskHistory.some(item => item.sourceMessageId === message.messageId && item.status === 'CANCELLED')" class="stopped-note">这项工作已停止</small>
           <div v-if="message.artifacts.length" class="message-files"><button v-for="file in message.artifacts" :key="file.artifactId" class="message-file" :disabled="downloading === file.artifactId" @click="download(file)"><span aria-hidden="true">▤</span>{{ file.fileName }}<span class="file-download" aria-hidden="true">↓</span></button></div>

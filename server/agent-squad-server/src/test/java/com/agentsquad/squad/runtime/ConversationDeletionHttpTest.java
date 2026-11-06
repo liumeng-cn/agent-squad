@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 /**
  * 会话删除 HTTP 边界测试：受理、幂等重放、版本冲突、删除后读取与提交屏障。
@@ -55,7 +56,7 @@ class ConversationDeletionHttpTest {
 
             mvc.perform(get("/api/v1/conversations/{conversationId}", conversationId)
                             .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN")))
-                    .andExpect(status().isNotFound());
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(404));
 
             var list = mvc.perform(get("/api/v1/conversations")
                             .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN")))
@@ -68,7 +69,7 @@ class ConversationDeletionHttpTest {
                             .header("Idempotency-Key", "late-task")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"message\":\"迟到的目标\"}"))
-                    .andExpect(status().isNotFound());
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(404));
         }
     }
 
@@ -116,7 +117,7 @@ class ConversationDeletionHttpTest {
                             .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
                             .header("Idempotency-Key", "delete-2")
                             .header("If-Match", "7"))
-                    .andExpect(status().isConflict());
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(409));
         }
     }
 }

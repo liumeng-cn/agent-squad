@@ -24,6 +24,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 /**
  * 回答停止与会话删除的HTTP归属验证。
@@ -46,7 +47,7 @@ class ResponseControlHttpTest {
             mvc.perform(post(path).header("Idempotency-Key", "stop")
                     .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")).andExpect(status().isUnauthorized());
             mvc.perform(post(path).with(TestAssertion.as(actor.view().userId(), "USER")).header("Idempotency-Key", "stale")
-                    .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":9}")).andExpect(status().isConflict());
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":9}")).andExpect(status().isOk()).andExpect(jsonPath("$.code").value(409));
             String first = mvc.perform(post(path).with(TestAssertion.as(actor.view().userId(), "USER")).header("Idempotency-Key", "stop")
                             .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")).andExpect(status().isAccepted())
                     .andReturn().getResponse().getContentAsString();
@@ -58,7 +59,7 @@ class ResponseControlHttpTest {
             assertThat(tasks.findTask(user, task).status()).isEqualTo("QUEUED");
             MessageTestActor other = new MessageTestActor(new com.agentsquad.squad.identity.AuthView(UUID.randomUUID().toString(), "other", java.util.List.of(AccountRole.USER), null));
             mvc.perform(post(path).with(TestAssertion.as(other.view().userId(), "USER")).header("Idempotency-Key", "foreign")
-                    .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")).andExpect(status().isNotFound());
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")).andExpect(status().isOk()).andExpect(jsonPath("$.code").value(404));
         }
     }
 

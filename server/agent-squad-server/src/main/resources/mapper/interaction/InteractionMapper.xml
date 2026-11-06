@@ -249,4 +249,22 @@
         SELECT COUNT(*) FROM sq_interaction WHERE user_id = #{userId} AND scope_id = #{scopeId}
             AND kind = #{kind} AND status = 'OPEN' AND del_flag = '0'
     </select>
+    <update id="cancelOpenByTask">
+        UPDATE sq_interaction
+        SET status = 'CANCELLED',
+            version = version + 1
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+          AND status = 'OPEN'
+          AND del_flag = '0'
+    </update>
+    <update id="cancelOpenByScope">
+        UPDATE sq_interaction
+        SET status = 'CANCELLED',
+            version = version + 1
+        WHERE user_id = #{userId}
+          AND scope_id = #{scopeId}
+          AND status = 'OPEN'
+          AND del_flag = '0'
+    </update>
 </mapper>

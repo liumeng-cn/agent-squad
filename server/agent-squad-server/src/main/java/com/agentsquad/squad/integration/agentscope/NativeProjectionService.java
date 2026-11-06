@@ -185,10 +185,13 @@ public class NativeProjectionService {
         if ("run/start".equals(event.type())) {
             publish(target, event, "job.run_started", Map.of("jobId", job.jobId()));
         } else if ("run/end".equals(event.type())) {
-            if (!"ACTIVE".equals(job.planStatus()) || job.cancelRequestedAt() != null) {
+            if (!"ACTIVE".equals(job.planStatus())) {
                 workerResultService.supersedeInFlight(target.userId(), target.bindingId());
                 publish(target, event, "job.run_ended", Map.of("jobId", job.jobId(),
                         "status", "SUPERSEDED"));
+            } else if (job.cancelRequestedAt() != null) {
+                // 任务取消与换计划不同；原生结束后仍由统一核对确认全部分支与外部效果。
+                publish(target, event, "job.run_ended", Map.of("jobId", job.jobId(), "status", "CANCELLING"));
             } else {
                 NativeRunOutcome outcome = NativeRunOutcome.fromCode(event.outcome());
                 boolean completed = outcome == NativeRunOutcome.COMPLETED

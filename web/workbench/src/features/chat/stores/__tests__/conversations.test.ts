@@ -15,6 +15,28 @@ describe('权威消息回放', () => {
       jobId: 'one', reusedFromJobId: 'old' } } as never)).toBe(true)
     expect(store.applyEventPayload({ type: 'job.reused', payload: { schemaVersion: 2, taskId: 'task', planVersion: 2 } } as never)).toBe(false)
   })
+  it('修改状态直接归位，旧历史不能覆盖新等待原因或已应用结果', () => {
+    const store = useConversationsStore()
+    const directive = { directiveId: 'change', taskId: 'task', sourceMessageId: 'user', status: 'ACCEPTED',
+      waitReason: 'WAITING_OPERATION', appliedVersion: null, goalRevision: null, reasonCode: null, reasonMessage: null }
+    expect(store.applyEventPayload({ type: 'directive.status_changed', sequence: 10,
+      payload: { schemaVersion: 2, directive } } as never)).toBe(true)
+    expect(store.directiveHistory[0]?.waitReason).toBe('WAITING_OPERATION')
+    store.mergeDirectives([{ ...directive, waitReason: 'WAITING_SAFE_POINT' }] as never, 9)
+    expect(store.directiveHistory[0]?.waitReason).toBe('WAITING_OPERATION')
+    expect(store.applyEventPayload({ type: 'directive.status_changed', sequence: 11,
+      payload: { schemaVersion: 2, directive: { ...directive, status: 'APPLIED', waitReason: 'NONE', appliedVersion: 2, goalRevision: 1 } } } as never)).toBe(true)
+    store.mergeDirectives([directive] as never, 12)
+    expect(store.directiveHistory[0]?.status).toBe('APPLIED')
+    store.startDraft()
+    expect(store.directiveHistory).toEqual([])
+  })
+  it('不完整或矛盾的修改事件必须重新同步，不能误报已经应用', () => {
+    const store = useConversationsStore()
+    expect(store.applyEventPayload({ type: 'directive.status_changed', sequence: 1,
+      payload: { schemaVersion: 2, directive: { directiveId: 'change', status: 'APPLIED' } } } as never)).toBe(false)
+    expect(store.directiveHistory).toEqual([])
+  })
   it('重复最终事件与快照只保留同一 messageId 一份', () => {
     const store = useConversationsStore()
     store.mergeMessages([message('final', 1)])

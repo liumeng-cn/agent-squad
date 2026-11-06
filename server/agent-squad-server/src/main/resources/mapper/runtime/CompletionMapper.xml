@@ -122,6 +122,84 @@
               AND i.task_id = #{taskId} AND i.status = 'OPEN')
     </update>
 
+    <select id="cancellationTargets" resultMap="com.agentsquad.squad.runtime.repository.ProjectionMapper.findDueTargetsResult">
+        SELECT user_id,
+            task_id,
+            binding_id,
+            agent_id,
+            framework_session_id,
+            native_event_cursor
+        FROM sq_runtime_binding
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+          AND del_flag = '0'
+        ORDER BY id
+    </select>
+
+    <select id="cancellingTasks" resultMap="com.agentsquad.squad.conversation.repository.TaskMapper.findOwnedResult">
+        SELECT id,
+            task_id,
+            user_id,
+            conversation_id,
+            status,
+            version,
+            plan_version,
+            answer_revision,
+            cancel_requested_at,
+            blocked_reason,
+            create_time,
+            last_update_time
+        FROM sq_goal_task
+        WHERE status = 'CANCELLING'
+          AND cancel_requested_at IS NOT NULL
+          AND id &gt; #{afterId}
+        ORDER BY id
+        LIMIT 20
+    </select>
+
+    <!-- 当前锁定读避免事务早先快照漏掉刚提交的外部操作。 -->
+    <select id="lockCancellationOperations" resultType="java.lang.String">
+        SELECT operation_id
+        FROM sq_operation
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+          AND status IN ('PREPARED', 'WAITING_APPROVAL', 'IN_FLIGHT', 'UNKNOWN', 'RECONCILING')
+        FOR UPDATE
+    </select>
+
+    <select id="lockCancellationSandboxes" resultType="java.lang.String">
+        SELECT x.execution_id
+        FROM sq_sandbox_execution x
+        JOIN sq_execution_scope s ON s.user_id = x.user_id AND s.scope_id = x.scope_id
+        WHERE s.user_id = #{userId}
+          AND s.kind = 'TASK'
+          AND s.owner_id = #{taskId}
+          AND x.status IN ('IN_FLIGHT', 'UNKNOWN')
+        FOR UPDATE
+    </select>
+
+    <select id="lockCancellationInteractions" resultType="java.lang.String">
+        SELECT interaction_id
+        FROM sq_interaction
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+          AND status = 'OPEN'
+        FOR UPDATE
+    </select>
+
+    <update id="cancelJobs">
+        UPDATE sq_worker_job
+        SET status = 'CANCELLED',
+            cancel_requested_at = COALESCE(cancel_requested_at, UTC_TIMESTAMP(3)),
+            guard_token = NULL,
+            guard_lease_until = NULL,
+            version = version + 1
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+          AND status IN ('BLOCKED', 'READY', 'RUNNING', 'RECOVERING', 'RECOVERY_BLOCKED',
+            'WAITING_INPUT', 'WAITING_APPROVAL', 'RECONCILING', 'CANCELLING')
+    </update>
+
     <update id="cancelTask">
         UPDATE sq_goal_task SET status = 'CANCELLED',
             version = version + 1

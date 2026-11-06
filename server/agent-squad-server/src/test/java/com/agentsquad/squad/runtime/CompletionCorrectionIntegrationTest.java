@@ -33,7 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Master 完成候选缺失的投影测试。
  * <p>
- * 使用持久 H2 库和原生事件视图验证一次纠正、再次缺失后的终态，以及取消意图优先级。
+ * 使用隔离 MySQL 库和原生事件视图验证一次纠正、再次缺失后的终态，以及取消意图优先级。
  */
 class CompletionCorrectionIntegrationTest {
 
@@ -253,6 +253,124 @@ class CompletionCorrectionIntegrationTest {
             assertThat(tasks.listEvents(USER_ID, target.taskId(), 0))
                     .extracting(item -> item.type())
                     .doesNotContain("task.recovery_blocked");
+        }
+    }
+
+    @Test
+    void cancellationWaitsForEveryWriterAndKeepsUnknownOperations(@TempDir Path directory) throws Exception {
+        try (var context = start(directory)) {
+            var target = createTask(context);
+            var jdbc = context.getBean(JdbcTemplate.class);
+            var bindings = context.getBean(BindingMapper.class);
+            String workerBinding = UUID.randomUUID().toString();
+            String workerAgent = UUID.randomUUID().toString().replace("-", "");
+            String workerSession = UUID.randomUUID().toString();
+            bindings.insertWorker(workerBinding, USER_ID, target.taskId(), workerAgent, workerSession, LocalDateTime.now(ZoneOffset.UTC));
+            var master = (io.agentscope.harness.agent.HarnessAgent) org.springframework.test.util.ReflectionTestUtils
+                    .getField(context.getBean(com.agentsquad.squad.agent.MasterAgent.class), "master");
+            var store = new io.agentscope.harness.agent.session.WorkspaceSessionLogStore(master.getWorkspaceManager());
+            var runtime = io.agentscope.core.agent.RuntimeContext.builder().userId(USER_ID).sessionId(workerSession).build();
+            var log = store.open(new io.agentscope.core.session.SessionKey(USER_ID, workerAgent, workerSession), runtime);
+            var writer = log.acquire("other-node", java.time.Duration.ofSeconds(30));
+            var operation = context.getBean(com.agentsquad.squad.tools.operation.OperationService.class).prepare(
+                    new com.agentsquad.squad.tools.operation.PrepareRequest(USER_ID, target.sessionId(), "turn", "write",
+                            "mock_ticket_create", "v1", "WRITE", java.util.Map.of("title", "test"), "stable", false, null, 0, 1, "tester"));
+            var unstarted = context.getBean(com.agentsquad.squad.tools.operation.OperationService.class).prepare(
+                    new com.agentsquad.squad.tools.operation.PrepareRequest(USER_ID, target.sessionId(), "turn", "write-not-started",
+                            "mock_ticket_create", "v1", "WRITE", java.util.Map.of("title", "next"), "another", false, null, 0, 1, "tester"));
+            var interaction = context.getBean(com.agentsquad.squad.interaction.service.InteractionService.class).bindFrameworkRequest(
+                    USER_ID, target.taskId(), target.bindingId(), null, "turn", "input-request",
+                    java.util.Map.of("name", "request_input", "input", java.util.Map.of("question", "请确认要求")));
+            jdbc.update("UPDATE sq_operation SET status='UNKNOWN' WHERE operation_id=?", operation.operationId());
+            var control = context.getBean(TaskControlService.class);
+            var receipt = control.cancel(USER_ID, target.taskId(), "stop-all", 0);
+            assertThat(control.cancel(USER_ID, target.taskId(), "stop-all", 0)).isEqualTo(receipt);
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> control.cancel(USER_ID, target.taskId(), "another-stop", 1))
+                    .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
+            assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id=?", String.class, unstarted.operationId())).isEqualTo("CANCELLED");
+            assertThat(jdbc.queryForObject("SELECT status FROM sq_budget_reservation WHERE user_id=? AND usage_key=?", String.class,
+                    USER_ID, unstarted.budgetUsageKey())).isEqualTo("SETTLED");
+            assertThat(jdbc.queryForObject("SELECT settled_units FROM sq_budget_reservation WHERE user_id=? AND usage_key=?", Long.class,
+                    USER_ID, unstarted.budgetUsageKey())).isZero();
+            assertThat(jdbc.queryForObject("SELECT status FROM sq_interaction WHERE interaction_id=?", String.class, interaction.interactionId())).isEqualTo("CANCELLED");
+            var conversation = context.getBean(ConversationMapper.class).findOwned(USER_ID,
+                    context.getBean(GoalTaskService.class).findTask(USER_ID, target.taskId()).conversationId());
+            context.getBean(com.agentsquad.squad.conversation.service.ConversationDeletionService.class)
+                    .delete(USER_ID, conversation.conversationId(), "delete-while-stopping", conversation.version());
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_command WHERE task_id=? AND action='STOP' AND status='CANCELLED'", Long.class, target.taskId())).isZero();
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_command WHERE task_id=? AND action='STOP'", Long.class, target.taskId())).isEqualTo(2);
+            var finalizer = context.getBean(com.agentsquad.squad.runtime.service.TaskFinalizerService.class);
+            finalizer.finalizeCancelledTask(USER_ID, target.taskId());
+            assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.taskId()).status()).isEqualTo("CANCELLING");
+            assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id=?", String.class, operation.operationId())).isEqualTo("UNKNOWN");
+            jdbc.update("UPDATE sq_operation SET status='SUCCEEDED' WHERE operation_id=?", operation.operationId());
+            finalizer.finalizeCancelledTask(USER_ID, target.taskId());
+            assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.taskId()).status()).isEqualTo("CANCELLING");
+            jdbc.update("UPDATE sq_operation SET status='UNKNOWN' WHERE operation_id=?", operation.operationId());
+            String workerStop = jdbc.queryForObject("SELECT command_id FROM sq_command WHERE binding_id=? AND action='STOP'", String.class, workerBinding);
+            context.getBean(com.agentsquad.squad.integration.agentscope.CommandDeliveryService.class).deliver(workerStop);
+            assertThat(context.getBean(CommandMapper.class).findOwned(USER_ID, workerStop).nativeStatus()).isEqualTo("no-active-run");
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_worker_job WHERE task_id=?", Long.class, target.taskId())).isZero();
+            log.release(writer);
+            finalizer.finalizeCancelledTask(USER_ID, target.taskId());
+            assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.taskId()).status()).isEqualTo("CANCELLING");
+            // 夹具模拟核对完成；生产环境必须由操作账本的核对服务提供该事实。
+            jdbc.update("UPDATE sq_operation SET status='SUCCEEDED' WHERE operation_id=?", operation.operationId());
+            String sandbox = UUID.randomUUID().toString();
+            String scopeId = jdbc.queryForObject("SELECT scope_id FROM sq_goal_task WHERE task_id=?", String.class, target.taskId());
+            jdbc.update("INSERT INTO sq_sandbox_execution (execution_id,user_id,scope_id,binding_id,logical_key,turn_id,tool_call_id,request_hash,status,deadline_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    sandbox, USER_ID, scopeId, target.bindingId(), "sandbox", "turn", "sandbox-call", "a".repeat(64), "UNKNOWN", LocalDateTime.now(ZoneOffset.UTC).plusMinutes(1));
+            finalizer.finalizeCancelledTask(USER_ID, target.taskId());
+            assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.taskId()).status()).isEqualTo("CANCELLING");
+            assertThat(jdbc.queryForObject("SELECT status FROM sq_sandbox_execution WHERE execution_id=?", String.class, sandbox)).isEqualTo("UNKNOWN");
+            jdbc.update("UPDATE sq_sandbox_execution SET status='SUCCEEDED' WHERE execution_id=?", sandbox);
+            context.getBean(com.agentsquad.squad.runtime.service.CancellationSettlementScheduler.class).settle();
+            assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.taskId()).status()).isEqualTo("CANCELLED");
+            assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id=?", String.class, operation.operationId())).isEqualTo("SUCCEEDED");
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_worker_job WHERE task_id=?", Long.class, target.taskId())).isZero();
+        }
+    }
+
+    @Test
+    void cancellationFencesAndStopsEveryJobWithoutStartingNewWork(@TempDir Path directory) throws Exception {
+        try (var context = start(directory)) {
+            var target = createTask(context);
+            var jdbc = context.getBean(JdbcTemplate.class);
+            var json = context.getBean(com.fasterxml.jackson.databind.ObjectMapper.class);
+            String key = "writer-" + UUID.randomUUID();
+            context.getBean(com.agentsquad.squad.worker.service.WorkerDefinitionService.class).publish(
+                    new com.agentsquad.squad.identity.AuthView(USER_ID, "admin", java.util.List.of(com.agentsquad.squad.common.enums.identity.AccountRole.ADMIN), null), key,
+                    new com.agentsquad.squad.worker.dto.WorkerDefinitionCreateRequest(key, "1.0.0", "写作", json.readTree("{}"), json.readTree("{}"), java.util.List.of(), "default", "default"));
+            var snapshots = context.getBean(com.agentsquad.squad.runtime.service.ContextSnapshotService.class);
+            String one = snapshots.prepare(USER_ID, target.sessionId(), "one", "one").snapshotId();
+            String two = snapshots.prepare(USER_ID, target.sessionId(), "two", "two").snapshotId();
+            var plan = context.getBean(com.agentsquad.squad.runtime.service.PlanService.class).publish(USER_ID, target.sessionId(),
+                    new com.agentsquad.squad.runtime.dto.PlanPublish("plan", 0, java.util.List.of(
+                            new com.agentsquad.squad.runtime.dto.PlanNode("one", key, "1.0.0", "分析一", one, java.util.List.of(), true, 1),
+                            new com.agentsquad.squad.runtime.dto.PlanNode("two", key, "1.0.0", "分析二", two, java.util.List.of(), true, 1)), "ALL_REQUIRED", java.util.List.of("完成")));
+            String firstBinding = jdbc.queryForObject("SELECT binding_id FROM sq_worker_job WHERE job_id=?", String.class, plan.jobIds().getFirst());
+            String secondBinding = jdbc.queryForObject("SELECT binding_id FROM sq_worker_job WHERE job_id=?", String.class, plan.jobIds().getLast());
+            var dispatch = context.getBean(com.agentsquad.squad.runtime.service.WorkerDispatchService.class);
+            var claimed = dispatch.claim(USER_ID, firstBinding);
+            long version = context.getBean(TaskMapper.class).findOwned(USER_ID, target.taskId()).version();
+            context.getBean(TaskControlService.class).cancel(USER_ID, target.taskId(), "stop-jobs", version);
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> dispatch.renew(USER_ID, firstBinding, claimed.guardToken()))
+                    .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> dispatch.claim(USER_ID, secondBinding))
+                    .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
+            var stops = jdbc.queryForList("SELECT command_id FROM sq_command WHERE task_id=? AND action='STOP' ORDER BY id", String.class, target.taskId());
+            assertThat(stops).hasSize(3);
+            var delivery = context.getBean(com.agentsquad.squad.integration.agentscope.CommandDeliveryService.class);
+            for (String command : stops) {
+                delivery.deliver(command);
+                assertThat(context.getBean(CommandMapper.class).findOwned(USER_ID, command).nativeStatus()).isEqualTo("no-active-run");
+            }
+            assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.taskId()).status()).isEqualTo("CANCELLED");
+            assertThat(jdbc.queryForList("SELECT status FROM sq_worker_job WHERE task_id=? ORDER BY id", String.class, target.taskId()))
+                    .containsExactly("CANCELLED", "CANCELLED");
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_reservation WHERE user_id=?", Long.class, USER_ID)).isZero();
+            assertThat(context.getBean(GoalTaskService.class).listEvents(USER_ID, target.taskId(), 0).stream()
+                    .filter(event -> event.type().equals("task.completed"))).hasSize(1);
         }
     }
 

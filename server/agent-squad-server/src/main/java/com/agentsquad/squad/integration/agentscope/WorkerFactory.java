@@ -104,6 +104,9 @@ public class WorkerFactory {
 
     private final Map<String, WorkerAgentHandle> active = new ConcurrentHashMap<>();
 
+    @Resource
+    private LocalSessionStopper localSessions;
+
     private AbstractJdbcDialect dialect;
 
     /**
@@ -163,7 +166,7 @@ public class WorkerFactory {
         allowedTools.add("report_job_result");
         context.put(com.agentsquad.squad.skill.integration.ScopeSkillCapabilities.class,
                 new com.agentsquad.squad.skill.integration.ScopeSkillCapabilities(allowedTools));
-        return handle.agent().session(context);
+        return localSessions.register(userId, bindingId, handle.agent().session(context));
     }
 
     private JsonNode readInput(String value) {

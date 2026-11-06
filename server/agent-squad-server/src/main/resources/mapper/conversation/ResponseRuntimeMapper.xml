@@ -218,4 +218,19 @@
         WHERE r.user_id = #{userId}
           AND b.framework_session_id = #{sessionId}
     </select>
+    <select id="cancellationTargets" resultMap="com.agentsquad.squad.runtime.repository.ProjectionMapper.findDueTargetsResult">
+        SELECT b.user_id,
+            b.task_id,
+            b.binding_id,
+            b.agent_id,
+            b.framework_session_id,
+            b.native_event_cursor
+        FROM sq_response_execution r
+        JOIN sq_runtime_binding b ON b.user_id = r.user_id AND b.binding_id = r.binding_id
+        WHERE r.cancel_requested_at IS NOT NULL
+          AND r.status IN ('CANCELLING', 'RECONCILING')
+          AND b.binding_id &gt; #{afterBinding}
+        ORDER BY b.binding_id
+        LIMIT 20
+    </select>
 </mapper>

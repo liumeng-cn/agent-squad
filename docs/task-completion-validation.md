@@ -40,3 +40,19 @@ GoalTaskNativeCreationIntegrationTest 的 HTTP 桩原先未适配普通回复流
 - 最后补充可选工作标记后，PlanAcceptanceIntegrationTest、PlanPublishIntegrationTest、MultiWorkerExecutionIntegrationTest 共 7 项再次通过；前端 37 项及构建再次通过。当前后端打包通过。接口 19 个正例、13 个反例通过；OpenSpec strict、运行安全和差异空白检查通过。临时容器与浏览器代理均已停止，根目录未重新创建 experiments。
 
 整个仓库的 `check_design.py` 尚有历史基线问题：manifest 的表数量与当前 schema 不一致，且后续检查依赖已删除的旧规范。没有删断言或降低要求来冒充通过。接口正反例、OpenSpec 变更校验、运行安全检查和业务测试分别验证，不将本阶段等同于全量发布准入。
+
+
+## 2026-11-06 修改反馈与取消收尾
+
+本轮沿原主线实现，不恢复已删除的 recovery-and-streaming-plan.md，不改变消息提交与会话 SSE 的交互方式。
+
+- 6.1 完成：快照与完整事件公开修改处理状态、等待原因、来源消息及实际应用版本；页面在原消息下简短显示，旧快照/历史不能覆盖新状态，未新增消息卡片。隔离 MySQL 验证并发修改只应用一个、拒绝陈旧目标、回滚、停止后拒绝、读取不派发及旧计划隔离。
+- 6.3 推进但不勾选：取消意图覆盖全部绑定、立即阻止 Worker guard 继续领取/续租、关闭未派发工具与开放交互。已知未派发工具按零消耗结算，未知收费和已有结算保留。SDK 控制入口不启动会话或领取 Worker。
+- 真实 SDK 实验先复现仅发 interrupt 时双 Worker 停在 CANCELLING；补本进程实际执行登记，通过公开 AgentSession.close 合作等待约十秒后取消阻塞运行。后台独立核对 SDK 写入者、操作与沙箱事实，确认后才结束取消；删除复用停止路径，已有停止命令不因删除而被撤销。
+- 取消核对采用会话→所有者锁序与当前锁定读，避免旧事务快照漏掉新提交操作；补查分页轮转，未知操作不能长期挤占前二十条，回复与目标分别处理。
+- 本轮最终后端选定 12 类共 49 项通过、0失败、0错误、0跳过。包括真实 SDK 双 Worker 网络阻塞取消、阻塞回答取消、纯控制不启动工作、远端 writer 租约与未知操作/沙箱阻止提前终态、已发生写入不撤销、显式重试预算继承、并行汇总和重启恢复。模型请求均为本地 HTTP 桩；外部结果核对部分为明确夹具，不冒充真实外部系统或跨机器验收。
+- 前端 38 项 Vitest + 2 项 Node 测试通过，生产构建通过；OpenAPI 21 个有效和 15 个无效样例符合预期，Mapper XML、运行安全检查及 diff 检查通过。
+- 全量 check_design.py 仍在原有 plannedBusinessTableCount 与实际表数不一致处失败；未降低或绕过门禁。SDK 在阻塞请求取消时仍有 onErrorDropped ERROR 噪声，未全局屏蔽真实错误，日志治理仍未完成。
+- 本轮完成进度 10/46，不能宣称主线全完成。真实多进程取消竞争、完整页面核对动作及真实模型复杂场景仍需验收。现有 SSE 异步鉴权、EOF 错误分类、逐字渲染问题保持在问题记录中。
+
+本地验证日志：/tmp/squad-controls-closure.log、/tmp/squad-final-web.log、/tmp/squad-final-web-build.log。完整交互图见 [复杂聊天交互](complex-chat-interaction.md)。当前业务服务未因本轮改动重新启动；不将磁盘代码和隔离测试视为当前页面已经运行新版本。

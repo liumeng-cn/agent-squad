@@ -48,6 +48,19 @@ export interface ExecutionFailure {
   nextAttemptAt: string | null
   allowedActions: string[]
 }
+export type TaskDirectiveStatus = 'ACCEPTED' | 'APPLIED' | 'REJECTED'
+export type TaskDirectiveWaitReason = 'NONE' | 'WAITING_SAFE_POINT' | 'WAITING_OPERATION' | 'WAITING_USER' | 'WAITING_COORDINATOR' | 'COORDINATING'
+export interface TaskDirectiveView {
+  directiveId: string
+  taskId: string
+  sourceMessageId: string
+  status: TaskDirectiveStatus
+  waitReason: TaskDirectiveWaitReason
+  appliedVersion: number | null
+  goalRevision: number | null
+  reasonCode: string | null
+  reasonMessage: string | null
+}
 export interface ChatSnapshot {
   conversation: ConversationHeader
   messages: ChatMessage[]
@@ -59,6 +72,7 @@ export interface ChatSnapshot {
   failures: ExecutionFailure[]
   operationIds: string[]
   executions: ChatExecution[]
+  directives: TaskDirectiveView[]
   taskStates: ChatTaskState[]
   cursor: string
 }

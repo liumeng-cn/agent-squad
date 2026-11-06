@@ -206,6 +206,22 @@ public class BudgetService {
         }
     }
 
+    /** 未派发工具经账本确认取消后按零消耗结算；未知收费和已有结算不撤销。 */
+    @Transactional
+    public void releaseUnsentTool(String userId, String scopeId, String usageKey) {
+        lockBudget(userId, scopeId, false);
+        BudgetReservationRow row = budgetMapper.findReservation(userId, scopeId, usageKey);
+        if (row == null) {
+            return;
+        }
+        if ("MODEL".equals(row.kind())) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "工具取消不能修改模型预算");
+        }
+        if ("RESERVED".equals(row.status()) && budgetMapper.settle(userId, scopeId, usageKey, 0) != 1) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "未派发工具预算状态已变化");
+        }
+    }
+
     /**
      * 核对确认成功后按原工具预留额出账；预留缺失或状态不匹配时拒绝，不能无账结算。
      */

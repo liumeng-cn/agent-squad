@@ -71,6 +71,15 @@ public final class CommittedSessionReader {
         return new AgentSession.Task(latest.id(), latest.turnId(), runId, status.nativeValue(), null);
     }
 
+    /** 日志写入者已释放或失效才可认定静止；发出 interrupt 本身不等于运行已经停止。 */
+    public boolean quiescent(String userId, String agentId, String sessionId) {
+        var log = open(userId, agentId, sessionId);
+        var head = log.head();
+        var inbox = new SessionInbox(log).snapshot();
+        return inbox.runId() == null
+                && (head.owner() == null || head.leaseUntil() <= System.currentTimeMillis());
+    }
+
     private SessionLog open(String userId, String agentId, String sessionId) {
         if (userId == null || userId.isBlank()) {
             throw new IllegalArgumentException("必须指定日志归属用户");

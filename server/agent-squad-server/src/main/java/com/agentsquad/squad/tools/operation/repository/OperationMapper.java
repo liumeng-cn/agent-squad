@@ -91,4 +91,6 @@ public interface OperationMapper {
                               @Param("updaterId") String updaterId);
 
     List<String> findUncertainInConversation(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    int cancelUnstartedByScope(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    java.util.List<OperationRow> lockUnstartedInScope(@Param("userId") String userId, @Param("scopeId") String scopeId);
 }

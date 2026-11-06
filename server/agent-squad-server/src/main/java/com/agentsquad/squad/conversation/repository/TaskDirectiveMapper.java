@@ -33,6 +33,14 @@ public interface TaskDirectiveMapper {
 
     int defer(@Param("userId") String userId, @Param("directiveId") String directiveId, @Param("next") LocalDateTime next);
 
+    int waiting(@Param("userId") String userId, @Param("directiveId") String directiveId,
+                @Param("reason") com.agentsquad.squad.common.enums.conversation.TaskDirectiveWaitReason reason);
+
+    List<TaskDirectiveRow> pageInConversation(@Param("userId") String userId,
+                                              @Param("conversationId") String conversationId,
+                                              @Param("generation") long generation,
+                                              @Param("first") long first, @Param("last") long last);
+
     int bindCommand(@Param("userId") String userId, @Param("directiveId") String directiveId, @Param("commandId") String commandId);
 
     int finish(@Param("userId") String userId, @Param("directiveId") String directiveId,

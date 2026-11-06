@@ -52,6 +52,18 @@ public class TaskControlService {
     private BindingMapper bindingMapper;
 
     @Resource
+    private com.agentsquad.squad.tools.operation.OperationService operations;
+
+    @Resource
+    private com.agentsquad.squad.interaction.repository.InteractionMapper interactions;
+
+    @Resource
+    private WorkerDispatchMapper workerDispatch;
+
+    @Resource
+    private ExecutionScopeService executionScopes;
+
+    @Resource
     private ObjectMapper objectMapper;
 
     /**
@@ -75,8 +87,8 @@ public class TaskControlService {
             }
             return toReceipt(prior);
         }
-        if (GoalTaskStatus.valueOf(task.status()).isTerminal()) {
-            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已结束，不可取消");
+        if (GoalTaskStatus.valueOf(task.status()).isTerminal() || task.cancelRequestedAt() != null) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标正在停止或已结束，不可重复取消");
         }
         if (task.version() != expectedVersion) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标版本已变化");
@@ -86,10 +98,27 @@ public class TaskControlService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标版本已变化");
         }
         commandMapper.cancelPendingByTask(userId, taskId);
+        workerDispatch.requestCancellation(userId, taskId, now);
+        operations.cancelUnstarted(userId, executionScopes.scopeForTask(userId, taskId));
+        interactions.cancelOpenByTask(userId, taskId);
         String commandId = UUID.randomUUID().toString();
         String bindingId = requireMasterBinding(userId, taskId);
         commandMapper.insertControl(commandId, userId, scopeKey, idempotencyKey, payloadHash,
                 taskId, bindingId, RuntimeCommandAction.STOP.name(), payloadJson, now);
+        for (String workerBinding : bindingMapper.taskBindingIds(userId, taskId)) {
+            if (!workerBinding.equals(bindingId)) {
+                commandMapper.insertControl(UUID.randomUUID().toString(), userId,
+                        "task.cancel.binding:" + taskId + ":" + workerBinding, idempotencyKey, payloadHash,
+                        taskId, workerBinding, RuntimeCommandAction.STOP.name(), payloadJson, now);
+            }
+        }
+        if (projectionMapper.reserveEventSequence(userId, taskId) != 1) {
+            throw new IllegalStateException("取消进度事件序号保留失败");
+        }
+        conversationProjection.insertProjected(userId, taskId, projectionMapper.eventSequence(userId, taskId),
+                "cancel:" + commandId + ":accepted", "task.cancelling",
+                RuntimePayloads.toJson(objectMapper, Map.of("status", GoalTaskStatus.CANCELLING.name(),
+                        "version", task.version() + 1)), now);
         log.info("取消命令受理成功 taskId={} commandId={} userId={}", taskId, commandId, userId);
         return new CommandReceipt(commandId, taskId, RuntimeCommandStatus.PENDING.name(), null, null);
     }

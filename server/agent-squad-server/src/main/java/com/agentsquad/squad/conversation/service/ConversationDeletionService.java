@@ -10,7 +10,6 @@ import com.agentsquad.squad.conversation.domain.ConversationStatus;
 import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
 import com.agentsquad.squad.conversation.domain.RuntimeCommandAction;
 import com.agentsquad.squad.conversation.domain.TaskRow;
-import com.agentsquad.squad.conversation.repository.BindingMapper;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.conversation.repository.TaskEventMapper;
@@ -44,6 +43,12 @@ public class ConversationDeletionService {
     private TaskEventPublishingService conversationProjection;
 
     @Resource
+    private TaskControlService taskControls;
+
+    @Resource
+    private com.agentsquad.squad.runtime.repository.CompletionMapper completion;
+
+    @Resource
     private ResponseControlService responseControls;
 
     @Resource
@@ -51,9 +56,6 @@ public class ConversationDeletionService {
 
     @Resource
     private TaskMapper taskMapper;
-
-    @Resource
-    private BindingMapper bindingMapper;
 
     @Resource
     private CommandMapper commandMapper;
@@ -70,7 +72,7 @@ public class ConversationDeletionService {
     /**
      * 受理删除：锁会话行校验版本，置 DELETING 并处理在途目标。
      *
-     * <p>QUEUED 目标尚未被原生会话受理，撤销未送达命令后直接平台终态；
+     * <p>只有没有投递尝试、计划和未决操作的排队目标才能直接结束；
      * 运行中目标写停止命令，由原生投影收尾。任何失败整体回滚。</p>
      */
     @Transactional
@@ -121,8 +123,14 @@ public class ConversationDeletionService {
             conversationMapper.clearActiveTask(userId, conversationId, taskId);
             return;
         }
+        if (task.cancelRequestedAt() != null) {
+            // 已受理的停止命令继续执行，删除不能撤销这些命令再重新创建一组。
+            return;
+        }
         commandMapper.cancelPendingByTask(userId, taskId);
-        if (GoalTaskStatus.QUEUED.name().equals(task.status())) {
+        if (GoalTaskStatus.QUEUED.name().equals(task.status()) && task.planVersion() == 0
+                && taskMapper.countStartedCommands(userId, taskId) == 0
+                && completion.countPendingEffects(userId, taskId) == 0) {
             if (taskMapper.updateCancelled(userId, taskId, now) != 1) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标状态已变化");
             }
@@ -131,15 +139,7 @@ public class ConversationDeletionService {
             log.info("未受理目标随删除就地取消 taskId={} conversationId={}", taskId, conversationId);
             return;
         }
-        if (taskMapper.updateCancelling(userId, taskId, task.version(), now) != 1) {
-            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标状态已变化");
-        }
-        String stopPayload = RuntimePayloads.toJson(objectMapper,
-                Map.of("action", RuntimeCommandAction.STOP.name()));
-        commandMapper.insertControl(UUID.randomUUID().toString(), userId, "task.cancel:" + taskId,
-                "conversation-delete", ContentDigests.sha256(stopPayload), taskId,
-                bindingMapper.findMasterBindingId(userId, taskId), RuntimeCommandAction.STOP.name(),
-                stopPayload, now);
+        taskControls.cancel(userId, taskId, "conversation-delete", task.version());
     }
 
     private void publishTaskCompleted(String userId, String taskId, String status, LocalDateTime now) {

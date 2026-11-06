@@ -39,6 +39,8 @@ public interface TaskMapper {
 
     String findInputJson(@Param("userId") String userId, @Param("taskId") String taskId);
 
+    int countStartedCommands(@Param("userId") String userId, @Param("taskId") String taskId);
+
     int updateCancelling(@Param("userId") String userId, @Param("taskId") String taskId,
                          @Param("expectedVersion") long expectedVersion,
                          @Param("cancelledAt") LocalDateTime cancelledAt);

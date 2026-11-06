@@ -51,6 +51,9 @@ public class TaskFinalizerService {
     private static final String MISSING_PROPOSAL_ANSWER = "本次目标未能生成有效的最终回答，请重新发起。";
 
     @Resource
+    private com.agentsquad.squad.integration.agentscope.NativeSessionGateway nativeGateway;
+
+    @Resource
     private ExecutionFailureService failures;
 
     @Resource
@@ -324,12 +327,23 @@ public class TaskFinalizerService {
     }
 
     private boolean finalizeCancelled(String userId, String taskId, String producerKey) {
+        scopes.lockOwned(userId, scopes.scopeForTask(userId, taskId), false);
         FinalizationRow row = completionMapper.lockTask(userId, taskId);
         if (row == null || !row.cancellationRequested()
                 || !GoalTaskStatus.RUNNING.name().equals(row.status())
                 && !GoalTaskStatus.CANCELLING.name().equals(row.status())) {
             return false;
         }
+        if (!completionMapper.lockCancellationOperations(userId, taskId).isEmpty()
+                || !completionMapper.lockCancellationSandboxes(userId, taskId).isEmpty()
+                || !completionMapper.lockCancellationInteractions(userId, taskId).isEmpty()) {
+            return false;
+        }
+        var targets = completionMapper.cancellationTargets(userId, taskId);
+        if (targets.isEmpty() || targets.stream().anyMatch(target -> !nativeGateway.quiescent(target))) {
+            return false;
+        }
+        completionMapper.cancelJobs(userId, taskId);
         if (completionMapper.cancelTask(row.userId(), row.taskId()) != 1) {
             return false;
         }

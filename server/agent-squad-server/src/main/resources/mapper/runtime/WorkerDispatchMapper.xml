@@ -133,4 +133,15 @@
             version = version + 1
         WHERE user_id = #{userId} AND binding_id = #{bindingId} AND status = 'RUNNING'
     </update>
+    <update id="requestCancellation">
+        UPDATE sq_worker_job
+        SET cancel_requested_at = #{now},
+            status = 'CANCELLING',
+            version = version + 1
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+          AND cancel_requested_at IS NULL
+          AND status IN ('BLOCKED', 'READY', 'RUNNING', 'RECOVERING', 'RECOVERY_BLOCKED',
+            'WAITING_INPUT', 'WAITING_APPROVAL', 'RECONCILING', 'CANCELLING')
+    </update>
 </mapper>

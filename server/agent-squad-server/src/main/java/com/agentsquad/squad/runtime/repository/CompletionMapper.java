@@ -28,6 +28,19 @@ public interface CompletionMapper {
                      @Param("outcome") String outcome, @Param("planVersion") long planVersion,
                      @Param("answerRevision") long answerRevision);
 
+    java.util.List<com.agentsquad.squad.runtime.domain.ProjectionTarget> cancellationTargets(
+            @Param("userId") String userId, @Param("taskId") String taskId);
+
+    java.util.List<com.agentsquad.squad.conversation.domain.TaskRow> cancellingTasks(@Param("afterId") long afterId);
+
+    java.util.List<String> lockCancellationOperations(@Param("userId") String userId, @Param("taskId") String taskId);
+
+    java.util.List<String> lockCancellationSandboxes(@Param("userId") String userId, @Param("taskId") String taskId);
+
+    java.util.List<String> lockCancellationInteractions(@Param("userId") String userId, @Param("taskId") String taskId);
+
+    int cancelJobs(@Param("userId") String userId, @Param("taskId") String taskId);
+
     int cancelTask(@Param("userId") String userId, @Param("taskId") String taskId);
 
     int markCorrectionRequested(@Param("userId") String userId, @Param("taskId") String taskId);

@@ -483,4 +483,44 @@
               WHERE user_id = #{userId} AND scope_id = #{scopeId})
         FOR UPDATE
     </select>
+    <update id="cancelUnstartedByScope">
+        UPDATE sq_operation
+        SET status = 'CANCELLED',
+            version = version + 1
+        WHERE user_id = #{userId}
+          AND scope_id = #{scopeId}
+          AND status IN ('PREPARED', 'WAITING_APPROVAL')
+          AND del_flag = '0'
+    </update>
+    <select id="lockUnstartedInScope" resultMap="findOwnedResult">
+        SELECT operation_id,
+            user_id,
+            task_id,
+            job_id,
+            binding_id,
+            framework_turn_id,
+            tool_call_id,
+            tool_key,
+            tool_version,
+            business_intent_key,
+            effect,
+            connection_id,
+            connection_revision,
+            auth_version,
+            request_hash,
+            arguments_json,
+            status,
+            version,
+            executor_owner,
+            executor_fence,
+            external_key,
+            result_json,
+            scope_id,
+            budget_usage_key
+        FROM sq_operation
+        WHERE user_id = #{userId} AND scope_id = #{scopeId}
+          AND status IN ('PREPARED', 'WAITING_APPROVAL')
+          AND del_flag = '0'
+        FOR UPDATE
+    </select>
 </mapper>

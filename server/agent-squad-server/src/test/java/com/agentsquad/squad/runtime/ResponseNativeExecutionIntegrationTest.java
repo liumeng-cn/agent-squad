@@ -342,6 +342,55 @@ class ResponseNativeExecutionIntegrationTest {
         }
     }
 
+    @Test
+    void replyStopWaitsForWriterReleaseWithoutStartingQueuedWork(@TempDir Path directory) throws Exception {
+        try (var model = new ResponseModelStub(); var context = start(directory, model, false)) {
+            var receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "stop-writer", new MessageCreateRequest("请回答", List.of()));
+            var jdbc = context.getBean(JdbcTemplate.class);
+            String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
+            String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
+            var master = (io.agentscope.harness.agent.HarnessAgent) org.springframework.test.util.ReflectionTestUtils
+                    .getField(context.getBean(com.agentsquad.squad.agent.MasterAgent.class), "master");
+            var runtime = io.agentscope.core.agent.RuntimeContext.builder().userId(USER).sessionId(session).build();
+            var store = new io.agentscope.harness.agent.session.WorkspaceSessionLogStore(master.getWorkspaceManager());
+            var log = store.open(new io.agentscope.core.session.SessionKey(USER, MasterAgentIdentity.AGENT_ID, session), runtime);
+            var writer = log.acquire("remote-owner", java.time.Duration.ofSeconds(30));
+            var stop = context.getBean(ResponseControlService.class).cancel(USER, receipt.executionId(), "stop", 0);
+            context.getBean(CommandDeliveryService.class).deliver(stop.commandId());
+            assertThat(jdbc.queryForObject("SELECT status FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId())).isEqualTo("CANCELLING");
+            var scheduler = context.getBean(com.agentsquad.squad.runtime.service.CancellationSettlementScheduler.class);
+            scheduler.settle();
+            assertThat(jdbc.queryForObject("SELECT status FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId())).isEqualTo("CANCELLING");
+            log.release(writer);
+            scheduler.settle();
+            assertThat(jdbc.queryForObject("SELECT status FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId())).isEqualTo("CANCELLED");
+            assertThat(model.calls.get()).isZero();
+        }
+    }
+
+    @Test
+    void stopsReplyWhileModelConnectionIsBlocked(@TempDir Path directory) throws Exception {
+        try (var model = new ResponseModelStub(true); var context = start(directory, model, true)) {
+            var receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "stop-active", new MessageCreateRequest("请回答", List.of()));
+            assertThat(model.blocked.await(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            var jdbc = context.getBean(JdbcTemplate.class);
+            long version = jdbc.queryForObject("SELECT version FROM sq_response_execution WHERE execution_id=?", Long.class, receipt.executionId());
+            context.getBean(ResponseControlService.class).cancel(USER, receipt.executionId(), "stop-active", version);
+            String status = null;
+            for (int attempt = 0; attempt < 200; attempt++) {
+                status = jdbc.queryForObject("SELECT status FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
+                if ("CANCELLED".equals(status)) {
+                    break;
+                }
+                Thread.sleep(100);
+            }
+            model.release.countDown();
+            assertThat(status).isEqualTo("CANCELLED");
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_message WHERE execution_id=? AND role='ASSISTANT'", Long.class, receipt.executionId())).isZero();
+            assertThat(model.calls.get()).isEqualTo(2);
+        }
+    }
+
     static ConfigurableApplicationContext start(Path directory, ResponseModelStub model, boolean fast) {
         return SpringApplication.run(AgentSquadApplication.class, "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("reply")),

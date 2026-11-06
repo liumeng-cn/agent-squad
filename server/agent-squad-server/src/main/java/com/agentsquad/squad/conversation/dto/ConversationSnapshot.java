@@ -15,5 +15,5 @@ public record ConversationSnapshot(ConversationView conversation, List<MessageVi
                                    TaskResponse activeTask, List<Interaction> interactions,
                                    List<ArtifactView> deliverables, List<ExecutionFailureView> failures,
                                    List<String> operationIds, List<ResponseExecutionView> executions,
-                                   List<com.agentsquad.squad.presentation.domain.ConversationTaskState> taskStates, String cursor) {
+                                   List<com.agentsquad.squad.presentation.domain.ConversationTaskState> taskStates, List<TaskDirectiveView> directives, String cursor) {
 }

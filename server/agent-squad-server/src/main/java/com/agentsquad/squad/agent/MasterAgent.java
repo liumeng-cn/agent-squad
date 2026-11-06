@@ -159,6 +159,12 @@ public class MasterAgent implements NativeSessionGateway {
 
     private HarnessAgent master;
 
+    @Resource
+    private com.agentsquad.squad.integration.agentscope.LocalSessionStopper localSessions;
+
+    @Resource
+    private com.agentsquad.squad.conversation.repository.BindingMapper controlBindings;
+
     private CommittedSessionReader committedReader;
 
     /**
@@ -296,9 +302,20 @@ public class MasterAgent implements NativeSessionGateway {
      */
     @Override
     public boolean stop(DeliveryRow delivery) {
-        AgentSession session = sessionFor(delivery);
-        session.start();
-        return session.interrupt(null);
+        var context = RuntimeContext.builder().userId(delivery.userId()).sessionId(delivery.sessionId()).build();
+        // 控制入口不能领取或续租 Worker guard，更不能 start 尚未执行的排队工作。
+        try (var controller = HarnessAgent.builder().agentId(delivery.agentId())
+                .model(master.getModel())
+                .sessionLogStore(new WorkspaceSessionLogStore(master.getWorkspaceManager()))
+                .disableSubagents().disableFilesystemTools().disableShellTool().disableWebTools()
+                .disableMemoryTools().disableMemoryHooks().disableDefaultWorkspaceSkills().build()) {
+            return controller.session(context).interrupt(null);
+        }
+    }
+
+    @Override
+    public boolean quiescent(ProjectionTarget target) {
+        return committedReader.quiescent(target.userId(), target.agentId(), target.sessionId());
     }
 
     /**
@@ -355,7 +372,7 @@ public class MasterAgent implements NativeSessionGateway {
         if (sandboxEnabled) { allowedTools.addAll(java.util.Set.of("sandbox_python", "commit_artifact")); }
         context.put(com.agentsquad.squad.skill.integration.ScopeSkillCapabilities.class,
                 new com.agentsquad.squad.skill.integration.ScopeSkillCapabilities(allowedTools));
-        return master.session(context);
+        return localSessions.register(userId, bindingId, master.session(context));
     }
 
     /**
@@ -375,6 +392,10 @@ public class MasterAgent implements NativeSessionGateway {
     /** 后台恢复显式启动调度，保留原有授权、Worker领取和续租检查，不由读接口触发。 */
     @Override
     public void startPending(ProjectionTarget target) {
+        if (controlBindings.localSessionState(target.userId(), target.bindingId())
+                != com.agentsquad.squad.common.enums.runtime.LocalSessionState.ACTIVE) {
+            return;
+        }
         sessionFor(target.userId(), target.bindingId(), target.sessionId(), target.agentId()).start();
     }
 

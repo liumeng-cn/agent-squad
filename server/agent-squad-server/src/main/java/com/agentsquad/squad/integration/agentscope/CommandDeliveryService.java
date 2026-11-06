@@ -295,7 +295,11 @@ public class CommandDeliveryService {
         boolean interrupted = nativeSessionGateway.stop(delivery);
         if (!interrupted) {
             if (delivery.taskId() == null) {
-                responses.stopped(delivery.userId(), delivery.bindingId());
+                var target = new com.agentsquad.squad.runtime.domain.ProjectionTarget(delivery.userId(), null,
+                        delivery.bindingId(), delivery.agentId(), delivery.sessionId(), 0);
+                if (nativeSessionGateway.quiescent(target)) {
+                    responses.stopped(delivery.userId(), delivery.bindingId());
+                }
             } else {
                 taskFinalizerService.finalizeCancelledTask(delivery.userId(), delivery.taskId());
             }

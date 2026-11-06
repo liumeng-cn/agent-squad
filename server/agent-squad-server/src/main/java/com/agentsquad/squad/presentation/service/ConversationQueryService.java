@@ -58,6 +58,9 @@ public class ConversationQueryService {
     private TaskMapper tasks;
 
     @Resource
+    private com.agentsquad.squad.conversation.repository.TaskDirectiveMapper directives;
+
+    @Resource
     private ObjectMapper json;
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
@@ -85,6 +88,9 @@ public class ConversationQueryService {
                 reads.deliverableIds(userId, conversationId).stream().filter(id -> artifactMapper.findOwned(userId, id) != null).map(id -> artifacts.get(userId, id)).toList(), failures.list(userId, conversationId), reads.uncertainOperationIds(userId, conversationId),
                 page.isEmpty() ? List.of() : reads.pageExecutions(userId, conversationId, page.getFirst().sequence(), page.getLast().sequence()).stream().map(row -> executionView(userId, row)).toList(),
                 page.isEmpty() ? List.of() : reads.pageTasks(userId, conversationId, page.getFirst().sequence(), page.getLast().sequence()),
+                page.isEmpty() ? List.of() : directives.pageInConversation(userId, conversationId, header.generation(),
+                        page.getFirst().sequence(), page.getLast().sequence()).stream()
+                        .map(com.agentsquad.squad.conversation.dto.TaskDirectiveView::from).toList(),
                 cursor(header, header.eventSequence()));
     }
 

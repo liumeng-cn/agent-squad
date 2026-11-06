@@ -50,6 +50,12 @@ public class ResponseControlService {
     private ConversationEventWriter events;
 
     @Resource
+    private com.agentsquad.squad.tools.operation.OperationService operations;
+
+    @Resource
+    private com.agentsquad.squad.interaction.repository.InteractionMapper interactions;
+
+    @Resource
     private ObjectMapper json;
 
     @Transactional
@@ -101,6 +107,8 @@ public class ResponseControlService {
     private CommandReceipt queueStop(ExecutionScopeRow scope, ResponseRuntimeRow row, String scopeKey, String key, String payload, String hash) {
         replies.cancelling(scope.userId(), row.bindingId(), LocalDateTime.now(ZoneOffset.UTC));
         replies.cancelPending(scope.userId(), row.bindingId());
+        operations.cancelUnstarted(scope.userId(), scope.scopeId());
+        interactions.cancelOpenByScope(scope.userId(), scope.scopeId());
         String id = UUID.randomUUID().toString();
         commands.insertControl(id, scope.userId(), scopeKey, key, hash, null, row.bindingId(), "STOP", payload, LocalDateTime.now(ZoneOffset.UTC));
         events.publish(scope, "response:" + row.executionId() + ":cancel", "execution.status_changed",

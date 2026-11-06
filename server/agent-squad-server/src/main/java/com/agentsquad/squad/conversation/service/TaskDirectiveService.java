@@ -1,6 +1,8 @@
 package com.agentsquad.squad.conversation.service;
 
 import com.agentsquad.squad.artifact.repository.ArtifactMapper;
+import com.agentsquad.squad.common.enums.conversation.TaskDirectiveWaitReason;
+import com.agentsquad.squad.conversation.dto.TaskDirectiveView;
 import com.agentsquad.squad.artifact.service.ArtifactService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
@@ -258,9 +260,18 @@ public class TaskDirectiveService {
             return;
         }
         directives.defer(userId, row.directiveId(), now().plusSeconds(2));
-        if (!Set.of("QUEUED", "RUNNING").contains(task.status()) || hasOpenEffects(target)
+        if (!directives.openOperations(userId, target.scopeId()).isEmpty()) {
+            waiting(target, row, TaskDirectiveWaitReason.WAITING_OPERATION);
+            return;
+        }
+        if (!directives.openInteractions(userId, target.scopeId()).isEmpty()) {
+            waiting(target, row, TaskDirectiveWaitReason.WAITING_USER);
+            return;
+        }
+        if (!Set.of("QUEUED", "RUNNING").contains(task.status())
                 || commands.countUnprocessedMasterCommands(userId, task.taskId()) > 0
                 || directives.pendingControls(userId, task.taskId()) > 0) {
+            waiting(target, row, TaskDirectiveWaitReason.WAITING_COORDINATOR);
             return;
         }
         if (row.commandId() != null) {
@@ -286,7 +297,15 @@ public class TaskDirectiveService {
         commands.insertControl(commandId, userId, "directive-coordinate:" + row.directiveId(), "initial",
                 ContentDigests.sha256(payload), task.taskId(), binding, "TASK_DIRECTIVE", payload, now());
         directives.bindCommand(userId, row.directiveId(), commandId);
+        waiting(target, row, TaskDirectiveWaitReason.COORDINATING);
         log.info("目标修改协调已排队 directiveId={} taskId={} commandId={}", row.directiveId(), task.taskId(), commandId);
+    }
+
+    /** 等待原因只在实际变化时写入并通知；重复扫描不产生重复进度事件。 */
+    private void waiting(ExecutionScopeRow scope, TaskDirectiveRow row, TaskDirectiveWaitReason reason) {
+        if (directives.waiting(scope.userId(), row.directiveId(), reason) == 1) {
+            publish(scope, row, "ACCEPTED", null, null, reason.name(), null);
+        }
     }
 
     private boolean hasOpenEffects(ExecutionScopeRow scope) {
@@ -309,6 +328,8 @@ public class TaskDirectiveService {
 
     private void publish(ExecutionScopeRow scope, TaskDirectiveRow row, String status, Long version, Long revision, String code, String reason) {
         Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("schemaVersion", 2);
+        payload.put("directive", TaskDirectiveView.from(directives.lock(scope.userId(), row.directiveId())));
         payload.put("directiveId", row.directiveId());
         payload.put("taskId", row.taskId());
         payload.put("sourceMessageId", row.sourceMessageId());
@@ -321,7 +342,7 @@ public class TaskDirectiveService {
             payload.put("reasonCode", code);
             payload.put("reasonMessage", reason);
         }
-        events.publish(scope, "directive:" + row.directiveId() + ":" + status, "directive.status_changed", payload);
+        events.publish(scope, "directive:" + row.directiveId() + ":" + status + ":" + UUID.randomUUID(), "directive.status_changed", payload);
     }
 
     private TaskDirectiveReceipt receipt(TaskDirectiveRow row) {

@@ -41,17 +41,23 @@ class MultiWorkerExecutionIntegrationTest {
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void runsTwoNodesAndJoinsOneGoal(boolean parallel, @TempDir Path directory) throws Exception {
-        runScenario(parallel, false, directory);
+        runScenario(parallel, false, false, directory);
     }
 
     @Test
     void reportsPartialAfterUnrecoverableBranch(@TempDir Path directory) throws Exception {
-        runScenario(false, true, directory);
+        runScenario(false, true, false, directory);
     }
 
-    private void runScenario(boolean parallel, boolean failSecond, Path directory) throws Exception {
+    @Test
+    void stopsTwoActuallyRunningWorkersWithoutPublishingLateResults(@TempDir Path directory) throws Exception {
+        runScenario(true, false, true, directory);
+    }
+
+    private void runScenario(boolean parallel, boolean failSecond, boolean cancel, Path directory) throws Exception {
         ObjectMapper json = new ObjectMapper();
         CountDownLatch firstCalls = new CountDownLatch(2);
+        CountDownLatch cancelRelease = new CountDownLatch(1);
         AtomicBoolean overlapped = new AtomicBoolean(false);
         AtomicBoolean dependencyVisible = new AtomicBoolean(false);
         AtomicInteger calls = new AtomicInteger();
@@ -78,6 +84,9 @@ class MultiWorkerExecutionIntegrationTest {
                     try {
                         if (firstCalls.await(5, TimeUnit.SECONDS)) {
                             overlapped.set(true);
+                        }
+                        if (cancel && !cancelRelease.await(15, TimeUnit.SECONDS)) {
+                            throw new IllegalStateException("取消验证未及时释放模型桩");
                         }
                     } catch (InterruptedException exception) {
                         Thread.currentThread().interrupt();
@@ -143,6 +152,28 @@ class MultiWorkerExecutionIntegrationTest {
             try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class, running)) {
                 JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
                 activeDatabase.set(jdbc);
+                if (cancel) {
+                    assertThat(firstCalls.await(10, TimeUnit.SECONDS)).isTrue();
+                    long version = jdbc.queryForObject("SELECT version FROM sq_goal_task WHERE task_id=?", Long.class, taskId);
+                    context.getBean(com.agentsquad.squad.conversation.service.TaskControlService.class).cancel(userId, taskId, "stop-both", version);
+                    String cancelled = null;
+                    for (int attempt = 0; attempt < 150; attempt++) {
+                        cancelled = jdbc.queryForObject("SELECT status FROM sq_goal_task WHERE task_id=?", String.class, taskId);
+                        if ("CANCELLED".equals(cancelled)) {
+                            break;
+                        }
+                        Thread.sleep(100);
+                    }
+                    cancelRelease.countDown();
+                    assertThat(cancelled).isEqualTo("CANCELLED");
+                    assertThat(jdbc.queryForList("SELECT status FROM sq_worker_job WHERE task_id=? ORDER BY id", String.class, taskId))
+                            .containsExactly("CANCELLED", "CANCELLED");
+                    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_command WHERE task_id=? AND action='STOP'", Integer.class, taskId)).isEqualTo(3);
+                    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_worker_job WHERE task_id=? AND result_json IS NOT NULL", Integer.class, taskId)).isZero();
+                    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_message WHERE task_id=? AND role='ASSISTANT'", Integer.class, taskId)).isZero();
+                    assertThat(calls.get()).isEqualTo(2);
+                    return;
+                }
                 String status = null;
                 for (int attempt = 0; attempt < 200; attempt++) {
                     status = jdbc.queryForObject("SELECT status FROM sq_goal_task WHERE task_id = ?", String.class, taskId);
@@ -164,6 +195,7 @@ class MultiWorkerExecutionIntegrationTest {
                 }
             }
         } finally {
+            cancelRelease.countDown();
             model.stop(0);
             executor.shutdownNow();
         }

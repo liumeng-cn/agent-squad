@@ -1,4 +1,4 @@
-import type { ChatExecution, ChatMessage, ConversationEvent } from '../../../shared/api/chatApi'
+import type { ChatExecution, ChatMessage, ConversationEvent, TaskDirectiveView } from '../../../shared/api/chatApi'
 
 import { executionActions, executionStatuses } from '../../../shared/api/chatTypes'
 
@@ -7,6 +7,7 @@ export type ConversationDelta =
   | { type: 'message.completed'; message: ChatMessage }
   | { type: 'execution.queued' | 'execution.status_changed'; execution: ChatExecution }
   | { type: 'conversation.title_updated'; title: string; titleVersion: number }
+  | { type: 'directive.status_changed'; directive: TaskDirectiveView }
   | { type: 'plan.published' | 'job.reused'; taskId: string; planVersion: number }
 
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value)
@@ -40,6 +41,21 @@ export function decodeConversationDelta(event: ConversationEvent): ConversationD
   }
   if (payload.schemaVersion !== 2) return
   switch (event.type) {
+    case 'directive.status_changed': {
+      const d = payload.directive
+      if (record(d) && id(d.directiveId) && id(d.taskId) && id(d.sourceMessageId)
+          && ['ACCEPTED', 'APPLIED', 'REJECTED'].includes(d.status as string)
+          && ['NONE', 'WAITING_SAFE_POINT', 'WAITING_OPERATION', 'WAITING_USER', 'WAITING_COORDINATOR', 'COORDINATING'].includes(d.waitReason as string)
+          && (d.reasonCode === null || typeof d.reasonCode === 'string')
+          && (d.reasonMessage === null || typeof d.reasonMessage === 'string')
+          && (d.status === 'APPLIED' ? version(d.appliedVersion) && (d.appliedVersion as number) > 0 && version(d.goalRevision) && (d.goalRevision as number) > 0 && d.waitReason === 'NONE'
+            : d.appliedVersion === null && d.goalRevision === null)
+          && (d.status === 'ACCEPTED' ? d.waitReason !== 'NONE' : d.waitReason === 'NONE')
+          && (d.status !== 'REJECTED' || id(d.reasonCode) && id(d.reasonMessage))) {
+        return { type: event.type, directive: d as unknown as TaskDirectiveView }
+      }
+      return
+    }
     case 'plan.published':
       if (id(payload.taskId) && version(payload.planVersion) && (payload.planVersion as number) > 0
           && Array.isArray(payload.jobIds) && payload.jobIds.every(id) && payload.jobIds.length <= 16

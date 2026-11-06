@@ -144,6 +144,36 @@
         "verdict": "DONE",
         "evidenceRefs": []
       }
+    },
+    {
+      "schema": "TaskDirectiveView",
+      "value": {
+        "directiveId": "11111111-1111-4111-8111-111111111111",
+        "taskId": "22222222-2222-4222-8222-222222222222",
+        "sourceMessageId": "33333333-3333-4333-8333-333333333333",
+        "status": "APPLIED",
+        "waitReason": "NONE",
+        "appliedVersion": null,
+        "goalRevision": null,
+        "reasonCode": "WAITING_OPERATION",
+        "reasonMessage": null
+      },
+      "reason": "处理状态、等待原因与应用版本必须一致，不能把收到要求伪造成已应用"
+    },
+    {
+      "schema": "TaskDirectiveView",
+      "value": {
+        "directiveId": "11111111-1111-4111-8111-111111111111",
+        "taskId": "22222222-2222-4222-8222-222222222222",
+        "sourceMessageId": "33333333-3333-4333-8333-333333333333",
+        "status": "ACCEPTED",
+        "waitReason": "NONE",
+        "appliedVersion": null,
+        "goalRevision": null,
+        "reasonCode": "WAITING_OPERATION",
+        "reasonMessage": null
+      },
+      "reason": "处理状态、等待原因与应用版本必须一致，不能把收到要求伪造成已应用"
     }
   ]
 }

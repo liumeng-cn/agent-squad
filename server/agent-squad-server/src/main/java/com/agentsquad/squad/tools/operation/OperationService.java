@@ -132,6 +132,19 @@ public class OperationService {
         return operationMapper.findOwned(request.userId(), operationId);
     }
 
+    /** 在取消事务内关闭尚未派发的工具并释放已知预留；不触碰在途或未知结果的写入。 */
+    @Transactional
+    public void cancelUnstarted(String userId, String scopeId) {
+        scopeService.lockOwned(userId, scopeId, false);
+        var unstarted = operationMapper.lockUnstartedInScope(userId, scopeId);
+        operationMapper.cancelUnstartedByScope(userId, scopeId);
+        for (OperationRow operation : unstarted) {
+            if (operation.budgetUsageKey() != null) {
+                budgetService.releaseUnsentTool(userId, scopeId, operation.budgetUsageKey());
+            }
+        }
+    }
+
     /**
      * 分页读取目标的操作视图；游标取最后一条操作的存储主键。
      */

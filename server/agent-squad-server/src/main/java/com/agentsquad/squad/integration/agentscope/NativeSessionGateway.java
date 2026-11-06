@@ -18,6 +18,11 @@ public interface NativeSessionGateway {
      */
     boolean stop(DeliveryRow delivery);
 
+    /** 只读检查原生写入者与运行，不构建业务 Worker 或启动调度；未知时保守不收尾。 */
+    default boolean quiescent(ProjectionTarget target) {
+        return false;
+    }
+
     /**
      * 恢复绑定会话的指定原生回合；幂等，已排队或已结束的恢复由 SDK 裁决。
      */
