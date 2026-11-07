@@ -4,6 +4,7 @@ import ActivityTimeline from './ActivityTimeline.vue'
 import type { ExecutionActivity } from '../../../shared/api/activities'
 import { getTaskJobs } from '../../../shared/api/tasksApi'
 import type { AcceptanceCheckView, WorkerJob, WorkerJobStatus } from '../../../shared/api/types'
+import { statusText } from '../../../shared/lib/taskStatus'
 const props = defineProps<{ taskId: string; status: string; revision: string; answerCompleted?: boolean; activities?: ExecutionActivity[] }>()
 const expanded = ref(true)
 const jobs = ref<WorkerJob[]>([])
@@ -15,6 +16,11 @@ const loading = ref(false)
 const selectedVersion = ref<number | undefined>()
 const shownVersion = ref(0)
 const latestVersion = ref(0)
+const overallStatus = computed(() => ({
+  SUCCEEDED: '整体已完成', PARTIAL: '整体只完成了一部分', FAILED: '整体未完成', CANCELLED: '整体已停止',
+}[props.status] ?? `整体${statusText(props.status)}`))
+const shownActivities = computed(() => (props.activities ?? []).filter(activity =>
+  activity.planVersion === shownVersion.value || (shownVersion.value === latestVersion.value && activity.planVersion === 0)))
 let requestVersion = 0
 const labels: Record<WorkerJobStatus, string> = {
   BLOCKED: '等待前一步完成', READY: '等待开始', RUNNING: '正在执行',
@@ -58,20 +64,21 @@ onBeforeUnmount(() => { requestVersion++ })
 </script>
 <template>
   <details v-if="visible" class="task-steps" :open="expanded" aria-label="工作步骤" @toggle="toggled">
-    <summary>处理步骤<span v-if="jobs.length">{{ completed }}/{{ jobs.length }} 项已完成</span></summary>
+    <summary>处理步骤<span>{{ overallStatus }}</span></summary>
     <p v-if="shownVersion" class="task-steps-note">
       {{ shownVersion < latestVersion ? '过去的安排' : '当前安排' }} · 第 {{ shownVersion }} 版
       <button v-if="shownVersion > 1" class="text-button" type="button" :disabled="loading" @click="selectVersion(shownVersion - 1)">查看上一版</button>
       <button v-if="selectedVersion !== undefined" class="text-button" type="button" :disabled="loading" @click="selectVersion()">返回当前安排</button>
     </p>
+    <p v-if="jobs.length" class="task-steps-note">本版步骤：{{ completed }}/{{ jobs.length }} 项已完成</p>
     <p v-if="error" class="task-steps-note">暂时无法读取进度 <button class="text-button" type="button" @click="load">重新读取</button></p>
     <p v-else-if="!jobs.length" class="task-steps-note">{{ loading ? '正在读取进度…' : (['SUCCEEDED', 'PARTIAL', 'FAILED', 'CANCELLED'].includes(status) ? '这次工作没有拆分步骤' : '正在安排工作…') }}</p>
     <p v-if="running > 1" class="task-steps-note">有 {{ running }} 项工作同时进行</p>
-    <ActivityTimeline :activities="(activities ?? []).filter(a => !a.jobId)" :completed="answerCompleted ?? terminal" />
+    <ActivityTimeline :activities="shownActivities.filter(a => !a.jobId)" :completed="answerCompleted ?? terminal" />
     <ol>
       <li v-for="job in jobs" :key="job.jobId" :class="{ finished: job.status === 'SUCCEEDED' }">
         <span class="task-step-dot" aria-hidden="true">{{ job.status === 'SUCCEEDED' ? '✓' : '·' }}</span>
-        <div><span class="task-step-title">{{ job.title || '处理这项工作' }}</span><small><span v-if="job.required === false">可选工作 · </span>{{ labels[job.status] }}<span v-if="job.reusedFromJobId"> · 沿用已有结果</span></small><ActivityTimeline :activities="(activities ?? []).filter(a => a.jobId === job.jobId)" :completed="['SUCCEEDED', 'FAILED', 'CANCELLED', 'SKIPPED', 'SUPERSEDED'].includes(job.status)" /></div>
+        <div><span class="task-step-title">{{ job.title || '处理这项工作' }}</span><small><span v-if="job.required === false">可选工作 · </span>{{ labels[job.status] }}<span v-if="job.reusedFromJobId"> · 沿用已有结果</span></small><ActivityTimeline :activities="shownActivities.filter(a => a.jobId === job.jobId)" :completed="['SUCCEEDED', 'FAILED', 'CANCELLED', 'SKIPPED', 'SUPERSEDED'].includes(job.status)" /></div>
       </li>
     </ol>
     <template v-if="checks.length">
