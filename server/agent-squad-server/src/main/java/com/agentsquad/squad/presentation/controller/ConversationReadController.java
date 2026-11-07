@@ -8,6 +8,9 @@ import com.agentsquad.squad.conversation.dto.ConversationSnapshot;
 import com.agentsquad.squad.presentation.service.ConversationQueryService;
 import com.agentsquad.squad.presentation.service.ConversationEventStreamer;
 import com.agentsquad.squad.identity.UserContext;
+import com.agentsquad.squad.presentation.dto.ActivityHistoryPage;
+import com.agentsquad.squad.presentation.dto.ActivityHistoryQuery;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.annotation.Resource;
@@ -45,6 +48,12 @@ public class ConversationReadController {
                                                     @PathVariable String conversationId, @RequestParam(required = false) Long beforeMessageSeq,
                                                     @RequestParam(defaultValue = "40") int limit) {
         return ApiResult.success(queries.snapshot(UserContext.current(servletRequest).userId(), conversationId, beforeMessageSeq, limit));
+    }
+
+    @GetMapping("/activities")
+    public ApiResult<ActivityHistoryPage> activities(HttpServletRequest request, @PathVariable String conversationId,
+                                                     @ModelAttribute ActivityHistoryQuery query) {
+        return ApiResult.success(queries.activityHistory(UserContext.current(request).userId(), conversationId, query));
     }
 
     @GetMapping(value = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

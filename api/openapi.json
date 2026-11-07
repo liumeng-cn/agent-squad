@@ -6316,6 +6316,85 @@
         }
       }
     },
+    "/api/v1/conversations/{conversationId}/activities": {
+      "get": {
+        "operationId": "getActivityHistory",
+        "tags": [
+          "public"
+        ],
+        "summary": "按来源消息分页读取处理历史",
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sourceMessageId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "beforeActivityId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "处理历史或业务错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "code": {
+                          "$ref": "#/components/schemas/ApiCode"
+                        },
+                        "data": {
+                          "$ref": "#/components/schemas/ActivityHistoryPage"
+                        },
+                        "msg": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "data",
+                        "msg"
+                      ]
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiResult"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/conversations/{conversationId}/snapshot": {
       "get": {
         "operationId": "getConversationSnapshot",
@@ -12403,6 +12482,30 @@
         ],
         "description": "完整修改状态增量，旧载荷通过一致快照补读；不得将收到修改当成已经应用。"
       },
+      "ActivityHistoryPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExecutionActivityView"
+            },
+            "maxItems": 40
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
       "ExecutionActivityView": {
         "type": "object",
         "additionalProperties": false,
@@ -12454,6 +12557,8 @@
               "WORKER_DISPATCH",
               "TASK_CHANGE",
               "MODEL_CALL",
+              "AUTO_RETRY_SCHEDULED",
+              "USER_RETRY_SCHEDULED",
               "SCRIPT_EXECUTE",
               "EXTERNAL_ACTION",
               "MEMORY_WRITE",

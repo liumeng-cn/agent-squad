@@ -105,6 +105,13 @@ export function chatSnapshot(id: string, before?: number): Promise<ChatSnapshot>
   if (before !== undefined) query.set('beforeMessageSeq', String(before))
   return apiGet(`/api/v1/conversations/${encodeURIComponent(id)}/snapshot?${query}`)
 }
+export function activityHistory(conversationId: string, sourceMessageId: string, cursor?: string) {
+  const query = new URLSearchParams({ sourceMessageId })
+  if (cursor) query.set('beforeActivityId', cursor)
+  return apiGet<{ items: ExecutionActivity[]; nextCursor: string | null }>(
+    `/api/v1/conversations/${encodeURIComponent(conversationId)}/activities?${query}`,
+  )
+}
 export function sendMessage(id: string | null, text: string, artifactIds: string[], key: string, selection?: ModelSelection): Promise<MessageReceipt> {
   return apiPost(id ? `/api/v1/conversations/${encodeURIComponent(id)}/messages` : '/api/v1/conversations/messages', { text, artifactIds, ...selection }, { idempotencyKey: key })
 }

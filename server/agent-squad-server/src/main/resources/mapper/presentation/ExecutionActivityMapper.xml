@@ -146,4 +146,33 @@
         ORDER BY CASE WHEN status IN ('QUEUED', 'RUNNING', 'WAITING') THEN 0 ELSE 1 END, id DESC
         LIMIT #{limit}
     </select>
+    <sql id="historyScope">
+        user_id = #{userId}
+        AND conversation_id = #{conversationId}
+        AND source_message_id = #{query.sourceMessageId}
+        AND del_flag = '0'
+        AND scope_id IN (
+            SELECT scope_id
+            FROM sq_execution_scope
+            WHERE user_id = #{userId}
+              AND conversation_id = #{conversationId}
+              AND conversation_generation = #{generation}
+              AND del_flag = '0'
+        )
+    </sql>
+    <select id="history" resultMap="activity">
+        SELECT <include refid="columns"/>
+        FROM sq_execution_activity
+        WHERE <include refid="historyScope"/>
+        <if test="query.beforeActivityId != null">
+            AND id &lt; (
+                SELECT id
+                FROM sq_execution_activity
+                WHERE activity_id = #{query.beforeActivityId}
+                  AND <include refid="historyScope"/>
+            )
+        </if>
+        ORDER BY id DESC
+        LIMIT #{limit}
+    </select>
 </mapper>

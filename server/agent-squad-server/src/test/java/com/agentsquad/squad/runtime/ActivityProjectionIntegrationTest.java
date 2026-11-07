@@ -6,6 +6,8 @@ import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
 import com.agentsquad.squad.integration.agentscope.NativeEventView;
 import com.agentsquad.squad.presentation.service.ActivityProjectionService;
+import com.agentsquad.squad.presentation.dto.ActivityHistoryQuery;
+import com.agentsquad.squad.presentation.dto.ExecutionActivityView;
 import com.agentsquad.squad.presentation.service.ConversationQueryService;
 import com.agentsquad.squad.runtime.domain.ProjectionTarget;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
@@ -96,6 +98,23 @@ class ActivityProjectionIntegrationTest {
             assertThatThrownBy(() -> reads.snapshot("00000000-0000-0000-0000-000000000002", receipt.conversationId(), null, 40))
                     .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_execution_activity", Integer.class)).isEqualTo(4);
+            transaction.executeWithoutResult(status -> {
+                for (int i = 10; i <= 50; i++) {
+                    service.accept(scope, target, new NativeEventView(i, "history-" + i, "model/dispatch",
+                            "run", "turn", null, 2000 + i, Map.of("modelCallId", "history-" + i)));
+                }
+            });
+            var first = reads.activityHistory(user, receipt.conversationId(), new ActivityHistoryQuery(receipt.messageId(), null));
+            assertThat(first.items()).hasSize(40);
+            assertThat(first.nextCursor()).isEqualTo(first.items().getLast().activityId());
+            var second = reads.activityHistory(user, receipt.conversationId(), new ActivityHistoryQuery(receipt.messageId(), first.nextCursor()));
+            assertThat(second.items()).hasSize(5).extracting(ExecutionActivityView::activityId)
+                    .doesNotContainAnyElementsOf(first.items().stream().map(ExecutionActivityView::activityId).toList());
+            assertThat(second.nextCursor()).isNull();
+            assertThat(reads.activityHistory(user, receipt.conversationId(), new ActivityHistoryQuery("other-message", first.nextCursor())).items()).isEmpty();
+            assertThatThrownBy(() -> reads.activityHistory("00000000-0000-0000-0000-000000000002", receipt.conversationId(),
+                    new ActivityHistoryQuery(receipt.messageId(), null)))
+                    .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
         }
     }
 }

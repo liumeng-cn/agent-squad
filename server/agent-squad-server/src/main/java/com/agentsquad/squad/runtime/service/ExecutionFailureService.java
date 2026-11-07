@@ -46,6 +46,8 @@ import java.util.UUID;
 @Slf4j
 public class ExecutionFailureService {
     @Resource
+    private com.agentsquad.squad.presentation.service.ActivityProjectionService activities;
+    @Resource
     private TaskMapper tasks;
 
     @Resource
@@ -153,6 +155,8 @@ public class ExecutionFailureService {
         commands.insertControl(UUID.randomUUID().toString(), scope.userId(), key, eventId, ContentDigests.sha256(payload),
                 "TASK".equals(scope.kind()) ? scope.ownerId() : null, bindingId, "RESUME", payload, next);
         failures.approveRetry(scope.userId(), failure.failureId(), attempt + 1);
+        activities.completed(scope, bindingId, new com.agentsquad.squad.presentation.service.ActivityBusinessFact(
+                com.agentsquad.squad.common.enums.execution.ActivityType.AUTO_RETRY_SCHEDULED, eventId));
         events.publish(scope, "retry:" + failure.failureId() + ":" + (attempt + 1), "failure.updated", Map.of("failureId", failure.failureId(), "status", "RETRYING", "attempt", attempt + 1, "maxAttempts", 2, "nextAttemptAt", next.toString()));
         log.info("暂时服务故障已排队恢复 scopeId={} failureId={} attempt={} nextAttemptAt={}", scope.scopeId(), failure.failureId(), attempt + 1, next);
         return true;

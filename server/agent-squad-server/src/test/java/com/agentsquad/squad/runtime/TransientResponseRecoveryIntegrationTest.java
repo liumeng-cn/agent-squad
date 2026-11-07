@@ -121,6 +121,12 @@ class TransientResponseRecoveryIntegrationTest {
             }
             assertThat(reads.snapshot(user, message.conversationId(), null, 40).messages()).anyMatch(item -> "恢复后的回答".equals(item.text()));
             assertThat(reads.snapshot(user, message.conversationId(), null, 40).failures()).isEmpty();
+            var history = reads.activityHistory(user, message.conversationId(),
+                    new com.agentsquad.squad.presentation.dto.ActivityHistoryQuery(message.messageId(), null));
+            assertThat(history.items().stream().filter(item -> item.type().name().equals("AUTO_RETRY_SCHEDULED")))
+                    .hasSize(exhaust ? 2 : 1);
+            assertThat(history.items().stream().filter(item -> item.type().name().equals("USER_RETRY_SCHEDULED")))
+                    .hasSize(exhaust ? 1 : 0);
             assertThat(reads.snapshot(user, message.conversationId(), null, 40).messages())
                     .noneMatch(item -> item.text().contains("未完成的旧预览"));
         } finally {

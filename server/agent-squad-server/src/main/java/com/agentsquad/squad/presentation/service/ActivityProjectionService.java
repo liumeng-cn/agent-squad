@@ -126,7 +126,9 @@ public class ActivityProjectionService {
         completed(scope, activities.masterBinding(scope.userId(), scope.scopeId()), fact);
     }
 
-    private void completed(ExecutionScopeRow scope, String bindingId, ActivityBusinessFact fact) {
+    /** 指定实际触发业务事件的绑定，重试记录归属到对应的执行节点。 */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void completed(ExecutionScopeRow scope, String bindingId, ActivityBusinessFact fact) {
         if (bindingId == null) {
             throw new IllegalStateException("活动来源缺少执行绑定");
         }
@@ -138,6 +140,8 @@ public class ActivityProjectionService {
             case CONTEXT_PREPARE -> new ActivityClassification(fact.type(), ActivityGroup.PREPARATION, "准备对话资料");
             case WORKER_DISPATCH -> new ActivityClassification(fact.type(), ActivityGroup.PLANNING, "任务已接手");
             case ANSWER_PUBLISH -> new ActivityClassification(fact.type(), ActivityGroup.DELIVERY, "交付回答");
+            case AUTO_RETRY_SCHEDULED -> new ActivityClassification(fact.type(), ActivityGroup.EXECUTION, "已安排自动重试");
+            case USER_RETRY_SCHEDULED -> new ActivityClassification(fact.type(), ActivityGroup.EXECUTION, "已受理你的重试请求");
             default -> throw new IllegalArgumentException("不支持的业务活动边界");
         };
         var job = workers.findByBinding(scope.userId(), bindingId);

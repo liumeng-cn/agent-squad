@@ -32,6 +32,8 @@ import java.util.UUID;
  */
 @Service
 public class ResponseRetryService {
+    @Resource
+    private com.agentsquad.squad.presentation.service.ActivityProjectionService activities;
     @org.springframework.beans.factory.annotation.Value("${agentsquad.response.completion-protocol:NATURAL}")
     private com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol completionProtocol;
 
@@ -117,6 +119,8 @@ public class ResponseRetryService {
         commands.insertControl(command, userId, scopeKey, key, hash, null, binding, "MESSAGE_SUBMIT", payload, now);
         var created = scopeMapper.findOwned(userId, nextScope);
         events.publish(created, "command:" + command + ":execution.queued", "execution.queued", Map.of("executionId", next, "sourceMessageId", original.sourceMessageId(), "retryOfExecutionId", executionId, "status", "QUEUED"));
+        activities.completed(created, binding, new com.agentsquad.squad.presentation.service.ActivityBusinessFact(
+                com.agentsquad.squad.common.enums.execution.ActivityType.USER_RETRY_SCHEDULED, command));
         return new MessageReceipt(scope.conversationId(), original.sourceMessageId(), next, command, ResponseExecutionStatus.QUEUED, scope.conversationId() + ":" + scope.conversationGeneration() + ":" + messages.eventSequence(userId, scope.conversationId()));
     }
 }

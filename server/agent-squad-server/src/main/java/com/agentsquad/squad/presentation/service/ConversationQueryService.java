@@ -12,6 +12,9 @@ import com.agentsquad.squad.conversation.dto.ConversationView;
 import com.agentsquad.squad.conversation.dto.ResponseExecutionView;
 import com.agentsquad.squad.conversation.domain.ResponseExecutionStatus;
 import com.agentsquad.squad.presentation.dto.ConversationEvent;
+import com.agentsquad.squad.presentation.dto.ActivityHistoryPage;
+import com.agentsquad.squad.presentation.dto.ActivityHistoryQuery;
+import com.agentsquad.squad.presentation.dto.ExecutionActivityView;
 import com.agentsquad.squad.presentation.repository.ConversationReadMapper;
 import com.agentsquad.squad.conversation.repository.ResponseContextMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
@@ -36,6 +39,8 @@ import java.util.List;
  */
 @Service
 public class ConversationQueryService {
+    private static final int ACTIVITY_HISTORY_PAGE_SIZE = 40;
+
     @Resource
     private ExecutionFailureService failures;
 
@@ -99,6 +104,19 @@ public class ConversationQueryService {
                 cursor(header, header.eventSequence()));
     }
 
+    /** 仅查询当前会话代际的来源消息，按固定活动身份向前翻页。 */
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public ActivityHistoryPage activityHistory(String userId, String conversationId, ActivityHistoryQuery query) {
+        var header = requireHeader(userId, conversationId);
+        if (query.sourceMessageId() == null || query.sourceMessageId().isBlank() || query.sourceMessageId().length() > 36
+                || query.beforeActivityId() != null && (query.beforeActivityId().isBlank() || query.beforeActivityId().length() > 36)) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "活动历史查询参数无效");
+        }
+        var rows = activities.history(userId, conversationId, header.generation(), query, ACTIVITY_HISTORY_PAGE_SIZE + 1);
+        var items = rows.stream().limit(ACTIVITY_HISTORY_PAGE_SIZE).map(ExecutionActivityView::from).toList();
+        String nextCursor = rows.size() > ACTIVITY_HISTORY_PAGE_SIZE ? items.getLast().activityId() : null;
+        return new ActivityHistoryPage(items, nextCursor);
+    }
     /**
      * 每次读取同时重验会话归属、代际和保留水位；删除后的既有订阅也不能继续读取内容。
      */
