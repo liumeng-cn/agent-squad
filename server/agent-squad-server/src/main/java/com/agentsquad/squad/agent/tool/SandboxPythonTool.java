@@ -2,8 +2,9 @@ package com.agentsquad.squad.agent.tool;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.util.RuntimePayloads;
+import com.agentsquad.squad.domain.entity.WorkerExecutionIdentity;
 import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
-import com.agentsquad.squad.sandbox.dto.SandboxExecuteRequest;
+import com.agentsquad.squad.domain.dto.SandboxExecuteRequest;
 import com.agentsquad.squad.sandbox.service.SandboxExecutionService;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -100,7 +101,7 @@ public class SandboxPythonTool implements AgentTool {
             throw new com.agentsquad.squad.common.exception.RuntimeBusinessException(
                     com.agentsquad.squad.common.exception.RuntimeExceptionCode.FORBIDDEN, "该Worker没有沙箱执行权限");
         }
-        var identity = context.get(com.agentsquad.squad.runtime.domain.WorkerExecutionIdentity.class);
+        var identity = context.get(WorkerExecutionIdentity.class);
         if (identity == null || !bindingId.equals(identity.bindingId())) {
             throw new com.agentsquad.squad.common.exception.RuntimeBusinessException(
                     com.agentsquad.squad.common.exception.RuntimeExceptionCode.FORBIDDEN, "缺少本次Worker领取的固定执行身份");

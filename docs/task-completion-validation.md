@@ -148,3 +148,4 @@ GoalTaskNativeCreationIntegrationTest 的 HTTP 桩原先未适配普通回复流
 
 - 本地 Gateway 实测使用 Trace `2d91a0943bf040099d8616faabc640bd`，服务入口、命令领取、异步模型和失败终态日志均携带相同 Trace ID。上游千问返回权限拒绝，活动历史 HTTP 接口正常返回该次模型失败记录。
 - SDK HTTP 错误正文不再写入控制台，日志与 Span 诊断仅保留异常类型和有界栈帧。故障重试测试同时检查业务错误日志存在且供应商私有正文不进入输出。
+- 本地 Gateway 成功用例使用模型桩，Trace `392aa0943bf040099d8616faabc640bd` 覆盖消息受理、命令领取、模型预算、事件提交和回复成功终态。验证后恢复原模型配置，Gateway 和业务服务健康检查均为 UP。

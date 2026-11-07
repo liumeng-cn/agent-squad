@@ -1,6 +1,6 @@
 package com.agentsquad.squad.agent.tool;
 
-import com.agentsquad.squad.artifact.domain.ArtifactRow;
+import com.agentsquad.squad.domain.entity.ArtifactRow;
 import com.agentsquad.squad.artifact.service.ArtifactService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.util.MaterialFormatter;

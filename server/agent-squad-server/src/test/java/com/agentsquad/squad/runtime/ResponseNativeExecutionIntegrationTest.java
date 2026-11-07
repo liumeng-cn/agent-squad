@@ -1,9 +1,9 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.conversation.domain.DeliveryRow;
-import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
-import com.agentsquad.squad.conversation.dto.MessageReceipt;
+import com.agentsquad.squad.domain.entity.DeliveryRow;
+import com.agentsquad.squad.domain.dto.MessageCreateRequest;
+import com.agentsquad.squad.domain.dto.MessageReceipt;
 import com.agentsquad.squad.conversation.repository.DeliveryMapper;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
 import com.agentsquad.squad.conversation.service.ResponseControlService;
@@ -14,8 +14,8 @@ import com.agentsquad.squad.runtime.service.CompletionProposalService;
 import com.agentsquad.squad.conversation.service.ResponseExecutionService;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import com.agentsquad.squad.integration.agentscope.NativeSessionGateway;
-import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
-import com.agentsquad.squad.runtime.domain.ProjectionTarget;
+import com.agentsquad.squad.domain.entity.MasterAgentIdentity;
+import com.agentsquad.squad.domain.entity.ProjectionTarget;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;

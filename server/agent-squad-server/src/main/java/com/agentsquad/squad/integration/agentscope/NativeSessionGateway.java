@@ -1,7 +1,7 @@
 package com.agentsquad.squad.integration.agentscope;
 
-import com.agentsquad.squad.conversation.domain.DeliveryRow;
-import com.agentsquad.squad.runtime.domain.ProjectionTarget;
+import com.agentsquad.squad.domain.entity.DeliveryRow;
+import com.agentsquad.squad.domain.entity.ProjectionTarget;
 import io.agentscope.core.session.SessionEvent;
 
 import java.util.List;

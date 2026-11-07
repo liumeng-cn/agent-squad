@@ -2,7 +2,7 @@ package com.agentsquad.squad.agent.tool;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.memory.dto.MemoryWriteRequest;
+import com.agentsquad.squad.domain.dto.MemoryWriteRequest;
 import com.agentsquad.squad.memory.service.ExplicitMemoryWriteService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;

@@ -2,28 +2,21 @@ package com.agentsquad.squad.runtime.service;
 
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
+import com.agentsquad.squad.domain.entity.*;
 import com.agentsquad.squad.integration.agentscope.NativeSubmissionReceipt;
 import com.agentsquad.squad.presentation.service.TaskEventPublishingService;
-import com.agentsquad.squad.runtime.domain.ProjectionTarget;
 import com.agentsquad.squad.runtime.repository.PlanMapper;
 import com.agentsquad.squad.runtime.repository.ProjectionMapper;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.conversation.domain.ExecutionScopeRow;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper;
 import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.conversation.service.ConversationEventWriter;
-import com.agentsquad.squad.presentation.domain.ExecutionFailureRow;
-import com.agentsquad.squad.conversation.dto.ExecutionFailureView;
-import com.agentsquad.squad.runtime.domain.FailureClassification;
-import com.agentsquad.squad.runtime.domain.ModelFailureClassifier;
+import com.agentsquad.squad.domain.dto.ExecutionFailureView;
 import com.agentsquad.squad.runtime.repository.ExecutionFailureMapper;
-import com.agentsquad.squad.runtime.domain.PlanCorrectionExhaustedException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -384,12 +377,12 @@ public class ExecutionFailureService {
         }
         events.publish(scope, "failure:" + row.failureId(), "failure.updated", Map.of("failureId", row.failureId(), "category", row.category(), "actor", row.actor(), "safeMessage", row.safeMessage(), "diagnosticId", row.diagnosticId()));
         if (key.startsWith("model:")) {
-            // 记录安全错误码与关联身份，不把供应商原始响应或密钥写入日志。
-            log.error("模型调用失败 scopeId={} bindingId={} category={} code={} diagnosticId={}",
-                    scope.scopeId(), bindingId, row.category(), row.code(), row.diagnosticId());
+            // 记录安全错误码、用户可读原因与关联身份，不把供应商原始响应或密钥写入日志。
+            log.error("模型调用失败 scopeId={} bindingId={} category={} code={} reason={} diagnosticId={}",
+                    scope.scopeId(), bindingId, row.category(), row.code(), row.safeMessage(), row.diagnosticId());
         } else {
-            log.warn("执行故障已记录 scopeId={} bindingId={} category={} code={} diagnosticId={}",
-                    scope.scopeId(), bindingId, row.category(), row.code(), row.diagnosticId());
+            log.warn("执行故障已记录 scopeId={} bindingId={} category={} code={} reason={} diagnosticId={}",
+                    scope.scopeId(), bindingId, row.category(), row.code(), row.safeMessage(), row.diagnosticId());
         }
     }
 }

@@ -1,24 +1,21 @@
 package com.agentsquad.squad.presentation.service;
 
-import com.agentsquad.squad.presentation.domain.ConversationExecution;
+import com.agentsquad.squad.domain.dto.*;
+import com.agentsquad.squad.domain.entity.ConversationExecution;
 import com.agentsquad.squad.runtime.service.ExecutionFailureService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.presentation.domain.ConversationHeader;
-import com.agentsquad.squad.conversation.dto.MessageView;
-import com.agentsquad.squad.conversation.dto.ConversationSnapshot;
-import com.agentsquad.squad.conversation.dto.ConversationView;
-import com.agentsquad.squad.conversation.dto.ResponseExecutionView;
-import com.agentsquad.squad.conversation.domain.ResponseExecutionStatus;
-import com.agentsquad.squad.presentation.dto.ConversationEvent;
-import com.agentsquad.squad.presentation.dto.ActivityHistoryPage;
-import com.agentsquad.squad.presentation.dto.ActivityHistoryQuery;
-import com.agentsquad.squad.presentation.dto.ExecutionActivityView;
+import com.agentsquad.squad.domain.entity.ConversationHeader;
+import com.agentsquad.squad.domain.entity.ResponseExecutionStatus;
+import com.agentsquad.squad.domain.dto.ConversationEvent;
+import com.agentsquad.squad.domain.dto.ActivityHistoryPage;
+import com.agentsquad.squad.domain.dto.ActivityHistoryQuery;
+import com.agentsquad.squad.domain.dto.ExecutionActivityView;
 import com.agentsquad.squad.presentation.repository.ConversationReadMapper;
 import com.agentsquad.squad.conversation.repository.ResponseContextMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
-import com.agentsquad.squad.conversation.dto.TaskResponse;
+import com.agentsquad.squad.domain.dto.TaskResponse;
 import com.agentsquad.squad.interaction.service.InteractionQueryService;
 import com.agentsquad.squad.artifact.service.ArtifactService;
 import com.agentsquad.squad.artifact.repository.ArtifactMapper;
@@ -98,9 +95,9 @@ public class ConversationQueryService {
                 page.isEmpty() ? List.of() : reads.pageTasks(userId, conversationId, page.getFirst().sequence(), page.getLast().sequence()),
                 page.isEmpty() ? List.of() : directives.pageInConversation(userId, conversationId, header.generation(),
                         page.getFirst().sequence(), page.getLast().sequence()).stream()
-                        .map(com.agentsquad.squad.conversation.dto.TaskDirectiveView::from).toList(),
+                        .map(TaskDirectiveView::from).toList(),
                 activities.recent(userId, conversationId, header.generation(), 100).stream()
-                        .map(com.agentsquad.squad.presentation.dto.ExecutionActivityView::from).toList(),
+                        .map(ExecutionActivityView::from).toList(),
                 cursor(header, header.eventSequence()));
     }
 

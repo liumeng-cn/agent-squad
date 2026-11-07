@@ -1,14 +1,14 @@
 package com.agentsquad.squad.interaction.service;
 
-import com.agentsquad.squad.presentation.dto.Interaction;
+import com.agentsquad.squad.domain.dto.Interaction;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
-import com.agentsquad.squad.presentation.dto.InteractionPage;
+import com.agentsquad.squad.domain.dto.InteractionPage;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.interaction.domain.InteractionRow;
+import com.agentsquad.squad.domain.entity.InteractionRow;
 import com.agentsquad.squad.interaction.repository.InteractionMapper;
-import com.agentsquad.squad.tools.operation.domain.OperationRow;
+import com.agentsquad.squad.domain.entity.OperationRow;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import com.agentsquad.squad.tools.operation.OperationPreview;
 import com.fasterxml.jackson.databind.ObjectMapper;

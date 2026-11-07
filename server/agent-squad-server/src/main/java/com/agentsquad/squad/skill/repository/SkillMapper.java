@@ -1,9 +1,9 @@
 package com.agentsquad.squad.skill.repository;
 
-import com.agentsquad.squad.skill.domain.SkillVersionRow;
-import com.agentsquad.squad.skill.domain.SkillTextFile;
-import com.agentsquad.squad.skill.domain.SkillGrantRow;
-import com.agentsquad.squad.skill.domain.SkillReference;
+import com.agentsquad.squad.domain.entity.SkillVersionRow;
+import com.agentsquad.squad.domain.entity.SkillTextFile;
+import com.agentsquad.squad.domain.entity.SkillGrantRow;
+import com.agentsquad.squad.domain.entity.SkillReference;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

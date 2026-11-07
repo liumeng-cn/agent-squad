@@ -771,6 +771,7 @@ textarea.input {
 /* 服务故障只使用轻量行内反馈，不绘制消息卡片。 */
 .chat-service-feedback { margin: 14px 0; color: #697588; font-size: 13px; line-height: 1.7; }
 .chat-service-feedback p { margin: 0 0 3px; }
+.chat-service-feedback .chat-model-error { color: #b42318; }
 .chat-service-feedback .text-button + .text-button { margin-left: 12px; }
 
 .model-selector { position: relative; max-width: min(55vw, 300px); }

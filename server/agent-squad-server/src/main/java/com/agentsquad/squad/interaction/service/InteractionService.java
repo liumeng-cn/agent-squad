@@ -1,23 +1,24 @@
 package com.agentsquad.squad.interaction.service;
 
+import com.agentsquad.squad.domain.dto.AcceptanceReviewRequest;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
-import com.agentsquad.squad.conversation.domain.CommandRow;
-import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
-import com.agentsquad.squad.conversation.dto.CommandReceipt;
+import com.agentsquad.squad.domain.entity.CommandRow;
+import com.agentsquad.squad.domain.entity.GoalTaskStatus;
+import com.agentsquad.squad.domain.dto.CommandReceipt;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.interaction.domain.InteractionRow;
+import com.agentsquad.squad.domain.entity.InteractionRow;
 import com.agentsquad.squad.interaction.repository.InteractionMapper;
 import com.agentsquad.squad.tools.mock.MockTicketConnector;
 import com.agentsquad.squad.tools.operation.OperationExecutor;
 import com.agentsquad.squad.tools.operation.OperationService;
-import com.agentsquad.squad.tools.operation.domain.OperationRow;
-import com.agentsquad.squad.tools.operation.domain.OperationStatus;
+import com.agentsquad.squad.domain.entity.OperationRow;
+import com.agentsquad.squad.domain.entity.OperationStatus;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -139,7 +140,7 @@ public class InteractionService {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "只能由目标协调会话请求用户验收");
             }
             var review = planAcceptance.prepareUserReview(userId, target.sessionId(), objectMapper.convertValue(
-                    call.get("input"), com.agentsquad.squad.runtime.dto.AcceptanceReviewRequest.class));
+                    call.get("input"), AcceptanceReviewRequest.class));
             String schema = RuntimePayloads.toJson(objectMapper, Map.of("type", "object", "properties",
                     Map.of("accepted", Map.of("type", "boolean", "title", "这项结果符合要求")),
                     "required", List.of("accepted"), "additionalProperties", false));

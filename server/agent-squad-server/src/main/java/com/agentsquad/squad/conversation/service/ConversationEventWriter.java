@@ -1,10 +1,10 @@
 package com.agentsquad.squad.conversation.service;
 
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.conversation.domain.ExecutionScopeRow;
+import com.agentsquad.squad.domain.entity.ExecutionScopeRow;
 import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
-import com.agentsquad.squad.conversation.domain.ConversationRow;
+import com.agentsquad.squad.domain.entity.ConversationRow;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import org.springframework.context.ApplicationEventPublisher;

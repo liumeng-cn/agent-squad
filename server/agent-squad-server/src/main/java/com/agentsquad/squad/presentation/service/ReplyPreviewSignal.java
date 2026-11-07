@@ -1,6 +1,6 @@
 package com.agentsquad.squad.presentation.service;
 
-import com.agentsquad.squad.presentation.dto.ReplyPreview;
+import com.agentsquad.squad.domain.dto.ReplyPreview;
 
 /**
  * 临时公开正文的内存通知

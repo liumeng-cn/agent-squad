@@ -1,6 +1,6 @@
 package com.agentsquad.squad.conversation.service;
 
-import com.agentsquad.squad.conversation.domain.RuntimeAdmissionSlot;
+import com.agentsquad.squad.domain.entity.RuntimeAdmissionSlot;
 import com.agentsquad.squad.conversation.repository.RuntimeAdmissionMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

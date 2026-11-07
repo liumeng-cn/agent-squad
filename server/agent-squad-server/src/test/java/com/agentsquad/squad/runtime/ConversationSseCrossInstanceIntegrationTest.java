@@ -1,8 +1,7 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
+import com.agentsquad.squad.domain.dto.MessageCreateRequest;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
-import com.agentsquad.squad.presentation.dto.ConversationEvent;
 import com.agentsquad.squad.presentation.service.ConversationQueryService;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import org.junit.jupiter.api.Test;

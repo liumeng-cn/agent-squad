@@ -45,8 +45,8 @@ public class ObservationSupport {
             "jobId", "bindingId", "runId", "turnId", "messageId", "conversationId", "agentId",
             "step", "phase", "action", "method", "path", "statusCode", "attempt", "sequence",
             "status", "outcome", "nativeStatus", "errorCode", "errorType", "reason", "durationMs",
-            "delayMs", "duplicate", "model", "provider", "toolName", "resultType", "inputTokens",
-            "outputTokens", "tokenCount", "costMicrounits", "budget", "event", "truncated");
+            "delayMs", "duplicate", "model", "modelId", "reasoningMode", "provider", "toolName", "resultType", "inputTokens",
+            "outputTokens", "tokenCount", "costMicrounits", "budget", "event", "truncated", "preview");
     private static final Set<String> CORE_FIELDS = Set.of(
             "requestId", "traceId", "spanId", "executionId", "taskId", "commandId",
             "step", "outcome", "errorCode", "truncated");
@@ -55,6 +55,18 @@ public class ObservationSupport {
             "delayMs", "durationMs", "duplicate", "attempt", "sequence", "nativeStatus",
             "errorType", "reason", "status", "method", "path", "statusCode", "action", "phase",
             "agentId", "conversationId", "messageId", "turnId", "runId", "bindingId", "jobId", "scopeId");
+    /**
+     * 结构化日志字段的固定输出顺序：业务语义在前、身份 ID 在后，避免 Map.of 哈希序把日志打乱。
+     */
+    private static final List<String> FIELD_ORDER = List.of(
+            "step", "phase", "action", "event", "outcome", "status", "nativeStatus",
+            "errorCode", "errorType", "reason", "preview", "model", "modelId", "reasoningMode", "provider", "toolName",
+            "attempt", "duplicate", "method", "path", "statusCode",
+            "durationMs", "delayMs", "inputTokens", "outputTokens", "tokenCount",
+            "costMicrounits", "budget", "sequence",
+            "executionId", "taskId", "commandId", "jobId", "turnId", "runId",
+            "bindingId", "agentId", "scopeId", "conversationId", "messageId",
+            "requestId", "traceId", "spanId", "truncated");
 
     @Resource
     private ObservationRegistry observationRegistry;
@@ -91,15 +103,24 @@ public class ObservationSupport {
     }
 
     /**
-     * 过滤并截断结构化日志字段，保证单条记录不超过 4 KiB。
+     * 过滤并截断结构化日志字段，保证单条记录不超过 4 KiB，字段按固定顺序输出。
      */
     public Map<String, Object> logFields(Map<String, Object> fields) {
-        Map<String, Object> result = new LinkedHashMap<>();
+        Map<String, Object> normalized = new LinkedHashMap<>();
         for (Map.Entry<String, Object> entry : fields.entrySet()) {
             if (entry.getValue() == null || !ALLOWED_FIELDS.contains(entry.getKey())) {
                 continue;
             }
-            result.put(entry.getKey(), normalize(entry.getValue()));
+            normalized.put(entry.getKey(), normalize(entry.getValue()));
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        for (String key : FIELD_ORDER) {
+            if (normalized.containsKey(key)) {
+                result.put(key, normalized.get(key));
+            }
+        }
+        for (Map.Entry<String, Object> entry : normalized.entrySet()) {
+            result.putIfAbsent(entry.getKey(), entry.getValue());
         }
         if (serializedBytes(result) <= MAX_LOG_FIELD_BYTES) {
             return result;

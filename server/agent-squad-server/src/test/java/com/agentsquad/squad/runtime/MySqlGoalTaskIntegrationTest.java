@@ -1,8 +1,8 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.conversation.dto.ConversationResponse;
-import com.agentsquad.squad.conversation.dto.TaskReceipt;
+import com.agentsquad.squad.domain.dto.ConversationResponse;
+import com.agentsquad.squad.domain.dto.TaskReceipt;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
 import com.agentsquad.squad.artifact.service.ArtifactService;
 import org.junit.jupiter.api.Test;

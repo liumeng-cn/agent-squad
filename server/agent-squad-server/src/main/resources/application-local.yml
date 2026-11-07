@@ -32,18 +32,165 @@ agentsquad:
     admission:
       enabled: false
   model:
-    api-key: ak-e3adac2c53ba7eda3b08b400a09d77ce
-    base-url: https://maas-api.cn-huabei-1.xf-yun.com/v2
-    name: spark-x2.6
+    api-key: sk-ws-H.YRYXHHY.7z7W.MEQCIDjoffOTy4eHaywvZsQqap9WE-90e1UabL2cR7s2xUciAiAoLqTVIp-dsNOC5-EOXnWy7eV9yzV__joOJTwSjsv2MQ
+    base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    # qwen3.8-flash 试用已失效（AccessDenied.Unpurchased），默认改用实测可用的 qwen3.8-omni-flash
+    name: qwen3.8-omni-flash
   worker:
     model-profiles:
       default:
         provider: OPENAI_COMPATIBLE
-        display-name: Spark-X2.6
+        display-name: Qwen3.8 Omni Flash（默认）
+        capabilities:
+        - REASONING
+        - TEXT_GENERATION
+        - TOOL_USE
+        - VISION
+        reasoning-adapter: QWEN_THINKING
+        reasoning-modes:
+        - 'OFF'
+        - 'ON'
+        default-reasoning-mode: 'OFF'
+        api-key: sk-ws-H.YRYXHHY.7z7W.MEQCIDjoffOTy4eHaywvZsQqap9WE-90e1UabL2cR7s2xUciAiAoLqTVIp-dsNOC5-EOXnWy7eV9yzV__joOJTwSjsv2MQ
+        base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+        model-name: qwen3.8-omni-flash
+        pricing-version: qwen-cn-v1
+        input-microunits-per-million-tokens: 800000
+        output-microunits-per-million-tokens: 2700000
+        max-input-tokens: 65536
+        max-output-tokens: 8192
+      "[qwen3.8-flash]": &dashscope-chat
+        provider: OPENAI_COMPATIBLE
+        display-name: Qwen3.8 Flash
+        capabilities:
+        - REASONING
+        - TEXT_GENERATION
+        - TOOL_USE
+        - VISION
+        reasoning-adapter: QWEN_THINKING
+        reasoning-modes:
+        - 'OFF'
+        - 'ON'
+        default-reasoning-mode: 'OFF'
+        api-key: sk-ws-H.YRYXHHY.7z7W.MEQCIDjoffOTy4eHaywvZsQqap9WE-90e1UabL2cR7s2xUciAiAoLqTVIp-dsNOC5-EOXnWy7eV9yzV__joOJTwSjsv2MQ
+        base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+        model-name: qwen3.8-flash
+        pricing-version: qwen-cn-v1
+        input-microunits-per-million-tokens: 800000
+        output-microunits-per-million-tokens: 2800000
+        max-input-tokens: 65536
+        max-output-tokens: 8192
+      # 千问系文本模型：支持思考与工具调用，走 QWEN_THINKING 适配
+      "[qwen3.8-max]":
+        <<: *dashscope-chat
+        model-name: qwen3.8-max
+        display-name: Qwen3.8 Max
         capabilities: [REASONING, TEXT_GENERATION, TOOL_USE]
-        reasoning-adapter: SPARK_THINKING
-        reasoning-modes: [OFF, AUTO, ON]
-        default-reasoning-mode: AUTO
-        api-key: ak-e3adac2c53ba7eda3b08b400a09d77ce
-        base-url: https://maas-api.cn-huabei-1.xf-yun.com/v2
+        reasoning-adapter: QWEN_THINKING
+        reasoning-modes: ['OFF', 'ON']
+        default-reasoning-mode: 'OFF'
+        input-microunits-per-million-tokens: 12000000
+        output-microunits-per-million-tokens: 36000000
+      "[qwen3.8-omni-flash]":
+        <<: *dashscope-chat
+        model-name: qwen3.8-omni-flash
+        display-name: Qwen3.8 Omni Flash
+        capabilities: [REASONING, TEXT_GENERATION, TOOL_USE, VISION]
+        reasoning-adapter: QWEN_THINKING
+        reasoning-modes: ['OFF', 'ON']
+        default-reasoning-mode: 'OFF'
+        input-microunits-per-million-tokens: 800000
+        output-microunits-per-million-tokens: 2700000
+      "[qwen3.8-2.4t-a95b]":
+        <<: *dashscope-chat
+        model-name: qwen3.8-2.4t-a95b
+        display-name: Qwen3.8 开源模型
+        capabilities: [REASONING, TEXT_GENERATION, TOOL_USE]
+        reasoning-adapter: QWEN_THINKING
+        reasoning-modes: ['OFF', 'ON']
+        default-reasoning-mode: 'OFF'
+        input-microunits-per-million-tokens: 12000000
+        output-microunits-per-million-tokens: 36000000
+      # 第三方模型：思考协议未实测，保持保守配置
+      "[deepseek-v4.1-flash]":
+        <<: *dashscope-chat
+        model-name: deepseek-v4.1-flash
+        display-name: DeepSeek V4.1 Flash
+        capabilities: [TEXT_GENERATION]
+        reasoning-adapter: NONE
+        reasoning-modes: [DEFAULT]
+        default-reasoning-mode: DEFAULT
+        input-microunits-per-million-tokens: 1000000
+        output-microunits-per-million-tokens: 4000000
+      "[kimi-k3]":
+        <<: *dashscope-chat
+        model-name: kimi-k3
+        display-name: Kimi K3
+        capabilities: [TEXT_GENERATION]
+        reasoning-adapter: NONE
+        reasoning-modes: [DEFAULT]
+        default-reasoning-mode: DEFAULT
+        input-microunits-per-million-tokens: 20000000
+        output-microunits-per-million-tokens: 100000000
+      # 阶梯计费（标准 2/8、>256K 6/24，限时 8 折），配置取 8 折入口档
+      "[qwen3.7-plus]":
+        <<: *dashscope-chat
+        model-name: qwen3.7-plus
+        display-name: Qwen3.7 Plus
+        capabilities: [REASONING, TEXT_GENERATION, TOOL_USE]
+        reasoning-adapter: QWEN_THINKING
+        reasoning-modes: ['OFF', 'ON']
+        default-reasoning-mode: 'OFF'
+        input-microunits-per-million-tokens: 1600000
+        output-microunits-per-million-tokens: 6400000
+      "[qwen3.7-max]":
+        <<: *dashscope-chat
+        model-name: qwen3.7-max
+        display-name: Qwen3.7 Max
+        capabilities: [REASONING, TEXT_GENERATION, TOOL_USE]
+        reasoning-adapter: QWEN_THINKING
+        reasoning-modes: ['OFF', 'ON']
+        default-reasoning-mode: 'OFF'
+        input-microunits-per-million-tokens: 12000000
+        output-microunits-per-million-tokens: 36000000
+      "[qwen3.7-flash]":
+        <<: *dashscope-chat
+        model-name: qwen3.7-flash
+        display-name: Qwen3.7 Flash
+        capabilities: [REASONING, TEXT_GENERATION, TOOL_USE]
+        reasoning-adapter: QWEN_THINKING
+        reasoning-modes: ['OFF', 'ON']
+        default-reasoning-mode: 'OFF'
+        input-microunits-per-million-tokens: 200000
+        output-microunits-per-million-tokens: 800000
+      "[qwen3.5-omni-plus]":
+        <<: *dashscope-chat
+        model-name: qwen3.5-omni-plus
+        display-name: Qwen3.5 Omni Plus
+        capabilities: [REASONING, TEXT_GENERATION, TOOL_USE, VISION]
+        reasoning-adapter: QWEN_THINKING
+        reasoning-modes: ['OFF', 'ON']
+        default-reasoning-mode: 'OFF'
+        input-microunits-per-million-tokens: 7000000
+        output-microunits-per-million-tokens: 40000000
+      "[spark-x2.6]":
+        provider: OPENAI_COMPATIBLE
         model-name: spark-x2.6
+        base-url: https://maas-api.cn-huabei-1.xf-yun.com/v2
+        api-key: ak-e3adac2c53ba7eda3b08b400a09d77ce
+        pricing-version: local-v1
+        input-microunits-per-million-tokens: 1000000
+        output-microunits-per-million-tokens: 1000000
+        max-input-tokens: 32768
+        max-output-tokens: 8192
+        display-name: Spark-X2.6
+        capabilities:
+        - REASONING
+        - TEXT_GENERATION
+        - TOOL_USE
+        reasoning-adapter: SPARK_THINKING
+        reasoning-modes:
+        - false
+        - AUTO
+        - true
+        default-reasoning-mode: AUTO

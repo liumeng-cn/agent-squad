@@ -1,7 +1,7 @@
 package com.agentsquad.squad.tools.operation.repository;
 
-import com.agentsquad.squad.tools.operation.domain.OperationRow;
-import com.agentsquad.squad.tools.operation.domain.ToolExecutionContextRow;
+import com.agentsquad.squad.domain.entity.OperationRow;
+import com.agentsquad.squad.domain.entity.ToolExecutionContextRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

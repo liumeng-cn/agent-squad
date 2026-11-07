@@ -2,7 +2,7 @@ package com.agentsquad.squad.conversation.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.conversation.domain.FinalDeliveryRow;
+import com.agentsquad.squad.domain.entity.FinalDeliveryRow;
 import com.agentsquad.squad.conversation.repository.FinalDeliveryMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

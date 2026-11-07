@@ -1,6 +1,6 @@
 package com.agentsquad.squad.conversation.repository;
 
-import com.agentsquad.squad.conversation.domain.RuntimeAdmissionSlot;
+import com.agentsquad.squad.domain.entity.RuntimeAdmissionSlot;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

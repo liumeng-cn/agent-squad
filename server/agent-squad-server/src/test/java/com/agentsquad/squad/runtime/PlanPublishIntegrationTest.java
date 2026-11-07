@@ -2,20 +2,22 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.conversation.dto.ConversationResponse;
-import com.agentsquad.squad.conversation.dto.TaskReceipt;
+import com.agentsquad.squad.domain.dto.ConversationResponse;
+import com.agentsquad.squad.domain.dto.TaskReceipt;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.domain.entity.ProjectionTarget;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.runtime.dto.PlanNode;
-import com.agentsquad.squad.runtime.dto.PlanPublish;
-import com.agentsquad.squad.runtime.dto.PlanReceipt;
+import com.agentsquad.squad.integration.agentscope.middleware.ScopedMasterToolsMiddleware;
+import com.agentsquad.squad.domain.dto.PlanNode;
+import com.agentsquad.squad.domain.dto.PlanPublish;
+import com.agentsquad.squad.domain.dto.PlanReceipt;
 import com.agentsquad.squad.runtime.service.ContextSnapshotService;
 import com.agentsquad.squad.runtime.service.MasterSignalService;
 import com.agentsquad.squad.runtime.service.PlanService;
 import com.agentsquad.squad.runtime.service.WorkerDispatchService;
 import com.agentsquad.squad.runtime.service.WorkerResultService;
 import com.agentsquad.squad.presentation.service.TaskSnapshotService;
-import com.agentsquad.squad.worker.dto.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.domain.dto.WorkerDefinitionCreateRequest;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -356,13 +358,13 @@ class PlanPublishIntegrationTest {
             org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "commandMapper", commands);
             var transaction = new org.springframework.transaction.support.TransactionTemplate(context.getBean(org.springframework.transaction.PlatformTransactionManager.class));
             assertThat(transaction.<Boolean>execute(status -> finalizer.recoverMissingProposal(
-                    new com.agentsquad.squad.runtime.domain.ProjectionTarget(userId, task.taskId(), masterBinding, "master", sessionId, 0),
+                    new ProjectionTarget(userId, task.taskId(), masterBinding, "master", sessionId, 0),
                     new com.agentsquad.squad.integration.agentscope.NativeEventView(100, "old-end", "run/end", "old-run", "old-plan-signal", "completed", 1000, java.util.Map.of()))))
                     .isTrue();
             assertThat(jdbc.queryForObject("SELECT completion_correction_count FROM sq_goal_task WHERE task_id = ?", Integer.class, task.taskId())).isZero();
 
             // 实际执行时等待，恢复受阻时开放协调工具，不能同时要求 Master 空等。
-            var middleware = new com.agentsquad.squad.integration.agentscope.ScopedMasterToolsMiddleware();
+            var middleware = new ScopedMasterToolsMiddleware();
             org.springframework.test.util.ReflectionTestUtils.setField(middleware, "scopes", context.getBean(com.agentsquad.squad.conversation.service.ExecutionScopeService.class));
             org.springframework.test.util.ReflectionTestUtils.setField(middleware, "scopeMapper", context.getBean(com.agentsquad.squad.conversation.repository.ExecutionScopeMapper.class));
             org.springframework.test.util.ReflectionTestUtils.setField(middleware, "tasks", context.getBean(com.agentsquad.squad.conversation.repository.TaskMapper.class));

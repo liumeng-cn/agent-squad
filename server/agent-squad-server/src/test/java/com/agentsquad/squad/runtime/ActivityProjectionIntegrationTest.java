@@ -2,16 +2,17 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.common.observability.ExecutionTrace;
+import com.agentsquad.squad.domain.dto.MessageReceipt;
 import io.micrometer.tracing.Tracer;
-import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
+import com.agentsquad.squad.domain.dto.MessageCreateRequest;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
 import com.agentsquad.squad.integration.agentscope.NativeEventView;
 import com.agentsquad.squad.presentation.service.ActivityProjectionService;
-import com.agentsquad.squad.presentation.dto.ActivityHistoryQuery;
-import com.agentsquad.squad.presentation.dto.ExecutionActivityView;
+import com.agentsquad.squad.domain.dto.ActivityHistoryQuery;
+import com.agentsquad.squad.domain.dto.ExecutionActivityView;
 import com.agentsquad.squad.presentation.service.ConversationQueryService;
-import com.agentsquad.squad.runtime.domain.ProjectionTarget;
+import com.agentsquad.squad.domain.entity.ProjectionTarget;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -44,7 +45,7 @@ class ActivityProjectionIntegrationTest {
             String user = "00000000-0000-0000-0000-000000000001";
             var tracer = context.getBean(Tracer.class);
             var parent = tracer.nextSpan().name("test.message.accept").start();
-            com.agentsquad.squad.conversation.dto.MessageReceipt receipt;
+            MessageReceipt receipt;
             try (var ignored = tracer.withSpan(parent)) {
                 receipt = context.getBean(MessageAcceptanceService.class)
                         .accept(user, null, "activity", new MessageCreateRequest("读取资料", List.of()));

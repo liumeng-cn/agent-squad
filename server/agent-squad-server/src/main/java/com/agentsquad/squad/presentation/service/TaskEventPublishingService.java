@@ -6,6 +6,9 @@ import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.conversation.service.FinalDeliveryService;
 import com.agentsquad.squad.conversation.service.ConversationEventWriter;
+import com.agentsquad.squad.domain.dto.JobReusedPayload;
+import com.agentsquad.squad.domain.dto.PlanAcceptanceCriterion;
+import com.agentsquad.squad.domain.dto.PlanPublishedPayload;
 import com.agentsquad.squad.presentation.repository.ConversationReadMapper;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -106,14 +109,14 @@ public class TaskEventPublishingService {
                 if ("plan.published".equals(eventType)) {
                     java.util.List<String> jobIds = json.convertValue(payload.path("jobIds"),
                             json.getTypeFactory().constructCollectionType(java.util.List.class, String.class));
-                    java.util.List<com.agentsquad.squad.runtime.dto.PlanAcceptanceCriterion> criteria = json.convertValue(
+                    java.util.List<PlanAcceptanceCriterion> criteria = json.convertValue(
                             payload.path("acceptanceCriteria"), json.getTypeFactory().constructCollectionType(java.util.List.class,
-                                    com.agentsquad.squad.runtime.dto.PlanAcceptanceCriterion.class));
-                    events.publish(scope, key, eventType, new com.agentsquad.squad.presentation.dto.PlanPublishedPayload(2,
+                                    PlanAcceptanceCriterion.class));
+                    events.publish(scope, key, eventType, new PlanPublishedPayload(2,
                             taskId, planVersion, jobIds, com.agentsquad.squad.common.enums.worker.PlanJoinPolicy.valueOf(
                             payload.path("joinPolicy").asText()), criteria));
                 } else {
-                    events.publish(scope, key, eventType, new com.agentsquad.squad.presentation.dto.JobReusedPayload(2,
+                    events.publish(scope, key, eventType, new JobReusedPayload(2,
                             taskId, planVersion, payload.path("jobId").asText(), payload.path("reusedFromJobId").asText()));
                 }
             } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {

@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper">
 
-    <resultMap id="findSubmissionResult" type="com.agentsquad.squad.conversation.domain.MessageSubmissionRow">
+    <resultMap id="findSubmissionResult" type="com.agentsquad.squad.domain.entity.MessageSubmissionRow">
         <constructor>
             <arg column="conversation_id" javaType="java.lang.String"/>
             <arg column="source_message_id" javaType="java.lang.String"/>

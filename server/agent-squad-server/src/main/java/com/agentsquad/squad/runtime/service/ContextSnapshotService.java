@@ -5,10 +5,12 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.CanonicalJson;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
-import com.agentsquad.squad.runtime.domain.ContextPreparationRow;
-import com.agentsquad.squad.runtime.domain.ContextSnapshotRow;
-import com.agentsquad.squad.runtime.dto.ContextSnapshotReceipt;
+import com.agentsquad.squad.domain.dto.ContextMaterial;
+import com.agentsquad.squad.domain.dto.ContextPreparationRequest;
+import com.agentsquad.squad.domain.entity.GoalTaskStatus;
+import com.agentsquad.squad.domain.entity.ContextPreparationRow;
+import com.agentsquad.squad.domain.entity.ContextSnapshotRow;
+import com.agentsquad.squad.domain.dto.ContextSnapshotReceipt;
 import com.agentsquad.squad.runtime.repository.ContextSnapshotMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,7 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -59,7 +60,7 @@ public class ContextSnapshotService {
     @Transactional
     public ContextSnapshotReceipt prepare(String userId, String sessionId,
                                           String targetNodeKey, String logicalKey) {
-        return prepare(userId, sessionId, new com.agentsquad.squad.runtime.dto.ContextPreparationRequest(
+        return prepare(userId, sessionId, new ContextPreparationRequest(
                 targetNodeKey, logicalKey, List.of(), List.of()));
     }
 
@@ -68,7 +69,7 @@ public class ContextSnapshotService {
      */
     @Transactional
     public ContextSnapshotReceipt prepare(String userId, String sessionId,
-            com.agentsquad.squad.runtime.dto.ContextPreparationRequest request) {
+            ContextPreparationRequest request) {
         String targetNodeKey = request.targetNodeKey();
         String logicalKey = request.logicalKey();
         if (request.skillVersionIds().size() > 64 || request.memoryIds().size() > 20
@@ -121,22 +122,22 @@ public class ContextSnapshotService {
 
         String message = originalMessage(context.inputJson());
         var applied = directives.effectiveApplied(userId, context.taskId());
-        var items = new java.util.ArrayList<com.agentsquad.squad.runtime.dto.ContextMaterial>();
+        var items = new java.util.ArrayList<ContextMaterial>();
         boolean replaced = applied.stream().anyMatch(item -> "REPLACE".equals(item.kind()));
-        items.add(new com.agentsquad.squad.runtime.dto.ContextMaterial(
+        items.add(new ContextMaterial(
                 replaced ? "USER_ORIGIN_REFERENCE" : "USER_CONSTRAINT", context.taskId(), "1", "USER", message));
         for (var directive : applied) {
-            items.add(new com.agentsquad.squad.runtime.dto.ContextMaterial(
+            items.add(new ContextMaterial(
                     "REPLACE".equals(directive.kind()) ? "USER_GOAL_REPLACEMENT" : "USER_SUPPLEMENT",
                     directive.sourceMessageId(), String.valueOf(directive.appliedGoalRevision()), "USER", directive.sourceText()));
             message += "\n" + directive.sourceText();
         }
         for (var skill : selectedSkills) {
-            items.add(new com.agentsquad.squad.runtime.dto.ContextMaterial("SKILL_REFERENCE", skill.skillVersionId(),
+            items.add(new ContextMaterial("SKILL_REFERENCE", skill.skillVersionId(),
                     skill.version(), "UNTRUSTED", skill.description(), skill.contentHash(), skill.authorizationRevision()));
         }
         for (var memory : selectedMemory.memories()) {
-            items.add(new com.agentsquad.squad.runtime.dto.ContextMaterial("EXPLICIT_MEMORY", memory.memoryId(),
+            items.add(new ContextMaterial("EXPLICIT_MEMORY", memory.memoryId(),
                     String.valueOf(memory.version()), "USER_DATA", memory.content()));
         }
         String itemsJson = RuntimePayloads.toJson(objectMapper, items);

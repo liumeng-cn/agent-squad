@@ -30,6 +30,19 @@ describe('服务异常的用户反馈', () => {
     expect(wrapper.findAll('.copy-answer-button')).toHaveLength(0)
     expect(wrapper.find('details').exists()).toBe(false)
   })
+  it.each([
+    ['MODEL_BILLING_UNAVAILABLE', '模型余额不足'],
+    ['BUDGET_EXHAUSTED', '本次处理额度已用完'],
+    ['MODEL_CREDENTIALS_INVALID', '当前模型的调用授权不可用'],
+    ['MODEL_UNAVAILABLE', '当前模型不可用'],
+    ['MODEL_ACCESS_DENIED', '当前模型未开通或试用已失效'],
+  ])('用红字显示 %s 对应的处理建议', (code, expectedText) => {
+    const store = fixture()
+    store.snapshot!.failures[0].code = code
+    const wrapper = mount(MessageThread)
+    expect(wrapper.find('.chat-model-error').text()).toContain(expectedText)
+    expect(wrapper.text()).not.toContain('Insufficient Balance')
+  })
   it('使用后端给出的执行身份和版本重试，不伪造权限', async () => {
     const store = fixture(['RETRY'])
     const retry = vi.spyOn(store, 'retry').mockResolvedValue(undefined)

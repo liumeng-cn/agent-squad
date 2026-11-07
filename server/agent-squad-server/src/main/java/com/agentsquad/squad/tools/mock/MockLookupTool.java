@@ -4,7 +4,7 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.tools.operation.OperationExecutor;
 import com.agentsquad.squad.tools.operation.OperationService;
 import com.agentsquad.squad.tools.operation.PrepareRequest;
-import com.agentsquad.squad.tools.operation.domain.OperationRow;
+import com.agentsquad.squad.domain.entity.OperationRow;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.tool.AgentTool;
 import io.agentscope.core.tool.ToolCallParam;

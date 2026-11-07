@@ -1,7 +1,7 @@
 package com.agentsquad.squad.conversation.repository;
 
-import com.agentsquad.squad.conversation.domain.ExecutionScopeRow;
-import com.agentsquad.squad.conversation.domain.ExecutionOwnerRow;
+import com.agentsquad.squad.domain.entity.ExecutionScopeRow;
+import com.agentsquad.squad.domain.entity.ExecutionOwnerRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

@@ -1,7 +1,7 @@
 package com.agentsquad.squad.sandbox;
 
-import com.agentsquad.squad.sandbox.dto.SandboxExecuteRequest;
-import com.agentsquad.squad.sandbox.dto.SandboxFile;
+import com.agentsquad.squad.domain.dto.SandboxExecuteRequest;
+import com.agentsquad.squad.domain.dto.SandboxFile;
 import com.agentsquad.squad.sandbox.infrastructure.HarnessDockerSandboxDriver;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;

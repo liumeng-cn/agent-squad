@@ -1,6 +1,6 @@
 package com.agentsquad.squad.conversation.repository;
 
-import com.agentsquad.squad.conversation.domain.TaskRow;
+import com.agentsquad.squad.domain.entity.TaskRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

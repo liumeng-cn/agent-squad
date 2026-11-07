@@ -2,7 +2,7 @@ package com.agentsquad.squad.runtime.service;
 
 import com.agentsquad.squad.presentation.service.TaskEventStreamer;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.conversation.domain.TaskRow;
+import com.agentsquad.squad.domain.entity.TaskRow;
 import com.agentsquad.squad.conversation.repository.TaskEventMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
 import org.junit.jupiter.api.AfterEach;

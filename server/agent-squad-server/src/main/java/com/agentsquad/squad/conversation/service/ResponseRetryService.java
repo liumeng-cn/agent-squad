@@ -4,16 +4,17 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.conversation.dto.MessageReceipt;
-import com.agentsquad.squad.conversation.domain.ResponseExecutionStatus;
+import com.agentsquad.squad.domain.dto.MessageReceipt;
+import com.agentsquad.squad.domain.entity.ResponseExecutionStatus;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper;
 import com.agentsquad.squad.conversation.repository.ResponseContextMapper;
 import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
+import com.agentsquad.squad.domain.entity.ResponseCompletionProtocol;
 import com.agentsquad.squad.runtime.repository.ExecutionFailureMapper;
-import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
+import com.agentsquad.squad.domain.entity.MasterAgentIdentity;
 import com.agentsquad.squad.artifact.service.ArtifactService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -37,7 +38,7 @@ public class ResponseRetryService {
     @Resource
     private com.agentsquad.squad.presentation.service.ActivityProjectionService activities;
     @org.springframework.beans.factory.annotation.Value("${agentsquad.response.completion-protocol:NATURAL}")
-    private com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol completionProtocol;
+    private ResponseCompletionProtocol completionProtocol;
 
     @Resource
     private FinalDeliveryService finalDeliveries;

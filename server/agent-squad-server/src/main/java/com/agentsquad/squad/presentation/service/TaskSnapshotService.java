@@ -4,19 +4,20 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
-import com.agentsquad.squad.runtime.domain.EventRow;
-import com.agentsquad.squad.conversation.domain.TaskRow;
-import com.agentsquad.squad.presentation.dto.AnswerView;
-import com.agentsquad.squad.presentation.dto.Interaction;
-import com.agentsquad.squad.conversation.dto.TaskResponse;
-import com.agentsquad.squad.presentation.dto.TaskSnapshot;
-import com.agentsquad.squad.presentation.dto.WorkerJob;
-import com.agentsquad.squad.presentation.dto.WorkerJobPage;
+import com.agentsquad.squad.domain.dto.AcceptanceCheckView;
+import com.agentsquad.squad.domain.entity.EventRow;
+import com.agentsquad.squad.domain.entity.TaskRow;
+import com.agentsquad.squad.domain.dto.AnswerView;
+import com.agentsquad.squad.domain.dto.Interaction;
+import com.agentsquad.squad.domain.dto.TaskResponse;
+import com.agentsquad.squad.domain.dto.TaskSnapshot;
+import com.agentsquad.squad.domain.dto.WorkerJob;
+import com.agentsquad.squad.domain.dto.WorkerJobPage;
 import com.agentsquad.squad.conversation.repository.TaskEventMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.interaction.service.InteractionQueryService;
-import com.agentsquad.squad.runtime.domain.WorkerJobRow;
+import com.agentsquad.squad.domain.entity.WorkerJobRow;
 import com.agentsquad.squad.runtime.repository.PlanMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -113,7 +114,7 @@ public class TaskSnapshotService {
     }
 
     /** 只展示正式结束任务的检查结论；候选检查尚未取得发布资格，不提前显示为已完成。 */
-    private List<com.agentsquad.squad.presentation.dto.AcceptanceCheckView> acceptanceChecks(TaskRow task) {
+    private List<AcceptanceCheckView> acceptanceChecks(TaskRow task) {
         if (task.planVersion() == 0 || !java.util.Set.of("SUCCEEDED", "PARTIAL", "FAILED").contains(task.status())) {
             return List.of();
         }
@@ -126,12 +127,12 @@ public class TaskSnapshotService {
             if (!checks.isArray() || checks.size() > 20) {
                 return List.of();
             }
-            var views = new java.util.ArrayList<com.agentsquad.squad.presentation.dto.AcceptanceCheckView>();
+            var views = new java.util.ArrayList<AcceptanceCheckView>();
             for (var check : checks) {
                 if (check.path("planVersion").asLong(-1) != task.planVersion()) {
                     return List.of();
                 }
-                views.add(new com.agentsquad.squad.presentation.dto.AcceptanceCheckView(check.path("criterionId").asText(),
+                views.add(new AcceptanceCheckView(check.path("criterionId").asText(),
                         check.path("text").asText(), check.path("required").asBoolean(),
                         com.agentsquad.squad.common.enums.worker.AcceptanceVerificationType.valueOf(check.path("verificationType").asText()),
                         com.agentsquad.squad.common.enums.worker.PlanAcceptanceVerdict.valueOf(check.path("verdict").asText())));

@@ -9,20 +9,21 @@ import com.agentsquad.squad.agent.tool.ProposeCompletionTool;
 import com.agentsquad.squad.agent.tool.PublishPlanTool;
 import com.agentsquad.squad.agent.tool.RequestInputTool;
 import com.agentsquad.squad.agent.tool.SubmitTaskDirectiveTool;
-import com.agentsquad.squad.conversation.domain.DeliveryRow;
+import com.agentsquad.squad.domain.entity.DeliveryRow;
 import com.agentsquad.squad.conversation.service.ResponseContextService;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.integration.agentscope.ExecutionContextMiddleware;
-import com.agentsquad.squad.integration.agentscope.ModelBudgetMiddleware;
+import com.agentsquad.squad.integration.agentscope.middleware.ModelBudgetMiddleware;
 import com.agentsquad.squad.integration.agentscope.NativeEventView;
 import com.agentsquad.squad.integration.agentscope.NativeSessionGateway;
 import com.agentsquad.squad.integration.agentscope.NativeSubmissionReceipt;
 import com.agentsquad.squad.integration.agentscope.PlatformSkillVisibility;
-import com.agentsquad.squad.integration.agentscope.ScopedMasterToolsMiddleware;
+import com.agentsquad.squad.integration.agentscope.middleware.ScopedMasterToolsMiddleware;
 import com.agentsquad.squad.integration.agentscope.WorkerFactory;
+import com.agentsquad.squad.integration.agentscope.middleware.SelectedReplyModelMiddleware;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
-import com.agentsquad.squad.runtime.domain.ProjectionTarget;
+import com.agentsquad.squad.domain.entity.MasterAgentIdentity;
+import com.agentsquad.squad.domain.entity.ProjectionTarget;
 import com.agentsquad.squad.tools.mock.MockLookupTool;
 import com.agentsquad.squad.tools.mock.MockTicketCreateTool;
 import io.agentscope.core.agent.RuntimeContext;
@@ -112,7 +113,7 @@ public class MasterAgent implements NativeSessionGateway {
     private com.agentsquad.squad.integration.agentscope.ReplyPreviewMiddleware replyPreview;
 
     @Resource
-    private com.agentsquad.squad.integration.agentscope.SelectedReplyModelMiddleware selectedModel;
+    private SelectedReplyModelMiddleware selectedModel;
 
     @Resource
     private ModelBudgetMiddleware modelBudgetMiddleware;

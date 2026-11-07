@@ -1,9 +1,10 @@
 package com.agentsquad.squad.sandbox.infrastructure;
 
-import com.agentsquad.squad.sandbox.domain.SandboxPolicy;
-import com.agentsquad.squad.sandbox.dto.SandboxDriverResult;
-import com.agentsquad.squad.sandbox.dto.SandboxExecuteRequest;
-import com.agentsquad.squad.sandbox.dto.SandboxOutput;
+import com.agentsquad.squad.domain.entity.SandboxInputFile;
+import com.agentsquad.squad.domain.entity.SandboxPolicy;
+import com.agentsquad.squad.domain.dto.SandboxDriverResult;
+import com.agentsquad.squad.domain.dto.SandboxExecuteRequest;
+import com.agentsquad.squad.domain.dto.SandboxOutput;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import io.agentscope.harness.agent.sandbox.ExecResult;
@@ -44,7 +45,7 @@ public class HarnessDockerSandboxDriver {
      * 超时或失败仍销毁整个容器，防止 docker exec 超时后遗留脚本进程。
      */
     public SandboxDriverResult execute(SandboxExecuteRequest request) throws Exception {
-        return execute(request, request.files().stream().map(file -> new com.agentsquad.squad.sandbox.domain.SandboxInputFile(
+        return execute(request, request.files().stream().map(file -> new SandboxInputFile(
                 file.path(), file.content().getBytes(StandardCharsets.UTF_8))).toList());
     }
 
@@ -52,7 +53,7 @@ public class HarnessDockerSandboxDriver {
      * 仅将服务层已校验的字节投影到容器；SDK工作空间保持空，避免其文件物化逻辑写到宿主。
      */
     public SandboxDriverResult execute(SandboxExecuteRequest request,
-                                       java.util.List<com.agentsquad.squad.sandbox.domain.SandboxInputFile> inputFiles) throws Exception {
+                                       java.util.List<SandboxInputFile> inputFiles) throws Exception {
         requireAvailable();
         SandboxPolicy.validate(request);
         WorkspaceSpec workspace = new WorkspaceSpec();

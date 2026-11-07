@@ -1,11 +1,12 @@
 package com.agentsquad.squad.agent.tool;
 
-import com.agentsquad.squad.artifact.dto.ArtifactCommitRequest;
+import com.agentsquad.squad.domain.dto.ArtifactCommitRequest;
 import com.agentsquad.squad.artifact.service.ArtifactDeliveryService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
+import com.agentsquad.squad.domain.entity.WorkerExecutionIdentity;
 import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -78,7 +79,7 @@ public class CommitArtifactTool implements AgentTool {
                     if (!definitions.requirePublished(worker.workerKey(), worker.workerVersion()).toolAllowlist().contains(getName())) {
                         throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "该Worker没有产物提交权限");
                     }
-                    var identity = context.get(com.agentsquad.squad.runtime.domain.WorkerExecutionIdentity.class);
+                    var identity = context.get(WorkerExecutionIdentity.class);
                     if (identity == null || !bindingId.equals(identity.bindingId())) {
                         throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "缺少本次Worker领取的固定执行身份");
                     }

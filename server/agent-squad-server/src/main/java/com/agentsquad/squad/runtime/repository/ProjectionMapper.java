@@ -1,6 +1,6 @@
 package com.agentsquad.squad.runtime.repository;
 
-import com.agentsquad.squad.runtime.domain.ProjectionTarget;
+import com.agentsquad.squad.domain.entity.ProjectionTarget;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

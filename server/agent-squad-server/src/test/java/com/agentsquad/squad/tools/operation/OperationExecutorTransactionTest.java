@@ -1,6 +1,6 @@
 package com.agentsquad.squad.tools.operation;
 
-import com.agentsquad.squad.tools.operation.domain.OperationRow;
+import com.agentsquad.squad.domain.entity.OperationRow;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;

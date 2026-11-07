@@ -1,15 +1,12 @@
 package com.agentsquad.squad.runtime.service;
 
+import com.agentsquad.squad.domain.dto.AcceptanceReview;
+import com.agentsquad.squad.domain.entity.*;
 import com.agentsquad.squad.presentation.service.TaskEventPublishingService;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
-import com.agentsquad.squad.runtime.domain.FailureClassification;
 import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
 import com.agentsquad.squad.integration.agentscope.NativeEventView;
-import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
-import com.agentsquad.squad.conversation.domain.RuntimeCommandAction;
-import com.agentsquad.squad.runtime.domain.FinalizationRow;
-import com.agentsquad.squad.runtime.domain.NativeRunOutcome;
-import com.agentsquad.squad.runtime.domain.ProjectionTarget;
+import com.agentsquad.squad.domain.entity.ProjectionTarget;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.conversation.repository.TaskEventMapper;
@@ -128,11 +125,11 @@ public class TaskFinalizerService {
         }
         if (row.planVersion() > 0) {
             try {
-                List<com.agentsquad.squad.runtime.dto.AcceptanceReview> reviews = objectMapper.convertValue(proposal.path("acceptanceReviews"),
+                List<AcceptanceReview> reviews = objectMapper.convertValue(proposal.path("acceptanceReviews"),
                         objectMapper.getTypeFactory().constructCollectionType(List.class,
-                                com.agentsquad.squad.runtime.dto.AcceptanceReview.class));
+                                AcceptanceReview.class));
                 var evaluation = planEvaluation.evaluate(row.userId(), row.taskId(), row.planVersion(), reviews);
-                if (evaluation.decision().stage() != com.agentsquad.squad.runtime.domain.PlanJoinStage.READY
+                if (evaluation.decision().stage() != PlanJoinStage.READY
                         || (GoalTaskStatus.SUCCEEDED.name().equals(outcome)
                         && evaluation.decision().outcome() != GoalTaskStatus.SUCCEEDED)
                         || (GoalTaskStatus.PARTIAL.name().equals(outcome)

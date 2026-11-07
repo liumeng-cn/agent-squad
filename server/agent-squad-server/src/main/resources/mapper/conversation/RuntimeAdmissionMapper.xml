@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.conversation.repository.RuntimeAdmissionMapper">
 
-    <resultMap id="slotResult" type="com.agentsquad.squad.conversation.domain.RuntimeAdmissionSlot">
+    <resultMap id="slotResult" type="com.agentsquad.squad.domain.entity.RuntimeAdmissionSlot">
         <constructor>
             <arg column="user_id" javaType="java.lang.String"/>
             <arg column="binding_id" javaType="java.lang.String"/>

@@ -2,17 +2,19 @@ package com.agentsquad.squad.skill.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.skill.config.SkillPackageLimits;
-import com.agentsquad.squad.skill.domain.SkillGrantRow;
-import com.agentsquad.squad.skill.domain.SkillPackage;
-import com.agentsquad.squad.skill.domain.SkillPackageValidator;
-import com.agentsquad.squad.skill.domain.SkillVersionRow;
-import com.agentsquad.squad.skill.dto.SkillDetail;
-import com.agentsquad.squad.skill.dto.SkillGrantRequest;
-import com.agentsquad.squad.skill.dto.SkillGrantView;
-import com.agentsquad.squad.skill.dto.SkillImportRequest;
-import com.agentsquad.squad.skill.dto.SkillPage;
-import com.agentsquad.squad.skill.dto.SkillVersionView;
+import com.agentsquad.squad.config.SkillPackageLimits;
+import com.agentsquad.squad.domain.dto.SkillFile;
+import com.agentsquad.squad.domain.entity.SkillGrantRow;
+import com.agentsquad.squad.domain.entity.SkillPackage;
+import com.agentsquad.squad.domain.entity.SkillPackageValidator;
+import com.agentsquad.squad.domain.entity.SkillTextFile;
+import com.agentsquad.squad.domain.entity.SkillVersionRow;
+import com.agentsquad.squad.domain.dto.SkillDetail;
+import com.agentsquad.squad.domain.dto.SkillGrantRequest;
+import com.agentsquad.squad.domain.dto.SkillGrantView;
+import com.agentsquad.squad.domain.dto.SkillImportRequest;
+import com.agentsquad.squad.domain.dto.SkillPage;
+import com.agentsquad.squad.domain.dto.SkillVersionView;
 import com.agentsquad.squad.skill.repository.SkillRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -72,7 +74,7 @@ public class SkillService {
     public SkillDetail detail(String userId, String versionId) {
         SkillVersionRow row = requireOwned(userId, versionId);
         SkillGrantRow grant = repository.grant(userId, versionId);
-        return new SkillDetail(versionView(row), repository.files(userId, versionId).stream().map(file -> new com.agentsquad.squad.skill.dto.SkillFile(file.path(), file.content())).toList(), grantView(grant));
+        return new SkillDetail(versionView(row), repository.files(userId, versionId).stream().map(file -> new SkillFile(file.path(), file.content())).toList(), grantView(grant));
     }
 
     public SkillPage list(String userId, String cursor, int limit) {
@@ -124,7 +126,7 @@ public class SkillService {
     }
 
     public SkillPackage validate(SkillImportRequest request) {
-        return SkillPackageValidator.validate(request == null || request.files() == null ? null : request.files().stream().map(file -> file == null ? null : new com.agentsquad.squad.skill.domain.SkillTextFile(file.path(), file.content())).toList(),
+        return SkillPackageValidator.validate(request == null || request.files() == null ? null : request.files().stream().map(file -> file == null ? null : new SkillTextFile(file.path(), file.content())).toList(),
                 Math.min(Math.max(limits.getMaxFiles(), 1), 64),
                 Math.min(Math.max(limits.getMaxFileBytes(), 1), 262144),
                 Math.min(Math.max(limits.getMaxPackageBytes(), 1), 16777216));

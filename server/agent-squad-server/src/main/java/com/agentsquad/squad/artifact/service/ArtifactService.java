@@ -2,8 +2,8 @@ package com.agentsquad.squad.artifact.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.artifact.domain.ArtifactRow;
-import com.agentsquad.squad.artifact.dto.ArtifactView;
+import com.agentsquad.squad.domain.entity.ArtifactRow;
+import com.agentsquad.squad.domain.dto.ArtifactView;
 import com.agentsquad.squad.artifact.repository.ArtifactMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;

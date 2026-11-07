@@ -1,6 +1,6 @@
 package com.agentsquad.squad.conversation.service;
 
-import com.agentsquad.squad.conversation.domain.ConversationRow;
+import com.agentsquad.squad.domain.entity.ConversationRow;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

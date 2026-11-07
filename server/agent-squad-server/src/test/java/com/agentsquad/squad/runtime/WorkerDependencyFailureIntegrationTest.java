@@ -5,17 +5,18 @@ import com.agentsquad.squad.common.enums.identity.AccountRole;
 import com.agentsquad.squad.common.enums.worker.WorkerJobStatus;
 import com.agentsquad.squad.common.enums.worker.WorkerSkipReason;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.domain.dto.AbandonFailedJobRequest;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.presentation.service.TaskSnapshotService;
-import com.agentsquad.squad.runtime.dto.PlanNode;
-import com.agentsquad.squad.runtime.dto.PlanPublish;
+import com.agentsquad.squad.domain.dto.PlanNode;
+import com.agentsquad.squad.domain.dto.PlanPublish;
 import com.agentsquad.squad.runtime.service.ContextSnapshotService;
 import com.agentsquad.squad.runtime.service.PlanService;
 import com.agentsquad.squad.runtime.service.WorkerDispatchService;
 import com.agentsquad.squad.runtime.service.WorkerResultService;
 import com.agentsquad.squad.runtime.repository.PlanMapper;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
-import com.agentsquad.squad.worker.dto.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.domain.dto.WorkerDefinitionCreateRequest;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -76,7 +77,7 @@ class WorkerDependencyFailureIntegrationTest {
             var results = context.getBean(WorkerResultService.class);
             var resolutions = context.getBean(com.agentsquad.squad.runtime.service.WorkerFailureResolutionService.class);
             String rootJob = jdbc.queryForObject("SELECT job_id FROM sq_worker_job WHERE node_key='root'", String.class);
-            var decision = new com.agentsquad.squad.runtime.dto.AbandonFailedJobRequest(rootJob, 1);
+            var decision = new AbandonFailedJobRequest(rootJob, 1);
             assertThatThrownBy(() -> resolutions.abandon(user, session, decision))
                     .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
             if (!permanentFailure) {
@@ -87,7 +88,7 @@ class WorkerDependencyFailureIntegrationTest {
                 assertThat(context.getBean(PlanMapper.class).countActiveJobs(user, task.taskId(), 1)).isEqualTo(4);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_task_event WHERE task_id=? AND event_type='job.skipped'", Integer.class, task.taskId())).isZero();
                 assertThatThrownBy(() -> resolutions.abandon(user, session,
-                        new com.agentsquad.squad.runtime.dto.AbandonFailedJobRequest(rootJob, 2)))
+                        new AbandonFailedJobRequest(rootJob, 2)))
                         .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
                 jdbc.update("""
                         INSERT INTO sq_interaction (interaction_id,user_id,task_id,origin,kind,question,

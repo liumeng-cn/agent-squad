@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper">
 
-    <resultMap id="lockByBindingResult" type="com.agentsquad.squad.conversation.domain.ResponseRuntimeRow">
+    <resultMap id="lockByBindingResult" type="com.agentsquad.squad.domain.entity.ResponseRuntimeRow">
         <constructor>
             <arg column="execution_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -19,7 +19,7 @@
             <arg column="correction_count" javaType="_int"/>
             <arg column="recovery_attempts" javaType="_int"/>
             <arg column="answer_message_id" javaType="java.lang.String"/>
-            <arg column="completion_protocol" javaType="com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol"/>
+            <arg column="completion_protocol" javaType="com.agentsquad.squad.domain.entity.ResponseCompletionProtocol"/>
         </constructor>
     </resultMap>
 
@@ -178,20 +178,20 @@
             'FAILED',
             'CANCELLED') ORDER BY id
     </select>
-    <select id="completionProtocol" resultType="com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol">
+    <select id="completionProtocol" resultType="com.agentsquad.squad.domain.entity.ResponseCompletionProtocol">
         SELECT completion_protocol
         FROM sq_response_execution
         WHERE user_id = #{userId} AND binding_id = #{bindingId} AND del_flag = '0'
     </select>
 
-    <select id="completionProtocolBySession" resultType="com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol">
+    <select id="completionProtocolBySession" resultType="com.agentsquad.squad.domain.entity.ResponseCompletionProtocol">
         SELECT r.completion_protocol
         FROM sq_response_execution r
         JOIN sq_runtime_binding b ON b.user_id = r.user_id AND b.binding_id = r.binding_id
         WHERE r.user_id = #{userId} AND b.framework_session_id = #{sessionId}
           AND r.del_flag = '0' AND b.del_flag = '0'
     </select>
-    <select id="previewTarget" resultType="com.agentsquad.squad.conversation.domain.ReplyPreviewTarget">
+    <select id="previewTarget" resultType="com.agentsquad.squad.domain.entity.ReplyPreviewTarget">
         SELECT r.user_id AS userId,
                r.conversation_id AS conversationId,
                r.execution_id AS executionId,

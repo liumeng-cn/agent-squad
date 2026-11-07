@@ -1,16 +1,16 @@
 package com.agentsquad.squad.sandbox.service;
 
-import com.agentsquad.squad.artifact.dto.ArtifactStageView;
+import com.agentsquad.squad.domain.dto.ArtifactStageView;
 import com.agentsquad.squad.artifact.service.ArtifactDeliveryService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.governance.service.BudgetService;
-import com.agentsquad.squad.sandbox.domain.SandboxExecutionContext;
-import com.agentsquad.squad.sandbox.domain.SandboxRunRow;
-import com.agentsquad.squad.sandbox.domain.SandboxDispatchClaim;
-import com.agentsquad.squad.sandbox.dto.SandboxDriverResult;
-import com.agentsquad.squad.sandbox.dto.SandboxExecuteRequest;
-import com.agentsquad.squad.sandbox.dto.SandboxExecutionResult;
+import com.agentsquad.squad.domain.entity.SandboxExecutionContext;
+import com.agentsquad.squad.domain.entity.SandboxRunRow;
+import com.agentsquad.squad.domain.entity.SandboxDispatchClaim;
+import com.agentsquad.squad.domain.dto.SandboxDriverResult;
+import com.agentsquad.squad.domain.dto.SandboxExecuteRequest;
+import com.agentsquad.squad.domain.dto.SandboxExecutionResult;
 import com.agentsquad.squad.sandbox.repository.SandboxMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

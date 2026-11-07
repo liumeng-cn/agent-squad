@@ -1,11 +1,11 @@
 package com.agentsquad.squad.conversation.service;
 
+import com.agentsquad.squad.domain.entity.*;
 import com.agentsquad.squad.presentation.service.TaskEventPublishingService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
-import com.agentsquad.squad.conversation.domain.*;
-import com.agentsquad.squad.conversation.dto.CommandReceipt;
+import com.agentsquad.squad.domain.dto.CommandReceipt;
 import com.agentsquad.squad.conversation.repository.*;
 import com.agentsquad.squad.runtime.repository.*;
 import com.agentsquad.squad.common.util.ContentDigests;

@@ -1,6 +1,6 @@
 package com.agentsquad.squad.integration.agentscope.inbox;
 
-import com.agentsquad.squad.runtime.domain.ProjectionTarget;
+import com.agentsquad.squad.domain.entity.ProjectionTarget;
 import com.agentsquad.squad.integration.agentscope.RuntimeEventConsumptionException;
 import io.agentscope.core.session.SessionEvent;
 import io.agentscope.core.session.SessionEventTypes;

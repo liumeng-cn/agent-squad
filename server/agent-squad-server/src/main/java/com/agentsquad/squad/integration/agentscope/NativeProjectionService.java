@@ -1,18 +1,19 @@
 package com.agentsquad.squad.integration.agentscope;
 
+import com.agentsquad.squad.domain.entity.FailureClassification;
 import com.agentsquad.squad.runtime.service.ExecutionFailureService;
 import com.agentsquad.squad.presentation.service.TaskEventPublishingService;
-import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
-import com.agentsquad.squad.conversation.domain.ExecutionScopeRow;
+import com.agentsquad.squad.domain.entity.GoalTaskStatus;
+import com.agentsquad.squad.domain.entity.ExecutionScopeRow;
 import com.agentsquad.squad.conversation.service.ResponseExecutionService;
 import com.agentsquad.squad.conversation.service.RuntimeAdmissionService;
 import com.agentsquad.squad.conversation.service.ConversationEventWriter;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
-import com.agentsquad.squad.runtime.domain.NativeRunOutcome;
-import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
-import com.agentsquad.squad.runtime.domain.WorkerLaunchRow;
-import com.agentsquad.squad.runtime.domain.ProjectionTarget;
+import com.agentsquad.squad.domain.entity.NativeRunOutcome;
+import com.agentsquad.squad.domain.entity.MasterAgentIdentity;
+import com.agentsquad.squad.domain.entity.WorkerLaunchRow;
+import com.agentsquad.squad.domain.entity.ProjectionTarget;
 import com.agentsquad.squad.runtime.repository.ProjectionMapper;
 import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
 import com.agentsquad.squad.runtime.service.WorkerResultService;
@@ -22,7 +23,7 @@ import com.agentsquad.squad.runtime.service.TaskFinalizerService;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.interaction.service.BindingResult;
 import com.agentsquad.squad.interaction.service.InteractionService;
-import com.agentsquad.squad.interaction.domain.InteractionRow;
+import com.agentsquad.squad.domain.entity.InteractionRow;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -253,7 +254,7 @@ public class NativeProjectionService {
         var scope = scopeMapper.findOwned(target.userId(), scopeMapper.findScopeByBinding(target.userId(), target.bindingId()));
         boolean approval = "APPROVAL".equals(binding.kind());
         failures.record(scope, target.bindingId(), "interaction:" + binding.interactionId(),
-                new com.agentsquad.squad.runtime.domain.FailureClassification(approval ? "AUTH_REQUIRED" : "INPUT_REQUIRED",
+                new FailureClassification(approval ? "AUTH_REQUIRED" : "INPUT_REQUIRED",
                         approval ? "USER_CONFIRMATION_REQUIRED" : "USER_INPUT_NEEDED", "USER",
                         approval ? "有一项操作需要你确认影响后决定是否执行。" : "需要你补充一些信息，才能继续。"));
         publish(target, event, "interaction.requested",

@@ -6,20 +6,20 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.observability.ObservationSupport;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.conversation.domain.ConversationRow;
-import com.agentsquad.squad.conversation.domain.MessageSubmissionRow;
-import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
+import com.agentsquad.squad.domain.entity.ConversationRow;
+import com.agentsquad.squad.domain.entity.MessageSubmissionRow;
+import com.agentsquad.squad.domain.dto.MessageCreateRequest;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
-import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
-import com.agentsquad.squad.conversation.domain.ResponseExecutionStatus;
-import com.agentsquad.squad.conversation.dto.MessageView;
-import com.agentsquad.squad.conversation.dto.ResponseExecutionView;
-import com.agentsquad.squad.presentation.dto.MessageAcceptedPayload;
-import com.agentsquad.squad.presentation.dto.ExecutionChangedPayload;
+import com.agentsquad.squad.domain.entity.MasterAgentIdentity;
+import com.agentsquad.squad.domain.entity.ResponseExecutionStatus;
+import com.agentsquad.squad.domain.dto.MessageView;
+import com.agentsquad.squad.domain.dto.ResponseExecutionView;
+import com.agentsquad.squad.domain.dto.MessageAcceptedPayload;
+import com.agentsquad.squad.domain.dto.ExecutionChangedPayload;
 import com.agentsquad.squad.presentation.domain.ConversationDeltaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -49,7 +49,7 @@ public class MessageAcceptanceWriter {
     private com.agentsquad.squad.common.observability.ExecutionTrace executionTrace;
 
     @org.springframework.beans.factory.annotation.Value("${agentsquad.response.completion-protocol:NATURAL}")
-    private com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol completionProtocol;
+    private com.agentsquad.squad.domain.entity.ResponseCompletionProtocol completionProtocol;
 
     @Resource
     private com.agentsquad.squad.model.service.ModelCatalogService modelCatalog;
@@ -154,13 +154,22 @@ public class MessageAcceptanceWriter {
                 new MessageAcceptedPayload(ConversationDeltaType.SCHEMA_VERSION, message, execution), now);
         appendEvent(userId, conversation, commandId, ConversationDeltaType.EXECUTION_QUEUED.code(),
                 new ExecutionChangedPayload(ConversationDeltaType.SCHEMA_VERSION, execution), now);
-        committedEvents.publishEvent(new com.agentsquad.squad.conversation.domain.CommandReadySignal(commandId));
+        committedEvents.publishEvent(new com.agentsquad.squad.domain.entity.CommandReadySignal(commandId));
         MessageSubmissionRow submission = messages.findSubmission(userId, scopeKey, key);
         log.info("用户消息已受理 {}", observations.logFields(Map.of(
                 "conversationId", conversationId, "messageId", messageId, "executionId", executionId,
                 "scopeId", scopeId, "commandId", commandId, "sequence", sequence,
-                "modelId", selectedModel.modelId(), "reasoningMode", selectedModel.reasoningMode().name())));
+                "modelId", selectedModel.modelId(), "reasoningMode", selectedModel.reasoningMode().name(),
+                "preview", preview(request.text()))));
         return submission;
+    }
+
+    /**
+     * 日志里只放单行截断的消息摘要，不输出完整用户输入。
+     */
+    private static String preview(String text) {
+        String singleLine = text.replaceAll("\\s+", " ").trim();
+        return singleLine.length() <= 40 ? singleLine : singleLine.substring(0, 40) + "…";
     }
 
     private ConversationRow lockConversation(String userId, String conversationId) {
@@ -183,7 +192,7 @@ public class MessageAcceptanceWriter {
     }
 
     private String fallbackTitle(String text) {
-        String title = com.agentsquad.squad.conversation.domain.ConversationTitles.safe(text, 32);
+        String title = com.agentsquad.squad.domain.entity.ConversationTitles.safe(text, 32);
         return title.isEmpty() ? "新对话" : title;
     }
 }

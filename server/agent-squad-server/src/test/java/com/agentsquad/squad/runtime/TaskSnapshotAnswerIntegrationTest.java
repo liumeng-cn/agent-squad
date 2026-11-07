@@ -1,7 +1,7 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.presentation.dto.TaskSnapshot;
+import com.agentsquad.squad.domain.dto.TaskSnapshot;
 import com.agentsquad.squad.conversation.repository.TaskEventMapper;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
 import com.agentsquad.squad.presentation.service.TaskSnapshotService;

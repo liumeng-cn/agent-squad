@@ -1,8 +1,10 @@
 package com.agentsquad.squad.integration.agentscope;
 
-import com.agentsquad.squad.runtime.domain.ProjectionTarget;
+import com.agentsquad.squad.domain.entity.ExecutionContextInvalidatedException;
+import com.agentsquad.squad.domain.entity.ResponseCompletionProtocol;
+import com.agentsquad.squad.domain.entity.ProjectionTarget;
 import com.agentsquad.squad.runtime.repository.ProjectionMapper;
-import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
+import com.agentsquad.squad.domain.entity.MasterAgentIdentity;
 import com.agentsquad.squad.runtime.service.WorkerRecoveryService;
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventConsumptionService;
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventReceiptService;
@@ -98,7 +100,7 @@ public class NativeProjectionPoller {
                         if (commandId.equals(receipt.commandId())) {
                             var evidence = "completed".equals(receipt.status())
                                     && replies.completionProtocol(target.userId(), target.bindingId())
-                                    == com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol.NATURAL
+                                    == ResponseCompletionProtocol.NATURAL
                                     ? naturalOutputs.readCompleted(target, receipt) : null;
                             responses.recover(target, receipt, evidence);
                         }
@@ -120,7 +122,7 @@ public class NativeProjectionPoller {
                 }
                 projectionMapper.defer(target.userId(), target.bindingId(),
                         now().plusSeconds(events.isEmpty() ? 5 : 1));
-            } catch (com.agentsquad.squad.runtime.domain.ExecutionContextInvalidatedException exception) {
+            } catch (ExecutionContextInvalidatedException exception) {
                 restrictions.restrict(target.userId(), scopeMapper.findScopeByBinding(target.userId(), target.bindingId()), target.bindingId());
             } catch (Exception exception) {
                 recordConsumptionFailure(target, events, exception);

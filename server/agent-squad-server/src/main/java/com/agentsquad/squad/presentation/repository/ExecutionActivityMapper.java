@@ -1,7 +1,7 @@
 package com.agentsquad.squad.presentation.repository;
 
-import com.agentsquad.squad.presentation.domain.ExecutionActivityRow;
-import com.agentsquad.squad.presentation.dto.ActivityHistoryQuery;
+import com.agentsquad.squad.domain.entity.ExecutionActivityRow;
+import com.agentsquad.squad.domain.dto.ActivityHistoryQuery;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

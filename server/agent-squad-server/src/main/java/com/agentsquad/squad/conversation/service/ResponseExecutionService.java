@@ -1,14 +1,11 @@
 package com.agentsquad.squad.conversation.service;
 
+import com.agentsquad.squad.domain.entity.*;
 import com.agentsquad.squad.runtime.service.ExecutionFailureService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.conversation.domain.ExecutionScopeRow;
-import com.agentsquad.squad.conversation.domain.ResponseRuntimeRow;
-import com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol;
-import com.agentsquad.squad.conversation.domain.NaturalReplyEvidence;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
@@ -16,17 +13,15 @@ import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
 import com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper;
 import com.agentsquad.squad.integration.agentscope.NativeEventView;
 import com.agentsquad.squad.integration.agentscope.NativeSubmissionReceipt;
-import com.agentsquad.squad.conversation.domain.ConversationRow;
-import com.agentsquad.squad.presentation.dto.CompletionProposalReceipt;
-import com.agentsquad.squad.presentation.dto.MessageCompletedPayload;
-import com.agentsquad.squad.presentation.dto.ExecutionChangedPayload;
+import com.agentsquad.squad.domain.dto.CompletionProposalReceipt;
+import com.agentsquad.squad.domain.dto.MessageCompletedPayload;
+import com.agentsquad.squad.domain.dto.ExecutionChangedPayload;
 import com.agentsquad.squad.presentation.domain.ConversationDeltaType;
 import com.agentsquad.squad.presentation.repository.ConversationReadMapper;
-import com.agentsquad.squad.conversation.dto.MessageView;
-import com.agentsquad.squad.conversation.dto.ResponseExecutionView;
-import com.agentsquad.squad.conversation.domain.ResponseExecutionStatus;
-import com.agentsquad.squad.runtime.domain.NativeRunOutcome;
-import com.agentsquad.squad.runtime.domain.ProjectionTarget;
+import com.agentsquad.squad.domain.dto.MessageView;
+import com.agentsquad.squad.domain.dto.ResponseExecutionView;
+import com.agentsquad.squad.domain.entity.NativeRunOutcome;
+import com.agentsquad.squad.domain.entity.ProjectionTarget;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -339,7 +334,7 @@ public class ResponseExecutionService {
             publishState(scope, row, "QUEUED", "correction:" + event.eventId());
         } else {
             failures.record(scope, row.bindingId(), "completion-correction-exhausted",
-                    new com.agentsquad.squad.runtime.domain.FailureClassification("LOGIC_INVALID", "COMPLETION_INVALID", "SYSTEM", "本次未能形成有效回答，已保留你的消息。"));
+                    new FailureClassification("LOGIC_INVALID", "COMPLETION_INVALID", "SYSTEM", "本次未能形成有效回答，已保留你的消息。"));
             finish(scope, row, "FAILED", "本次未能生成有效回答，已保留你的消息，请稍后重试。");
         }
     }

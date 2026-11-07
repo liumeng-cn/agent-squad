@@ -2,7 +2,7 @@ package com.agentsquad.squad.runtime.service;
 
 import com.agentsquad.squad.conversation.service.ConversationEventWriter;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
-import com.agentsquad.squad.runtime.domain.FailureClassification;
+import com.agentsquad.squad.domain.entity.FailureClassification;
 import com.agentsquad.squad.runtime.repository.ExecutionRestrictionMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

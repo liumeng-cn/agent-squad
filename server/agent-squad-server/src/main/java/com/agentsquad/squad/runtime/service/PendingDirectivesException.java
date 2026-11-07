@@ -2,7 +2,7 @@ package com.agentsquad.squad.runtime.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.runtime.dto.PendingDirectiveFeedback;
+import com.agentsquad.squad.domain.dto.PendingDirectiveFeedback;
 
 import java.util.List;
 

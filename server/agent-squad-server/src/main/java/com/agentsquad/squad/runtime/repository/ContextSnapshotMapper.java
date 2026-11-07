@@ -1,7 +1,7 @@
 package com.agentsquad.squad.runtime.repository;
 
-import com.agentsquad.squad.runtime.domain.ContextPreparationRow;
-import com.agentsquad.squad.runtime.domain.ContextSnapshotRow;
+import com.agentsquad.squad.domain.entity.ContextPreparationRow;
+import com.agentsquad.squad.domain.entity.ContextSnapshotRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

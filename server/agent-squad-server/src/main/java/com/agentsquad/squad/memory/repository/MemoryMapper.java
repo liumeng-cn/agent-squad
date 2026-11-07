@@ -1,9 +1,9 @@
 package com.agentsquad.squad.memory.repository;
 
-import com.agentsquad.squad.memory.domain.MemoryRow;
-import com.agentsquad.squad.memory.domain.MemoryScopePin;
-import com.agentsquad.squad.memory.domain.MemorySource;
-import com.agentsquad.squad.memory.domain.MemoryWriteReceiptRow;
+import com.agentsquad.squad.domain.entity.MemoryRow;
+import com.agentsquad.squad.domain.entity.MemoryScopePin;
+import com.agentsquad.squad.domain.entity.MemorySource;
+import com.agentsquad.squad.domain.entity.MemoryWriteReceiptRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

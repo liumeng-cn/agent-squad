@@ -1,16 +1,14 @@
 package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.common.observability.ObservationSupport;
-import com.agentsquad.squad.conversation.domain.DeliveryRow;
-import com.agentsquad.squad.conversation.domain.CommandClaimContext;
+import com.agentsquad.squad.domain.entity.*;
 import com.agentsquad.squad.conversation.service.RuntimeAdmissionService;
 import com.agentsquad.squad.conversation.service.RuntimeAdmissionBusyException;
-import com.agentsquad.squad.conversation.domain.RuntimeCommandAction;
 import com.agentsquad.squad.conversation.repository.DeliveryMapper;
 import com.agentsquad.squad.conversation.service.TaskControlService;
 import com.agentsquad.squad.runtime.service.TaskFinalizerService;
 import com.agentsquad.squad.runtime.service.WorkerRecoveryService;
-import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
+import com.agentsquad.squad.domain.entity.MasterAgentIdentity;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -35,7 +33,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -162,7 +159,7 @@ public class CommandDeliveryService {
 
     /** 只在受理事务提交后异步领取，扫描保留为通知丢失与容量不足的补偿。 */
     @org.springframework.transaction.event.TransactionalEventListener(phase = org.springframework.transaction.event.TransactionPhase.AFTER_COMMIT)
-    public void ready(com.agentsquad.squad.conversation.domain.CommandReadySignal signal) {
+    public void ready(CommandReadySignal signal) {
         if (wakeupEnabled) {
             notifyOrSchedule(signal.commandId());
         }
@@ -269,7 +266,7 @@ public class CommandDeliveryService {
         } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
             admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
             fail(commandId, token, delivery.attempts(), "INVALID_PAYLOAD");
-        } catch (com.agentsquad.squad.runtime.domain.ExecutionContextInvalidatedException exception) {
+        } catch (ExecutionContextInvalidatedException exception) {
             restrictions.restrict(delivery.userId(), scopes.scopeForSession(delivery.userId(), delivery.sessionId()), delivery.bindingId());
         } catch (Exception exception) {
             retry(commandId, token, delivery.attempts(), "NATIVE_SUBMIT_FAILED");
@@ -301,7 +298,7 @@ public class CommandDeliveryService {
         boolean interrupted = nativeSessionGateway.stop(delivery);
         if (!interrupted) {
             if (delivery.taskId() == null) {
-                var target = new com.agentsquad.squad.runtime.domain.ProjectionTarget(delivery.userId(), null,
+                var target = new ProjectionTarget(delivery.userId(), null,
                         delivery.bindingId(), delivery.agentId(), delivery.sessionId(), 0);
                 if (nativeSessionGateway.quiescent(target)) {
                     responses.stopped(delivery.userId(), delivery.bindingId());

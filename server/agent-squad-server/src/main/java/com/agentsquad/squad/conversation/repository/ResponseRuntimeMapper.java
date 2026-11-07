@@ -1,6 +1,9 @@
 package com.agentsquad.squad.conversation.repository;
 
-import com.agentsquad.squad.conversation.domain.ResponseRuntimeRow;
+import com.agentsquad.squad.domain.entity.ProjectionTarget;
+import com.agentsquad.squad.domain.entity.ResponseRuntimeRow;
+import com.agentsquad.squad.domain.entity.ReplyPreviewTarget;
+import com.agentsquad.squad.domain.entity.ResponseCompletionProtocol;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -19,12 +22,12 @@ public interface ResponseRuntimeMapper {
 
     String modelChoiceBySession(@Param("userId") String userId, @Param("sessionId") String sessionId);
 
-    com.agentsquad.squad.conversation.domain.ReplyPreviewTarget previewTarget(@Param("userId") String userId, @Param("sessionId") String sessionId);
+    ReplyPreviewTarget previewTarget(@Param("userId") String userId, @Param("sessionId") String sessionId);
 
-    com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol completionProtocol(
+    ResponseCompletionProtocol completionProtocol(
             @Param("userId") String userId, @Param("bindingId") String bindingId);
 
-    com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol completionProtocolBySession(
+    ResponseCompletionProtocol completionProtocolBySession(
             @Param("userId") String userId, @Param("sessionId") String sessionId);
 
     ResponseRuntimeRow lockByBinding(@Param("userId") String userId, @Param("bindingId") String bindingId);
@@ -69,5 +72,5 @@ public interface ResponseRuntimeMapper {
     String originalCommand(@Param("userId") String userId, @Param("bindingId") String bindingId);
 
     List<String> activeBindings(@Param("userId") String userId, @Param("conversationId") String conversationId);
-    List<com.agentsquad.squad.runtime.domain.ProjectionTarget> cancellationTargets(@Param("afterBinding") String afterBinding);
+    List<ProjectionTarget> cancellationTargets(@Param("afterBinding") String afterBinding);
 }

@@ -1,7 +1,7 @@
 package com.agentsquad.squad.sandbox.repository;
 
-import com.agentsquad.squad.sandbox.domain.SandboxBindingRow;
-import com.agentsquad.squad.sandbox.domain.SandboxRunRow;
+import com.agentsquad.squad.domain.entity.SandboxBindingRow;
+import com.agentsquad.squad.domain.entity.SandboxRunRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

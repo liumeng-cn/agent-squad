@@ -1,6 +1,6 @@
 package com.agentsquad.squad.runtime.repository;
 
-import com.agentsquad.squad.presentation.domain.ExecutionFailureRow;
+import com.agentsquad.squad.domain.entity.ExecutionFailureRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

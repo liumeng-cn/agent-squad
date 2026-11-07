@@ -1,7 +1,7 @@
 package com.agentsquad.squad.conversation.repository;
 
-import com.agentsquad.squad.conversation.domain.DeliveryRow;
-import com.agentsquad.squad.conversation.domain.CommandClaimContext;
+import com.agentsquad.squad.domain.entity.DeliveryRow;
+import com.agentsquad.squad.domain.entity.CommandClaimContext;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

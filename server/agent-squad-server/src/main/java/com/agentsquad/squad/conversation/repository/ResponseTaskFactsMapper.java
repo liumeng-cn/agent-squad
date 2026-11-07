@@ -1,6 +1,8 @@
 package com.agentsquad.squad.conversation.repository;
 
-import com.agentsquad.squad.conversation.domain.ResponseJobFact;
+import com.agentsquad.squad.domain.entity.ResponseJobFact;
+import com.agentsquad.squad.domain.entity.ResponseFailureFact;
+import com.agentsquad.squad.domain.entity.ResponseTaskStatusFact;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -18,9 +20,9 @@ public interface ResponseTaskFactsMapper {
     List<ResponseJobFact> jobs(@Param("userId") String userId, @Param("taskId") String taskId,
                                @Param("planVersion") long planVersion);
 
-    List<com.agentsquad.squad.conversation.domain.ResponseTaskStatusFact> recentTasks(@Param("userId") String userId,
-            @Param("conversationId") String conversationId,@Param("generation") long generation,@Param("through") long through);
+    List<ResponseTaskStatusFact> recentTasks(@Param("userId") String userId,
+                                             @Param("conversationId") String conversationId, @Param("generation") long generation, @Param("through") long through);
 
-    List<com.agentsquad.squad.conversation.domain.ResponseFailureFact> recentFailures(@Param("userId") String userId,
-            @Param("conversationId") String conversationId,@Param("generation") long generation,@Param("through") long through);
+    List<ResponseFailureFact> recentFailures(@Param("userId") String userId,
+                                             @Param("conversationId") String conversationId, @Param("generation") long generation, @Param("through") long through);
 }

@@ -4,12 +4,12 @@ import com.agentsquad.squad.presentation.service.TaskEventPublishingService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
-import com.agentsquad.squad.conversation.domain.CommandRow;
-import com.agentsquad.squad.conversation.domain.ConversationRow;
-import com.agentsquad.squad.conversation.domain.ConversationStatus;
-import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
-import com.agentsquad.squad.conversation.domain.RuntimeCommandAction;
-import com.agentsquad.squad.conversation.domain.TaskRow;
+import com.agentsquad.squad.domain.entity.CommandRow;
+import com.agentsquad.squad.domain.entity.ConversationRow;
+import com.agentsquad.squad.domain.entity.ConversationStatus;
+import com.agentsquad.squad.domain.entity.GoalTaskStatus;
+import com.agentsquad.squad.domain.entity.RuntimeCommandAction;
+import com.agentsquad.squad.domain.entity.TaskRow;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.conversation.repository.TaskEventMapper;

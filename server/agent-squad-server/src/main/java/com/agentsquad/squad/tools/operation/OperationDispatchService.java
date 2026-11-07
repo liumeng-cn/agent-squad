@@ -4,7 +4,7 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.identity.UserStatusGuard;
-import com.agentsquad.squad.tools.operation.domain.OperationRow;
+import com.agentsquad.squad.domain.entity.OperationRow;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;

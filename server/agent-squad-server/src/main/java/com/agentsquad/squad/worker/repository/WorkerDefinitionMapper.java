@@ -1,7 +1,7 @@
 package com.agentsquad.squad.worker.repository;
 
 import com.agentsquad.squad.common.enums.worker.WorkerDefinitionStatus;
-import com.agentsquad.squad.worker.domain.WorkerDefinitionRow;
+import com.agentsquad.squad.domain.entity.WorkerDefinitionRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

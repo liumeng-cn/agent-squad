@@ -1,12 +1,12 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.conversation.dto.ConversationResponse;
-import com.agentsquad.squad.conversation.dto.TaskReceipt;
+import com.agentsquad.squad.domain.dto.ConversationResponse;
+import com.agentsquad.squad.domain.dto.TaskReceipt;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
-import com.agentsquad.squad.worker.dto.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.domain.dto.WorkerDefinitionCreateRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;

@@ -1,6 +1,6 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
+import com.agentsquad.squad.domain.dto.MessageCreateRequest;
 import com.agentsquad.squad.conversation.service.CommandClaimService;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
 import com.agentsquad.squad.conversation.service.ResponseContextService;
@@ -10,8 +10,8 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.runtime.service.ContextSnapshotService;
 import com.agentsquad.squad.runtime.service.PlanService;
-import com.agentsquad.squad.runtime.dto.PlanPublish;
-import com.agentsquad.squad.runtime.dto.PlanNode;
+import com.agentsquad.squad.domain.dto.PlanPublish;
+import com.agentsquad.squad.domain.dto.PlanNode;
 import com.agentsquad.squad.conversation.service.ResponseControlService;
 import com.agentsquad.squad.interaction.repository.InteractionMapper;
 

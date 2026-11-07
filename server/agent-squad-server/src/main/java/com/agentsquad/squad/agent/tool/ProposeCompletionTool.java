@@ -1,7 +1,7 @@
 package com.agentsquad.squad.agent.tool;
 
-import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
-import com.agentsquad.squad.presentation.dto.CompletionProposalReceipt;
+import com.agentsquad.squad.domain.entity.GoalTaskStatus;
+import com.agentsquad.squad.domain.dto.CompletionProposalReceipt;
 import com.agentsquad.squad.runtime.service.CompletionProposalService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import io.agentscope.core.agent.RuntimeContext;
@@ -16,8 +16,8 @@ import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 import java.util.Map;
-import com.agentsquad.squad.runtime.dto.AcceptanceReview;
-import com.agentsquad.squad.runtime.dto.CompletionSubmission;
+import com.agentsquad.squad.domain.dto.AcceptanceReview;
+import com.agentsquad.squad.domain.dto.CompletionSubmission;
 
 /**
  * AgentScope 暴露给 Master 的完成候选工具。工具结果只是持久回执，不能当作用户最终答案。

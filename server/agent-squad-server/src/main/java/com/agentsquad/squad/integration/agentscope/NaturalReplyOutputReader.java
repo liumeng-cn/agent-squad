@@ -1,11 +1,11 @@
 package com.agentsquad.squad.integration.agentscope;
 
-import com.agentsquad.squad.conversation.domain.NaturalReplyEvidence;
-import com.agentsquad.squad.conversation.domain.ResponseExecutionStatus;
+import com.agentsquad.squad.domain.entity.NaturalReplyEvidence;
+import com.agentsquad.squad.domain.entity.ResponseExecutionStatus;
 import com.agentsquad.squad.integration.agentscope.completion.ModelCompletionNormalizer;
 import com.agentsquad.squad.integration.agentscope.completion.ModelEvidenceIssue;
 import com.agentsquad.squad.integration.agentscope.completion.ModelFinishReason;
-import com.agentsquad.squad.runtime.domain.ProjectionTarget;
+import com.agentsquad.squad.domain.entity.ProjectionTarget;
 import io.agentscope.core.message.GenerateReason;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;

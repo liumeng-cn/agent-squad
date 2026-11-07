@@ -3,8 +3,10 @@ package com.agentsquad.squad.integration.agentscope;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
+import com.agentsquad.squad.domain.entity.SkillCapabilityUnavailableException;
+import com.agentsquad.squad.domain.entity.WorkerExecutionIdentity;
 import com.agentsquad.squad.identity.UserStatusGuard;
-import com.agentsquad.squad.runtime.domain.ExecutionContextInvalidatedException;
+import com.agentsquad.squad.domain.entity.ExecutionContextInvalidatedException;
 import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
 import com.agentsquad.squad.runtime.service.ExecutionAuthorizationService;
 import com.agentsquad.squad.runtime.service.ExecutionRestrictionService;
@@ -101,7 +103,7 @@ public class ExecutionContextMiddleware implements MiddlewareBase {
                     String bindingId = bindings.findBindingBySession(userId, context.getSessionId());
                     var worker = workers.findByBinding(userId, bindingId);
                     if (worker != null) {
-                        var identity = context.get(com.agentsquad.squad.runtime.domain.WorkerExecutionIdentity.class);
+                        var identity = context.get(WorkerExecutionIdentity.class);
                         if (identity == null || !bindingId.equals(identity.bindingId())
                                 || !java.util.Objects.equals(worker.guardToken(), identity.guardToken())
                                 || worker.guardLeaseUntil() == null || !worker.guardLeaseUntil().isAfter(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC))
@@ -165,7 +167,7 @@ public class ExecutionContextMiddleware implements MiddlewareBase {
                 })
                 .subscribeOn(Schedulers.boundedElastic()).thenMany(Flux.defer(() ->
                         executionTrace.session(context.getUserId(), context.getSessionId(), "squad.tool.batch", () -> next.apply(input))))
-                .onErrorResume(com.agentsquad.squad.skill.domain.SkillCapabilityUnavailableException.class, error ->
+                .onErrorResume(SkillCapabilityUnavailableException.class, error ->
                         Mono.fromRunnable(() -> failures.reportModel(context.getUserId(), context.getSessionId(), "skill-capability", error))
                                 .subscribeOn(Schedulers.boundedElastic()).thenMany(Flux.error(error)))
                 .onErrorResume(ExecutionContextInvalidatedException.class, error -> restrict(context, error));

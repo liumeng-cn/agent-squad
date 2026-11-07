@@ -1,6 +1,6 @@
 package com.agentsquad.squad.artifact.repository;
 
-import com.agentsquad.squad.artifact.domain.ArtifactStageRow;
+import com.agentsquad.squad.domain.entity.ArtifactStageRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

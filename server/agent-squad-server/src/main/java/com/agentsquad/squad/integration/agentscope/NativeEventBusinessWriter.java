@@ -1,7 +1,8 @@
 package com.agentsquad.squad.integration.agentscope;
 
+import com.agentsquad.squad.domain.entity.ResponseCompletionProtocol;
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventBusinessWriter;
-import com.agentsquad.squad.runtime.domain.ProjectionTarget;
+import com.agentsquad.squad.domain.entity.ProjectionTarget;
 import io.agentscope.core.session.SessionEvent;
 import io.agentscope.core.session.SessionEventTypes;
 import jakarta.annotation.Resource;
@@ -33,7 +34,7 @@ public class NativeEventBusinessWriter implements RuntimeEventBusinessWriter {
         Object status = "run/end".equals(event.type()) ? data.get("status") : null;
         if (target.taskId() == null && "run/end".equals(event.type()) && "completed".equals(status)
                 && replies.completionProtocol(target.userId(), target.bindingId())
-                == com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol.NATURAL) {
+                == ResponseCompletionProtocol.NATURAL) {
             data = new java.util.LinkedHashMap<>(data);
             data.put("naturalOutput", naturalOutputs.read(target, event));
         }

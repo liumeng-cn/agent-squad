@@ -4,11 +4,12 @@ import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.enums.worker.WorkerJobStatus;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.conversation.domain.RuntimeCommandAction;
+import com.agentsquad.squad.domain.entity.PlanJoinStage;
+import com.agentsquad.squad.domain.entity.RuntimeCommandAction;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
-import com.agentsquad.squad.runtime.domain.PlanRow;
-import com.agentsquad.squad.runtime.domain.WorkerJobRow;
+import com.agentsquad.squad.domain.entity.PlanRow;
+import com.agentsquad.squad.domain.entity.WorkerJobRow;
 import com.agentsquad.squad.runtime.repository.PlanMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,7 +24,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.Set;
 
 /**
  * Worker 结果到 Master 协调轮次的持久信号服务。
@@ -95,8 +95,8 @@ public class MasterSignalService {
         List<WorkerJobRow> jobs = planMapper.lockJobs(plan.taskId(), plan.planVersion());
         boolean allSucceeded = !jobs.isEmpty() && jobs.stream().allMatch(job -> WorkerJobStatus.SUCCEEDED.name().equals(job.status()));
         var stage = planEvaluation.evaluate(plan.userId(), plan.taskId(), plan.planVersion(), List.of()).decision().stage();
-        if (jobs.isEmpty() || !(stage == com.agentsquad.squad.runtime.domain.PlanJoinStage.READY
-                || stage == com.agentsquad.squad.runtime.domain.PlanJoinStage.NEEDS_COORDINATION)
+        if (jobs.isEmpty() || !(stage == PlanJoinStage.READY
+                || stage == PlanJoinStage.NEEDS_COORDINATION)
                 || commandMapper.countUnprocessedMasterCommands(plan.userId(), plan.taskId()) > 0) {
             return;
         }

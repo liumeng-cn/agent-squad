@@ -2,12 +2,12 @@ package com.agentsquad.squad.runtime.service;
 
 import com.agentsquad.squad.common.util.CanonicalJson;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.runtime.domain.ContextSnapshotRow;
-import com.agentsquad.squad.runtime.domain.WorkerJobRow;
-import com.agentsquad.squad.runtime.dto.PlanNode;
+import com.agentsquad.squad.domain.entity.ContextSnapshotRow;
+import com.agentsquad.squad.domain.entity.WorkerJobRow;
+import com.agentsquad.squad.domain.dto.PlanNode;
 import com.agentsquad.squad.runtime.repository.ContextSnapshotMapper;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
-import com.agentsquad.squad.worker.dto.WorkerDefinitionResponse;
+import com.agentsquad.squad.domain.dto.WorkerDefinitionResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;

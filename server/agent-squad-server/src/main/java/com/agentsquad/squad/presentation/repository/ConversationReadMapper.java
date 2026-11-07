@@ -1,10 +1,10 @@
 package com.agentsquad.squad.presentation.repository;
 
-import com.agentsquad.squad.presentation.domain.ConversationTaskState;
-import com.agentsquad.squad.presentation.domain.ConversationHeader;
-import com.agentsquad.squad.presentation.domain.ConversationMessageRow;
-import com.agentsquad.squad.presentation.domain.ConversationExecution;
-import com.agentsquad.squad.presentation.domain.ConversationEventRow;
+import com.agentsquad.squad.domain.entity.ConversationTaskState;
+import com.agentsquad.squad.domain.entity.ConversationHeader;
+import com.agentsquad.squad.domain.entity.ConversationMessageRow;
+import com.agentsquad.squad.domain.entity.ConversationExecution;
+import com.agentsquad.squad.domain.entity.ConversationEventRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

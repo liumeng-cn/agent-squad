@@ -1,6 +1,6 @@
 package com.agentsquad.squad.tools.operation;
 
-import com.agentsquad.squad.tools.operation.domain.OperationRow;
+import com.agentsquad.squad.domain.entity.OperationRow;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

@@ -35,7 +35,24 @@ const threadMessages = computed(() => [
     sourceMessageId: preview.sourceMessageId, executionId: preview.executionId, taskId: null, occurredAt: '', artifacts: [],
     isPreview: true, renderKey: `reply:${preview.executionId}` })),
 ])
+function modelFailureText(failure: ExecutionFailure) {
+  if (failure.status === 'RETRYING') return
+  switch (failure.code) {
+    case 'MODEL_BILLING_UNAVAILABLE':
+      return '模型余额不足或计费不可用，请切换模型后再试。你的消息已保留。'
+    case 'BUDGET_EXHAUSTED':
+      return '本次处理额度已用完。你的消息和已完成的内容已保留。'
+    case 'MODEL_CREDENTIALS_INVALID':
+      return '当前模型的调用授权不可用，请切换模型后再试。你的消息已保留。'
+    case 'MODEL_UNAVAILABLE':
+      return '当前模型不可用，请切换模型后再试。你的消息已保留。'
+    case 'MODEL_ACCESS_DENIED':
+      return '当前模型未开通或试用已失效，请切换模型后再试。你的消息已保留。'
+  }
+}
 function failureText(failure: ExecutionFailure) {
+  const modelError = modelFailureText(failure)
+  if (modelError) return modelError
   if (failure.status === 'RETRYING' || failure.actor !== 'SYSTEM' || failure.category === 'EXTERNAL_UNKNOWN') return failure.safeMessage
   if (failure.taskId) return '这项工作未能完成，已保留你的要求和已完成内容。'
   return '回答服务暂时异常，未能完成这次回答。你的消息已保留。'
@@ -134,7 +151,7 @@ function answerCompleted(source: string) { return chat.messages.some(message => 
           <small v-if="chat.taskHistory.some(item => item.sourceMessageId === message.messageId && item.status === 'CANCELLED')" class="stopped-note">这项工作已停止</small>
           <div v-if="message.artifacts.length" class="message-files"><button v-for="file in message.artifacts" :key="file.artifactId" class="message-file" :disabled="downloading === file.artifactId" @click="download(file)"><span aria-hidden="true">▤</span>{{ file.fileName }}<span class="file-download" aria-hidden="true">↓</span></button></div>
           <section v-for="failure in failuresFor(message.messageId)" :key="failure.failureId" class="chat-service-feedback" role="status">
-            <p>{{ failureText(failure) }}</p>
+            <p :class="{ 'chat-model-error': modelFailureText(failure) }">{{ failureText(failure) }}</p>
             <button v-if="failure.allowedActions.includes('RETRY') && failure.executionId && failure.expectedVersion !== null" class="text-button" :disabled="!!chat.controlling" @click="chat.retry(failure.executionId, failure.expectedVersion)">{{ chat.controlling === failure.executionId ? '正在重试…' : '重新尝试' }}</button>
             <button v-if="failure.status !== 'RETRYING' && originalText(failure)" class="text-button" @click="copy(failure.failureId, originalText(failure)!)">{{ copied === failure.failureId ? '已复制' : '复制原消息' }}</button>
           </section>
@@ -152,7 +169,7 @@ function answerCompleted(source: string) { return chat.messages.some(message => 
       <InteractionCard v-for="interaction in chat.snapshot?.interactions ?? []" :key="`${interaction.interactionId}:${interaction.version}`" :interaction="interaction" @refresh="chat.refreshSnapshot()" />
       <TaskSteps v-for="task in stepTasks.filter(item => !item.afterMessageId && !item.beforeMessageId)" :key="task.taskId" :task-id="task.taskId" :status="task.status" :answer-completed="task.answerCompleted" :activities="chat.activities.filter(a => a.taskId === task.taskId || a.sourceMessageId === task.sourceMessageId)" :revision="String(chat.stepsVersion)" />
       <section v-for="failure in orphanFailures" :key="failure.failureId" class="chat-service-feedback" role="status">
-        <p>{{ failureText(failure) }}</p>
+        <p :class="{ 'chat-model-error': modelFailureText(failure) }">{{ failureText(failure) }}</p>
         <button v-if="failure.allowedActions.includes('RETRY') && failure.executionId && failure.expectedVersion !== null" class="text-button" :disabled="!!chat.controlling" @click="chat.retry(failure.executionId, failure.expectedVersion)">{{ chat.controlling === failure.executionId ? '正在重试…' : '重新尝试' }}</button>
         <button v-if="failure.status !== 'RETRYING' && originalText(failure)" class="text-button" @click="copy(failure.failureId, originalText(failure)!)">{{ copied === failure.failureId ? '已复制' : '复制原消息' }}</button>
       </section>

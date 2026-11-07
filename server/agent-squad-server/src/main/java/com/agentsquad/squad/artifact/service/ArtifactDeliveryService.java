@@ -1,16 +1,15 @@
 package com.agentsquad.squad.artifact.service;
 
 import com.agentsquad.squad.artifact.repository.ArtifactMapper;
-import com.agentsquad.squad.artifact.service.ArtifactService;
-import com.agentsquad.squad.artifact.dto.ArtifactView;
-import com.agentsquad.squad.artifact.domain.ArtifactContentPolicy;
-import com.agentsquad.squad.artifact.domain.ArtifactStageRow;
-import com.agentsquad.squad.artifact.dto.ArtifactStageView;
+import com.agentsquad.squad.domain.dto.ArtifactView;
+import com.agentsquad.squad.domain.entity.ArtifactContentPolicy;
+import com.agentsquad.squad.domain.entity.ArtifactStageRow;
+import com.agentsquad.squad.domain.dto.ArtifactStageView;
 import com.agentsquad.squad.artifact.repository.ArtifactDeliveryMapper;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.sandbox.domain.SandboxExecutionContext;
-import com.agentsquad.squad.sandbox.domain.SandboxPolicy;
+import com.agentsquad.squad.domain.entity.SandboxExecutionContext;
+import com.agentsquad.squad.domain.entity.SandboxPolicy;
 import com.agentsquad.squad.sandbox.service.SandboxAccessService;
 import com.agentsquad.squad.sandbox.repository.SandboxMapper;
 import jakarta.annotation.Resource;

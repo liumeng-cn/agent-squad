@@ -4,13 +4,12 @@ import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
-import com.agentsquad.squad.runtime.domain.CompletionContextRow;
-import com.agentsquad.squad.conversation.domain.ExecutionScopeRow;
+import com.agentsquad.squad.domain.dto.CompletionSubmission;
+import com.agentsquad.squad.domain.entity.*;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.conversation.service.ResponseExecutionService;
-import com.agentsquad.squad.conversation.domain.GoalTaskStatus;
-import com.agentsquad.squad.presentation.dto.CompletionProposalReceipt;
+import com.agentsquad.squad.domain.dto.CompletionProposalReceipt;
 import com.agentsquad.squad.runtime.repository.CompletionMapper;
 import com.agentsquad.squad.runtime.repository.PlanMapper;
 import com.agentsquad.squad.common.util.ContentDigests;
@@ -71,13 +70,13 @@ public class CompletionProposalService {
     @Transactional
     public CompletionProposalReceipt propose(String userId, String sessionId, String turnId,
                                              String toolCallId, String outcome, String finalAnswer) {
-        return submit(new com.agentsquad.squad.runtime.dto.CompletionSubmission(userId, sessionId, turnId,
+        return submit(new CompletionSubmission(userId, sessionId, turnId,
                 toolCallId, outcome, finalAnswer, List.of()));
     }
 
     /** 保存当前计划逐项检查结果；没有证据的成功声明被拒绝，发布前还需再次核对。 */
     @Transactional
-    public CompletionProposalReceipt submit(com.agentsquad.squad.runtime.dto.CompletionSubmission submission) {
+    public CompletionProposalReceipt submit(CompletionSubmission submission) {
         String userId = submission.userId();
         String sessionId = submission.sessionId();
         String turnId = submission.turnId();
@@ -109,10 +108,10 @@ public class CompletionProposalService {
                 || GoalTaskStatus.RUNNING.name().equals(context.taskStatus()))) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已不能提交完成候选");
         }
-        var acceptanceResults = List.<com.agentsquad.squad.runtime.domain.PlanAcceptanceResult>of();
+        var acceptanceResults = List.<PlanAcceptanceResult>of();
         if (context.planVersion() > 0) {
             var evaluation = planEvaluation.evaluate(userId, context.taskId(), context.planVersion(), submission.reviews());
-            if (evaluation.decision().stage() != com.agentsquad.squad.runtime.domain.PlanJoinStage.READY
+            if (evaluation.decision().stage() != PlanJoinStage.READY
                     || (GoalTaskStatus.SUCCEEDED.name().equals(outcome)
                     && evaluation.decision().outcome() != GoalTaskStatus.SUCCEEDED)) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,

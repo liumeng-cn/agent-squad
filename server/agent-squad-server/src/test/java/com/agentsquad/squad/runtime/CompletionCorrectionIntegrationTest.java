@@ -2,10 +2,12 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
+import com.agentsquad.squad.domain.dto.PlanNode;
+import com.agentsquad.squad.domain.dto.PlanPublish;
+import com.agentsquad.squad.domain.dto.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.domain.entity.*;
 import com.agentsquad.squad.integration.agentscope.NativeEventView;
 import com.agentsquad.squad.integration.agentscope.NativeProjectionService;
-import com.agentsquad.squad.conversation.domain.*;
-import com.agentsquad.squad.runtime.domain.*;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.conversation.repository.DeliveryMapper;
@@ -338,14 +340,14 @@ class CompletionCorrectionIntegrationTest {
             String key = "writer-" + UUID.randomUUID();
             context.getBean(com.agentsquad.squad.worker.service.WorkerDefinitionService.class).publish(
                     new com.agentsquad.squad.identity.AuthView(USER_ID, "admin", java.util.List.of(com.agentsquad.squad.common.enums.identity.AccountRole.ADMIN), null), key,
-                    new com.agentsquad.squad.worker.dto.WorkerDefinitionCreateRequest(key, "1.0.0", "写作", json.readTree("{}"), json.readTree("{}"), java.util.List.of(), "default", "default"));
+                    new WorkerDefinitionCreateRequest(key, "1.0.0", "写作", json.readTree("{}"), json.readTree("{}"), java.util.List.of(), "default", "default"));
             var snapshots = context.getBean(com.agentsquad.squad.runtime.service.ContextSnapshotService.class);
             String one = snapshots.prepare(USER_ID, target.sessionId(), "one", "one").snapshotId();
             String two = snapshots.prepare(USER_ID, target.sessionId(), "two", "two").snapshotId();
             var plan = context.getBean(com.agentsquad.squad.runtime.service.PlanService.class).publish(USER_ID, target.sessionId(),
-                    new com.agentsquad.squad.runtime.dto.PlanPublish("plan", 0, java.util.List.of(
-                            new com.agentsquad.squad.runtime.dto.PlanNode("one", key, "1.0.0", "分析一", one, java.util.List.of(), true, 1),
-                            new com.agentsquad.squad.runtime.dto.PlanNode("two", key, "1.0.0", "分析二", two, java.util.List.of(), true, 1)), "ALL_REQUIRED", java.util.List.of("完成")));
+                    new PlanPublish("plan", 0, java.util.List.of(
+                            new PlanNode("one", key, "1.0.0", "分析一", one, java.util.List.of(), true, 1),
+                            new PlanNode("two", key, "1.0.0", "分析二", two, java.util.List.of(), true, 1)), "ALL_REQUIRED", java.util.List.of("完成")));
             String firstBinding = jdbc.queryForObject("SELECT binding_id FROM sq_worker_job WHERE job_id=?", String.class, plan.jobIds().getFirst());
             String secondBinding = jdbc.queryForObject("SELECT binding_id FROM sq_worker_job WHERE job_id=?", String.class, plan.jobIds().getLast());
             var dispatch = context.getBean(com.agentsquad.squad.runtime.service.WorkerDispatchService.class);

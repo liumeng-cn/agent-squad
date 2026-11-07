@@ -1,6 +1,6 @@
 package com.agentsquad.squad.presentation.stream;
 
-import com.agentsquad.squad.conversation.domain.ReplyPreviewTarget;
+import com.agentsquad.squad.domain.entity.ReplyPreviewTarget;
 import com.agentsquad.squad.integration.agentscope.ReplyPreviewBuffer;
 import com.agentsquad.squad.presentation.domain.ReplyPreviewPhase;
 import com.agentsquad.squad.presentation.service.ReplyPreviewSignal;

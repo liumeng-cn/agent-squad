@@ -1,8 +1,8 @@
 package com.agentsquad.squad.governance.service;
 
 import com.agentsquad.squad.governance.repository.BudgetMapper;
-import com.agentsquad.squad.governance.domain.BudgetAccountRow;
-import com.agentsquad.squad.governance.domain.BudgetReservationRow;
+import com.agentsquad.squad.domain.entity.BudgetAccountRow;
+import com.agentsquad.squad.domain.entity.BudgetReservationRow;
 import com.agentsquad.squad.worker.profile.WorkerModelProfile;
 import com.agentsquad.squad.common.exception.BudgetExceededException;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
@@ -93,8 +93,9 @@ public class BudgetService {
         requireAvailable(userId, scopeId, account, units);
         budgetMapper.insertModel(UUID.randomUUID().toString(), userId, scopeId, usageKey,
                 units, modelProfileKey, profile.getPricingVersion(), requestHash);
-        log.info("模型预算已预留 scopeId={} usageKey={} profileKey={} pricingVersion={} units={}",
-                scopeId, usageKey, modelProfileKey, profile.getPricingVersion(), units);
+        // 模型档案放前面便于一眼定位链路所用模型；usageKey 是内部去重哈希，放最后。
+        log.info("模型预算已预留 scopeId={} profileKey={} pricingVersion={} units={} usageKey={}",
+                scopeId, modelProfileKey, profile.getPricingVersion(), units, usageKey);
     }
 
     /**

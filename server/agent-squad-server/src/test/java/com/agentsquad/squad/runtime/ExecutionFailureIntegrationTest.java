@@ -1,14 +1,15 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
+import com.agentsquad.squad.domain.dto.MessageCreateRequest;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
 import com.agentsquad.squad.conversation.service.ResponseRetryService;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
+import com.agentsquad.squad.domain.entity.PlanCorrectionExhaustedException;
 import com.agentsquad.squad.runtime.repository.ExecutionFailureMapper;
 import com.agentsquad.squad.runtime.service.ExecutionFailureService;
-import com.agentsquad.squad.runtime.domain.ModelFailureClassifier;
+import com.agentsquad.squad.domain.entity.ModelFailureClassifier;
 import com.agentsquad.squad.presentation.service.ConversationQueryService;
 import com.agentsquad.squad.tools.operation.OperationService;
 import com.agentsquad.squad.tools.operation.PrepareRequest;
@@ -53,6 +54,18 @@ class ExecutionFailureIntegrationTest {
                 new io.agentscope.core.model.transport.HttpTransportException("transport", new java.io.EOFException("private"))));
         assertThat(interrupted.code()).isEqualTo("MODEL_CONNECTION_INTERRUPTED");
         assertThat(interrupted.safeMessage()).doesNotContain("private");
+        // 百炼把欠费与未开通放在 HTTP 400 的错误码里，要归类为环境故障而不是请求校验失败。
+        var arrearage = ModelFailureClassifier.classify(new OpenAIException("private-secret", 400, "Arrearage", "hidden"));
+        assertThat(arrearage.category()).isEqualTo("ENVIRONMENT");
+        assertThat(arrearage.code()).isEqualTo("MODEL_BILLING_UNAVAILABLE");
+        var unpurchased = ModelFailureClassifier.classify(new OpenAIException("private-secret", 400, "AccessDenied.Unpurchased", "hidden"));
+        assertThat(unpurchased.category()).isEqualTo("ENVIRONMENT");
+        assertThat(unpurchased.code()).isEqualTo("MODEL_ACCESS_DENIED");
+        var transportBilling = ModelFailureClassifier.classify(new io.agentscope.core.model.transport.HttpTransportException("transport", 400,
+                "{\"error\":{\"code\":\"Arrearage\",\"message\":\"hidden\"}}"));
+        assertThat(transportBilling.code()).isEqualTo("MODEL_BILLING_UNAVAILABLE");
+        assertThat(ModelFailureClassifier.classify(new OpenAIException("x", 400, "unknown-code", "x")).code())
+                .isEqualTo("MODEL_REQUEST_REJECTED");
     }
 
     @Test
@@ -178,10 +191,10 @@ class ExecutionFailureIntegrationTest {
             assertThat(context.getBean(ExecutionFailureMapper.class).planAttempts(user, scopeId)).isEqualTo(3);
             var service = context.getBean(ExecutionFailureService.class);
             assertThatThrownBy(() -> service.requireModelAllowed(user, session))
-                    .isInstanceOf(com.agentsquad.squad.runtime.domain.PlanCorrectionExhaustedException.class);
+                    .isInstanceOf(PlanCorrectionExhaustedException.class);
             // 同一原因已由计划纠正记录，模型分类再次上报不能生成第二条用户可见故障。
             service.reportModel(user, session, "plan-exhausted-call",
-                    new com.agentsquad.squad.runtime.domain.PlanCorrectionExhaustedException());
+                    new PlanCorrectionExhaustedException());
             assertThat(context.getBean(JdbcTemplate.class).queryForObject(
                     "SELECT COUNT(1) FROM sq_execution_failure WHERE user_id=? AND scope_id=? AND code='PLAN_CORRECTION_EXHAUSTED'",
                     Integer.class, user, scopeId)).isEqualTo(1);

@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.conversation.repository.TaskDirectiveMapper">
 
-    <resultMap id="lockResult" type="com.agentsquad.squad.conversation.domain.TaskDirectiveRow">
+    <resultMap id="lockResult" type="com.agentsquad.squad.domain.entity.TaskDirectiveRow">
         <constructor>
             <arg column="directive_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -28,7 +28,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="findByKeyResult" type="com.agentsquad.squad.conversation.domain.TaskDirectiveRow">
+    <resultMap id="findByKeyResult" type="com.agentsquad.squad.domain.entity.TaskDirectiveRow">
         <constructor>
             <arg column="directive_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -54,7 +54,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="appliedResult" type="com.agentsquad.squad.conversation.domain.TaskDirectiveRow">
+    <resultMap id="appliedResult" type="com.agentsquad.squad.domain.entity.TaskDirectiveRow">
         <constructor>
             <arg column="directive_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -80,14 +80,14 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="goalStateResult" type="com.agentsquad.squad.conversation.domain.TaskGoalState">
+    <resultMap id="goalStateResult" type="com.agentsquad.squad.domain.entity.TaskGoalState">
         <constructor>
             <arg column="goal_revision" javaType="_long"/>
             <arg column="input_json" javaType="java.lang.String"/>
         </constructor>
     </resultMap>
 
-    <resultMap id="dueResult" type="com.agentsquad.squad.conversation.domain.TaskDirectiveTarget">
+    <resultMap id="dueResult" type="com.agentsquad.squad.domain.entity.TaskDirectiveTarget">
         <constructor>
             <arg column="directive_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -95,7 +95,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="latestFactsResult" type="com.agentsquad.squad.conversation.domain.TaskDirectiveFact">
+    <resultMap id="latestFactsResult" type="com.agentsquad.squad.domain.entity.TaskDirectiveFact">
         <constructor>
             <arg column="directive_id" javaType="java.lang.String"/>
             <arg column="source_message_id" javaType="java.lang.String"/>

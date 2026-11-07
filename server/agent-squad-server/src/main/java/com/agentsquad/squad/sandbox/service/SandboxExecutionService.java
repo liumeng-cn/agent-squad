@@ -2,13 +2,15 @@ package com.agentsquad.squad.sandbox.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.sandbox.domain.SandboxPolicy;
-import com.agentsquad.squad.sandbox.dto.SandboxExecuteRequest;
-import com.agentsquad.squad.sandbox.dto.SandboxExecutionResult;
+import com.agentsquad.squad.domain.entity.SandboxExecutionContext;
+import com.agentsquad.squad.domain.entity.SandboxInputFile;
+import com.agentsquad.squad.domain.entity.SandboxPolicy;
+import com.agentsquad.squad.domain.dto.SandboxExecuteRequest;
+import com.agentsquad.squad.domain.dto.SandboxExecutionResult;
 import com.agentsquad.squad.sandbox.infrastructure.HarnessDockerSandboxDriver;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.agentsquad.squad.artifact.domain.ArtifactContentPolicy;
+import com.agentsquad.squad.domain.entity.ArtifactContentPolicy;
 import jakarta.annotation.Resource;
 import com.agentsquad.squad.identity.UserStatusGuard;
 import lombok.extern.slf4j.Slf4j;
@@ -75,15 +77,15 @@ public class SandboxExecutionService {
         }
     }
 
-    private java.util.List<com.agentsquad.squad.sandbox.domain.SandboxInputFile> resolveInputs(
-            com.agentsquad.squad.sandbox.domain.SandboxExecutionContext context, SandboxExecuteRequest request) {
-        var inputs = new java.util.ArrayList<com.agentsquad.squad.sandbox.domain.SandboxInputFile>();
+    private java.util.List<SandboxInputFile> resolveInputs(
+            SandboxExecutionContext context, SandboxExecuteRequest request) {
+        var inputs = new java.util.ArrayList<SandboxInputFile>();
         var paths = new java.util.HashSet<String>();
         long bytes = 0;
         for (var file : request.files()) {
             byte[] content = file.content().getBytes(StandardCharsets.UTF_8);
             paths.add(file.path());
-            inputs.add(new com.agentsquad.squad.sandbox.domain.SandboxInputFile(file.path(), content));
+            inputs.add(new SandboxInputFile(file.path(), content));
             bytes += content.length;
         }
         var attached = artifactMapper.listScopeIds(context.userId(), context.scopeId());
@@ -97,7 +99,7 @@ public class SandboxExecutionService {
             if (!paths.add(path) || artifact.content().length > SandboxPolicy.MAX_FILE_BYTES) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "沙箱附件重复或超过单文件限制");
             }
-            inputs.add(new com.agentsquad.squad.sandbox.domain.SandboxInputFile(path, artifact.content()));
+            inputs.add(new SandboxInputFile(path, artifact.content()));
             bytes += artifact.content().length;
         }
         if (bytes > SandboxPolicy.MAX_TOTAL_BYTES) {

@@ -1,9 +1,9 @@
 package com.agentsquad.squad.conversation.repository;
 
-import com.agentsquad.squad.conversation.domain.TaskDirectiveRow;
-import com.agentsquad.squad.conversation.domain.TaskDirectiveTarget;
-import com.agentsquad.squad.conversation.domain.TaskDirectiveFact;
-import com.agentsquad.squad.conversation.domain.TaskGoalState;
+import com.agentsquad.squad.domain.entity.TaskDirectiveRow;
+import com.agentsquad.squad.domain.entity.TaskDirectiveTarget;
+import com.agentsquad.squad.domain.entity.TaskDirectiveFact;
+import com.agentsquad.squad.domain.entity.TaskGoalState;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

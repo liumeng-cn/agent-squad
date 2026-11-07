@@ -69,6 +69,19 @@ class ObservationSupportTest {
     }
 
     @Test
+    void emitsFieldsInCanonicalOrderRegardlessOfInputMap() {
+        Map<String, Object> fields = Map.of(
+                "scopeId", "scope-1", "executionId", "execution-1", "modelId", "default",
+                "reasoningMode", "OFF", "outcome", "FAILED", "commandId", "command-1",
+                "preview", "你好", "reason", "模型未开通");
+
+        Map<String, Object> result = support().logFields(fields);
+
+        assertEquals(java.util.List.of("outcome", "reason", "preview", "modelId", "reasoningMode",
+                "executionId", "commandId", "scopeId"), java.util.List.copyOf(result.keySet()));
+    }
+
+    @Test
     void classifiesKnownErrorFamilies() {
         ObservationSupport support = support();
 

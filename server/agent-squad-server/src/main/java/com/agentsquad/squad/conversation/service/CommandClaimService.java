@@ -1,7 +1,7 @@
 package com.agentsquad.squad.conversation.service;
 
 import com.agentsquad.squad.common.observability.ObservationSupport;
-import com.agentsquad.squad.conversation.domain.CommandClaimContext;
+import com.agentsquad.squad.domain.entity.CommandClaimContext;
 import com.agentsquad.squad.conversation.repository.DeliveryMapper;
 import jakarta.annotation.Resource;
 import com.agentsquad.squad.identity.UserStatusGuard;

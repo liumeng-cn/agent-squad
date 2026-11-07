@@ -2,9 +2,9 @@ package com.agentsquad.squad.conversation.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.conversation.domain.ConversationRow;
-import com.agentsquad.squad.conversation.domain.ExecutionOwnerRow;
-import com.agentsquad.squad.conversation.domain.ExecutionScopeRow;
+import com.agentsquad.squad.domain.entity.ConversationRow;
+import com.agentsquad.squad.domain.entity.ExecutionOwnerRow;
+import com.agentsquad.squad.domain.entity.ExecutionScopeRow;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import jakarta.annotation.Resource;

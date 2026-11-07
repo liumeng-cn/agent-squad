@@ -1,7 +1,7 @@
 package com.agentsquad.squad.agent.tool;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.runtime.dto.AcceptanceReviewRequest;
+import com.agentsquad.squad.domain.dto.AcceptanceReviewRequest;
 import com.agentsquad.squad.runtime.service.PlanAcceptanceService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.message.ToolResultBlock;

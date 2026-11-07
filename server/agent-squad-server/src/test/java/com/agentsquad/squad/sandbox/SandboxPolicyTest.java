@@ -1,9 +1,9 @@
 package com.agentsquad.squad.sandbox;
 
-import com.agentsquad.squad.sandbox.domain.SandboxPolicy;
-import com.agentsquad.squad.sandbox.dto.SandboxExecuteRequest;
-import com.agentsquad.squad.sandbox.dto.SandboxFile;
-import com.agentsquad.squad.artifact.domain.ArtifactContentPolicy;
+import com.agentsquad.squad.domain.entity.SandboxPolicy;
+import com.agentsquad.squad.domain.dto.SandboxExecuteRequest;
+import com.agentsquad.squad.domain.dto.SandboxFile;
+import com.agentsquad.squad.domain.entity.ArtifactContentPolicy;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

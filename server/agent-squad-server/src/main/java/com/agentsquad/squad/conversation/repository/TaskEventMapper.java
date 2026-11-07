@@ -1,6 +1,6 @@
 package com.agentsquad.squad.conversation.repository;
 
-import com.agentsquad.squad.runtime.domain.EventRow;
+import com.agentsquad.squad.domain.entity.EventRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

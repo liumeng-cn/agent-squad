@@ -1,15 +1,15 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.conversation.domain.TaskDirectiveRow;
-import com.agentsquad.squad.conversation.domain.TaskGoalState;
-import com.agentsquad.squad.conversation.domain.TaskRow;
+import com.agentsquad.squad.domain.entity.TaskDirectiveRow;
+import com.agentsquad.squad.domain.entity.TaskGoalState;
+import com.agentsquad.squad.domain.entity.TaskRow;
 import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
-import com.agentsquad.squad.runtime.domain.PlanContextRow;
-import com.agentsquad.squad.runtime.dto.PlanNode;
-import com.agentsquad.squad.runtime.dto.PlanPublish;
+import com.agentsquad.squad.domain.entity.PlanContextRow;
+import com.agentsquad.squad.domain.dto.PlanNode;
+import com.agentsquad.squad.domain.dto.PlanPublish;
 import com.agentsquad.squad.runtime.repository.PlanMapper;
 import com.agentsquad.squad.runtime.service.PlanService;
 import com.fasterxml.jackson.databind.ObjectMapper;

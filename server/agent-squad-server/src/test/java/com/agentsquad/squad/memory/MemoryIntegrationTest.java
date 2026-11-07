@@ -2,14 +2,14 @@ package com.agentsquad.squad.memory;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
+import com.agentsquad.squad.domain.dto.MessageCreateRequest;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
-import com.agentsquad.squad.memory.domain.MemoryContextInvalidatedException;
-import com.agentsquad.squad.memory.dto.MemoryCreate;
-import com.agentsquad.squad.memory.dto.MemoryUpdate;
-import com.agentsquad.squad.memory.dto.MemoryWriteRequest;
+import com.agentsquad.squad.common.MemoryContextInvalidatedException;
+import com.agentsquad.squad.domain.dto.MemoryCreate;
+import com.agentsquad.squad.domain.dto.MemoryUpdate;
+import com.agentsquad.squad.domain.dto.MemoryWriteRequest;
 import com.agentsquad.squad.memory.service.ExplicitMemoryWriteService;
 import com.agentsquad.squad.memory.service.MemoryContextService;
 import com.agentsquad.squad.memory.service.MemoryService;
@@ -20,7 +20,6 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.nio.file.Path;
-import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;

@@ -1,7 +1,7 @@
 package com.agentsquad.squad.conversation.repository;
 
-import com.agentsquad.squad.conversation.domain.ResponseContextRow;
-import com.agentsquad.squad.conversation.domain.ResponseHistoryRow;
+import com.agentsquad.squad.domain.entity.ResponseContextRow;
+import com.agentsquad.squad.domain.entity.ResponseHistoryRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

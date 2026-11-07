@@ -1,6 +1,6 @@
 package com.agentsquad.squad.tools.repository;
 
-import com.agentsquad.squad.tools.domain.ConnectionRow;
+import com.agentsquad.squad.domain.entity.ConnectionRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

@@ -1,7 +1,9 @@
 package com.agentsquad.squad.runtime.repository;
 
-import com.agentsquad.squad.runtime.domain.CompletionContextRow;
-import com.agentsquad.squad.runtime.domain.FinalizationRow;
+import com.agentsquad.squad.domain.entity.ProjectionTarget;
+import com.agentsquad.squad.domain.entity.TaskRow;
+import com.agentsquad.squad.domain.entity.CompletionContextRow;
+import com.agentsquad.squad.domain.entity.FinalizationRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -28,10 +30,10 @@ public interface CompletionMapper {
                      @Param("outcome") String outcome, @Param("planVersion") long planVersion,
                      @Param("answerRevision") long answerRevision);
 
-    java.util.List<com.agentsquad.squad.runtime.domain.ProjectionTarget> cancellationTargets(
+    java.util.List<ProjectionTarget> cancellationTargets(
             @Param("userId") String userId, @Param("taskId") String taskId);
 
-    java.util.List<com.agentsquad.squad.conversation.domain.TaskRow> cancellingTasks(@Param("afterId") long afterId);
+    java.util.List<TaskRow> cancellingTasks(@Param("afterId") long afterId);
 
     java.util.List<String> lockCancellationOperations(@Param("userId") String userId, @Param("taskId") String taskId);
 

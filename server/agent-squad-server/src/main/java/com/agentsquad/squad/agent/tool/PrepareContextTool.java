@@ -1,7 +1,8 @@
 package com.agentsquad.squad.agent.tool;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.runtime.dto.ContextSnapshotReceipt;
+import com.agentsquad.squad.domain.dto.ContextPreparationRequest;
+import com.agentsquad.squad.domain.dto.ContextSnapshotReceipt;
 import com.agentsquad.squad.runtime.service.ContextSnapshotService;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.ToolResultBlock;
@@ -76,7 +77,7 @@ public class PrepareContextTool implements AgentTool {
         try {
             ContextSnapshotReceipt receipt = contextSnapshotService.prepare(
                     context.getUserId(), context.getSessionId(), json.convertValue(param.getInput(),
-                            com.agentsquad.squad.runtime.dto.ContextPreparationRequest.class));
+                            ContextPreparationRequest.class));
             return ToolResultBlock.text("局部上下文已准备。contextSnapshotId=" + receipt.snapshotId()
                     + " contentHash=" + receipt.contentHash());
         } catch (IllegalArgumentException exception) {

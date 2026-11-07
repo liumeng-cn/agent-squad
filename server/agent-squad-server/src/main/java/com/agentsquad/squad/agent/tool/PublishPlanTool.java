@@ -2,8 +2,8 @@ package com.agentsquad.squad.agent.tool;
 
 import com.agentsquad.squad.runtime.service.ExecutionFailureService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.runtime.dto.PlanPublish;
-import com.agentsquad.squad.runtime.dto.PlanReceipt;
+import com.agentsquad.squad.domain.dto.PlanPublish;
+import com.agentsquad.squad.domain.dto.PlanReceipt;
 import com.agentsquad.squad.runtime.service.PlanService;
 import com.agentsquad.squad.runtime.service.PendingDirectivesException;
 import com.agentsquad.squad.common.util.RuntimePayloads;

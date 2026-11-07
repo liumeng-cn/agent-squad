@@ -4,14 +4,17 @@ import com.agentsquad.squad.agent.tool.ReportJobResultTool;
 import com.agentsquad.squad.common.util.CanonicalJson;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.runtime.domain.ContextSnapshotRow;
-import com.agentsquad.squad.runtime.domain.WorkerLaunchRow;
+import com.agentsquad.squad.domain.entity.WorkerExecutionIdentity;
+import com.agentsquad.squad.integration.agentscope.middleware.ModelBudgetMiddleware;
+import com.agentsquad.squad.integration.agentscope.middleware.ProfiledModelBudgetMiddleware;
+import com.agentsquad.squad.domain.entity.ContextSnapshotRow;
+import com.agentsquad.squad.domain.entity.WorkerLaunchRow;
 import com.agentsquad.squad.runtime.repository.ContextSnapshotMapper;
 import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
 import com.agentsquad.squad.runtime.service.WorkerDispatchService;
 import com.agentsquad.squad.runtime.service.WorkerResultService;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
-import com.agentsquad.squad.worker.dto.WorkerDefinitionResponse;
+import com.agentsquad.squad.domain.dto.WorkerDefinitionResponse;
 import com.agentsquad.squad.worker.profile.WorkerModelProfile;
 import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;
 import com.agentsquad.squad.worker.profile.WorkerRuntimeProfile;
@@ -158,8 +161,8 @@ public class WorkerFactory {
                         userId, bindingId, sessionId,
                         com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource.CURRENT_MAPPING_VERSION)));
 
-        context.put(com.agentsquad.squad.runtime.domain.WorkerExecutionIdentity.class,
-                new com.agentsquad.squad.runtime.domain.WorkerExecutionIdentity(bindingId, handle.guardToken()));
+        context.put(WorkerExecutionIdentity.class,
+                new WorkerExecutionIdentity(bindingId, handle.guardToken()));
         WorkerLaunchRow job = dispatchMapper.findByBinding(userId, bindingId);
         JsonNode selectedInput = readInput(job.inputJson());
         ContextSnapshotRow selected = snapshotMapper.findOwned(userId, job.taskId(), selectedInput.path("contextSnapshotId").asText());

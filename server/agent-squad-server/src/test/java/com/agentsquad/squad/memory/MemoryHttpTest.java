@@ -3,7 +3,7 @@ package com.agentsquad.squad.memory;
 import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
 
-import com.agentsquad.squad.memory.dto.MemoryCreate;
+import com.agentsquad.squad.domain.dto.MemoryCreate;
 import com.agentsquad.squad.memory.service.MemoryService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

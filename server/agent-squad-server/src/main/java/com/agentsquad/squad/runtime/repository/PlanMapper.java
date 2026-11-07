@@ -1,8 +1,8 @@
 package com.agentsquad.squad.runtime.repository;
 
-import com.agentsquad.squad.runtime.domain.PlanContextRow;
-import com.agentsquad.squad.runtime.domain.PlanRow;
-import com.agentsquad.squad.runtime.domain.WorkerJobRow;
+import com.agentsquad.squad.domain.entity.PlanContextRow;
+import com.agentsquad.squad.domain.entity.PlanRow;
+import com.agentsquad.squad.domain.entity.WorkerJobRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

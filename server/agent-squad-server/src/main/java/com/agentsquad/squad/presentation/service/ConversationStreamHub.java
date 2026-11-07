@@ -1,5 +1,6 @@
 package com.agentsquad.squad.presentation.service;
 
+import com.agentsquad.squad.domain.dto.ReplyPreview;
 import com.agentsquad.squad.identity.UserStatusGuard;
 
 import java.util.Comparator;
@@ -93,7 +94,7 @@ public final class ConversationStreamHub {
         return Long.parseLong(cursor.substring(cursor.lastIndexOf(':') + 1));
     }
 
-    public void preview(com.agentsquad.squad.presentation.dto.ReplyPreview preview) {
+    public void preview(ReplyPreview preview) {
         subscribers.values().forEach(subscriber -> subscriber.preview(preview));
     }
 

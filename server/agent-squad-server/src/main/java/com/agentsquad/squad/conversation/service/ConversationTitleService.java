@@ -1,14 +1,13 @@
 package com.agentsquad.squad.conversation.service;
 
-import com.agentsquad.squad.conversation.dto.ConversationView;
+import com.agentsquad.squad.domain.dto.ConversationView;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.conversation.domain.ConversationTitles;
+import com.agentsquad.squad.domain.entity.ConversationTitles;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
-import com.agentsquad.squad.conversation.dto.ConversationTitleUpdate;
-import com.agentsquad.squad.presentation.domain.ConversationHeader;
-import com.agentsquad.squad.presentation.dto.ConversationListPage;
+import com.agentsquad.squad.domain.dto.ConversationTitleUpdate;
+import com.agentsquad.squad.domain.dto.ConversationListPage;
 import com.agentsquad.squad.presentation.repository.ConversationReadMapper;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;

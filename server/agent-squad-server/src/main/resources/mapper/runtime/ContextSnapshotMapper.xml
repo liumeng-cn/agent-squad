@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.runtime.repository.ContextSnapshotMapper">
 
-    <resultMap id="lockPreparationResult" type="com.agentsquad.squad.runtime.domain.ContextPreparationRow">
+    <resultMap id="lockPreparationResult" type="com.agentsquad.squad.domain.entity.ContextPreparationRow">
         <constructor>
             <arg column="user_id" javaType="java.lang.String"/>
             <arg column="task_id" javaType="java.lang.String"/>
@@ -14,7 +14,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="findByLogicalKeyResult" type="com.agentsquad.squad.runtime.domain.ContextSnapshotRow">
+    <resultMap id="findByLogicalKeyResult" type="com.agentsquad.squad.domain.entity.ContextSnapshotRow">
         <constructor>
             <arg column="snapshot_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -30,7 +30,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="findOwnedResult" type="com.agentsquad.squad.runtime.domain.ContextSnapshotRow">
+    <resultMap id="findOwnedResult" type="com.agentsquad.squad.domain.entity.ContextSnapshotRow">
         <constructor>
             <arg column="snapshot_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>

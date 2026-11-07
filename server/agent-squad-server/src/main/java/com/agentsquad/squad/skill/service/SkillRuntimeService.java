@@ -4,11 +4,12 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
-import com.agentsquad.squad.skill.domain.SkillCatalog;
-import com.agentsquad.squad.skill.domain.SkillPackageValidator;
-import com.agentsquad.squad.skill.domain.SkillReference;
-import com.agentsquad.squad.skill.domain.SkillVersionRow;
-import com.agentsquad.squad.skill.domain.SkillTextFile;
+import com.agentsquad.squad.domain.entity.SkillCapabilityUnavailableException;
+import com.agentsquad.squad.domain.entity.SkillCatalog;
+import com.agentsquad.squad.domain.entity.SkillPackageValidator;
+import com.agentsquad.squad.domain.entity.SkillReference;
+import com.agentsquad.squad.domain.entity.SkillVersionRow;
+import com.agentsquad.squad.domain.entity.SkillTextFile;
 import com.agentsquad.squad.skill.repository.SkillRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -110,7 +111,7 @@ public class SkillRuntimeService {
             throw new IllegalStateException("技能工具依赖记录损坏", exception);
         }
         if (allowedTools == null || !allowedTools.containsAll(required)) {
-            throw new com.agentsquad.squad.skill.domain.SkillCapabilityUnavailableException();
+            throw new SkillCapabilityUnavailableException();
         }
     }
 

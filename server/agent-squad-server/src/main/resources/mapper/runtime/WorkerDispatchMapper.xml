@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.runtime.repository.WorkerDispatchMapper">
 
-    <resultMap id="findByBindingResult" type="com.agentsquad.squad.runtime.domain.WorkerLaunchRow">
+    <resultMap id="findByBindingResult" type="com.agentsquad.squad.domain.entity.WorkerLaunchRow">
         <constructor>
             <arg column="user_id" javaType="java.lang.String"/>
             <arg column="task_id" javaType="java.lang.String"/>

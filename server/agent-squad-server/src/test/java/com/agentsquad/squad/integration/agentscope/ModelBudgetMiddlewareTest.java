@@ -1,11 +1,12 @@
 package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.conversation.dto.ConversationResponse;
-import com.agentsquad.squad.conversation.dto.TaskReceipt;
+import com.agentsquad.squad.domain.dto.ConversationResponse;
+import com.agentsquad.squad.domain.dto.TaskReceipt;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
 import com.agentsquad.squad.governance.service.BudgetService;
 import com.agentsquad.squad.governance.repository.BudgetMapper;
+import com.agentsquad.squad.integration.agentscope.middleware.ModelBudgetMiddleware;
 import com.agentsquad.squad.worker.profile.WorkerModelProfile;
 import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;

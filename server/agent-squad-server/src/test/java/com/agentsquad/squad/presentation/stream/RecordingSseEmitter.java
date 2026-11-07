@@ -1,7 +1,7 @@
 package com.agentsquad.squad.presentation.stream;
 
-import com.agentsquad.squad.presentation.dto.ConversationEvent;
-import com.agentsquad.squad.presentation.dto.ReplyPreview;
+import com.agentsquad.squad.domain.dto.ConversationEvent;
+import com.agentsquad.squad.domain.dto.ReplyPreview;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;

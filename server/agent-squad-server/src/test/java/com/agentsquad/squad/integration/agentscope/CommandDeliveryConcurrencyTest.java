@@ -1,6 +1,6 @@
 package com.agentsquad.squad.integration.agentscope;
 
-import com.agentsquad.squad.conversation.domain.CommandClaimContext;
+import com.agentsquad.squad.domain.entity.CommandClaimContext;
 import com.agentsquad.squad.conversation.repository.DeliveryMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;

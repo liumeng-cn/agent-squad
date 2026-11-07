@@ -1,7 +1,7 @@
 package com.agentsquad.squad.governance.repository;
 
-import com.agentsquad.squad.governance.domain.BudgetReservationRow;
-import com.agentsquad.squad.governance.domain.BudgetAccountRow;
+import com.agentsquad.squad.domain.entity.BudgetReservationRow;
+import com.agentsquad.squad.domain.entity.BudgetAccountRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

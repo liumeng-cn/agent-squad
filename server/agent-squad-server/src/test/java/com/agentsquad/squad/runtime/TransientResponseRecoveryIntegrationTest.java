@@ -1,7 +1,8 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
+import com.agentsquad.squad.domain.dto.ActivityHistoryQuery;
+import com.agentsquad.squad.domain.dto.MessageCreateRequest;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
 import com.agentsquad.squad.conversation.service.ResponseRetryService;
 import com.agentsquad.squad.presentation.service.ConversationQueryService;
@@ -20,7 +21,6 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -126,7 +126,7 @@ class TransientResponseRecoveryIntegrationTest {
             assertThat(reads.snapshot(user, message.conversationId(), null, 40).messages()).anyMatch(item -> "恢复后的回答".equals(item.text()));
             assertThat(reads.snapshot(user, message.conversationId(), null, 40).failures()).isEmpty();
             var history = reads.activityHistory(user, message.conversationId(),
-                    new com.agentsquad.squad.presentation.dto.ActivityHistoryQuery(message.messageId(), null));
+                    new ActivityHistoryQuery(message.messageId(), null));
             assertThat(history.items().stream().filter(item -> item.type().name().equals("AUTO_RETRY_SCHEDULED")))
                     .hasSize(exhaust ? 2 : 1);
             assertThat(history.items().stream().filter(item -> item.type().name().equals("USER_RETRY_SCHEDULED")))

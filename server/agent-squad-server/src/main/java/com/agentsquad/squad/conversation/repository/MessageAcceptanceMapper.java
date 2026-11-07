@@ -1,6 +1,7 @@
 package com.agentsquad.squad.conversation.repository;
 
-import com.agentsquad.squad.conversation.domain.MessageSubmissionRow;
+import com.agentsquad.squad.domain.entity.MessageSubmissionRow;
+import com.agentsquad.squad.domain.entity.ResponseCompletionProtocol;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -30,7 +31,7 @@ public interface MessageAcceptanceMapper {
     int insertExecution(@Param("executionId") String executionId, @Param("userId") String userId,
                         @Param("conversationId") String conversationId, @Param("messageId") String messageId,
                         @Param("scopeId") String scopeId, @Param("bindingId") String bindingId,
-                        @Param("completionProtocol") com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol completionProtocol);
+                        @Param("completionProtocol") ResponseCompletionProtocol completionProtocol);
 
     int setModelChoice(@Param("userId") String userId, @Param("executionId") String executionId, @Param("choice") String choice);
 

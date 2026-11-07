@@ -2,7 +2,7 @@ package com.agentsquad.squad.agent.tool;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.conversation.dto.TaskDirectiveSubmit;
+import com.agentsquad.squad.domain.dto.TaskDirectiveSubmit;
 import com.agentsquad.squad.conversation.service.TaskDirectiveService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;

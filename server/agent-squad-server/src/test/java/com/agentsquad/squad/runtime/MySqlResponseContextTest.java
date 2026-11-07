@@ -1,7 +1,7 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.conversation.domain.ResponseContextSnapshot;
-import com.agentsquad.squad.conversation.dto.MessageReceipt;
+import com.agentsquad.squad.domain.entity.ResponseContextSnapshot;
+import com.agentsquad.squad.domain.dto.MessageReceipt;
 import com.agentsquad.squad.conversation.service.ResponseContextService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;

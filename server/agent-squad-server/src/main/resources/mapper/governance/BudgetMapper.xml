@@ -2,14 +2,14 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.governance.repository.BudgetMapper">
 
-    <resultMap id="lockAccountResult" type="com.agentsquad.squad.governance.domain.BudgetAccountRow">
+    <resultMap id="lockAccountResult" type="com.agentsquad.squad.domain.entity.BudgetAccountRow">
         <constructor>
             <arg column="budget_profile_key" javaType="java.lang.String"/>
             <arg column="budget_limit_microunits" javaType="_long"/>
         </constructor>
     </resultMap>
 
-    <resultMap id="findReservationResult" type="com.agentsquad.squad.governance.domain.BudgetReservationRow">
+    <resultMap id="findReservationResult" type="com.agentsquad.squad.domain.entity.BudgetReservationRow">
         <constructor>
             <arg column="kind" javaType="java.lang.String"/>
             <arg column="status" javaType="java.lang.String"/>

@@ -1,6 +1,6 @@
 package com.agentsquad.squad.interaction.repository;
 
-import com.agentsquad.squad.interaction.domain.InteractionRow;
+import com.agentsquad.squad.domain.entity.InteractionRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

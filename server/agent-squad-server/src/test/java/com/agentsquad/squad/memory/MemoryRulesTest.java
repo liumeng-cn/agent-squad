@@ -1,8 +1,8 @@
 package com.agentsquad.squad.memory;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.memory.domain.MemoryRow;
-import com.agentsquad.squad.memory.domain.MemoryRules;
+import com.agentsquad.squad.domain.entity.MemoryRow;
+import com.agentsquad.squad.domain.entity.MemoryRules;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;

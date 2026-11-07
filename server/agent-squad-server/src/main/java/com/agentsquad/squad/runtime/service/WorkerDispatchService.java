@@ -2,7 +2,7 @@ package com.agentsquad.squad.runtime.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.runtime.domain.WorkerLaunchRow;
+import com.agentsquad.squad.domain.entity.WorkerLaunchRow;
 import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;

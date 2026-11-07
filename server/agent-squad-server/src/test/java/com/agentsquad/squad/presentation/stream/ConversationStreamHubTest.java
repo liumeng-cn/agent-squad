@@ -1,8 +1,8 @@
 package com.agentsquad.squad.presentation.stream;
 
 import com.agentsquad.squad.identity.UserStatusGuard;
-import com.agentsquad.squad.presentation.dto.ConversationEvent;
-import com.agentsquad.squad.presentation.dto.ReplyPreview;
+import com.agentsquad.squad.domain.dto.ConversationEvent;
+import com.agentsquad.squad.domain.dto.ReplyPreview;
 import com.agentsquad.squad.presentation.domain.ReplyPreviewPhase;
 import com.agentsquad.squad.presentation.service.ConversationQueryService;
 import com.agentsquad.squad.presentation.service.ConversationStreamHub;
@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;

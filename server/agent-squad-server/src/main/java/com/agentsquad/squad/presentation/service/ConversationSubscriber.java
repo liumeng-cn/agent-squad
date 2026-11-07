@@ -1,6 +1,7 @@
 package com.agentsquad.squad.presentation.service;
 
-import com.agentsquad.squad.presentation.dto.ConversationEvent;
+import com.agentsquad.squad.domain.dto.ConversationEvent;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -15,6 +16,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p>
  * 队列有界且只控制本连接发送，断开只释放订阅；从不引用或取消Worker、模型或后台任务。
  */
+@Slf4j
 public final class ConversationSubscriber {
     private static final int BUFFER_LIMIT = 128;
     private final SseEmitter emitter;
@@ -25,7 +27,7 @@ public final class ConversationSubscriber {
     private final AtomicBoolean closed = new AtomicBoolean();
     private final AtomicBoolean sending = new AtomicBoolean();
     private final AtomicBoolean heartbeatPending = new AtomicBoolean();
-    private final java.util.concurrent.ConcurrentHashMap<String, com.agentsquad.squad.presentation.dto.ReplyPreview> previews = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentHashMap<String, com.agentsquad.squad.domain.dto.ReplyPreview> previews = new java.util.concurrent.ConcurrentHashMap<>();
     private volatile String cursor;
 
     public ConversationSubscriber(SseEmitter emitter, String cursor, Executor sender, Runnable onClosed, Runnable authorize) {
@@ -66,7 +68,7 @@ public final class ConversationSubscriber {
     /**
      * 每个回复只保留最新可替换预览，慢连接不会积累逐token队列。
      */
-    public void preview(com.agentsquad.squad.presentation.dto.ReplyPreview preview) {
+    public void preview(com.agentsquad.squad.domain.dto.ReplyPreview preview) {
         if (closed.get()) {
             return;
         }
@@ -133,7 +135,12 @@ public final class ConversationSubscriber {
             queue.clear();
             previews.clear();
             onClosed.run();
-            emitter.complete();
+            try {
+                emitter.complete();
+            } catch (IllegalStateException clientGone) {
+                // 客户端已断开导致 AsyncContext 失效属正常取消，只留调试痕迹。
+                log.debug("事件订阅连接已关闭");
+            }
         }
     }
 }
