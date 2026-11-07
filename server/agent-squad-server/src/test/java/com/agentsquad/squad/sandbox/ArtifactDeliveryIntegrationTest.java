@@ -4,7 +4,7 @@ import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.artifact.service.ArtifactService;
 import com.agentsquad.squad.artifact.service.ArtifactDeliveryService;
 import com.agentsquad.squad.artifact.service.ArtifactRetentionService;
-import com.agentsquad.squad.domain.dto.MessageCreateRequest;
+import com.agentsquad.squad.domain.request.MessageCreateRequest;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
 import com.agentsquad.squad.runtime.service.ExecutionAuthorizationService;
 import com.agentsquad.squad.domain.dto.SandboxDriverResult;

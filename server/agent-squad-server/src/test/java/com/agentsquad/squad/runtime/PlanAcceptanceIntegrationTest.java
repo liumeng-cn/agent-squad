@@ -22,7 +22,7 @@ import com.agentsquad.squad.runtime.service.PlanAcceptanceService;
 import com.agentsquad.squad.runtime.service.PlanCompletionEvaluationService;
 import com.agentsquad.squad.runtime.service.PlanService;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
-import com.agentsquad.squad.domain.dto.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.params.ParameterizedTest;

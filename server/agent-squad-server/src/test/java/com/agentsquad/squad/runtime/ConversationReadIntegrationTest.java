@@ -1,8 +1,8 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.dto.ConversationTitleUpdate;
-import com.agentsquad.squad.domain.dto.MessageCreateRequest;
+import com.agentsquad.squad.domain.request.ConversationTitleUpdateRequest;
+import com.agentsquad.squad.domain.request.MessageCreateRequest;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
 import com.agentsquad.squad.conversation.service.ConversationTitleService;
 import com.agentsquad.squad.presentation.service.ConversationQueryService;
@@ -87,12 +87,12 @@ class ConversationReadIntegrationTest {
         assertThat(older.items().getFirst().title()).isEqualTo("讨论一下 合作方案");
         assertThat(older.nextCursor()).isNull();
         assertThatThrownBy(() -> service.list(UUID.randomUUID().toString(), page.nextCursor(), 1)).isInstanceOf(RuntimeBusinessException.class);
-        var renamed = service.rename(user, first.conversationId(), new ConversationTitleUpdate(" 我的\n 合作主题 ", 0L));
+        var renamed = service.rename(user, first.conversationId(), new ConversationTitleUpdateRequest(" 我的\n 合作主题 ", 0L));
         assertThat(renamed.title()).isEqualTo("我的 合作主题");
         assertThat(renamed.titleSource()).isEqualTo("MANUAL");
-        assertThatThrownBy(() -> service.rename(user, first.conversationId(), new ConversationTitleUpdate("旧版本名称", 0L))).isInstanceOf(RuntimeBusinessException.class);
-        assertThatThrownBy(() -> service.rename(user, first.conversationId(), new ConversationTitleUpdate("\u200b\u0001", 1L))).isInstanceOf(RuntimeBusinessException.class);
-        assertThatThrownBy(() -> service.rename(UUID.randomUUID().toString(), first.conversationId(), new ConversationTitleUpdate("其他人名称", 1L))).isInstanceOf(RuntimeBusinessException.class);
+        assertThatThrownBy(() -> service.rename(user, first.conversationId(), new ConversationTitleUpdateRequest("旧版本名称", 0L))).isInstanceOf(RuntimeBusinessException.class);
+        assertThatThrownBy(() -> service.rename(user, first.conversationId(), new ConversationTitleUpdateRequest("\u200b\u0001", 1L))).isInstanceOf(RuntimeBusinessException.class);
+        assertThatThrownBy(() -> service.rename(UUID.randomUUID().toString(), first.conversationId(), new ConversationTitleUpdateRequest("其他人名称", 1L))).isInstanceOf(RuntimeBusinessException.class);
         assertThat(context.getBean(ConversationQueryService.class).snapshot(user, first.conversationId(), null, 20).conversation().title()).isEqualTo("我的 合作主题");
     }
 

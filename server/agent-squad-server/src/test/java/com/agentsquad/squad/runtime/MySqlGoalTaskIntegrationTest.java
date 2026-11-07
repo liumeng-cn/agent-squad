@@ -2,7 +2,7 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.domain.dto.ConversationResponse;
-import com.agentsquad.squad.domain.dto.TaskReceipt;
+import com.agentsquad.squad.domain.response.TaskReceiptResponse;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
 import com.agentsquad.squad.artifact.service.ArtifactService;
 import org.junit.jupiter.api.Test;
@@ -33,7 +33,7 @@ class MySqlGoalTaskIntegrationTest {
             String artifactId = artifacts.upload(userId, UUID.randomUUID().toString(), "evidence.txt", content)
                     .artifactId();
             ConversationResponse conversation = service.createConversation(userId, "MySQL 受理测试");
-            TaskReceipt receipt = service.submit(userId, conversation.conversationId(),
+            TaskReceiptResponse receipt = service.submit(userId, conversation.conversationId(),
                     UUID.randomUUID().toString(), "检查事务链路", List.of(artifactId));
             assertThat(service.findTask(userId, receipt.taskId()).status()).isEqualTo("QUEUED");
             assertThat(service.findCommand(userId, receipt.commandId()).status()).isEqualTo("PENDING");

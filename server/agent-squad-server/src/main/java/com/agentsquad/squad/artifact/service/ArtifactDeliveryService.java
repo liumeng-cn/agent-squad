@@ -1,7 +1,7 @@
 package com.agentsquad.squad.artifact.service;
 
 import com.agentsquad.squad.artifact.repository.ArtifactMapper;
-import com.agentsquad.squad.domain.dto.ArtifactView;
+import com.agentsquad.squad.domain.response.ArtifactResponse;
 import com.agentsquad.squad.domain.entity.ArtifactContentPolicy;
 import com.agentsquad.squad.domain.entity.ArtifactStageRow;
 import com.agentsquad.squad.domain.dto.ArtifactStageView;
@@ -80,7 +80,7 @@ public class ArtifactDeliveryService {
      * 同事务发布内容、Scope关联和暂存状态；重放返回原产物，不读取模型指定宿主文件。
      */
     @Transactional
-    public ArtifactView commit(String userId, String sessionId, String guardToken, String stageId, String expectedHash) {
+    public ArtifactResponse commit(String userId, String sessionId, String guardToken, String stageId, String expectedHash) {
         ArtifactStageRow stage = stages.find(userId, stageId);
         if (stage == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "暂存产物不存在或已过期");
@@ -114,7 +114,7 @@ public class ArtifactDeliveryService {
         if (stages.commit(userId, stageId, artifactId) != 1) {
             throw conflict("产物提交状态已变化");
         }
-        ArtifactView published = artifactService.get(userId, artifactId);
+        ArtifactResponse published = artifactService.get(userId, artifactId);
         events.publish(scope, "artifact-ready:" + stageId, "artifact.ready", published);
         return published;
     }

@@ -1,14 +1,26 @@
 package com.agentsquad.squad.controller;
 
+import com.agentsquad.squad.domain.response.CommandReceiptResponse;
+import com.agentsquad.squad.domain.dto.CommandResponse;
+import com.agentsquad.squad.domain.request.ControlRequest;
+import com.agentsquad.squad.domain.request.ConversationCreateRequest;
+import com.agentsquad.squad.domain.response.ConversationListPageResponse;
+import com.agentsquad.squad.domain.dto.ConversationResponse;
+import com.agentsquad.squad.domain.response.GoalTaskPageResponse;
+import com.agentsquad.squad.domain.request.TaskCreateRequest;
+import com.agentsquad.squad.domain.response.TaskReceiptResponse;
+import com.agentsquad.squad.domain.dto.TaskResponse;
+import com.agentsquad.squad.domain.response.TaskSnapshotResponse;
+import com.agentsquad.squad.domain.response.WorkerJobPageResponse;
+
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.model.ApiResult;
 
-import com.agentsquad.squad.domain.dto.*;
 import com.agentsquad.squad.identity.UserContext;
 import jakarta.servlet.http.HttpServletRequest;
-import com.agentsquad.squad.domain.dto.TaskSnapshot;
-import com.agentsquad.squad.domain.dto.WorkerJobPage;
+import com.agentsquad.squad.domain.response.TaskSnapshotResponse;
+import com.agentsquad.squad.domain.response.WorkerJobPageResponse;
 import com.agentsquad.squad.conversation.service.ConversationDeletionService;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
 import com.agentsquad.squad.conversation.service.TaskControlService;
@@ -61,7 +73,7 @@ public class RuntimeController {
      * 查询当前计划的归属子任务；不把 Worker 当作可由用户独立启动的目标。
      */
     @GetMapping("/tasks/{taskId}/jobs")
-    public ApiResult<WorkerJobPage> listJobs(HttpServletRequest servletRequest,
+    public ApiResult<WorkerJobPageResponse> listJobs(HttpServletRequest servletRequest,
                                             @PathVariable String taskId,
                                             @org.springframework.web.bind.annotation.RequestParam(required = false) Long planVersion) {
         return ApiResult.success(taskSnapshotService.listJobs(UserContext.current(servletRequest).userId(), taskId, planVersion));
@@ -82,7 +94,7 @@ public class RuntimeController {
      * 列出当前用户的会话，cursor 为存储主键 id。
      */
     @GetMapping("/conversations")
-    public ApiResult<ConversationListPage> listConversations(
+    public ApiResult<ConversationListPageResponse> listConversations(
             HttpServletRequest servletRequest,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit) {
@@ -129,7 +141,7 @@ public class RuntimeController {
      * 列出一个会话下的目标。
      */
     @GetMapping("/conversations/{conversationId}/tasks")
-    public ApiResult<GoalTaskPage> listConversationTasks(
+    public ApiResult<GoalTaskPageResponse> listConversationTasks(
             HttpServletRequest servletRequest,
             @PathVariable String conversationId,
             @RequestParam(required = false) String cursor,
@@ -142,7 +154,7 @@ public class RuntimeController {
      */
     @PostMapping("/conversations/{conversationId}/tasks")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public ApiResult<TaskReceipt> createTask(
+    public ApiResult<TaskReceiptResponse> createTask(
             HttpServletRequest servletRequest,
             @PathVariable String conversationId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
@@ -164,7 +176,7 @@ public class RuntimeController {
      * 查询当前用户的目标详情快照。
      */
     @GetMapping("/tasks/{taskId}/snapshot")
-    public ApiResult<TaskSnapshot> getTaskSnapshot(HttpServletRequest servletRequest,
+    public ApiResult<TaskSnapshotResponse> getTaskSnapshot(HttpServletRequest servletRequest,
                                                    @PathVariable String taskId) {
         return ApiResult.success(taskSnapshotService.snapshot(UserContext.current(servletRequest).userId(), taskId));
     }
@@ -174,7 +186,7 @@ public class RuntimeController {
      */
     @PostMapping("/tasks/{taskId}/cancel")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public ApiResult<CommandReceipt> cancelTask(
+    public ApiResult<CommandReceiptResponse> cancelTask(
             HttpServletRequest servletRequest,
             @PathVariable String taskId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
@@ -188,7 +200,7 @@ public class RuntimeController {
      */
     @PostMapping("/tasks/{taskId}/resume")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public ApiResult<CommandReceipt> resumeTask(
+    public ApiResult<CommandReceiptResponse> resumeTask(
             HttpServletRequest servletRequest,
             @PathVariable String taskId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,

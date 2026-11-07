@@ -9,9 +9,9 @@ import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.domain.entity.MemoryRow;
 import com.agentsquad.squad.domain.entity.MemorySource;
 import com.agentsquad.squad.domain.entity.MemoryWriteReceiptRow;
-import com.agentsquad.squad.domain.dto.MemoryCreate;
-import com.agentsquad.squad.domain.dto.MemoryMutationResult;
-import com.agentsquad.squad.domain.dto.MemoryUpdate;
+import com.agentsquad.squad.domain.request.MemoryCreateRequest;
+import com.agentsquad.squad.domain.response.MemoryMutationResponse;
+import com.agentsquad.squad.domain.request.MemoryUpdateRequest;
 import com.agentsquad.squad.domain.dto.MemoryWriteReceipt;
 import com.agentsquad.squad.domain.dto.MemoryWriteRequest;
 import com.agentsquad.squad.memory.repository.MemoryMapper;
@@ -73,19 +73,19 @@ public class ExplicitMemoryWriteService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "显式记忆必须引用本次受权用户消息中的原话");
         }
 
-        MemoryMutationResult result = apply(userId, request, source);
+        MemoryMutationResponse result = apply(userId, request, source);
         MemoryWriteReceipt receipt = new MemoryWriteReceipt(result.memory().memoryId(), result.memory().version(),
                 result.memoryRevision(), result.affectedScopes(), result.impact());
         mapper.insertReceipt(userId, scopeId, request.logicalKey(), hash, RuntimePayloads.toJson(json, receipt));
         return receipt;
     }
 
-    private MemoryMutationResult apply(String userId, MemoryWriteRequest request, MemorySource source) {
+    private MemoryMutationResponse apply(String userId, MemoryWriteRequest request, MemorySource source) {
         if ("CREATE".equals(request.action())) {
             if (request.expectedVersion() != null) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "创建记忆不接受旧版本");
             }
-            return memories.createFromSource(userId, new MemoryCreate(request.key(), request.content(), request.expiresAt()),
+            return memories.createFromSource(userId, new MemoryCreateRequest(request.key(), request.content(), request.expiresAt()),
                     source.messageId(), request.sourceQuote());
         }
         MemoryRow current = mapper.findActiveKey(userId, request.key());
@@ -99,7 +99,7 @@ public class ExplicitMemoryWriteService {
             return memories.delete(userId, current.memoryId(), request.expectedVersion());
         }
         return memories.updateFromSource(userId, current.memoryId(),
-                new MemoryUpdate(request.expectedVersion(), request.content(), request.expiresAt()),
+                new MemoryUpdateRequest(request.expectedVersion(), request.content(), request.expiresAt()),
                 source.messageId(), request.sourceQuote());
     }
 

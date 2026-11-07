@@ -3,13 +3,13 @@ package com.agentsquad.squad.controller;
 import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.identity.UserContext;
 import jakarta.servlet.http.HttpServletRequest;
-import com.agentsquad.squad.domain.dto.SkillDetail;
-import com.agentsquad.squad.domain.dto.SkillGrantRequest;
-import com.agentsquad.squad.domain.dto.SkillGrantView;
-import com.agentsquad.squad.domain.dto.SkillImportRequest;
-import com.agentsquad.squad.domain.dto.SkillPage;
-import com.agentsquad.squad.domain.dto.SkillRevokeRequest;
-import com.agentsquad.squad.domain.dto.SkillVersionView;
+import com.agentsquad.squad.domain.response.SkillDetailResponse;
+import com.agentsquad.squad.domain.request.SkillGrantRequest;
+import com.agentsquad.squad.domain.response.SkillGrantResponse;
+import com.agentsquad.squad.domain.request.SkillImportRequest;
+import com.agentsquad.squad.domain.response.SkillPageResponse;
+import com.agentsquad.squad.domain.request.SkillRevokeRequest;
+import com.agentsquad.squad.domain.response.SkillVersionResponse;
 import com.agentsquad.squad.skill.service.SkillService;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
@@ -37,7 +37,7 @@ public class SkillController {
     private SkillService skills;
 
     @GetMapping
-    public ApiResult<SkillPage> list(HttpServletRequest servletRequest,
+    public ApiResult<SkillPageResponse> list(HttpServletRequest servletRequest,
                                      @RequestParam(required = false) String cursor,
                                      @RequestParam(defaultValue = "20") int limit) {
         return ApiResult.success(skills.list(UserContext.current(servletRequest).userId(), cursor, limit));
@@ -45,25 +45,25 @@ public class SkillController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResult<SkillVersionView> importPackage(HttpServletRequest servletRequest,
+    public ApiResult<SkillVersionResponse> importPackage(HttpServletRequest servletRequest,
                                                      @RequestBody SkillImportRequest request) {
         return ApiResult.success(skills.importPackage(UserContext.current(servletRequest).userId(), request));
     }
 
     @GetMapping("/{versionId}")
-    public ApiResult<SkillDetail> detail(HttpServletRequest servletRequest,
+    public ApiResult<SkillDetailResponse> detail(HttpServletRequest servletRequest,
                                          @PathVariable String versionId) {
         return ApiResult.success(skills.detail(UserContext.current(servletRequest).userId(), versionId));
     }
 
     @PutMapping("/{versionId}/grant")
-    public ApiResult<SkillGrantView> grant(HttpServletRequest servletRequest,
+    public ApiResult<SkillGrantResponse> grant(HttpServletRequest servletRequest,
                                            @PathVariable String versionId, @Valid @RequestBody SkillGrantRequest request) {
         return ApiResult.success(skills.changeGrant(UserContext.current(servletRequest).userId(), versionId, request));
     }
 
     @PostMapping("/{versionId}/revoke")
-    public ApiResult<SkillDetail> revoke(HttpServletRequest servletRequest,
+    public ApiResult<SkillDetailResponse> revoke(HttpServletRequest servletRequest,
                                          @PathVariable String versionId, @Valid @RequestBody SkillRevokeRequest request) {
         return ApiResult.success(skills.revoke(UserContext.current(servletRequest).userId(), versionId,
                 request.expectedVersion()));

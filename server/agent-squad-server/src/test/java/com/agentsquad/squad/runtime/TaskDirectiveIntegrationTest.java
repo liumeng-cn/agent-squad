@@ -2,7 +2,7 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.domain.dto.GoalTaskCreate;
-import com.agentsquad.squad.domain.dto.MessageCreateRequest;
+import com.agentsquad.squad.domain.request.MessageCreateRequest;
 import com.agentsquad.squad.domain.dto.TaskDirectiveSubmit;
 import com.agentsquad.squad.domain.dto.TaskDirectiveDecision;
 import com.agentsquad.squad.conversation.service.GoalTaskCreationService;
@@ -19,7 +19,7 @@ import com.agentsquad.squad.tools.operation.OperationService;
 import com.agentsquad.squad.tools.operation.PrepareRequest;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
-import com.agentsquad.squad.domain.dto.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

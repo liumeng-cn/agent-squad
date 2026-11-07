@@ -1,8 +1,8 @@
 package com.agentsquad.squad.interaction.service;
 
-import com.agentsquad.squad.domain.dto.Interaction;
+import com.agentsquad.squad.domain.response.InteractionResponse;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
-import com.agentsquad.squad.domain.dto.InteractionPage;
+import com.agentsquad.squad.domain.response.InteractionPageResponse;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.RuntimePayloads;
@@ -58,12 +58,12 @@ public class InteractionQueryService {
     /**
      * 分页读取目标的交互视图；游标取最后一条交互的存储主键。
      */
-    public InteractionPage listPage(String userId, String taskId, String cursor, int limit) {
+    public InteractionPageResponse listPage(String userId, String taskId, String cursor, int limit) {
         scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         int pageSize = Math.min(Math.max(limit, 1), 100);
         List<InteractionRow> rows = interactionMapper.listByTask(userId, taskId, parseCursor(cursor), pageSize + 1);
         boolean hasMore = rows.size() > pageSize;
-        List<Interaction> items = rows.stream()
+        List<InteractionResponse> items = rows.stream()
                 .limit(Math.min(Math.max(limit, 1), 100))
                 .map(row -> viewOf(userId, row))
                 .toList();
@@ -73,13 +73,13 @@ public class InteractionQueryService {
                     rows.get(Math.min(Math.max(limit, 1), 100) - 1).interactionId());
             nextCursor = lastCursorId == null ? null : String.valueOf(lastCursorId);
         }
-        return new InteractionPage(items, nextCursor);
+        return new InteractionPageResponse(items, nextCursor);
     }
 
     /**
      * 读取当前用户单个交互视图；不存在统一按 NOT_FOUND 处理。
      */
-    public Interaction getOwned(String userId, String interactionId) {
+    public InteractionResponse getOwned(String userId, String interactionId) {
         InteractionRow row = interactionMapper.findOwned(userId, interactionId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "交互不存在");
@@ -110,7 +110,7 @@ public class InteractionQueryService {
     /**
      * 把存储行映射为对外视图；审批卡附带账本操作上下文供核对与确认摘要比对。
      */
-    public Interaction viewOf(String userId, InteractionRow row) {
+    public InteractionResponse viewOf(String userId, InteractionRow row) {
         Object approvalContext = null;
         if (KIND_APPROVAL.equals(row.kind()) && row.operationId() != null) {
             OperationRow operation = operationMapper.findOwned(userId, row.operationId());
@@ -125,7 +125,7 @@ public class InteractionQueryService {
                 approvalContext = context;
             }
         }
-        return new Interaction(row.interactionId(), row.taskId(), row.jobId(), row.kind(),
+        return new InteractionResponse(row.interactionId(), row.taskId(), row.jobId(), row.kind(),
                 row.origin(), KIND_APPROVAL.equals(row.kind()) ? "请确认此操作的影响后决定是否执行" : row.question(),
                 parseJsonOrNull(row.answerSchemaJson()),
                 row.requestHash(), row.planVersion(),

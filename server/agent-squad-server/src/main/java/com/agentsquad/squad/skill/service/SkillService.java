@@ -9,12 +9,12 @@ import com.agentsquad.squad.domain.entity.SkillPackage;
 import com.agentsquad.squad.domain.entity.SkillPackageValidator;
 import com.agentsquad.squad.domain.entity.SkillTextFile;
 import com.agentsquad.squad.domain.entity.SkillVersionRow;
-import com.agentsquad.squad.domain.dto.SkillDetail;
-import com.agentsquad.squad.domain.dto.SkillGrantRequest;
-import com.agentsquad.squad.domain.dto.SkillGrantView;
-import com.agentsquad.squad.domain.dto.SkillImportRequest;
-import com.agentsquad.squad.domain.dto.SkillPage;
-import com.agentsquad.squad.domain.dto.SkillVersionView;
+import com.agentsquad.squad.domain.response.SkillDetailResponse;
+import com.agentsquad.squad.domain.request.SkillGrantRequest;
+import com.agentsquad.squad.domain.response.SkillGrantResponse;
+import com.agentsquad.squad.domain.request.SkillImportRequest;
+import com.agentsquad.squad.domain.response.SkillPageResponse;
+import com.agentsquad.squad.domain.response.SkillVersionResponse;
 import com.agentsquad.squad.skill.repository.SkillRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -49,7 +49,7 @@ public class SkillService {
      * 同用户同名称版本且内容相同返回原版本；任何文件落库失败回滚整个包，不自动启用。
      */
     @Transactional
-    public SkillVersionView importPackage(String userId, SkillImportRequest request) {
+    public SkillVersionResponse importPackage(String userId, SkillImportRequest request) {
         SkillPackage skill = validate(request);
         SkillVersionRow prior = repository.findNamedVersion(userId, skill.name(), skill.version());
         if (prior != null) {
@@ -71,18 +71,18 @@ public class SkillService {
         return versionView(requireOwned(userId, versionId));
     }
 
-    public SkillDetail detail(String userId, String versionId) {
+    public SkillDetailResponse detail(String userId, String versionId) {
         SkillVersionRow row = requireOwned(userId, versionId);
         SkillGrantRow grant = repository.grant(userId, versionId);
-        return new SkillDetail(versionView(row), repository.files(userId, versionId).stream().map(file -> new SkillFile(file.path(), file.content())).toList(), grantView(grant));
+        return new SkillDetailResponse(versionView(row), repository.files(userId, versionId).stream().map(file -> new SkillFile(file.path(), file.content())).toList(), grantView(grant));
     }
 
-    public SkillPage list(String userId, String cursor, int limit) {
+    public SkillPageResponse list(String userId, String cursor, int limit) {
         int pageSize = Math.min(Math.max(limit, 1), 100);
         List<SkillVersionRow> rows = repository.list(userId, parseCursor(cursor), pageSize + 1);
         boolean hasMore = rows.size() > pageSize;
         List<SkillVersionRow> page = rows.stream().limit(pageSize).toList();
-        return new SkillPage(page.stream().map(this::versionView).toList(),
+        return new SkillPageResponse(page.stream().map(this::versionView).toList(),
                 hasMore ? Long.toString(page.get(page.size() - 1).id()) : null);
     }
 
@@ -90,7 +90,7 @@ public class SkillService {
      * 普通启停只影响新执行目录，不递增安全撤销代际，已固定的版本继续可读。
      */
     @Transactional
-    public SkillGrantView changeGrant(String userId, String versionId, SkillGrantRequest request) {
+    public SkillGrantResponse changeGrant(String userId, String versionId, SkillGrantRequest request) {
         SkillVersionRow row = requireLocked(userId, versionId);
         if (request == null || request.enabled() == null || request.expectedVersion() == null || request.expectedVersion() < 0) {
             throw invalid("授权版本无效");
@@ -109,7 +109,7 @@ public class SkillService {
      * 安全撤销与授权版本更新同事务提交；任何后续在途读取必须核对新代际，不允许恢复启用。
      */
     @Transactional
-    public SkillDetail revoke(String userId, String versionId, long expectedVersion) {
+    public SkillDetailResponse revoke(String userId, String versionId, long expectedVersion) {
         SkillVersionRow row = requireLocked(userId, versionId);
         if (expectedVersion < 0) {
             throw invalid("授权版本无效");
@@ -132,7 +132,7 @@ public class SkillService {
                 Math.min(Math.max(limits.getMaxPackageBytes(), 1), 16777216));
     }
 
-    private SkillVersionView sameVersion(SkillVersionRow prior, SkillPackage skill) {
+    private SkillVersionResponse sameVersion(SkillVersionRow prior, SkillPackage skill) {
         if (prior == null || !prior.contentHash().equals(skill.contentHash())) {
             throw conflict("同名同版本技能已存在且内容不同，请使用新版本号");
         }
@@ -155,19 +155,19 @@ public class SkillService {
         return row;
     }
 
-    private SkillVersionView versionView(SkillVersionRow row) {
+    private SkillVersionResponse versionView(SkillVersionRow row) {
         SkillGrantRow grant = repository.grant(row.userId(), row.skillVersionId());
         String status = "REVOKED".equals(row.status()) ? "REVOKED"
                 : grant != null && grant.enabled() ? "ENABLED" : "DISABLED";
-        return new SkillVersionView(row.skillVersionId(), row.name(), row.version(), row.contentHash(),
+        return new SkillVersionResponse(row.skillVersionId(), row.name(), row.version(), row.contentHash(),
                 row.description(), status);
     }
 
-    private SkillGrantView grantView(SkillGrantRow grant) {
+    private SkillGrantResponse grantView(SkillGrantRow grant) {
         if (grant == null) {
             throw new IllegalStateException("技能授权记录缺失");
         }
-        return new SkillGrantView(grant.skillVersionId(), grant.enabled(), grant.version());
+        return new SkillGrantResponse(grant.skillVersionId(), grant.enabled(), grant.version());
     }
 
     private String writeTools(List<String> tools) {

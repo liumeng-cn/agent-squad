@@ -3,7 +3,7 @@ package com.agentsquad.squad.governance;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.domain.dto.ConversationResponse;
-import com.agentsquad.squad.domain.dto.TaskReceipt;
+import com.agentsquad.squad.domain.response.TaskReceiptResponse;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
 import com.agentsquad.squad.governance.service.BudgetService;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
@@ -46,9 +46,9 @@ class BudgetUserTotalConcurrencyTest {
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
 
             ConversationResponse first = tasks.createConversation(userId, "跨scope预算一");
-            TaskReceipt taskOne = tasks.submit(userId, first.conversationId(), "task-one", "任务一");
+            TaskReceiptResponse taskOne = tasks.submit(userId, first.conversationId(), "task-one", "任务一");
             ConversationResponse second = tasks.createConversation(userId, "跨scope预算二");
-            TaskReceipt taskTwo = tasks.submit(userId, second.conversationId(), "task-two", "任务二");
+            TaskReceiptResponse taskTwo = tasks.submit(userId, second.conversationId(), "task-two", "任务二");
 
             WorkerModelProfile profile = new WorkerModelProfile();
             profile.setPricingVersion("user-total-v1");

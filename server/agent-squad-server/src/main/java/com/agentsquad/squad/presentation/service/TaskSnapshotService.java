@@ -8,11 +8,11 @@ import com.agentsquad.squad.domain.dto.AcceptanceCheckView;
 import com.agentsquad.squad.domain.entity.EventRow;
 import com.agentsquad.squad.domain.entity.TaskRow;
 import com.agentsquad.squad.domain.dto.AnswerView;
-import com.agentsquad.squad.domain.dto.Interaction;
+import com.agentsquad.squad.domain.response.InteractionResponse;
 import com.agentsquad.squad.domain.dto.TaskResponse;
-import com.agentsquad.squad.domain.dto.TaskSnapshot;
+import com.agentsquad.squad.domain.response.TaskSnapshotResponse;
 import com.agentsquad.squad.domain.dto.WorkerJob;
-import com.agentsquad.squad.domain.dto.WorkerJobPage;
+import com.agentsquad.squad.domain.response.WorkerJobPageResponse;
 import com.agentsquad.squad.conversation.repository.TaskEventMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
 import com.agentsquad.squad.common.util.RuntimePayloads;
@@ -65,7 +65,7 @@ public class TaskSnapshotService {
      * pending 取开放的持久交互，供详情页渲染追问卡与审批卡。</p>
      */
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public TaskSnapshot snapshot(String userId, String taskId) {
+    public TaskSnapshotResponse snapshot(String userId, String taskId) {
         TaskRow task = taskMapper.findOwned(userId, taskId);
         if (task == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
@@ -77,13 +77,13 @@ public class TaskSnapshotService {
                 formatTime(task.cancelRequestedAt()), task.blockedReason(),
                 formatTime(task.createTime()), formatTime(task.lastUpdateTime()));
         AnswerView answer = buildAnswer(userId, taskId, task.answerRevision());
-        List<Interaction> pending = interactionQueryService.listOpenByTask(userId, taskId).stream()
+        List<InteractionResponse> pending = interactionQueryService.listOpenByTask(userId, taskId).stream()
                 .map(row -> interactionQueryService.viewOf(userId, row))
                 .toList();
         String cursor = taskId + ":" + maxSeq;
         log.debug("任务快照生成 userId={} taskId={} seq={} answerCompleted={} pending={}",
                 userId, taskId, maxSeq, answer.completed(), pending.size());
-        return new TaskSnapshot(taskResponse, goalMessage(userId, taskId),
+        return new TaskSnapshotResponse(taskResponse, goalMessage(userId, taskId),
                 currentJobs(task), pending, answer, cursor);
     }
 
@@ -92,13 +92,13 @@ public class TaskSnapshotService {
      */
     @org.springframework.transaction.annotation.Transactional(readOnly = true,
             isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
-    public WorkerJobPage listJobs(String userId, String taskId) {
+    public WorkerJobPageResponse listJobs(String userId, String taskId) {
         return listJobs(userId, taskId, null);
     }
 
     /** 按真实计划版本读取历史；权限仍以当前会话和目标归属判断，旧节点不混入当前完成数。 */
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public WorkerJobPage listJobs(String userId, String taskId, Long requestedPlanVersion) {
+    public WorkerJobPageResponse listJobs(String userId, String taskId, Long requestedPlanVersion) {
         TaskRow task = taskMapper.findOwned(userId, taskId);
         if (task == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
@@ -109,7 +109,7 @@ public class TaskSnapshotService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "这版工作安排不存在");
         }
         var jobs = version == 0 ? List.<WorkerJob>of() : planMapper.listJobs(taskId, version).stream().map(this::jobView).toList();
-        return new WorkerJobPage(jobs, null, version == task.planVersion() ? acceptanceChecks(task) : List.of(),
+        return new WorkerJobPageResponse(jobs, null, version == task.planVersion() ? acceptanceChecks(task) : List.of(),
                 version, task.planVersion());
     }
 

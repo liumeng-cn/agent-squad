@@ -4,7 +4,7 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.dto.MessageReceipt;
+import com.agentsquad.squad.domain.response.MessageReceiptResponse;
 import com.agentsquad.squad.domain.entity.ResponseExecutionStatus;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
@@ -80,7 +80,7 @@ public class ResponseRetryService {
      * 同键返回原后继收据；多个键不能为同一失败记录建立两个后继，UNKNOWN账本不允许重试。
      */
     @Transactional
-    public MessageReceipt retry(String userId, String executionId, String key, long expectedVersion) {
+    public MessageReceiptResponse retry(String userId, String executionId, String key, long expectedVersion) {
         if (key == null || key.isBlank() || key.length() > 160) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "重试幂等键无效");
         }
@@ -95,7 +95,7 @@ public class ResponseRetryService {
             if (!hash.equals(prior.payloadHash())) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "同一重试键的请求不同");
             }
-            return new MessageReceipt(prior.conversationId(), prior.messageId(), prior.executionId(), prior.commandId(), ResponseExecutionStatus.valueOf(prior.status()), prior.conversationId() + ":" + prior.generation() + ":" + prior.receiptSequence());
+            return new MessageReceiptResponse(prior.conversationId(), prior.messageId(), prior.executionId(), prior.commandId(), ResponseExecutionStatus.valueOf(prior.status()), prior.conversationId() + ":" + prior.generation() + ":" + prior.receiptSequence());
         }
         var failure = failures.latest(userId, scope.scopeId(), oldBinding);
         if (original.version() != expectedVersion || failure == null
@@ -126,6 +126,6 @@ public class ResponseRetryService {
         events.publish(created, "command:" + command + ":execution.queued", "execution.queued", Map.of("executionId", next, "sourceMessageId", original.sourceMessageId(), "retryOfExecutionId", executionId, "status", "QUEUED"));
         activities.completed(created, binding, new com.agentsquad.squad.presentation.service.ActivityBusinessFact(
                 com.agentsquad.squad.common.enums.execution.ActivityType.USER_RETRY_SCHEDULED, command));
-        return new MessageReceipt(scope.conversationId(), original.sourceMessageId(), next, command, ResponseExecutionStatus.QUEUED, scope.conversationId() + ":" + scope.conversationGeneration() + ":" + messages.eventSequence(userId, scope.conversationId()));
+        return new MessageReceiptResponse(scope.conversationId(), original.sourceMessageId(), next, command, ResponseExecutionStatus.QUEUED, scope.conversationId() + ":" + scope.conversationGeneration() + ":" + messages.eventSequence(userId, scope.conversationId()));
     }
 }

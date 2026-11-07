@@ -2,7 +2,7 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.domain.dto.ConversationResponse;
-import com.agentsquad.squad.domain.dto.TaskReceipt;
+import com.agentsquad.squad.domain.response.TaskReceiptResponse;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.integration.agentscope.CommandDeliveryService;
@@ -14,7 +14,7 @@ import com.agentsquad.squad.domain.dto.PlanReceipt;
 import com.agentsquad.squad.runtime.service.ContextSnapshotService;
 import com.agentsquad.squad.runtime.service.PlanService;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
-import com.agentsquad.squad.domain.dto.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import io.agentscope.harness.agent.session.AgentSession;
@@ -117,7 +117,7 @@ class WorkerCrashRecoveryIntegrationTest {
                                 List.of(), "default", "default"));
                 GoalTaskService tasks = first.getBean(GoalTaskService.class);
                 ConversationResponse conversation = tasks.createConversation(userId, "崩溃恢复");
-                TaskReceipt task = tasks.submit(userId, conversation.conversationId(),
+                TaskReceiptResponse task = tasks.submit(userId, conversation.conversationId(),
                         "crash-goal", "写一段摘要");
                 jdbc.update("UPDATE sq_command SET status = 'CANCELLED' WHERE command_id = ?",
                         task.commandId());

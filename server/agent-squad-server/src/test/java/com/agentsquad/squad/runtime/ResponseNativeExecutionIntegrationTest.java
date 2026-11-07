@@ -2,8 +2,8 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.domain.entity.DeliveryRow;
-import com.agentsquad.squad.domain.dto.MessageCreateRequest;
-import com.agentsquad.squad.domain.dto.MessageReceipt;
+import com.agentsquad.squad.domain.request.MessageCreateRequest;
+import com.agentsquad.squad.domain.response.MessageReceiptResponse;
 import com.agentsquad.squad.conversation.repository.DeliveryMapper;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
 import com.agentsquad.squad.conversation.service.ResponseControlService;
@@ -51,7 +51,7 @@ class ResponseNativeExecutionIntegrationTest {
     void invalidSubmitPayloadIsBlockedThroughRealDelivery(String payload, @TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub();
              ConfigurableApplicationContext context = start(directory, model, false)) {
-            MessageReceipt receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "invalid",
+            MessageReceiptResponse receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "invalid",
                     new MessageCreateRequest("不会发给模型", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             jdbc.update("UPDATE sq_command SET payload_json=?, due_at='2000-01-01' WHERE command_id=?",
@@ -69,7 +69,7 @@ class ResponseNativeExecutionIntegrationTest {
     void platformDeletionIntentIsNotBlockedOrExecutedByNativePoller(@TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub();
              ConfigurableApplicationContext context = start(directory, model, false)) {
-            MessageReceipt receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "platform-delete",
+            MessageReceiptResponse receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "platform-delete",
                     new MessageCreateRequest("平台删除意图", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             jdbc.update("UPDATE sq_command SET action='DELETE_CONVERSATION', due_at='2000-01-01' WHERE command_id=?",
@@ -89,7 +89,7 @@ class ResponseNativeExecutionIntegrationTest {
     void invalidRespondPayloadIsBlockedBeforeCallingSdk(@TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub();
              ConfigurableApplicationContext context = start(directory, model, false)) {
-            MessageReceipt receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "invalid-respond",
+            MessageReceiptResponse receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "invalid-respond",
                     new MessageCreateRequest("不会发给模型", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             jdbc.update("UPDATE sq_command SET action='RESPOND', payload_json='{}', due_at='2000-01-01' WHERE command_id=?",
@@ -105,7 +105,7 @@ class ResponseNativeExecutionIntegrationTest {
     void unknownPendingActionIsBlockedWithoutExpandingExecutableWhitelist(@TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub();
              ConfigurableApplicationContext context = start(directory, model, false)) {
-            MessageReceipt receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "unknown-action",
+            MessageReceiptResponse receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "unknown-action",
                     new MessageCreateRequest("不会发给模型", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             jdbc.update("UPDATE sq_command SET action='UNSUPPORTED', due_at='2000-01-01' WHERE command_id=?",
@@ -125,9 +125,9 @@ class ResponseNativeExecutionIntegrationTest {
         try (ResponseModelStub model = new ResponseModelStub(false, true);
              ConfigurableApplicationContext context = start(directory, model, true)) {
             MessageAcceptanceService messages = context.getBean(MessageAcceptanceService.class);
-            MessageReceipt first = messages.accept(USER, null, "same-idempotency",
+            MessageReceiptResponse first = messages.accept(USER, null, "same-idempotency",
                     new MessageCreateRequest("隔离标记甲：只处理我的请求", List.of()));
-            MessageReceipt second = messages.accept(otherUser, null, "same-idempotency",
+            MessageReceiptResponse second = messages.accept(otherUser, null, "same-idempotency",
                     new MessageCreateRequest("隔离标记乙：只处理我的请求", List.of()));
             assertThat(model.concurrentUsers.await(8, TimeUnit.SECONDS)).isTrue();
             assertThat(model.concurrencyTimedOut.get()).isFalse();
@@ -157,7 +157,7 @@ class ResponseNativeExecutionIntegrationTest {
     @Test
     void answersFollowUpWithoutCreatingTasks(@TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub()) {
-            MessageReceipt first;
+            MessageReceiptResponse first;
             try (ConfigurableApplicationContext beforeSubmit = start(directory, model, false)) {
                 first = beforeSubmit.getBean(MessageAcceptanceService.class).accept(USER, null, "first",
                         new MessageCreateRequest("主角叫小明", List.of()));
@@ -166,7 +166,7 @@ class ResponseNativeExecutionIntegrationTest {
             try (ConfigurableApplicationContext context = start(directory, model, true)) {
                 MessageAcceptanceService messages = context.getBean(MessageAcceptanceService.class);
                 await(context, first, "SUCCEEDED");
-                MessageReceipt next = messages.accept(USER, first.conversationId(), "follow", new MessageCreateRequest("他叫什么？", List.of()));
+                MessageReceiptResponse next = messages.accept(USER, first.conversationId(), "follow", new MessageCreateRequest("他叫什么？", List.of()));
                 await(context, next, "SUCCEEDED");
                 JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
                 assertThat(jdbc.queryForList("SELECT content FROM sq_message WHERE role='ASSISTANT' ORDER BY message_seq", String.class))
@@ -189,7 +189,7 @@ class ResponseNativeExecutionIntegrationTest {
     @ValueSource(booleans = {false, true})
     void lostReceiptReusesSdkTurnAndCompletedJournal(boolean saveReceipt, @TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub()) {
-            MessageReceipt receipt;
+            MessageReceiptResponse receipt;
             String turn;
             try (ConfigurableApplicationContext context = start(directory, model, false)) {
                 receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "lost", new MessageCreateRequest("主角叫小明", List.of()));
@@ -247,7 +247,7 @@ class ResponseNativeExecutionIntegrationTest {
     @Test
     void stopBeforeDeliveryCancelsOnlyReply(@TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub(); ConfigurableApplicationContext context = start(directory, model, false)) {
-            MessageReceipt receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "stop", new MessageCreateRequest("请回答", List.of()));
+            MessageReceiptResponse receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "stop", new MessageCreateRequest("请回答", List.of()));
             var command = context.getBean(ResponseControlService.class).cancel(USER, receipt.executionId(), "stop-key", 0);
             context.getBean(JdbcTemplate.class).update("UPDATE sq_command SET due_at='2000-01-01' WHERE command_id=?", command.commandId());
             context.getBean(CommandDeliveryService.class).deliver(command.commandId());
@@ -261,7 +261,7 @@ class ResponseNativeExecutionIntegrationTest {
     void sealedWriterResumesSameTurnWithPersistedCandidate(@TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub(true);
              ConfigurableApplicationContext first = start(directory, model, false)) {
-            MessageReceipt receipt = first.getBean(MessageAcceptanceService.class).accept(USER, null, "crash",
+            MessageReceiptResponse receipt = first.getBean(MessageAcceptanceService.class).accept(USER, null, "crash",
                     new MessageCreateRequest("主角叫小明", List.of()));
             first.getBean(JdbcTemplate.class).update("UPDATE sq_command SET due_at='2000-01-01' WHERE command_id=?", receipt.commandId());
             first.getBean(CommandDeliveryService.class).deliver(receipt.commandId());
@@ -294,7 +294,7 @@ class ResponseNativeExecutionIntegrationTest {
     @Test
     void revokedGenerationCannotPublishRecordedCandidate(@TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub(); ConfigurableApplicationContext context = start(directory, model, false)) {
-            MessageReceipt receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "revoked", new MessageCreateRequest("请回答", List.of()));
+            MessageReceiptResponse receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "revoked", new MessageCreateRequest("请回答", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
             String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
@@ -314,7 +314,7 @@ class ResponseNativeExecutionIntegrationTest {
     @Test
     void unknownWritePreventsCompletionCorrectionAndPrematureCancellation(@TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub(); ConfigurableApplicationContext context = start(directory, model, false)) {
-            MessageReceipt receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "unknown", new MessageCreateRequest("请处理", List.of()));
+            MessageReceiptResponse receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "unknown", new MessageCreateRequest("请处理", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
             String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
@@ -405,7 +405,7 @@ class ResponseNativeExecutionIntegrationTest {
                 "--agentsquad.worker.model-profiles.default.model-name=test-model");
     }
 
-    static void await(ConfigurableApplicationContext context, MessageReceipt receipt, String expected) throws Exception {
+    static void await(ConfigurableApplicationContext context, MessageReceiptResponse receipt, String expected) throws Exception {
         String status = null;
         for (int i = 0; i < 200; i++) {
             status = context.getBean(JdbcTemplate.class).queryForObject("SELECT status FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());

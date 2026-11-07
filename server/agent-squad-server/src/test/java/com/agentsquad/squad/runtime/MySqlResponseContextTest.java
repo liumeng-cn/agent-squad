@@ -1,7 +1,7 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.domain.entity.ResponseContextSnapshot;
-import com.agentsquad.squad.domain.dto.MessageReceipt;
+import com.agentsquad.squad.domain.response.MessageReceiptResponse;
 import com.agentsquad.squad.conversation.service.ResponseContextService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -31,7 +31,7 @@ class MySqlResponseContextTest {
                 System.getenv("SQUAD_MESSAGE_TEST_URL"), System.getenv("SQUAD_MESSAGE_TEST_USER"),
                 System.getenv("SQUAD_MESSAGE_TEST_PASSWORD"), owner)) {
             MessageTestActor actor = MessageAcceptanceHttpTest.actor(context);
-            MessageReceipt first = MessageAcceptanceHttpTest.send(context, actor, "/api/v1/conversations/messages",
+            MessageReceiptResponse first = MessageAcceptanceHttpTest.send(context, actor, "/api/v1/conversations/messages",
                     "context-first", Map.of("text", "只能读到这条"));
             MessageAcceptanceHttpTest.send(context, actor, "/api/v1/conversations/" + first.conversationId() + "/messages",
                     "context-later", Map.of("text", "不能提前进入前一个回复"));

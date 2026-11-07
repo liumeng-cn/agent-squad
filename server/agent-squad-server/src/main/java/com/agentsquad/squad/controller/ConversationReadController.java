@@ -1,15 +1,15 @@
 package com.agentsquad.squad.controller;
 
 import com.agentsquad.squad.common.model.ApiResult;
-import com.agentsquad.squad.domain.dto.ConversationTitleUpdate;
-import com.agentsquad.squad.domain.dto.ConversationView;
+import com.agentsquad.squad.domain.request.ConversationTitleUpdateRequest;
+import com.agentsquad.squad.domain.response.ConversationViewResponse;
 import com.agentsquad.squad.conversation.service.ConversationTitleService;
-import com.agentsquad.squad.domain.dto.ConversationSnapshot;
+import com.agentsquad.squad.domain.response.ConversationSnapshotResponse;
 import com.agentsquad.squad.presentation.service.ConversationQueryService;
 import com.agentsquad.squad.presentation.service.ConversationEventStreamer;
 import com.agentsquad.squad.identity.UserContext;
-import com.agentsquad.squad.domain.dto.ActivityHistoryPage;
-import com.agentsquad.squad.domain.dto.ActivityHistoryQuery;
+import com.agentsquad.squad.domain.response.ActivityHistoryPageResponse;
+import com.agentsquad.squad.domain.request.ActivityHistoryRequest;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletRequest;
@@ -44,15 +44,15 @@ public class ConversationReadController {
     private ConversationEventStreamer events;
 
     @GetMapping("/snapshot")
-    public ApiResult<ConversationSnapshot> snapshot(HttpServletRequest servletRequest,
+    public ApiResult<ConversationSnapshotResponse> snapshot(HttpServletRequest servletRequest,
                                                     @PathVariable String conversationId, @RequestParam(required = false) Long beforeMessageSeq,
                                                     @RequestParam(defaultValue = "40") int limit) {
         return ApiResult.success(queries.snapshot(UserContext.current(servletRequest).userId(), conversationId, beforeMessageSeq, limit));
     }
 
     @GetMapping("/activities")
-    public ApiResult<ActivityHistoryPage> activities(HttpServletRequest request, @PathVariable String conversationId,
-                                                     @ModelAttribute ActivityHistoryQuery query) {
+    public ApiResult<ActivityHistoryPageResponse> activities(HttpServletRequest request, @PathVariable String conversationId,
+                                                     @ModelAttribute ActivityHistoryRequest query) {
         return ApiResult.success(queries.activityHistory(UserContext.current(request).userId(), conversationId, query));
     }
 
@@ -69,9 +69,9 @@ public class ConversationReadController {
     }
 
     @PatchMapping("/title")
-    public ApiResult<ConversationView> rename(
+    public ApiResult<ConversationViewResponse> rename(
             HttpServletRequest servletRequest, @PathVariable String conversationId,
-            @Valid @RequestBody ConversationTitleUpdate request) {
+            @Valid @RequestBody ConversationTitleUpdateRequest request) {
         return ApiResult.success(titles.rename(UserContext.current(servletRequest).userId(), conversationId, request));
     }
 }

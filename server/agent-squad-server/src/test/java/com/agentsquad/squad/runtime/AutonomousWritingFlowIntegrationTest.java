@@ -2,11 +2,11 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.domain.dto.ConversationResponse;
-import com.agentsquad.squad.domain.dto.TaskReceipt;
+import com.agentsquad.squad.domain.response.TaskReceiptResponse;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
-import com.agentsquad.squad.domain.dto.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
@@ -118,7 +118,7 @@ class AutonomousWritingFlowIntegrationTest {
                                 """), List.of(), "default", "default"));
                 GoalTaskService tasks = spring.getBean(GoalTaskService.class);
                 ConversationResponse conversation = tasks.createConversation(userId, "写作目标");
-                TaskReceipt task = tasks.submit(userId, conversation.conversationId(),
+                TaskReceiptResponse task = tasks.submit(userId, conversation.conversationId(),
                         "autonomous-writing", "请写一段短文");
                 taskIdRef.set(task.taskId());
 

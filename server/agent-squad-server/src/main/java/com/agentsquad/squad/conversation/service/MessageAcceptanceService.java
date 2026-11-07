@@ -6,8 +6,8 @@ import com.agentsquad.squad.common.util.CanonicalJson;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.domain.entity.MessageSubmissionRow;
 import com.agentsquad.squad.domain.entity.ResponseExecutionStatus;
-import com.agentsquad.squad.domain.dto.MessageCreateRequest;
-import com.agentsquad.squad.domain.dto.MessageReceipt;
+import com.agentsquad.squad.domain.request.MessageCreateRequest;
+import com.agentsquad.squad.domain.response.MessageReceiptResponse;
 import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -46,7 +46,7 @@ public class MessageAcceptanceService {
     /**
      * 先持久消息与回复命令；同键同规范化输入只返回原身份，在途目标不阻断新消息。
      */
-    public MessageReceipt accept(String userId, String conversationId, String key, MessageCreateRequest request) {
+    public MessageReceiptResponse accept(String userId, String conversationId, String key, MessageCreateRequest request) {
         userStatus.requireActive(userId);
         if (key == null || key.isBlank() || key.length() > 160) {
             throw invalid("消息幂等键长度必须为1到160");
@@ -78,7 +78,7 @@ public class MessageAcceptanceService {
         scopeService.requireReadable(userId, row.scopeId());
         log.info("消息受理回执 conversationId={} messageId={} executionId={} commandId={}",
                 row.conversationId(), row.messageId(), row.executionId(), row.commandId());
-        return new MessageReceipt(row.conversationId(), row.messageId(), row.executionId(), row.commandId(),
+        return new MessageReceiptResponse(row.conversationId(), row.messageId(), row.executionId(), row.commandId(),
                 ResponseExecutionStatus.valueOf(row.status()),
                 row.conversationId() + ":" + row.generation() + ":" + row.receiptSequence());
     }

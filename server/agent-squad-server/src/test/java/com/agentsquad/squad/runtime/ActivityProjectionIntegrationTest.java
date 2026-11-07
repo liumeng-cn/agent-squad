@@ -2,14 +2,14 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.common.observability.ExecutionTrace;
-import com.agentsquad.squad.domain.dto.MessageReceipt;
+import com.agentsquad.squad.domain.response.MessageReceiptResponse;
 import io.micrometer.tracing.Tracer;
-import com.agentsquad.squad.domain.dto.MessageCreateRequest;
+import com.agentsquad.squad.domain.request.MessageCreateRequest;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
 import com.agentsquad.squad.integration.agentscope.NativeEventView;
 import com.agentsquad.squad.presentation.service.ActivityProjectionService;
-import com.agentsquad.squad.domain.dto.ActivityHistoryQuery;
+import com.agentsquad.squad.domain.request.ActivityHistoryRequest;
 import com.agentsquad.squad.domain.dto.ExecutionActivityView;
 import com.agentsquad.squad.presentation.service.ConversationQueryService;
 import com.agentsquad.squad.domain.entity.ProjectionTarget;
@@ -45,7 +45,7 @@ class ActivityProjectionIntegrationTest {
             String user = "00000000-0000-0000-0000-000000000001";
             var tracer = context.getBean(Tracer.class);
             var parent = tracer.nextSpan().name("test.message.accept").start();
-            MessageReceipt receipt;
+            MessageReceiptResponse receipt;
             try (var ignored = tracer.withSpan(parent)) {
                 receipt = context.getBean(MessageAcceptanceService.class)
                         .accept(user, null, "activity", new MessageCreateRequest("读取资料", List.of()));
@@ -152,16 +152,16 @@ class ActivityProjectionIntegrationTest {
                             "run", "turn", null, 2000 + i, Map.of("modelCallId", "history-" + i)));
                 }
             });
-            var first = reads.activityHistory(user, receipt.conversationId(), new ActivityHistoryQuery(receipt.messageId(), null));
+            var first = reads.activityHistory(user, receipt.conversationId(), new ActivityHistoryRequest(receipt.messageId(), null));
             assertThat(first.items()).hasSize(40);
             assertThat(first.nextCursor()).isEqualTo(first.items().getLast().activityId());
-            var second = reads.activityHistory(user, receipt.conversationId(), new ActivityHistoryQuery(receipt.messageId(), first.nextCursor()));
+            var second = reads.activityHistory(user, receipt.conversationId(), new ActivityHistoryRequest(receipt.messageId(), first.nextCursor()));
             assertThat(second.items()).hasSize(5).extracting(ExecutionActivityView::activityId)
                     .doesNotContainAnyElementsOf(first.items().stream().map(ExecutionActivityView::activityId).toList());
             assertThat(second.nextCursor()).isNull();
-            assertThat(reads.activityHistory(user, receipt.conversationId(), new ActivityHistoryQuery("other-message", first.nextCursor())).items()).isEmpty();
+            assertThat(reads.activityHistory(user, receipt.conversationId(), new ActivityHistoryRequest("other-message", first.nextCursor())).items()).isEmpty();
             assertThatThrownBy(() -> reads.activityHistory("00000000-0000-0000-0000-000000000002", receipt.conversationId(),
-                    new ActivityHistoryQuery(receipt.messageId(), null)))
+                    new ActivityHistoryRequest(receipt.messageId(), null)))
                     .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
         }
     }

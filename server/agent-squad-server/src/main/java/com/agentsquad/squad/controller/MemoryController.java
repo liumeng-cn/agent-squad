@@ -3,10 +3,10 @@ package com.agentsquad.squad.controller;
 import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.identity.UserContext;
 import jakarta.servlet.http.HttpServletRequest;
-import com.agentsquad.squad.domain.dto.MemoryCreate;
-import com.agentsquad.squad.domain.dto.MemoryMutationResult;
-import com.agentsquad.squad.domain.dto.MemoryPage;
-import com.agentsquad.squad.domain.dto.MemoryUpdate;
+import com.agentsquad.squad.domain.request.MemoryCreateRequest;
+import com.agentsquad.squad.domain.response.MemoryMutationResponse;
+import com.agentsquad.squad.domain.response.MemoryPageResponse;
+import com.agentsquad.squad.domain.request.MemoryUpdateRequest;
 import com.agentsquad.squad.memory.service.MemoryService;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
@@ -34,7 +34,7 @@ public class MemoryController {
     private MemoryService memories;
 
     @GetMapping
-    public ApiResult<MemoryPage> list(HttpServletRequest servletRequest,
+    public ApiResult<MemoryPageResponse> list(HttpServletRequest servletRequest,
                                       @RequestParam(required = false) String cursor,
                                       @RequestParam(defaultValue = "20") int limit) {
         return ApiResult.success(memories.list(UserContext.current(servletRequest).userId(), cursor, limit));
@@ -42,20 +42,20 @@ public class MemoryController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResult<MemoryMutationResult> create(HttpServletRequest servletRequest,
-                                                  @Valid @RequestBody MemoryCreate request) {
+    public ApiResult<MemoryMutationResponse> create(HttpServletRequest servletRequest,
+                                                  @Valid @RequestBody MemoryCreateRequest request) {
         return ApiResult.success(memories.create(UserContext.current(servletRequest).userId(), request));
     }
 
     @PatchMapping("/{memoryId}")
-    public ApiResult<MemoryMutationResult> update(HttpServletRequest servletRequest,
+    public ApiResult<MemoryMutationResponse> update(HttpServletRequest servletRequest,
                                                   @PathVariable String memoryId,
-                                                  @Valid @RequestBody MemoryUpdate request) {
+                                                  @Valid @RequestBody MemoryUpdateRequest request) {
         return ApiResult.success(memories.update(UserContext.current(servletRequest).userId(), memoryId, request));
     }
 
     @DeleteMapping("/{memoryId}")
-    public ApiResult<MemoryMutationResult> delete(HttpServletRequest servletRequest,
+    public ApiResult<MemoryMutationResponse> delete(HttpServletRequest servletRequest,
                                                   @PathVariable String memoryId,
                                                   @RequestParam long expectedVersion) {
         return ApiResult.success(memories.delete(UserContext.current(servletRequest).userId(), memoryId, expectedVersion));

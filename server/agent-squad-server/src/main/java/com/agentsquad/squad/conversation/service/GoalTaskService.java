@@ -13,8 +13,8 @@ import com.agentsquad.squad.domain.entity.MasterAgentIdentity;
 import com.agentsquad.squad.domain.dto.CommandResponse;
 import com.agentsquad.squad.domain.dto.ConversationPage;
 import com.agentsquad.squad.domain.dto.ConversationResponse;
-import com.agentsquad.squad.domain.dto.GoalTaskPage;
-import com.agentsquad.squad.domain.dto.TaskReceipt;
+import com.agentsquad.squad.domain.response.GoalTaskPageResponse;
+import com.agentsquad.squad.domain.response.TaskReceiptResponse;
 import com.agentsquad.squad.domain.dto.TaskResponse;
 import com.agentsquad.squad.domain.dto.TaskEventResponse;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
@@ -130,7 +130,7 @@ public class GoalTaskService {
      * <p>任何 SQL 失败都回滚；重试同键同输入返回原收据，不创建新任务。</p>
      */
     @Transactional
-    public TaskReceipt submit(String userId, String conversationId, String idempotencyKey, String message) {
+    public TaskReceiptResponse submit(String userId, String conversationId, String idempotencyKey, String message) {
         return submit(userId, conversationId, idempotencyKey, message, List.of());
     }
 
@@ -138,7 +138,7 @@ public class GoalTaskService {
      * 将附件引用与目标、命令在同一事务提交；不接收未 READY 或其他用户的引用。
      */
     @Transactional
-    public TaskReceipt submit(String userId, String conversationId, String idempotencyKey, String message,
+    public TaskReceiptResponse submit(String userId, String conversationId, String idempotencyKey, String message,
                                List<String> artifactIds) {
         if (artifactIds != null && artifactIds.stream().anyMatch(id -> id == null || id.isBlank())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "附件引用不能为空");
@@ -163,7 +163,7 @@ public class GoalTaskService {
             if (!prior.payloadHash().equals(payloadHash)) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同幂等键的输入不一致");
             }
-            return new TaskReceipt(prior.taskId(), prior.commandId(), GoalTaskStatus.QUEUED.name());
+            return new TaskReceiptResponse(prior.taskId(), prior.commandId(), GoalTaskStatus.QUEUED.name());
         }
         if (conversation.activeTaskId() != null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "会话已有未完成目标");
@@ -189,7 +189,7 @@ public class GoalTaskService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "会话状态已变化");
         }
         log.info("目标受理成功 taskId={} commandId={} conversationId={}", taskId, commandId, conversationId);
-        return new TaskReceipt(taskId, commandId, GoalTaskStatus.QUEUED.name());
+        return new TaskReceiptResponse(taskId, commandId, GoalTaskStatus.QUEUED.name());
     }
 
     /**
@@ -207,14 +207,14 @@ public class GoalTaskService {
     /**
      * 列出某一会话下的目标，按创建时间倒序。
      */
-    public GoalTaskPage listConversationTasks(String userId, String conversationId, String cursor, int limit) {
+    public GoalTaskPageResponse listConversationTasks(String userId, String conversationId, String cursor, int limit) {
         getConversation(userId, conversationId);
         Long cursorId = parseCursor(cursor);
         List<TaskRow> rows = taskMapper.listByConversation(userId, conversationId, cursorId,
                 Math.min(Math.max(limit, 1), 100));
         List<TaskResponse> items = rows.stream().map(this::toResponse).toList();
         String nextCursor = rows.isEmpty() ? null : String.valueOf(rows.get(rows.size() - 1).id());
-        return new GoalTaskPage(items, nextCursor);
+        return new GoalTaskPageResponse(items, nextCursor);
     }
 
     private TaskResponse toResponse(TaskRow task) {

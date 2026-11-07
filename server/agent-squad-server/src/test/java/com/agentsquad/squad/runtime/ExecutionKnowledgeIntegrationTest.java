@@ -2,12 +2,12 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.artifact.service.ArtifactDeliveryService;
-import com.agentsquad.squad.domain.dto.MessageCreateRequest;
+import com.agentsquad.squad.domain.request.MessageCreateRequest;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
 import com.agentsquad.squad.conversation.service.ResponseContextService;
 import com.agentsquad.squad.integration.agentscope.NativeEventView;
 import com.agentsquad.squad.integration.agentscope.NativeProjectionService;
-import com.agentsquad.squad.domain.dto.MemoryCreate;
+import com.agentsquad.squad.domain.request.MemoryCreateRequest;
 import com.agentsquad.squad.domain.dto.MemoryWriteRequest;
 import com.agentsquad.squad.memory.service.ExplicitMemoryWriteService;
 import com.agentsquad.squad.memory.service.MemoryService;
@@ -21,8 +21,8 @@ import com.agentsquad.squad.domain.dto.SandboxOutput;
 import com.agentsquad.squad.sandbox.service.SandboxAccessService;
 import com.agentsquad.squad.sandbox.service.SandboxRunTransaction;
 import com.agentsquad.squad.domain.dto.SkillFile;
-import com.agentsquad.squad.domain.dto.SkillGrantRequest;
-import com.agentsquad.squad.domain.dto.SkillImportRequest;
+import com.agentsquad.squad.domain.request.SkillGrantRequest;
+import com.agentsquad.squad.domain.request.SkillImportRequest;
 import com.agentsquad.squad.skill.service.SkillService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -53,7 +53,7 @@ class ExecutionKnowledgeIntegrationTest {
             var skill = skills.importPackage(USER, new SkillImportRequest(List.of(new SkillFile("SKILL.md",
                     "---\nname: tone\ndescription: 适用于回复语气的规则\nversion: 1.0.0\n---\nSKILL_BODY_TOKEN 使用简洁措辞。"))));
             skills.changeGrant(USER, skill.skillVersionId(), new SkillGrantRequest(true, 0L));
-            context.getBean(MemoryService.class).create(USER, new MemoryCreate("tone", "MEMORY_VALUE_TOKEN 喜欢短句", null));
+            context.getBean(MemoryService.class).create(USER, new MemoryCreateRequest("tone", "MEMORY_VALUE_TOKEN 喜欢短句", null));
             var receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "knowledge",
                     new MessageCreateRequest("请按我的偏好回复", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);

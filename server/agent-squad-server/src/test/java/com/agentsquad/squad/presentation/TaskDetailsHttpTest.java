@@ -4,7 +4,7 @@ import com.agentsquad.squad.testsupport.ApiResultJson;
 import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.artifact.service.ArtifactService;
-import com.agentsquad.squad.domain.dto.ArtifactView;
+import com.agentsquad.squad.domain.response.ArtifactResponse;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
 
 import com.agentsquad.squad.identity.AuthView;
@@ -78,7 +78,7 @@ class TaskDetailsHttpTest {
                     .andExpect(status().isUnauthorized());
             assertThat(mvc.perform(get("/api/v1/artifacts/{id}/content", artifactId).with(TestAssertion.as(userId, "USER")))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray()).isEqualTo(bytes);
-            ArtifactView corrupted = context.getBean(ArtifactService.class).upload(actor.userId(), "corrupt-check",
+            ArtifactResponse corrupted = context.getBean(ArtifactService.class).upload(actor.userId(), "corrupt-check",
                     "corrupt.txt", "before".getBytes(StandardCharsets.UTF_8));
             jdbc.update("UPDATE sq_artifact SET content_bytes = ? WHERE artifact_id = ?",
                     "after".getBytes(StandardCharsets.UTF_8), corrupted.artifactId());

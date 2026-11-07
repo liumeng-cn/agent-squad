@@ -1,8 +1,8 @@
 package com.agentsquad.squad.controller;
 
 import com.agentsquad.squad.common.model.ApiResult;
-import com.agentsquad.squad.domain.dto.MessageCreateRequest;
-import com.agentsquad.squad.domain.dto.MessageReceipt;
+import com.agentsquad.squad.domain.request.MessageCreateRequest;
+import com.agentsquad.squad.domain.response.MessageReceiptResponse;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
 import com.agentsquad.squad.identity.UserContext;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,7 +31,7 @@ public class MessageController {
 
     @PostMapping("/messages")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public ApiResult<MessageReceipt> first(HttpServletRequest servletRequest,
+    public ApiResult<MessageReceiptResponse> first(HttpServletRequest servletRequest,
                                            @RequestHeader("Idempotency-Key") String key,
                                            @Valid @RequestBody MessageCreateRequest request) {
         return ApiResult.success(messages.accept(UserContext.current(servletRequest).userId(), null, key, request));
@@ -39,7 +39,7 @@ public class MessageController {
 
     @PostMapping("/{conversationId}/messages")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public ApiResult<MessageReceipt> append(HttpServletRequest servletRequest,
+    public ApiResult<MessageReceiptResponse> append(HttpServletRequest servletRequest,
                                             @PathVariable String conversationId,
                                             @RequestHeader("Idempotency-Key") String key,
                                             @Valid @RequestBody MessageCreateRequest request) {

@@ -4,10 +4,10 @@ import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.identity.UserContext;
 import com.agentsquad.squad.tools.connection.ConnectionService;
 import jakarta.servlet.http.HttpServletRequest;
-import com.agentsquad.squad.domain.dto.ConnectionCreateRequest;
-import com.agentsquad.squad.domain.dto.ConnectionPage;
+import com.agentsquad.squad.domain.request.ConnectionCreateRequest;
+import com.agentsquad.squad.domain.response.ConnectionPageResponse;
 import com.agentsquad.squad.domain.dto.ConnectionResponse;
-import com.agentsquad.squad.domain.dto.ConnectionUpdateRequest;
+import com.agentsquad.squad.domain.request.ConnectionUpdateRequest;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -40,7 +40,7 @@ public class ConnectionController {
      * 分页列出当前用户的连接。
      */
     @GetMapping("/connections")
-    public ApiResult<ConnectionPage> list(
+    public ApiResult<ConnectionPageResponse> list(
             HttpServletRequest servletRequest,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit) {

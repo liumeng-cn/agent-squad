@@ -4,10 +4,10 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.domain.entity.MemoryRow;
 import com.agentsquad.squad.domain.entity.MemoryRules;
-import com.agentsquad.squad.domain.dto.MemoryCreate;
-import com.agentsquad.squad.domain.dto.MemoryMutationResult;
-import com.agentsquad.squad.domain.dto.MemoryPage;
-import com.agentsquad.squad.domain.dto.MemoryUpdate;
+import com.agentsquad.squad.domain.request.MemoryCreateRequest;
+import com.agentsquad.squad.domain.response.MemoryMutationResponse;
+import com.agentsquad.squad.domain.response.MemoryPageResponse;
+import com.agentsquad.squad.domain.request.MemoryUpdateRequest;
 import com.agentsquad.squad.domain.dto.MemoryView;
 import com.agentsquad.squad.memory.repository.MemoryMapper;
 import jakarta.annotation.Resource;
@@ -33,14 +33,14 @@ public class MemoryService {
     @Resource
     private MemoryMapper mapper;
 
-    public MemoryPage list(String userId, String cursor, int limit) {
+    public MemoryPageResponse list(String userId, String cursor, int limit) {
         Long before = parseCursor(cursor);
         int size = Math.min(Math.max(limit, 1), 100);
         List<MemoryRow> rows = mapper.list(userId, before, size + 1);
         boolean more = rows.size() > size;
         List<MemoryRow> page = more ? rows.subList(0, size) : rows;
         String next = more ? Long.toString(page.getLast().storageId()) : null;
-        return new MemoryPage(page.stream().map(this::view).toList(), next,
+        return new MemoryPageResponse(page.stream().map(this::view).toList(), next,
                 mapper.revision(userId), mapper.blockedScopes(userId));
     }
 
@@ -48,7 +48,7 @@ public class MemoryService {
      * 用户设置页明确创建；有效同键同内容返回原记录，异内容走带版本纠正；删除后的同键创建使用新身份，保留旧墓碑。
      */
     @Transactional
-    public MemoryMutationResult create(String userId, MemoryCreate request) {
+    public MemoryMutationResponse create(String userId, MemoryCreateRequest request) {
         return createFromSource(userId, request, null, null);
     }
 
@@ -56,7 +56,7 @@ public class MemoryService {
      * 来源引用由受权工具入口提供，普通设置页不能伪造来源消息。
      */
     @Transactional
-    public MemoryMutationResult createFromSource(String userId, MemoryCreate request,
+    public MemoryMutationResponse createFromSource(String userId, MemoryCreateRequest request,
                                                  String sourceMessageId, String sourceQuote) {
         MemoryRules.requireContent(request.key(), request.content(), utc(request.expiresAt()), now());
         lockRevision(userId);
@@ -84,12 +84,12 @@ public class MemoryService {
      * 纠正正文与失效代际同事务提交；旧Scope引用只能阻塞，不能原位变成新版本。
      */
     @Transactional
-    public MemoryMutationResult update(String userId, String memoryId, MemoryUpdate request) {
+    public MemoryMutationResponse update(String userId, String memoryId, MemoryUpdateRequest request) {
         return updateFromSource(userId, memoryId, request, null, null);
     }
 
     @Transactional
-    public MemoryMutationResult updateFromSource(String userId, String memoryId, MemoryUpdate request,
+    public MemoryMutationResponse updateFromSource(String userId, String memoryId, MemoryUpdateRequest request,
                                                  String sourceMessageId, String sourceQuote) {
         lockRevision(userId);
         MemoryRow current = requireOwned(userId, memoryId);
@@ -111,7 +111,7 @@ public class MemoryService {
      * 删除先写墓碑并清空正文，再原子阻塞所有旧代际上下文；不声称已撤回已发出的模型调用。
      */
     @Transactional
-    public MemoryMutationResult delete(String userId, String memoryId, long expectedVersion) {
+    public MemoryMutationResponse delete(String userId, String memoryId, long expectedVersion) {
         lockRevision(userId);
         MemoryRow current = requireOwned(userId, memoryId);
         if ("DELETED".equals(current.status()) && current.version() == expectedVersion + 1) {
@@ -161,9 +161,9 @@ public class MemoryService {
         mapper.blockOldScopes(userId, mapper.revision(userId));
     }
 
-    private MemoryMutationResult result(String userId, MemoryRow memory) {
+    private MemoryMutationResponse result(String userId, MemoryRow memory) {
         int scopes = mapper.blockedScopes(userId);
-        return new MemoryMutationResult(view(memory), mapper.revision(userId), scopes,
+        return new MemoryMutationResponse(view(memory), mapper.revision(userId), scopes,
                 scopes == 0 ? "已保存；后续新执行使用当前有效记忆" : "记忆已变更；旧执行上下文已阻塞，需从有效资料重新发起，已发出的请求不能撤回");
     }
 

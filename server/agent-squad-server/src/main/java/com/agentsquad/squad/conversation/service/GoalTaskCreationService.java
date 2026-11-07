@@ -11,7 +11,7 @@ import com.agentsquad.squad.domain.entity.ExecutionScopeRow;
 import com.agentsquad.squad.domain.entity.ResponseContextMessage;
 import com.agentsquad.squad.domain.entity.ResponseRuntimeRow;
 import com.agentsquad.squad.domain.dto.GoalTaskCreate;
-import com.agentsquad.squad.domain.dto.TaskReceipt;
+import com.agentsquad.squad.domain.response.TaskReceiptResponse;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
@@ -97,7 +97,7 @@ public class GoalTaskCreationService {
      * 首次创建检查运行状态；原调用重放仅返回原收据，不重新激活已结束目标或刷新额度。
      */
     @Transactional
-    public TaskReceipt create(String userId, String sessionId, GoalTaskCreate request) {
+    public TaskReceiptResponse create(String userId, String sessionId, GoalTaskCreate request) {
         validate(request);
         userStatusGuard.requireActive(userId);
         ExecutionScopeRow source = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), false);
@@ -121,7 +121,7 @@ public class GoalTaskCreationService {
             if (!hash.equals(prior.payloadHash())) {
                 throw error(RuntimeExceptionCode.CONFLICT, "同一目标创建键的内容不一致");
             }
-            return new TaskReceipt(prior.taskId(), prior.commandId(), "QUEUED");
+            return new TaskReceiptResponse(prior.taskId(), prior.commandId(), "QUEUED");
         }
         if (reply.cancellationRequested() || !Set.of("QUEUED", "RUNNING", "RECOVERING").contains(reply.status())) {
             throw error(RuntimeExceptionCode.CONFLICT, "当前回复已不能创建目标");
@@ -171,7 +171,7 @@ public class GoalTaskCreationService {
                 "title", request.title(), "status", "QUEUED"));
         log.info("Master独立目标创建事实已写入 conversationId={} executionId={} taskId={} commandId={}",
                 source.conversationId(), reply.executionId(), taskId, commandId);
-        return new TaskReceipt(taskId, commandId, "QUEUED");
+        return new TaskReceiptResponse(taskId, commandId, "QUEUED");
     }
 
     private void validate(GoalTaskCreate request) {

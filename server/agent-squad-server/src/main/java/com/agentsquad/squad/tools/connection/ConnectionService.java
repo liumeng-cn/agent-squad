@@ -5,10 +5,10 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.domain.entity.ConnectionRow;
-import com.agentsquad.squad.domain.dto.ConnectionCreateRequest;
-import com.agentsquad.squad.domain.dto.ConnectionPage;
+import com.agentsquad.squad.domain.request.ConnectionCreateRequest;
+import com.agentsquad.squad.domain.response.ConnectionPageResponse;
 import com.agentsquad.squad.domain.dto.ConnectionResponse;
-import com.agentsquad.squad.domain.dto.ConnectionUpdateRequest;
+import com.agentsquad.squad.domain.request.ConnectionUpdateRequest;
 import com.agentsquad.squad.tools.repository.ConnectionMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -78,14 +78,14 @@ public class ConnectionService {
     /**
      * 分页列出当前用户连接；cursor 为存储主键，空表示首页。
      */
-    public ConnectionPage list(String userId, String cursor, int limit) {
+    public ConnectionPageResponse list(String userId, String cursor, int limit) {
         Long cursorId = parseCursor(cursor);
         List<ConnectionRow> rows = connectionMapper.listByOwner(userId, cursorId,
                 Math.min(Math.max(limit, 1), 100));
         String nextCursor = rows.size() == Math.min(Math.max(limit, 1), 100)
                 ? String.valueOf(rows.get(rows.size() - 1).id())
                 : null;
-        return new ConnectionPage(rows.stream().map(this::toView).toList(), nextCursor);
+        return new ConnectionPageResponse(rows.stream().map(this::toView).toList(), nextCursor);
     }
 
     /**

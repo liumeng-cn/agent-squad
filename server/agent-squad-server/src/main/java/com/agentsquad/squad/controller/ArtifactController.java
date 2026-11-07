@@ -1,7 +1,7 @@
 package com.agentsquad.squad.controller;
 
 import com.agentsquad.squad.domain.entity.ArtifactRow;
-import com.agentsquad.squad.domain.dto.ArtifactView;
+import com.agentsquad.squad.domain.response.ArtifactResponse;
 import com.agentsquad.squad.artifact.service.ArtifactService;
 import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.identity.UserContext;
@@ -39,20 +39,20 @@ public class ArtifactController {
 
     @PostMapping("/artifacts")
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResult<ArtifactView> upload(HttpServletRequest servletRequest,
+    public ApiResult<ArtifactResponse> upload(HttpServletRequest servletRequest,
                                           @RequestHeader("Idempotency-Key") String key, @RequestParam("file") MultipartFile file) throws IOException {
         String userId = UserContext.current(servletRequest).userId();
         return ApiResult.success(artifactService.upload(userId, key, file.getOriginalFilename(), file.getBytes()));
     }
 
     @GetMapping("/artifacts/{artifactId}")
-    public ApiResult<ArtifactView> get(HttpServletRequest servletRequest,
+    public ApiResult<ArtifactResponse> get(HttpServletRequest servletRequest,
                                        @PathVariable String artifactId) {
         return ApiResult.success(artifactService.get(UserContext.current(servletRequest).userId(), artifactId));
     }
 
     @GetMapping("/tasks/{taskId}/artifacts")
-    public ApiResult<List<ArtifactView>> list(HttpServletRequest servletRequest,
+    public ApiResult<List<ArtifactResponse>> list(HttpServletRequest servletRequest,
                                               @PathVariable String taskId) {
         return ApiResult.success(artifactService.listTask(UserContext.current(servletRequest).userId(), taskId));
     }

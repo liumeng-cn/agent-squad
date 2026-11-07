@@ -1,5 +1,7 @@
 package com.agentsquad.squad.domain.dto;
 
+import com.agentsquad.squad.domain.response.ArtifactResponse;
+
 import java.util.List;
 
 /**
@@ -9,5 +11,5 @@ import java.util.List;
  */
 public record MessageView(String messageId, long sequence, String role, String text, long revision,
                           boolean completed, String sourceMessageId, String executionId, String taskId,
-                          String occurredAt, List<ArtifactView> artifacts) {
+                          String occurredAt, List<ArtifactResponse> artifacts) {
 }

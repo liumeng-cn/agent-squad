@@ -2,7 +2,7 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.domain.dto.ConversationResponse;
-import com.agentsquad.squad.domain.dto.TaskReceipt;
+import com.agentsquad.squad.domain.response.TaskReceiptResponse;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.domain.dto.PlanNode;
@@ -11,7 +11,7 @@ import com.agentsquad.squad.domain.dto.PlanReceipt;
 import com.agentsquad.squad.runtime.service.ContextSnapshotService;
 import com.agentsquad.squad.runtime.service.PlanService;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
-import com.agentsquad.squad.domain.dto.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
@@ -147,7 +147,7 @@ class WorkerNativeExecutionIntegrationTest {
                 ObjectMapper json = spring.getBean(ObjectMapper.class);
                 JdbcTemplate jdbc = spring.getBean(JdbcTemplate.class);
                 ConversationResponse conversation = tasks.createConversation(userId, "写作任务");
-                TaskReceipt task = tasks.submit(userId, conversation.conversationId(),
+                TaskReceiptResponse task = tasks.submit(userId, conversation.conversationId(),
                         "native-worker", "写一段摘要");
                 taskId = task.taskId();
                 definitions.publish(new AuthView(userId, "admin", List.of(AccountRole.ADMIN), "csrf"),

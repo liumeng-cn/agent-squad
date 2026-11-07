@@ -3,8 +3,8 @@ package com.agentsquad.squad.identity;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.domain.dto.MessageCreateRequest;
-import com.agentsquad.squad.domain.dto.MessageReceipt;
+import com.agentsquad.squad.domain.request.MessageCreateRequest;
+import com.agentsquad.squad.domain.response.MessageReceiptResponse;
 import com.agentsquad.squad.conversation.service.CommandClaimService;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
@@ -40,7 +40,7 @@ class UserStatusGuardIntegrationTest {
             CommandClaimService claims = context.getBean(CommandClaimService.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
 
-            MessageReceipt first = messages.accept(owner, null, "first",
+            MessageReceiptResponse first = messages.accept(owner, null, "first",
                     new MessageCreateRequest("第一条消息", List.of()));
             assertThat(count(jdbc, "sq_conversation", owner)).isEqualTo(1);
 

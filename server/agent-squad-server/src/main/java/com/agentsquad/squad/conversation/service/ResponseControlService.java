@@ -9,7 +9,7 @@ import com.agentsquad.squad.domain.entity.ConversationRow;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.domain.entity.ExecutionScopeRow;
 import com.agentsquad.squad.domain.entity.ResponseRuntimeRow;
-import com.agentsquad.squad.domain.dto.CommandReceipt;
+import com.agentsquad.squad.domain.response.CommandReceiptResponse;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper;
@@ -59,7 +59,7 @@ public class ResponseControlService {
     private ObjectMapper json;
 
     @Transactional
-    public CommandReceipt cancel(String userId, String executionId, String key, long expectedVersion) {
+    public CommandReceiptResponse cancel(String userId, String executionId, String key, long expectedVersion) {
         if (key == null || key.isBlank() || key.length() > 160) {
             throw error(RuntimeExceptionCode.VALIDATION, "幂等键无效");
         }
@@ -80,7 +80,7 @@ public class ResponseControlService {
             if (!hash.equals(prior.payloadHash())) {
                 throw error(RuntimeExceptionCode.CONFLICT, "相同幂等键的输入不一致");
             }
-            return new CommandReceipt(prior.commandId(), null, prior.status(), prior.nativeTurnId(), null);
+            return new CommandReceiptResponse(prior.commandId(), null, prior.status(), prior.nativeTurnId(), null);
         }
         if (row.version() != expectedVersion || row.cancellationRequested()
                 || Set.of("SUCCEEDED", "PARTIAL", "FAILED", "CANCELLED").contains(row.status())) {
@@ -104,7 +104,7 @@ public class ResponseControlService {
         }
     }
 
-    private CommandReceipt queueStop(ExecutionScopeRow scope, ResponseRuntimeRow row, String scopeKey, String key, String payload, String hash) {
+    private CommandReceiptResponse queueStop(ExecutionScopeRow scope, ResponseRuntimeRow row, String scopeKey, String key, String payload, String hash) {
         replies.cancelling(scope.userId(), row.bindingId(), LocalDateTime.now(ZoneOffset.UTC));
         replies.cancelPending(scope.userId(), row.bindingId());
         operations.cancelUnstarted(scope.userId(), scope.scopeId());
@@ -113,7 +113,7 @@ public class ResponseControlService {
         commands.insertControl(id, scope.userId(), scopeKey, key, hash, null, row.bindingId(), "STOP", payload, LocalDateTime.now(ZoneOffset.UTC));
         events.publish(scope, "response:" + row.executionId() + ":cancel", "execution.status_changed",
                 Map.of("executionId", row.executionId(), "status", "CANCELLING", "version", row.version() + 1));
-        return new CommandReceipt(id, null, "PENDING", null, null);
+        return new CommandReceiptResponse(id, null, "PENDING", null, null);
     }
 
     private RuntimeBusinessException error(RuntimeExceptionCode code, String text) {

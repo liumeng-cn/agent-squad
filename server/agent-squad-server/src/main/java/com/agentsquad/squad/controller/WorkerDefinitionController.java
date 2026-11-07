@@ -4,10 +4,10 @@ import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.identity.UserContext;
 import jakarta.servlet.http.HttpServletRequest;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
-import com.agentsquad.squad.domain.dto.WorkerDefinitionCreateRequest;
-import com.agentsquad.squad.domain.dto.WorkerDefinitionPage;
+import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.domain.response.WorkerDefinitionPageResponse;
 import com.agentsquad.squad.domain.dto.WorkerDefinitionResponse;
-import com.agentsquad.squad.domain.dto.WorkerStatusUpdateRequest;
+import com.agentsquad.squad.domain.request.WorkerStatusUpdateRequest;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -42,7 +42,7 @@ public class WorkerDefinitionController {
      * 查询已发布能力，不触发 Worker 执行。
      */
     @GetMapping
-    public ApiResult<WorkerDefinitionPage> list(
+    public ApiResult<WorkerDefinitionPageResponse> list(
             HttpServletRequest servletRequest,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit) {

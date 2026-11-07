@@ -3,7 +3,7 @@ package com.agentsquad.squad.governance;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.domain.dto.ConversationResponse;
-import com.agentsquad.squad.domain.dto.TaskReceipt;
+import com.agentsquad.squad.domain.response.TaskReceiptResponse;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
 import com.agentsquad.squad.governance.service.BudgetService;
 import com.agentsquad.squad.worker.profile.WorkerModelProfile;
@@ -43,7 +43,7 @@ class BudgetReservationConcurrencyTest {
             BudgetService budget = context.getBean(BudgetService.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             ConversationResponse conversation = tasks.createConversation(userId, "并发预算");
-            TaskReceipt task = tasks.submit(userId, conversation.conversationId(), "budget-task", "测试预算");
+            TaskReceiptResponse task = tasks.submit(userId, conversation.conversationId(), "budget-task", "测试预算");
 
             WorkerModelProfile profile = new WorkerModelProfile();
             profile.setPricingVersion("concurrent-v1");
@@ -99,7 +99,7 @@ class BudgetReservationConcurrencyTest {
             profile.setMaxOutputTokens(20);
 
             ConversationResponse firstConversation = tasks.createConversation(userId, "模型预算");
-            TaskReceipt firstTask = tasks.submit(userId, firstConversation.conversationId(),
+            TaskReceiptResponse firstTask = tasks.submit(userId, firstConversation.conversationId(),
                     "model-task", "预算结算");
             String hash = "a".repeat(64);
             budget.reserveModel(userId, scopeId(jdbc, firstTask.taskId()), "model:first", hash, "default", profile);
@@ -114,7 +114,7 @@ class BudgetReservationConcurrencyTest {
             assertThat(consumed).isEqualTo(100L);
 
             ConversationResponse secondConversation = tasks.createConversation(userId, "未知计费");
-            TaskReceipt secondTask = tasks.submit(userId, secondConversation.conversationId(),
+            TaskReceiptResponse secondTask = tasks.submit(userId, secondConversation.conversationId(),
                     "unknown-task", "未知计费");
             budget.reserveModel(userId, scopeId(jdbc, secondTask.taskId()), "model:unknown", hash, "default", profile);
             budget.markModelUnknown(userId, scopeId(jdbc, secondTask.taskId()), "model:unknown");

@@ -2,7 +2,7 @@ package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.domain.dto.ConversationResponse;
-import com.agentsquad.squad.domain.dto.TaskReceipt;
+import com.agentsquad.squad.domain.response.TaskReceiptResponse;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
 import com.agentsquad.squad.governance.service.BudgetService;
 import com.agentsquad.squad.governance.repository.BudgetMapper;
@@ -98,7 +98,7 @@ class ModelBudgetMiddlewareTest {
         String userId = "00000000-0000-0000-0000-000000000001";
         GoalTaskService tasks = spring.getBean(GoalTaskService.class);
         ConversationResponse conversation = tasks.createConversation(userId, "模型预算");
-        TaskReceipt task = tasks.submit(userId, conversation.conversationId(),
+        TaskReceiptResponse task = tasks.submit(userId, conversation.conversationId(),
                 "model-budget", "测试模型调用预算");
         JdbcTemplate jdbc = spring.getBean(JdbcTemplate.class);
         String sessionId = jdbc.queryForObject("""

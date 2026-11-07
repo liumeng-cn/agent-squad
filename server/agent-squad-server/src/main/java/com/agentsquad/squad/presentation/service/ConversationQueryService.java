@@ -1,6 +1,16 @@
 package com.agentsquad.squad.presentation.service;
 
-import com.agentsquad.squad.domain.dto.*;
+import com.agentsquad.squad.domain.response.ActivityHistoryPageResponse;
+import com.agentsquad.squad.domain.request.ActivityHistoryRequest;
+import com.agentsquad.squad.domain.dto.ConversationEvent;
+import com.agentsquad.squad.domain.response.ConversationSnapshotResponse;
+import com.agentsquad.squad.domain.response.ConversationViewResponse;
+import com.agentsquad.squad.domain.dto.ExecutionActivityView;
+import com.agentsquad.squad.domain.dto.MessageView;
+import com.agentsquad.squad.domain.dto.ResponseExecutionView;
+import com.agentsquad.squad.domain.dto.TaskDirectiveView;
+import com.agentsquad.squad.domain.dto.TaskResponse;
+
 import com.agentsquad.squad.domain.entity.ConversationExecution;
 import com.agentsquad.squad.runtime.service.ExecutionFailureService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
@@ -9,8 +19,8 @@ import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.domain.entity.ConversationHeader;
 import com.agentsquad.squad.domain.entity.ResponseExecutionStatus;
 import com.agentsquad.squad.domain.dto.ConversationEvent;
-import com.agentsquad.squad.domain.dto.ActivityHistoryPage;
-import com.agentsquad.squad.domain.dto.ActivityHistoryQuery;
+import com.agentsquad.squad.domain.response.ActivityHistoryPageResponse;
+import com.agentsquad.squad.domain.request.ActivityHistoryRequest;
 import com.agentsquad.squad.domain.dto.ExecutionActivityView;
 import com.agentsquad.squad.presentation.repository.ConversationReadMapper;
 import com.agentsquad.squad.conversation.repository.ResponseContextMapper;
@@ -69,7 +79,7 @@ public class ConversationQueryService {
     private com.agentsquad.squad.presentation.repository.ExecutionActivityMapper activities;
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public ConversationSnapshot snapshot(String userId, String conversationId, Long before, int limit) {
+    public ConversationSnapshotResponse snapshot(String userId, String conversationId, Long before, int limit) {
         if ((before != null && before < 1) || limit < 1 || limit > 100) {
             throw invalid("历史分页参数无效");
         }
@@ -87,7 +97,7 @@ public class ConversationQueryService {
                 active = new TaskResponse(task.taskId(), task.conversationId(), task.status(), task.version(), task.planVersion(), task.answerRevision(), task.cancelRequestedAt() == null ? null : task.cancelRequestedAt().atOffset(java.time.ZoneOffset.UTC).toString(), null, task.createTime().atOffset(java.time.ZoneOffset.UTC).toString(), task.lastUpdateTime().atOffset(java.time.ZoneOffset.UTC).toString());
             }
         }
-        return new ConversationSnapshot(ConversationView.from(header), messages, more ? page.getFirst().sequence() : null,
+        return new ConversationSnapshotResponse(ConversationViewResponse.from(header), messages, more ? page.getFirst().sequence() : null,
                 reads.activeExecutions(userId, conversationId).stream().map(row -> executionView(userId, row)).toList(), active,
                 reads.interactionIds(userId, conversationId).stream().map(id -> interactions.getOwned(userId, id)).toList(),
                 reads.deliverableIds(userId, conversationId).stream().filter(id -> artifactMapper.findOwned(userId, id) != null).map(id -> artifacts.get(userId, id)).toList(), failures.list(userId, conversationId), reads.uncertainOperationIds(userId, conversationId),
@@ -103,7 +113,7 @@ public class ConversationQueryService {
 
     /** 仅查询当前会话代际的来源消息，按固定活动身份向前翻页。 */
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public ActivityHistoryPage activityHistory(String userId, String conversationId, ActivityHistoryQuery query) {
+    public ActivityHistoryPageResponse activityHistory(String userId, String conversationId, ActivityHistoryRequest query) {
         var header = requireHeader(userId, conversationId);
         if (query.sourceMessageId() == null || query.sourceMessageId().isBlank() || query.sourceMessageId().length() > 36
                 || query.beforeActivityId() != null && (query.beforeActivityId().isBlank() || query.beforeActivityId().length() > 36)) {
@@ -112,7 +122,7 @@ public class ConversationQueryService {
         var rows = activities.history(userId, conversationId, header.generation(), query, ACTIVITY_HISTORY_PAGE_SIZE + 1);
         var items = rows.stream().limit(ACTIVITY_HISTORY_PAGE_SIZE).map(ExecutionActivityView::from).toList();
         String nextCursor = rows.size() > ACTIVITY_HISTORY_PAGE_SIZE ? items.getLast().activityId() : null;
-        return new ActivityHistoryPage(items, nextCursor);
+        return new ActivityHistoryPageResponse(items, nextCursor);
     }
     /**
      * 每次读取同时重验会话归属、代际和保留水位；删除后的既有订阅也不能继续读取内容。

@@ -3,7 +3,7 @@ package com.agentsquad.squad.runtime;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.domain.dto.ConversationResponse;
-import com.agentsquad.squad.domain.dto.TaskReceipt;
+import com.agentsquad.squad.domain.response.TaskReceiptResponse;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
 import com.agentsquad.squad.domain.entity.ProjectionTarget;
 import com.agentsquad.squad.identity.AuthView;
@@ -17,7 +17,7 @@ import com.agentsquad.squad.runtime.service.PlanService;
 import com.agentsquad.squad.runtime.service.WorkerDispatchService;
 import com.agentsquad.squad.runtime.service.WorkerResultService;
 import com.agentsquad.squad.presentation.service.TaskSnapshotService;
-import com.agentsquad.squad.domain.dto.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -59,7 +59,7 @@ class PlanPublishIntegrationTest {
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             ObjectMapper json = context.getBean(ObjectMapper.class);
             ConversationResponse conversation = tasks.createConversation(userId, "复用测试");
-            TaskReceipt task = tasks.submit(userId, conversation.conversationId(),
+            TaskReceiptResponse task = tasks.submit(userId, conversation.conversationId(),
                     "reuse-goal", "写一段摘要");
             definitions.publish(new AuthView(userId, "admin", List.of(AccountRole.ADMIN), "csrf"),
                     "reuse-writer", new WorkerDefinitionCreateRequest(
@@ -179,7 +179,7 @@ class PlanPublishIntegrationTest {
             ObjectMapper mapper = context.getBean(ObjectMapper.class);
 
             ConversationResponse conversation = goalTaskService.createConversation(userId, "排障");
-            TaskReceipt task = goalTaskService.submit(userId, conversation.conversationId(),
+            TaskReceiptResponse task = goalTaskService.submit(userId, conversation.conversationId(),
                     "request-1", "排查错误日志");
 
             AuthView admin = new AuthView(userId, "admin", List.of(AccountRole.ADMIN), "csrf");

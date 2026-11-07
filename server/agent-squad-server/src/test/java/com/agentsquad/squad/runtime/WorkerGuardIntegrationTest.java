@@ -3,7 +3,7 @@ package com.agentsquad.squad.runtime;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.domain.dto.ConversationResponse;
-import com.agentsquad.squad.domain.dto.TaskReceipt;
+import com.agentsquad.squad.domain.response.TaskReceiptResponse;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.domain.entity.WorkerLaunchRow;
@@ -18,7 +18,7 @@ import com.agentsquad.squad.runtime.service.WorkerRecoveryService;
 import com.agentsquad.squad.integration.agentscope.NativeSubmissionReceipt;
 import com.agentsquad.squad.domain.entity.ProjectionTarget;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
-import com.agentsquad.squad.domain.dto.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -62,7 +62,7 @@ class WorkerGuardIntegrationTest {
             JdbcTemplate jdbc = spring.getBean(JdbcTemplate.class);
 
             ConversationResponse conversation = tasks.createConversation(userId, "Worker guard");
-            TaskReceipt task = tasks.submit(userId, conversation.conversationId(),
+            TaskReceiptResponse task = tasks.submit(userId, conversation.conversationId(),
                     "worker-guard", "写一段摘要");
             definitions.publish(new AuthView(userId, "admin", List.of(AccountRole.ADMIN), "csrf"),
                     "guard-definition", new WorkerDefinitionCreateRequest(

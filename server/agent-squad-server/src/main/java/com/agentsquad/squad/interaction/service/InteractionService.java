@@ -6,7 +6,7 @@ import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.domain.entity.CommandRow;
 import com.agentsquad.squad.domain.entity.GoalTaskStatus;
-import com.agentsquad.squad.domain.dto.CommandReceipt;
+import com.agentsquad.squad.domain.response.CommandReceiptResponse;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
@@ -207,7 +207,7 @@ public class InteractionService {
      * 用户答复：批准派发、拒绝取消、追问回填；全部先落账本再排队 RESPOND 命令。
      */
     @Transactional
-    public CommandReceipt respond(AuthView actor, String interactionId, String idempotencyKey,
+    public CommandReceiptResponse respond(AuthView actor, String interactionId, String idempotencyKey,
                                   long expectedVersion, String answerKind, Boolean approve,
                                   String confirmedRequestHash, Map<String, Object> inputValue) {
         if (idempotencyKey == null || idempotencyKey.isBlank() || idempotencyKey.length() > 160) {
@@ -264,7 +264,7 @@ public class InteractionService {
                 if (prior != null) {
                     log.info("交互答复幂等复用原回执 interactionId={} commandId={}",
                             interactionId, prior.commandId());
-                    return new CommandReceipt(prior.commandId(), prior.taskId(),
+                    return new CommandReceiptResponse(prior.commandId(), prior.taskId(),
                             prior.status(), null, null);
                 }
             }
@@ -303,7 +303,7 @@ public class InteractionService {
         scopeMapper.queueResponseAfterInteraction(actor.userId(), row.scopeId());
         log.info("交互答复已受理 interactionId={} kind={} commandId={} approve={}",
                 interactionId, row.kind(), commandId, approve);
-        return new CommandReceipt(commandId, row.taskId(), "PENDING", null, null);
+        return new CommandReceiptResponse(commandId, row.taskId(), "PENDING", null, null);
     }
 
     /**

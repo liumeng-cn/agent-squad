@@ -1,13 +1,13 @@
 package com.agentsquad.squad.conversation.service;
 
-import com.agentsquad.squad.domain.dto.ConversationView;
+import com.agentsquad.squad.domain.response.ConversationViewResponse;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.domain.entity.ConversationTitles;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
-import com.agentsquad.squad.domain.dto.ConversationTitleUpdate;
-import com.agentsquad.squad.domain.dto.ConversationListPage;
+import com.agentsquad.squad.domain.request.ConversationTitleUpdateRequest;
+import com.agentsquad.squad.domain.response.ConversationListPageResponse;
 import com.agentsquad.squad.presentation.repository.ConversationReadMapper;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,7 +46,7 @@ public class ConversationTitleService {
     private ObjectMapper json;
 
     @Transactional
-    public ConversationView rename(String userId, String conversationId, ConversationTitleUpdate request) {
+    public ConversationViewResponse rename(String userId, String conversationId, ConversationTitleUpdateRequest request) {
         String title = ConversationTitles.safe(request.title(), 200);
         if (title.isBlank() || request.expectedTitleVersion() == null || request.expectedTitleVersion() < 0) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "标题不能为空或只含控制字符");
@@ -62,11 +62,11 @@ public class ConversationTitleService {
         events.reserveEvent(userId, conversationId);
         events.insertEvent(userId, conversationId, row.generation(), events.eventSequence(userId, conversationId), "title:" + conversationId + ":" + updated.titleVersion(), "conversation.title_updated", RuntimePayloads.toJson(json, Map.of("title", title, "titleVersion", updated.titleVersion())), LocalDateTime.now(ZoneOffset.UTC));
         committedEvents.publishEvent(new ConversationCommittedSignal(userId, conversationId));
-        return ConversationView.from(updated);
+        return ConversationViewResponse.from(updated);
     }
 
     @Transactional(readOnly = true)
-    public ConversationListPage list(String userId, String cursor, int limit) {
+    public ConversationListPageResponse list(String userId, String cursor, int limit) {
         if (limit < 1 || limit > 100) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "分页大小无效");
         }
@@ -94,6 +94,6 @@ public class ConversationTitleService {
             var last = page.getLast();
             next = Base64.getUrlEncoder().withoutPadding().encodeToString((userId + "|" + last.lastActivityAt() + "|" + reads.conversationId(userId, last.conversationId())).getBytes(StandardCharsets.UTF_8));
         }
-        return new ConversationListPage(page.stream().map(ConversationView::from).toList(), next);
+        return new ConversationListPageResponse(page.stream().map(ConversationViewResponse::from).toList(), next);
     }
 }

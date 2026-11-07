@@ -1,7 +1,7 @@
 package com.agentsquad.squad.presentation.repository;
 
 import com.agentsquad.squad.domain.entity.ExecutionActivityRow;
-import com.agentsquad.squad.domain.dto.ActivityHistoryQuery;
+import com.agentsquad.squad.domain.request.ActivityHistoryRequest;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -32,6 +32,6 @@ public interface ExecutionActivityMapper {
                                       @Param("generation") long generation, @Param("limit") int limit);
 
     List<ExecutionActivityRow> history(@Param("userId") String userId, @Param("conversationId") String conversationId,
-                                       @Param("generation") long generation, @Param("query") ActivityHistoryQuery query,
+                                       @Param("generation") long generation, @Param("query") ActivityHistoryRequest query,
                                        @Param("limit") int limit);
 }

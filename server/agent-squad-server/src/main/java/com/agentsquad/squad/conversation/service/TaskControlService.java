@@ -5,7 +5,7 @@ import com.agentsquad.squad.presentation.service.TaskEventPublishingService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
-import com.agentsquad.squad.domain.dto.CommandReceipt;
+import com.agentsquad.squad.domain.response.CommandReceiptResponse;
 import com.agentsquad.squad.conversation.repository.*;
 import com.agentsquad.squad.runtime.repository.*;
 import com.agentsquad.squad.common.util.ContentDigests;
@@ -70,7 +70,7 @@ public class TaskControlService {
      * 提交取消命令：校验归属与版本、按幂等键去重、撤销未送达业务命令并写入 STOP 命令。
      */
     @Transactional
-    public CommandReceipt cancel(String userId, String taskId, String idempotencyKey, long expectedVersion) {
+    public CommandReceiptResponse cancel(String userId, String taskId, String idempotencyKey, long expectedVersion) {
         validateIdempotencyKey(idempotencyKey);
         TaskRow task = taskMapper.lockOwned(userId, taskId);
         if (task == null) {
@@ -120,14 +120,14 @@ public class TaskControlService {
                 RuntimePayloads.toJson(objectMapper, Map.of("status", GoalTaskStatus.CANCELLING.name(),
                         "version", task.version() + 1)), now);
         log.info("取消命令受理成功 taskId={} commandId={} userId={}", taskId, commandId, userId);
-        return new CommandReceipt(commandId, taskId, RuntimeCommandStatus.PENDING.name(), null, null);
+        return new CommandReceiptResponse(commandId, taskId, RuntimeCommandStatus.PENDING.name(), null, null);
     }
 
     /**
      * 提交恢复命令：校验归属、版本与可恢复状态，按幂等键去重并写入 RESUME 命令。
      */
     @Transactional
-    public CommandReceipt resume(String userId, String taskId, String idempotencyKey, long expectedVersion) {
+    public CommandReceiptResponse resume(String userId, String taskId, String idempotencyKey, long expectedVersion) {
         validateIdempotencyKey(idempotencyKey);
         TaskRow task = taskMapper.lockOwned(userId, taskId);
         if (task == null) {
@@ -163,7 +163,7 @@ public class TaskControlService {
         commandMapper.insertControl(commandId, userId, scopeKey, idempotencyKey, payloadHash,
                 taskId, bindingId, RuntimeCommandAction.RESUME.name(), payloadJson, now);
         log.info("恢复命令受理成功 taskId={} commandId={} userId={}", taskId, commandId, userId);
-        return new CommandReceipt(commandId, taskId, RuntimeCommandStatus.PENDING.name(), null, null);
+        return new CommandReceiptResponse(commandId, taskId, RuntimeCommandStatus.PENDING.name(), null, null);
     }
 
     /**
@@ -191,8 +191,8 @@ public class TaskControlService {
         log.warn("原生恢复命令被阻塞 taskId={} commandId={} errorCode={}", taskId, commandId, errorCode);
     }
 
-    private CommandReceipt toReceipt(CommandRow command) {
-        return new CommandReceipt(command.commandId(), command.taskId(), command.status(),
+    private CommandReceiptResponse toReceipt(CommandRow command) {
+        return new CommandReceiptResponse(command.commandId(), command.taskId(), command.status(),
                 command.nativeTurnId(), null);
     }
 

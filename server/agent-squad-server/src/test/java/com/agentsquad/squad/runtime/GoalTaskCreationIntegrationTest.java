@@ -6,8 +6,8 @@ import com.agentsquad.squad.artifact.service.ArtifactService;
 import java.nio.charset.StandardCharsets;
 
 import com.agentsquad.squad.domain.dto.GoalTaskCreate;
-import com.agentsquad.squad.domain.dto.MessageCreateRequest;
-import com.agentsquad.squad.domain.dto.TaskReceipt;
+import com.agentsquad.squad.domain.request.MessageCreateRequest;
+import com.agentsquad.squad.domain.response.TaskReceiptResponse;
 import com.agentsquad.squad.conversation.service.GoalTaskCreationService;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
 import com.agentsquad.squad.governance.service.BudgetService;
@@ -108,7 +108,7 @@ class GoalTaskCreationIntegrationTest {
         assertThatThrownBy(() -> goals.create(user, session, new GoalTaskCreate("forged", "标题", "目标", UUID.randomUUID().toString())))
                 .isInstanceOf(RuntimeBusinessException.class).hasMessageContaining("当前受权消息");
         assertThatThrownBy(() -> goals.create(UUID.randomUUID().toString(), session, request)).isInstanceOf(RuntimeBusinessException.class);
-        TaskReceipt task = goals.create(user, session, request);
+        TaskReceiptResponse task = goals.create(user, session, request);
         assertThat(goals.create(user, session, request)).isEqualTo(task);
         assertThatThrownBy(() -> goals.create(user, session, new GoalTaskCreate("goal", "标题", "不同目标", message.messageId())))
                 .isInstanceOf(RuntimeBusinessException.class).hasMessageContaining("内容不一致");
@@ -157,7 +157,7 @@ class GoalTaskCreationIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_conversation_event WHERE user_id=? AND event_type='task.created'", Long.class, user)).isEqualTo(1);
     }
 
-    private static TaskReceipt concurrent(ConfigurableApplicationContext context, String user, String session, GoalTaskCreate request,
+    private static TaskReceiptResponse concurrent(ConfigurableApplicationContext context, String user, String session, GoalTaskCreate request,
                                           CountDownLatch ready, CountDownLatch go) throws Exception {
         ready.countDown();
         if (!go.await(10, TimeUnit.SECONDS)) {

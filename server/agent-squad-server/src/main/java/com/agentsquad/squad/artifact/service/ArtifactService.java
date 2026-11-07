@@ -3,7 +3,7 @@ package com.agentsquad.squad.artifact.service;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.domain.entity.ArtifactRow;
-import com.agentsquad.squad.domain.dto.ArtifactView;
+import com.agentsquad.squad.domain.response.ArtifactResponse;
 import com.agentsquad.squad.artifact.repository.ArtifactMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
@@ -56,7 +56,7 @@ public class ArtifactService {
      * 内容校验与摘要完成后原子提交 READY；并发同键重放只返回同一产物。
      */
     @Transactional
-    public ArtifactView upload(String userId, String key, String name, byte[] content) {
+    public ArtifactResponse upload(String userId, String key, String name, byte[] content) {
         if (key == null || key.isBlank() || key.length() > 160 || name == null || name.isBlank()
                 || name.length() > 240 || name.contains("/") || name.contains("\\")
                 || name.chars().anyMatch(value -> value < 32) || content == null || content.length > MAX_BYTES) {
@@ -89,7 +89,7 @@ public class ArtifactService {
         return get(userId, id);
     }
 
-    public ArtifactView get(String userId, String id) {
+    public ArtifactResponse get(String userId, String id) {
         return view(requireOwned(userId, id));
     }
 
@@ -122,7 +122,7 @@ public class ArtifactService {
         }
     }
 
-    public List<ArtifactView> listTask(String userId, String taskId) {
+    public List<ArtifactResponse> listTask(String userId, String taskId) {
         if (taskMapper.findOwned(userId, taskId) == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
         }
@@ -145,7 +145,7 @@ public class ArtifactService {
         }
     }
 
-    public List<ArtifactView> listScope(String userId, String scopeId) {
+    public List<ArtifactResponse> listScope(String userId, String scopeId) {
         scopeService.requireReadable(userId, scopeId);
         return mapper.listScopeIds(userId, scopeId).stream().map(id -> get(userId, id)).toList();
     }
@@ -158,7 +158,7 @@ public class ArtifactService {
         return mapper.listScopeIds(userId, scopeId).contains(id);
     }
 
-    private ArtifactView sameUpload(String userId, ArtifactRow row, String name, String hash) {
+    private ArtifactResponse sameUpload(String userId, ArtifactRow row, String name, String hash) {
         if (row == null || !row.fileName().equals(name) || !row.sha256().equals(hash)) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同上传键的文件不一致");
         }
@@ -173,8 +173,8 @@ public class ArtifactService {
         return row;
     }
 
-    private ArtifactView view(ArtifactRow row) {
-        return new ArtifactView(row.artifactId(), row.fileName(), row.mediaType(), row.sizeBytes(),
+    private ArtifactResponse view(ArtifactRow row) {
+        return new ArtifactResponse(row.artifactId(), row.fileName(), row.mediaType(), row.sizeBytes(),
                 row.sha256(), "READY", row.expiresAt().atOffset(ZoneOffset.UTC).toString());
     }
 

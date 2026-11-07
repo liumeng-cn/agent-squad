@@ -2,8 +2,8 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.domain.dto.GoalTaskCreate;
-import com.agentsquad.squad.domain.dto.MessageCreateRequest;
-import com.agentsquad.squad.domain.dto.MessageReceipt;
+import com.agentsquad.squad.domain.request.MessageCreateRequest;
+import com.agentsquad.squad.domain.response.MessageReceiptResponse;
 import com.agentsquad.squad.conversation.service.FinalDeliveryService;
 import com.agentsquad.squad.conversation.service.GoalTaskCreationService;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
@@ -227,7 +227,7 @@ class FinalDeliveryIntegrationTest {
         }
     }
 
-    private void complete(ConfigurableApplicationContext context, String user, MessageReceipt receipt, String answer) {
+    private void complete(ConfigurableApplicationContext context, String user, MessageReceiptResponse receipt, String answer) {
         JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
         String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
         String scopeId = jdbc.queryForObject("SELECT scope_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
@@ -241,7 +241,7 @@ class FinalDeliveryIntegrationTest {
                 new NativeEventView(1, "end", "run/end", "run", turn, "completed", 0, java.util.Map.of("naturalOutput", output)));
     }
 
-    private MessageReceipt message(ConfigurableApplicationContext context, String user, String conversation, String key) {
+    private MessageReceiptResponse message(ConfigurableApplicationContext context, String user, String conversation, String key) {
         return context.getBean(MessageAcceptanceService.class).accept(user, conversation, key,
                 new MessageCreateRequest("写两篇作文", List.of()));
     }
@@ -250,7 +250,7 @@ class FinalDeliveryIntegrationTest {
         return jdbc.queryForObject("SELECT COUNT(*) FROM sq_message WHERE user_id=? AND role='ASSISTANT'", Long.class, user);
     }
 
-    private String session(JdbcTemplate jdbc, MessageReceipt receipt) {
+    private String session(JdbcTemplate jdbc, MessageReceiptResponse receipt) {
         return jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=(SELECT binding_id FROM sq_response_execution WHERE execution_id=?)", String.class, receipt.executionId());
     }
 

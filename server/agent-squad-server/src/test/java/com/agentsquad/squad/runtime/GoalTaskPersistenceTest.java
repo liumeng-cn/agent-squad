@@ -2,7 +2,7 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.domain.dto.ConversationResponse;
-import com.agentsquad.squad.domain.dto.TaskReceipt;
+import com.agentsquad.squad.domain.response.TaskReceiptResponse;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import org.junit.jupiter.api.Test;
@@ -33,7 +33,7 @@ class GoalTaskPersistenceTest {
         };
         String userId = "00000000-0000-0000-0000-000000000001";
         String otherUser = "00000000-0000-0000-0000-000000000002";
-        TaskReceipt receipt;
+        TaskReceiptResponse receipt;
         try (ConfigurableApplicationContext first = SpringApplication.run(AgentSquadApplication.class, properties)) {
             GoalTaskService service = first.getBean(GoalTaskService.class);
             ConversationResponse conversation = service.createConversation(userId, "服务排障");

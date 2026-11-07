@@ -2,13 +2,13 @@ package com.agentsquad.squad.memory;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.dto.MessageCreateRequest;
+import com.agentsquad.squad.domain.request.MessageCreateRequest;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
 import com.agentsquad.squad.common.MemoryContextInvalidatedException;
-import com.agentsquad.squad.domain.dto.MemoryCreate;
-import com.agentsquad.squad.domain.dto.MemoryUpdate;
+import com.agentsquad.squad.domain.request.MemoryCreateRequest;
+import com.agentsquad.squad.domain.request.MemoryUpdateRequest;
 import com.agentsquad.squad.domain.dto.MemoryWriteRequest;
 import com.agentsquad.squad.memory.service.ExplicitMemoryWriteService;
 import com.agentsquad.squad.memory.service.MemoryContextService;
@@ -38,15 +38,15 @@ class MemoryIntegrationTest {
         try (var context = start(database(directory))) {
             MemoryService service = context.getBean(MemoryService.class);
             String user = UUID.randomUUID().toString();
-            var created = service.create(user, new MemoryCreate("language", "中文", null));
+            var created = service.create(user, new MemoryCreateRequest("language", "中文", null));
             String id = created.memory().memoryId();
-            assertThat(service.create(user, new MemoryCreate("language", "中文", null)).memory().memoryId()).isEqualTo(id);
-            assertThatThrownBy(() -> service.create(user, new MemoryCreate("language", "English", null))).isInstanceOf(RuntimeBusinessException.class);
-            assertThatThrownBy(() -> service.update("foreign", id, new MemoryUpdate(0, "English", null))).isInstanceOf(RuntimeBusinessException.class);
+            assertThat(service.create(user, new MemoryCreateRequest("language", "中文", null)).memory().memoryId()).isEqualTo(id);
+            assertThatThrownBy(() -> service.create(user, new MemoryCreateRequest("language", "English", null))).isInstanceOf(RuntimeBusinessException.class);
+            assertThatThrownBy(() -> service.update("foreign", id, new MemoryUpdateRequest(0, "English", null))).isInstanceOf(RuntimeBusinessException.class);
             assertThat(service.list("foreign", null, 20).items()).isEmpty();
-            var corrected = service.update(user, id, new MemoryUpdate(0, "简体中文", null));
+            var corrected = service.update(user, id, new MemoryUpdateRequest(0, "简体中文", null));
             assertThat(corrected.memory().version()).isEqualTo(1);
-            assertThatThrownBy(() -> service.update(user, id, new MemoryUpdate(0, "旧值", null))).isInstanceOf(RuntimeBusinessException.class);
+            assertThatThrownBy(() -> service.update(user, id, new MemoryUpdateRequest(0, "旧值", null))).isInstanceOf(RuntimeBusinessException.class);
             assertThat(service.search(user, "简体", 20).getFirst().content()).isEqualTo("简体中文");
             assertThat(service.list(user, null, 20).items().getFirst().content()).isEqualTo("简体中文");
         }
@@ -60,12 +60,12 @@ class MemoryIntegrationTest {
         String id;
         try (var context = start(database)) {
             var service = context.getBean(MemoryService.class);
-            id = service.create(user, new MemoryCreate("preference", "旧值", null)).memory().memoryId();
+            id = service.create(user, new MemoryCreateRequest("preference", "旧值", null)).memory().memoryId();
             scope = newScope(context, user, "请回复");
             var contexts = context.getBean(MemoryContextService.class);
             assertThat(contexts.freeze(user, scope).memories().getFirst().content()).isEqualTo("旧值");
             assertThatThrownBy(() -> contexts.select(user, scope, List.of(UUID.randomUUID().toString()))).isInstanceOf(RuntimeBusinessException.class);
-            var changed = service.update(user, id, new MemoryUpdate(0, "新值", null));
+            var changed = service.update(user, id, new MemoryUpdateRequest(0, "新值", null));
             assertThat(changed.affectedScopes()).isEqualTo(1);
             assertThatThrownBy(() -> contexts.requireCurrent(user, scope)).isInstanceOf(MemoryContextInvalidatedException.class);
             String next = newScope(context, user, "再回复");
@@ -90,7 +90,7 @@ class MemoryIntegrationTest {
         try (var context = start(database(directory))) {
             String user = UUID.randomUUID().toString();
             String id = context.getBean(MemoryService.class).create(user,
-                    new MemoryCreate("expiry", "有时效的内容", java.time.OffsetDateTime.now(ZoneOffset.UTC).plusHours(1))).memory().memoryId();
+                    new MemoryCreateRequest("expiry", "有时效的内容", java.time.OffsetDateTime.now(ZoneOffset.UTC).plusHours(1))).memory().memoryId();
             String scope = newScope(context, user, "读取有效内容");
             var contexts = context.getBean(MemoryContextService.class);
             assertThat(contexts.freeze(user, scope).memoryRevision()).isZero();
@@ -179,21 +179,21 @@ class MemoryIntegrationTest {
             var service = context.getBean(MemoryService.class);
             var contexts = context.getBean(MemoryContextService.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            String oldId = service.create(user, new MemoryCreate("回复语言", "旧偏好", null)).memory().memoryId();
+            String oldId = service.create(user, new MemoryCreateRequest("回复语言", "旧偏好", null)).memory().memoryId();
             String oldScope = newScope(context, user, "使用原偏好回复");
             contexts.freeze(user, oldScope);
             service.delete(user, oldId, 0);
 
-            var recreated = service.create(user, new MemoryCreate("回复语言", "新偏好", null));
+            var recreated = service.create(user, new MemoryCreateRequest("回复语言", "新偏好", null));
             String newId = recreated.memory().memoryId();
             assertThat(newId).isNotEqualTo(oldId);
             assertThat(recreated.memory().version()).isZero();
             assertThat(service.requireOwned(user, oldId).status()).isEqualTo("DELETED");
             assertThat(service.requireOwned(user, oldId).content()).isEmpty();
-            assertThat(service.create(user, new MemoryCreate("回复语言", "新偏好", null)).memory().memoryId()).isEqualTo(newId);
-            assertThatThrownBy(() -> service.create(user, new MemoryCreate("回复语言", "覆盖新偏好", null)))
+            assertThat(service.create(user, new MemoryCreateRequest("回复语言", "新偏好", null)).memory().memoryId()).isEqualTo(newId);
+            assertThatThrownBy(() -> service.create(user, new MemoryCreateRequest("回复语言", "覆盖新偏好", null)))
                     .isInstanceOf(RuntimeBusinessException.class);
-            assertThatThrownBy(() -> service.update(user, oldId, new MemoryUpdate(1, "不能复活", null)))
+            assertThatThrownBy(() -> service.update(user, oldId, new MemoryUpdateRequest(1, "不能复活", null)))
                     .isInstanceOf(RuntimeBusinessException.class);
             assertThatThrownBy(() -> contexts.requireCurrent(user, oldScope)).isInstanceOf(MemoryContextInvalidatedException.class);
             String fresh = newScope(context, user, "使用新偏好回复");
@@ -212,7 +212,7 @@ class MemoryIntegrationTest {
             assertThat(service.requireOwned(user, oldId).status()).isEqualTo("DELETED");
             assertThat(service.requireOwned(user, newId).content()).isEqualTo("英文");
             service.delete(user, newId, 1);
-            String thirdId = service.create(user, new MemoryCreate("回复语言", "第三次偏好", null)).memory().memoryId();
+            String thirdId = service.create(user, new MemoryCreateRequest("回复语言", "第三次偏好", null)).memory().memoryId();
             assertThat(thirdId).isNotIn(oldId, newId);
         }
     }
@@ -233,7 +233,7 @@ class MemoryIntegrationTest {
                 oldId, user, "可重新使用的键");
         try (var context = start(url, "classpath:db/schema.sql")) {
             MemoryService service = context.getBean(MemoryService.class);
-            String newId = service.create(user, new MemoryCreate("可重新使用的键", "升级后明确重新创建", null)).memory().memoryId();
+            String newId = service.create(user, new MemoryCreateRequest("可重新使用的键", "升级后明确重新创建", null)).memory().memoryId();
             assertThat(newId).isNotEqualTo(oldId);
             assertThat(service.requireOwned(user, oldId).status()).isEqualTo("DELETED");
             assertThat(service.requireOwned(user, oldId).version()).isEqualTo(1);

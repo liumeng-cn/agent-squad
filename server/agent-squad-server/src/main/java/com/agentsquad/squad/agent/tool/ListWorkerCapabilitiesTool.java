@@ -3,7 +3,7 @@ package com.agentsquad.squad.agent.tool;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
-import com.agentsquad.squad.domain.dto.WorkerDefinitionPage;
+import com.agentsquad.squad.domain.response.WorkerDefinitionPageResponse;
 import com.agentsquad.squad.domain.dto.WorkerDefinitionResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.message.ToolResultBlock;
@@ -99,7 +99,7 @@ public class ListWorkerCapabilitiesTool implements AgentTool {
             return ToolResultBlock.error("能力目录每页最多 20 条");
         }
         try {
-            WorkerDefinitionPage page = definitionService.listEnabled(cursor, limit);
+            WorkerDefinitionPageResponse page = definitionService.listEnabled(cursor, limit);
             List<Map<String, String>> summaries = page.items().stream()
                     .map(definition -> Map.of(
                             "workerKey", definition.workerKey(),

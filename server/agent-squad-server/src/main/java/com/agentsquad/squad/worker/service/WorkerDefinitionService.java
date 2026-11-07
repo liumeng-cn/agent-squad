@@ -9,10 +9,10 @@ import com.agentsquad.squad.common.util.JsonSchemaValidator;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.domain.entity.WorkerDefinitionRow;
-import com.agentsquad.squad.domain.dto.WorkerDefinitionCreateRequest;
-import com.agentsquad.squad.domain.dto.WorkerDefinitionPage;
+import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.domain.response.WorkerDefinitionPageResponse;
 import com.agentsquad.squad.domain.dto.WorkerDefinitionResponse;
-import com.agentsquad.squad.domain.dto.WorkerStatusUpdateRequest;
+import com.agentsquad.squad.domain.request.WorkerStatusUpdateRequest;
 import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;
 import com.agentsquad.squad.worker.repository.WorkerDefinitionMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -95,23 +95,23 @@ public class WorkerDefinitionService {
     /**
      * 按持久主键分页读取已发布定义，不启动或恢复任何 Worker。
      */
-    public WorkerDefinitionPage list(String cursor, int limit) {
+    public WorkerDefinitionPageResponse list(String cursor, int limit) {
         long afterId = parseCursor(cursor);
         int pageSize = Math.clamp(limit, 1, 100);
         List<WorkerDefinitionRow> rows = definitionMapper.listAfter(afterId, pageSize);
         String nextCursor = rows.size() == pageSize ? String.valueOf(rows.getLast().id()) : null;
-        return new WorkerDefinitionPage(rows.stream().map(this::toResponse).toList(), nextCursor);
+        return new WorkerDefinitionPageResponse(rows.stream().map(this::toResponse).toList(), nextCursor);
     }
 
     /**
      * Master 按持久版本发现当前可调度能力；页游标只用于遍历，不成为执行授权。
      */
-    public WorkerDefinitionPage listEnabled(String cursor, int limit) {
+    public WorkerDefinitionPageResponse listEnabled(String cursor, int limit) {
         long afterId = parseCursor(cursor);
         int pageSize = Math.clamp(limit, 1, 20);
         List<WorkerDefinitionRow> rows = definitionMapper.listEnabledAfter(afterId, pageSize);
         String nextCursor = rows.size() == pageSize ? String.valueOf(rows.get(rows.size() - 1).id()) : null;
-        return new WorkerDefinitionPage(rows.stream().map(this::toResponse).toList(), nextCursor);
+        return new WorkerDefinitionPageResponse(rows.stream().map(this::toResponse).toList(), nextCursor);
     }
 
     /**

@@ -1,15 +1,15 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.domain.dto.MessageCreateRequest;
+import com.agentsquad.squad.domain.request.MessageCreateRequest;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
-import com.agentsquad.squad.domain.dto.MemoryCreate;
-import com.agentsquad.squad.domain.dto.MemoryUpdate;
+import com.agentsquad.squad.domain.request.MemoryCreateRequest;
+import com.agentsquad.squad.domain.request.MemoryUpdateRequest;
 import com.agentsquad.squad.memory.service.MemoryService;
 import com.agentsquad.squad.runtime.service.ExecutionAuthorizationService;
 import com.agentsquad.squad.domain.dto.SkillFile;
-import com.agentsquad.squad.domain.dto.SkillGrantRequest;
-import com.agentsquad.squad.domain.dto.SkillImportRequest;
+import com.agentsquad.squad.domain.request.SkillGrantRequest;
+import com.agentsquad.squad.domain.request.SkillImportRequest;
 import com.agentsquad.squad.skill.service.SkillService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -41,7 +41,7 @@ class MySqlKnowledgeGovernanceTest {
             var imported = skills.importPackage(user, new SkillImportRequest(List.of(new SkillFile("SKILL.md",
                     "---\nname: mysql-rule\ndescription: MySQL验证技能\nversion: 1.0.0\n---\n固定内容"))));
             skills.changeGrant(user, imported.skillVersionId(), new SkillGrantRequest(true, 0L));
-            var memory = context.getBean(MemoryService.class).create(user, new MemoryCreate("language", "中文", null));
+            var memory = context.getBean(MemoryService.class).create(user, new MemoryCreateRequest("language", "中文", null));
             var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "governance",
                     new MessageCreateRequest("验证隔离知识资料", List.of()));
             var jdbc = context.getBean(JdbcTemplate.class);
@@ -54,7 +54,7 @@ class MySqlKnowledgeGovernanceTest {
             gate.requireScopeCurrent(user, scope);
             assertThatThrownBy(() -> skills.detail(UUID.randomUUID().toString(), imported.skillVersionId())).hasMessageContaining("不存在");
             var memories = context.getBean(MemoryService.class);
-            memories.update(user, memory.memory().memoryId(), new MemoryUpdate(0, "英文", null));
+            memories.update(user, memory.memory().memoryId(), new MemoryUpdateRequest(0, "英文", null));
             assertThatThrownBy(() -> gate.requireScopeCurrent(user, scope)).hasMessageContaining("旧上下文");
             memories.delete(user, memory.memory().memoryId(), 1);
             assertThat(jdbc.queryForObject("SELECT content FROM sq_memory WHERE memory_id=?", String.class, memory.memory().memoryId())).isEmpty();

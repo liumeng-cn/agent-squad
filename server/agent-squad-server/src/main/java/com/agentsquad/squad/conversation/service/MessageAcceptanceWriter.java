@@ -8,7 +8,7 @@ import com.agentsquad.squad.common.observability.ObservationSupport;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.domain.entity.ConversationRow;
 import com.agentsquad.squad.domain.entity.MessageSubmissionRow;
-import com.agentsquad.squad.domain.dto.MessageCreateRequest;
+import com.agentsquad.squad.domain.request.MessageCreateRequest;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
