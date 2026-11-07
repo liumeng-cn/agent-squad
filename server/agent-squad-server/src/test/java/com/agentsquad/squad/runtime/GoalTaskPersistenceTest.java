@@ -3,7 +3,7 @@ package com.agentsquad.squad.runtime;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.domain.dto.ConversationResponse;
 import com.agentsquad.squad.domain.response.TaskReceiptResponse;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

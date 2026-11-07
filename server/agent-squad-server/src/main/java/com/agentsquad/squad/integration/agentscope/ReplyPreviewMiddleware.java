@@ -68,7 +68,7 @@ public class ReplyPreviewMiddleware implements MiddlewareBase {
     /**
      * 页面推送故障不能中止模型；只记录分类，临时文本允许丢失。
      */
-    private void publish(com.agentsquad.squad.presentation.service.ReplyPreviewSignal signal) {
+    private void publish(com.agentsquad.squad.service.ReplyPreviewSignal signal) {
         try {
             previews.publishEvent(signal);
         } catch (RuntimeException unavailable) {

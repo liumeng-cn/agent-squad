@@ -2,9 +2,9 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.domain.request.MessageCreateRequest;
-import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
+import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.model.domain.ReasoningMode;
-import com.agentsquad.squad.model.service.ModelCatalogService;
+import com.agentsquad.squad.service.ModelCatalogService;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;

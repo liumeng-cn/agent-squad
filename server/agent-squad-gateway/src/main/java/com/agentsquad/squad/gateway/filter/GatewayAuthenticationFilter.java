@@ -1,6 +1,6 @@
 package com.agentsquad.squad.gateway.filter;
 
-import com.agentsquad.squad.gateway.auth.service.AuthService;
+import com.agentsquad.squad.gateway.service.AuthService;
 import com.agentsquad.squad.gateway.auth.AuthView;
 import com.agentsquad.squad.gateway.auth.InternalIdentitySigner;
 import jakarta.annotation.Resource;

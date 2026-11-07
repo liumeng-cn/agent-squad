@@ -3,7 +3,7 @@ package com.agentsquad.squad.integration.agentscope.middleware;
 import com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper;
 import com.agentsquad.squad.integration.agentscope.CachedReplyModel;
 import com.agentsquad.squad.model.domain.AcceptedModelChoice;
-import com.agentsquad.squad.model.service.ModelCatalogService;
+import com.agentsquad.squad.service.ModelCatalogService;
 import io.agentscope.core.agent.Agent;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.event.AgentEvent;

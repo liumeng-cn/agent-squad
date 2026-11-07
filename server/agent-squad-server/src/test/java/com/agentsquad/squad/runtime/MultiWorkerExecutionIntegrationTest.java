@@ -1,13 +1,13 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.domain.dto.PlanNode;
 import com.agentsquad.squad.domain.dto.PlanPublish;
-import com.agentsquad.squad.runtime.service.ContextSnapshotService;
-import com.agentsquad.squad.runtime.service.PlanService;
-import com.agentsquad.squad.worker.service.WorkerDefinitionService;
+import com.agentsquad.squad.service.ContextSnapshotService;
+import com.agentsquad.squad.service.PlanService;
+import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
@@ -156,7 +156,7 @@ class MultiWorkerExecutionIntegrationTest {
                 if (cancel) {
                     assertThat(firstCalls.await(10, TimeUnit.SECONDS)).isTrue();
                     long version = jdbc.queryForObject("SELECT version FROM sq_goal_task WHERE task_id=?", Long.class, taskId);
-                    context.getBean(com.agentsquad.squad.conversation.service.TaskControlService.class).cancel(userId, taskId, "stop-both", version);
+                    context.getBean(com.agentsquad.squad.service.TaskControlService.class).cancel(userId, taskId, "stop-both", version);
                     String cancelled = null;
                     for (int attempt = 0; attempt < 150; attempt++) {
                         cancelled = jdbc.queryForObject("SELECT status FROM sq_goal_task WHERE task_id=?", String.class, taskId);

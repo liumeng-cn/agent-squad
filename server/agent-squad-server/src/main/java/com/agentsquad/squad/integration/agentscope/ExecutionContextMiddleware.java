@@ -2,14 +2,14 @@ package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
-import com.agentsquad.squad.conversation.service.ExecutionScopeService;
+import com.agentsquad.squad.service.ExecutionScopeService;
 import com.agentsquad.squad.domain.exception.SkillCapabilityUnavailableException;
 import com.agentsquad.squad.domain.model.WorkerExecutionIdentity;
-import com.agentsquad.squad.identity.service.UserStatusGuard;
+import com.agentsquad.squad.service.UserStatusGuard;
 import com.agentsquad.squad.domain.exception.ExecutionContextInvalidatedException;
 import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
-import com.agentsquad.squad.runtime.service.ExecutionAuthorizationService;
-import com.agentsquad.squad.runtime.service.ExecutionRestrictionService;
+import com.agentsquad.squad.service.ExecutionAuthorizationService;
+import com.agentsquad.squad.service.ExecutionRestrictionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.Agent;
 import io.agentscope.core.agent.RuntimeContext;
@@ -42,10 +42,10 @@ public class ExecutionContextMiddleware implements MiddlewareBase {
     @Resource
     private com.agentsquad.squad.common.observability.ExecutionTrace executionTrace;
     @Resource
-    private com.agentsquad.squad.skill.service.SkillRuntimeService skills;
+    private com.agentsquad.squad.service.SkillRuntimeService skills;
 
     @Resource
-    private com.agentsquad.squad.runtime.service.ExecutionFailureService failures;
+    private com.agentsquad.squad.service.ExecutionFailureService failures;
 
     @Resource
     private ExecutionAuthorizationService authorization;

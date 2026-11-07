@@ -1,6 +1,6 @@
 package com.agentsquad.squad.integration.agentscope;
 
-import com.agentsquad.squad.integration.agentscope.service.CommandDeliveryService;
+import com.agentsquad.squad.service.CommandDeliveryService;
 
 import com.agentsquad.squad.config.RedisWakeupProperties;
 import com.agentsquad.squad.domain.entity.CommandClaimContextDO;

@@ -3,7 +3,7 @@ package com.agentsquad.squad.controller;
 import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.domain.request.MessageCreateRequest;
 import com.agentsquad.squad.domain.response.MessageReceiptResponse;
-import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
+import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.identity.UserContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.annotation.Resource;

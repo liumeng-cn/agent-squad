@@ -3,7 +3,7 @@ package com.agentsquad.squad.presentation.stream;
 import com.agentsquad.squad.domain.entity.ReplyPreviewTargetDO;
 import com.agentsquad.squad.integration.agentscope.ReplyPreviewBuffer;
 import com.agentsquad.squad.presentation.domain.ReplyPreviewPhase;
-import com.agentsquad.squad.presentation.service.ReplyPreviewSignal;
+import com.agentsquad.squad.service.ReplyPreviewSignal;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

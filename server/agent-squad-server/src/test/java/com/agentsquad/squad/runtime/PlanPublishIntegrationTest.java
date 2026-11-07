@@ -4,21 +4,21 @@ import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.domain.dto.ConversationResponse;
 import com.agentsquad.squad.domain.response.TaskReceiptResponse;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.integration.agentscope.middleware.ScopedMasterToolsMiddleware;
 import com.agentsquad.squad.domain.dto.PlanNode;
 import com.agentsquad.squad.domain.dto.PlanPublish;
 import com.agentsquad.squad.domain.dto.PlanReceipt;
-import com.agentsquad.squad.runtime.service.ContextSnapshotService;
-import com.agentsquad.squad.runtime.service.MasterSignalService;
-import com.agentsquad.squad.runtime.service.PlanService;
-import com.agentsquad.squad.runtime.service.WorkerDispatchService;
-import com.agentsquad.squad.runtime.service.WorkerResultService;
-import com.agentsquad.squad.presentation.service.TaskSnapshotService;
+import com.agentsquad.squad.service.ContextSnapshotService;
+import com.agentsquad.squad.service.MasterSignalService;
+import com.agentsquad.squad.service.PlanService;
+import com.agentsquad.squad.service.WorkerDispatchService;
+import com.agentsquad.squad.service.WorkerResultService;
+import com.agentsquad.squad.service.TaskSnapshotService;
 import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
-import com.agentsquad.squad.worker.service.WorkerDefinitionService;
+import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -351,7 +351,7 @@ class PlanPublishIntegrationTest {
             assertThat(commands.countPlanSignalTurn(userId, task.taskId(), "old-plan-signal", 2)).isZero();
             jdbc.update("UPDATE sq_goal_task SET status = 'RUNNING' WHERE task_id = ?", task.taskId());
             String masterBinding = jdbc.queryForObject("SELECT binding_id FROM sq_runtime_binding WHERE framework_session_id = ?", String.class, sessionId);
-            var finalizer = new com.agentsquad.squad.runtime.service.TaskFinalizerService();
+            var finalizer = new com.agentsquad.squad.service.TaskFinalizerService();
             org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "directives", context.getBean(com.agentsquad.squad.conversation.repository.TaskDirectiveMapper.class));
             org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "completionMapper", context.getBean(com.agentsquad.squad.runtime.repository.CompletionMapper.class));
             org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "planMapper", context.getBean(com.agentsquad.squad.runtime.repository.PlanMapper.class));
@@ -365,7 +365,7 @@ class PlanPublishIntegrationTest {
 
             // 实际执行时等待，恢复受阻时开放协调工具，不能同时要求 Master 空等。
             var middleware = new ScopedMasterToolsMiddleware();
-            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "scopes", context.getBean(com.agentsquad.squad.conversation.service.ExecutionScopeService.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "scopes", context.getBean(com.agentsquad.squad.service.ExecutionScopeService.class));
             org.springframework.test.util.ReflectionTestUtils.setField(middleware, "scopeMapper", context.getBean(com.agentsquad.squad.conversation.repository.ExecutionScopeMapper.class));
             org.springframework.test.util.ReflectionTestUtils.setField(middleware, "tasks", context.getBean(com.agentsquad.squad.conversation.repository.TaskMapper.class));
             org.springframework.test.util.ReflectionTestUtils.setField(middleware, "plans", context.getBean(com.agentsquad.squad.runtime.repository.PlanMapper.class));

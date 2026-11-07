@@ -10,7 +10,7 @@ import com.agentsquad.squad.agent.tool.PublishPlanTool;
 import com.agentsquad.squad.agent.tool.RequestInputTool;
 import com.agentsquad.squad.agent.tool.SubmitTaskDirectiveTool;
 import com.agentsquad.squad.domain.entity.DeliveryDO;
-import com.agentsquad.squad.conversation.service.ResponseContextService;
+import com.agentsquad.squad.service.ResponseContextService;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.integration.agentscope.ExecutionContextMiddleware;
 import com.agentsquad.squad.integration.agentscope.middleware.ModelBudgetMiddleware;

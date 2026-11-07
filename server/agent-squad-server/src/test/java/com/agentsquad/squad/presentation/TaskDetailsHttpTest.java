@@ -3,13 +3,13 @@ package com.agentsquad.squad.presentation;
 import com.agentsquad.squad.testsupport.ApiResultJson;
 import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.artifact.service.ArtifactService;
+import com.agentsquad.squad.service.ArtifactService;
 import com.agentsquad.squad.domain.response.ArtifactResponse;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.service.GoalTaskService;
 
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.interaction.repository.InteractionMapper;
-import com.agentsquad.squad.interaction.service.InputFormSchema;
+import com.agentsquad.squad.service.InputFormSchema;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

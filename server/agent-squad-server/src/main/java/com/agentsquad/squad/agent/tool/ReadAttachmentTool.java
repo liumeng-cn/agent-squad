@@ -1,11 +1,11 @@
 package com.agentsquad.squad.agent.tool;
 
 import com.agentsquad.squad.domain.entity.ArtifactDO;
-import com.agentsquad.squad.artifact.service.ArtifactService;
+import com.agentsquad.squad.service.ArtifactService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.util.MaterialFormatter;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.conversation.service.ExecutionScopeService;
+import com.agentsquad.squad.service.ExecutionScopeService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.ToolResultBlock;

@@ -2,7 +2,7 @@ package com.agentsquad.squad.controller;
 
 import com.agentsquad.squad.domain.entity.ArtifactDO;
 import com.agentsquad.squad.domain.response.ArtifactResponse;
-import com.agentsquad.squad.artifact.service.ArtifactService;
+import com.agentsquad.squad.service.ArtifactService;
 import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.identity.UserContext;
 import jakarta.servlet.http.HttpServletRequest;

@@ -3,9 +3,9 @@ package com.agentsquad.squad.runtime;
 import com.agentsquad.squad.testsupport.ApiResultJson;
 import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.artifact.service.ArtifactService;
+import com.agentsquad.squad.service.ArtifactService;
 import com.agentsquad.squad.domain.response.MessageReceiptResponse;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.service.GoalTaskService;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;

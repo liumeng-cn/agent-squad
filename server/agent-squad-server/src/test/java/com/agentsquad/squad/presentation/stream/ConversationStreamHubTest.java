@@ -1,13 +1,13 @@
 package com.agentsquad.squad.presentation.stream;
 
-import com.agentsquad.squad.identity.service.UserStatusGuard;
+import com.agentsquad.squad.service.UserStatusGuard;
 import com.agentsquad.squad.domain.dto.ConversationEvent;
 import com.agentsquad.squad.domain.dto.ReplyPreview;
 import com.agentsquad.squad.presentation.domain.ReplyPreviewPhase;
-import com.agentsquad.squad.presentation.service.ConversationQueryService;
-import com.agentsquad.squad.presentation.service.ConversationStreamHub;
-import com.agentsquad.squad.presentation.service.ConversationStreamKey;
-import com.agentsquad.squad.presentation.service.ConversationSubscriber;
+import com.agentsquad.squad.service.ConversationQueryService;
+import com.agentsquad.squad.service.ConversationStreamHub;
+import com.agentsquad.squad.service.ConversationStreamKey;
+import com.agentsquad.squad.service.ConversationSubscriber;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import org.junit.jupiter.api.Test;
 

@@ -3,17 +3,17 @@ package com.agentsquad.squad.runtime;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.domain.dto.ConversationResponse;
 import com.agentsquad.squad.domain.response.TaskReceiptResponse;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.integration.agentscope.service.CommandDeliveryService;
+import com.agentsquad.squad.service.CommandDeliveryService;
 import com.agentsquad.squad.integration.agentscope.NativeProjectionPoller;
 import com.agentsquad.squad.integration.agentscope.WorkerFactory;
 import com.agentsquad.squad.domain.dto.PlanNode;
 import com.agentsquad.squad.domain.dto.PlanPublish;
 import com.agentsquad.squad.domain.dto.PlanReceipt;
-import com.agentsquad.squad.runtime.service.ContextSnapshotService;
-import com.agentsquad.squad.runtime.service.PlanService;
-import com.agentsquad.squad.worker.service.WorkerDefinitionService;
+import com.agentsquad.squad.service.ContextSnapshotService;
+import com.agentsquad.squad.service.PlanService;
+import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
@@ -174,7 +174,7 @@ class WorkerCrashRecoveryIntegrationTest {
                 // 通过真实业务服务建立已提交候选夹具；旧模型调用仍阻塞，保留尚未结束的writer。
                 String guard = jdbc.queryForObject("SELECT guard_token FROM sq_worker_job WHERE job_id = ?", String.class, jobId);
                 String turn = jdbc.queryForObject("SELECT native_turn_id FROM sq_command WHERE command_id = ?", String.class, commandId);
-                first.getBean(com.agentsquad.squad.runtime.service.WorkerResultService.class).propose(
+                first.getBean(com.agentsquad.squad.service.WorkerResultService.class).propose(
                         userId, bindingId, guard, turn, json.readTree("{\"text\":\"候选摘要\"}"));
                 for (int attempt = 0; attempt < 100; attempt++) {
                     String candidate = jdbc.queryForObject(

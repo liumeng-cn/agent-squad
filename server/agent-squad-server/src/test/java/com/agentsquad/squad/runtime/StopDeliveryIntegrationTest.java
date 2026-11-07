@@ -1,16 +1,16 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.conversation.service.ExecutionScopeService;
-import com.agentsquad.squad.integration.agentscope.service.CommandDeliveryService;
+import com.agentsquad.squad.service.ExecutionScopeService;
+import com.agentsquad.squad.service.CommandDeliveryService;
 import com.agentsquad.squad.domain.model.MasterAgentIdentity;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.conversation.repository.TaskEventMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
-import com.agentsquad.squad.conversation.service.ConversationCleanupScheduler;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.service.ConversationCleanupScheduler;
+import com.agentsquad.squad.service.GoalTaskService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;

@@ -21,11 +21,11 @@ import com.agentsquad.squad.identity.UserContext;
 import jakarta.servlet.http.HttpServletRequest;
 import com.agentsquad.squad.domain.response.TaskSnapshotResponse;
 import com.agentsquad.squad.domain.response.WorkerJobPageResponse;
-import com.agentsquad.squad.conversation.service.ConversationDeletionService;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
-import com.agentsquad.squad.conversation.service.TaskControlService;
-import com.agentsquad.squad.presentation.service.TaskEventStreamer;
-import com.agentsquad.squad.presentation.service.TaskSnapshotService;
+import com.agentsquad.squad.service.ConversationDeletionService;
+import com.agentsquad.squad.service.GoalTaskService;
+import com.agentsquad.squad.service.TaskControlService;
+import com.agentsquad.squad.service.TaskEventStreamer;
+import com.agentsquad.squad.service.TaskSnapshotService;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -52,7 +52,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class RuntimeController {
 
     @Resource
-    private com.agentsquad.squad.conversation.service.ConversationTitleService conversationTitles;
+    private com.agentsquad.squad.service.ConversationTitleService conversationTitles;
 
     @Resource
     private GoalTaskService goalTaskService;

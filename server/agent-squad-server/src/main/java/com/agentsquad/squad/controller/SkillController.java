@@ -10,7 +10,7 @@ import com.agentsquad.squad.domain.request.SkillImportRequest;
 import com.agentsquad.squad.domain.response.SkillPageResponse;
 import com.agentsquad.squad.domain.request.SkillRevokeRequest;
 import com.agentsquad.squad.domain.response.SkillVersionResponse;
-import com.agentsquad.squad.skill.service.SkillService;
+import com.agentsquad.squad.service.SkillService;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;

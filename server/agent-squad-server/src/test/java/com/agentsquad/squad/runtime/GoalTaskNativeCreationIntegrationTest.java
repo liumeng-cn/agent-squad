@@ -2,9 +2,9 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.domain.request.MessageCreateRequest;
-import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
+import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.worker.service.WorkerDefinitionService;
+import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

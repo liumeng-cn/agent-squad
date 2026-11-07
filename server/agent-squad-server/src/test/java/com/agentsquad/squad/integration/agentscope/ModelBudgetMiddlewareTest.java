@@ -3,8 +3,8 @@ package com.agentsquad.squad.integration.agentscope;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.domain.dto.ConversationResponse;
 import com.agentsquad.squad.domain.response.TaskReceiptResponse;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
-import com.agentsquad.squad.governance.service.BudgetService;
+import com.agentsquad.squad.service.GoalTaskService;
+import com.agentsquad.squad.service.BudgetService;
 import com.agentsquad.squad.governance.repository.BudgetMapper;
 import com.agentsquad.squad.integration.agentscope.middleware.ModelBudgetMiddleware;
 import com.agentsquad.squad.worker.profile.WorkerModelProfile;
@@ -123,13 +123,13 @@ class ModelBudgetMiddlewareTest {
         profiles.setModelProfiles(Map.of("default", profile));
 
         ModelBudgetMiddleware middleware = new ModelBudgetMiddleware();
-        ReflectionTestUtils.setField(middleware, "failures", spring.getBean(com.agentsquad.squad.runtime.service.ExecutionFailureService.class));
+        ReflectionTestUtils.setField(middleware, "failures", spring.getBean(com.agentsquad.squad.service.ExecutionFailureService.class));
         ReflectionTestUtils.setField(middleware, "budgetMapper", spring.getBean(BudgetMapper.class));
         ReflectionTestUtils.setField(middleware, "budgetService", spring.getBean(BudgetService.class));
         ReflectionTestUtils.setField(middleware, "profileRegistry", profiles);
         ReflectionTestUtils.setField(middleware, "objectMapper", spring.getBean(ObjectMapper.class));
         ReflectionTestUtils.setField(middleware, "userStatusGuard",
-                spring.getBean(com.agentsquad.squad.identity.service.UserStatusGuard.class));
+                spring.getBean(com.agentsquad.squad.service.UserStatusGuard.class));
         return new Fixture(middleware, runtime, jdbc, task.taskId());
     }
 

@@ -1,10 +1,10 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.artifact.service.ArtifactService;
+import com.agentsquad.squad.service.ArtifactService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.domain.model.ResponseContextSnapshot;
 import com.agentsquad.squad.domain.response.MessageReceiptResponse;
-import com.agentsquad.squad.conversation.service.ResponseContextService;
+import com.agentsquad.squad.service.ResponseContextService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.context.ConfigurableApplicationContext;

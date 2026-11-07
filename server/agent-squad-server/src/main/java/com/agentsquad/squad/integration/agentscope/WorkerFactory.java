@@ -11,9 +11,9 @@ import com.agentsquad.squad.domain.entity.ContextSnapshotDO;
 import com.agentsquad.squad.domain.entity.WorkerLaunchDO;
 import com.agentsquad.squad.runtime.repository.ContextSnapshotMapper;
 import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
-import com.agentsquad.squad.runtime.service.WorkerDispatchService;
-import com.agentsquad.squad.runtime.service.WorkerResultService;
-import com.agentsquad.squad.worker.service.WorkerDefinitionService;
+import com.agentsquad.squad.service.WorkerDispatchService;
+import com.agentsquad.squad.service.WorkerResultService;
+import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.agentsquad.squad.domain.dto.WorkerDefinitionResponse;
 import com.agentsquad.squad.worker.profile.WorkerModelProfile;
 import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;
@@ -112,7 +112,7 @@ public class WorkerFactory {
     private final Map<String, WorkerAgentHandle> active = new ConcurrentHashMap<>();
 
     @Resource
-    private com.agentsquad.squad.model.service.ModelCatalogService modelCatalog;
+    private com.agentsquad.squad.service.ModelCatalogService modelCatalog;
 
     @Resource
     private LocalSessionStopper localSessions;

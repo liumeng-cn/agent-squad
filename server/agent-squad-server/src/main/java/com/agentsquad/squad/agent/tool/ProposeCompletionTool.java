@@ -2,7 +2,7 @@ package com.agentsquad.squad.agent.tool;
 
 import com.agentsquad.squad.domain.enums.GoalTaskStatus;
 import com.agentsquad.squad.domain.dto.CompletionProposalReceipt;
-import com.agentsquad.squad.runtime.service.CompletionProposalService;
+import com.agentsquad.squad.service.CompletionProposalService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.ToolResultBlock;

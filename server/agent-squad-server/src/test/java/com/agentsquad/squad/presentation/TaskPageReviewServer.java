@@ -1,16 +1,16 @@
 package com.agentsquad.squad.presentation;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.artifact.service.ArtifactService;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.service.ArtifactService;
+import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.interaction.repository.InteractionMapper;
-import com.agentsquad.squad.interaction.service.InputFormSchema;
+import com.agentsquad.squad.service.InputFormSchema;
 import com.agentsquad.squad.domain.dto.PlanNode;
 import com.agentsquad.squad.domain.dto.PlanPublish;
-import com.agentsquad.squad.runtime.service.ContextSnapshotService;
-import com.agentsquad.squad.runtime.service.PlanService;
-import com.agentsquad.squad.worker.service.WorkerDefinitionService;
+import com.agentsquad.squad.service.ContextSnapshotService;
+import com.agentsquad.squad.service.PlanService;
+import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.SpringApplication;

@@ -2,9 +2,9 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.domain.request.MessageCreateRequest;
-import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
-import com.agentsquad.squad.presentation.service.ConversationEventStreamer;
-import com.agentsquad.squad.presentation.service.RedisConversationNotifications;
+import com.agentsquad.squad.service.MessageAcceptanceService;
+import com.agentsquad.squad.service.ConversationEventStreamer;
+import com.agentsquad.squad.service.RedisConversationNotifications;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Timeout;

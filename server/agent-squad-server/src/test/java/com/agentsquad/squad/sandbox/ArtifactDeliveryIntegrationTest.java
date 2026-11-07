@@ -1,17 +1,17 @@
 package com.agentsquad.squad.sandbox;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.artifact.service.ArtifactService;
-import com.agentsquad.squad.artifact.service.ArtifactDeliveryService;
-import com.agentsquad.squad.artifact.service.ArtifactRetentionService;
+import com.agentsquad.squad.service.ArtifactService;
+import com.agentsquad.squad.service.ArtifactDeliveryService;
+import com.agentsquad.squad.service.ArtifactRetentionService;
 import com.agentsquad.squad.domain.request.MessageCreateRequest;
-import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
-import com.agentsquad.squad.runtime.service.ExecutionAuthorizationService;
+import com.agentsquad.squad.service.MessageAcceptanceService;
+import com.agentsquad.squad.service.ExecutionAuthorizationService;
 import com.agentsquad.squad.domain.dto.SandboxDriverResult;
 import com.agentsquad.squad.domain.dto.SandboxExecuteRequest;
 import com.agentsquad.squad.domain.dto.SandboxOutput;
-import com.agentsquad.squad.sandbox.service.SandboxAccessService;
-import com.agentsquad.squad.sandbox.service.SandboxRunTransaction;
+import com.agentsquad.squad.service.SandboxAccessService;
+import com.agentsquad.squad.service.SandboxRunTransaction;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;

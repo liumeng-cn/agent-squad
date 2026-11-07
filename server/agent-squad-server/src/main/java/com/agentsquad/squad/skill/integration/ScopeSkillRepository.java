@@ -1,9 +1,9 @@
 package com.agentsquad.squad.skill.integration;
 
-import com.agentsquad.squad.conversation.service.ExecutionScopeService;
+import com.agentsquad.squad.service.ExecutionScopeService;
 import com.agentsquad.squad.domain.model.SkillCatalog;
 import com.agentsquad.squad.domain.entity.SkillReferenceDO;
-import com.agentsquad.squad.skill.service.SkillRuntimeService;
+import com.agentsquad.squad.service.SkillRuntimeService;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.skill.AgentSkill;
 import io.agentscope.core.skill.repository.AgentSkillRepositoryInfo;

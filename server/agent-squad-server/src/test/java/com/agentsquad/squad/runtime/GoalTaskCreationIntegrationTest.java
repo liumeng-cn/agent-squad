@@ -1,16 +1,16 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.artifact.service.ArtifactService;
+import com.agentsquad.squad.service.ArtifactService;
 
 import java.nio.charset.StandardCharsets;
 
 import com.agentsquad.squad.domain.dto.GoalTaskCreate;
 import com.agentsquad.squad.domain.request.MessageCreateRequest;
 import com.agentsquad.squad.domain.response.TaskReceiptResponse;
-import com.agentsquad.squad.conversation.service.GoalTaskCreationService;
-import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
-import com.agentsquad.squad.governance.service.BudgetService;
+import com.agentsquad.squad.service.GoalTaskCreationService;
+import com.agentsquad.squad.service.MessageAcceptanceService;
+import com.agentsquad.squad.service.BudgetService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.context.ConfigurableApplicationContext;

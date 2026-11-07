@@ -5,20 +5,20 @@ import com.agentsquad.squad.domain.dto.GoalTaskCreate;
 import com.agentsquad.squad.domain.request.MessageCreateRequest;
 import com.agentsquad.squad.domain.dto.TaskDirectiveSubmit;
 import com.agentsquad.squad.domain.dto.TaskDirectiveDecision;
-import com.agentsquad.squad.conversation.service.GoalTaskCreationService;
-import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
-import com.agentsquad.squad.conversation.service.TaskDirectiveService;
+import com.agentsquad.squad.service.GoalTaskCreationService;
+import com.agentsquad.squad.service.MessageAcceptanceService;
+import com.agentsquad.squad.service.TaskDirectiveService;
 import com.agentsquad.squad.domain.entity.TaskDirectiveTargetDO;
 import com.agentsquad.squad.domain.dto.PlanNode;
 import com.agentsquad.squad.domain.dto.PlanPublish;
-import com.agentsquad.squad.runtime.service.ContextSnapshotService;
-import com.agentsquad.squad.runtime.service.PlanService;
-import com.agentsquad.squad.runtime.service.WorkerDispatchService;
-import com.agentsquad.squad.runtime.service.WorkerResultService;
-import com.agentsquad.squad.tools.operation.service.OperationService;
+import com.agentsquad.squad.service.ContextSnapshotService;
+import com.agentsquad.squad.service.PlanService;
+import com.agentsquad.squad.service.WorkerDispatchService;
+import com.agentsquad.squad.service.WorkerResultService;
+import com.agentsquad.squad.service.OperationService;
 import com.agentsquad.squad.tools.operation.PrepareRequest;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.worker.service.WorkerDefinitionService;
+import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -73,7 +73,7 @@ class TaskDirectiveIntegrationTest {
             long version = version(jdbc, task.taskId());
             var one = service.submit(user, replySession(jdbc, first.executionId()), new TaskDirectiveSubmit("one", task.taskId(), version, "SUPPLEMENT", "活泼"));
             var two = service.submit(user, replySession(jdbc, second.executionId()), new TaskDirectiveSubmit("two", task.taskId(), version, "SUPPLEMENT", "正式"));
-            var query = context.getBean(com.agentsquad.squad.presentation.service.ConversationQueryService.class);
+            var query = context.getBean(com.agentsquad.squad.service.ConversationQueryService.class);
             Long commands = jdbc.queryForObject("SELECT COUNT(*) FROM sq_command WHERE user_id=?", Long.class, user);
             query.snapshot(user, source.conversationId(), null, 40);
             query.snapshot(user, source.conversationId(), null, 40);
@@ -113,9 +113,9 @@ class TaskDirectiveIntegrationTest {
             long version = version(jdbc, task.taskId());
             var service = context.getBean(TaskDirectiveService.class);
             var receipt = service.submit(user, replySession(jdbc, change.executionId()), new TaskDirectiveSubmit("change", task.taskId(), version, "SUPPLEMENT", "活泼"));
-            context.getBean(com.agentsquad.squad.conversation.service.TaskControlService.class).cancel(user, task.taskId(), "stop", version);
+            context.getBean(com.agentsquad.squad.service.TaskControlService.class).cancel(user, task.taskId(), "stop", version);
             service.dispatch(new TaskDirectiveTargetDO(receipt.directiveId(), user, task.taskId()));
-            var snapshot = context.getBean(com.agentsquad.squad.presentation.service.ConversationQueryService.class)
+            var snapshot = context.getBean(com.agentsquad.squad.service.ConversationQueryService.class)
                     .snapshot(user, source.conversationId(), null, 40);
             assertThat(snapshot.directives()).singleElement().satisfies(item -> {
                 assertThat(item.status()).isEqualTo(com.agentsquad.squad.common.enums.conversation.TaskDirectiveStatus.REJECTED);
@@ -153,7 +153,7 @@ class TaskDirectiveIntegrationTest {
         var receipt = directives.submit(user, session, request);
         assertThat(receipt.status()).isEqualTo("ACCEPTED");
         assertThat(receipt.appliedVersion()).isNull();
-        var query = context.getBean(com.agentsquad.squad.presentation.service.ConversationQueryService.class);
+        var query = context.getBean(com.agentsquad.squad.service.ConversationQueryService.class);
         var acceptedSnapshot = query.snapshot(user, source.conversationId(), null, 40);
         assertThat(acceptedSnapshot.directives()).singleElement().satisfies(item -> {
             assertThat(item.status()).isEqualTo(com.agentsquad.squad.common.enums.conversation.TaskDirectiveStatus.ACCEPTED);
@@ -212,7 +212,7 @@ class TaskDirectiveIntegrationTest {
         jdbc.update("UPDATE sq_command SET status='APPLIED' WHERE task_id=?", task.taskId());
         service.dispatch(new TaskDirectiveTargetDO(receipt.directiveId(), user, task.taskId()));
         assertThat(jdbc.queryForObject("SELECT command_id FROM sq_task_directive WHERE directive_id=?", String.class, receipt.directiveId())).isNull();
-        var query = context.getBean(com.agentsquad.squad.presentation.service.ConversationQueryService.class);
+        var query = context.getBean(com.agentsquad.squad.service.ConversationQueryService.class);
         var waiting = query.snapshot(user, source.conversationId(), null, 40);
         assertThat(waiting.directives()).singleElement().satisfies(item -> {
             assertThat(item.status()).isEqualTo(com.agentsquad.squad.common.enums.conversation.TaskDirectiveStatus.ACCEPTED);

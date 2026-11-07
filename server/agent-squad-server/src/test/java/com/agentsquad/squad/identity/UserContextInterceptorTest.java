@@ -1,6 +1,6 @@
 package com.agentsquad.squad.identity;
 
-import com.agentsquad.squad.identity.service.UserStatusGuard;
+import com.agentsquad.squad.service.UserStatusGuard;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;

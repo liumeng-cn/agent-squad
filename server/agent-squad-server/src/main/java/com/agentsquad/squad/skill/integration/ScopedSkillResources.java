@@ -3,7 +3,7 @@ package com.agentsquad.squad.skill.integration;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.domain.entity.SkillTextFileDO;
-import com.agentsquad.squad.skill.service.SkillRuntimeService;
+import com.agentsquad.squad.service.SkillRuntimeService;
 import io.agentscope.harness.agent.skill.SkillResources;
 
 import java.nio.charset.StandardCharsets;

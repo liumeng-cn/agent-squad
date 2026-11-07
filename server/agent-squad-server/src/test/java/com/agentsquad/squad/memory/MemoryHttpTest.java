@@ -4,7 +4,7 @@ import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
 
 import com.agentsquad.squad.domain.request.MemoryCreateRequest;
-import com.agentsquad.squad.memory.service.MemoryService;
+import com.agentsquad.squad.service.MemoryService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;

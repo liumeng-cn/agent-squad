@@ -1,18 +1,18 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.artifact.service.ArtifactService;
+import com.agentsquad.squad.service.ArtifactService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
-import com.agentsquad.squad.governance.service.BudgetService;
+import com.agentsquad.squad.service.GoalTaskService;
+import com.agentsquad.squad.service.BudgetService;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.integration.agentscope.middleware.ModelBudgetMiddleware;
-import com.agentsquad.squad.interaction.service.InteractionService;
-import com.agentsquad.squad.interaction.service.InteractionQueryService;
-import com.agentsquad.squad.tools.operation.service.OperationExecutor;
-import com.agentsquad.squad.tools.operation.service.OperationService;
+import com.agentsquad.squad.service.InteractionService;
+import com.agentsquad.squad.service.InteractionQueryService;
+import com.agentsquad.squad.service.OperationExecutor;
+import com.agentsquad.squad.service.OperationService;
 import com.agentsquad.squad.tools.operation.PrepareRequest;
 import com.agentsquad.squad.domain.entity.OperationDO;
 import io.agentscope.core.agent.RuntimeContext;

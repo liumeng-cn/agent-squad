@@ -6,12 +6,12 @@ import com.agentsquad.squad.domain.entity.TaskGoalStateDO;
 import com.agentsquad.squad.domain.entity.TaskDO;
 import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
-import com.agentsquad.squad.conversation.service.ExecutionScopeService;
+import com.agentsquad.squad.service.ExecutionScopeService;
 import com.agentsquad.squad.domain.entity.PlanContextDO;
 import com.agentsquad.squad.domain.dto.PlanNode;
 import com.agentsquad.squad.domain.dto.PlanPublish;
 import com.agentsquad.squad.runtime.repository.PlanMapper;
-import com.agentsquad.squad.runtime.service.PlanService;
+import com.agentsquad.squad.service.PlanService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -64,7 +64,7 @@ class PlanPendingDirectiveTest {
                 "ALL_REQUIRED", List.of("done"));
         RuntimeBusinessException failure = assertThrows(RuntimeBusinessException.class,
                 () -> service.publish("user", "session", request));
-        var pending = (com.agentsquad.squad.runtime.service.PendingDirectivesException) failure;
+        var pending = (com.agentsquad.squad.service.PendingDirectivesException) failure;
         assertThat(pending.directives()).hasSize(2);
         assertThat(pending.directives().get(0).directiveId()).isEqualTo("first");
         assertThat(pending.directives().get(1).directiveId()).isEqualTo("second");

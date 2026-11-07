@@ -6,7 +6,7 @@ import com.agentsquad.squad.domain.enums.GoalTaskStatus;
 import com.agentsquad.squad.common.enums.worker.PlanAcceptanceVerdict;
 import com.agentsquad.squad.domain.model.PlanJoinFacts;
 import com.agentsquad.squad.domain.model.PlanJoinJob;
-import com.agentsquad.squad.runtime.service.PlanJoinPolicyService;
+import com.agentsquad.squad.service.PlanJoinPolicyService;
 import com.agentsquad.squad.domain.enums.PlanJoinStage;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;

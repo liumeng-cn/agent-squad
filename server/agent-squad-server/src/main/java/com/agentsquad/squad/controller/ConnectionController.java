@@ -2,7 +2,7 @@ package com.agentsquad.squad.controller;
 
 import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.identity.UserContext;
-import com.agentsquad.squad.tools.connection.service.ConnectionService;
+import com.agentsquad.squad.service.ConnectionService;
 import jakarta.servlet.http.HttpServletRequest;
 import com.agentsquad.squad.domain.request.ConnectionCreateRequest;
 import com.agentsquad.squad.domain.response.ConnectionPageResponse;

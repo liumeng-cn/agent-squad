@@ -3,7 +3,7 @@ package com.agentsquad.squad.agent.tool;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.domain.dto.ContextPreparationRequest;
 import com.agentsquad.squad.domain.dto.ContextSnapshotReceipt;
-import com.agentsquad.squad.runtime.service.ContextSnapshotService;
+import com.agentsquad.squad.service.ContextSnapshotService;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.tool.AgentTool;

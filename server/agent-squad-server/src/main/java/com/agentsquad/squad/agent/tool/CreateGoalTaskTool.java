@@ -2,7 +2,7 @@ package com.agentsquad.squad.agent.tool;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.domain.dto.GoalTaskCreate;
-import com.agentsquad.squad.conversation.service.GoalTaskCreationService;
+import com.agentsquad.squad.service.GoalTaskCreationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.ToolResultBlock;

@@ -5,15 +5,15 @@ import com.agentsquad.squad.domain.enums.ResponseCompletionProtocol;
 import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
 import com.agentsquad.squad.runtime.repository.ProjectionMapper;
 import com.agentsquad.squad.domain.model.MasterAgentIdentity;
-import com.agentsquad.squad.runtime.service.WorkerRecoveryService;
-import com.agentsquad.squad.integration.agentscope.inbox.service.RuntimeEventConsumptionService;
-import com.agentsquad.squad.integration.agentscope.inbox.service.RuntimeEventReceiptService;
+import com.agentsquad.squad.service.WorkerRecoveryService;
+import com.agentsquad.squad.service.RuntimeEventConsumptionService;
+import com.agentsquad.squad.service.RuntimeEventReceiptService;
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource;
-import com.agentsquad.squad.integration.agentscope.inbox.service.RuntimeEventFailureService;
+import com.agentsquad.squad.service.RuntimeEventFailureService;
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventFailureCode;
 import io.agentscope.core.session.SessionEvent;
 import jakarta.annotation.Resource;
-import com.agentsquad.squad.conversation.service.ResponseExecutionService;
+import com.agentsquad.squad.service.ResponseExecutionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -34,16 +34,16 @@ public class NativeProjectionPoller {
     private com.agentsquad.squad.common.observability.ExecutionTrace executionTrace;
 
     @Resource
-    private com.agentsquad.squad.runtime.service.ExecutionAuthorizationService authorization;
+    private com.agentsquad.squad.service.ExecutionAuthorizationService authorization;
 
     @Resource
-    private com.agentsquad.squad.runtime.service.ExecutionRestrictionService restrictions;
+    private com.agentsquad.squad.service.ExecutionRestrictionService restrictions;
 
     @Resource
     private com.agentsquad.squad.conversation.repository.ExecutionScopeMapper scopeMapper;
 
     @Resource
-    private com.agentsquad.squad.runtime.service.ExecutionFailureService failures;
+    private com.agentsquad.squad.service.ExecutionFailureService failures;
 
     @Resource
     private NaturalReplyOutputReader naturalOutputs;

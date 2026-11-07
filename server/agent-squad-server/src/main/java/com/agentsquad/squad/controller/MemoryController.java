@@ -7,7 +7,7 @@ import com.agentsquad.squad.domain.request.MemoryCreateRequest;
 import com.agentsquad.squad.domain.response.MemoryMutationResponse;
 import com.agentsquad.squad.domain.response.MemoryPageResponse;
 import com.agentsquad.squad.domain.request.MemoryUpdateRequest;
-import com.agentsquad.squad.memory.service.MemoryService;
+import com.agentsquad.squad.service.MemoryService;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;

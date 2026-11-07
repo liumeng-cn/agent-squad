@@ -3,10 +3,10 @@ package com.agentsquad.squad.runtime;
 import com.agentsquad.squad.common.enums.identity.AccountRole;
 
 import com.agentsquad.squad.testsupport.TestAssertion;
-import com.agentsquad.squad.conversation.service.ConversationCleanupScheduler;
-import com.agentsquad.squad.conversation.service.ConversationDeletionService;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
-import com.agentsquad.squad.conversation.service.ResponseExecutionService;
+import com.agentsquad.squad.service.ConversationCleanupScheduler;
+import com.agentsquad.squad.service.ConversationDeletionService;
+import com.agentsquad.squad.service.GoalTaskService;
+import com.agentsquad.squad.service.ResponseExecutionService;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
