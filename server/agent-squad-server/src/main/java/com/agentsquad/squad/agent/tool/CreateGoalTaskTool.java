@@ -1,7 +1,6 @@
 package com.agentsquad.squad.agent.tool;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.conversation.dto.GoalTaskCreate;
 import com.agentsquad.squad.conversation.service.GoalTaskCreationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,6 +40,11 @@ public class CreateGoalTaskTool implements AgentTool {
     }
 
     @Override
+    public boolean isReturnDirect() {
+        return true;
+    }
+
+    @Override
     public String getDescription() {
         return "当前用户目标需要持续推进或委派协作时创建独立目标。用户明确要求Worker或并行协作时必须调用，不能自行回答代替执行。普通交流直接回答。"
                 + "sourceMessageId必须是当前用户消息，logicalKey同业务重试保持不变；返回持久受理收据，不能声称工作已完成。";
@@ -69,7 +73,8 @@ public class CreateGoalTaskTool implements AgentTool {
         }
         try {
             GoalTaskCreate request = json.convertValue(param.getInput(), GoalTaskCreate.class);
-            return ToolResultBlock.text(RuntimePayloads.toJson(json, goals.create(context.getUserId(), context.getSessionId(), request)));
+            goals.create(context.getUserId(), context.getSessionId(), request);
+            return ToolResultBlock.text("任务已受理，完成后会统一给出结果。");
         } catch (RuntimeBusinessException exception) {
             return ToolResultBlock.error(exception.getMessage());
         }

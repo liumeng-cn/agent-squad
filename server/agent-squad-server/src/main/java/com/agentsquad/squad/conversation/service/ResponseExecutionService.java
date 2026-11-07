@@ -49,6 +49,8 @@ import java.util.UUID;
 @Slf4j
 public class ResponseExecutionService {
     @Resource
+    private com.agentsquad.squad.conversation.repository.GoalCreationMapper goalOrigins;
+    @Resource
     private com.agentsquad.squad.presentation.service.ActivityProjectionService activities;
     private static final Set<String> TERMINAL = Set.of("SUCCEEDED", "PARTIAL", "FAILED", "CANCELLED");
 
@@ -158,6 +160,13 @@ public class ResponseExecutionService {
             return;
         }
         NativeRunOutcome outcome = NativeRunOutcome.fromCode(event.outcome());
+        // 目标已持久受理，来源回复只结算交接，正式答案由目标发布。
+        if (outcome == NativeRunOutcome.COMPLETED
+                && replies.openInteractions(scope.userId(), scope.scopeId()) == 0
+                && goalOrigins.taskForSourceExecution(scope.userId(), row.executionId()) != null) {
+            finish(scope, row, "SUCCEEDED", null);
+            return;
+        }
         if (outcome == NativeRunOutcome.SUSPENDED) {
             String waiting = waiting(scope);
             if (waiting != null) {
@@ -232,6 +241,10 @@ public class ResponseExecutionService {
         if ("completed".equals(receipt.status()) && "RECONCILING".equals(row.status())
                 && replies.uncertain(scope.userId(), scope.scopeId()) == 0
                 && replies.openInteractions(scope.userId(), scope.scopeId()) == 0) {
+            if (goalOrigins.taskForSourceExecution(scope.userId(), row.executionId()) != null) {
+                finish(scope, row, "SUCCEEDED", null);
+                return;
+            }
             if (row.completionProtocol() == ResponseCompletionProtocol.NATURAL) {
                 if (evidence != null) {
                     String text = evidence.text();

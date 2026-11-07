@@ -264,7 +264,7 @@ class GoalTaskNativeCreationIntegrationTest {
                 assertThat(status).isEqualTo("SUCCEEDED");
                 assertThat(masterCalls.get()).isEqualTo(directive ? 4 : 7);
                 assertThat(directiveMasterCalls.get()).isEqualTo(directive ? 7 : 0);
-                assertThat(replyCalls.get()).isEqualTo(2);
+                assertThat(replyCalls.get()).isEqualTo(1);
                 // 每个成功Worker保存结果后直接结束，不再额外调用模型生成确认文案。
                 assertThat(workerCalls.get()).isBetween(directive ? 3 : 2, directive ? 4 : 2);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_account", Long.class)).isEqualTo(queryDuringWork ? 2 : 1);
@@ -272,9 +272,13 @@ class GoalTaskNativeCreationIntegrationTest {
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_worker_job WHERE status='SUCCEEDED'", Long.class)).isEqualTo(2);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_runtime_binding WHERE task_id IS NULL", Long.class)).isEqualTo(queryDuringWork ? 2 : 1);
                 assertThat(jdbc.queryForList("SELECT DISTINCT status FROM sq_response_execution", String.class)).containsExactly("SUCCEEDED");
-                assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_reservation WHERE status='SETTLED'", Long.class)).isGreaterThanOrEqualTo(queryDuringWork ? 12 : directive ? 10 : 11);
+                assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_reservation WHERE status='SETTLED'", Long.class)).isGreaterThanOrEqualTo(queryDuringWork ? 11 : directive ? 9 : 10);
                 assertThat(progressCalls.get()).isEqualTo("query".equals(mode) ? 1 : 0);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_conversation_event WHERE event_type='task.created'", Long.class)).isEqualTo(1);
+                assertThat(jdbc.queryForObject("""
+                        SELECT COUNT(*) FROM sq_message
+                        WHERE source_message_id = ? AND role = 'ASSISTANT'
+                        """, Long.class, message.messageId())).isEqualTo(1);
                 assertThat(jdbc.queryForObject(
                         "SELECT COUNT(*) FROM sq_goal_task WHERE conversation_id = ?",
                         Integer.class, message.conversationId())).isEqualTo(1);
