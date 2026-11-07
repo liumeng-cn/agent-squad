@@ -80,6 +80,9 @@ public class ResponseContextService {
     @Resource
     private ObjectMapper objectMapper;
 
+    @Resource
+    private com.agentsquad.squad.presentation.service.ActivityProjectionService activities;
+
     /**
      * SDK 提交前独立调用并提交快照；事务不接触模型，失败不会留下半份上下文。
      * 超限明确拒绝，不截断用户前文；附件正文按单文件预算截断并保留标记。
@@ -140,6 +143,8 @@ public class ResponseContextService {
         if (mapper.freeze(userId, source.executionId(), json, ContentDigests.sha256(json)) != 1) {
             throw new IllegalStateException("回复上下文冻结发生竞争");
         }
+        activities.completed(scope, new com.agentsquad.squad.presentation.service.ActivityBusinessFact(
+                com.agentsquad.squad.common.enums.execution.ActivityType.CONTEXT_PREPARE, source.executionId()));
         log.info("回复上下文已冻结 conversationId={} messageCount={} materialCount={} contextChars={}",
                 scope.conversationId(), messages.size(),
                 messages.stream().mapToInt(m -> m.materials().size()).sum(), characters);

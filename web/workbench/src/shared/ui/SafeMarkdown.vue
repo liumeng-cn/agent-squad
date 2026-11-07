@@ -43,12 +43,14 @@ function blocks(text: string, depth = 0): VNode[] {
       while (index < lines.length && !/^\s*```/.test(lines[index]!)) code.push(lines[index++]!)
       const content = code.join('\n')
       result.push(h('div', { class: 'markdown-code-block' }, [
+        h('div', { class: 'markdown-code-header' }, [
         h('span', { class: 'markdown-code-language' }, language || '代码'),
-        h('button', { type: 'button', onClick: async (event: MouseEvent) => {
+        h('button', { class: 'markdown-code-copy', type: 'button', 'aria-label': '复制代码', onClick: async (event: MouseEvent) => {
           const button = event.currentTarget as HTMLButtonElement
           try { await navigator.clipboard.writeText(content); button.textContent = '已复制' }
           catch { button.textContent = '复制失败，请手动选择' }
-        } }, '复制代码'),
+        } }, '复制'),
+        ]),
         h('pre', [h('code', content)]),
       ])); index++; continue
     }

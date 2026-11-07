@@ -716,9 +716,17 @@ textarea.input {
 .answer-markdown pre { padding: 15px 17px; background: #f5f7fa; border: 1px solid #eceff4; border-radius: 11px; overflow: auto; font-size: 13px; line-height: 1.65; }
 .answer-markdown code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .86em; background: #f0f3f7; border-radius: 4px; padding: 2px 5px; }
 .answer-markdown pre code { background: transparent; padding: 0; }
+.markdown-code-block { margin: 14px 0 18px; overflow: hidden; border: 1px solid #eceff4; border-radius: 11px; background: #f5f7fa; }
+.markdown-code-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 12px; border-bottom: 1px solid #eceff4; color: #8b94a2; font-size: 11px; line-height: 1.5; }
+.markdown-code-copy { flex-shrink: 0; border: 0; border-radius: 5px; padding: 3px 6px; background: transparent; color: #8b94a2; font: inherit; cursor: pointer; }
+.markdown-code-copy:hover { color: #525e70; background: #e9edf3; }
+.markdown-code-copy:focus-visible { outline: 2px solid #7794ed; outline-offset: 2px; }
+.answer-markdown .markdown-code-block pre { margin: 0; border: 0; border-radius: 0; }
 .answer-markdown a { color: #3d65c9; text-decoration: underline; text-underline-offset: 3px; }
-.copy-answer-button { border: 0; color: #9aa1ae; font-size: 11px; background: transparent; border-radius: 6px; padding: 3px 5px; opacity: .3; transition: opacity .15s; }
-.chat-message:hover .copy-answer-button, .copy-answer-button:focus-visible { opacity: 1; }
+.copy-answer-button { display: inline-grid; place-items: center; width: 30px; height: 30px; border: 0; color: #9aa1ae; background: transparent; border-radius: 7px; padding: 5px; cursor: pointer; }
+.copy-answer-button svg { width: 19px; height: 19px; }
+.copy-answer-button:hover { color: #657084; background: #f2f4f8; }
+.copy-answer-button:focus-visible { outline: 2px solid #7794ed; outline-offset: 2px; }
 .answer-state { display: flex; align-items: center; gap: 9px; color: #8d95a1; font-size: 13px; margin: 16px 0 18px 41px; }
 .state-indicator { display: inline-block; width: 7px; height: 7px; background: #aeb8cd; border-radius: 50%; }
 .state-indicator.running { background: #7794ed; animation: state-breathe 1.6s ease-in-out infinite alternate; }

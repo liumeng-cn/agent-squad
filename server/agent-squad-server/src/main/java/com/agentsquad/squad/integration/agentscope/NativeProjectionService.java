@@ -96,6 +96,9 @@ public class NativeProjectionService {
     @Resource
     private RuntimeAdmissionService admission;
 
+    @Resource
+    private com.agentsquad.squad.presentation.service.ActivityProjectionService activities;
+
     /**
      * 重复事件只跳过；缺少前序事件则回滚并等待重新读取完整前缀。
      */
@@ -166,6 +169,7 @@ public class NativeProjectionService {
             }
             admission.releaseEnded(target.userId(), target.bindingId(), event.turnId(), event.runId());
         }
+        activities.accept(scope, target, event);
         if (projectionMapper.advanceCursor(target.userId(), target.bindingId(), cursor, event.sequence()) != 1) {
             throw new IllegalStateException("Agent执行事件处理位置已被其他线程更新");
         }

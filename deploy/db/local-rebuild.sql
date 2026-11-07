@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS sq_execution_activity;
 -- 本地验证库重建脚本：仅供用户手动执行，会删除当前库内下列51张项目表及其数据。
 -- 来源：server/agent-squad-server/src/main/resources/db/migration/V1__baseline.sql。
 -- 不包含模型密钥、数据库密码或生产凭据；不要对生产/共享数据库执行。
@@ -1321,3 +1322,43 @@ INSERT INTO sq_user (
 COMMIT;
 
 SELECT username, role, status FROM sq_user ORDER BY username;
+
+CREATE TABLE IF NOT EXISTS sq_execution_activity
+(
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '存储主键',
+    activity_id CHAR(36) NOT NULL COMMENT '活动业务ID',
+    user_id CHAR(36) NOT NULL COMMENT '归属用户ID',
+    scope_id CHAR(36) NOT NULL COMMENT '执行作用域ID',
+    conversation_id CHAR(36) NOT NULL COMMENT '所属会话ID',
+    source_message_id CHAR(36) NULL COMMENT '来源用户消息ID',
+    execution_id CHAR(36) NULL COMMENT '普通回复ID',
+    task_id CHAR(36) NULL COMMENT '目标任务ID',
+    job_id CHAR(36) NULL COMMENT '工作节点ID',
+    binding_id CHAR(36) NOT NULL COMMENT '原生执行绑定ID',
+    run_id VARCHAR(160) NULL COMMENT '原生运行ID',
+    turn_id VARCHAR(160) NULL COMMENT '原生回合ID',
+    source_key VARCHAR(160) NOT NULL COMMENT '同用户幂等来源键',
+    plan_version BIGINT NOT NULL DEFAULT 0 COMMENT '所属计划版本',
+    activity_type VARCHAR(40) NOT NULL COMMENT '业务活动类型',
+    activity_group VARCHAR(24) NOT NULL COMMENT '业务活动分组',
+    status VARCHAR(24) NOT NULL COMMENT '活动状态',
+    wait_reason VARCHAR(32) NULL COMMENT '等待原因',
+    safe_summary VARCHAR(120) NOT NULL COMMENT '服务端固定安全文案',
+    started_at DATETIME(3) NULL COMMENT '实际派发时间，缺失不补造',
+    ended_at DATETIME(3) NULL COMMENT '实际结束时间',
+    version BIGINT NOT NULL DEFAULT 1 COMMENT '公开活动版本',
+    native_sequence BIGINT NOT NULL COMMENT '最后已应用原生序号',
+    creator_id VARCHAR(36) NOT NULL DEFAULT '' COMMENT '创建人ID',
+    creator_name VARCHAR(50) NOT NULL DEFAULT '' COMMENT '创建人姓名',
+    create_time DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    last_updater_id VARCHAR(36) NOT NULL DEFAULT '' COMMENT '最后更新人ID',
+    last_updater_name VARCHAR(50) NOT NULL DEFAULT '' COMMENT '最后更新人姓名',
+    last_update_time DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '最后更新时间',
+    del_flag CHAR(1) NOT NULL DEFAULT '0' COMMENT '删除标志[0-否,1-是]',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_activity_id (activity_id),
+    UNIQUE KEY uk_activity_source (user_id, source_key),
+    KEY idx_activity_conversation (user_id, conversation_id, id),
+    KEY idx_activity_run (user_id, binding_id, run_id, status),
+    KEY idx_activity_owner (user_id, scope_id, id)
+) ENGINE = InnoDB COMMENT = '用户可见的真实执行活动';

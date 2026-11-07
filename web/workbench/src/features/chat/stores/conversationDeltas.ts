@@ -1,8 +1,10 @@
 import type { ChatExecution, ChatMessage, ConversationEvent, TaskDirectiveView } from '../../../shared/api/chatApi'
+import { decodeActivity, type ExecutionActivity } from '../../../shared/api/activities'
 
 import { executionActions, executionStatuses } from '../../../shared/api/chatTypes'
 
 export type ConversationDelta =
+  | { type: 'activity.updated'; activity: ExecutionActivity }
   | { type: 'message.accepted'; message: ChatMessage; execution: ChatExecution }
   | { type: 'message.completed'; message: ChatMessage }
   | { type: 'execution.queued' | 'execution.status_changed'; execution: ChatExecution }
@@ -41,6 +43,11 @@ export function decodeConversationDelta(event: ConversationEvent): ConversationD
   }
   if (payload.schemaVersion !== 2) return
   switch (event.type) {
+    case 'activity.updated': {
+      const activity = decodeActivity(payload.activity)
+      if (activity) return { type: event.type, activity }
+      return
+    }
     case 'directive.status_changed': {
       const d = payload.directive
       if (record(d) && id(d.directiveId) && id(d.taskId) && id(d.sourceMessageId)

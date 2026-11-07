@@ -27,6 +27,8 @@ import java.util.UUID;
 @Service
 public class TaskEventPublishingService {
     @Resource
+    private ActivityProjectionService activities;
+    @Resource
     private FinalDeliveryService finalDeliveries;
 
     @Resource
@@ -89,6 +91,8 @@ public class TaskEventPublishingService {
                     }
                 }
                 events.publish(scope, key, "message.completed", Map.of("messageId", messageId, "revision", revision, "taskId", taskId, "text", text));
+                activities.completed(scope, new ActivityBusinessFact(com.agentsquad.squad.common.enums.execution.ActivityType.ANSWER_PUBLISH,
+                        messageId + ":" + revision));
             } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
                 throw new IllegalStateException("目标公开答案无法读取", exception);
             }

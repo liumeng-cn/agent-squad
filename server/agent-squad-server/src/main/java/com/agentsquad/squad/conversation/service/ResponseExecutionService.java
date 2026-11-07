@@ -48,6 +48,8 @@ import java.util.UUID;
 @Service
 @Slf4j
 public class ResponseExecutionService {
+    @Resource
+    private com.agentsquad.squad.presentation.service.ActivityProjectionService activities;
     private static final Set<String> TERMINAL = Set.of("SUCCEEDED", "PARTIAL", "FAILED", "CANCELLED");
 
     @Resource
@@ -368,6 +370,8 @@ public class ResponseExecutionService {
                     row.sourceMessageId(), row.executionId(), null, answerTime.atOffset(ZoneOffset.UTC).toString(), java.util.List.of());
             events.publish(scope, "response:" + row.executionId() + ":answer", ConversationDeltaType.MESSAGE_COMPLETED.code(),
                     new MessageCompletedPayload(ConversationDeltaType.SCHEMA_VERSION, message));
+            activities.completed(scope, new com.agentsquad.squad.presentation.service.ActivityBusinessFact(
+                    com.agentsquad.squad.common.enums.execution.ActivityType.ANSWER_PUBLISH, answerId));
         }
         if ("CANCELLED".equals(status)) {
             finalDeliveries.close(scope.userId(), row.sourceMessageId(), "RESPONSE", row.executionId());

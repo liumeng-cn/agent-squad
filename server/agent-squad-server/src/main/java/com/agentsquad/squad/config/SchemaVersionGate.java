@@ -25,12 +25,12 @@ public class SchemaVersionGate implements InitializingBean {
     private static final String HISTORY_TABLE = "flyway_schema_history";
     private static final List<String> REQUIRED_TABLES = List.of(
             "sq_user", "sq_auth_session", "sq_auth_rate_bucket", "sq_auth_audit",
-            "sq_runtime_admission_counter", "sq_runtime_admission_slot", "sq_final_delivery", "sq_runtime_event_inbox");
+            "sq_runtime_admission_counter", "sq_runtime_admission_slot", "sq_final_delivery", "sq_runtime_event_inbox", "sq_execution_activity");
 
     @Resource
     private SchemaInspectionMapper schemaInspection;
 
-    @Value("${agentsquad.schema.expected-version:8}")
+    @Value("${agentsquad.schema.expected-version:9}")
     private int expectedVersion;
 
     @Value("${spring.sql.init.mode:always}")

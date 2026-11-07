@@ -11087,6 +11087,13 @@
             "items": {
               "$ref": "#/components/schemas/TaskDirectiveView"
             }
+          },
+          "activities": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/ExecutionActivityView"
+            }
           }
         },
         "required": [
@@ -11102,7 +11109,8 @@
           "operationIds",
           "executions",
           "taskStates",
-          "directives"
+          "directives",
+          "activities"
         ],
         "description": "会话一致前缀；cursor 为 conversationId:generation:eventSeq，不能与 Task cursor 混用。",
         "x-implementation-status": "implemented-conversation-first-experience"
@@ -12394,6 +12402,175 @@
           }
         ],
         "description": "完整修改状态增量，旧载荷通过一致快照补读；不得将收到修改当成已经应用。"
+      },
+      "ExecutionActivityView": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "activityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceMessageId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "executionId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "taskId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "jobId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "planVersion": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "CONTEXT_PREPARE",
+              "FILE_READ",
+              "SKILL_LOAD",
+              "DATA_QUERY",
+              "TASK_CREATE",
+              "CAPABILITY_LOOKUP",
+              "PLAN_PUBLISH",
+              "WORKER_DISPATCH",
+              "TASK_CHANGE",
+              "MODEL_CALL",
+              "SCRIPT_EXECUTE",
+              "EXTERNAL_ACTION",
+              "MEMORY_WRITE",
+              "RESULT_VERIFY",
+              "OPERATION_RECONCILE",
+              "RESULT_AGGREGATE",
+              "RESULT_SUBMIT",
+              "ARTIFACT_COMMIT",
+              "ANSWER_PUBLISH",
+              "USER_INTERACTION",
+              "TOOL_CALL"
+            ]
+          },
+          "group": {
+            "type": "string",
+            "enum": [
+              "PREPARATION",
+              "PLANNING",
+              "EXECUTION",
+              "VERIFICATION",
+              "DELIVERY"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "WAITING",
+              "SUCCEEDED",
+              "FAILED",
+              "CANCELLED",
+              "UNKNOWN"
+            ]
+          },
+          "waitReason": {
+            "type": "string",
+            "enum": [
+              "CAPACITY",
+              "DEPENDENCY",
+              "INPUT",
+              "APPROVAL",
+              "EXTERNAL_RESULT",
+              "RESUME_READY",
+              "RETRY_BACKOFF",
+              "EVENT_RECOVERY"
+            ],
+            "nullable": true
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "endedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "activityId",
+          "sourceMessageId",
+          "executionId",
+          "taskId",
+          "jobId",
+          "planVersion",
+          "version",
+          "type",
+          "group",
+          "status",
+          "waitReason",
+          "summary",
+          "startedAt",
+          "endedAt"
+        ]
+      },
+      "ActivityUpdatedEvent": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ConversationEvent"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "activity.updated"
+                ]
+              },
+              "payload": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "schemaVersion": {
+                    "type": "integer",
+                    "enum": [
+                      2
+                    ]
+                  },
+                  "activity": {
+                    "$ref": "#/components/schemas/ExecutionActivityView"
+                  }
+                },
+                "required": [
+                  "schemaVersion",
+                  "activity"
+                ]
+              }
+            }
+          }
+        ]
       }
     }
   }

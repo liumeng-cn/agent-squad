@@ -63,6 +63,9 @@ public class ConversationQueryService {
     @Resource
     private ObjectMapper json;
 
+    @Resource
+    private com.agentsquad.squad.presentation.repository.ExecutionActivityMapper activities;
+
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public ConversationSnapshot snapshot(String userId, String conversationId, Long before, int limit) {
         if ((before != null && before < 1) || limit < 1 || limit > 100) {
@@ -91,6 +94,8 @@ public class ConversationQueryService {
                 page.isEmpty() ? List.of() : directives.pageInConversation(userId, conversationId, header.generation(),
                         page.getFirst().sequence(), page.getLast().sequence()).stream()
                         .map(com.agentsquad.squad.conversation.dto.TaskDirectiveView::from).toList(),
+                activities.recent(userId, conversationId, header.generation(), 100).stream()
+                        .map(com.agentsquad.squad.presentation.dto.ExecutionActivityView::from).toList(),
                 cursor(header, header.eventSequence()));
     }
 

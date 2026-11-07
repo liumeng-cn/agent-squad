@@ -24,8 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * 开发 baseline 与生产版本迁移的结构一致性校验。
- * <p>在隔离 MySQL schema 上分别执行开发单文件 baseline 与 deploy 下 V1→V6 迁移，
- * 比较最终表、列和索引；防止两套 DDL 漂移。不读取或修改开发库。</p>
+ * <p>在隔离 MySQL schema 上分别执行开发单文件 baseline 与 deploy 下活动表增量迁移，
+ * 比较新建与当前版本升级后的表、列和索引；防止两套 DDL 漂移。不读取或修改开发库。</p>
  */
 class SchemaParityTest {
 
@@ -56,28 +56,19 @@ class SchemaParityTest {
             ScriptUtils.executeSqlScript(dev, new ClassPathResource("db/migration/V1__baseline.sql"));
 
             Path migrationDir = locateMigrationDir();
-            ScriptUtils.executeSqlScript(prod,
-                    new FileSystemResource(migrationDir.resolve("V1__initial_44_tables.sql")));
-            ScriptUtils.executeSqlScript(prod,
-                    new FileSystemResource(migrationDir.resolve("V2__multiuser_identity.sql")));
-            ScriptUtils.executeSqlScript(prod,
-                    new FileSystemResource(migrationDir.resolve("V3__runtime_admission.sql")));
-            ScriptUtils.executeSqlScript(prod,
-                    new FileSystemResource(migrationDir.resolve("V4__admission_run_identity.sql")));
-            ScriptUtils.executeSqlScript(prod,
-                    new FileSystemResource(migrationDir.resolve("V5__final_delivery.sql")));
-            ScriptUtils.executeSqlScript(prod,
-                    new FileSystemResource(migrationDir.resolve("V6__runtime_event_inbox.sql")));
-            ScriptUtils.executeSqlScript(prod,
-                    new FileSystemResource(migrationDir.resolve("V7__natural_reply_protocol.sql")));
-            ScriptUtils.executeSqlScript(prod,
-                    new FileSystemResource(migrationDir.resolve("V8__accepted_model_selection.sql")));
+            // 当前完整基线去掉本次新增表，构造升级前结构，再执行明确的增量DDL。
+            String complete = new ClassPathResource("db/migration/V1__baseline.sql").getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+            String addition = Files.readString(migrationDir.resolve("V9__execution_activity.sql"));
+            assertTrue(complete.contains(addition.trim()), "完整基线必须包含同一活动表定义");
+            String previous = complete.replace(addition.trim(), "");
+            ScriptUtils.executeSqlScript(prod, new org.springframework.core.io.ByteArrayResource(previous.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            ScriptUtils.executeSqlScript(prod, new FileSystemResource(migrationDir.resolve("V9__execution_activity.sql")));
 
             Map<String, Map<String, String>> devSchema = readSchema(dev);
             Map<String, Map<String, String>> prodSchema = readSchema(prod);
 
-            assertEquals(52, devSchema.size(), "开发 baseline 应包含 52 张表");
-            assertEquals(52, prodSchema.size(), "生产 V1→V7 应包含 52 张表");
+            assertEquals(53, devSchema.size(), "开发 baseline 应包含 53 张表");
+            assertEquals(53, prodSchema.size(), "生产活动表升级 应包含 53 张表");
             assertEquals(devSchema.keySet(), prodSchema.keySet(), "两套 DDL 的表集合不一致");
             devSchema.forEach((table, devDefinition) -> {
                 Map<String, String> prodDefinition = prodSchema.get(table);

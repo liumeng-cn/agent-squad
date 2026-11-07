@@ -60,21 +60,22 @@ class SchemaVersionGateTest {
                         + "(5, '5', 'final delivery', 'SQL', 'V5__final_delivery.sql', 'test', 0, 1), "
                         + "(6, '6', 'event inbox', 'SQL', 'V6__runtime_event_inbox.sql', 'test', 0, 1), "
                         + "(7, '7', 'natural reply', 'SQL', 'V7__natural_reply_protocol.sql', 'test', 0, 1), "
-                        + "(8, '8', 'model choice', 'SQL', 'V8__accepted_model_selection.sql', 'test', 0, 1)");
+                        + "(8, '8', 'model choice', 'SQL', 'V8__accepted_model_selection.sql', 'test', 0, 1), "
+                        + "(9, '9', 'execution activity', 'SQL', 'V9__execution_activity.sql', 'test', 0, 1)");
             }
         }
 
         try (ConfigurableApplicationContext context = start(url)) {
             assertTrue(context.isActive(), "版本已应用时生产上下文应正常启动");
         }
-        assertEquals(53, countTables(url), "生产启动只校验版本，不得创建额外业务表");
+        assertEquals(54, countTables(url), "生产启动只校验版本，不得创建额外业务表");
         try (Connection connection = DriverManager.getConnection(url, MySqlTestDatabase.username(),
                 MySqlTestDatabase.password()); Statement statement = connection.createStatement()) {
             statement.executeUpdate("DELETE FROM flyway_schema_history WHERE version = '3'");
         }
         Exception missingVersion = assertThrows(Exception.class, () -> start(url));
         assertTrue(messageChain(missingVersion).contains("生产数据库迁移版本落后"));
-        assertEquals(53, countTables(url), "中间版本缺失时也不能执行 DDL");
+        assertEquals(54, countTables(url), "中间版本缺失时也不能执行 DDL");
     }
 
     @Test
@@ -82,15 +83,15 @@ class SchemaVersionGateTest {
         SchemaInspectionMapper mapper = mock(SchemaInspectionMapper.class);
         SchemaVersionGate gate = new SchemaVersionGate();
         ReflectionTestUtils.setField(gate, "schemaInspection", mapper);
-        ReflectionTestUtils.setField(gate, "expectedVersion", 8);
+        ReflectionTestUtils.setField(gate, "expectedVersion", 9);
         ReflectionTestUtils.setField(gate, "sqlInitMode", "never");
         ReflectionTestUtils.setField(gate, "strictIdentity", true);
         ReflectionTestUtils.setField(gate, "enforceUserStatus", true);
-        when(mapper.countAppliedVersions(8)).thenReturn(8);
+        when(mapper.countAppliedVersions(9)).thenReturn(9);
         when(mapper.countRequiredTables(anyList())).thenReturn(6);
         assertTrue(assertThrows(IllegalStateException.class, gate::afterPropertiesSet)
                 .getMessage().contains("缺少必需业务表"));
-        when(mapper.countRequiredTables(anyList())).thenReturn(8);
+        when(mapper.countRequiredTables(anyList())).thenReturn(9);
         when(mapper.countPendingWithoutDelivery()).thenReturn(1L);
         assertTrue(assertThrows(IllegalStateException.class, gate::afterPropertiesSet)
                 .getMessage().contains("缺少最终交付权"));

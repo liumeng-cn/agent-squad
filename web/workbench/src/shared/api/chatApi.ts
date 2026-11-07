@@ -1,4 +1,5 @@
 import type { ModelSelection } from './modelsApi'
+import type { ExecutionActivity } from './activities'
 import { apiGet, apiPatch, apiPost } from './http'
 import type { Artifact } from './taskDetailsApi'
 import type { ConversationResponse, Interaction, TaskResponse } from './types'
@@ -62,6 +63,7 @@ export interface TaskDirectiveView {
   reasonMessage: string | null
 }
 export interface ChatSnapshot {
+  activities?: ExecutionActivity[]
   conversation: ConversationHeader
   messages: ChatMessage[]
   nextBeforeSeq: number | null

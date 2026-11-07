@@ -1,4 +1,5 @@
 import type { ModelSelection } from '../../../shared/api/modelsApi'
+import type { ExecutionActivity } from '../../../shared/api/activities'
 import { defineStore } from 'pinia'
 import { decodeReplyPreview, type ReplyPreview } from './replyPreviews'
 import { decodeConversationDelta } from './conversationDeltas'
@@ -22,6 +23,8 @@ const controlKeys = new Map<string, string>()
 const sequence = (cursor: string) => Number(cursor.split(':').at(-1) ?? 0)
 
 interface State {
+  activities: ExecutionActivity[]
+  stepsVersion: number
   directiveHistory: TaskDirectiveView[]
   directiveWatermarks: Record<string, number>
   previews: Record<string, ReplyPreview>
@@ -52,6 +55,7 @@ interface State {
 /** 会话消息是显示权威，刷新、翻页和断线只读，不重发历史请求。 */
 export const useConversationsStore = defineStore('conversations', {
   state: (): State => ({
+    activities: [], stepsVersion: 0,
     directiveHistory: [], directiveWatermarks: {},
     previews: {}, retiredPreviewStreams: [],
     items: [], nextCursor: null, listLoading: false, listLoaded: false, listError: '',
@@ -65,6 +69,7 @@ export const useConversationsStore = defineStore('conversations', {
   },
   actions: {
     dispose() {
+      this.activities = []; this.stepsVersion = 0
       epoch++; snapshotRequest++; seenSequence = 0
       this.previews = {}; this.retiredPreviewStreams = []
       stream?.close(); stream = null
@@ -151,6 +156,16 @@ export const useConversationsStore = defineStore('conversations', {
       }
       this.taskHistory = [...tasks.values()]
     },
+    mergeActivities(incoming: ExecutionActivity[]) {
+      const merged = new Map(this.activities.map(item => [item.activityId, item]))
+      for (const item of incoming) {
+        const previous = merged.get(item.activityId)
+        if (!previous || item.version > previous.version) merged.set(item.activityId, item)
+      }
+      const active = (item: ExecutionActivity) => ['QUEUED', 'RUNNING', 'WAITING'].includes(item.status)
+      this.activities = [...merged.values()].sort((a, b) => Number(active(b)) - Number(active(a))
+        || (b.startedAt ?? b.endedAt ?? '').localeCompare(a.startedAt ?? a.endedAt ?? '')).slice(0, 200)
+    },
     async refreshSnapshot(): Promise<boolean> {
       const id = this.activeConversationId
       if (!id) return false
@@ -162,8 +177,10 @@ export const useConversationsStore = defineStore('conversations', {
         if (this.snapshot && snapshot.conversation.generation !== this.snapshot.conversation.generation) {
           this.messages = []; this.directiveHistory = []; this.directiveWatermarks = {}
           this.previews = {}; this.retiredPreviewStreams = []
+          this.activities = []
         }
         this.snapshot = snapshot; this.mergeMessages(snapshot.messages); this.mergeHistoryStates(snapshot)
+        this.mergeActivities(snapshot.activities ?? []); this.stepsVersion++
         for (const id of Object.keys(this.previews)) {
           if (!snapshot.activeExecutions.some(item => item.executionId === id && ['QUEUED', 'RUNNING', 'RECOVERING'].includes(item.status))
               || snapshot.messages.some(item => item.executionId === id && item.role === 'ASSISTANT' && item.completed)) delete this.previews[id]
@@ -178,7 +195,7 @@ export const useConversationsStore = defineStore('conversations', {
         if (current !== epoch || id !== this.activeConversationId) return false
         this.error = errorMessage(cause)
         if (cause instanceof ApiError && [401, 403, 404].includes(cause.code)) {
-          this.unavailable = true; this.snapshot = null; this.messages = []; this.executionHistory = []; this.taskHistory = []; this.directiveHistory = []; this.directiveWatermarks = {}; stream?.close()
+          this.unavailable = true; this.snapshot = null; this.messages = []; this.executionHistory = []; this.taskHistory = []; this.directiveHistory = []; this.directiveWatermarks = {}; this.activities = []; stream?.close()
           this.previews = {}; this.retiredPreviewStreams = []
         }
         return false
@@ -203,6 +220,11 @@ export const useConversationsStore = defineStore('conversations', {
     applyEventPayload(event: ConversationEvent): boolean {
       const delta = decodeConversationDelta(event)
       if (delta) {
+        if (delta.type === 'activity.updated') {
+          this.mergeActivities([delta.activity])
+          return true
+        }
+        this.stepsVersion++
         if (delta.type === 'directive.status_changed') {
           this.mergeDirectives([delta.directive], event.sequence)
           return true
