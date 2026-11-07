@@ -1,6 +1,6 @@
 package com.agentsquad.squad.integration.agentscope.middleware;
 
-import com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper;
+import com.agentsquad.squad.mapper.ResponseRuntimeMapper;
 import com.agentsquad.squad.integration.agentscope.CachedReplyModel;
 import com.agentsquad.squad.model.domain.AcceptedModelChoice;
 import com.agentsquad.squad.service.ModelCatalogService;

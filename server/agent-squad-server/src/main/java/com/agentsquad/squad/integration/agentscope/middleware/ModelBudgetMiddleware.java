@@ -3,7 +3,7 @@ package com.agentsquad.squad.integration.agentscope.middleware;
 import com.agentsquad.squad.service.ExecutionFailureService;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.service.BudgetService;
-import com.agentsquad.squad.governance.repository.BudgetMapper;
+import com.agentsquad.squad.mapper.BudgetMapper;
 import com.agentsquad.squad.service.UserStatusGuardService;
 import com.agentsquad.squad.worker.profile.WorkerModelProfile;
 import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;

@@ -3,7 +3,7 @@ package com.agentsquad.squad.agent.tool;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.domain.model.WorkerExecutionIdentity;
-import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
+import com.agentsquad.squad.mapper.WorkerDispatchMapper;
 import com.agentsquad.squad.domain.dto.SandboxExecuteRequest;
 import com.agentsquad.squad.service.SandboxExecutionService;
 import com.agentsquad.squad.service.WorkerDefinitionService;
@@ -37,7 +37,7 @@ public class SandboxPythonTool implements AgentTool {
     private ObjectMapper json;
 
     @Resource
-    private com.agentsquad.squad.conversation.repository.ExecutionScopeMapper bindings;
+    private com.agentsquad.squad.mapper.ExecutionScopeMapper bindings;
 
     @Resource
     private WorkerDispatchMapper workers;

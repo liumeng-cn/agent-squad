@@ -9,7 +9,7 @@ import com.agentsquad.squad.domain.response.MemoryMutationResponse;
 import com.agentsquad.squad.domain.response.MemoryPageResponse;
 import com.agentsquad.squad.domain.request.MemoryUpdateRequest;
 import com.agentsquad.squad.domain.dto.MemoryView;
-import com.agentsquad.squad.memory.repository.MemoryMapper;
+import com.agentsquad.squad.mapper.MemoryMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

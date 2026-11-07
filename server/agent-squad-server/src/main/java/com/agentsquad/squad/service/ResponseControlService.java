@@ -6,13 +6,13 @@ import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.domain.entity.CommandDO;
 import com.agentsquad.squad.domain.entity.ConversationDO;
-import com.agentsquad.squad.conversation.repository.ConversationMapper;
+import com.agentsquad.squad.mapper.ConversationMapper;
 import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
 import com.agentsquad.squad.domain.entity.ResponseRuntimeDO;
 import com.agentsquad.squad.domain.response.CommandReceiptResponse;
-import com.agentsquad.squad.conversation.repository.CommandMapper;
-import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
-import com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper;
+import com.agentsquad.squad.mapper.CommandMapper;
+import com.agentsquad.squad.mapper.ExecutionScopeMapper;
+import com.agentsquad.squad.mapper.ResponseRuntimeMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -53,7 +53,7 @@ public class ResponseControlService {
     private com.agentsquad.squad.service.OperationService operations;
 
     @Resource
-    private com.agentsquad.squad.interaction.repository.InteractionMapper interactions;
+    private com.agentsquad.squad.mapper.InteractionMapper interactions;
 
     @Resource
     private ObjectMapper json;

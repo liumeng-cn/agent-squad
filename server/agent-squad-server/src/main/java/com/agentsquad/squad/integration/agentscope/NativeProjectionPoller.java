@@ -3,7 +3,7 @@ package com.agentsquad.squad.integration.agentscope;
 import com.agentsquad.squad.domain.exception.ExecutionContextInvalidatedException;
 import com.agentsquad.squad.domain.enums.ResponseCompletionProtocol;
 import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
-import com.agentsquad.squad.runtime.repository.ProjectionMapper;
+import com.agentsquad.squad.mapper.ProjectionMapper;
 import com.agentsquad.squad.domain.model.MasterAgentIdentity;
 import com.agentsquad.squad.service.WorkerRecoveryService;
 import com.agentsquad.squad.service.RuntimeEventConsumptionService;
@@ -40,7 +40,7 @@ public class NativeProjectionPoller {
     private com.agentsquad.squad.service.ExecutionRestrictionService restrictions;
 
     @Resource
-    private com.agentsquad.squad.conversation.repository.ExecutionScopeMapper scopeMapper;
+    private com.agentsquad.squad.mapper.ExecutionScopeMapper scopeMapper;
 
     @Resource
     private com.agentsquad.squad.service.ExecutionFailureService failures;
@@ -49,7 +49,7 @@ public class NativeProjectionPoller {
     private NaturalReplyOutputReader naturalOutputs;
 
     @Resource
-    private com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper replies;
+    private com.agentsquad.squad.mapper.ResponseRuntimeMapper replies;
 
     @Resource
     private ResponseExecutionService responses;

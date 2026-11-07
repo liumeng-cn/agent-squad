@@ -10,7 +10,7 @@ import com.agentsquad.squad.gateway.admin.AdminUserUpdateRequest;
 
 import com.agentsquad.squad.gateway.admin.AdminUserPage;
 
-import com.agentsquad.squad.gateway.admin.AdminUserMapper;
+import com.agentsquad.squad.gateway.mapper.AdminUserMapper;
 
 import com.agentsquad.squad.gateway.admin.AdminUserCreateResult;
 

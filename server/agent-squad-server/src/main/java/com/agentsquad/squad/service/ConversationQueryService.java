@@ -21,11 +21,11 @@ import com.agentsquad.squad.domain.dto.ConversationEvent;
 import com.agentsquad.squad.domain.response.ActivityHistoryPageResponse;
 import com.agentsquad.squad.domain.request.ActivityHistoryRequest;
 import com.agentsquad.squad.domain.dto.ExecutionActivityView;
-import com.agentsquad.squad.presentation.repository.ConversationReadMapper;
-import com.agentsquad.squad.conversation.repository.ResponseContextMapper;
-import com.agentsquad.squad.conversation.repository.TaskMapper;
+import com.agentsquad.squad.mapper.ConversationReadMapper;
+import com.agentsquad.squad.mapper.ResponseContextMapper;
+import com.agentsquad.squad.mapper.TaskMapper;
 import com.agentsquad.squad.domain.dto.TaskResponse;
-import com.agentsquad.squad.artifact.repository.ArtifactMapper;
+import com.agentsquad.squad.mapper.ArtifactMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -67,13 +67,13 @@ public class ConversationQueryService {
     private TaskMapper tasks;
 
     @Resource
-    private com.agentsquad.squad.conversation.repository.TaskDirectiveMapper directives;
+    private com.agentsquad.squad.mapper.TaskDirectiveMapper directives;
 
     @Resource
     private ObjectMapper json;
 
     @Resource
-    private com.agentsquad.squad.presentation.repository.ExecutionActivityMapper activities;
+    private com.agentsquad.squad.mapper.ExecutionActivityMapper activities;
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public ConversationSnapshotResponse snapshot(String userId, String conversationId, Long before, int limit) {

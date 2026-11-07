@@ -1,10 +1,10 @@
 package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.service.RuntimeEventConsumptionService;
-import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventInboxMapper;
+import com.agentsquad.squad.mapper.RuntimeEventInboxMapper;
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource;
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeJournalReadySignal;
-import com.agentsquad.squad.runtime.repository.ProjectionMapper;
+import com.agentsquad.squad.mapper.ProjectionMapper;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

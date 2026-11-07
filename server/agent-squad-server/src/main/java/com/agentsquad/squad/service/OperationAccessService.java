@@ -2,7 +2,7 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.common.enums.identity.AccountRole;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.tools.operation.repository.OperationAccessMapper;
+import com.agentsquad.squad.mapper.OperationAccessMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 

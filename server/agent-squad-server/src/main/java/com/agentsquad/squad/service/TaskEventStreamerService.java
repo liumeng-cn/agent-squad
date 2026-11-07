@@ -5,8 +5,8 @@ import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
 import com.agentsquad.squad.domain.entity.EventDO;
 import com.agentsquad.squad.domain.dto.TaskEventResponse;
-import com.agentsquad.squad.conversation.repository.TaskEventMapper;
-import com.agentsquad.squad.conversation.repository.TaskMapper;
+import com.agentsquad.squad.mapper.TaskEventMapper;
+import com.agentsquad.squad.mapper.TaskMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;

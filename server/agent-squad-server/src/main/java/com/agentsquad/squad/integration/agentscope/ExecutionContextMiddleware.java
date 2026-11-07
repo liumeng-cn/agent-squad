@@ -1,13 +1,13 @@
 package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
+import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.service.ExecutionScopeService;
 import com.agentsquad.squad.domain.exception.SkillCapabilityUnavailableException;
 import com.agentsquad.squad.domain.model.WorkerExecutionIdentity;
 import com.agentsquad.squad.service.UserStatusGuardService;
 import com.agentsquad.squad.domain.exception.ExecutionContextInvalidatedException;
-import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
+import com.agentsquad.squad.mapper.WorkerDispatchMapper;
 import com.agentsquad.squad.service.ExecutionAuthorizationService;
 import com.agentsquad.squad.service.ExecutionRestrictionService;
 import com.fasterxml.jackson.databind.ObjectMapper;

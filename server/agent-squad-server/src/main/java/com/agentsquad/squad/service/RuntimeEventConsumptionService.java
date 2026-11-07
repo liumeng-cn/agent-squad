@@ -8,7 +8,7 @@ import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventFingerprint
 
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventFailureCode;
 
-import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventInboxMapper;
+import com.agentsquad.squad.mapper.RuntimeEventInboxMapper;
 
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventBusinessWriter;
 

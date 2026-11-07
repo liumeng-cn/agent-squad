@@ -2,7 +2,7 @@ package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.config.RedisWakeupProperties;
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource;
-import com.agentsquad.squad.runtime.repository.ProjectionMapper;
+import com.agentsquad.squad.mapper.ProjectionMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

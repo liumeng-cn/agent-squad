@@ -1,6 +1,6 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.runtime.repository.CompletionMapper;
+import com.agentsquad.squad.mapper.CompletionMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -26,7 +26,7 @@ public class CancellationSettlementSchedulerService {
     private TaskFinalizerService finalizer;
 
     @Resource
-    private com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper replies;
+    private com.agentsquad.squad.mapper.ResponseRuntimeMapper replies;
 
     @Resource
     private com.agentsquad.squad.service.ResponseExecutionService responses;

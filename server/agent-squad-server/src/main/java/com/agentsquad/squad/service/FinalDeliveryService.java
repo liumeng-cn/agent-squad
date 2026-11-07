@@ -3,7 +3,7 @@ package com.agentsquad.squad.service;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.domain.entity.FinalDeliveryDO;
-import com.agentsquad.squad.conversation.repository.FinalDeliveryMapper;
+import com.agentsquad.squad.mapper.FinalDeliveryMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

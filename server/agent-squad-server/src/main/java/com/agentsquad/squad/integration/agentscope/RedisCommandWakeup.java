@@ -5,7 +5,7 @@ import com.agentsquad.squad.service.CommandDeliveryService;
 import com.agentsquad.squad.config.RedisWakeupProperties;
 import com.agentsquad.squad.domain.entity.CommandClaimContextDO;
 import com.agentsquad.squad.domain.enums.RuntimeCommandAction;
-import com.agentsquad.squad.conversation.repository.DeliveryMapper;
+import com.agentsquad.squad.mapper.DeliveryMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

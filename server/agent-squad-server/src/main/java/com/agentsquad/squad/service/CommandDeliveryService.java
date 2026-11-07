@@ -16,7 +16,7 @@ import com.agentsquad.squad.domain.exception.ExecutionContextInvalidatedExceptio
 import com.agentsquad.squad.domain.model.CommandReadySignal;
 
 import com.agentsquad.squad.common.observability.ObservationSupport;
-import com.agentsquad.squad.conversation.repository.DeliveryMapper;
+import com.agentsquad.squad.mapper.DeliveryMapper;
 import com.agentsquad.squad.domain.model.MasterAgentIdentity;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.JsonNode;

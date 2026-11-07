@@ -4,7 +4,7 @@ import com.agentsquad.squad.tools.operation.PrepareRequest;
 
 import com.agentsquad.squad.tools.operation.OperationPreview;
 
-import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
+import com.agentsquad.squad.mapper.TaskDirectiveMapper;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.RuntimePayloads;
@@ -15,7 +15,7 @@ import com.agentsquad.squad.domain.dto.OperationPage;
 import com.agentsquad.squad.domain.dto.OperationView;
 import com.agentsquad.squad.domain.dto.OperationDetail;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.tools.operation.repository.OperationMapper;
+import com.agentsquad.squad.mapper.OperationMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

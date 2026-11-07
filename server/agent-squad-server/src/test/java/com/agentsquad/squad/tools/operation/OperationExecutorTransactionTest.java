@@ -5,7 +5,7 @@ import com.agentsquad.squad.service.OperationExecutorService;
 import com.agentsquad.squad.service.OperationDispatchService;
 
 import com.agentsquad.squad.domain.entity.OperationDO;
-import com.agentsquad.squad.tools.operation.repository.OperationMapper;
+import com.agentsquad.squad.mapper.OperationMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.aop.framework.ProxyFactory;

@@ -3,21 +3,21 @@ package com.agentsquad.squad.service;
 import com.agentsquad.squad.domain.dto.AcceptanceReviewRequest;
 import com.agentsquad.squad.domain.model.BindingResult;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
+import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.domain.entity.CommandDO;
 import com.agentsquad.squad.domain.enums.GoalTaskStatus;
 import com.agentsquad.squad.domain.response.CommandReceiptResponse;
-import com.agentsquad.squad.conversation.repository.CommandMapper;
+import com.agentsquad.squad.mapper.CommandMapper;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.domain.entity.InteractionDO;
-import com.agentsquad.squad.interaction.repository.InteractionMapper;
+import com.agentsquad.squad.mapper.InteractionMapper;
 import com.agentsquad.squad.tools.mock.MockTicketConnector;
 import com.agentsquad.squad.domain.entity.OperationDO;
 import com.agentsquad.squad.domain.enums.OperationStatus;
-import com.agentsquad.squad.tools.operation.repository.OperationMapper;
+import com.agentsquad.squad.mapper.OperationMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -93,7 +93,7 @@ public class InteractionService {
     private com.agentsquad.squad.service.PlanAcceptanceService planAcceptance;
 
     @Resource
-    private com.agentsquad.squad.runtime.repository.ProjectionMapper projections;
+    private com.agentsquad.squad.mapper.ProjectionMapper projections;
 
     @Value("${agentsquad.interaction.ttl-hours:24}")
     private long ttlHours;

@@ -1,6 +1,6 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.governance.repository.BudgetMapper;
+import com.agentsquad.squad.mapper.BudgetMapper;
 import com.agentsquad.squad.domain.entity.BudgetAccountDO;
 import com.agentsquad.squad.domain.entity.BudgetReservationDO;
 import com.agentsquad.squad.worker.profile.WorkerModelProfile;

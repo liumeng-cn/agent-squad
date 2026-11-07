@@ -1,7 +1,7 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.domain.model.FailureClassification;
-import com.agentsquad.squad.runtime.repository.ExecutionRestrictionMapper;
+import com.agentsquad.squad.mapper.ExecutionRestrictionMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

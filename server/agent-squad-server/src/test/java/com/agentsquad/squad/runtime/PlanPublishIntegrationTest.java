@@ -346,15 +346,15 @@ class PlanPublishIntegrationTest {
 
             // 旧版汇总回合发布了新版计划时，只等待新版工作，不排入完成纠正。
             jdbc.update("UPDATE sq_command SET native_turn_id = 'old-plan-signal' WHERE task_id = ? AND action = 'MASTER_SIGNAL'", task.taskId());
-            var commands = context.getBean(com.agentsquad.squad.conversation.repository.CommandMapper.class);
+            var commands = context.getBean(com.agentsquad.squad.mapper.CommandMapper.class);
             assertThat(commands.countPlanSignalTurn(userId, task.taskId(), "old-plan-signal", 1)).isEqualTo(1);
             assertThat(commands.countPlanSignalTurn(userId, task.taskId(), "old-plan-signal", 2)).isZero();
             jdbc.update("UPDATE sq_goal_task SET status = 'RUNNING' WHERE task_id = ?", task.taskId());
             String masterBinding = jdbc.queryForObject("SELECT binding_id FROM sq_runtime_binding WHERE framework_session_id = ?", String.class, sessionId);
             var finalizer = new com.agentsquad.squad.service.TaskFinalizerService();
-            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "directives", context.getBean(com.agentsquad.squad.conversation.repository.TaskDirectiveMapper.class));
-            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "completionMapper", context.getBean(com.agentsquad.squad.runtime.repository.CompletionMapper.class));
-            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "planMapper", context.getBean(com.agentsquad.squad.runtime.repository.PlanMapper.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "directives", context.getBean(com.agentsquad.squad.mapper.TaskDirectiveMapper.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "completionMapper", context.getBean(com.agentsquad.squad.mapper.CompletionMapper.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "planMapper", context.getBean(com.agentsquad.squad.mapper.PlanMapper.class));
             org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "commandMapper", commands);
             var transaction = new org.springframework.transaction.support.TransactionTemplate(context.getBean(org.springframework.transaction.PlatformTransactionManager.class));
             assertThat(transaction.<Boolean>execute(status -> finalizer.recoverMissingProposal(
@@ -366,9 +366,9 @@ class PlanPublishIntegrationTest {
             // 实际执行时等待，恢复受阻时开放协调工具，不能同时要求 Master 空等。
             var middleware = new ScopedMasterToolsMiddleware();
             org.springframework.test.util.ReflectionTestUtils.setField(middleware, "scopes", context.getBean(com.agentsquad.squad.service.ExecutionScopeService.class));
-            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "scopeMapper", context.getBean(com.agentsquad.squad.conversation.repository.ExecutionScopeMapper.class));
-            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "tasks", context.getBean(com.agentsquad.squad.conversation.repository.TaskMapper.class));
-            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "plans", context.getBean(com.agentsquad.squad.runtime.repository.PlanMapper.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "scopeMapper", context.getBean(com.agentsquad.squad.mapper.ExecutionScopeMapper.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "tasks", context.getBean(com.agentsquad.squad.mapper.TaskMapper.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "plans", context.getBean(com.agentsquad.squad.mapper.PlanMapper.class));
             for (String state : List.of("READY", "RECOVERY_BLOCKED")) {
                 jdbc.update("UPDATE sq_worker_job SET status = ? WHERE job_id = ?", state, secondReceipt.jobIds().getFirst());
                 middleware.onModelCall(null, io.agentscope.core.agent.RuntimeContext.builder().userId(userId).sessionId(sessionId).build(),

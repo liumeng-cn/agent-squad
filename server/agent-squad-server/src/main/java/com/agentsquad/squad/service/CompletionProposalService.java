@@ -6,15 +6,15 @@ import com.agentsquad.squad.domain.enums.GoalTaskStatus;
 import com.agentsquad.squad.domain.enums.PlanJoinStage;
 import com.agentsquad.squad.domain.model.PlanAcceptanceResult;
 
-import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
+import com.agentsquad.squad.mapper.TaskDirectiveMapper;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
 import com.agentsquad.squad.domain.dto.CompletionSubmission;
-import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
+import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.domain.dto.CompletionProposalReceipt;
-import com.agentsquad.squad.runtime.repository.CompletionMapper;
-import com.agentsquad.squad.runtime.repository.PlanMapper;
+import com.agentsquad.squad.mapper.CompletionMapper;
+import com.agentsquad.squad.mapper.PlanMapper;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;

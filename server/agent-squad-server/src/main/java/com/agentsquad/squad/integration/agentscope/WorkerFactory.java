@@ -9,8 +9,8 @@ import com.agentsquad.squad.integration.agentscope.middleware.ModelBudgetMiddlew
 import com.agentsquad.squad.integration.agentscope.middleware.ProfiledModelBudgetMiddleware;
 import com.agentsquad.squad.domain.entity.ContextSnapshotDO;
 import com.agentsquad.squad.domain.entity.WorkerLaunchDO;
-import com.agentsquad.squad.runtime.repository.ContextSnapshotMapper;
-import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
+import com.agentsquad.squad.mapper.ContextSnapshotMapper;
+import com.agentsquad.squad.mapper.WorkerDispatchMapper;
 import com.agentsquad.squad.service.WorkerDispatchService;
 import com.agentsquad.squad.service.WorkerResultService;
 import com.agentsquad.squad.service.WorkerDefinitionService;

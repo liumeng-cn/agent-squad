@@ -1,0 +1,327 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.mapper.SkillMapper">
+    <resultMap id="SkillVersionRow" type="com.agentsquad.squad.domain.entity.SkillVersionDO">
+        <constructor>
+            <arg column="id" javaType="_long"/>
+            <arg column="skill_version_id" javaType="string"/>
+            <arg column="user_id" javaType="string"/>
+            <arg column="skill_name" javaType="string"/>
+            <arg column="skill_version" javaType="string"/>
+            <arg column="description" javaType="string"/>
+            <arg column="content_hash" javaType="string"/>
+            <arg column="required_tools_json" javaType="string"/>
+            <arg column="status" javaType="string"/>
+            <arg column="authorization_revision" javaType="_long"/>
+        </constructor>
+    </resultMap>
+    <resultMap id="SkillTextFile" type="com.agentsquad.squad.domain.entity.SkillTextFileDO">
+        <constructor>
+            <arg column="file_path" javaType="string"/>
+            <arg column="file_content" javaType="string"/>
+        </constructor>
+    </resultMap>
+    <resultMap id="SkillGrantRow" type="com.agentsquad.squad.domain.entity.SkillGrantDO">
+        <constructor>
+            <arg column="user_id" javaType="string"/>
+            <arg column="skill_version_id" javaType="string"/>
+            <arg column="enabled" javaType="_boolean"/>
+            <arg column="version" javaType="_long"/>
+        </constructor>
+    </resultMap>
+    <resultMap id="SkillReference" type="com.agentsquad.squad.domain.entity.SkillReferenceDO">
+        <constructor>
+            <arg column="skill_version_id" javaType="string"/>
+            <arg column="skill_name" javaType="string"/>
+            <arg column="skill_version" javaType="string"/>
+            <arg column="description" javaType="string"/>
+            <arg column="content_hash" javaType="string"/>
+            <arg column="authorization_revision" javaType="_long"/>
+        </constructor>
+    </resultMap>
+
+    <select id="find" resultMap="SkillVersionRow">
+        SELECT id,
+               skill_version_id,
+               user_id,
+               skill_name,
+               skill_version,
+               description,
+               content_hash,
+               required_tools_json,
+               status,
+               authorization_revision
+        FROM sq_skill_version
+        WHERE user_id = #{userId}
+          AND skill_version_id = #{versionId}
+          AND del_flag = '0'
+    </select>
+    <select id="lockVersion" resultMap="SkillVersionRow">
+        SELECT id,
+               skill_version_id,
+               user_id,
+               skill_name,
+               skill_version,
+               description,
+               content_hash,
+               required_tools_json,
+               status,
+               authorization_revision
+        FROM sq_skill_version
+        WHERE user_id = #{userId}
+          AND skill_version_id = #{versionId}
+          AND del_flag = '0'
+        FOR UPDATE
+    </select>
+    <select id="findNamedVersion" resultMap="SkillVersionRow">
+        SELECT id,
+               skill_version_id,
+               user_id,
+               skill_name,
+               skill_version,
+               description,
+               content_hash,
+               required_tools_json,
+               status,
+               authorization_revision
+        FROM sq_skill_version
+        WHERE user_id = #{userId}
+          AND skill_name = #{name}
+          AND skill_version = #{version}
+          AND del_flag = '0'
+    </select>
+    <select id="findNamedVersionCurrent" resultMap="SkillVersionRow">
+        SELECT id,
+               skill_version_id,
+               user_id,
+               skill_name,
+               skill_version,
+               description,
+               content_hash,
+               required_tools_json,
+               status,
+               authorization_revision
+        FROM sq_skill_version
+        WHERE user_id = #{userId}
+          AND skill_name = #{name}
+          AND skill_version = #{version}
+          AND del_flag = '0'
+        FOR UPDATE
+    </select>
+    <select id="list" resultMap="SkillVersionRow">
+        SELECT id,
+               skill_version_id,
+               user_id,
+               skill_name,
+               skill_version,
+               description,
+               content_hash,
+               required_tools_json,
+               status,
+               authorization_revision
+        FROM sq_skill_version
+        WHERE user_id = #{userId}
+          AND id > #{afterId}
+          AND del_flag = '0'
+        ORDER BY id
+        LIMIT #{limit}
+    </select>
+    <insert id="insertVersion">
+        INSERT INTO sq_skill_version (
+            skill_version_id,
+            user_id,
+            skill_name,
+            skill_version,
+            description,
+            content_hash,
+            required_tools_json,
+            creator_id,
+            last_updater_id
+        )
+        VALUES (
+            #{versionId},
+            #{userId},
+            #{name},
+            #{version},
+            #{description},
+            #{contentHash},
+            #{requiredToolsJson},
+            #{userId},
+            #{userId}
+        )
+    </insert>
+    <insert id="insertFile">
+        INSERT INTO sq_skill_file (
+            skill_file_id,
+            user_id,
+            skill_version_id,
+            file_path,
+            file_content,
+            creator_id,
+            last_updater_id
+        )
+        VALUES (
+            #{fileId},
+            #{userId},
+            #{versionId},
+            #{file.path},
+            #{file.content},
+            #{userId},
+            #{userId}
+        )
+    </insert>
+    <select id="files" resultMap="SkillTextFile">
+        SELECT file_path,
+               file_content
+        FROM sq_skill_file
+        WHERE user_id = #{userId}
+          AND skill_version_id = #{versionId}
+          AND del_flag = '0'
+        ORDER BY file_path
+    </select>
+    <select id="file" resultMap="SkillTextFile">
+        SELECT file_path,
+               file_content
+        FROM sq_skill_file
+        WHERE user_id = #{userId}
+          AND skill_version_id = #{versionId}
+          AND file_path = #{path}
+          AND del_flag = '0'
+    </select>
+    <insert id="insertGrant">
+        INSERT INTO sq_skill_grant (
+            grant_id,
+            user_id,
+            skill_version_id,
+            enabled,
+            creator_id,
+            last_updater_id
+        )
+        VALUES (
+            #{grantId},
+            #{userId},
+            #{versionId},
+            FALSE,
+            #{userId},
+            #{userId}
+        )
+    </insert>
+    <select id="grant" resultMap="SkillGrantRow">
+        SELECT user_id,
+               skill_version_id,
+               enabled,
+               version
+        FROM sq_skill_grant
+        WHERE user_id = #{userId}
+          AND skill_version_id = #{versionId}
+          AND del_flag = '0'
+    </select>
+    <select id="lockGrant" resultMap="SkillGrantRow">
+        SELECT user_id,
+               skill_version_id,
+               enabled,
+               version
+        FROM sq_skill_grant
+        WHERE user_id = #{userId}
+          AND skill_version_id = #{versionId}
+          AND del_flag = '0'
+        FOR UPDATE
+    </select>
+    <update id="changeGrant">
+        UPDATE sq_skill_grant
+        SET enabled = #{enabled},
+               version = version + 1,
+               last_updater_id = #{userId}
+        WHERE user_id = #{userId}
+          AND skill_version_id = #{versionId}
+          AND version = #{expectedVersion}
+          AND del_flag = '0'
+    </update>
+    <update id="revoke">
+        UPDATE sq_skill_version
+        SET status = 'REVOKED',
+               authorization_revision = authorization_revision + 1,
+               last_updater_id = #{userId}
+        WHERE user_id = #{userId}
+          AND skill_version_id = #{versionId}
+          AND status &lt;> 'REVOKED'
+          AND del_flag = '0'
+    </update>
+    <select id="catalogExists" resultType="string">
+        SELECT catalog_id
+        FROM sq_scope_skill_catalog
+        WHERE user_id = #{userId}
+          AND scope_id = #{scopeId}
+          AND del_flag = '0'
+        FOR UPDATE
+    </select>
+    <insert id="insertCatalog">
+        INSERT INTO sq_scope_skill_catalog (
+            catalog_id,
+            user_id,
+            scope_id,
+            creator_id,
+            last_updater_id
+        )
+        VALUES (
+            #{catalogId},
+            #{userId},
+            #{scopeId},
+            #{userId},
+            #{userId}
+        )
+    </insert>
+    <insert id="insertReference">
+        INSERT INTO sq_scope_skill_ref (
+            reference_id,
+            user_id,
+            scope_id,
+            skill_version_id,
+            content_hash,
+            authorization_revision,
+            creator_id,
+            last_updater_id
+        )
+        VALUES (
+            #{referenceId},
+            #{userId},
+            #{scopeId},
+            #{skill.skillVersionId},
+            #{skill.contentHash},
+            #{skill.authorizationRevision},
+            #{userId},
+            #{userId}
+        )
+    </insert>
+    <select id="references" resultMap="SkillReference">
+        SELECT r.skill_version_id,
+               v.skill_name,
+               v.skill_version,
+               v.description,
+               r.content_hash,
+               r.authorization_revision
+        FROM sq_scope_skill_ref r
+        JOIN sq_skill_version v ON v.user_id = r.user_id
+          AND v.skill_version_id = r.skill_version_id
+        WHERE r.user_id = #{userId}
+          AND r.scope_id = #{scopeId}
+          AND r.del_flag = '0'
+        ORDER BY v.skill_name FOR UPDATE
+    </select>
+    <select id="lockVersions" resultMap="SkillVersionRow">
+        SELECT id,
+               skill_version_id,
+               user_id,
+               skill_name,
+               skill_version,
+               description,
+               content_hash,
+               required_tools_json,
+               status,
+               authorization_revision
+        FROM sq_skill_version
+        WHERE user_id = #{userId}
+          AND del_flag = '0'
+        ORDER BY id FOR UPDATE
+    </select>
+</mapper>

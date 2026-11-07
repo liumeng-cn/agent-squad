@@ -1,7 +1,7 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.domain.entity.RuntimeAdmissionSlotDO;
-import com.agentsquad.squad.conversation.repository.RuntimeAdmissionMapper;
+import com.agentsquad.squad.mapper.RuntimeAdmissionMapper;
 import com.agentsquad.squad.domain.exception.RuntimeAdmissionBusyException;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

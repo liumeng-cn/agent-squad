@@ -1,7 +1,7 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.domain.entity.OperationDO;
-import com.agentsquad.squad.tools.operation.repository.OperationMapper;
+import com.agentsquad.squad.mapper.OperationMapper;
 import com.agentsquad.squad.domain.model.FailureClassification;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;

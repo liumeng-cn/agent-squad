@@ -9,7 +9,7 @@ import com.agentsquad.squad.domain.model.SandboxDispatchClaim;
 import com.agentsquad.squad.domain.dto.SandboxDriverResult;
 import com.agentsquad.squad.domain.dto.SandboxExecuteRequest;
 import com.agentsquad.squad.domain.dto.SandboxExecutionResult;
-import com.agentsquad.squad.sandbox.repository.SandboxMapper;
+import com.agentsquad.squad.mapper.SandboxMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;

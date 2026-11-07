@@ -2,7 +2,7 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.common.observability.ObservationSupport;
 import com.agentsquad.squad.domain.entity.CommandClaimContextDO;
-import com.agentsquad.squad.conversation.repository.DeliveryMapper;
+import com.agentsquad.squad.mapper.DeliveryMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

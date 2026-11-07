@@ -9,7 +9,7 @@ import com.agentsquad.squad.domain.request.ConnectionCreateRequest;
 import com.agentsquad.squad.domain.response.ConnectionPageResponse;
 import com.agentsquad.squad.domain.dto.ConnectionResponse;
 import com.agentsquad.squad.domain.request.ConnectionUpdateRequest;
-import com.agentsquad.squad.tools.repository.ConnectionMapper;
+import com.agentsquad.squad.mapper.ConnectionMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;

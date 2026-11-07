@@ -1,16 +1,16 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
+import com.agentsquad.squad.mapper.TaskDirectiveMapper;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.enums.worker.WorkerJobStatus;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.domain.enums.PlanJoinStage;
 import com.agentsquad.squad.domain.enums.RuntimeCommandAction;
-import com.agentsquad.squad.conversation.repository.BindingMapper;
-import com.agentsquad.squad.conversation.repository.CommandMapper;
+import com.agentsquad.squad.mapper.BindingMapper;
+import com.agentsquad.squad.mapper.CommandMapper;
 import com.agentsquad.squad.domain.entity.PlanDO;
 import com.agentsquad.squad.domain.entity.WorkerJobDO;
-import com.agentsquad.squad.runtime.repository.PlanMapper;
+import com.agentsquad.squad.mapper.PlanMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;

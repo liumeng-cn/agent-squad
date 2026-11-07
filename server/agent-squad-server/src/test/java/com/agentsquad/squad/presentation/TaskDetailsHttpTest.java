@@ -8,7 +8,7 @@ import com.agentsquad.squad.domain.response.ArtifactResponse;
 import com.agentsquad.squad.service.GoalTaskService;
 
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.interaction.repository.InteractionMapper;
+import com.agentsquad.squad.mapper.InteractionMapper;
 import com.agentsquad.squad.service.InputFormSchemaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -155,7 +155,7 @@ class TaskDetailsHttpTest {
                         .contentType(MediaType.APPLICATION_JSON).content(response)).andExpect(status().isAccepted());
             }
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_command WHERE action = 'RESPOND'", Integer.class)).isEqualTo(1);
-            var events = context.getBean(com.agentsquad.squad.conversation.repository.TaskEventMapper.class);
+            var events = context.getBean(com.agentsquad.squad.mapper.TaskEventMapper.class);
             events.insertProjected(actor.userId(), taskId, 2, "answer-old", "answer.completed",
                     "{\"text\":\"旧回答\",\"revision\":0}", LocalDateTime.now());
             events.insertProjected(actor.userId(), taskId, 3, "answer-new", "answer.replaced",

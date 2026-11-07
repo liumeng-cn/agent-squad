@@ -6,8 +6,8 @@ import com.agentsquad.squad.domain.model.PlanCompletionEvaluation;
 import com.agentsquad.squad.domain.model.PlanJoinFacts;
 import com.agentsquad.squad.domain.model.PlanJoinJob;
 import com.agentsquad.squad.domain.dto.AcceptanceReview;
-import com.agentsquad.squad.runtime.repository.CompletionMapper;
-import com.agentsquad.squad.runtime.repository.PlanMapper;
+import com.agentsquad.squad.mapper.CompletionMapper;
+import com.agentsquad.squad.mapper.PlanMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 

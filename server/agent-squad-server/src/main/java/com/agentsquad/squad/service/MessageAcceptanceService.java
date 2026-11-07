@@ -8,7 +8,7 @@ import com.agentsquad.squad.domain.entity.MessageSubmissionDO;
 import com.agentsquad.squad.domain.enums.ResponseExecutionStatus;
 import com.agentsquad.squad.domain.request.MessageCreateRequest;
 import com.agentsquad.squad.domain.response.MessageReceiptResponse;
-import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
+import com.agentsquad.squad.mapper.MessageAcceptanceMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

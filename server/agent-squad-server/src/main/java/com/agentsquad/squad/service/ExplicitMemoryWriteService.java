@@ -13,7 +13,7 @@ import com.agentsquad.squad.domain.response.MemoryMutationResponse;
 import com.agentsquad.squad.domain.request.MemoryUpdateRequest;
 import com.agentsquad.squad.domain.dto.MemoryWriteReceipt;
 import com.agentsquad.squad.domain.dto.MemoryWriteRequest;
-import com.agentsquad.squad.memory.repository.MemoryMapper;
+import com.agentsquad.squad.mapper.MemoryMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;

@@ -1,6 +1,6 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.artifact.repository.ArtifactDeliveryMapper;
+import com.agentsquad.squad.mapper.ArtifactDeliveryMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

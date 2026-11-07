@@ -14,18 +14,18 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.conversation.repository.CommandMapper;
-import com.agentsquad.squad.conversation.repository.ConversationMapper;
-import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
-import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
-import com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper;
+import com.agentsquad.squad.mapper.CommandMapper;
+import com.agentsquad.squad.mapper.ConversationMapper;
+import com.agentsquad.squad.mapper.ExecutionScopeMapper;
+import com.agentsquad.squad.mapper.MessageAcceptanceMapper;
+import com.agentsquad.squad.mapper.ResponseRuntimeMapper;
 import com.agentsquad.squad.integration.agentscope.NativeEventView;
 import com.agentsquad.squad.integration.agentscope.NativeSubmissionReceipt;
 import com.agentsquad.squad.domain.dto.CompletionProposalReceipt;
 import com.agentsquad.squad.domain.dto.MessageCompletedPayload;
 import com.agentsquad.squad.domain.dto.ExecutionChangedPayload;
 import com.agentsquad.squad.presentation.domain.ConversationDeltaType;
-import com.agentsquad.squad.presentation.repository.ConversationReadMapper;
+import com.agentsquad.squad.mapper.ConversationReadMapper;
 import com.agentsquad.squad.domain.dto.MessageView;
 import com.agentsquad.squad.domain.dto.ResponseExecutionView;
 import com.agentsquad.squad.domain.enums.NativeRunOutcome;
@@ -52,7 +52,7 @@ import java.util.UUID;
 @Slf4j
 public class ResponseExecutionService {
     @Resource
-    private com.agentsquad.squad.conversation.repository.GoalCreationMapper goalOrigins;
+    private com.agentsquad.squad.mapper.GoalCreationMapper goalOrigins;
     @Resource
     private com.agentsquad.squad.service.ActivityProjectionService activities;
     private static final Set<String> TERMINAL = Set.of("SUCCEEDED", "PARTIAL", "FAILED", "CANCELLED");

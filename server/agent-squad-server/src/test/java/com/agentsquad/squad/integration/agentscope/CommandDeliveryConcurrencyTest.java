@@ -3,7 +3,7 @@ package com.agentsquad.squad.integration.agentscope;
 import com.agentsquad.squad.service.CommandDeliveryService;
 
 import com.agentsquad.squad.domain.entity.CommandClaimContextDO;
-import com.agentsquad.squad.conversation.repository.DeliveryMapper;
+import com.agentsquad.squad.mapper.DeliveryMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 

@@ -8,7 +8,7 @@ import com.agentsquad.squad.service.FinalDeliveryService;
 import com.agentsquad.squad.service.GoalTaskCreationService;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.ResponseExecutionService;
-import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
+import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.domain.model.NaturalReplyEvidence;
 import com.agentsquad.squad.domain.enums.ResponseExecutionStatus;
 import com.agentsquad.squad.integration.agentscope.NativeEventView;

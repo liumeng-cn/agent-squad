@@ -1,6 +1,6 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
+import com.agentsquad.squad.mapper.TaskDirectiveMapper;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.CanonicalJson;
@@ -11,7 +11,7 @@ import com.agentsquad.squad.domain.enums.GoalTaskStatus;
 import com.agentsquad.squad.domain.entity.ContextPreparationDO;
 import com.agentsquad.squad.domain.entity.ContextSnapshotDO;
 import com.agentsquad.squad.domain.dto.ContextSnapshotReceipt;
-import com.agentsquad.squad.runtime.repository.ContextSnapshotMapper;
+import com.agentsquad.squad.mapper.ContextSnapshotMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;

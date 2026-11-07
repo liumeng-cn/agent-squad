@@ -166,7 +166,7 @@ public class MasterAgent implements NativeSessionGateway {
     private com.agentsquad.squad.integration.agentscope.LocalSessionStopper localSessions;
 
     @Resource
-    private com.agentsquad.squad.conversation.repository.BindingMapper controlBindings;
+    private com.agentsquad.squad.mapper.BindingMapper controlBindings;
 
     private CommittedSessionReader committedReader;
 

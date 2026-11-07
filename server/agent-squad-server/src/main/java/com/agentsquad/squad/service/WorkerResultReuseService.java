@@ -5,7 +5,7 @@ import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.domain.entity.ContextSnapshotDO;
 import com.agentsquad.squad.domain.entity.WorkerJobDO;
 import com.agentsquad.squad.domain.dto.PlanNode;
-import com.agentsquad.squad.runtime.repository.ContextSnapshotMapper;
+import com.agentsquad.squad.mapper.ContextSnapshotMapper;
 import com.agentsquad.squad.domain.dto.WorkerDefinitionResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

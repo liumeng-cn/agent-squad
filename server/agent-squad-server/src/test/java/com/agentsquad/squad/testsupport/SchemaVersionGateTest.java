@@ -2,7 +2,7 @@ package com.agentsquad.squad.testsupport;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.config.SchemaVersionGate;
-import com.agentsquad.squad.config.repository.SchemaInspectionMapper;
+import com.agentsquad.squad.mapper.SchemaInspectionMapper;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.SpringApplication;

@@ -1,7 +1,7 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.domain.entity.ConversationDO;
-import com.agentsquad.squad.conversation.repository.ConversationMapper;
+import com.agentsquad.squad.mapper.ConversationMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

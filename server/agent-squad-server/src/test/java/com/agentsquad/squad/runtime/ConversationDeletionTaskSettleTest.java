@@ -2,8 +2,8 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.conversation.repository.TaskMapper;
-import com.agentsquad.squad.conversation.repository.TaskEventMapper;
+import com.agentsquad.squad.mapper.TaskMapper;
+import com.agentsquad.squad.mapper.TaskEventMapper;
 import com.agentsquad.squad.domain.dto.ConversationResponse;
 import com.agentsquad.squad.domain.response.TaskReceiptResponse;
 import com.agentsquad.squad.service.ConversationCleanupSchedulerService;

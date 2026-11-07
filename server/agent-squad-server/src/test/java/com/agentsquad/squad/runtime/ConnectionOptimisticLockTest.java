@@ -5,7 +5,7 @@ import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.service.ConnectionService;
 import com.agentsquad.squad.domain.request.ConnectionCreateRequest;
 import com.agentsquad.squad.domain.request.ConnectionUpdateRequest;
-import com.agentsquad.squad.tools.repository.ConnectionMapper;
+import com.agentsquad.squad.mapper.ConnectionMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.test.util.ReflectionTestUtils;

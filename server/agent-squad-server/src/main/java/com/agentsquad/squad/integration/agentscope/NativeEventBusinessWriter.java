@@ -28,7 +28,7 @@ public class NativeEventBusinessWriter implements RuntimeEventBusinessWriter {
     private NaturalReplyOutputReader naturalOutputs;
 
     @Resource
-    private com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper replies;
+    private com.agentsquad.squad.mapper.ResponseRuntimeMapper replies;
 
     @Override
     public void apply(ProjectionTargetDO target, SessionEvent event) {

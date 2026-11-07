@@ -1,6 +1,6 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.artifact.repository.ArtifactMapper;
+import com.agentsquad.squad.mapper.ArtifactMapper;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.observability.ObservationSupport;
@@ -9,11 +9,11 @@ import com.agentsquad.squad.domain.entity.ConversationDO;
 import com.agentsquad.squad.domain.entity.MessageSubmissionDO;
 import com.agentsquad.squad.domain.model.ConversationCommittedSignal;
 import com.agentsquad.squad.domain.request.MessageCreateRequest;
-import com.agentsquad.squad.conversation.repository.BindingMapper;
-import com.agentsquad.squad.conversation.repository.CommandMapper;
-import com.agentsquad.squad.conversation.repository.ConversationMapper;
-import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
-import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
+import com.agentsquad.squad.mapper.BindingMapper;
+import com.agentsquad.squad.mapper.CommandMapper;
+import com.agentsquad.squad.mapper.ConversationMapper;
+import com.agentsquad.squad.mapper.ExecutionScopeMapper;
+import com.agentsquad.squad.mapper.MessageAcceptanceMapper;
 import com.agentsquad.squad.domain.model.MasterAgentIdentity;
 import com.agentsquad.squad.domain.enums.ResponseExecutionStatus;
 import com.agentsquad.squad.domain.dto.MessageView;

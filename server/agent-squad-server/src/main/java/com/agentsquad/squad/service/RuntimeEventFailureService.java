@@ -2,7 +2,7 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource;
 
-import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventInboxMapper;
+import com.agentsquad.squad.mapper.RuntimeEventInboxMapper;
 
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventFailureCode;
 

@@ -4,7 +4,7 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.domain.entity.SandboxBindingDO;
 import com.agentsquad.squad.domain.model.SandboxExecutionContext;
-import com.agentsquad.squad.sandbox.repository.SandboxMapper;
+import com.agentsquad.squad.mapper.SandboxMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 

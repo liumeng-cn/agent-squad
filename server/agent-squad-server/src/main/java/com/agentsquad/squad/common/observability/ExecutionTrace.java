@@ -1,6 +1,6 @@
 package com.agentsquad.squad.common.observability;
 
-import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
+import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import io.micrometer.tracing.Tracer;
 import io.micrometer.context.ContextRegistry;
 import io.micrometer.tracing.propagation.Propagator;

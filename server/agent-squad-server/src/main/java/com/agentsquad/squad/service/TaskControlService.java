@@ -10,8 +10,13 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
 import com.agentsquad.squad.domain.response.CommandReceiptResponse;
-import com.agentsquad.squad.conversation.repository.*;
-import com.agentsquad.squad.runtime.repository.*;
+import com.agentsquad.squad.mapper.BindingMapper;
+import com.agentsquad.squad.mapper.CommandMapper;
+import com.agentsquad.squad.mapper.DeliveryMapper;
+import com.agentsquad.squad.mapper.TaskEventMapper;
+import com.agentsquad.squad.mapper.TaskMapper;
+import com.agentsquad.squad.mapper.ProjectionMapper;
+import com.agentsquad.squad.mapper.WorkerDispatchMapper;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -59,7 +64,7 @@ public class TaskControlService {
     private com.agentsquad.squad.service.OperationService operations;
 
     @Resource
-    private com.agentsquad.squad.interaction.repository.InteractionMapper interactions;
+    private com.agentsquad.squad.mapper.InteractionMapper interactions;
 
     @Resource
     private WorkerDispatchMapper workerDispatch;

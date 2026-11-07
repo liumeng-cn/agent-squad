@@ -30,7 +30,7 @@ public class SandboxExecutionService {
     private com.agentsquad.squad.service.ArtifactService artifacts;
 
     @Resource
-    private com.agentsquad.squad.artifact.repository.ArtifactMapper artifactMapper;
+    private com.agentsquad.squad.mapper.ArtifactMapper artifactMapper;
 
     @Resource
     private SandboxAccessService access;

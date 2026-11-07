@@ -2,8 +2,8 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
-import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
-import com.agentsquad.squad.conversation.repository.ConversationMapper;
+import com.agentsquad.squad.mapper.MessageAcceptanceMapper;
+import com.agentsquad.squad.mapper.ConversationMapper;
 import com.agentsquad.squad.domain.entity.ConversationDO;
 import com.agentsquad.squad.domain.model.ConversationCommittedSignal;
 import com.fasterxml.jackson.databind.ObjectMapper;

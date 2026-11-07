@@ -14,7 +14,7 @@ import com.agentsquad.squad.domain.response.WorkerDefinitionPageResponse;
 import com.agentsquad.squad.domain.dto.WorkerDefinitionResponse;
 import com.agentsquad.squad.domain.request.WorkerStatusUpdateRequest;
 import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;
-import com.agentsquad.squad.worker.repository.WorkerDefinitionMapper;
+import com.agentsquad.squad.mapper.WorkerDefinitionMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

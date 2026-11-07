@@ -4,6 +4,7 @@ import com.agentsquad.squad.domain.entity.SkillGrantDO;
 import com.agentsquad.squad.domain.entity.SkillReferenceDO;
 import com.agentsquad.squad.domain.entity.SkillVersionDO;
 import com.agentsquad.squad.domain.entity.SkillTextFileDO;
+import com.agentsquad.squad.mapper.SkillMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Repository;
 

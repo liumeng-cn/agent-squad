@@ -2,7 +2,7 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.domain.response.TaskSnapshotResponse;
-import com.agentsquad.squad.conversation.repository.TaskEventMapper;
+import com.agentsquad.squad.mapper.TaskEventMapper;
 import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.service.TaskSnapshotService;
 import org.junit.jupiter.api.Test;

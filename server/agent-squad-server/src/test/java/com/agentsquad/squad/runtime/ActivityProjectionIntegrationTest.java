@@ -5,7 +5,7 @@ import com.agentsquad.squad.common.observability.ExecutionTrace;
 import com.agentsquad.squad.domain.response.MessageReceiptResponse;
 import io.micrometer.tracing.Tracer;
 import com.agentsquad.squad.domain.request.MessageCreateRequest;
-import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
+import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.integration.agentscope.NativeEventView;
 import com.agentsquad.squad.service.ActivityProjectionService;

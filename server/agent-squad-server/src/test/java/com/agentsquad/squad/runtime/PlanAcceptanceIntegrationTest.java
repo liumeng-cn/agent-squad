@@ -128,7 +128,7 @@ class PlanAcceptanceIntegrationTest {
             assertThat(proposal.path("acceptanceResults")).hasSize(3);
             assertThat(proposal.path("acceptanceResults").get(2).path("verifier").asText()).isEqualTo("USER:" + user);
             if (accepted && "true".equals(System.getenv("SQUAD_ACCEPTANCE_BROWSER_PROBE"))) {
-                var target = context.getBean(com.agentsquad.squad.runtime.repository.ProjectionMapper.class).findTarget(user, binding);
+                var target = context.getBean(com.agentsquad.squad.mapper.ProjectionMapper.class).findTarget(user, binding);
                 assertThat(context.getBean(com.agentsquad.squad.service.TaskFinalizerService.class).tryComplete(target,
                         new com.agentsquad.squad.integration.agentscope.NativeEventView(1, "finished", "turn/output", "run",
                                 "turn", "completed", System.currentTimeMillis(), Map.of()))).isTrue();
@@ -171,7 +171,7 @@ class PlanAcceptanceIntegrationTest {
             assertThat(old.acceptanceCriteria().get(0).legacy()).isTrue();
             db.update("UPDATE sq_worker_job SET status='FAILED',result_json=NULL WHERE task_id=? AND plan_version=2 AND node_key='optional'", task.taskId());
             completion.submit(new CompletionSubmission(user, session, "turn-new", "call-new", "PARTIAL", "保留已有结果", List.of()));
-            var target = context.getBean(com.agentsquad.squad.runtime.repository.ProjectionMapper.class).findTarget(user, binding);
+            var target = context.getBean(com.agentsquad.squad.mapper.ProjectionMapper.class).findTarget(user, binding);
             assertThat(context.getBean(com.agentsquad.squad.service.TaskFinalizerService.class).tryComplete(target,
                     new com.agentsquad.squad.integration.agentscope.NativeEventView(1, "old-ended", "turn/output", "run",
                             "turn", "completed", System.currentTimeMillis(), Map.of()))).isFalse();

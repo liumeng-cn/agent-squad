@@ -9,11 +9,11 @@ import com.agentsquad.squad.domain.enums.ConversationStatus;
 import com.agentsquad.squad.domain.enums.GoalTaskStatus;
 import com.agentsquad.squad.domain.enums.RuntimeCommandAction;
 import com.agentsquad.squad.domain.entity.TaskDO;
-import com.agentsquad.squad.conversation.repository.CommandMapper;
-import com.agentsquad.squad.conversation.repository.ConversationMapper;
-import com.agentsquad.squad.conversation.repository.TaskEventMapper;
-import com.agentsquad.squad.conversation.repository.TaskMapper;
-import com.agentsquad.squad.runtime.repository.ProjectionMapper;
+import com.agentsquad.squad.mapper.CommandMapper;
+import com.agentsquad.squad.mapper.ConversationMapper;
+import com.agentsquad.squad.mapper.TaskEventMapper;
+import com.agentsquad.squad.mapper.TaskMapper;
+import com.agentsquad.squad.mapper.ProjectionMapper;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,7 +45,7 @@ public class ConversationDeletionService {
     private TaskControlService taskControls;
 
     @Resource
-    private com.agentsquad.squad.runtime.repository.CompletionMapper completion;
+    private com.agentsquad.squad.mapper.CompletionMapper completion;
 
     @Resource
     private ResponseControlService responseControls;

@@ -14,7 +14,7 @@ import com.agentsquad.squad.service.ContextSnapshotService;
 import com.agentsquad.squad.service.PlanService;
 import com.agentsquad.squad.service.WorkerDispatchService;
 import com.agentsquad.squad.service.WorkerResultService;
-import com.agentsquad.squad.runtime.repository.PlanMapper;
+import com.agentsquad.squad.mapper.PlanMapper;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
 import com.agentsquad.squad.service.WorkerDefinitionService;

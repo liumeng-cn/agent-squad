@@ -1,13 +1,13 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.conversation.repository.TaskEventMapper;
-import com.agentsquad.squad.conversation.repository.TaskMapper;
-import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
+import com.agentsquad.squad.mapper.TaskEventMapper;
+import com.agentsquad.squad.mapper.TaskMapper;
+import com.agentsquad.squad.mapper.MessageAcceptanceMapper;
 import com.agentsquad.squad.domain.dto.JobReusedPayload;
 import com.agentsquad.squad.domain.dto.PlanAcceptanceCriterion;
 import com.agentsquad.squad.domain.dto.PlanPublishedPayload;
 import com.agentsquad.squad.domain.model.ActivityBusinessFact;
-import com.agentsquad.squad.presentation.repository.ConversationReadMapper;
+import com.agentsquad.squad.mapper.ConversationReadMapper;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;

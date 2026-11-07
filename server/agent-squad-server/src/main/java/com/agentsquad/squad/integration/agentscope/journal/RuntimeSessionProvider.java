@@ -1,6 +1,6 @@
 package com.agentsquad.squad.integration.agentscope.journal;
 
-import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventInboxMapper;
+import com.agentsquad.squad.mapper.RuntimeEventInboxMapper;
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSinkFactory;
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource;
 import io.agentscope.core.agent.RuntimeContext;

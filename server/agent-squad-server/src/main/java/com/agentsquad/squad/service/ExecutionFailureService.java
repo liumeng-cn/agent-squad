@@ -9,19 +9,19 @@ import com.agentsquad.squad.domain.model.ModelFailureClassifier;
 
 import com.agentsquad.squad.domain.model.FailureClassification;
 
-import com.agentsquad.squad.conversation.repository.ConversationMapper;
-import com.agentsquad.squad.conversation.repository.TaskMapper;
+import com.agentsquad.squad.mapper.ConversationMapper;
+import com.agentsquad.squad.mapper.TaskMapper;
 import com.agentsquad.squad.integration.agentscope.NativeSubmissionReceipt;
-import com.agentsquad.squad.runtime.repository.PlanMapper;
-import com.agentsquad.squad.runtime.repository.ProjectionMapper;
+import com.agentsquad.squad.mapper.PlanMapper;
+import com.agentsquad.squad.mapper.ProjectionMapper;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.conversation.repository.CommandMapper;
-import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
-import com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper;
-import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
+import com.agentsquad.squad.mapper.CommandMapper;
+import com.agentsquad.squad.mapper.ExecutionScopeMapper;
+import com.agentsquad.squad.mapper.ResponseRuntimeMapper;
+import com.agentsquad.squad.mapper.TaskDirectiveMapper;
 import com.agentsquad.squad.domain.dto.ExecutionFailureView;
-import com.agentsquad.squad.runtime.repository.ExecutionFailureMapper;
+import com.agentsquad.squad.mapper.ExecutionFailureMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

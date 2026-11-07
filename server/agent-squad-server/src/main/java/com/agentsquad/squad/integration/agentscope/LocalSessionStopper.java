@@ -1,6 +1,6 @@
 package com.agentsquad.squad.integration.agentscope;
 
-import com.agentsquad.squad.conversation.repository.BindingMapper;
+import com.agentsquad.squad.mapper.BindingMapper;
 import com.agentsquad.squad.common.enums.runtime.LocalSessionState;
 import io.agentscope.harness.agent.session.AgentSession;
 import jakarta.annotation.PreDestroy;

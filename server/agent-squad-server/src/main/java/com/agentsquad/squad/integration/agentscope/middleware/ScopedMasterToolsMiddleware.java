@@ -1,6 +1,6 @@
 package com.agentsquad.squad.integration.agentscope.middleware;
 
-import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
+import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.service.ExecutionScopeService;
 import com.agentsquad.squad.common.enums.worker.WorkerJobStatus;
 import com.agentsquad.squad.domain.enums.ResponseCompletionProtocol;
@@ -40,7 +40,7 @@ public class ScopedMasterToolsMiddleware implements MiddlewareBase {
             WorkerJobStatus.RECONCILING, WorkerJobStatus.CANCELLING);
 
     @Resource
-    private com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper replies;
+    private com.agentsquad.squad.mapper.ResponseRuntimeMapper replies;
 
     @Resource
     private ExecutionScopeService scopes;
@@ -49,13 +49,13 @@ public class ScopedMasterToolsMiddleware implements MiddlewareBase {
     private ExecutionScopeMapper scopeMapper;
 
     @Resource
-    private com.agentsquad.squad.conversation.repository.TaskMapper tasks;
+    private com.agentsquad.squad.mapper.TaskMapper tasks;
 
     @Resource
-    private com.agentsquad.squad.runtime.repository.PlanMapper plans;
+    private com.agentsquad.squad.mapper.PlanMapper plans;
 
     @Resource
-    private com.agentsquad.squad.conversation.repository.GoalCreationMapper origins;
+    private com.agentsquad.squad.mapper.GoalCreationMapper origins;
 
     @Override
     public Set<ExtensionPoint> activePoints() {

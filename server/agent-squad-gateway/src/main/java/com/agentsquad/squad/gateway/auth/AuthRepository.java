@@ -1,5 +1,6 @@
 package com.agentsquad.squad.gateway.auth;
 
+import com.agentsquad.squad.gateway.mapper.AuthMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;

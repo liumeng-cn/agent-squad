@@ -8,7 +8,7 @@ import com.agentsquad.squad.domain.model.MemoryRules;
 import com.agentsquad.squad.domain.entity.MemoryScopePinDO;
 import com.agentsquad.squad.domain.dto.MemoryContextSnapshot;
 import com.agentsquad.squad.domain.dto.MemoryReference;
-import com.agentsquad.squad.memory.repository.MemoryMapper;
+import com.agentsquad.squad.mapper.MemoryMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

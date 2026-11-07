@@ -1,16 +1,16 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.artifact.repository.ArtifactMapper;
+import com.agentsquad.squad.mapper.ArtifactMapper;
 import com.agentsquad.squad.domain.response.ArtifactResponse;
 import com.agentsquad.squad.domain.model.ArtifactContentPolicy;
 import com.agentsquad.squad.domain.entity.ArtifactStageDO;
 import com.agentsquad.squad.domain.dto.ArtifactStageView;
-import com.agentsquad.squad.artifact.repository.ArtifactDeliveryMapper;
+import com.agentsquad.squad.mapper.ArtifactDeliveryMapper;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.domain.model.SandboxExecutionContext;
 import com.agentsquad.squad.domain.model.SandboxPolicy;
-import com.agentsquad.squad.sandbox.repository.SandboxMapper;
+import com.agentsquad.squad.mapper.SandboxMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
