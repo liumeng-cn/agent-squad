@@ -5,7 +5,7 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.domain.dto.PlanPublish;
 import com.agentsquad.squad.domain.dto.PlanReceipt;
 import com.agentsquad.squad.service.PlanService;
-import com.agentsquad.squad.service.PendingDirectivesException;
+import com.agentsquad.squad.domain.exception.PendingDirectivesException;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;

@@ -47,7 +47,7 @@ public class ResponseControlService {
     private CommandMapper commands;
 
     @Resource
-    private ConversationEventWriter events;
+    private ConversationEventWriterService events;
 
     @Resource
     private com.agentsquad.squad.service.OperationService operations;

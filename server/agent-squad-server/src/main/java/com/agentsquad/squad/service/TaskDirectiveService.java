@@ -86,7 +86,7 @@ public class TaskDirectiveService {
     private MasterSignalService signals;
 
     @Resource
-    private ConversationEventWriter events;
+    private ConversationEventWriterService events;
 
     @Resource
     private ArtifactMapper artifactMapper;

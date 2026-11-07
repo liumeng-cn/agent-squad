@@ -1,6 +1,6 @@
 package com.agentsquad.squad.identity;
 
-import com.agentsquad.squad.service.UserStatusGuard;
+import com.agentsquad.squad.service.UserStatusGuardService;
 
 import com.agentsquad.squad.common.enums.identity.AccountRole;
 import jakarta.annotation.Resource;
@@ -29,7 +29,7 @@ public class UserContextInterceptor implements HandlerInterceptor {
     private SignedIdentityVerifier verifier;
 
     @Resource
-    private UserStatusGuard userStatus;
+    private UserStatusGuardService userStatus;
 
     @Value("${agentsquad.identity.strict:false}")
     private boolean strict;

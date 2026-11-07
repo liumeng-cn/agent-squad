@@ -5,7 +5,7 @@ import com.agentsquad.squad.service.ArtifactService;
 import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.interaction.repository.InteractionMapper;
-import com.agentsquad.squad.service.InputFormSchema;
+import com.agentsquad.squad.service.InputFormSchemaService;
 import com.agentsquad.squad.domain.dto.PlanNode;
 import com.agentsquad.squad.domain.dto.PlanPublish;
 import com.agentsquad.squad.service.ContextSnapshotService;
@@ -64,7 +64,7 @@ public final class TaskPageReviewServer {
                 "{\"text\":\"草稿已就绪，等待审阅\"}", plan.jobIds().getFirst());
         jdbc.update("UPDATE sq_worker_job SET status = 'WAITING_INPUT' WHERE job_id = ?", plan.jobIds().get(1));
         jdbc.update("UPDATE sq_goal_task SET status = 'WAITING_INPUT' WHERE task_id = ?", task.taskId());
-        String schema = context.getBean(InputFormSchema.class).normalize(json.readTree("""
+        String schema = context.getBean(InputFormSchemaService.class).normalize(json.readTree("""
                 {"type":"object","properties":{"tone":{"type":"string","title":"文章文风","enum":["正式","轻松"]}},"required":["tone"]}
                 """)).toString();
         context.getBean(InteractionMapper.class).insert(UUID.randomUUID().toString(), userId, task.taskId(), plan.jobIds().get(1),

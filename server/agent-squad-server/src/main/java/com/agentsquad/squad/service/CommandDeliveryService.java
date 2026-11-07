@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.agentsquad.squad.domain.exception.RuntimeAdmissionBusyException;
 import com.agentsquad.squad.integration.agentscope.NativeSubmissionReceipt;
 
 import com.agentsquad.squad.integration.agentscope.RedisCommandWakeup;

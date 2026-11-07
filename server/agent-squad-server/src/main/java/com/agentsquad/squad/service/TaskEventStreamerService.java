@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 @Service
 @Slf4j
-public class TaskEventStreamer {
+public class TaskEventStreamerService {
 
     private static final long POLL_INTERVAL_MS = 1000L;
     private static final long HEARTBEAT_INTERVAL_NANOS = TimeUnit.SECONDS.toNanos(15);

@@ -15,12 +15,12 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 @ConditionalOnProperty(prefix = "agentsquad.sandbox", name = "enabled", havingValue = "true")
-public class SandboxRecoveryScheduler {
+public class SandboxRecoverySchedulerService {
     @Resource
     private SandboxMapper mapper;
 
     @Resource
-    private SandboxRunTransaction transactions;
+    private SandboxRunTransactionService transactions;
 
     @Scheduled(fixedDelayString = "${agentsquad.sandbox.recovery-interval-ms:30000}")
     public void markUnknown() {

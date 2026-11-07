@@ -1,4 +1,4 @@
-package com.agentsquad.squad.service;
+package com.agentsquad.squad.domain.model;
 
 /**
  * 会话共享订阅的隔离键

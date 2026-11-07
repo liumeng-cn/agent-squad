@@ -6,7 +6,7 @@ import com.agentsquad.squad.conversation.repository.TaskMapper;
 import com.agentsquad.squad.conversation.repository.TaskEventMapper;
 import com.agentsquad.squad.domain.dto.ConversationResponse;
 import com.agentsquad.squad.domain.response.TaskReceiptResponse;
-import com.agentsquad.squad.service.ConversationCleanupScheduler;
+import com.agentsquad.squad.service.ConversationCleanupSchedulerService;
 import com.agentsquad.squad.service.ConversationDeletionService;
 import com.agentsquad.squad.service.GoalTaskService;
 import org.junit.jupiter.api.Test;
@@ -38,7 +38,7 @@ class ConversationDeletionTaskSettleTest {
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class, properties)) {
             GoalTaskService goalTaskService = context.getBean(GoalTaskService.class);
             ConversationDeletionService deletionService = context.getBean(ConversationDeletionService.class);
-            ConversationCleanupScheduler cleanupScheduler = context.getBean(ConversationCleanupScheduler.class);
+            ConversationCleanupSchedulerService cleanupScheduler = context.getBean(ConversationCleanupSchedulerService.class);
 
             ConversationResponse conversation = goalTaskService.createConversation(userId, "删除收尾");
             TaskReceiptResponse receipt = goalTaskService.submit(userId, conversation.conversationId(),

@@ -28,7 +28,7 @@ import java.util.UUID;
  * IN_FLIGHT和预算先提交才执行容器；进程失联后保留占额，不自动重发原执行。
  */
 @Service
-public class SandboxRunTransaction {
+public class SandboxRunTransactionService {
     private static final long UNITS_PER_SECOND = 1000;
 
     @Resource

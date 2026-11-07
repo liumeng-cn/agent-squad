@@ -9,7 +9,7 @@ import com.agentsquad.squad.tools.repository.ConnectionMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.test.util.ReflectionTestUtils;
-import com.agentsquad.squad.service.LocalSecretVault;
+import com.agentsquad.squad.service.LocalSecretVaultService;
 
 import java.nio.file.Path;
 import java.util.Base64;
@@ -35,7 +35,7 @@ class ConnectionOptimisticLockTest {
                 com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), owner)) {
             byte[] key = new byte[32];
             new java.security.SecureRandom().nextBytes(key);
-            ReflectionTestUtils.setField(context.getBean(LocalSecretVault.class), "masterKeyBase64",
+            ReflectionTestUtils.setField(context.getBean(LocalSecretVaultService.class), "masterKeyBase64",
                     Base64.getEncoder().encodeToString(key));
             ConnectionService service = context.getBean(ConnectionService.class);
             ConnectionMapper mapper = context.getBean(ConnectionMapper.class);

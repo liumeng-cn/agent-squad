@@ -27,7 +27,7 @@ public class ExecutionRestrictionService {
     private ExecutionFailureService failures;
 
     @Resource
-    private ConversationEventWriter events;
+    private ConversationEventWriterService events;
 
     /**
      * 共享会话锁下原子写阻塞、命令与安全故障事件；重复发现不重复修改版本或追加状态事件。

@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 队列有界且只控制本连接发送，断开只释放订阅；从不引用或取消Worker、模型或后台任务。
  */
 @Slf4j
-public final class ConversationSubscriber {
+public final class ConversationSubscriberService {
     private static final int BUFFER_LIMIT = 128;
     private final SseEmitter emitter;
     private final Executor sender;
@@ -30,7 +30,7 @@ public final class ConversationSubscriber {
     private final java.util.concurrent.ConcurrentHashMap<String, com.agentsquad.squad.domain.dto.ReplyPreview> previews = new java.util.concurrent.ConcurrentHashMap<>();
     private volatile String cursor;
 
-    public ConversationSubscriber(SseEmitter emitter, String cursor, Executor sender, Runnable onClosed, Runnable authorize) {
+    public ConversationSubscriberService(SseEmitter emitter, String cursor, Executor sender, Runnable onClosed, Runnable authorize) {
         this.emitter = emitter;
         this.cursor = cursor;
         this.sender = sender;

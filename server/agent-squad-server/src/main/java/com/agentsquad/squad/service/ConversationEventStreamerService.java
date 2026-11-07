@@ -2,6 +2,9 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.domain.model.ConversationCommittedSignal;
+import com.agentsquad.squad.domain.model.ConversationStreamKey;
+import com.agentsquad.squad.domain.model.ReplyPreviewSignal;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
@@ -25,14 +28,14 @@ import java.util.concurrent.TimeUnit;
  * 同一用户会话共享事件读取，连接只拥有独立有界发送队列；关闭页面不停止后台任务或消费。
  */
 @Service
-public class ConversationEventStreamer {
+public class ConversationEventStreamerService {
     private static final int EXECUTOR_BACKLOG = 128;
 
     @Resource
     private ConversationQueryService queries;
 
     @Resource
-    private UserStatusGuard userStatus;
+    private UserStatusGuardService userStatus;
 
     @Value("${agentsquad.events.poll-threads:4}")
     private int pollThreads;
@@ -47,7 +50,7 @@ public class ConversationEventStreamer {
     private int maxConnectionsPerUser;
 
     private final ConcurrentHashMap<String, Integer> userConnections = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<ConversationStreamKey, ConversationStreamHub> hubs = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<ConversationStreamKey, ConversationStreamHubService> hubs = new ConcurrentHashMap<>();
     private ThreadPoolExecutor readers;
     private ThreadPoolExecutor senders;
     private Semaphore slots;
@@ -92,7 +95,7 @@ public class ConversationEventStreamer {
         var key = new ConversationStreamKey(userId, conversationId);
         String id = UUID.randomUUID().toString();
         var emitter = new SseEmitter(0L);
-        var subscriber = new ConversationSubscriber(emitter, after, senders, () -> {
+        var subscriber = new ConversationSubscriberService(emitter, after, senders, () -> {
             hubs.computeIfPresent(key, (ignored, hub) -> {
                 hub.remove(id);
                 return hub.isEmpty() ? null : hub;
@@ -104,7 +107,7 @@ public class ConversationEventStreamer {
         });
         try {
             var hub = hubs.compute(key, (ignored, existing) -> {
-                var selected = existing == null ? new ConversationStreamHub(key, queries, userStatus, readers) : existing;
+                var selected = existing == null ? new ConversationStreamHubService(key, queries, userStatus, readers) : existing;
                 selected.add(id, subscriber);
                 return selected;
             });
@@ -144,7 +147,7 @@ public class ConversationEventStreamer {
     /** 低频会话级核对仅补漏；正常更新由提交通知触发，不再每连接500ms查库。 */
     @Scheduled(fixedDelayString = "${agentsquad.events.reconcile-delay-ms:15000}")
     public void reconcile() {
-        hubs.values().forEach(ConversationStreamHub::heartbeatAndReconcile);
+        hubs.values().forEach(ConversationStreamHubService::heartbeatAndReconcile);
     }
 
     private void release(String userId) {
@@ -158,7 +161,7 @@ public class ConversationEventStreamer {
 
     @PreDestroy
     public void shutdown() {
-        hubs.values().forEach(ConversationStreamHub::close);
+        hubs.values().forEach(ConversationStreamHubService::close);
         if (readers != null) {
             readers.shutdownNow();
         }

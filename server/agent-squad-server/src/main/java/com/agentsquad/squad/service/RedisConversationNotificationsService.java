@@ -1,9 +1,11 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.config.RedisWakeupProperties;
+import com.agentsquad.squad.domain.model.ConversationCommittedSignal;
 import com.agentsquad.squad.domain.model.ConversationWakeupNotice;
 import com.agentsquad.squad.domain.model.ConversationPreviewNotice;
 import com.agentsquad.squad.domain.dto.ReplyPreview;
+import com.agentsquad.squad.domain.model.ReplyPreviewSignal;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -36,7 +38,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 @Component
 @ConditionalOnProperty(prefix = "agentsquad.redis-wakeup", name = "enabled", havingValue = "true")
-public class RedisConversationNotifications {
+public class RedisConversationNotificationsService {
     private static final int MAX_NOTICE_BYTES = 1024;
     private static final int MAX_PREVIEW_UNITS = 65536;
     private static final int MAX_PREVIEW_BYTES = MAX_PREVIEW_UNITS * 6 + MAX_NOTICE_BYTES;
@@ -70,7 +72,7 @@ public class RedisConversationNotifications {
     private ObjectMapper json;
 
     @Resource
-    private ConversationEventStreamer streamer;
+    private ConversationEventStreamerService streamer;
 
     @PostConstruct
     public void initialize() {

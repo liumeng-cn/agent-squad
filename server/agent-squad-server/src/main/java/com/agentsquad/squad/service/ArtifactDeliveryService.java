@@ -30,7 +30,7 @@ public class ArtifactDeliveryService {
     private com.agentsquad.squad.service.ExecutionScopeService scopes;
 
     @Resource
-    private com.agentsquad.squad.service.ConversationEventWriter events;
+    private com.agentsquad.squad.service.ConversationEventWriterService events;
 
     @Resource
     private ArtifactDeliveryMapper stages;

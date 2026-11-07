@@ -28,10 +28,10 @@ import java.util.UUID;
 @Service
 @Slf4j
 public class MessageAcceptanceService {
-    @Resource private UserStatusGuard userStatus;
+    @Resource private UserStatusGuardService userStatus;
 
     @Resource
-    private MessageAcceptanceWriter writer;
+    private MessageAcceptanceWriterService writer;
 
     @Resource
     private MessageAcceptanceMapper mapper;

@@ -1,4 +1,4 @@
-package com.agentsquad.squad.service;
+package com.agentsquad.squad.domain.model;
 
 /**
  * 会话提交后的读取提示

@@ -5,7 +5,7 @@ import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.service.ExecutionScopeService;
 import com.agentsquad.squad.domain.exception.SkillCapabilityUnavailableException;
 import com.agentsquad.squad.domain.model.WorkerExecutionIdentity;
-import com.agentsquad.squad.service.UserStatusGuard;
+import com.agentsquad.squad.service.UserStatusGuardService;
 import com.agentsquad.squad.domain.exception.ExecutionContextInvalidatedException;
 import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
 import com.agentsquad.squad.service.ExecutionAuthorizationService;
@@ -66,7 +66,7 @@ public class ExecutionContextMiddleware implements MiddlewareBase {
     private ObjectMapper json;
 
     @Resource
-    private UserStatusGuard userStatusGuard;
+    private UserStatusGuardService userStatusGuard;
 
     @Override
     public Set<ExtensionPoint> activePoints() {

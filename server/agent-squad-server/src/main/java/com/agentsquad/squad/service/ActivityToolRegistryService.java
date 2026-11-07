@@ -2,14 +2,15 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.common.enums.execution.ActivityGroup;
 import com.agentsquad.squad.common.enums.execution.ActivityType;
+import com.agentsquad.squad.domain.model.ActivityClassification;
 
 /**
  * 当前工具的用户过程分类
  * <p>
  * 只描述真实工具边界，不改写工具业务逻辑；未知工具使用中性分类，不编造读取或外部操作。
  */
-public final class ActivityToolRegistry {
-    private ActivityToolRegistry() {
+public final class ActivityToolRegistryService {
+    private ActivityToolRegistryService() {
     }
 
     public static ActivityClassification classify(String tool) {

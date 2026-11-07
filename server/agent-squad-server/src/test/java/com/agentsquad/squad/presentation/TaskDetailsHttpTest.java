@@ -9,7 +9,7 @@ import com.agentsquad.squad.service.GoalTaskService;
 
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.interaction.repository.InteractionMapper;
-import com.agentsquad.squad.service.InputFormSchema;
+import com.agentsquad.squad.service.InputFormSchemaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -137,7 +137,7 @@ class TaskDetailsHttpTest {
                     .andExpect(status().isConflict());
 
             String interactionId = UUID.randomUUID().toString();
-            String schema = context.getBean(InputFormSchema.class).normalize(json.readTree("""
+            String schema = context.getBean(InputFormSchemaService.class).normalize(json.readTree("""
                     {"type":"object","properties":{"style":{"type":"string","enum":["正式","轻松"]}},"required":["style"]}
                     """)).toString();
             context.getBean(InteractionMapper.class).insert(interactionId, actor.userId(), taskId, null,

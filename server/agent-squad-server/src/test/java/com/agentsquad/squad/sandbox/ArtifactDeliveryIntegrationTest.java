@@ -11,7 +11,7 @@ import com.agentsquad.squad.domain.dto.SandboxDriverResult;
 import com.agentsquad.squad.domain.dto.SandboxExecuteRequest;
 import com.agentsquad.squad.domain.dto.SandboxOutput;
 import com.agentsquad.squad.service.SandboxAccessService;
-import com.agentsquad.squad.service.SandboxRunTransaction;
+import com.agentsquad.squad.service.SandboxRunTransactionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
@@ -46,7 +46,7 @@ class ArtifactDeliveryIntegrationTest {
             context.getBean(ExecutionAuthorizationService.class).prepare(userId, scopeId);
             var identity = context.getBean(SandboxAccessService.class).resolve(userId, sessionId, null, "turn", "call");
             var request = new SandboxExecuteRequest("report", "print('report')", List.of(), List.of("result.txt"), 5);
-            SandboxRunTransaction ledger = context.getBean(SandboxRunTransaction.class);
+            SandboxRunTransactionService ledger = context.getBean(SandboxRunTransactionService.class);
             var claim = ledger.begin(identity, request, "a".repeat(64));
             assertThat(claim.newlyAccepted()).isTrue();
             var repeat = ledger.begin(identity, request, "a".repeat(64));

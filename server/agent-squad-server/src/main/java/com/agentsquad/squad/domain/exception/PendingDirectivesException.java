@@ -1,4 +1,4 @@
-package com.agentsquad.squad.service;
+package com.agentsquad.squad.domain.exception;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;

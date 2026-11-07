@@ -1,7 +1,7 @@
 package com.agentsquad.squad.tools.mock;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.service.OperationExecutor;
+import com.agentsquad.squad.service.OperationExecutorService;
 import com.agentsquad.squad.service.OperationService;
 import com.agentsquad.squad.tools.operation.PrepareRequest;
 import com.agentsquad.squad.domain.entity.OperationDO;
@@ -31,7 +31,7 @@ public class MockLookupTool implements AgentTool {
     private OperationService operationService;
 
     @Resource
-    private OperationExecutor operationExecutor;
+    private OperationExecutorService operationExecutor;
 
     @Resource
     private MockTicketConnector mockTicketConnector;

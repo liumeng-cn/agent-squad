@@ -35,7 +35,7 @@ import static com.agentsquad.squad.common.util.RuntimePayloads.toJson;
  * 外部操作账本预检服务（M07 事务 A）。
  *
  * <p>锁定执行归属、规范化参数并计算摘要、预留预算、落 PREPARED/WAITING_APPROVAL；
- * 本事务提交前绝不发送外部请求，实际派发由 OperationExecutor 分步独立持久。
+ * 本事务提交前绝不发送外部请求，实际派发由 OperationExecutorService 分步独立持久。
  * 原生调用键与业务意图键双路幂等；同意图不同参数直接拒绝。</p>
  */
 @Service

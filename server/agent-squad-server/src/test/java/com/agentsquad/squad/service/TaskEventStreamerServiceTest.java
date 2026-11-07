@@ -21,9 +21,9 @@ import static org.mockito.Mockito.when;
  * <p>
  * 验证共享轮询器在连接满额时拒绝新订阅，避免页面连接无界占用服务资源。
  */
-class TaskEventStreamerTest {
+class TaskEventStreamerServiceTest {
 
-    private TaskEventStreamer streamer;
+    private TaskEventStreamerService streamer;
 
     @AfterEach
     void tearDown() {
@@ -39,7 +39,7 @@ class TaskEventStreamerTest {
         when(taskMapper.findOwned(anyString(), anyString())).thenReturn(mock(TaskDO.class));
         when(eventMapper.listAfter(anyString(), anyString(), anyLong())).thenReturn(List.of());
 
-        streamer = new TaskEventStreamer();
+        streamer = new TaskEventStreamerService();
         ReflectionTestUtils.setField(streamer, "taskMapper", taskMapper);
         ReflectionTestUtils.setField(streamer, "taskEventMapper", eventMapper);
         ReflectionTestUtils.setField(streamer, "pollThreads", 1);

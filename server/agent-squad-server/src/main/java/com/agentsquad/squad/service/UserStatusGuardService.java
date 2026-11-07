@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @Slf4j
-public class UserStatusGuard {
+public class UserStatusGuardService {
 
     @Resource
     private UserStatusMapper mapper;

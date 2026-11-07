@@ -11,7 +11,7 @@ import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.integration.agentscope.middleware.ModelBudgetMiddleware;
 import com.agentsquad.squad.service.InteractionService;
 import com.agentsquad.squad.service.InteractionQueryService;
-import com.agentsquad.squad.service.OperationExecutor;
+import com.agentsquad.squad.service.OperationExecutorService;
 import com.agentsquad.squad.service.OperationService;
 import com.agentsquad.squad.tools.operation.PrepareRequest;
 import com.agentsquad.squad.domain.entity.OperationDO;
@@ -113,7 +113,7 @@ class ScopeRuntimeOwnershipIntegrationTest {
                 Long.class, userId)).isEqualTo(5);
 
         OperationService operations = context.getBean(OperationService.class);
-        OperationExecutor executor = context.getBean(OperationExecutor.class);
+        OperationExecutorService executor = context.getBean(OperationExecutorService.class);
         OperationDO read = operations.prepare(request(execution, "read-1", "mock_lookup", "READ", null, false, 2));
         assertThat(read.taskId()).isNull();
         assertThat(read.scopeId()).isEqualTo(execution.scopeId());

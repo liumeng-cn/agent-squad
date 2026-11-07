@@ -64,7 +64,7 @@ class PlanPendingDirectiveTest {
                 "ALL_REQUIRED", List.of("done"));
         RuntimeBusinessException failure = assertThrows(RuntimeBusinessException.class,
                 () -> service.publish("user", "session", request));
-        var pending = (com.agentsquad.squad.service.PendingDirectivesException) failure;
+        var pending = (com.agentsquad.squad.domain.exception.PendingDirectivesException) failure;
         assertThat(pending.directives()).hasSize(2);
         assertThat(pending.directives().get(0).directiveId()).isEqualTo("first");
         assertThat(pending.directives().get(1).directiveId()).isEqualTo("second");

@@ -1,4 +1,4 @@
-package com.agentsquad.squad.service;
+package com.agentsquad.squad.domain.model;
 
 import com.agentsquad.squad.domain.dto.ReplyPreview;
 

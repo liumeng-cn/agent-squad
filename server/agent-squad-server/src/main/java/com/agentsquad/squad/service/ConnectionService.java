@@ -43,7 +43,7 @@ public class ConnectionService {
     private ConnectionMapper connectionMapper;
 
     @Resource
-    private LocalSecretVault secretVault;
+    private LocalSecretVaultService secretVault;
 
     @Resource
     private ObjectMapper objectMapper;

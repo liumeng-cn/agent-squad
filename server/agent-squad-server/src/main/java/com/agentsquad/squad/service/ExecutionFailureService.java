@@ -4,6 +4,7 @@ import com.agentsquad.squad.domain.entity.ExecutionFailureDO;
 import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
 import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
 import com.agentsquad.squad.domain.exception.PlanCorrectionExhaustedException;
+import com.agentsquad.squad.domain.model.ActivityBusinessFact;
 import com.agentsquad.squad.domain.model.ModelFailureClassifier;
 
 import com.agentsquad.squad.domain.model.FailureClassification;
@@ -69,7 +70,7 @@ public class ExecutionFailureService {
     private ExecutionFailureMapper failures;
 
     @Resource
-    private ConversationEventWriter events;
+    private ConversationEventWriterService events;
 
     @Resource
     private CommandMapper commands;
@@ -152,7 +153,7 @@ public class ExecutionFailureService {
         commands.insertControl(UUID.randomUUID().toString(), scope.userId(), key, eventId, ContentDigests.sha256(payload),
                 "TASK".equals(scope.kind()) ? scope.ownerId() : null, bindingId, "RESUME", payload, next);
         failures.approveRetry(scope.userId(), failure.failureId(), attempt + 1);
-        activities.completed(scope, bindingId, new com.agentsquad.squad.service.ActivityBusinessFact(
+        activities.completed(scope, bindingId, new com.agentsquad.squad.domain.model.ActivityBusinessFact(
                 com.agentsquad.squad.common.enums.execution.ActivityType.AUTO_RETRY_SCHEDULED, eventId));
         events.publish(scope, "retry:" + failure.failureId() + ":" + (attempt + 1), "failure.updated", Map.of("failureId", failure.failureId(), "status", "RETRYING", "attempt", attempt + 1, "maxAttempts", 2, "nextAttemptAt", next.toString()));
         log.info("暂时服务故障已排队恢复 scopeId={} failureId={} attempt={} nextAttemptAt={}", scope.scopeId(), failure.failureId(), attempt + 1, next);

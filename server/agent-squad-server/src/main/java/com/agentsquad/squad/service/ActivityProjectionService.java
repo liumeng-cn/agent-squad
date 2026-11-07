@@ -8,6 +8,9 @@ import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
+import com.agentsquad.squad.domain.model.ActivityBusinessFact;
+import com.agentsquad.squad.domain.model.ActivityClassification;
+import com.agentsquad.squad.domain.model.ActivityProjectionChange;
 import com.agentsquad.squad.integration.agentscope.NativeEventView;
 import com.agentsquad.squad.domain.entity.ExecutionActivityDO;
 import com.agentsquad.squad.domain.dto.ActivityUpdatedEvent;
@@ -39,7 +42,7 @@ public class ActivityProjectionService {
     private ExecutionActivityMapper activities;
 
     @Resource
-    private ConversationEventWriter events;
+    private ConversationEventWriterService events;
 
     @Resource
     private WorkerDispatchMapper workers;
@@ -92,7 +95,7 @@ public class ActivityProjectionService {
                 if (value instanceof Map<?, ?> result && "tool_result".equals(result.get("type"))) {
                     String callId = text(result.get("id"));
                     if (callId != null) {
-                        var classification = ActivityToolRegistry.classify(defaultText(result.get("name")));
+                        var classification = ActivityToolRegistryService.classify(defaultText(result.get("name")));
                         var status = resultStatus(text(result.get("state")));
                         var reason = status == ActivityStatus.WAITING
                                 ? (classification.type() == ActivityType.EXTERNAL_ACTION ? ActivityWaitReason.APPROVAL : ActivityWaitReason.INPUT) : null;
@@ -109,7 +112,7 @@ public class ActivityProjectionService {
                 default -> "denied".equals(text(data.get("decision"))) ? ActivityStatus.CANCELLED : null;
             };
             if (status != null) {
-                var classification = ActivityToolRegistry.classify(name == null ? "" : name);
+                var classification = ActivityToolRegistryService.classify(name == null ? "" : name);
                 var reason = status == ActivityStatus.WAITING
                         ? (classification.type() == ActivityType.EXTERNAL_ACTION ? ActivityWaitReason.APPROVAL : ActivityWaitReason.INPUT) : null;
                 save(scope, target, event, new ActivityProjectionChange("tool:" + id, classification, status, reason));

@@ -1,6 +1,6 @@
 package com.agentsquad.squad.tools.operation;
 
-import com.agentsquad.squad.service.OperationExecutor;
+import com.agentsquad.squad.service.OperationExecutorService;
 
 import com.agentsquad.squad.service.OperationDispatchService;
 
@@ -39,8 +39,8 @@ class OperationExecutorTransactionTest {
         when(operationMapper.completeInFlight(anyString(), anyString(), anyLong(), anyString(),
                 anyLong(), anyString(), anyString(), anyString())).thenReturn(1);
 
-        OperationExecutor target = new OperationExecutor();
-        ReflectionTestUtils.setField(target, "userStatus", mock(com.agentsquad.squad.service.UserStatusGuard.class));
+        OperationExecutorService target = new OperationExecutorService();
+        ReflectionTestUtils.setField(target, "userStatus", mock(com.agentsquad.squad.service.UserStatusGuardService.class));
         ReflectionTestUtils.setField(target, "operationMapper", operationMapper);
         OperationDispatchService dispatch = mock(OperationDispatchService.class);
         when(dispatch.begin(any(), anyString(), anyLong(), any(), anyString())).thenReturn(1);
@@ -52,7 +52,7 @@ class OperationExecutorTransactionTest {
         proxyFactory.setProxyTargetClass(true);
         proxyFactory.addAdvice(new TransactionInterceptor(transactionManager,
                 new AnnotationTransactionAttributeSource()));
-        OperationExecutor executor = (OperationExecutor) proxyFactory.getProxy();
+        OperationExecutorService executor = (OperationExecutorService) proxyFactory.getProxy();
 
         OperationDO operation = mock(OperationDO.class);
         when(operation.userId()).thenReturn("user-1");

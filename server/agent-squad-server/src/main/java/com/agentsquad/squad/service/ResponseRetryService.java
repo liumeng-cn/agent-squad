@@ -4,6 +4,7 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
+import com.agentsquad.squad.domain.model.ActivityBusinessFact;
 import com.agentsquad.squad.domain.response.MessageReceiptResponse;
 import com.agentsquad.squad.domain.enums.ResponseExecutionStatus;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
@@ -70,7 +71,7 @@ public class ResponseRetryService {
     private ArtifactService artifacts;
 
     @Resource
-    private ConversationEventWriter events;
+    private ConversationEventWriterService events;
 
     @Resource
     private ObjectMapper json;
@@ -123,7 +124,7 @@ public class ResponseRetryService {
         commands.insertControl(command, userId, scopeKey, key, hash, null, binding, "MESSAGE_SUBMIT", payload, now);
         var created = scopeMapper.findOwned(userId, nextScope);
         events.publish(created, "command:" + command + ":execution.queued", "execution.queued", Map.of("executionId", next, "sourceMessageId", original.sourceMessageId(), "retryOfExecutionId", executionId, "status", "QUEUED"));
-        activities.completed(created, binding, new com.agentsquad.squad.service.ActivityBusinessFact(
+        activities.completed(created, binding, new com.agentsquad.squad.domain.model.ActivityBusinessFact(
                 com.agentsquad.squad.common.enums.execution.ActivityType.USER_RETRY_SCHEDULED, command));
         return new MessageReceiptResponse(scope.conversationId(), original.sourceMessageId(), next, command, ResponseExecutionStatus.QUEUED, scope.conversationId() + ":" + scope.conversationGeneration() + ":" + messages.eventSequence(userId, scope.conversationId()));
     }

@@ -4,7 +4,7 @@ import com.agentsquad.squad.service.ExecutionFailureService;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.service.BudgetService;
 import com.agentsquad.squad.governance.repository.BudgetMapper;
-import com.agentsquad.squad.service.UserStatusGuard;
+import com.agentsquad.squad.service.UserStatusGuardService;
 import com.agentsquad.squad.worker.profile.WorkerModelProfile;
 import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -56,7 +56,7 @@ public class ModelBudgetMiddleware implements MiddlewareBase {
     private ObjectMapper objectMapper;
 
     @Resource
-    private UserStatusGuard userStatusGuard;
+    private UserStatusGuardService userStatusGuard;
 
     @Override
     public Set<ExtensionPoint> activePoints() {

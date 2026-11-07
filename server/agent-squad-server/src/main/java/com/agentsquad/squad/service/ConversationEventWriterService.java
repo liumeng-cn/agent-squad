@@ -5,6 +5,7 @@ import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
 import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.domain.entity.ConversationDO;
+import com.agentsquad.squad.domain.model.ConversationCommittedSignal;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import org.springframework.context.ApplicationEventPublisher;
@@ -21,7 +22,7 @@ import java.time.ZoneOffset;
  * 调用方先持有会话锁；删除期间仍可结算运行事实，但不重新公开会话内容。
  */
 @Service
-public class ConversationEventWriter {
+public class ConversationEventWriterService {
     @Resource
     private ApplicationEventPublisher committedEvents;
 

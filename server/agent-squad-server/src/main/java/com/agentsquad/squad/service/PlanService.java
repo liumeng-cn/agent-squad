@@ -9,6 +9,7 @@ import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.domain.entity.BudgetAccountDO;
+import com.agentsquad.squad.domain.exception.PendingDirectivesException;
 import com.agentsquad.squad.governance.repository.BudgetMapper;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.domain.enums.GoalTaskStatus;

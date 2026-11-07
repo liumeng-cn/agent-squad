@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @ConditionalOnProperty(prefix = "agentsquad.artifact.retention", name = "enabled", havingValue = "true")
-public class ArtifactRetentionScheduler {
+public class ArtifactRetentionSchedulerService {
     @Resource
     private ArtifactRetentionService retention;
 

@@ -2,6 +2,7 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.domain.dto.ReplyPreview;
 
+import com.agentsquad.squad.domain.model.ConversationStreamKey;
 import java.util.Comparator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -13,26 +14,26 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p>
  * 多连接共享提交后读取，限制每轮批次；慢连接只丢弃自身订阅，不阻塞模型或业务提交。
  */
-public final class ConversationStreamHub {
+public final class ConversationStreamHubService {
     private static final int EVENT_PAGE_SIZE = 100;
     private static final int MAX_BATCHES_PER_DRAIN = 4;
     private final ConversationStreamKey key;
     private final ConversationQueryService queries;
-    private final UserStatusGuard users;
+    private final UserStatusGuardService users;
     private final Executor executor;
-    private final ConcurrentHashMap<String, ConversationSubscriber> subscribers = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ConversationSubscriberService> subscribers = new ConcurrentHashMap<>();
     private final AtomicBoolean queued = new AtomicBoolean();
     private final AtomicBoolean dirty = new AtomicBoolean();
 
-    public ConversationStreamHub(ConversationStreamKey key, ConversationQueryService queries,
-                                 UserStatusGuard users, Executor executor) {
+    public ConversationStreamHubService(ConversationStreamKey key, ConversationQueryService queries,
+                                 UserStatusGuardService users, Executor executor) {
         this.key = key;
         this.queries = queries;
         this.users = users;
         this.executor = executor;
     }
 
-    public void add(String id, ConversationSubscriber subscriber) {
+    public void add(String id, ConversationSubscriberService subscriber) {
         subscribers.put(id, subscriber);
     }
 

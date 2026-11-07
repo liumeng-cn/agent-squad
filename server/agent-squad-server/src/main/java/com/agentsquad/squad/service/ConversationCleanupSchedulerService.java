@@ -17,7 +17,7 @@ import java.util.List;
  */
 @Component
 @Slf4j
-public class ConversationCleanupScheduler {
+public class ConversationCleanupSchedulerService {
 
     private static final int CLEANUP_BATCH = 50;
 

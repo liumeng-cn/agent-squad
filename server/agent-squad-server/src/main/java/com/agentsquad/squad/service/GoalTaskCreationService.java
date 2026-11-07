@@ -76,7 +76,7 @@ public class GoalTaskCreationService {
     private TaskEventMapper taskEvents;
 
     @Resource
-    private ConversationEventWriter events;
+    private ConversationEventWriterService events;
 
     @Resource
     private BudgetMapper budgets;
@@ -88,7 +88,7 @@ public class GoalTaskCreationService {
     private ObjectMapper json;
 
     @Resource
-    private UserStatusGuard userStatusGuard;
+    private UserStatusGuardService userStatusGuard;
 
     /**
      * 会话→来源回复→用户预算→账户顺序持锁，同事务创建目标、来源、Scope、Binding、命令与事件。

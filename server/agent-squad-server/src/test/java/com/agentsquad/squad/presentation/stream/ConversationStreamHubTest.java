@@ -1,13 +1,13 @@
 package com.agentsquad.squad.presentation.stream;
 
-import com.agentsquad.squad.service.UserStatusGuard;
+import com.agentsquad.squad.service.UserStatusGuardService;
 import com.agentsquad.squad.domain.dto.ConversationEvent;
 import com.agentsquad.squad.domain.dto.ReplyPreview;
 import com.agentsquad.squad.presentation.domain.ReplyPreviewPhase;
 import com.agentsquad.squad.service.ConversationQueryService;
-import com.agentsquad.squad.service.ConversationStreamHub;
-import com.agentsquad.squad.service.ConversationStreamKey;
-import com.agentsquad.squad.service.ConversationSubscriber;
+import com.agentsquad.squad.service.ConversationStreamHubService;
+import com.agentsquad.squad.domain.model.ConversationStreamKey;
+import com.agentsquad.squad.service.ConversationSubscriberService;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import org.junit.jupiter.api.Test;
 
@@ -45,9 +45,9 @@ class ConversationStreamHubTest {
     @Test
     void twoSubscribersShareOneCommittedEventRead() {
         var queries = mock(ConversationQueryService.class);
-        var users = mock(UserStatusGuard.class);
+        var users = mock(UserStatusGuardService.class);
         when(queries.events(eq("user"), eq("conversation"), anyString())).thenReturn(List.of(event(1)));
-        var hub = new ConversationStreamHub(new ConversationStreamKey("user", "conversation"), queries, users, Runnable::run);
+        var hub = new ConversationStreamHubService(new ConversationStreamKey("user", "conversation"), queries, users, Runnable::run);
         var first = new RecordingSseEmitter();
         var second = new RecordingSseEmitter();
         hub.add("first", subscriber(first, Runnable::run, () -> {
@@ -63,9 +63,9 @@ class ConversationStreamHubTest {
     @Test
     void coalescedNotificationDuringReadIsNotLost() {
         var queries = mock(ConversationQueryService.class);
-        var users = mock(UserStatusGuard.class);
+        var users = mock(UserStatusGuardService.class);
         var executor = new QueuedExecutor();
-        var hub = new ConversationStreamHub(new ConversationStreamKey("user", "conversation"), queries, users, executor);
+        var hub = new ConversationStreamHubService(new ConversationStreamKey("user", "conversation"), queries, users, executor);
         var calls = new AtomicInteger();
         when(queries.events(eq("user"), eq("conversation"), anyString())).thenAnswer(call -> {
             int count = calls.incrementAndGet();
@@ -131,8 +131,8 @@ class ConversationStreamHubTest {
         assertThat(emitter.events).isEmpty();
     }
 
-    private ConversationSubscriber subscriber(RecordingSseEmitter emitter, java.util.concurrent.Executor sender, Runnable release) {
-        return new ConversationSubscriber(emitter, "conversation:1:0", sender, release, () -> {
+    private ConversationSubscriberService subscriber(RecordingSseEmitter emitter, java.util.concurrent.Executor sender, Runnable release) {
+        return new ConversationSubscriberService(emitter, "conversation:1:0", sender, release, () -> {
         });
     }
 

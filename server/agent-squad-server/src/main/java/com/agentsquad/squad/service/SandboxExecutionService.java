@@ -25,7 +25,7 @@ import java.nio.charset.StandardCharsets;
 @Service
 @Slf4j
 public class SandboxExecutionService {
-    @Resource private UserStatusGuard userStatus;
+    @Resource private UserStatusGuardService userStatus;
     @Resource
     private com.agentsquad.squad.service.ArtifactService artifacts;
 
@@ -36,7 +36,7 @@ public class SandboxExecutionService {
     private SandboxAccessService access;
 
     @Resource
-    private SandboxRunTransaction transactions;
+    private SandboxRunTransactionService transactions;
 
     @Resource
     private HarnessDockerSandboxDriver driver;

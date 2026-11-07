@@ -26,7 +26,7 @@ import java.util.UUID;
  */
 @Service
 @Slf4j
-public class LocalSecretVault {
+public class LocalSecretVaultService {
 
     private static final String REF_PREFIX = "local-vault:";
     private static final int IV_LENGTH = 12;

@@ -18,7 +18,7 @@ import java.time.ZoneOffset;
 @Component
 @Slf4j
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
-public class TaskDirectiveScheduler {
+public class TaskDirectiveSchedulerService {
     @Resource
     private TaskDirectiveMapper mapper;
 

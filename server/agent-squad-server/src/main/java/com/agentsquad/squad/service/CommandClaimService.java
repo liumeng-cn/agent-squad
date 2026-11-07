@@ -19,7 +19,7 @@ import java.util.Map;
 @Slf4j
 @Service
 public class CommandClaimService {
-    @Resource private UserStatusGuard userStatus;
+    @Resource private UserStatusGuardService userStatus;
     @Resource
     private DeliveryMapper deliveries;
 

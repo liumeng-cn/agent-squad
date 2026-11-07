@@ -19,7 +19,7 @@ import com.agentsquad.squad.domain.dto.SandboxDriverResult;
 import com.agentsquad.squad.domain.dto.SandboxExecuteRequest;
 import com.agentsquad.squad.domain.dto.SandboxOutput;
 import com.agentsquad.squad.service.SandboxAccessService;
-import com.agentsquad.squad.service.SandboxRunTransaction;
+import com.agentsquad.squad.service.SandboxRunTransactionService;
 import com.agentsquad.squad.domain.dto.SkillFile;
 import com.agentsquad.squad.domain.request.SkillGrantRequest;
 import com.agentsquad.squad.domain.request.SkillImportRequest;
@@ -99,7 +99,7 @@ class ExecutionKnowledgeIntegrationTest {
             var memory = writes.write(USER, session, request);
             context.getBean(ExecutionAuthorizationService.class).prepare(USER, scope);
             var identity = context.getBean(SandboxAccessService.class).resolve(USER, session, null, "turn", "tool");
-            var ledger = context.getBean(SandboxRunTransaction.class);
+            var ledger = context.getBean(SandboxRunTransactionService.class);
             var runRequest = new SandboxExecuteRequest("file", "print('file')", List.of(), List.of("result.txt"), 5);
             var claim = ledger.begin(identity, runRequest, "a".repeat(64));
             var result = ledger.finish(identity, claim.run().executionId(), runRequest,

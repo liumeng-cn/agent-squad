@@ -26,7 +26,7 @@ public class OperationDispatchService {
     private OperationMapper mapper;
 
     @Resource
-    private UserStatusGuard userStatusGuard;
+    private UserStatusGuardService userStatusGuard;
 
     /**
      * 独立事务领取操作；UNKNOWN或RECONCILING未核清前，同会话不得发出新的外部请求。

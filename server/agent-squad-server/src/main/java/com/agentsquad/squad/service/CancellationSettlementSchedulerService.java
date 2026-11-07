@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
-public class CancellationSettlementScheduler {
+public class CancellationSettlementSchedulerService {
     private long afterId;
     private String afterBinding = "";
 

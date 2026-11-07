@@ -11,6 +11,7 @@ import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
 import com.agentsquad.squad.domain.entity.ConversationDO;
 import com.agentsquad.squad.domain.entity.TaskDO;
+import com.agentsquad.squad.domain.model.ActivityBusinessFact;
 import com.agentsquad.squad.domain.model.ResponseTaskFacts;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
@@ -142,7 +143,7 @@ public class ResponseContextService {
         if (mapper.freeze(userId, source.executionId(), json, ContentDigests.sha256(json)) != 1) {
             throw new IllegalStateException("回复上下文冻结发生竞争");
         }
-        activities.completed(scope, new com.agentsquad.squad.service.ActivityBusinessFact(
+        activities.completed(scope, new com.agentsquad.squad.domain.model.ActivityBusinessFact(
                 com.agentsquad.squad.common.enums.execution.ActivityType.CONTEXT_PREPARE, source.executionId()));
         log.info("回复上下文已冻结 conversationId={} messageCount={} materialCount={} contextChars={}",
                 scope.conversationId(), messages.size(),

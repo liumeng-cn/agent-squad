@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.agentsquad.squad.domain.model.BindingResult;
 import com.agentsquad.squad.integration.agentscope.NativeProjectionCommitLog;
 
 import com.agentsquad.squad.integration.agentscope.NativeEventView;
@@ -55,7 +56,7 @@ public class NativeProjectionService {
     private ResponseExecutionService responses;
 
     @Resource
-    private ConversationEventWriter conversationEvents;
+    private ConversationEventWriterService conversationEvents;
 
     @Resource
     private ExecutionScopeMapper scopeMapper;

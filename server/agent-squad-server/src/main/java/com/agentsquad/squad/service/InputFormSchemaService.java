@@ -17,7 +17,7 @@ import java.util.Set;
  * 仅支持最多 16 个平铺标量字段与有界枚举；缺省采用 answer 文本字段，拒绝引用和可执行表达式。
  */
 @Component
-public class InputFormSchema {
+public class InputFormSchemaService {
     private static final Set<String> ROOT_KEYS = Set.of("type", "properties", "required", "additionalProperties", "title", "description");
 
     private static final Set<String> FIELD_KEYS = Set.of("type", "title", "description", "enum", "minLength", "maxLength", "minimum", "maximum");

@@ -6,7 +6,7 @@ import com.agentsquad.squad.domain.response.ConversationViewResponse;
 import com.agentsquad.squad.service.ConversationTitleService;
 import com.agentsquad.squad.domain.response.ConversationSnapshotResponse;
 import com.agentsquad.squad.service.ConversationQueryService;
-import com.agentsquad.squad.service.ConversationEventStreamer;
+import com.agentsquad.squad.service.ConversationEventStreamerService;
 import com.agentsquad.squad.identity.UserContext;
 import com.agentsquad.squad.domain.response.ActivityHistoryPageResponse;
 import com.agentsquad.squad.domain.request.ActivityHistoryRequest;
@@ -41,7 +41,7 @@ public class ConversationReadController {
     private ConversationQueryService queries;
 
     @Resource
-    private ConversationEventStreamer events;
+    private ConversationEventStreamerService events;
 
     @GetMapping("/snapshot")
     public ApiResult<ConversationSnapshotResponse> snapshot(HttpServletRequest servletRequest,

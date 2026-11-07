@@ -24,7 +24,7 @@ import com.agentsquad.squad.domain.response.WorkerJobPageResponse;
 import com.agentsquad.squad.service.ConversationDeletionService;
 import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.service.TaskControlService;
-import com.agentsquad.squad.service.TaskEventStreamer;
+import com.agentsquad.squad.service.TaskEventStreamerService;
 import com.agentsquad.squad.service.TaskSnapshotService;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
@@ -64,7 +64,7 @@ public class RuntimeController {
     private TaskControlService taskControlService;
 
     @Resource
-    private TaskEventStreamer taskEventStreamer;
+    private TaskEventStreamerService taskEventStreamer;
 
     @Resource
     private TaskSnapshotService taskSnapshotService;

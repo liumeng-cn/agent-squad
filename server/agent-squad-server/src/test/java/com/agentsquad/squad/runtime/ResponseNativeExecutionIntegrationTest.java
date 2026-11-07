@@ -358,7 +358,7 @@ class ResponseNativeExecutionIntegrationTest {
             var stop = context.getBean(ResponseControlService.class).cancel(USER, receipt.executionId(), "stop", 0);
             context.getBean(CommandDeliveryService.class).deliver(stop.commandId());
             assertThat(jdbc.queryForObject("SELECT status FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId())).isEqualTo("CANCELLING");
-            var scheduler = context.getBean(com.agentsquad.squad.service.CancellationSettlementScheduler.class);
+            var scheduler = context.getBean(com.agentsquad.squad.service.CancellationSettlementSchedulerService.class);
             scheduler.settle();
             assertThat(jdbc.queryForObject("SELECT status FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId())).isEqualTo("CANCELLING");
             log.release(writer);

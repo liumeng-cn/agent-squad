@@ -1,6 +1,7 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.domain.dto.AcceptanceReviewRequest;
+import com.agentsquad.squad.domain.model.BindingResult;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.domain.entity.CommandDO;
@@ -54,7 +55,7 @@ public class InteractionService {
     private JsonSchemaValidator jsonSchemaValidator;
 
     @Resource
-    private InputFormSchema inputFormSchema;
+    private InputFormSchemaService inputFormSchema;
 
     private static final String KIND_INPUT = "INPUT";
     private static final String KIND_APPROVAL = "APPROVAL";
@@ -74,7 +75,7 @@ public class InteractionService {
     private OperationMapper operationMapper;
 
     @Resource
-    private OperationExecutor operationExecutor;
+    private OperationExecutorService operationExecutor;
 
     @Resource
     private OperationService operationService;

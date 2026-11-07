@@ -129,7 +129,7 @@ class ModelBudgetMiddlewareTest {
         ReflectionTestUtils.setField(middleware, "profileRegistry", profiles);
         ReflectionTestUtils.setField(middleware, "objectMapper", spring.getBean(ObjectMapper.class));
         ReflectionTestUtils.setField(middleware, "userStatusGuard",
-                spring.getBean(com.agentsquad.squad.service.UserStatusGuard.class));
+                spring.getBean(com.agentsquad.squad.service.UserStatusGuardService.class));
         return new Fixture(middleware, runtime, jdbc, task.taskId());
     }
 

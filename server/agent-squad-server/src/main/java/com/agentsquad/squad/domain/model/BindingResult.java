@@ -1,4 +1,4 @@
-package com.agentsquad.squad.service;
+package com.agentsquad.squad.domain.model;
 
 /**
  * 框架交互绑定结果。
