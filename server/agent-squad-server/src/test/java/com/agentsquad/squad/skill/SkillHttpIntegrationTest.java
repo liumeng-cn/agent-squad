@@ -78,7 +78,9 @@ class SkillHttpIntegrationTest {
             assertThatThrownBy(() -> skills.importPackage(USER, request("1.0.0", "不同资源")))
                     .hasMessageContaining("内容不同");
             String otherVersion = skills.importPackage(OTHER, request("1.0.0", "其他用户资源")).skillVersionId();
-            mvc.perform(get("/api/v1/skills/{id}", otherVersion).with(TestAssertion.as(USER, "ADMIN"))).andExpect(status().isNotFound());
+            mvc.perform(get("/api/v1/skills/{id}", otherVersion).with(TestAssertion.as(USER, "ADMIN")))
+                    .andExpect(status().isOk())
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.code").value(404));
             assertThat(skills.list(USER, null, 10).items()).hasSize(1);
             assertThatThrownBy(() -> skills.detail(OTHER, versionId)).isInstanceOf(RuntimeBusinessException.class);
 

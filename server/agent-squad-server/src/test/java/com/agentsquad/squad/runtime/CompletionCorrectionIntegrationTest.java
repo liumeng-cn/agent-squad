@@ -266,9 +266,7 @@ class CompletionCorrectionIntegrationTest {
             String workerAgent = UUID.randomUUID().toString().replace("-", "");
             String workerSession = UUID.randomUUID().toString();
             bindings.insertWorker(workerBinding, USER_ID, target.taskId(), workerAgent, workerSession, LocalDateTime.now(ZoneOffset.UTC));
-            var master = (io.agentscope.harness.agent.HarnessAgent) org.springframework.test.util.ReflectionTestUtils
-                    .getField(context.getBean(com.agentsquad.squad.agent.MasterAgent.class), "master");
-            var store = new io.agentscope.harness.agent.session.WorkspaceSessionLogStore(master.getWorkspaceManager());
+            var store = context.getBean(com.agentsquad.squad.integration.agentscope.journal.RuntimeSessionProvider.class).logStore();
             var runtime = io.agentscope.core.agent.RuntimeContext.builder().userId(USER_ID).sessionId(workerSession).build();
             var log = store.open(new io.agentscope.core.session.SessionKey(USER_ID, workerAgent, workerSession), runtime);
             var writer = log.acquire("other-node", java.time.Duration.ofSeconds(30));

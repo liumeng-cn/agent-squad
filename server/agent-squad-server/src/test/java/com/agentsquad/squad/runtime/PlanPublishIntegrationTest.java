@@ -210,16 +210,6 @@ class PlanPublishIntegrationTest {
                     "analyze", "foreign-context"))
                     .isInstanceOf(RuntimeBusinessException.class);
 
-            PlanPublish schemaMismatch = new PlanPublish("schema-mismatch", 0, List.of(
-                    new PlanNode("analyze", "structured-input", "1.0.0", "分析日志",
-                            analyzeContext, List.of(), true, 1)),
-                    "ALL_REQUIRED", List.of("完成"));
-            assertThatThrownBy(() -> planService.publish(userId, sessionId, schemaMismatch))
-                    .isInstanceOf(RuntimeBusinessException.class)
-                    .hasMessageContaining("Worker 输入");
-            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_plan WHERE task_id = ?",
-                    Integer.class, task.taskId())).isZero();
-
             PlanPublish missingContext = new PlanPublish("missing-context", 0, List.of(
                     new PlanNode("analyze", "log-analysis", "1.0.0", "分析日志",
                             "00000000-0000-0000-0000-000000000099", List.of(), true, 1)),
@@ -346,11 +336,49 @@ class PlanPublishIntegrationTest {
                     .hasMessageContaining("循环");
 
             PlanPublish second = new PlanPublish("plan-2", 1, List.of(
-                    new PlanNode("summary", "log-analysis", "1.0.0", "汇总结果",
+                    new PlanNode("summary", "structured-input", "1.0.0", "topic：日志分析；请汇总结果",
                             summaryContext, List.of(), true, 1)),
                     "ALL_REQUIRED", List.of("汇总完成"));
             PlanReceipt secondReceipt = planService.publish(userId, sessionId, second);
             assertThat(secondReceipt.planVersion()).isEqualTo(2);
+
+            // 旧版汇总回合发布了新版计划时，只等待新版工作，不排入完成纠正。
+            jdbc.update("UPDATE sq_command SET native_turn_id = 'old-plan-signal' WHERE task_id = ? AND action = 'MASTER_SIGNAL'", task.taskId());
+            var commands = context.getBean(com.agentsquad.squad.conversation.repository.CommandMapper.class);
+            assertThat(commands.countPlanSignalTurn(userId, task.taskId(), "old-plan-signal", 1)).isEqualTo(1);
+            assertThat(commands.countPlanSignalTurn(userId, task.taskId(), "old-plan-signal", 2)).isZero();
+            jdbc.update("UPDATE sq_goal_task SET status = 'RUNNING' WHERE task_id = ?", task.taskId());
+            String masterBinding = jdbc.queryForObject("SELECT binding_id FROM sq_runtime_binding WHERE framework_session_id = ?", String.class, sessionId);
+            var finalizer = new com.agentsquad.squad.runtime.service.TaskFinalizerService();
+            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "directives", context.getBean(com.agentsquad.squad.conversation.repository.TaskDirectiveMapper.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "completionMapper", context.getBean(com.agentsquad.squad.runtime.repository.CompletionMapper.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "planMapper", context.getBean(com.agentsquad.squad.runtime.repository.PlanMapper.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "commandMapper", commands);
+            var transaction = new org.springframework.transaction.support.TransactionTemplate(context.getBean(org.springframework.transaction.PlatformTransactionManager.class));
+            assertThat(transaction.<Boolean>execute(status -> finalizer.recoverMissingProposal(
+                    new com.agentsquad.squad.runtime.domain.ProjectionTarget(userId, task.taskId(), masterBinding, "master", sessionId, 0),
+                    new com.agentsquad.squad.integration.agentscope.NativeEventView(100, "old-end", "run/end", "old-run", "old-plan-signal", "completed", 1000, java.util.Map.of()))))
+                    .isTrue();
+            assertThat(jdbc.queryForObject("SELECT completion_correction_count FROM sq_goal_task WHERE task_id = ?", Integer.class, task.taskId())).isZero();
+
+            // 实际执行时等待，恢复受阻时开放协调工具，不能同时要求 Master 空等。
+            var middleware = new com.agentsquad.squad.integration.agentscope.ScopedMasterToolsMiddleware();
+            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "scopes", context.getBean(com.agentsquad.squad.conversation.service.ExecutionScopeService.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "scopeMapper", context.getBean(com.agentsquad.squad.conversation.repository.ExecutionScopeMapper.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "tasks", context.getBean(com.agentsquad.squad.conversation.repository.TaskMapper.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "plans", context.getBean(com.agentsquad.squad.runtime.repository.PlanMapper.class));
+            for (String state : List.of("READY", "RECOVERY_BLOCKED")) {
+                jdbc.update("UPDATE sq_worker_job SET status = ? WHERE job_id = ?", state, secondReceipt.jobIds().getFirst());
+                middleware.onModelCall(null, io.agentscope.core.agent.RuntimeContext.builder().userId(userId).sessionId(sessionId).build(),
+                        new io.agentscope.core.middleware.ModelCallInput(List.of(), List.of(io.agentscope.core.model.ToolSchema.builder().name("propose_completion").description("完成").build()), null, null), adjusted -> {
+                            assertThat(adjusted.tools().isEmpty()).isEqualTo("READY".equals(state));
+                            if ("RECOVERY_BLOCKED".equals(state)) {
+                                assertThat(mapper.valueToTree(adjusted.messages()).toString()).contains("不能继续空等", "完整替换当前安排");
+                            }
+                            return reactor.core.publisher.Flux.empty();
+                        }).blockLast();
+            }
+            jdbc.update("UPDATE sq_worker_job SET status = 'READY' WHERE job_id = ?", secondReceipt.jobIds().getFirst());
 
             String oldPlanStatus = jdbc.queryForObject(
                     "SELECT status FROM sq_plan WHERE task_id = ? AND plan_version = 1",

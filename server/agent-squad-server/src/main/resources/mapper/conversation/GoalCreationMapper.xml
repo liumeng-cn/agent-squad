@@ -2,6 +2,15 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.conversation.repository.GoalCreationMapper">
 
+    <select id="taskForSourceExecution" resultType="java.lang.String">
+        SELECT task_id
+        FROM sq_goal_task
+        WHERE user_id = #{userId}
+          AND origin_execution_id = #{executionId}
+        ORDER BY id
+        LIMIT 1
+    </select>
+
     <update id="linkSource">
         UPDATE sq_goal_task
         SET origin_message_id   = #{messageId},

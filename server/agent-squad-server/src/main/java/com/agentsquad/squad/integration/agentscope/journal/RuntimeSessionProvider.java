@@ -79,7 +79,7 @@ public class RuntimeSessionProvider {
             throw new IllegalArgumentException("原生日志读取范围无效");
         }
         requireBinding(source);
-        if (agentId == null || !agentId.equals(inboxMapper.lockBoundAgent(source))) {
+        if (agentId == null || !agentId.equals(inboxMapper.findBoundAgent(source))) {
             throw new IllegalStateException("原生日志Agent与绑定不匹配");
         }
         return journalStore.open(new SessionKey(source.userId(), agentId, source.sessionId()), readContext(source))
@@ -91,7 +91,7 @@ public class RuntimeSessionProvider {
     }
 
     private void requireBinding(RuntimeEventSource source) {
-        if (source == null || !source.sessionId().equals(inboxMapper.lockBoundSession(source))) {
+        if (source == null || !source.sessionId().equals(inboxMapper.findBoundSession(source))) {
             throw new IllegalStateException("原生会话归属不匹配");
         }
     }

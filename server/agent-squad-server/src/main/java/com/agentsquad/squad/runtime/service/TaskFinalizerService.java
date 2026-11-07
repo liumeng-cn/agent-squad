@@ -202,9 +202,10 @@ public class TaskFinalizerService {
                 || row.proposalJson() != null || event.turnId() == null) {
             return false;
         }
+        // 旧计划的汇总回合可能刚发布新版；它不能代替新版完成通知，更不能消耗完成纠正次数。
         if (row.planVersion() > 0
                 && planMapper.countActivePlan(row.userId(), row.taskId(), row.planVersion()) > 0
-                && commandMapper.countSignalTurn(row.userId(), row.taskId(), event.turnId()) == 0) {
+                && commandMapper.countPlanSignalTurn(row.userId(), row.taskId(), event.turnId(), row.planVersion()) == 0) {
             log.info("Master 规划回合已结束，等待 Worker 汇合 taskId={} planVersion={} turnId={}",
                     row.taskId(), row.planVersion(), event.turnId());
             return true;

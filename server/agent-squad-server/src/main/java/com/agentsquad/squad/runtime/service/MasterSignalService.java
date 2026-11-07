@@ -111,6 +111,7 @@ public class MasterSignalService {
             throw new IllegalStateException("汇合时 Master Binding 已消失");
         }
         List<Map<String, Object>> results = new ArrayList<>(jobs.size());
+        var definition = acceptance.definition(plan);
         for (WorkerJobRow job : jobs) {
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("jobId", job.jobId());
@@ -118,6 +119,8 @@ public class MasterSignalService {
             result.put("workerKey", job.workerKey());
             result.put("workerVersion", job.workerVersion());
             result.put("status", job.status());
+            definition.nodes().stream().filter(node -> node.nodeKey().equals(job.nodeKey()))
+                    .findFirst().ifPresent(node -> result.put("planNode", node));
             if ("SUCCEEDED".equals(job.status())) {
                 result.put("result", readResult(job));
             }
@@ -127,9 +130,11 @@ public class MasterSignalService {
                 + "当前计划版本为 " + plan.planVersion() + "。请核对以下固定 Worker 状态与成功结果。"
                 + (allSucceeded ? "完成原目标并调用 propose_completion："
                 : "有工作未完成。RECOVERY_BLOCKED不是最终失败：优先发布新计划重新安排；确认不能继续时先调用abandon_failed_job明确放弃。"
+                + "publish_plan完整替换当前计划，不是追加节点；新计划必须包含原目标仍需要的成功节点和待补做节点。"
+                + "成功节点可沿用下面planNode中的固定输入，平台判定能否复用；不要只提交补做部分导致已有成果退出当前计划。"
                 + "全部工作明确收尾后可用PARTIAL说明未完成部分，不能把等待恢复的工作直接当作完成：")
                 + RuntimePayloads.toJson(objectMapper, results)
-                + "。当前完成条件：" + RuntimePayloads.toJson(objectMapper, acceptance.definition(plan).acceptanceCriteria())
+                + "。当前完成条件：" + RuntimePayloads.toJson(objectMapper, definition.acceptanceCriteria())
                 + "。propose_completion必须提供acceptanceReviews，逐项criterionId、PASS/FAIL/UNKNOWN和evidenceRefs。"
                 + "MODEL_REVIEW引用本计划成功jobId并如实评价；USER_REVIEW先调用request_acceptance_review，"
                 + "收到实际答复后引用interactionId；缺少证据不能声明SUCCEEDED。";

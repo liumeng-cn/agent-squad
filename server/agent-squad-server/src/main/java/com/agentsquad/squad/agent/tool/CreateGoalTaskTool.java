@@ -42,7 +42,7 @@ public class CreateGoalTaskTool implements AgentTool {
 
     @Override
     public String getDescription() {
-        return "仅当当前用户目标需要持续推进或委派协作时创建独立目标。普通交流直接回答。"
+        return "当前用户目标需要持续推进或委派协作时创建独立目标。用户明确要求Worker或并行协作时必须调用，不能自行回答代替执行。普通交流直接回答。"
                 + "sourceMessageId必须是当前用户消息，logicalKey同业务重试保持不变；返回持久受理收据，不能声称工作已完成。";
     }
 

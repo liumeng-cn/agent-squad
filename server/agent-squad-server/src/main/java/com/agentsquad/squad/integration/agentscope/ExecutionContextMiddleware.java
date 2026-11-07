@@ -106,10 +106,15 @@ public class ExecutionContextMiddleware implements MiddlewareBase {
                             throw new CancellationException("Worker固定执行身份已结束");
                         }
                         authorization.prepare(userId, scopeId);
+                        var selection = context.get(com.agentsquad.squad.skill.integration.SkillSelection.class);
+                        // SDK可能重新装配工具目录，模型发送前仍按固定局部技能选择裁剪。
+                        var tools = selection != null && selection.skillVersionIds().isEmpty()
+                                ? input.tools().stream().filter(tool -> !"load_skill_through_path".equals(tool.getName())).toList()
+                                : input.tools();
                         context.put(com.agentsquad.squad.skill.integration.ScopeSkillCapabilities.class,
-                                new com.agentsquad.squad.skill.integration.ScopeSkillCapabilities(input.tools().stream()
+                                new com.agentsquad.squad.skill.integration.ScopeSkillCapabilities(tools.stream()
                                         .map(tool -> tool.getName()).collect(java.util.stream.Collectors.toSet())));
-                        return input;
+                        return new ModelCallInput(input.messages(), tools, input.options(), input.model());
                     }
                     var snapshot = authorization.prepare(userId, scopeId);
                     var messages = new ArrayList<>(input.messages());

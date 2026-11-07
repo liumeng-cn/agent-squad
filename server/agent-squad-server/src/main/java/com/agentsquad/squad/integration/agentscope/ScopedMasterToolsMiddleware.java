@@ -2,6 +2,8 @@ package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
+import com.agentsquad.squad.common.enums.worker.WorkerJobStatus;
+import com.agentsquad.squad.runtime.domain.WorkerJobRow;
 import io.agentscope.core.agent.Agent;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.event.AgentEvent;
@@ -18,6 +20,7 @@ import reactor.core.scheduler.Schedulers;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -30,6 +33,10 @@ import java.util.function.Function;
 public class ScopedMasterToolsMiddleware implements MiddlewareBase {
     private static final Set<String> TASK_ONLY = Set.of("prepare_context", "publish_plan", "apply_task_directive", "abandon_failed_job", "request_acceptance_review");
     private static final Set<String> RESPONSE_ONLY = Set.of("create_goal_task", "submit_task_directive", "write_explicit_memory");
+    private static final Set<WorkerJobStatus> EXECUTING_JOBS = EnumSet.of(
+            WorkerJobStatus.READY, WorkerJobStatus.RUNNING, WorkerJobStatus.RECOVERING,
+            WorkerJobStatus.WAITING_INPUT, WorkerJobStatus.WAITING_APPROVAL,
+            WorkerJobStatus.RECONCILING, WorkerJobStatus.CANCELLING);
 
     @Resource
     private com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper replies;
@@ -45,6 +52,9 @@ public class ScopedMasterToolsMiddleware implements MiddlewareBase {
 
     @Resource
     private com.agentsquad.squad.runtime.repository.PlanMapper plans;
+
+    @Resource
+    private com.agentsquad.squad.conversation.repository.GoalCreationMapper origins;
 
     @Override
     public Set<ExtensionPoint> activePoints() {
@@ -64,18 +74,28 @@ public class ScopedMasterToolsMiddleware implements MiddlewareBase {
                     boolean natural = response && replies.completionProtocolBySession(context.getUserId(), context.getSessionId())
                             == com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol.NATURAL;
                     var hidden = new java.util.HashSet<>(response ? TASK_ONLY : RESPONSE_ONLY);
+                    boolean handedOff = response && origins.taskForSourceExecution(context.getUserId(), scope.ownerId()) != null;
+                    if (handedOff) {
+                        hidden.add("create_goal_task");
+                        hidden.add("submit_task_directive");
+                    }
                     if (natural) {
                         hidden.add("propose_completion");
                     }
                     var task = response ? null : tasks.findOwned(context.getUserId(), scope.ownerId());
-                    boolean awaitingWorkers = task != null && task.planVersion() > 0
-                            && plans.countActiveJobs(context.getUserId(), task.taskId(), task.planVersion()) > 0;
+                    var jobs = task == null || task.planVersion() == 0 ? List.<WorkerJobRow>of()
+                            : plans.listJobs(task.taskId(), task.planVersion());
+                    boolean awaitingWorkers = jobs.stream().anyMatch(job -> EXECUTING_JOBS.contains(WorkerJobStatus.valueOf(job.status())));
+                    boolean needsCoordination = jobs.stream().anyMatch(job -> WorkerJobStatus.RECOVERY_BLOCKED.name().equals(job.status())
+                            || WorkerJobStatus.BLOCKED.name().equals(job.status()));
                     if (awaitingWorkers) {
                         hidden.add("propose_completion");
                         hidden.add("request_acceptance_review");
                     }
                     String roleInstruction = response
-                            ? "当前职责是回复这条用户消息。如果已用create_goal_task接下独立工作，本次只用一两句话确认正在处理；"
+                            ? "当前职责是回复这条用户消息。用户明确要求Worker、多任务并行或委派协作时，必须实际调用create_goal_task，"
+                            + "不能因为你能自行写出内容而跳过用户指定的执行方式。"
+                            + "如果已用create_goal_task接下独立工作，本次只用一两句话确认正在处理；"
                             + "等待后台工作是正常过程，不要称为失败、缺口或尚不能交付，不解释执行状态细节。"
                             + "不要主动提供跳过协作的替代方案，不再要求用户回复一句来确认继续。"
                             + "除非确实缺少用户才能提供的关键材料，否则自行推进。查询进展时只给简洁的真实进展。"
@@ -88,16 +108,25 @@ public class ScopedMasterToolsMiddleware implements MiddlewareBase {
                             + "完成时finalAnswer默认只放可直接使用的成品，不要放任务受理、两步协作、执行说明或验收报告。"
                             + "原始用户未明确要求展示提纲或过程时，不公开内部提纲，也不解释如何依据提纲。"
                             + "交付前检查篇幅和内容要求，超长则压缩。不要擅自添加用户未要求的成果。";
-                    if (awaitingWorkers) {
+                    if (handedOff) {
+                        roleInstruction = "这条用户消息已经成功建立独立目标，后台会独立推进并统一交付。"
+                                + "当前仅用一句话确认正在处理，然后结束回复；不再创建目标、不重复提交修改、不生成替代成品。";
+                    } else if (awaitingWorkers) {
                         roleInstruction = "当前计划已经发布，Worker仍在执行，等待结果是正常状态。"
                                 + "若没有收到TASK_DIRECTIVE或明确的节点失败通知，本轮直接输出简短等待说明并结束，"
                                 + "不要再调用工具，不要重新发布计划、检查验收或声明完成。平台会在结果就绪后另起一轮通知你。"
                                 + "只有收到TASK_DIRECTIVE时才调用apply_task_directive处理用户修改。";
+                    } else if (needsCoordination) {
+                        roleInstruction = "当前没有仍在执行的Worker，但存在恢复受阻或依赖受阻的节点，需要你协调，不能继续空等。"
+                                + "依据本轮状态与结果通知重新安排失败分支，或者明确调用abandon_failed_job放弃无法继续的节点。"
+                                + "publish_plan是完整替换当前安排，不是追加补做：必须保留原目标仍需要的成功节点，"
+                                + "保持其nodeKey、goal、worker版本和contextSnapshotId不变，由平台检查能否复用。"
+                                + "不要只发布失败节点而丢掉已成功的成果；新计划发布后结束本轮，等待新的汇总通知。";
                     } else if (task != null && task.planVersion() > 0) {
                         roleInstruction = "当前计划的Worker已经收尾，这是结果核验与最终交付阶段，不是初次派工。"
                                 + "先读取本轮通知携带的节点结果与验收条件，已有成果满足用户要求时不要重新发布计划。"
                                 + "仅USER_REVIEW条件调用request_acceptance_review并等待用户确认；MODEL_REVIEW引用本计划成功jobId如实评价，"
-                                + "PROGRAMMATIC使用平台检查事实。随后调用propose_completion提交完整finalAnswer及逐项证据。"
+                                + "DETERMINISTIC使用平台检查事实。随后调用propose_completion提交完整finalAnswer及逐项证据。"
                                 + "只有确实存在未满足条件或用户修改了目标时才重新准备上下文和计划，不能因为收到汇合通知就再派一遍相同工作。"
                                 + "最终回答只包含用户需要的成品，不输出内部执行报告。";
                     }

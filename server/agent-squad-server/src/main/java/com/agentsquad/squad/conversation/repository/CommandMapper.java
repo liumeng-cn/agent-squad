@@ -37,6 +37,9 @@ public interface CommandMapper {
     int countSignalTurn(@Param("userId") String userId, @Param("taskId") String taskId,
                         @Param("turnId") String turnId);
 
+    int countPlanSignalTurn(@Param("userId") String userId, @Param("taskId") String taskId,
+                            @Param("turnId") String turnId, @Param("planVersion") long planVersion);
+
     int markMasterTurnApplied(@Param("userId") String userId, @Param("taskId") String taskId,
                               @Param("turnId") String turnId);
 

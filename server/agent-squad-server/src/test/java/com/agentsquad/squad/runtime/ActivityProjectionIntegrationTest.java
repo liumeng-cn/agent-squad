@@ -44,6 +44,14 @@ class ActivityProjectionIntegrationTest {
             String scopeId = jdbc.queryForObject("SELECT scope_id FROM sq_response_execution", String.class);
             String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding", String.class);
             var scope = context.getBean(ExecutionScopeMapper.class).findOwned(user, scopeId);
+            var sessions = context.getBean(com.agentsquad.squad.integration.agentscope.journal.RuntimeSessionProvider.class);
+            var source = new com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource(user, binding, session, 1);
+            String agent = jdbc.queryForObject("SELECT agent_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
+            int journalObjects = jdbc.queryForObject("SELECT COUNT(*) FROM agentscope_store", Integer.class);
+            assertThat(sessions.executionContext(source).getSessionId()).isEqualTo(session);
+            assertThat(sessions.readCommitted(source, agent, 0, 100)).isEmpty();
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM agentscope_store", Integer.class)).isEqualTo(journalObjects);
+            assertThatThrownBy(() -> sessions.readCommitted(source, "another-agent", 0, 100)).isInstanceOf(IllegalStateException.class);
             var target = new ProjectionTarget(user, null, binding, "master", session, 0);
             var service = context.getBean(ActivityProjectionService.class);
             var transaction = new TransactionTemplate(context.getBean(PlatformTransactionManager.class));

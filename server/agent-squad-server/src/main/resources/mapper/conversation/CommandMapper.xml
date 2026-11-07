@@ -158,6 +158,16 @@
           AND action = 'MASTER_SIGNAL' AND native_turn_id = #{turnId}
     </select>
 
+    <select id="countPlanSignalTurn" resultType="_int">
+        SELECT COUNT(*)
+        FROM sq_command
+        WHERE user_id = #{userId}
+          AND task_id = #{taskId}
+          AND action = 'MASTER_SIGNAL'
+          AND native_turn_id = #{turnId}
+          AND JSON_EXTRACT(payload_json, '$.planVersion') = #{planVersion}
+    </select>
+
     <update id="markMasterTurnApplied">
         UPDATE sq_command SET status = 'APPLIED'
         WHERE user_id = #{userId} AND task_id = #{taskId}

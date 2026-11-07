@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.model.ExecutionConfig;
 import io.agentscope.core.model.GenerateOptions;
+import io.agentscope.core.model.ToolChoice;
 import io.agentscope.core.tool.Toolkit;
 import io.agentscope.extensions.jdbc.JdbcDistributedStore;
 import io.agentscope.extensions.jdbc.dialect.AbstractJdbcDialect;
@@ -228,6 +229,8 @@ public class WorkerFactory {
         }
         toolkit.registerAgentTool(new ReportJobResultTool(resultService, objectMapper,
                 userId, sessionId, bindingId, claimed.guardToken()).outputSchema(definition.outputSchema()));
+        boolean hasSelectedSkills = readInput(snapshot.itemsJson()).valueStream()
+                .anyMatch(item -> "SKILL_REFERENCE".equals(item.path("kind").asText()));
         String prompt = "你是独立 Worker。能力：" + definition.description()
                 + "。只处理当前节点，不发布计划、不结束父目标、不委派其他 Agent。"
                 + "结果是供统一助手核验的材料，不是直接发给用户的消息。提供实质内容、依据与具体缺口，"
@@ -235,9 +238,17 @@ public class WorkerFactory {
                 + "任务说明需按已发布输入 Schema 理解：" + definition.inputSchema()
                 + "。局部上下文（JSON）：" + snapshot.itemsJson()
                 + "。完成工作后必须调用 report_job_result，result 须符合已发布输出 Schema："
-                + definition.outputSchema();
+                + definition.outputSchema()
+                + (hasSelectedSkills ? "。只使用当前available_skills列出的技能，不猜测技能ID。"
+                : "。本节点未分配技能，直接根据任务说明完成工作，不尝试加载技能或工作区说明。");
         ToolsConfig toolsConfig = new ToolsConfig();
-        toolsConfig.setDeny(List.of("wait_async_results"));
+        toolsConfig.setDeny(hasSelectedSkills ? List.of("wait_async_results")
+                : List.of("wait_async_results", "load_skill_through_path"));
+        var generation = GenerateOptions.builder().maxTokens(model.getMaxOutputTokens());
+        // 纯生成节点只有结果提交能力，必须返回结构化结果，避免正文已生成但平台无法验收。
+        if (!hasSelectedSkills && definition.toolAllowlist().isEmpty()) {
+            generation.toolChoice(new ToolChoice.Specific("report_job_result"));
+        }
         HarnessAgent.Builder agentBuilder = HarnessAgent.builder()
                 .agentId(agentId)
                 .name("Worker " + definition.workerKey() + " " + definition.workerVersion())
@@ -245,7 +256,7 @@ public class WorkerFactory {
                 .model(OpenAIChatModel.builder().apiKey(model.getApiKey())
                         .baseUrl(model.getBaseUrl()).modelName(model.getModelName())
                         .stream(false).build())
-                .generateOptions(modelCatalog.applyReasoning(GenerateOptions.builder().maxTokens(model.getMaxOutputTokens()),
+                .generateOptions(modelCatalog.applyReasoning(generation,
                         model, model.getDefaultReasoningMode()).build())
                 .modelExecutionConfig(ExecutionConfig.builder()
                         .timeout(Duration.ofSeconds(runtime.getModelRequestTimeoutSeconds()))

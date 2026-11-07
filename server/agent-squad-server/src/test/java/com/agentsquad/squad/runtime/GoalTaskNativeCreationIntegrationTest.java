@@ -83,6 +83,8 @@ class GoalTaskNativeCreationIntegrationTest {
             }
             String response;
             if (worker) {
+                assertThat(request.path("tools").toString()).doesNotContain("load_skill_through_path");
+                assertThat(request.path("tool_choice").path("function").path("name").asText()).isEqualTo("report_job_result");
                 int workerCall = workerCalls.incrementAndGet();
                 if (queryDuringWork && workerCall == 1) {
                     workerBlocked.countDown();

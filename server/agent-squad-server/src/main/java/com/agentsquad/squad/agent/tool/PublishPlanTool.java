@@ -53,6 +53,8 @@ public class PublishPlanTool implements AgentTool {
     @Override
     public String getDescription() {
         return "需要多个 Worker 协作时调用。提交不可变的节点图（串行依赖、并行与显式汇合）；"
+                + "每次发布均完整替换当前安排，不是追加补做；必须包含原目标仍需要的全部节点。"
+                + "保留成功节点的nodeKey、goal、worker版本和contextSnapshotId，平台判定能否复用已有结果；"
                 + "每个节点的 goal 是发给该 Worker 的任务说明，需覆盖其输入 Schema 的必填信息；"
                 + "返回 planId 和 jobIds，不等待执行完成。";
     }
