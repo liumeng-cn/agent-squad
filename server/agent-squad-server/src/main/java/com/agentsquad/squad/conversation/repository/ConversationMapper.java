@@ -1,6 +1,6 @@
 package com.agentsquad.squad.conversation.repository;
 
-import com.agentsquad.squad.domain.entity.ConversationRow;
+import com.agentsquad.squad.domain.entity.ConversationDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -15,11 +15,11 @@ public interface ConversationMapper {
     int insert(@Param("conversationId") String conversationId, @Param("userId") String userId,
                @Param("title") String title);
 
-    ConversationRow lockOwned(@Param("userId") String userId, @Param("conversationId") String conversationId);
+    ConversationDO lockOwned(@Param("userId") String userId, @Param("conversationId") String conversationId);
 
-    ConversationRow findOwned(@Param("userId") String userId, @Param("conversationId") String conversationId);
+    ConversationDO findOwned(@Param("userId") String userId, @Param("conversationId") String conversationId);
 
-    List<ConversationRow> listByOwner(@Param("userId") String userId, @Param("cursorId") Long cursorId,
+    List<ConversationDO> listByOwner(@Param("userId") String userId, @Param("cursorId") Long cursorId,
                                       @Param("limit") int limit);
 
     int activateTask(@Param("userId") String userId, @Param("conversationId") String conversationId,
@@ -33,5 +33,5 @@ public interface ConversationMapper {
 
     int markDeleted(@Param("userId") String userId, @Param("conversationId") String conversationId);
 
-    List<ConversationRow> findDeletable(@Param("limit") int limit);
+    List<ConversationDO> findDeletable(@Param("limit") int limit);
 }

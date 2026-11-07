@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.conversation.repository.ExecutionScopeMapper">
 
-    <resultMap id="findActiveOwnedResult" type="com.agentsquad.squad.domain.entity.ExecutionScopeRow">
+    <resultMap id="findActiveOwnedResult" type="com.agentsquad.squad.domain.entity.ExecutionScopeDO">
         <constructor>
             <arg column="scope_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -14,7 +14,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="findOwnedResult" type="com.agentsquad.squad.domain.entity.ExecutionScopeRow">
+    <resultMap id="findOwnedResult" type="com.agentsquad.squad.domain.entity.ExecutionScopeDO">
         <constructor>
             <arg column="scope_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -26,7 +26,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="lockTaskOwnerResult" type="com.agentsquad.squad.domain.entity.ExecutionOwnerRow">
+    <resultMap id="lockTaskOwnerResult" type="com.agentsquad.squad.domain.entity.ExecutionOwnerDO">
         <constructor>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="cancellation_requested" javaType="_boolean"/>
@@ -34,7 +34,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="lockResponseOwnerResult" type="com.agentsquad.squad.domain.entity.ExecutionOwnerRow">
+    <resultMap id="lockResponseOwnerResult" type="com.agentsquad.squad.domain.entity.ExecutionOwnerDO">
         <constructor>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="cancellation_requested" javaType="_boolean"/>

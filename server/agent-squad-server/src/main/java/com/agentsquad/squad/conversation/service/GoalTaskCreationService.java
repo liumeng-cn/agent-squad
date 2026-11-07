@@ -5,11 +5,11 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.CanonicalJson;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.CommandRow;
-import com.agentsquad.squad.domain.entity.ConversationRow;
-import com.agentsquad.squad.domain.entity.ExecutionScopeRow;
-import com.agentsquad.squad.domain.entity.ResponseContextMessage;
-import com.agentsquad.squad.domain.entity.ResponseRuntimeRow;
+import com.agentsquad.squad.domain.entity.CommandDO;
+import com.agentsquad.squad.domain.entity.ConversationDO;
+import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
+import com.agentsquad.squad.domain.model.ResponseContextMessage;
+import com.agentsquad.squad.domain.entity.ResponseRuntimeDO;
 import com.agentsquad.squad.domain.dto.GoalTaskCreate;
 import com.agentsquad.squad.domain.response.TaskReceiptResponse;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
@@ -20,10 +20,10 @@ import com.agentsquad.squad.conversation.repository.GoalCreationMapper;
 import com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper;
 import com.agentsquad.squad.conversation.repository.TaskEventMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
-import com.agentsquad.squad.domain.entity.BudgetAccountRow;
+import com.agentsquad.squad.domain.entity.BudgetAccountDO;
 import com.agentsquad.squad.governance.repository.BudgetMapper;
 import com.agentsquad.squad.identity.UserStatusGuard;
-import com.agentsquad.squad.domain.entity.MasterAgentIdentity;
+import com.agentsquad.squad.domain.model.MasterAgentIdentity;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -100,23 +100,23 @@ public class GoalTaskCreationService {
     public TaskReceiptResponse create(String userId, String sessionId, GoalTaskCreate request) {
         validate(request);
         userStatusGuard.requireActive(userId);
-        ExecutionScopeRow source = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), false);
+        ExecutionScopeDO source = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), false);
         if (!"RESPONSE".equals(source.kind())) {
             throw error(RuntimeExceptionCode.FORBIDDEN, "只有消息回复可以建立独立目标");
         }
-        ConversationRow conversation = conversations.lockOwned(userId, source.conversationId());
+        ConversationDO conversation = conversations.lockOwned(userId, source.conversationId());
         if (!"ACTIVE".equals(conversation.status()) || conversation.generation() != source.conversationGeneration()) {
             throw error(RuntimeExceptionCode.NOT_FOUND, "来源会话已失效");
         }
         String sourceBinding = scopeMapper.findBindingBySession(userId, sessionId);
-        ResponseRuntimeRow reply = replies.lockByBinding(userId, sourceBinding);
+        ResponseRuntimeDO reply = replies.lockByBinding(userId, sourceBinding);
         if (reply == null || !reply.sourceMessageId().equals(request.sourceMessageId())) {
             throw error(RuntimeExceptionCode.FORBIDDEN, "目标来源必须是当前受权消息");
         }
         String scopeKey = "goal.create:" + source.scopeId();
         String requestJson = RuntimePayloads.toJson(json, request);
         String hash = CanonicalJson.sha256(json, requestJson);
-        CommandRow prior = commands.findByKeyCurrent(userId, scopeKey, request.logicalKey());
+        CommandDO prior = commands.findByKeyCurrent(userId, scopeKey, request.logicalKey());
         if (prior != null) {
             if (!hash.equals(prior.payloadHash())) {
                 throw error(RuntimeExceptionCode.CONFLICT, "同一目标创建键的内容不一致");
@@ -133,7 +133,7 @@ public class GoalTaskCreationService {
         ResponseContextMessage message = contexts.freeze(userId, sourceBinding).messages().getLast();
         budgets.ensureUser(userId);
         budgets.lockUser(userId);
-        BudgetAccountRow account = budgets.lockAccount(userId, source.scopeId());
+        BudgetAccountDO account = budgets.lockAccount(userId, source.scopeId());
         if (account == null) {
             throw error(RuntimeExceptionCode.CONFLICT, "来源预算账户已不可用");
         }

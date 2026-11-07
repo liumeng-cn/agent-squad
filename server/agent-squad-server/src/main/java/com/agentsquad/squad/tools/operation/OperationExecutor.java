@@ -3,8 +3,8 @@ package com.agentsquad.squad.tools.operation;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.OperationRow;
-import com.agentsquad.squad.domain.entity.OperationStatus;
+import com.agentsquad.squad.domain.entity.OperationDO;
+import com.agentsquad.squad.domain.enums.OperationStatus;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -50,7 +50,7 @@ public class OperationExecutor {
      * 执行账本操作并返回连接器结果 JSON；暂停调用方事务，确保 IN_FLIGHT 在外部调用前独立提交。
      */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    public String execute(OperationRow operation, ExternalCall externalCall) {
+    public String execute(OperationDO operation, ExternalCall externalCall) {
         userStatus.requireActive(operation.userId());
         String externalKey = "mock:" + operation.operationId();
         markInFlight(operation, externalKey);
@@ -79,7 +79,7 @@ public class OperationExecutor {
     /**
      * 从已成功账本回收结果（审批重放路径），不再调用连接器。
      */
-    public String resultOf(OperationRow operation) {
+    public String resultOf(OperationDO operation) {
         if (!OperationStatus.SUCCEEDED.name().equals(operation.status()) || operation.resultJson() == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "操作没有可复用的成功结果");
         }
@@ -90,11 +90,11 @@ public class OperationExecutor {
      * 置 IN_FLIGHT 并写执行器租约；单条 CAS 自动提交，即 IN_FLIGHT 持久点。
      * 租约按 UTC 写入，与失联扫描的比较基准一致。
      */
-    public void markInFlight(OperationRow operation, String externalKey) {
+    public void markInFlight(OperationDO operation, String externalKey) {
         LocalDateTime leaseUntil = LocalDateTime.now(ZoneOffset.UTC).plusSeconds(LEASE_SECONDS);
         int inflight = dispatchService.begin(operation, instanceId, 1L, leaseUntil, externalKey);
         if (inflight != 1) {
-            OperationRow current = operationMapper.findOwned(operation.userId(), operation.operationId());
+            OperationDO current = operationMapper.findOwned(operation.userId(), operation.operationId());
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
                     "操作状态已变化，不能重复派发（当前 " + current.status() + "）");
         }
@@ -103,7 +103,7 @@ public class OperationExecutor {
     /**
      * 成功出账；返回 false 表示执行器 CAS 竞争，调用方转 UNKNOWN。
      */
-    public boolean completeAsSucceeded(OperationRow operation, String resultJson) {
+    public boolean completeAsSucceeded(OperationDO operation, String resultJson) {
         return operationMapper.completeInFlight(operation.userId(), operation.operationId(),
                 operation.version() + 1, instanceId, 1L, OperationStatus.SUCCEEDED.name(),
                 resultJson, instanceId) == 1;
@@ -112,7 +112,7 @@ public class OperationExecutor {
     /**
      * 失败出账；连接器异常只留分类信息，不落原始异常正文。
      */
-    public boolean completeAsFailed(OperationRow operation, Exception cause) {
+    public boolean completeAsFailed(OperationDO operation, Exception cause) {
         String message = cause.getClass().getSimpleName();
         return operationMapper.completeInFlight(operation.userId(), operation.operationId(),
                 operation.version() + 1, instanceId, 1L, OperationStatus.FAILED.name(),
@@ -122,7 +122,7 @@ public class OperationExecutor {
     /**
      * 结果不明出账；只能由核对流程再推进。
      */
-    public void markUnknown(OperationRow operation) {
+    public void markUnknown(OperationDO operation) {
         if (unknowns.mark(operation, operation.version() + 1, instanceId)) {
             log.warn("操作转入 UNKNOWN，等待人工或连接器核对 operationId={}", operation.operationId());
         }

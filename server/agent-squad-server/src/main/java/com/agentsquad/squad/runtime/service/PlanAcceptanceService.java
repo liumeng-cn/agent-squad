@@ -7,11 +7,11 @@ import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.interaction.repository.InteractionMapper;
-import com.agentsquad.squad.domain.entity.PlanAcceptanceResult;
+import com.agentsquad.squad.domain.model.PlanAcceptanceResult;
 import com.agentsquad.squad.common.enums.worker.PlanAcceptanceVerdict;
-import com.agentsquad.squad.domain.entity.PlanRow;
-import com.agentsquad.squad.domain.entity.UserAcceptanceReview;
-import com.agentsquad.squad.domain.entity.WorkerJobRow;
+import com.agentsquad.squad.domain.entity.PlanDO;
+import com.agentsquad.squad.domain.model.UserAcceptanceReview;
+import com.agentsquad.squad.domain.entity.WorkerJobDO;
 import com.agentsquad.squad.domain.dto.AcceptanceReview;
 import com.agentsquad.squad.domain.dto.AcceptanceReviewRequest;
 import com.agentsquad.squad.domain.dto.PlanAcceptanceCriterion;
@@ -48,7 +48,7 @@ public class PlanAcceptanceService {
     @Resource
     private ObjectMapper json;
 
-    public List<PlanAcceptanceResult> assess(PlanRow plan, List<WorkerJobRow> jobs, List<AcceptanceReview> reviews) {
+    public List<PlanAcceptanceResult> assess(PlanDO plan, List<WorkerJobDO> jobs, List<AcceptanceReview> reviews) {
         var definition = definition(plan);
         var byId = new HashMap<String, AcceptanceReview>();
         if (reviews != null) {
@@ -80,7 +80,7 @@ public class PlanAcceptanceService {
                         && WorkerJobStatus.SUCCEEDED.name().equals(job.status()) && job.resultJson() != null);
                 verdict = passed ? PlanAcceptanceVerdict.PASS : PlanAcceptanceVerdict.FAIL;
                 verifier = "PLATFORM:REQUIRED_RESULTS_READY";
-                refs = requiredJobs.stream().map(WorkerJobRow::jobId).toList();
+                refs = requiredJobs.stream().map(WorkerJobDO::jobId).toList();
             } else if (review != null && !review.evidenceRefs().isEmpty()) {
                 if (criterion.verificationType() == AcceptanceVerificationType.MODEL_REVIEW) {
                     for (String ref : review.evidenceRefs()) {
@@ -148,7 +148,7 @@ public class PlanAcceptanceService {
                 "请确认这项结果是否符合要求：" + criterion.text(), reviewHash(plan, criterion));
     }
 
-    public PlanPublish definition(PlanRow plan) {
+    public PlanPublish definition(PlanDO plan) {
         try {
             return json.readValue(plan.definitionJson(), PlanPublish.class);
         } catch (java.io.IOException exception) {
@@ -156,7 +156,7 @@ public class PlanAcceptanceService {
         }
     }
 
-    private String reviewHash(PlanRow plan, PlanAcceptanceCriterion criterion) {
+    private String reviewHash(PlanDO plan, PlanAcceptanceCriterion criterion) {
         return ContentDigests.sha256(plan.taskId() + ":" + plan.planVersion() + ":" + plan.goalRevision()
                 + ":" + criterion.criterionId() + ":" + criterion.text());
     }

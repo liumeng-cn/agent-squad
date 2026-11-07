@@ -1,10 +1,10 @@
 package com.agentsquad.squad.integration.agentscope;
 
-import com.agentsquad.squad.domain.entity.ExecutionContextInvalidatedException;
-import com.agentsquad.squad.domain.entity.ResponseCompletionProtocol;
-import com.agentsquad.squad.domain.entity.ProjectionTarget;
+import com.agentsquad.squad.domain.exception.ExecutionContextInvalidatedException;
+import com.agentsquad.squad.domain.enums.ResponseCompletionProtocol;
+import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
 import com.agentsquad.squad.runtime.repository.ProjectionMapper;
-import com.agentsquad.squad.domain.entity.MasterAgentIdentity;
+import com.agentsquad.squad.domain.model.MasterAgentIdentity;
 import com.agentsquad.squad.runtime.service.WorkerRecoveryService;
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventConsumptionService;
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventReceiptService;
@@ -77,7 +77,7 @@ public class NativeProjectionPoller {
      */
     @Scheduled(fixedDelayString = "${agentsquad.projection.poll-delay-ms:1000}")
     public void projectDue() {
-        for (ProjectionTarget target : projectionMapper.findDueTargets(now())) {
+        for (ProjectionTargetDO target : projectionMapper.findDueTargets(now())) {
             List<SessionEvent> events = List.of();
             try {
                 authorization.requireBindingCurrent(target.userId(), target.bindingId());
@@ -133,7 +133,7 @@ public class NativeProjectionPoller {
         }
     }
 
-    private void recordConsumptionFailure(ProjectionTarget target, List<SessionEvent> events, Exception failure) {
+    private void recordConsumptionFailure(ProjectionTargetDO target, List<SessionEvent> events, Exception failure) {
         if (events.isEmpty()) {
             return;
         }

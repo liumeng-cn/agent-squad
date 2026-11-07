@@ -1,10 +1,10 @@
 package com.agentsquad.squad.conversation.service;
 
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.ExecutionScopeRow;
+import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
 import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
-import com.agentsquad.squad.domain.entity.ConversationRow;
+import com.agentsquad.squad.domain.entity.ConversationDO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import org.springframework.context.ApplicationEventPublisher;
@@ -36,8 +36,8 @@ public class ConversationEventWriter {
     private ObjectMapper json;
 
     @Transactional(propagation = Propagation.MANDATORY)
-    public void publish(ExecutionScopeRow scope, String key, String type, Object payload) {
-        ConversationRow conversation = conversations.lockOwned(scope.userId(), scope.conversationId());
+    public void publish(ExecutionScopeDO scope, String key, String type, Object payload) {
+        ConversationDO conversation = conversations.lockOwned(scope.userId(), scope.conversationId());
         if (conversation == null || !"ACTIVE".equals(conversation.status())
                 || conversation.generation() != scope.conversationGeneration()) {
             return;

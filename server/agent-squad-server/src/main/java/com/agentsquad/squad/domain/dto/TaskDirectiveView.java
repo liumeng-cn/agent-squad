@@ -2,7 +2,7 @@ package com.agentsquad.squad.domain.dto;
 
 import com.agentsquad.squad.common.enums.conversation.TaskDirectiveStatus;
 import com.agentsquad.squad.common.enums.conversation.TaskDirectiveWaitReason;
-import com.agentsquad.squad.domain.entity.TaskDirectiveRow;
+import com.agentsquad.squad.domain.entity.TaskDirectiveDO;
 
 /**
  * 用户要求修改的公开处理结果
@@ -15,7 +15,7 @@ public record TaskDirectiveView(String directiveId, String taskId, String source
     /**
      * 已有历史受理记录没有等待原因时，保守显示等待安全处理点，不推测已经开始协调。
      */
-    public static TaskDirectiveView from(TaskDirectiveRow row) {
+    public static TaskDirectiveView from(TaskDirectiveDO row) {
         TaskDirectiveStatus status = TaskDirectiveStatus.valueOf(row.status());
         TaskDirectiveWaitReason wait = TaskDirectiveWaitReason.NONE;
         if (status == TaskDirectiveStatus.ACCEPTED) {

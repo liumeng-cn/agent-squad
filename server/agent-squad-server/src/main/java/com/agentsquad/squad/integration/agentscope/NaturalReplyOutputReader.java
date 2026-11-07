@@ -1,11 +1,11 @@
 package com.agentsquad.squad.integration.agentscope;
 
-import com.agentsquad.squad.domain.entity.NaturalReplyEvidence;
-import com.agentsquad.squad.domain.entity.ResponseExecutionStatus;
+import com.agentsquad.squad.domain.model.NaturalReplyEvidence;
+import com.agentsquad.squad.domain.enums.ResponseExecutionStatus;
 import com.agentsquad.squad.integration.agentscope.completion.ModelCompletionNormalizer;
 import com.agentsquad.squad.integration.agentscope.completion.ModelEvidenceIssue;
 import com.agentsquad.squad.integration.agentscope.completion.ModelFinishReason;
-import com.agentsquad.squad.domain.entity.ProjectionTarget;
+import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
 import io.agentscope.core.message.GenerateReason;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
@@ -36,7 +36,7 @@ public class NaturalReplyOutputReader {
     /**
      * 外部结果核对完成后重新读取同一Run的终结事实，不重新调用模型或依赖内存候选。
      */
-    public NaturalReplyEvidence readCompleted(ProjectionTarget target, NativeSubmissionReceipt receipt) {
+    public NaturalReplyEvidence readCompleted(ProjectionTargetDO target, NativeSubmissionReceipt receipt) {
         long after = 0;
         for (int page = 0; page < MAX_EVIDENCE_EVENTS / READ_BATCH; page++) {
             var events = gateway.readCommittedEvents(target, after, READ_BATCH);
@@ -55,7 +55,7 @@ public class NaturalReplyOutputReader {
         return null;
     }
 
-    public NaturalReplyEvidence read(ProjectionTarget target, SessionEvent ended) {
+    public NaturalReplyEvidence read(ProjectionTargetDO target, SessionEvent ended) {
         List<SessionEvent> runEvents = new ArrayList<>();
         long after = 0;
         int inspected = 0;

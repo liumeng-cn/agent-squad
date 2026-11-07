@@ -12,7 +12,7 @@ import com.agentsquad.squad.presentation.service.ActivityProjectionService;
 import com.agentsquad.squad.domain.request.ActivityHistoryRequest;
 import com.agentsquad.squad.domain.dto.ExecutionActivityView;
 import com.agentsquad.squad.presentation.service.ConversationQueryService;
-import com.agentsquad.squad.domain.entity.ProjectionTarget;
+import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -102,7 +102,7 @@ class ActivityProjectionIntegrationTest {
             assertThat(sessions.readCommitted(source, agent, 0, 100)).isEmpty();
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM agentscope_store", Integer.class)).isEqualTo(journalObjects);
             assertThatThrownBy(() -> sessions.readCommitted(source, "another-agent", 0, 100)).isInstanceOf(IllegalStateException.class);
-            var target = new ProjectionTarget(user, null, binding, "master", session, 0);
+            var target = new ProjectionTargetDO(user, null, binding, "master", session, 0);
             var service = context.getBean(ActivityProjectionService.class);
             var transaction = new TransactionTemplate(context.getBean(PlatformTransactionManager.class));
             var queued = new NativeEventView(1, "queued", "tool/requested", "run", "turn", null, 1000,

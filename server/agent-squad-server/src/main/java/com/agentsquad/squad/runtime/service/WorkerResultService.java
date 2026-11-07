@@ -4,8 +4,8 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.CanonicalJson;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.WorkerLaunchRow;
-import com.agentsquad.squad.domain.entity.PlanRow;
+import com.agentsquad.squad.domain.entity.WorkerLaunchDO;
+import com.agentsquad.squad.domain.entity.PlanDO;
 import com.agentsquad.squad.runtime.repository.PlanMapper;
 import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;
@@ -62,7 +62,7 @@ public class WorkerResultService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "Worker 结果参数无效");
         }
         authorization.requireBindingCurrent(userId, bindingId);
-        WorkerLaunchRow job = dispatchMapper.findByBinding(userId, bindingId);
+        WorkerLaunchDO job = dispatchMapper.findByBinding(userId, bindingId);
         if (job == null || !"RUNNING".equals(job.jobStatus())
                 || !"ACTIVE".equals(job.planStatus()) || job.cancelRequestedAt() != null
                 || !guardToken.equals(job.guardToken()) || job.guardLeaseUntil() == null
@@ -97,7 +97,7 @@ public class WorkerResultService {
     @Transactional
     public boolean finalizeSuccess(String userId, String bindingId, String turnId) {
         authorization.requireBindingCurrent(userId, bindingId);
-        WorkerLaunchRow job = dispatchMapper.findByBinding(userId, bindingId);
+        WorkerLaunchDO job = dispatchMapper.findByBinding(userId, bindingId);
         if (job == null) {
             return false;
         }
@@ -105,7 +105,7 @@ public class WorkerResultService {
         if (currentVersion == null || currentVersion != job.planVersion()) {
             return false;
         }
-        PlanRow plan = planMapper.lockPlan(userId, job.taskId(), job.planVersion());
+        PlanDO plan = planMapper.lockPlan(userId, job.taskId(), job.planVersion());
         if (plan == null || !"ACTIVE".equals(plan.status())) {
             return false;
         }
@@ -132,7 +132,7 @@ public class WorkerResultService {
     @Transactional
     public void markFailed(String userId, String bindingId) {
         authorization.requireBindingCurrent(userId, bindingId);
-        WorkerLaunchRow job = dispatchMapper.findByBinding(userId, bindingId);
+        WorkerLaunchDO job = dispatchMapper.findByBinding(userId, bindingId);
         if (job == null) {
             return;
         }
@@ -140,7 +140,7 @@ public class WorkerResultService {
         if (version == null || version != job.planVersion()) {
             return;
         }
-        PlanRow plan = planMapper.lockPlan(userId, job.taskId(), version);
+        PlanDO plan = planMapper.lockPlan(userId, job.taskId(), version);
         if (plan == null || !"ACTIVE".equals(plan.status()) || dispatchMapper.markFailed(userId, bindingId) != 1) {
             return;
         }
@@ -154,7 +154,7 @@ public class WorkerResultService {
     @Transactional
     public void markRecoveryBlocked(String userId, String bindingId) {
         authorization.requireBindingCurrent(userId, bindingId);
-        WorkerLaunchRow job = dispatchMapper.findByBinding(userId, bindingId);
+        WorkerLaunchDO job = dispatchMapper.findByBinding(userId, bindingId);
         if (job == null) {
             return;
         }
@@ -162,7 +162,7 @@ public class WorkerResultService {
         if (currentVersion == null || currentVersion != job.planVersion()) {
             return;
         }
-        PlanRow plan = planMapper.lockPlan(userId, job.taskId(), job.planVersion());
+        PlanDO plan = planMapper.lockPlan(userId, job.taskId(), job.planVersion());
         if (plan != null && "ACTIVE".equals(plan.status())
                 && dispatchMapper.markRecoveryBlocked(userId, bindingId) == 1) {
             masterSignalService.onJobStateChanged(plan);

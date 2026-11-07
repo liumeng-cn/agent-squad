@@ -5,9 +5,9 @@ import com.agentsquad.squad.artifact.service.ArtifactDeliveryService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.governance.service.BudgetService;
-import com.agentsquad.squad.domain.entity.SandboxExecutionContext;
-import com.agentsquad.squad.domain.entity.SandboxRunRow;
-import com.agentsquad.squad.domain.entity.SandboxDispatchClaim;
+import com.agentsquad.squad.domain.model.SandboxExecutionContext;
+import com.agentsquad.squad.domain.entity.SandboxRunDO;
+import com.agentsquad.squad.domain.model.SandboxDispatchClaim;
 import com.agentsquad.squad.domain.dto.SandboxDriverResult;
 import com.agentsquad.squad.domain.dto.SandboxExecuteRequest;
 import com.agentsquad.squad.domain.dto.SandboxExecutionResult;
@@ -51,7 +51,7 @@ public class SandboxRunTransaction {
     @Transactional
     public SandboxDispatchClaim begin(SandboxExecutionContext context, SandboxExecuteRequest request, String hash) {
         access.requireCurrent(context);
-        SandboxRunRow prior = mapper.prior(context.userId(), context.bindingId(), request.logicalKey(),
+        SandboxRunDO prior = mapper.prior(context.userId(), context.bindingId(), request.logicalKey(),
                 context.turnId(), context.toolCallId());
         if (prior != null) {
             if (!hash.equals(prior.requestHash())) {
@@ -65,7 +65,7 @@ public class SandboxRunTransaction {
         mapper.insert(id, context.userId(), context.scopeId(), context.bindingId(), request.logicalKey(),
                 context.turnId(), context.toolCallId(), hash,
                 LocalDateTime.now(ZoneOffset.UTC).plusSeconds(request.timeoutSeconds() + 120));
-        return new SandboxDispatchClaim(new SandboxRunRow(id, context.userId(), context.scopeId(), context.bindingId(), hash, "IN_FLIGHT", null), true);
+        return new SandboxDispatchClaim(new SandboxRunDO(id, context.userId(), context.scopeId(), context.bindingId(), hash, "IN_FLIGHT", null), true);
     }
 
     @Transactional
@@ -101,16 +101,16 @@ public class SandboxRunTransaction {
      * 已结束执行的预算结算不会被覆盖，也不会通过创建新容器重发。
      */
     @Transactional
-    public int expire(SandboxRunRow candidate) {
+    public int expire(SandboxRunDO candidate) {
         budget.markUnknown(candidate.userId(), candidate.scopeId(), usageKey(candidate.executionId()));
-        SandboxRunRow current = mapper.find(candidate.userId(), candidate.executionId());
+        SandboxRunDO current = mapper.find(candidate.userId(), candidate.executionId());
         if (current == null || !"IN_FLIGHT".equals(current.status())) {
             return 0;
         }
         return mapper.expireOne(candidate.userId(), candidate.executionId());
     }
 
-    public SandboxExecutionResult replay(SandboxRunRow prior) {
+    public SandboxExecutionResult replay(SandboxRunDO prior) {
         if (!("SUCCEEDED".equals(prior.status()) || "FAILED".equals(prior.status())) || prior.resultJson() == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
                     "沙箱执行已受理但结果待核对，不能自动重放");

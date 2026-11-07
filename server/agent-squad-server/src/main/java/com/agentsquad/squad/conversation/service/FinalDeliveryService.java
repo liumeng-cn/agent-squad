@@ -2,7 +2,7 @@ package com.agentsquad.squad.conversation.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.domain.entity.FinalDeliveryRow;
+import com.agentsquad.squad.domain.entity.FinalDeliveryDO;
 import com.agentsquad.squad.conversation.repository.FinalDeliveryMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +32,7 @@ public class FinalDeliveryService {
      * 来源回复持锁后转交当前代际，发布已发生或归属变化时整个任务创建事务回滚。
      */
     public void transfer(String userId, String sourceMessageId, String executionId, String taskId) {
-        FinalDeliveryRow row = requireCurrent(userId, sourceMessageId);
+        FinalDeliveryDO row = requireCurrent(userId, sourceMessageId);
         if (!row.ownedBy("RESPONSE", executionId) || !"OWNED".equals(row.state())
                 || deliveries.transfer(userId, sourceMessageId, row.generation(), executionId, taskId) != 1) {
             throw conflict("当前请求的最终交付权已转交或发布，不能创建目标");
@@ -43,7 +43,7 @@ public class FinalDeliveryService {
      * 只有当前所有者可持久发布；重放复用原消息ID，迟到旧代际和委派后的回复不公开模型正文。
      */
     public String claimPublication(String userId, String sourceMessageId, String ownerType, String ownerId) {
-        FinalDeliveryRow row = requireCurrent(userId, sourceMessageId);
+        FinalDeliveryDO row = requireCurrent(userId, sourceMessageId);
         if (!row.ownedBy(ownerType, ownerId) || "CLOSED".equals(row.state())) {
             log.info("最终交付候选未获发布权 sourceMessageId={} ownerType={} ownerId={} generation={}",
                     sourceMessageId, ownerType, ownerId, row.generation());
@@ -63,7 +63,7 @@ public class FinalDeliveryService {
      * 取消只关闭本所有者的未发布交付位，不撤销其他任务或已完成结果。
      */
     public void close(String userId, String sourceMessageId, String ownerType, String ownerId) {
-        FinalDeliveryRow row = requireCurrent(userId, sourceMessageId);
+        FinalDeliveryDO row = requireCurrent(userId, sourceMessageId);
         if (row.ownedBy(ownerType, ownerId)) {
             deliveries.close(userId, sourceMessageId, row.generation());
         }
@@ -73,7 +73,7 @@ public class FinalDeliveryService {
      * 已通过失败重试校验后建立后继代际；委派任务的原回复不能另建第二条交付链。
      */
     public void retry(String userId, String sourceMessageId, String previousExecutionId, String executionId) {
-        FinalDeliveryRow row = requireCurrent(userId, sourceMessageId);
+        FinalDeliveryDO row = requireCurrent(userId, sourceMessageId);
         if (!row.ownedBy("RESPONSE", previousExecutionId)) {
             throw conflict("该请求已委派或已有后继回复，不能重试原回复");
         }
@@ -81,8 +81,8 @@ public class FinalDeliveryService {
         deliveries.insert(UUID.randomUUID().toString(), userId, sourceMessageId, row.generation() + 1, executionId);
     }
 
-    private FinalDeliveryRow requireCurrent(String userId, String sourceMessageId) {
-        FinalDeliveryRow row = deliveries.lockCurrent(userId, sourceMessageId);
+    private FinalDeliveryDO requireCurrent(String userId, String sourceMessageId) {
+        FinalDeliveryDO row = deliveries.lockCurrent(userId, sourceMessageId);
         if (row == null) {
             throw conflict("请求缺少最终交付事实，需先核对存储结构与来源");
         }

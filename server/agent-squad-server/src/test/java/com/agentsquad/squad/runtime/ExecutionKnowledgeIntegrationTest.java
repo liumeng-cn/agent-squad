@@ -11,8 +11,8 @@ import com.agentsquad.squad.domain.request.MemoryCreateRequest;
 import com.agentsquad.squad.domain.dto.MemoryWriteRequest;
 import com.agentsquad.squad.memory.service.ExplicitMemoryWriteService;
 import com.agentsquad.squad.memory.service.MemoryService;
-import com.agentsquad.squad.domain.entity.MasterAgentIdentity;
-import com.agentsquad.squad.domain.entity.ProjectionTarget;
+import com.agentsquad.squad.domain.model.MasterAgentIdentity;
+import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
 import com.agentsquad.squad.runtime.service.ExecutionAuthorizationService;
 import com.agentsquad.squad.runtime.service.ExecutionRestrictionService;
 import com.agentsquad.squad.domain.dto.SandboxDriverResult;
@@ -68,7 +68,7 @@ class ExecutionKnowledgeIntegrationTest {
             if (!"SUCCEEDED".equals(status)) {
                 String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
                 String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
-                var target = new ProjectionTarget(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
+                var target = new ProjectionTargetDO(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
                 var diagnostic = context.getBean(com.agentsquad.squad.integration.agentscope.NativeSessionGateway.class)
                         .readEvents(target, 0, 100).stream().filter(event -> event.type().contains("error") || "run/end".equals(event.type())).toList();
                 var master = (io.agentscope.harness.agent.HarnessAgent) org.springframework.test.util.ReflectionTestUtils.getField(
@@ -104,7 +104,7 @@ class ExecutionKnowledgeIntegrationTest {
             var claim = ledger.begin(identity, runRequest, "a".repeat(64));
             var result = ledger.finish(identity, claim.run().executionId(), runRequest,
                     new SandboxDriverResult(0, "", "", false, List.of(new SandboxOutput("result.txt", "SECRET_LINEAGE_TOKEN".getBytes(StandardCharsets.UTF_8)))));
-            var target = new ProjectionTarget(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
+            var target = new ProjectionTargetDO(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
             var projector = context.getBean(NativeProjectionService.class);
             projector.accept(target, new NativeEventView(1, "start", "run/start", "run", "turn", null, 0, Map.of()));
             context.getBean(MemoryService.class).delete(USER, memory.memoryId(), 0);

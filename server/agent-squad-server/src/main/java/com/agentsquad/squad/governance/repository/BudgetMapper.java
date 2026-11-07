@@ -1,7 +1,7 @@
 package com.agentsquad.squad.governance.repository;
 
-import com.agentsquad.squad.domain.entity.BudgetReservationRow;
-import com.agentsquad.squad.domain.entity.BudgetAccountRow;
+import com.agentsquad.squad.domain.entity.BudgetReservationDO;
+import com.agentsquad.squad.domain.entity.BudgetAccountDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -16,7 +16,7 @@ public interface BudgetMapper {
     String findScopeBySession(@Param("userId") String userId,
                              @Param("sessionId") String sessionId);
 
-    BudgetAccountRow lockAccount(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    BudgetAccountDO lockAccount(@Param("userId") String userId, @Param("scopeId") String scopeId);
 
     int ensureUser(@Param("userId") String userId);
 
@@ -40,7 +40,7 @@ public interface BudgetMapper {
                     @Param("pricingVersion") String pricingVersion,
                     @Param("requestHash") String requestHash);
 
-    BudgetReservationRow findReservation(@Param("userId") String userId,
+    BudgetReservationDO findReservation(@Param("userId") String userId,
                                          @Param("scopeId") String scopeId,
                                          @Param("usageKey") String usageKey);
 

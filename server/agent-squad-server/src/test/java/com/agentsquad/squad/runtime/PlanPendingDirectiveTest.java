@@ -1,13 +1,13 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.entity.TaskDirectiveRow;
-import com.agentsquad.squad.domain.entity.TaskGoalState;
-import com.agentsquad.squad.domain.entity.TaskRow;
+import com.agentsquad.squad.domain.entity.TaskDirectiveDO;
+import com.agentsquad.squad.domain.entity.TaskGoalStateDO;
+import com.agentsquad.squad.domain.entity.TaskDO;
 import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
-import com.agentsquad.squad.domain.entity.PlanContextRow;
+import com.agentsquad.squad.domain.entity.PlanContextDO;
 import com.agentsquad.squad.domain.dto.PlanNode;
 import com.agentsquad.squad.domain.dto.PlanPublish;
 import com.agentsquad.squad.runtime.repository.PlanMapper;
@@ -43,14 +43,14 @@ class PlanPendingDirectiveTest {
         ReflectionTestUtils.setField(service, "executionScopes", scopes);
         ReflectionTestUtils.setField(service, "objectMapper", json);
         when(plans.lockMasterContext("user", "session")).thenReturn(
-                new PlanContextRow("user", "task", "binding", 0, "RUNNING", false, 1, "ACTIVE"));
-        when(directives.goalState("user", "task")).thenReturn(new TaskGoalState(1, "{}"));
+                new PlanContextDO("user", "task", "binding", 0, "RUNNING", false, 1, "ACTIVE"));
+        when(directives.goalState("user", "task")).thenReturn(new TaskGoalStateDO(1, "{}"));
         when(directives.pending("user", "task")).thenReturn(List.of("first", "second"));
-        TaskRow task = mock(TaskRow.class);
+        TaskDO task = mock(TaskDO.class);
         when(task.version()).thenReturn(9L);
         when(tasks.lockOwnedRow("user", "task")).thenReturn(task);
         for (String id : List.of("first", "second")) {
-            TaskDirectiveRow row = mock(TaskDirectiveRow.class);
+            TaskDirectiveDO row = mock(TaskDirectiveDO.class);
             when(row.directiveId()).thenReturn(id);
             when(row.taskId()).thenReturn("task");
             when(row.status()).thenReturn("ACCEPTED");

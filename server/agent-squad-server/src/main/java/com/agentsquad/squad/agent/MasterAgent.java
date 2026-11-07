@@ -9,7 +9,7 @@ import com.agentsquad.squad.agent.tool.ProposeCompletionTool;
 import com.agentsquad.squad.agent.tool.PublishPlanTool;
 import com.agentsquad.squad.agent.tool.RequestInputTool;
 import com.agentsquad.squad.agent.tool.SubmitTaskDirectiveTool;
-import com.agentsquad.squad.domain.entity.DeliveryRow;
+import com.agentsquad.squad.domain.entity.DeliveryDO;
 import com.agentsquad.squad.conversation.service.ResponseContextService;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.integration.agentscope.ExecutionContextMiddleware;
@@ -22,8 +22,8 @@ import com.agentsquad.squad.integration.agentscope.middleware.ScopedMasterToolsM
 import com.agentsquad.squad.integration.agentscope.WorkerFactory;
 import com.agentsquad.squad.integration.agentscope.middleware.SelectedReplyModelMiddleware;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.agentsquad.squad.domain.entity.MasterAgentIdentity;
-import com.agentsquad.squad.domain.entity.ProjectionTarget;
+import com.agentsquad.squad.domain.model.MasterAgentIdentity;
+import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
 import com.agentsquad.squad.tools.mock.MockLookupTool;
 import com.agentsquad.squad.tools.mock.MockTicketCreateTool;
 import io.agentscope.core.agent.RuntimeContext;
@@ -277,7 +277,7 @@ public class MasterAgent implements NativeSessionGateway {
      * 用绑定的用户/会话身份和原命令 ID 提交，重复投递不会产生第二个原生回合。
      */
     @Override
-    public NativeSubmissionReceipt submit(DeliveryRow delivery, String message) {
+    public NativeSubmissionReceipt submit(DeliveryDO delivery, String message) {
         AgentSession session = sessionFor(delivery);
         // 原命令若已进入SDK，以原生收据为准；升级后的上下文字段不能改变已接受命令的输入。
         AgentSession.Task accepted = findAccepted(session, delivery.commandId());
@@ -314,7 +314,7 @@ public class MasterAgent implements NativeSessionGateway {
      * 提交中断意图；false 表示原生会话当前没有活跃运行，平台须就地收尾。
      */
     @Override
-    public boolean stop(DeliveryRow delivery) {
+    public boolean stop(DeliveryDO delivery) {
         var context = RuntimeContext.builder().userId(delivery.userId()).sessionId(delivery.sessionId()).build();
         // 控制入口不能领取或续租 Worker guard，更不能 start 尚未执行的排队工作。
         try (var controller = HarnessAgent.builder().agentId(delivery.agentId())
@@ -328,7 +328,7 @@ public class MasterAgent implements NativeSessionGateway {
     }
 
     @Override
-    public boolean quiescent(ProjectionTarget target) {
+    public boolean quiescent(ProjectionTargetDO target) {
         return committedReader.quiescent(target.userId(), target.agentId(), target.sessionId());
     }
 
@@ -336,7 +336,7 @@ public class MasterAgent implements NativeSessionGateway {
      * 恢复指定原生回合；SDK 拒绝时抛出 IllegalStateException，由投递器分类处理。
      */
     @Override
-    public void resume(DeliveryRow delivery, String turnId) {
+    public void resume(DeliveryDO delivery, String turnId) {
         AgentSession session = sessionFor(delivery);
         session.start();
         session.resume(turnId);
@@ -346,7 +346,7 @@ public class MasterAgent implements NativeSessionGateway {
      * 把用户答复注入挂起的外部执行请求；请求已消失按终局受理处理，会话非空闲则重试。
      */
     @Override
-    public String respond(DeliveryRow delivery, String requestId, String answerText) {
+    public String respond(DeliveryDO delivery, String requestId, String answerText) {
         AgentSession session = sessionFor(delivery);
         session.start();
         try {
@@ -361,7 +361,7 @@ public class MasterAgent implements NativeSessionGateway {
         return "responded";
     }
 
-    private AgentSession sessionFor(DeliveryRow delivery) {
+    private AgentSession sessionFor(DeliveryDO delivery) {
         return sessionFor(delivery.userId(), delivery.bindingId(), delivery.sessionId(), delivery.agentId());
     }
 
@@ -393,19 +393,19 @@ public class MasterAgent implements NativeSessionGateway {
      * 纯读数据库中已提交的官方日志；Master和Worker共用后端，读取Worker不会创建Agent或领取业务guard。
      */
     @Override
-    public List<NativeEventView> readEvents(ProjectionTarget target, long after, int limit) {
+    public List<NativeEventView> readEvents(ProjectionTargetDO target, long after, int limit) {
         return readCommittedEvents(target, after, limit)
                 .stream().map(this::toEventView).toList();
     }
 
     @Override
-    public List<SessionEvent> readCommittedEvents(ProjectionTarget target, long after, int limit) {
+    public List<SessionEvent> readCommittedEvents(ProjectionTargetDO target, long after, int limit) {
         return committedReader.read(target.userId(), target.agentId(), target.sessionId(), after, limit);
     }
 
     /** 后台恢复显式启动调度，保留原有授权、Worker领取和续租检查，不由读接口触发。 */
     @Override
-    public void startPending(ProjectionTarget target) {
+    public void startPending(ProjectionTargetDO target) {
         if (controlBindings.localSessionState(target.userId(), target.bindingId())
                 != com.agentsquad.squad.common.enums.runtime.LocalSessionState.ACTIVE) {
             return;
@@ -414,7 +414,7 @@ public class MasterAgent implements NativeSessionGateway {
     }
 
     @Override
-    public NativeSubmissionReceipt inspectTask(ProjectionTarget target, String commandId) {
+    public NativeSubmissionReceipt inspectTask(ProjectionTargetDO target, String commandId) {
         AgentSession.Task task = committedReader.inspect(target.userId(), target.agentId(), target.sessionId(), commandId);
         return new NativeSubmissionReceipt(commandId, task.turnId(), task.runId(), task.status());
     }

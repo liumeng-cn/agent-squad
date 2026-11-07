@@ -6,7 +6,7 @@ import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.domain.request.MessageCreateRequest;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
-import com.agentsquad.squad.domain.entity.SkillCatalog;
+import com.agentsquad.squad.domain.model.SkillCatalog;
 import com.agentsquad.squad.domain.dto.SkillFile;
 import com.agentsquad.squad.domain.request.SkillGrantRequest;
 import com.agentsquad.squad.domain.request.SkillImportRequest;

@@ -1,6 +1,6 @@
 package com.agentsquad.squad.artifact.repository;
 
-import com.agentsquad.squad.domain.entity.ArtifactRow;
+import com.agentsquad.squad.domain.entity.ArtifactDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -18,11 +18,11 @@ public interface ArtifactMapper {
                @Param("mediaType") String mediaType, @Param("size") long size, @Param("hash") String hash,
                @Param("key") String key, @Param("content") byte[] content, @Param("expiresAt") LocalDateTime expiresAt);
 
-    ArtifactRow findOwned(@Param("userId") String userId, @Param("id") String id);
+    ArtifactDO findOwned(@Param("userId") String userId, @Param("id") String id);
 
-    ArtifactRow findContent(@Param("userId") String userId, @Param("id") String id);
+    ArtifactDO findContent(@Param("userId") String userId, @Param("id") String id);
 
-    ArtifactRow findUpload(@Param("userId") String userId, @Param("key") String key);
+    ArtifactDO findUpload(@Param("userId") String userId, @Param("key") String key);
 
     int attach(@Param("userId") String userId, @Param("taskId") String taskId, @Param("id") String id);
 

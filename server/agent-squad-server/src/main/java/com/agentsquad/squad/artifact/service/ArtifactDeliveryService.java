@@ -2,14 +2,14 @@ package com.agentsquad.squad.artifact.service;
 
 import com.agentsquad.squad.artifact.repository.ArtifactMapper;
 import com.agentsquad.squad.domain.response.ArtifactResponse;
-import com.agentsquad.squad.domain.entity.ArtifactContentPolicy;
-import com.agentsquad.squad.domain.entity.ArtifactStageRow;
+import com.agentsquad.squad.domain.model.ArtifactContentPolicy;
+import com.agentsquad.squad.domain.entity.ArtifactStageDO;
 import com.agentsquad.squad.domain.dto.ArtifactStageView;
 import com.agentsquad.squad.artifact.repository.ArtifactDeliveryMapper;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.domain.entity.SandboxExecutionContext;
-import com.agentsquad.squad.domain.entity.SandboxPolicy;
+import com.agentsquad.squad.domain.model.SandboxExecutionContext;
+import com.agentsquad.squad.domain.model.SandboxPolicy;
 import com.agentsquad.squad.sandbox.service.SandboxAccessService;
 import com.agentsquad.squad.sandbox.repository.SandboxMapper;
 import jakarta.annotation.Resource;
@@ -63,7 +63,7 @@ public class ArtifactDeliveryService {
         String name = path.substring(path.lastIndexOf('/') + 1);
         ArtifactContentPolicy.mediaType(name, content);
         String hash = ArtifactContentPolicy.digest(content);
-        ArtifactStageRow prior = stages.findPath(context.userId(), executionId, path);
+        ArtifactStageDO prior = stages.findPath(context.userId(), executionId, path);
         if (prior != null) {
             if (!hash.equals(prior.sha256())) {
                 throw conflict("相同工作区路径的内容已变化");
@@ -81,7 +81,7 @@ public class ArtifactDeliveryService {
      */
     @Transactional
     public ArtifactResponse commit(String userId, String sessionId, String guardToken, String stageId, String expectedHash) {
-        ArtifactStageRow stage = stages.find(userId, stageId);
+        ArtifactStageDO stage = stages.find(userId, stageId);
         if (stage == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "暂存产物不存在或已过期");
         }
@@ -119,7 +119,7 @@ public class ArtifactDeliveryService {
         return published;
     }
 
-    private ArtifactStageView view(ArtifactStageRow row) {
+    private ArtifactStageView view(ArtifactStageDO row) {
         return new ArtifactStageView(row.stageId(), row.executionId(), row.fileName(), row.sha256(),
                 row.content().length, row.status(), row.artifactId());
     }

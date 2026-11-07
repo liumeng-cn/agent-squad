@@ -11,13 +11,13 @@ import com.agentsquad.squad.domain.dto.ResponseExecutionView;
 import com.agentsquad.squad.domain.dto.TaskDirectiveView;
 import com.agentsquad.squad.domain.dto.TaskResponse;
 
-import com.agentsquad.squad.domain.entity.ConversationExecution;
+import com.agentsquad.squad.domain.entity.ConversationExecutionDO;
 import com.agentsquad.squad.runtime.service.ExecutionFailureService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.ConversationHeader;
-import com.agentsquad.squad.domain.entity.ResponseExecutionStatus;
+import com.agentsquad.squad.domain.entity.ConversationHeaderDO;
+import com.agentsquad.squad.domain.enums.ResponseExecutionStatus;
 import com.agentsquad.squad.domain.dto.ConversationEvent;
 import com.agentsquad.squad.domain.response.ActivityHistoryPageResponse;
 import com.agentsquad.squad.domain.request.ActivityHistoryRequest;
@@ -83,7 +83,7 @@ public class ConversationQueryService {
         if ((before != null && before < 1) || limit < 1 || limit > 100) {
             throw invalid("历史分页参数无效");
         }
-        ConversationHeader header = requireHeader(userId, conversationId);
+        ConversationHeaderDO header = requireHeader(userId, conversationId);
         var rows = reads.messages(userId, conversationId, before, limit + 1);
         boolean more = rows.size() > limit;
         var page = new ArrayList<>(rows.subList(0, Math.min(rows.size(), limit)));
@@ -144,7 +144,7 @@ public class ConversationQueryService {
         return event.conversationId() + ":" + event.generation() + ":" + event.sequence();
     }
 
-    public ConversationHeader requireHeader(String userId, String conversationId) {
+    public ConversationHeaderDO requireHeader(String userId, String conversationId) {
         var header = reads.header(userId, conversationId);
         if (header == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "对话不存在或已删除");
@@ -152,7 +152,7 @@ public class ConversationQueryService {
         return header;
     }
 
-    public long validateCursor(String userId, ConversationHeader header, String after) {
+    public long validateCursor(String userId, ConversationHeaderDO header, String after) {
         long sequence = 0;
         if (after != null && !after.isBlank()) {
             if (after.length() > 200) {
@@ -185,14 +185,14 @@ public class ConversationQueryService {
         return sequence;
     }
 
-    private ResponseExecutionView executionView(String userId, ConversationExecution row) {
+    private ResponseExecutionView executionView(String userId, ConversationExecutionDO row) {
         boolean terminal = java.util.Set.of("SUCCEEDED", "PARTIAL", "FAILED", "CANCELLED").contains(row.status());
         return new ResponseExecutionView(row.executionId(), row.sourceMessageId(), ResponseExecutionStatus.valueOf(row.status()), row.version(),
                 row.answerMessageId(), row.failureId(), "FAILED".equals(row.status()) && failures.canRetry(userId, row.executionId()) ? List.of("RETRY")
                 : row.cancellationRequested() || terminal || "CANCELLING".equals(row.status()) ? List.of() : List.of("STOP"));
     }
 
-    private String cursor(ConversationHeader header, long sequence) {
+    private String cursor(ConversationHeaderDO header, long sequence) {
         return header.conversationId() + ":" + header.generation() + ":" + sequence;
     }
 

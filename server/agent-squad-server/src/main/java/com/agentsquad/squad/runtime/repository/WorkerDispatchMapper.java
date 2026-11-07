@@ -1,6 +1,6 @@
 package com.agentsquad.squad.runtime.repository;
 
-import com.agentsquad.squad.domain.entity.WorkerLaunchRow;
+import com.agentsquad.squad.domain.entity.WorkerLaunchDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Mapper
 public interface WorkerDispatchMapper {
 
-    WorkerLaunchRow findByBinding(@Param("userId") String userId,
+    WorkerLaunchDO findByBinding(@Param("userId") String userId,
                                   @Param("bindingId") String bindingId);
 
     int claimGuard(@Param("userId") String userId, @Param("bindingId") String bindingId,

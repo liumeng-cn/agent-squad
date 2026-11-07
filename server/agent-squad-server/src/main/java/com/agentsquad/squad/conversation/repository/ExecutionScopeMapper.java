@@ -1,7 +1,7 @@
 package com.agentsquad.squad.conversation.repository;
 
-import com.agentsquad.squad.domain.entity.ExecutionScopeRow;
-import com.agentsquad.squad.domain.entity.ExecutionOwnerRow;
+import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
+import com.agentsquad.squad.domain.entity.ExecutionOwnerDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -24,7 +24,7 @@ public interface ExecutionScopeMapper {
 
     java.util.Map<String, String> sessionTrace(@Param("userId") String userId, @Param("sessionId") String sessionId);
 
-    ExecutionScopeRow findActiveOwned(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    ExecutionScopeDO findActiveOwned(@Param("userId") String userId, @Param("scopeId") String scopeId);
 
     int insertAccount(@Param("userId") String userId, @Param("accountId") String accountId,
                       @Param("profileKey") String profileKey, @Param("limit") long limit);
@@ -35,7 +35,7 @@ public interface ExecutionScopeMapper {
 
     int linkTaskScope(@Param("userId") String userId, @Param("taskId") String taskId, @Param("scopeId") String scopeId);
 
-    ExecutionScopeRow findOwned(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    ExecutionScopeDO findOwned(@Param("userId") String userId, @Param("scopeId") String scopeId);
 
     String findBindingBySession(@Param("userId") String userId, @Param("sessionId") String sessionId);
 
@@ -45,10 +45,10 @@ public interface ExecutionScopeMapper {
 
     String findScopeByTask(@Param("userId") String userId, @Param("taskId") String taskId);
 
-    ExecutionOwnerRow lockTaskOwner(@Param("userId") String userId, @Param("ownerId") String ownerId,
+    ExecutionOwnerDO lockTaskOwner(@Param("userId") String userId, @Param("ownerId") String ownerId,
                                    @Param("scopeId") String scopeId);
 
-    ExecutionOwnerRow lockResponseOwner(@Param("userId") String userId, @Param("ownerId") String ownerId,
+    ExecutionOwnerDO lockResponseOwner(@Param("userId") String userId, @Param("ownerId") String ownerId,
                                        @Param("scopeId") String scopeId);
 
     int queueTaskAfterInteraction(@Param("userId") String userId, @Param("scopeId") String scopeId);

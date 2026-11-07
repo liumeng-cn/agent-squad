@@ -2,7 +2,7 @@ package com.agentsquad.squad.interaction.service;
 
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.entity.InteractionRow;
+import com.agentsquad.squad.domain.entity.InteractionDO;
 import com.agentsquad.squad.interaction.repository.InteractionMapper;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,7 +34,7 @@ class InteractionServiceTest {
         ReflectionTestUtils.setField(service, "scopeService", mock(com.agentsquad.squad.conversation.service.ExecutionScopeService.class));
 
         AuthView actor = new AuthView("user-1", "tester", List.of(AccountRole.USER), "csrf");
-        InteractionRow row = new InteractionRow("interaction-1", actor.userId(), "task-1",
+        InteractionDO row = new InteractionDO("interaction-1", actor.userId(), "task-1",
                 "job-1", "binding-1", "operation-1", "FRAMEWORK", "request-1",
                 "APPROVAL", "确认执行", "{}", 0L, "hash-1", 0L,
                 LocalDateTime.now().plusHours(1), "OPEN", 2L, null, "scope-1");

@@ -3,13 +3,13 @@ package com.agentsquad.squad.conversation.service;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
-import com.agentsquad.squad.domain.entity.CommandRow;
-import com.agentsquad.squad.domain.entity.ConversationRow;
-import com.agentsquad.squad.domain.entity.ConversationStatus;
-import com.agentsquad.squad.domain.entity.GoalTaskStatus;
-import com.agentsquad.squad.domain.entity.TaskRow;
-import com.agentsquad.squad.domain.entity.EventRow;
-import com.agentsquad.squad.domain.entity.MasterAgentIdentity;
+import com.agentsquad.squad.domain.entity.CommandDO;
+import com.agentsquad.squad.domain.entity.ConversationDO;
+import com.agentsquad.squad.domain.enums.ConversationStatus;
+import com.agentsquad.squad.domain.enums.GoalTaskStatus;
+import com.agentsquad.squad.domain.entity.TaskDO;
+import com.agentsquad.squad.domain.entity.EventDO;
+import com.agentsquad.squad.domain.model.MasterAgentIdentity;
 import com.agentsquad.squad.domain.dto.CommandResponse;
 import com.agentsquad.squad.domain.dto.ConversationPage;
 import com.agentsquad.squad.domain.dto.ConversationResponse;
@@ -90,7 +90,7 @@ public class GoalTaskService {
      */
     public ConversationPage listConversations(String userId, String cursor, int limit) {
         Long cursorId = parseCursor(cursor);
-        List<ConversationRow> rows = conversationMapper.listByOwner(userId, cursorId,
+        List<ConversationDO> rows = conversationMapper.listByOwner(userId, cursorId,
                 Math.min(Math.max(limit, 1), 100));
         List<ConversationResponse> items = rows.stream().map(this::toResponse).toList();
         String nextCursor = rows.isEmpty() ? null : String.valueOf(rows.get(rows.size() - 1).id());
@@ -101,14 +101,14 @@ public class GoalTaskService {
      * 读取当前用户单个对话快照；删除中与已删除会话立即拒绝读取。
      */
     public ConversationResponse getConversation(String userId, String conversationId) {
-        ConversationRow row = conversationMapper.findOwned(userId, conversationId);
+        ConversationDO row = conversationMapper.findOwned(userId, conversationId);
         if (row == null || !ConversationStatus.ACTIVE.name().equals(row.status())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "会话不存在");
         }
         return toResponse(row);
     }
 
-    private ConversationResponse toResponse(ConversationRow row) {
+    private ConversationResponse toResponse(ConversationDO row) {
         return new ConversationResponse(row.conversationId(), row.title(), row.generation(),
                 row.status(), row.version(), row.activeTaskId());
     }
@@ -150,7 +150,7 @@ public class GoalTaskService {
         if (message == null || message.isBlank() || message.length() > 20000) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "目标内容长度必须为 1 到 20000");
         }
-        ConversationRow conversation = conversationMapper.lockOwned(userId, conversationId);
+        ConversationDO conversation = conversationMapper.lockOwned(userId, conversationId);
         if (conversation == null || !ConversationStatus.ACTIVE.name().equals(conversation.status())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "会话不存在");
         }
@@ -158,7 +158,7 @@ public class GoalTaskService {
         String payloadJson = RuntimePayloads.toJson(objectMapper, attachments.isEmpty()
                 ? Map.of("message", message) : Map.of("message", message, "artifactIds", attachments));
         String payloadHash = ContentDigests.sha256(payloadJson);
-        CommandRow prior = commandMapper.findByKey(userId, scopeKey, idempotencyKey);
+        CommandDO prior = commandMapper.findByKey(userId, scopeKey, idempotencyKey);
         if (prior != null) {
             if (!prior.payloadHash().equals(payloadHash)) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同幂等键的输入不一致");
@@ -196,7 +196,7 @@ public class GoalTaskService {
      * 按登录主体读取目标，不暴露其他用户的存在性。
      */
     public TaskResponse findTask(String userId, String taskId) {
-        TaskRow task = taskMapper.findOwned(userId, taskId);
+        TaskDO task = taskMapper.findOwned(userId, taskId);
         if (task == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
         }
@@ -210,14 +210,14 @@ public class GoalTaskService {
     public GoalTaskPageResponse listConversationTasks(String userId, String conversationId, String cursor, int limit) {
         getConversation(userId, conversationId);
         Long cursorId = parseCursor(cursor);
-        List<TaskRow> rows = taskMapper.listByConversation(userId, conversationId, cursorId,
+        List<TaskDO> rows = taskMapper.listByConversation(userId, conversationId, cursorId,
                 Math.min(Math.max(limit, 1), 100));
         List<TaskResponse> items = rows.stream().map(this::toResponse).toList();
         String nextCursor = rows.isEmpty() ? null : String.valueOf(rows.get(rows.size() - 1).id());
         return new GoalTaskPageResponse(items, nextCursor);
     }
 
-    private TaskResponse toResponse(TaskRow task) {
+    private TaskResponse toResponse(TaskDO task) {
         return new TaskResponse(task.taskId(), task.conversationId(), task.status(), task.version(),
                 task.planVersion(), task.answerRevision(),
                 formatTime(task.cancelRequestedAt()), task.blockedReason(),
@@ -232,7 +232,7 @@ public class GoalTaskService {
      * 仅返回当前用户的命令收据。
      */
     public CommandResponse findCommand(String userId, String commandId) {
-        CommandRow command = commandMapper.findOwned(userId, commandId);
+        CommandDO command = commandMapper.findOwned(userId, commandId);
         if (command == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "命令不存在");
         }
@@ -254,7 +254,7 @@ public class GoalTaskService {
                 .toList();
     }
 
-    private TaskEventResponse toEventResponse(EventRow row) {
+    private TaskEventResponse toEventResponse(EventDO row) {
         return new TaskEventResponse(row.eventSeq(), row.taskId(), row.eventType(),
                 row.payloadJson(), row.occurredAt());
     }

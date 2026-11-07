@@ -1,6 +1,6 @@
 package com.agentsquad.squad.integration.agentscope;
 
-import com.agentsquad.squad.domain.entity.ReplyPreviewTarget;
+import com.agentsquad.squad.domain.entity.ReplyPreviewTargetDO;
 import com.agentsquad.squad.presentation.domain.ReplyPreviewPhase;
 import com.agentsquad.squad.domain.dto.ReplyPreview;
 import com.agentsquad.squad.presentation.service.ReplyPreviewSignal;
@@ -18,7 +18,7 @@ public final class ReplyPreviewBuffer {
     private static final int MAX_TEXT_UNITS = 65536;
     private static final long MIN_INTERVAL_NANOS = 50000000;
     private static final long THINKING_INTERVAL_NANOS = 2000000000;
-    private final ReplyPreviewTarget target;
+    private final ReplyPreviewTargetDO target;
     private final String runId;
     private final String streamId = UUID.randomUUID().toString();
     private final Consumer<ReplyPreviewSignal> publish;
@@ -29,7 +29,7 @@ public final class ReplyPreviewBuffer {
     private int sentLength;
     private boolean closed;
 
-    public ReplyPreviewBuffer(ReplyPreviewTarget target, String runId, Consumer<ReplyPreviewSignal> publish) {
+    public ReplyPreviewBuffer(ReplyPreviewTargetDO target, String runId, Consumer<ReplyPreviewSignal> publish) {
         this.target = target;
         this.runId = runId;
         this.publish = publish;

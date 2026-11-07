@@ -1,6 +1,6 @@
 package com.agentsquad.squad.integration.agentscope.inbox;
 
-import com.agentsquad.squad.domain.entity.ProjectionTarget;
+import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
 import com.agentsquad.squad.integration.agentscope.RuntimeEventConsumptionException;
 import io.agentscope.core.session.SessionEvent;
 import io.agentscope.core.session.SessionEventTypes;
@@ -32,7 +32,7 @@ public class RuntimeEventConsumptionService {
      * 不先锁inbox，避免与业务的会话、所有者、绑定锁顺序倒置；不同绑定的失败互不传播。
      */
     @Transactional
-    public void consume(ProjectionTarget target, List<SessionEvent> events) {
+    public void consume(ProjectionTargetDO target, List<SessionEvent> events) {
         if (events == null || events.size() > MAX_BATCH_SIZE) {
             throw new IllegalArgumentException("原生事件消费批次无效");
         }

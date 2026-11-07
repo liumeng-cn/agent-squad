@@ -1,7 +1,7 @@
 package com.agentsquad.squad.sandbox.infrastructure;
 
-import com.agentsquad.squad.domain.entity.SandboxInputFile;
-import com.agentsquad.squad.domain.entity.SandboxPolicy;
+import com.agentsquad.squad.domain.model.SandboxInputFile;
+import com.agentsquad.squad.domain.model.SandboxPolicy;
 import com.agentsquad.squad.domain.dto.SandboxDriverResult;
 import com.agentsquad.squad.domain.dto.SandboxExecuteRequest;
 import com.agentsquad.squad.domain.dto.SandboxOutput;

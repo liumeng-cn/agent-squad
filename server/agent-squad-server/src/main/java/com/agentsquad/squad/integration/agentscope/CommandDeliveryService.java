@@ -1,14 +1,21 @@
 package com.agentsquad.squad.integration.agentscope;
 
+import com.agentsquad.squad.domain.entity.CommandClaimContextDO;
+import com.agentsquad.squad.domain.entity.DeliveryDO;
+import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
+import com.agentsquad.squad.domain.enums.RuntimeCommandAction;
+import com.agentsquad.squad.domain.exception.ExecutionContextInvalidatedException;
+
+import com.agentsquad.squad.domain.model.CommandReadySignal;
+
 import com.agentsquad.squad.common.observability.ObservationSupport;
-import com.agentsquad.squad.domain.entity.*;
 import com.agentsquad.squad.conversation.service.RuntimeAdmissionService;
 import com.agentsquad.squad.conversation.service.RuntimeAdmissionBusyException;
 import com.agentsquad.squad.conversation.repository.DeliveryMapper;
 import com.agentsquad.squad.conversation.service.TaskControlService;
 import com.agentsquad.squad.runtime.service.TaskFinalizerService;
 import com.agentsquad.squad.runtime.service.WorkerRecoveryService;
-import com.agentsquad.squad.domain.entity.MasterAgentIdentity;
+import com.agentsquad.squad.domain.model.MasterAgentIdentity;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -185,7 +192,7 @@ public class CommandDeliveryService {
             return;
         }
         try {
-            CommandClaimContext context = deliveryMapper.claimContext(commandId);
+            CommandClaimContextDO context = deliveryMapper.claimContext(commandId);
             boolean control = context != null && ("STOP".equals(context.action())
                     || "RESPOND".equals(context.action()));
             (control ? controlExecutor : deliveryExecutor).execute(() -> {
@@ -230,10 +237,10 @@ public class CommandDeliveryService {
                     commandId, exception.getStatusCode().value());
             return;
         }
-        DeliveryRow delivery = deliveryMapper.findClaimed(commandId, token);
+        DeliveryDO delivery = deliveryMapper.findClaimed(commandId, token);
         if (delivery == null) {
             // 尚未调用原生 SDK，缺失 Binding 不可能产生本次原生运行。
-            CommandClaimContext context = deliveryMapper.claimContext(commandId);
+            CommandClaimContextDO context = deliveryMapper.claimContext(commandId);
             if (context != null) {
                 admission.releaseUnsubmitted(context.userId(), context.bindingId(), commandId);
             }
@@ -276,7 +283,7 @@ public class CommandDeliveryService {
         }
     }
 
-    private void deliverSubmit(String commandId, String token, DeliveryRow delivery) throws Exception {
+    private void deliverSubmit(String commandId, String token, DeliveryDO delivery) throws Exception {
         JsonNode payload = RuntimePayloads.readJson(objectMapper, delivery.payloadJson());
         String message = payload == null ? null : payload.path("message").textValue();
         if (message == null || message.isBlank()) {
@@ -294,11 +301,11 @@ public class CommandDeliveryService {
     /**
      * 投递中断意图；原生会话已无活跃运行时就地取消目标，不伪造等待停止。
      */
-    private void deliverStop(String commandId, String token, DeliveryRow delivery) {
+    private void deliverStop(String commandId, String token, DeliveryDO delivery) {
         boolean interrupted = nativeSessionGateway.stop(delivery);
         if (!interrupted) {
             if (delivery.taskId() == null) {
-                var target = new ProjectionTarget(delivery.userId(), null,
+                var target = new ProjectionTargetDO(delivery.userId(), null,
                         delivery.bindingId(), delivery.agentId(), delivery.sessionId(), 0);
                 if (nativeSessionGateway.quiescent(target)) {
                     responses.stopped(delivery.userId(), delivery.bindingId());
@@ -314,7 +321,7 @@ public class CommandDeliveryService {
     /**
      * 投递恢复意图；恢复前必须已存在原生回合，未受理目标先等 SUBMIT 投递成功。
      */
-    private void deliverResume(String commandId, String token, DeliveryRow delivery) {
+    private void deliverResume(String commandId, String token, DeliveryDO delivery) {
         String turnId = deliveryMapper.findSubmitTurnId(delivery.userId(), delivery.taskId(),
                 delivery.bindingId());
         if (turnId == null) {
@@ -360,7 +367,7 @@ public class CommandDeliveryService {
      * 投递交互答复；先让目标离开等待态，再注入答案驱动原生回合恢复。
      * 原生请求已消失说明交互已被框架侧解析，按终局受理不再重试。
      */
-    private void deliverRespond(String commandId, String token, DeliveryRow delivery) throws Exception {
+    private void deliverRespond(String commandId, String token, DeliveryDO delivery) throws Exception {
         JsonNode payload = RuntimePayloads.readJson(objectMapper, delivery.payloadJson());
         String requestId = payload == null ? null : payload.path("requestId").textValue();
         String answerText = payload == null ? null : payload.path("answerText").textValue();
@@ -376,7 +383,7 @@ public class CommandDeliveryService {
         saveReceipt(commandId, token, delivery, null, null, nativeStatus);
     }
 
-    private void saveReceipt(String commandId, String token, DeliveryRow delivery,
+    private void saveReceipt(String commandId, String token, DeliveryDO delivery,
                              String turnId, String runId, String nativeStatus) {
         int saved = deliveryMapper.saveReceipt(commandId, token, turnId, runId, nativeStatus, now());
         if (saved == 1) {
@@ -399,7 +406,7 @@ public class CommandDeliveryService {
     /**
      * 组装命令投递日志的公共字段；未关联任务的命令不输出空 taskId。
      */
-    private Map<String, Object> commandFields(String commandId, DeliveryRow delivery) {
+    private Map<String, Object> commandFields(String commandId, DeliveryDO delivery) {
         Map<String, Object> fields = new LinkedHashMap<>();
         fields.put("commandId", commandId);
         if (delivery.taskId() != null) {

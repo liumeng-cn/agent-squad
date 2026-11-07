@@ -1,0 +1,11 @@
+package com.agentsquad.squad.domain.entity;
+
+/**
+ * 会话头与一致水位的数据库查询结果
+ * <p>
+ * 字段只取同用户、同会话的已提交事实，不包含原生内部推理或运行候选。
+ */
+public record ConversationHeaderDO(String conversationId, String title, String titleSource, long titleVersion,
+                                 String status, long generation, long version, String activeTaskId, long eventSequence,
+                                 java.time.LocalDateTime lastActivityAt) {
+}

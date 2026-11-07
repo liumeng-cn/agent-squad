@@ -1,6 +1,6 @@
 package com.agentsquad.squad.presentation.repository;
 
-import com.agentsquad.squad.domain.entity.ExecutionActivityRow;
+import com.agentsquad.squad.domain.entity.ExecutionActivityDO;
 import com.agentsquad.squad.domain.request.ActivityHistoryRequest;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -18,20 +18,20 @@ public interface ExecutionActivityMapper {
 
     String sourceMessage(@Param("userId") String userId, @Param("scopeId") String scopeId);
 
-    ExecutionActivityRow find(@Param("userId") String userId, @Param("bindingId") String bindingId,
+    ExecutionActivityDO find(@Param("userId") String userId, @Param("bindingId") String bindingId,
                               @Param("sourceKey") String sourceKey);
 
-    int insert(ExecutionActivityRow row);
+    int insert(ExecutionActivityDO row);
 
-    int update(ExecutionActivityRow row);
+    int update(ExecutionActivityDO row);
 
-    List<ExecutionActivityRow> activeRun(@Param("userId") String userId, @Param("bindingId") String bindingId,
+    List<ExecutionActivityDO> activeRun(@Param("userId") String userId, @Param("bindingId") String bindingId,
                                          @Param("runId") String runId);
 
-    List<ExecutionActivityRow> recent(@Param("userId") String userId, @Param("conversationId") String conversationId,
+    List<ExecutionActivityDO> recent(@Param("userId") String userId, @Param("conversationId") String conversationId,
                                       @Param("generation") long generation, @Param("limit") int limit);
 
-    List<ExecutionActivityRow> history(@Param("userId") String userId, @Param("conversationId") String conversationId,
+    List<ExecutionActivityDO> history(@Param("userId") String userId, @Param("conversationId") String conversationId,
                                        @Param("generation") long generation, @Param("query") ActivityHistoryRequest query,
                                        @Param("limit") int limit);
 }

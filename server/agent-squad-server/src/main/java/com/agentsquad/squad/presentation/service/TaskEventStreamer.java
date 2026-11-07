@@ -3,7 +3,7 @@ package com.agentsquad.squad.presentation.service;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
-import com.agentsquad.squad.domain.entity.EventRow;
+import com.agentsquad.squad.domain.entity.EventDO;
 import com.agentsquad.squad.domain.dto.TaskEventResponse;
 import com.agentsquad.squad.conversation.repository.TaskEventMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
@@ -109,8 +109,8 @@ public class TaskEventStreamer {
                 return;
             }
             try {
-                List<EventRow> rows = taskEventMapper.listAfter(userId, taskId, lastSeq.get());
-                for (EventRow row : rows) {
+                List<EventDO> rows = taskEventMapper.listAfter(userId, taskId, lastSeq.get());
+                for (EventDO row : rows) {
                     emitter.send(SseEmitter.event()
                             .name("message")
                             .id(taskId + ":" + row.eventSeq())
@@ -145,7 +145,7 @@ public class TaskEventStreamer {
         return emitter;
     }
 
-    private TaskEventResponse toResponse(EventRow row) {
+    private TaskEventResponse toResponse(EventDO row) {
         return new TaskEventResponse(row.eventSeq(), row.taskId(), row.eventType(),
                 row.payloadJson(), row.occurredAt());
     }

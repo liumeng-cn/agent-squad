@@ -1,6 +1,14 @@
 package com.agentsquad.squad.conversation.service;
 
-import com.agentsquad.squad.domain.entity.*;
+import com.agentsquad.squad.domain.entity.ConversationDO;
+import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
+import com.agentsquad.squad.domain.entity.ResponseRuntimeDO;
+import com.agentsquad.squad.domain.enums.ResponseCompletionProtocol;
+import com.agentsquad.squad.domain.enums.ResponseExecutionStatus;
+import com.agentsquad.squad.domain.model.FailureClassification;
+
+import com.agentsquad.squad.domain.model.NaturalReplyEvidence;
+
 import com.agentsquad.squad.runtime.service.ExecutionFailureService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
@@ -20,8 +28,8 @@ import com.agentsquad.squad.presentation.domain.ConversationDeltaType;
 import com.agentsquad.squad.presentation.repository.ConversationReadMapper;
 import com.agentsquad.squad.domain.dto.MessageView;
 import com.agentsquad.squad.domain.dto.ResponseExecutionView;
-import com.agentsquad.squad.domain.entity.NativeRunOutcome;
-import com.agentsquad.squad.domain.entity.ProjectionTarget;
+import com.agentsquad.squad.domain.enums.NativeRunOutcome;
+import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -93,8 +101,8 @@ public class ResponseExecutionService {
                 || answer.length() > 200000) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "回复候选内容或运行身份无效");
         }
-        ExecutionScopeRow scope = lock(userId, bindingId, true);
-        ResponseRuntimeRow row = replies.lockByBinding(userId, bindingId);
+        ExecutionScopeDO scope = lock(userId, bindingId, true);
+        ResponseRuntimeDO row = replies.lockByBinding(userId, bindingId);
         if (!"RESPONSE".equals(scope.kind()) || row.cancellationRequested() || TERMINAL.contains(row.status())
                 || row.completionProtocol() == ResponseCompletionProtocol.NATURAL) {
             throw conflict("回复已不能提交完成候选");
@@ -124,14 +132,14 @@ public class ResponseExecutionService {
      * 更新回复状态、纠正命令、助手消息时，同时保存本次处理到的 Agent 执行事件序号；失败则一起回滚，已处理的事件不再重复执行。
      */
     @Transactional
-    public void accept(ExecutionScopeRow scope, ProjectionTarget target, NativeEventView event) {
+    public void accept(ExecutionScopeDO scope, ProjectionTargetDO target, NativeEventView event) {
         // 与目标创建保持会话→来源回复→交付位的锁序，避免完成与转交相互等待。
         scopes.lockOwned(scope.userId(), scope.scopeId(), false);
-        ResponseRuntimeRow row = replies.lockByBinding(scope.userId(), target.bindingId());
+        ResponseRuntimeDO row = replies.lockByBinding(scope.userId(), target.bindingId());
         if (row == null || TERMINAL.contains(row.status())) {
             return;
         }
-        ConversationRow conversation = conversations.lockOwned(scope.userId(), scope.conversationId());
+        ConversationDO conversation = conversations.lockOwned(scope.userId(), scope.conversationId());
         if ((!"ACTIVE".equals(conversation.status()) || conversation.generation() != scope.conversationGeneration())
                 && !row.cancellationRequested()) {
             replies.cancelling(scope.userId(), row.bindingId(), now());
@@ -215,15 +223,15 @@ public class ResponseExecutionService {
      * AgentScope 确认原回合中断后安排恢复；同一次运行只安排一次恢复，不重新提交用户消息。
      */
     @Transactional
-    public void recover(ProjectionTarget target, NativeSubmissionReceipt receipt) {
+    public void recover(ProjectionTargetDO target, NativeSubmissionReceipt receipt) {
         recover(target, receipt, null);
     }
 
     /** 核对结束后仅使用持久原生日志恢复自然答案；缺少证据保持核对，不转入旧候选纠正回合。 */
     @Transactional
-    public void recover(ProjectionTarget target, NativeSubmissionReceipt receipt, NaturalReplyEvidence evidence) {
-        ExecutionScopeRow scope = lock(target.userId(), target.bindingId(), false);
-        ResponseRuntimeRow row = replies.lockByBinding(target.userId(), target.bindingId());
+    public void recover(ProjectionTargetDO target, NativeSubmissionReceipt receipt, NaturalReplyEvidence evidence) {
+        ExecutionScopeDO scope = lock(target.userId(), target.bindingId(), false);
+        ResponseRuntimeDO row = replies.lockByBinding(target.userId(), target.bindingId());
         if (row == null || TERMINAL.contains(row.status())) {
             return;
         }
@@ -285,14 +293,14 @@ public class ResponseExecutionService {
 
     @Transactional
     public void stopped(String userId, String bindingId) {
-        ExecutionScopeRow scope = lock(userId, bindingId, false);
+        ExecutionScopeDO scope = lock(userId, bindingId, false);
         settleCancelled(scope, replies.lockByBinding(userId, bindingId));
     }
 
     @Transactional
     public void rejectedResume(String userId, String bindingId) {
-        ExecutionScopeRow scope = lock(userId, bindingId, false);
-        ResponseRuntimeRow row = replies.lockByBinding(userId, bindingId);
+        ExecutionScopeDO scope = lock(userId, bindingId, false);
+        ResponseRuntimeDO row = replies.lockByBinding(userId, bindingId);
         if (row != null && !TERMINAL.contains(row.status())) {
             if (row.cancellationRequested()) {
                 settleCancelled(scope, row);
@@ -302,11 +310,11 @@ public class ResponseExecutionService {
         }
     }
 
-    public String originalCommand(ProjectionTarget target) {
+    public String originalCommand(ProjectionTargetDO target) {
         return replies.originalCommand(target.userId(), target.bindingId());
     }
 
-    private String waiting(ExecutionScopeRow scope) {
+    private String waiting(ExecutionScopeDO scope) {
         var kinds = replies.openKinds(scope.userId(), scope.scopeId());
         if (kinds.contains("APPROVAL")) {
             return "WAITING_APPROVAL";
@@ -314,7 +322,7 @@ public class ResponseExecutionService {
         return kinds.contains("INPUT") ? "WAITING_INPUT" : null;
     }
 
-    private boolean validProposal(ResponseRuntimeRow row, ProjectionTarget target, NativeEventView event, JsonNode proposal) {
+    private boolean validProposal(ResponseRuntimeDO row, ProjectionTargetDO target, NativeEventView event, JsonNode proposal) {
         return proposal != null && event.turnId() != null && event.turnId().equals(row.proposalTurnId())
                 && target.bindingId().equals(proposal.path("sourceBindingId").asText())
                 && event.turnId().equals(proposal.path("sourceTurnId").asText())
@@ -324,7 +332,7 @@ public class ResponseExecutionService {
                 "finalAnswer", proposal.path("finalAnswer").asText()))).equals(row.proposalHash());
     }
 
-    private void correctOrFail(ExecutionScopeRow scope, ResponseRuntimeRow row, NativeEventView event) {
+    private void correctOrFail(ExecutionScopeDO scope, ResponseRuntimeDO row, NativeEventView event) {
         if (row.correctionCount() == 0) {
             if (replies.correct(scope.userId(), row.bindingId()) != 1) {
                 throw new IllegalStateException("回复纠正写入竞争");
@@ -339,7 +347,7 @@ public class ResponseExecutionService {
         }
     }
 
-    private void settleCancelled(ExecutionScopeRow scope, ResponseRuntimeRow row) {
+    private void settleCancelled(ExecutionScopeDO scope, ResponseRuntimeDO row) {
         if (row == null || !row.cancellationRequested() || TERMINAL.contains(row.status())) {
             return;
         }
@@ -352,7 +360,7 @@ public class ResponseExecutionService {
         }
     }
 
-    private void finish(ExecutionScopeRow scope, ResponseRuntimeRow row, String status, String answer) {
+    private void finish(ExecutionScopeDO scope, ResponseRuntimeDO row, String status, String answer) {
         if ("SUCCEEDED".equals(status) || "PARTIAL".equals(status)) {
             failures.resolve(scope.userId(), row.bindingId());
             failures.resolveSuperseded(scope);
@@ -363,7 +371,7 @@ public class ResponseExecutionService {
             failures.ensureNativeFailure(scope, row.bindingId(), "execution-failed:" + row.executionId());
         }
         String answerId = null;
-        ConversationRow conversation = conversations.lockOwned(scope.userId(), scope.conversationId());
+        ConversationDO conversation = conversations.lockOwned(scope.userId(), scope.conversationId());
         if (answer != null && "ACTIVE".equals(conversation.status())
                 && conversation.generation() == scope.conversationGeneration()) {
             answerId = finalDeliveries.claimPublication(scope.userId(), row.sourceMessageId(), "RESPONSE", row.executionId());
@@ -391,14 +399,14 @@ public class ResponseExecutionService {
         log.info("回复已终结 executionId={} bindingId={} status={}", row.executionId(), row.bindingId(), status);
     }
 
-    private void state(ExecutionScopeRow scope, ResponseRuntimeRow row, String status, String producer) {
+    private void state(ExecutionScopeDO scope, ResponseRuntimeDO row, String status, String producer) {
         if (!status.equals(row.status())) {
             replies.status(scope.userId(), row.bindingId(), status);
             publishState(scope, row, status, producer);
         }
     }
 
-    private void publishState(ExecutionScopeRow scope, ResponseRuntimeRow row, String status, String producer) {
+    private void publishState(ExecutionScopeDO scope, ResponseRuntimeDO row, String status, String producer) {
         var current = conversationReads.execution(scope.userId(), scope.conversationId(), row.executionId());
         if (current == null) {
             return;
@@ -413,13 +421,13 @@ public class ResponseExecutionService {
                 new ExecutionChangedPayload(ConversationDeltaType.SCHEMA_VERSION, execution));
     }
 
-    private void command(ExecutionScopeRow scope, ResponseRuntimeRow row, String scopeKey, String key, String action, Object payload) {
+    private void command(ExecutionScopeDO scope, ResponseRuntimeDO row, String scopeKey, String key, String action, Object payload) {
         String value = RuntimePayloads.toJson(json, payload);
         commands.insertControl(UUID.randomUUID().toString(), scope.userId(), scopeKey, key, ContentDigests.sha256(value),
                 null, row.bindingId(), action, value, now());
     }
 
-    private ExecutionScopeRow lock(String userId, String bindingId, boolean dispatch) {
+    private ExecutionScopeDO lock(String userId, String bindingId, boolean dispatch) {
         return scopes.lockOwned(userId, scopeMapper.findScopeByBinding(userId, bindingId), dispatch);
     }
 

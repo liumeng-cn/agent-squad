@@ -1,9 +1,9 @@
 package com.agentsquad.squad.runtime.repository;
 
-import com.agentsquad.squad.domain.entity.ProjectionTarget;
-import com.agentsquad.squad.domain.entity.TaskRow;
-import com.agentsquad.squad.domain.entity.CompletionContextRow;
-import com.agentsquad.squad.domain.entity.FinalizationRow;
+import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
+import com.agentsquad.squad.domain.entity.TaskDO;
+import com.agentsquad.squad.domain.entity.CompletionContextDO;
+import com.agentsquad.squad.domain.entity.FinalizationDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -15,7 +15,7 @@ public interface CompletionMapper {
 
     int countPendingEffects(@Param("userId") String userId, @Param("taskId") String taskId);
 
-    CompletionContextRow lockByMasterSession(@Param("userId") String userId,
+    CompletionContextDO lockByMasterSession(@Param("userId") String userId,
                                              @Param("sessionId") String sessionId);
 
     int saveProposal(@Param("userId") String userId, @Param("taskId") String taskId,
@@ -23,17 +23,17 @@ public interface CompletionMapper {
                      @Param("toolCallId") String toolCallId, @Param("proposalHash") String proposalHash,
                      @Param("proposalJson") String proposalJson);
 
-    FinalizationRow lockTask(@Param("userId") String userId, @Param("taskId") String taskId);
+    FinalizationDO lockTask(@Param("userId") String userId, @Param("taskId") String taskId);
 
     int completeTask(@Param("userId") String userId, @Param("taskId") String taskId,
                      @Param("bindingId") String bindingId, @Param("turnId") String turnId,
                      @Param("outcome") String outcome, @Param("planVersion") long planVersion,
                      @Param("answerRevision") long answerRevision);
 
-    java.util.List<ProjectionTarget> cancellationTargets(
+    java.util.List<ProjectionTargetDO> cancellationTargets(
             @Param("userId") String userId, @Param("taskId") String taskId);
 
-    java.util.List<TaskRow> cancellingTasks(@Param("afterId") long afterId);
+    java.util.List<TaskDO> cancellingTasks(@Param("afterId") long afterId);
 
     java.util.List<String> lockCancellationOperations(@Param("userId") String userId, @Param("taskId") String taskId);
 

@@ -5,8 +5,8 @@ import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
 import com.agentsquad.squad.domain.dto.AcceptanceCheckView;
-import com.agentsquad.squad.domain.entity.EventRow;
-import com.agentsquad.squad.domain.entity.TaskRow;
+import com.agentsquad.squad.domain.entity.EventDO;
+import com.agentsquad.squad.domain.entity.TaskDO;
 import com.agentsquad.squad.domain.dto.AnswerView;
 import com.agentsquad.squad.domain.response.InteractionResponse;
 import com.agentsquad.squad.domain.dto.TaskResponse;
@@ -17,7 +17,7 @@ import com.agentsquad.squad.conversation.repository.TaskEventMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.interaction.service.InteractionQueryService;
-import com.agentsquad.squad.domain.entity.WorkerJobRow;
+import com.agentsquad.squad.domain.entity.WorkerJobDO;
 import com.agentsquad.squad.runtime.repository.PlanMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -66,7 +66,7 @@ public class TaskSnapshotService {
      */
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public TaskSnapshotResponse snapshot(String userId, String taskId) {
-        TaskRow task = taskMapper.findOwned(userId, taskId);
+        TaskDO task = taskMapper.findOwned(userId, taskId);
         if (task == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
         }
@@ -99,7 +99,7 @@ public class TaskSnapshotService {
     /** 按真实计划版本读取历史；权限仍以当前会话和目标归属判断，旧节点不混入当前完成数。 */
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public WorkerJobPageResponse listJobs(String userId, String taskId, Long requestedPlanVersion) {
-        TaskRow task = taskMapper.findOwned(userId, taskId);
+        TaskDO task = taskMapper.findOwned(userId, taskId);
         if (task == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
         }
@@ -114,7 +114,7 @@ public class TaskSnapshotService {
     }
 
     /** 只展示正式结束任务的检查结论；候选检查尚未取得发布资格，不提前显示为已完成。 */
-    private List<AcceptanceCheckView> acceptanceChecks(TaskRow task) {
+    private List<AcceptanceCheckView> acceptanceChecks(TaskDO task) {
         if (task.planVersion() == 0 || !java.util.Set.of("SUCCEEDED", "PARTIAL", "FAILED").contains(task.status())) {
             return List.of();
         }
@@ -146,7 +146,7 @@ public class TaskSnapshotService {
     /**
      * 已经完成的节点只公开经终态裁决的结果，候选与固定输入留在运行端。
      */
-    private List<WorkerJob> currentJobs(TaskRow task) {
+    private List<WorkerJob> currentJobs(TaskDO task) {
         if (task.planVersion() == 0) {
             return List.of();
         }
@@ -155,7 +155,7 @@ public class TaskSnapshotService {
                 .toList();
     }
 
-    private WorkerJob jobView(WorkerJobRow row) {
+    private WorkerJob jobView(WorkerJobDO row) {
         JsonNode result = null;
         if ("SUCCEEDED".equals(row.status()) && row.resultJson() != null) {
             try {
@@ -202,7 +202,7 @@ public class TaskSnapshotService {
     }
 
     private AnswerView buildAnswer(String userId, String taskId, long answerRevision) {
-        EventRow event = taskEventMapper.findLatestAnswerEvent(userId, taskId, answerRevision);
+        EventDO event = taskEventMapper.findLatestAnswerEvent(userId, taskId, answerRevision);
         if (event == null) {
             return new AnswerView(answerRevision, "", false);
         }

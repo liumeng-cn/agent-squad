@@ -5,16 +5,16 @@ import com.agentsquad.squad.common.enums.execution.ActivityStatus;
 import com.agentsquad.squad.common.enums.execution.ActivityType;
 import com.agentsquad.squad.common.enums.execution.ActivityWaitReason;
 import com.agentsquad.squad.common.util.ContentDigests;
-import com.agentsquad.squad.domain.entity.ExecutionScopeRow;
+import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
 import com.agentsquad.squad.conversation.service.ConversationEventWriter;
 import com.agentsquad.squad.integration.agentscope.NativeEventView;
-import com.agentsquad.squad.domain.entity.ExecutionActivityRow;
+import com.agentsquad.squad.domain.entity.ExecutionActivityDO;
 import com.agentsquad.squad.domain.dto.ActivityUpdatedEvent;
 import com.agentsquad.squad.domain.dto.ExecutionActivityView;
 import com.agentsquad.squad.presentation.repository.ExecutionActivityMapper;
-import com.agentsquad.squad.domain.entity.ProjectionTarget;
+import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
 import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -55,7 +55,7 @@ public class ActivityProjectionService {
      * 连续消费事务已校验归属与原生顺序；重复事件不再调用本入口。
      */
     @Transactional(propagation = Propagation.MANDATORY)
-    public void accept(ExecutionScopeRow scope, ProjectionTarget target, NativeEventView event) {
+    public void accept(ExecutionScopeDO scope, ProjectionTargetDO target, NativeEventView event) {
         if ("run/start".equals(event.type()) && workers.findByBinding(scope.userId(), target.bindingId()) != null) {
             completed(scope, target.bindingId(), new ActivityBusinessFact(ActivityType.WORKER_DISPATCH, event.runId()));
         }
@@ -122,13 +122,13 @@ public class ActivityProjectionService {
      * 业务记录与已完成活动在同一事务提交；仅记录已发生的边界，不补造持续时间。
      */
     @Transactional(propagation = Propagation.MANDATORY)
-    public void completed(ExecutionScopeRow scope, ActivityBusinessFact fact) {
+    public void completed(ExecutionScopeDO scope, ActivityBusinessFact fact) {
         completed(scope, activities.masterBinding(scope.userId(), scope.scopeId()), fact);
     }
 
     /** 指定实际触发业务事件的绑定，重试记录归属到对应的执行节点。 */
     @Transactional(propagation = Propagation.MANDATORY)
-    public void completed(ExecutionScopeRow scope, String bindingId, ActivityBusinessFact fact) {
+    public void completed(ExecutionScopeDO scope, String bindingId, ActivityBusinessFact fact) {
         if (bindingId == null) {
             throw new IllegalStateException("活动来源缺少执行绑定");
         }
@@ -146,7 +146,7 @@ public class ActivityProjectionService {
         };
         var job = workers.findByBinding(scope.userId(), bindingId);
         var task = scope.kind().equals("TASK") ? tasks.findOwned(scope.userId(), scope.ownerId()) : null;
-        var row = new ExecutionActivityRow(UUID.randomUUID().toString(), scope.userId(), scope.scopeId(), scope.conversationId(),
+        var row = new ExecutionActivityDO(UUID.randomUUID().toString(), scope.userId(), scope.scopeId(), scope.conversationId(),
                 activities.sourceMessage(scope.userId(), scope.scopeId()), scope.kind().equals("RESPONSE") ? scope.ownerId() : null,
                 task == null ? null : task.taskId(), job == null ? null : job.jobId(), bindingId, null, null, key,
                 job != null ? job.planVersion() : task == null ? 0 : task.planVersion(), classification.type(), classification.group(),
@@ -155,7 +155,7 @@ public class ActivityProjectionService {
         publish(scope, row, fact.key());
     }
 
-    private void save(ExecutionScopeRow scope, ProjectionTarget target, NativeEventView event, ActivityProjectionChange change) {
+    private void save(ExecutionScopeDO scope, ProjectionTargetDO target, NativeEventView event, ActivityProjectionChange change) {
         String key = target.bindingId() + ":" + ContentDigests.sha256(event.turnId() + ":" + change.source());
         var previous = activities.find(scope.userId(), target.bindingId(), key);
         if (previous != null) {
@@ -165,7 +165,7 @@ public class ActivityProjectionService {
         var job = workers.findByBinding(scope.userId(), target.bindingId());
         var task = scope.kind().equals("TASK") ? tasks.findOwned(scope.userId(), scope.ownerId()) : null;
         LocalDateTime now = timestamp(event);
-        var row = new ExecutionActivityRow(UUID.randomUUID().toString(), scope.userId(), scope.scopeId(), scope.conversationId(),
+        var row = new ExecutionActivityDO(UUID.randomUUID().toString(), scope.userId(), scope.scopeId(), scope.conversationId(),
                 activities.sourceMessage(scope.userId(), scope.scopeId()), scope.kind().equals("RESPONSE") ? scope.ownerId() : null,
                 task == null ? null : task.taskId(), job == null ? null : job.jobId(), target.bindingId(), event.runId(), event.turnId(), key,
                 job != null ? job.planVersion() : task == null ? 0 : task.planVersion(), change.classification().type(),
@@ -175,7 +175,7 @@ public class ActivityProjectionService {
         publish(scope, row, event.eventId());
     }
 
-    private void transition(ExecutionScopeRow scope, ExecutionActivityRow row, NativeEventView event,
+    private void transition(ExecutionScopeDO scope, ExecutionActivityDO row, NativeEventView event,
                             ActivityStatus status, ActivityWaitReason waitReason) {
         if (row.nativeSequence() >= event.sequence() || terminal(row.status())) {
             return;
@@ -183,7 +183,7 @@ public class ActivityProjectionService {
         if (row.status() == status && row.waitReason() == waitReason) {
             return;
         }
-        var changed = new ExecutionActivityRow(row.activityId(), row.userId(), row.scopeId(), row.conversationId(),
+        var changed = new ExecutionActivityDO(row.activityId(), row.userId(), row.scopeId(), row.conversationId(),
                 row.sourceMessageId(), row.executionId(), row.taskId(), row.jobId(), row.bindingId(), row.runId(), row.turnId(),
                 row.sourceKey(), row.planVersion(), row.type(), row.group(), status, waitReason, row.summary(),
                 row.startedAt() == null && status == ActivityStatus.RUNNING ? timestamp(event) : row.startedAt(),
@@ -194,7 +194,7 @@ public class ActivityProjectionService {
         publish(scope, changed, event.eventId());
     }
 
-    private void closeRun(ExecutionScopeRow scope, ProjectionTarget target, NativeEventView event) {
+    private void closeRun(ExecutionScopeDO scope, ProjectionTargetDO target, NativeEventView event) {
         for (var row : activities.activeRun(scope.userId(), target.bindingId(), event.runId())) {
             if ("suspended".equals(event.outcome())) {
                 var reason = row.type() == ActivityType.EXTERNAL_ACTION ? ActivityWaitReason.APPROVAL : ActivityWaitReason.INPUT;
@@ -237,7 +237,7 @@ public class ActivityProjectionService {
         return name == null ? "" : name;
     }
 
-    private void publish(ExecutionScopeRow scope, ExecutionActivityRow row, String eventId) {
+    private void publish(ExecutionScopeDO scope, ExecutionActivityDO row, String eventId) {
         events.publish(scope, "activity:" + row.activityId() + ":" + eventId, "activity.updated",
                 new ActivityUpdatedEvent(2, ExecutionActivityView.from(row)));
     }

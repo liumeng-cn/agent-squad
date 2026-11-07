@@ -3,8 +3,8 @@ package com.agentsquad.squad.tools.mock;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.tools.operation.OperationService;
 import com.agentsquad.squad.tools.operation.PrepareRequest;
-import com.agentsquad.squad.domain.entity.OperationRow;
-import com.agentsquad.squad.domain.entity.OperationStatus;
+import com.agentsquad.squad.domain.entity.OperationDO;
+import com.agentsquad.squad.domain.enums.OperationStatus;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.tool.AgentTool;
 import io.agentscope.core.tool.ToolCallParam;
@@ -78,7 +78,7 @@ public class MockTicketCreateTool implements AgentTool {
         }
         String turnId = context.get(TURN_ID_KEY, String.class);
         try {
-            OperationRow operation = operationService.prepare(new PrepareRequest(
+            OperationDO operation = operationService.prepare(new PrepareRequest(
                     context.getUserId(), context.getSessionId(), turnId,
                     param.getToolUseBlock().getId(), getName(), "v1", "WRITE",
                     Map.of("title", titleText, "detail", detailText),

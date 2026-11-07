@@ -1,6 +1,6 @@
 package com.agentsquad.squad.conversation.repository;
 
-import com.agentsquad.squad.domain.entity.EventRow;
+import com.agentsquad.squad.domain.entity.EventDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -22,11 +22,11 @@ public interface TaskEventMapper {
                         @Param("eventType") String eventType, @Param("payloadJson") String payloadJson,
                         @Param("occurredAt") LocalDateTime occurredAt);
 
-    List<EventRow> listAfter(@Param("userId") String userId, @Param("taskId") String taskId,
+    List<EventDO> listAfter(@Param("userId") String userId, @Param("taskId") String taskId,
                              @Param("after") long after);
 
     long maxSeq(@Param("userId") String userId, @Param("taskId") String taskId);
 
-    EventRow findLatestAnswerEvent(@Param("userId") String userId, @Param("taskId") String taskId,
+    EventDO findLatestAnswerEvent(@Param("userId") String userId, @Param("taskId") String taskId,
                                    @Param("revision") long revision);
 }

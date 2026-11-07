@@ -1,6 +1,6 @@
 package com.agentsquad.squad.domain.response;
 
-import com.agentsquad.squad.domain.entity.ResponseExecutionStatus;
+import com.agentsquad.squad.domain.enums.ResponseExecutionStatus;
 
 /**
  * 消息持久受理收据。

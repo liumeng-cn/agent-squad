@@ -1,6 +1,6 @@
 package com.agentsquad.squad.tools.operation;
 
-import com.agentsquad.squad.domain.entity.OperationRow;
+import com.agentsquad.squad.domain.entity.OperationDO;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -34,9 +34,9 @@ public class OperationUnknownSweeper {
      */
     @Scheduled(fixedDelayString = "${agentsquad.operation.unknown-sweep-delay-ms:15000}")
     public void sweep() {
-        List<OperationRow> expired = operationMapper.findExpiredInFlight(
+        List<OperationDO> expired = operationMapper.findExpiredInFlight(
                 LocalDateTime.now(ZoneOffset.UTC), batchSize);
-        for (OperationRow row : expired) {
+        for (OperationDO row : expired) {
             if (unknowns.mark(row, row.version(), "unknown-sweeper")) {
                 log.warn("IN_FLIGHT 租约过期转 UNKNOWN operationId={} taskId={} owner={}",
                         row.operationId(), row.taskId(), row.executorOwner());

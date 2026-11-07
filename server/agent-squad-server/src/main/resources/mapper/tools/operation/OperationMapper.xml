@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.tools.operation.repository.OperationMapper">
 
-    <resultMap id="lockToolContextResult" type="com.agentsquad.squad.domain.entity.ToolExecutionContextRow">
+    <resultMap id="lockToolContextResult" type="com.agentsquad.squad.domain.entity.ToolExecutionContextDO">
         <constructor>
             <arg column="task_id" javaType="java.lang.String"/>
             <arg column="binding_id" javaType="java.lang.String"/>
@@ -12,7 +12,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="findByNativeCallResult" type="com.agentsquad.squad.domain.entity.OperationRow">
+    <resultMap id="findByNativeCallResult" type="com.agentsquad.squad.domain.entity.OperationDO">
         <constructor>
             <arg column="operation_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -41,7 +41,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="findByBusinessIntentResult" type="com.agentsquad.squad.domain.entity.OperationRow">
+    <resultMap id="findByBusinessIntentResult" type="com.agentsquad.squad.domain.entity.OperationDO">
         <constructor>
             <arg column="operation_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -70,7 +70,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="findOwnedResult" type="com.agentsquad.squad.domain.entity.OperationRow">
+    <resultMap id="findOwnedResult" type="com.agentsquad.squad.domain.entity.OperationDO">
         <constructor>
             <arg column="operation_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -99,7 +99,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="listByTaskResult" type="com.agentsquad.squad.domain.entity.OperationRow">
+    <resultMap id="listByTaskResult" type="com.agentsquad.squad.domain.entity.OperationDO">
         <constructor>
             <arg column="operation_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -128,7 +128,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="findExpiredInFlightResult" type="com.agentsquad.squad.domain.entity.OperationRow">
+    <resultMap id="findExpiredInFlightResult" type="com.agentsquad.squad.domain.entity.OperationDO">
         <constructor>
             <arg column="operation_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>

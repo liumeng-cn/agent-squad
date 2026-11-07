@@ -1,6 +1,6 @@
 package com.agentsquad.squad.domain.dto;
 
-import com.agentsquad.squad.domain.entity.SkillCatalog;
+import com.agentsquad.squad.domain.model.SkillCatalog;
 
 /**
  * 执行固定资料视图。

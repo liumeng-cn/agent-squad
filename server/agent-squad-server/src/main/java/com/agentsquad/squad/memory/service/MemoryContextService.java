@@ -4,9 +4,9 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.common.MemoryContextInvalidatedException;
-import com.agentsquad.squad.domain.entity.MemoryRow;
-import com.agentsquad.squad.domain.entity.MemoryRules;
-import com.agentsquad.squad.domain.entity.MemoryScopePin;
+import com.agentsquad.squad.domain.entity.MemoryDO;
+import com.agentsquad.squad.domain.model.MemoryRules;
+import com.agentsquad.squad.domain.entity.MemoryScopePinDO;
 import com.agentsquad.squad.domain.dto.MemoryContextSnapshot;
 import com.agentsquad.squad.domain.dto.MemoryReference;
 import com.agentsquad.squad.memory.repository.MemoryMapper;
@@ -42,13 +42,13 @@ public class MemoryContextService {
     public MemoryContextSnapshot freeze(String userId, String scopeId) {
         scopes.lockOwned(userId, scopeId, true);
         long revision = lockRevision(userId);
-        MemoryScopePin prior = mapper.pin(userId, scopeId);
+        MemoryScopePinDO prior = mapper.pin(userId, scopeId);
         if (prior != null) {
             return currentSnapshot(userId, scopeId, prior, revision);
         }
-        List<MemoryRow> memories = mapper.active(userId, now(), MAX_REFERENCES);
+        List<MemoryDO> memories = mapper.active(userId, now(), MAX_REFERENCES);
         mapper.pinScope(userId, scopeId, revision);
-        for (MemoryRow memory : memories) {
+        for (MemoryDO memory : memories) {
             mapper.pinItem(userId, scopeId, memory.memoryId(), memory.version());
         }
         return new MemoryContextSnapshot(revision, memories.stream().map(this::reference).toList());
@@ -62,7 +62,7 @@ public class MemoryContextService {
     public void requireCurrent(String userId, String scopeId) {
         scopes.requireReadable(userId, scopeId);
         long revision = lockRevision(userId);
-        MemoryScopePin pin = mapper.pin(userId, scopeId);
+        MemoryScopePinDO pin = mapper.pin(userId, scopeId);
         if (pin != null) {
             currentSnapshot(userId, scopeId, pin, revision);
         }
@@ -75,7 +75,7 @@ public class MemoryContextService {
     public MemoryContextSnapshot read(String userId, String scopeId) {
         scopes.requireReadable(userId, scopeId);
         long revision = lockRevision(userId);
-        MemoryScopePin pin = mapper.pin(userId, scopeId);
+        MemoryScopePinDO pin = mapper.pin(userId, scopeId);
         if (pin == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "执行尚未固定记忆上下文");
         }
@@ -130,13 +130,13 @@ public class MemoryContextService {
         return Set.copyOf(excluded);
     }
 
-    private MemoryContextSnapshot currentSnapshot(String userId, String scopeId, MemoryScopePin pin, long revision) {
+    private MemoryContextSnapshot currentSnapshot(String userId, String scopeId, MemoryScopePinDO pin, long revision) {
         if (!"CURRENT".equals(pin.barrierStatus()) || pin.memoryRevision() != revision) {
             throw new MemoryContextInvalidatedException();
         }
         LocalDateTime timestamp = now();
         List<MemoryReference> memories = mapper.pinnedIds(userId, scopeId).stream().map(id -> {
-            MemoryRow current = mapper.find(userId, id);
+            MemoryDO current = mapper.find(userId, id);
             Long expected = mapper.pinnedVersion(userId, scopeId, id);
             if (current == null || expected == null || current.version() != expected
                     || !MemoryRules.active(current, timestamp)) {
@@ -152,7 +152,7 @@ public class MemoryContextService {
         return mapper.lockRevision(userId);
     }
 
-    private MemoryReference reference(MemoryRow row) {
+    private MemoryReference reference(MemoryDO row) {
         return new MemoryReference(row.memoryId(), row.key(), row.content(), row.version(), row.expiresAt());
     }
 

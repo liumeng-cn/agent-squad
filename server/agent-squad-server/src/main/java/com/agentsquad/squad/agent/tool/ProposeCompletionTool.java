@@ -1,6 +1,6 @@
 package com.agentsquad.squad.agent.tool;
 
-import com.agentsquad.squad.domain.entity.GoalTaskStatus;
+import com.agentsquad.squad.domain.enums.GoalTaskStatus;
 import com.agentsquad.squad.domain.dto.CompletionProposalReceipt;
 import com.agentsquad.squad.runtime.service.CompletionProposalService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;

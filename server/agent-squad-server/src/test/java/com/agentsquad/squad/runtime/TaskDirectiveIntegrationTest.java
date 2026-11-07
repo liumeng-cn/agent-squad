@@ -8,7 +8,7 @@ import com.agentsquad.squad.domain.dto.TaskDirectiveDecision;
 import com.agentsquad.squad.conversation.service.GoalTaskCreationService;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
 import com.agentsquad.squad.conversation.service.TaskDirectiveService;
-import com.agentsquad.squad.domain.entity.TaskDirectiveTarget;
+import com.agentsquad.squad.domain.entity.TaskDirectiveTargetDO;
 import com.agentsquad.squad.domain.dto.PlanNode;
 import com.agentsquad.squad.domain.dto.PlanPublish;
 import com.agentsquad.squad.runtime.service.ContextSnapshotService;
@@ -114,7 +114,7 @@ class TaskDirectiveIntegrationTest {
             var service = context.getBean(TaskDirectiveService.class);
             var receipt = service.submit(user, replySession(jdbc, change.executionId()), new TaskDirectiveSubmit("change", task.taskId(), version, "SUPPLEMENT", "活泼"));
             context.getBean(com.agentsquad.squad.conversation.service.TaskControlService.class).cancel(user, task.taskId(), "stop", version);
-            service.dispatch(new TaskDirectiveTarget(receipt.directiveId(), user, task.taskId()));
+            service.dispatch(new TaskDirectiveTargetDO(receipt.directiveId(), user, task.taskId()));
             var snapshot = context.getBean(com.agentsquad.squad.presentation.service.ConversationQueryService.class)
                     .snapshot(user, source.conversationId(), null, 40);
             assertThat(snapshot.directives()).singleElement().satisfies(item -> {
@@ -210,7 +210,7 @@ class TaskDirectiveIntegrationTest {
         var service = context.getBean(TaskDirectiveService.class);
         var receipt = service.submit(user, replySession(jdbc, message.executionId()), new TaskDirectiveSubmit("change", task.taskId(), version(jdbc, task.taskId()), "REPLACE", "另一工作"));
         jdbc.update("UPDATE sq_command SET status='APPLIED' WHERE task_id=?", task.taskId());
-        service.dispatch(new TaskDirectiveTarget(receipt.directiveId(), user, task.taskId()));
+        service.dispatch(new TaskDirectiveTargetDO(receipt.directiveId(), user, task.taskId()));
         assertThat(jdbc.queryForObject("SELECT command_id FROM sq_task_directive WHERE directive_id=?", String.class, receipt.directiveId())).isNull();
         var query = context.getBean(com.agentsquad.squad.presentation.service.ConversationQueryService.class);
         var waiting = query.snapshot(user, source.conversationId(), null, 40);
@@ -218,7 +218,7 @@ class TaskDirectiveIntegrationTest {
             assertThat(item.status()).isEqualTo(com.agentsquad.squad.common.enums.conversation.TaskDirectiveStatus.ACCEPTED);
             assertThat(item.waitReason()).isEqualTo(com.agentsquad.squad.common.enums.conversation.TaskDirectiveWaitReason.WAITING_OPERATION);
         });
-        service.dispatch(new TaskDirectiveTarget(receipt.directiveId(), user, task.taskId()));
+        service.dispatch(new TaskDirectiveTargetDO(receipt.directiveId(), user, task.taskId()));
         assertThat(query.snapshot(user, source.conversationId(), null, 40).cursor()).isEqualTo(waiting.cursor());
         assertThat(query.events(user, source.conversationId(), null)).filteredOn(event -> event.type().equals("directive.status_changed"))
                 .allSatisfy(event -> {

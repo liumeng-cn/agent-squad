@@ -1,7 +1,7 @@
 package com.agentsquad.squad.worker.repository;
 
 import com.agentsquad.squad.common.enums.worker.WorkerDefinitionStatus;
-import com.agentsquad.squad.domain.entity.WorkerDefinitionRow;
+import com.agentsquad.squad.domain.entity.WorkerDefinitionDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -23,11 +23,11 @@ public interface WorkerDefinitionMapper {
                @Param("publishKey") String publishKey, @Param("payloadHash") String payloadHash,
                @Param("actorId") String actorId, @Param("actorName") String actorName);
 
-    WorkerDefinitionRow findByPublishKey(@Param("actorId") String actorId, @Param("publishKey") String publishKey);
+    WorkerDefinitionDO findByPublishKey(@Param("actorId") String actorId, @Param("publishKey") String publishKey);
 
-    WorkerDefinitionRow findByDefinitionId(@Param("definitionId") String definitionId);
+    WorkerDefinitionDO findByDefinitionId(@Param("definitionId") String definitionId);
 
-    List<WorkerDefinitionRow> listAfter(@Param("afterId") long afterId, @Param("limit") int limit);
+    List<WorkerDefinitionDO> listAfter(@Param("afterId") long afterId, @Param("limit") int limit);
 
     int updateStatus(@Param("definitionId") String definitionId, @Param("expectedVersion") long expectedVersion,
                      @Param("status") WorkerDefinitionStatus status, @Param("idempotencyKey") String idempotencyKey,
@@ -37,12 +37,12 @@ public interface WorkerDefinitionMapper {
     int countEnabled(@Param("workerKey") String workerKey,
                      @Param("workerVersion") String workerVersion);
 
-    List<WorkerDefinitionRow> listEnabledAfter(@Param("afterId") long afterId,
+    List<WorkerDefinitionDO> listEnabledAfter(@Param("afterId") long afterId,
                                                 @Param("limit") int limit);
 
-    WorkerDefinitionRow findEnabled(@Param("workerKey") String workerKey,
+    WorkerDefinitionDO findEnabled(@Param("workerKey") String workerKey,
                                     @Param("workerVersion") String workerVersion);
 
-    WorkerDefinitionRow findPublished(@Param("workerKey") String workerKey,
+    WorkerDefinitionDO findPublished(@Param("workerKey") String workerKey,
                                       @Param("workerVersion") String workerVersion);
 }

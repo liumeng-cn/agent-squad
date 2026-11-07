@@ -6,9 +6,9 @@ import com.agentsquad.squad.domain.response.InteractionPageResponse;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.InteractionRow;
+import com.agentsquad.squad.domain.entity.InteractionDO;
 import com.agentsquad.squad.interaction.repository.InteractionMapper;
-import com.agentsquad.squad.domain.entity.OperationRow;
+import com.agentsquad.squad.domain.entity.OperationDO;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import com.agentsquad.squad.tools.operation.OperationPreview;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -49,7 +49,7 @@ public class InteractionQueryService {
     /**
      * 列出目标的交互存储行；游标为存储主键。
      */
-    public List<InteractionRow> listByTask(String userId, String taskId, String cursor, int limit) {
+    public List<InteractionDO> listByTask(String userId, String taskId, String cursor, int limit) {
         scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         Long cursorId = parseCursor(cursor);
         return interactionMapper.listByTask(userId, taskId, cursorId, Math.min(Math.max(limit, 1), 100));
@@ -61,7 +61,7 @@ public class InteractionQueryService {
     public InteractionPageResponse listPage(String userId, String taskId, String cursor, int limit) {
         scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         int pageSize = Math.min(Math.max(limit, 1), 100);
-        List<InteractionRow> rows = interactionMapper.listByTask(userId, taskId, parseCursor(cursor), pageSize + 1);
+        List<InteractionDO> rows = interactionMapper.listByTask(userId, taskId, parseCursor(cursor), pageSize + 1);
         boolean hasMore = rows.size() > pageSize;
         List<InteractionResponse> items = rows.stream()
                 .limit(Math.min(Math.max(limit, 1), 100))
@@ -80,7 +80,7 @@ public class InteractionQueryService {
      * 读取当前用户单个交互视图；不存在统一按 NOT_FOUND 处理。
      */
     public InteractionResponse getOwned(String userId, String interactionId) {
-        InteractionRow row = interactionMapper.findOwned(userId, interactionId);
+        InteractionDO row = interactionMapper.findOwned(userId, interactionId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "交互不存在");
         }
@@ -91,7 +91,7 @@ public class InteractionQueryService {
     /**
      * 列出目标仍开放的交互存储行（快照 pending 来源）。
      */
-    public List<InteractionRow> listOpenByTask(String userId, String taskId) {
+    public List<InteractionDO> listOpenByTask(String userId, String taskId) {
         scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         return interactionMapper.findOpenIds(userId, taskId).stream()
                 .map(id -> interactionMapper.findOwned(userId, id))
@@ -99,7 +99,7 @@ public class InteractionQueryService {
                 .toList();
     }
 
-    public List<InteractionRow> listOpenByScope(String userId, String scopeId) {
+    public List<InteractionDO> listOpenByScope(String userId, String scopeId) {
         scopeService.requireReadable(userId, scopeId);
         return interactionMapper.findOpenByScope(userId, scopeId).stream()
                 .map(id -> interactionMapper.findOwned(userId, id))
@@ -110,10 +110,10 @@ public class InteractionQueryService {
     /**
      * 把存储行映射为对外视图；审批卡附带账本操作上下文供核对与确认摘要比对。
      */
-    public InteractionResponse viewOf(String userId, InteractionRow row) {
+    public InteractionResponse viewOf(String userId, InteractionDO row) {
         Object approvalContext = null;
         if (KIND_APPROVAL.equals(row.kind()) && row.operationId() != null) {
-            OperationRow operation = operationMapper.findOwned(userId, row.operationId());
+            OperationDO operation = operationMapper.findOwned(userId, row.operationId());
             if (operation != null) {
                 Map<String, Object> context = new LinkedHashMap<>();
                 context.put("operationId", operation.operationId());

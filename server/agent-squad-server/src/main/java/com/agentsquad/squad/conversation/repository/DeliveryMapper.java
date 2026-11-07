@@ -1,7 +1,7 @@
 package com.agentsquad.squad.conversation.repository;
 
-import com.agentsquad.squad.domain.entity.DeliveryRow;
-import com.agentsquad.squad.domain.entity.CommandClaimContext;
+import com.agentsquad.squad.domain.entity.DeliveryDO;
+import com.agentsquad.squad.domain.entity.CommandClaimContextDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -55,11 +55,11 @@ public interface DeliveryMapper {
     int claim(@Param("commandId") String commandId, @Param("token") String token,
               @Param("now") LocalDateTime now, @Param("leaseUntil") LocalDateTime leaseUntil);
 
-    CommandClaimContext claimContext(@Param("commandId") String commandId);
+    CommandClaimContextDO claimContext(@Param("commandId") String commandId);
 
     List<String> earlierBlockingReplies(@Param("userId") String userId, @Param("bindingId") String bindingId);
 
-    DeliveryRow findClaimed(@Param("commandId") String commandId, @Param("token") String token);
+    DeliveryDO findClaimed(@Param("commandId") String commandId, @Param("token") String token);
 
     String findSubmitTurnId(@Param("userId") String userId, @Param("taskId") String taskId,
                             @Param("bindingId") String bindingId);

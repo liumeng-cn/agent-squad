@@ -1,0 +1,8 @@
+package com.agentsquad.squad.domain.entity;
+
+/**
+ * 对话数据库查询结果，只承载数据库事实
+ */
+public record ConversationDO(long id, String conversationId, String userId, String title, String status,
+                              String activeTaskId, long generation, long version) {
+}

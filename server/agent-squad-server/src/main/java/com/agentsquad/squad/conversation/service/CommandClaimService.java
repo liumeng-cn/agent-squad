@@ -1,7 +1,7 @@
 package com.agentsquad.squad.conversation.service;
 
 import com.agentsquad.squad.common.observability.ObservationSupport;
-import com.agentsquad.squad.domain.entity.CommandClaimContext;
+import com.agentsquad.squad.domain.entity.CommandClaimContextDO;
 import com.agentsquad.squad.conversation.repository.DeliveryMapper;
 import jakarta.annotation.Resource;
 import com.agentsquad.squad.identity.UserStatusGuard;
@@ -35,7 +35,7 @@ public class CommandClaimService {
 
     @Transactional
     public boolean claim(String commandId, String token, LocalDateTime now, LocalDateTime leaseUntil) {
-        CommandClaimContext context = deliveries.claimContext(commandId);
+        CommandClaimContextDO context = deliveries.claimContext(commandId);
         if (context == null) {
             return false;
         }

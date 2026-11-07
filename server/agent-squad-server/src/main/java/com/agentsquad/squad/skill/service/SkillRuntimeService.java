@@ -4,12 +4,12 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
-import com.agentsquad.squad.domain.entity.SkillCapabilityUnavailableException;
-import com.agentsquad.squad.domain.entity.SkillCatalog;
-import com.agentsquad.squad.domain.entity.SkillPackageValidator;
-import com.agentsquad.squad.domain.entity.SkillReference;
-import com.agentsquad.squad.domain.entity.SkillVersionRow;
-import com.agentsquad.squad.domain.entity.SkillTextFile;
+import com.agentsquad.squad.domain.exception.SkillCapabilityUnavailableException;
+import com.agentsquad.squad.domain.model.SkillCatalog;
+import com.agentsquad.squad.domain.model.SkillPackageValidator;
+import com.agentsquad.squad.domain.entity.SkillReferenceDO;
+import com.agentsquad.squad.domain.entity.SkillVersionDO;
+import com.agentsquad.squad.domain.entity.SkillTextFileDO;
 import com.agentsquad.squad.skill.repository.SkillRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -44,12 +44,12 @@ public class SkillRuntimeService {
         scopes.lockOwned(userId, scopeId, true);
         scopes.requireReadable(userId, scopeId);
         if (!repository.catalogExists(userId, scopeId)) {
-            List<SkillVersionRow> versions = repository.listSelectable(userId);
+            List<SkillVersionDO> versions = repository.listSelectable(userId);
             if (versions.size() > 64) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "可用技能超过 64 项，请停用不需要的技能后重试");
             }
             repository.insertCatalog(userId, scopeId);
-            for (SkillVersionRow version : versions) {
+            for (SkillVersionDO version : versions) {
                 repository.insertReference(userId, scopeId, version);
             }
         }
@@ -72,12 +72,12 @@ public class SkillRuntimeService {
      * 只读取当前 Scope 已固定版本的包内文件；不访问宿主文件系统，不允许名称替代版本身份。
      */
     @Transactional
-    public SkillTextFile read(String userId, String scopeId, String versionId, String path) {
+    public SkillTextFileDO read(String userId, String scopeId, String versionId, String path) {
         scopes.lockOwned(userId, scopeId, false);
         scopes.requireReadable(userId, scopeId);
-        SkillReference reference = requireReference(userId, scopeId, versionId);
+        SkillReferenceDO reference = requireReference(userId, scopeId, versionId);
         validateReferences(userId, List.of(reference));
-        SkillTextFile file = repository.file(userId, versionId, SkillPackageValidator.validatePath(path));
+        SkillTextFileDO file = repository.file(userId, versionId, SkillPackageValidator.validatePath(path));
         if (file == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "技能文件不存在");
         }
@@ -85,10 +85,10 @@ public class SkillRuntimeService {
     }
 
     @Transactional
-    public List<SkillTextFile> files(String userId, String scopeId, String versionId) {
+    public List<SkillTextFileDO> files(String userId, String scopeId, String versionId) {
         scopes.lockOwned(userId, scopeId, false);
         scopes.requireReadable(userId, scopeId);
-        SkillReference reference = requireReference(userId, scopeId, versionId);
+        SkillReferenceDO reference = requireReference(userId, scopeId, versionId);
         validateReferences(userId, List.of(reference));
         return repository.files(userId, versionId);
     }
@@ -100,9 +100,9 @@ public class SkillRuntimeService {
     public void requireCapabilities(String userId, String scopeId, String versionId, Set<String> allowedTools) {
         scopes.lockOwned(userId, scopeId, false);
         scopes.requireReadable(userId, scopeId);
-        SkillReference reference = requireReference(userId, scopeId, versionId);
+        SkillReferenceDO reference = requireReference(userId, scopeId, versionId);
         validateReferences(userId, List.of(reference));
-        SkillVersionRow row = repository.find(userId, versionId);
+        SkillVersionDO row = repository.find(userId, versionId);
         List<String> required;
         try {
             required = RuntimePayloads.readJson(objectMapper, row.requiredToolsJson()).valueStream()
@@ -115,16 +115,16 @@ public class SkillRuntimeService {
         }
     }
 
-    private SkillReference requireReference(String userId, String scopeId, String versionId) {
+    private SkillReferenceDO requireReference(String userId, String scopeId, String versionId) {
         return repository.references(userId, scopeId).stream()
                 .filter(reference -> reference.skillVersionId().equals(versionId)).findFirst()
                 .orElseThrow(() -> new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN,
                         "当前执行未获授权使用此技能版本"));
     }
 
-    private void validateReferences(String userId, List<SkillReference> references) {
-        for (SkillReference reference : references) {
-            SkillVersionRow current = repository.lockVersion(userId, reference.skillVersionId());
+    private void validateReferences(String userId, List<SkillReferenceDO> references) {
+        for (SkillReferenceDO reference : references) {
+            SkillVersionDO current = repository.lockVersion(userId, reference.skillVersionId());
             if (current == null || "REVOKED".equals(current.status())
                     || current.authorizationRevision() != reference.authorizationRevision()
                     || !current.contentHash().equals(reference.contentHash())) {

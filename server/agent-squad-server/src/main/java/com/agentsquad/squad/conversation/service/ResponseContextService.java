@@ -3,24 +3,24 @@ package com.agentsquad.squad.conversation.service;
 import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
 import com.agentsquad.squad.artifact.repository.ArtifactMapper;
 import com.agentsquad.squad.artifact.service.ArtifactService;
-import com.agentsquad.squad.domain.entity.ArtifactRow;
+import com.agentsquad.squad.domain.entity.ArtifactDO;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.MaterialFormatter;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.ExecutionScopeRow;
-import com.agentsquad.squad.domain.entity.ConversationRow;
-import com.agentsquad.squad.domain.entity.TaskRow;
-import com.agentsquad.squad.domain.entity.ResponseTaskFacts;
+import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
+import com.agentsquad.squad.domain.entity.ConversationDO;
+import com.agentsquad.squad.domain.entity.TaskDO;
+import com.agentsquad.squad.domain.model.ResponseTaskFacts;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
 import com.agentsquad.squad.conversation.repository.ResponseTaskFactsMapper;
-import com.agentsquad.squad.domain.entity.ResponseContextMessage;
-import com.agentsquad.squad.domain.entity.ResponseContextMaterial;
-import com.agentsquad.squad.domain.entity.ResponseContextRow;
-import com.agentsquad.squad.domain.entity.ResponseHistoryRow;
-import com.agentsquad.squad.domain.entity.ResponseContextSnapshot;
+import com.agentsquad.squad.domain.model.ResponseContextMessage;
+import com.agentsquad.squad.domain.model.ResponseContextMaterial;
+import com.agentsquad.squad.domain.entity.ResponseContextDO;
+import com.agentsquad.squad.domain.entity.ResponseHistoryDO;
+import com.agentsquad.squad.domain.model.ResponseContextSnapshot;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.repository.ResponseContextMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -89,12 +89,12 @@ public class ResponseContextService {
      */
     @Transactional
     public ResponseContextSnapshot freeze(String userId, String bindingId) {
-        ExecutionScopeRow scope = scopeService.lockOwned(userId,
+        ExecutionScopeDO scope = scopeService.lockOwned(userId,
                 scopeMapper.findScopeByBinding(userId, bindingId), true);
         if (!"RESPONSE".equals(scope.kind())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "只有回复执行可读取会话前缀");
         }
-        ResponseContextRow source = mapper.findSource(userId, bindingId);
+        ResponseContextDO source = mapper.findSource(userId, bindingId);
         if (source == null || !scope.ownerId().equals(source.executionId())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "回复来源消息不存在");
         }
@@ -113,7 +113,7 @@ public class ResponseContextService {
         var excluded = memories.excludedHistoryMessageIds(userId);
         List<ResponseContextMessage> messages = new ArrayList<>();
         long characters = 0;
-        for (ResponseHistoryRow row : mapper.prefix(userId, scope.conversationId(), source.sourceSequence())) {
+        for (ResponseHistoryDO row : mapper.prefix(userId, scope.conversationId(), source.sourceSequence())) {
             String text = excluded.contains(row.messageId()) && !source.sourceMessageId().equals(row.messageId())
                     ? "[已删除或纠正的记忆关联内容不再用于上下文]" : row.text();
             characters += text.length();
@@ -157,7 +157,7 @@ public class ResponseContextService {
     private List<ResponseContextMaterial> buildMaterials(String userId, List<String> artifactIds) {
         List<ResponseContextMaterial> materials = new ArrayList<>();
         for (String artifactId : artifactIds) {
-            ArtifactRow artifact = artifactService.content(userId, artifactId);
+            ArtifactDO artifact = artifactService.content(userId, artifactId);
             String raw = new String(artifact.content(), StandardCharsets.UTF_8);
             String formatted = MaterialFormatter.format(raw, artifact.mediaType(), MAX_MATERIAL_CHARACTERS);
             boolean truncated = formatted.length() < raw.length();
@@ -170,12 +170,12 @@ public class ResponseContextService {
     /**
      * 当前目标与节点按会话→目标→Job顺序读取，与消息材料同事务冻结，不跨模型请求持锁。
      */
-    private ResponseTaskFacts activeTask(ExecutionScopeRow scope) {
-        ConversationRow conversation = conversations.lockOwned(scope.userId(), scope.conversationId());
+    private ResponseTaskFacts activeTask(ExecutionScopeDO scope) {
+        ConversationDO conversation = conversations.lockOwned(scope.userId(), scope.conversationId());
         if (conversation.activeTaskId() == null) {
             return null;
         }
-        TaskRow task = tasks.lockOwnedRow(scope.userId(), conversation.activeTaskId());
+        TaskDO task = tasks.lockOwnedRow(scope.userId(), conversation.activeTaskId());
         if (task == null || !scope.conversationId().equals(task.conversationId())) {
             throw new IllegalStateException("会话当前目标归属不一致");
         }

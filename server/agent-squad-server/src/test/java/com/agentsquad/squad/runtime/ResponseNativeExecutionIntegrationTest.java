@@ -1,7 +1,7 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.domain.entity.DeliveryRow;
+import com.agentsquad.squad.domain.entity.DeliveryDO;
 import com.agentsquad.squad.domain.request.MessageCreateRequest;
 import com.agentsquad.squad.domain.response.MessageReceiptResponse;
 import com.agentsquad.squad.conversation.repository.DeliveryMapper;
@@ -14,8 +14,8 @@ import com.agentsquad.squad.runtime.service.CompletionProposalService;
 import com.agentsquad.squad.conversation.service.ResponseExecutionService;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import com.agentsquad.squad.integration.agentscope.NativeSessionGateway;
-import com.agentsquad.squad.domain.entity.MasterAgentIdentity;
-import com.agentsquad.squad.domain.entity.ProjectionTarget;
+import com.agentsquad.squad.domain.model.MasterAgentIdentity;
+import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -198,7 +198,7 @@ class ResponseNativeExecutionIntegrationTest {
                 String token = UUID.randomUUID().toString();
                 LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
                 assertThat(deliveries.claim(receipt.commandId(), token, now, now.plusSeconds(60))).isEqualTo(1);
-                DeliveryRow delivery = deliveries.findClaimed(receipt.commandId(), token);
+                DeliveryDO delivery = deliveries.findClaimed(receipt.commandId(), token);
                 NativeSessionGateway gateway = context.getBean(NativeSessionGateway.class);
                 if (saveReceipt) {
                     turn = gateway.submit(delivery, "主角叫小明").turnId();
@@ -208,7 +208,7 @@ class ResponseNativeExecutionIntegrationTest {
                     turn = previous.session(RuntimeContext.builder().userId(USER).sessionId(delivery.sessionId()).build())
                             .submit(delivery.commandId(), "主角叫小明").turnId();
                 }
-                ProjectionTarget target = target(delivery);
+                ProjectionTargetDO target = target(delivery);
                 for (int i = 0; i < 150; i++) {
                     if ("completed".equals(gateway.inspectTask(target, receipt.commandId()).status())) {
                         break;
@@ -234,7 +234,7 @@ class ResponseNativeExecutionIntegrationTest {
                 assertThat(model.calls.get()).isEqualTo(2);
                 String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
                 String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
-                ProjectionTarget target = new ProjectionTarget(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
+                ProjectionTargetDO target = new ProjectionTargetDO(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
                 for (var event : context.getBean(NativeSessionGateway.class).readEvents(target, 0, 100)) {
                     context.getBean(NativeProjectionService.class).accept(target, event);
                 }
@@ -299,7 +299,7 @@ class ResponseNativeExecutionIntegrationTest {
             String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
             String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
             String turn = UUID.randomUUID().toString();
-            ProjectionTarget target = new ProjectionTarget(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
+            ProjectionTargetDO target = new ProjectionTargetDO(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
             NativeProjectionService projector = context.getBean(NativeProjectionService.class);
             projector.accept(target, new NativeEventView(1, "start", "run/start", "run", turn, null, 0, java.util.Map.of()));
             context.getBean(CompletionProposalService.class).propose(USER, session, turn, "proposal", "SUCCEEDED", "不应公开的旧候选");
@@ -319,7 +319,7 @@ class ResponseNativeExecutionIntegrationTest {
             String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
             String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
             String turn = UUID.randomUUID().toString();
-            ProjectionTarget target = new ProjectionTarget(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
+            ProjectionTargetDO target = new ProjectionTargetDO(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
             NativeProjectionService projector = context.getBean(NativeProjectionService.class);
             projector.accept(target, new NativeEventView(1, "start", "run/start", "run", turn, null, 0, java.util.Map.of()));
             String operation = UUID.randomUUID().toString();
@@ -417,7 +417,7 @@ class ResponseNativeExecutionIntegrationTest {
         assertThat(status).isEqualTo(expected);
     }
 
-    private ProjectionTarget target(DeliveryRow delivery) {
-        return new ProjectionTarget(USER, null, delivery.bindingId(), delivery.agentId(), delivery.sessionId(), 0);
+    private ProjectionTargetDO target(DeliveryDO delivery) {
+        return new ProjectionTargetDO(USER, null, delivery.bindingId(), delivery.agentId(), delivery.sessionId(), 0);
     }
 }

@@ -1,8 +1,8 @@
 package com.agentsquad.squad.presentation.service;
 
 import com.agentsquad.squad.config.RedisWakeupProperties;
-import com.agentsquad.squad.domain.entity.ConversationWakeupNotice;
-import com.agentsquad.squad.domain.entity.ConversationPreviewNotice;
+import com.agentsquad.squad.domain.model.ConversationWakeupNotice;
+import com.agentsquad.squad.domain.model.ConversationPreviewNotice;
 import com.agentsquad.squad.domain.dto.ReplyPreview;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;

@@ -1,10 +1,10 @@
 package com.agentsquad.squad.tools.operation;
 
-import com.agentsquad.squad.domain.entity.OperationRow;
+import com.agentsquad.squad.domain.entity.OperationDO;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.runtime.service.ExecutionFailureService;
-import com.agentsquad.squad.domain.entity.FailureClassification;
+import com.agentsquad.squad.domain.model.FailureClassification;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +27,7 @@ public class OperationUnknownService {
     private ExecutionFailureService failures;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public boolean mark(OperationRow operation, long expectedVersion, String actor) {
+    public boolean mark(OperationDO operation, long expectedVersion, String actor) {
         var scope = scopes.lockOwned(operation.userId(), operation.scopeId(), false);
         if (operations.markUnknown(operation.userId(), operation.operationId(), expectedVersion, actor) != 1) {
             return false;

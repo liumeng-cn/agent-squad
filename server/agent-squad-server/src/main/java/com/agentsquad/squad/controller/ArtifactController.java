@@ -1,6 +1,6 @@
 package com.agentsquad.squad.controller;
 
-import com.agentsquad.squad.domain.entity.ArtifactRow;
+import com.agentsquad.squad.domain.entity.ArtifactDO;
 import com.agentsquad.squad.domain.response.ArtifactResponse;
 import com.agentsquad.squad.artifact.service.ArtifactService;
 import com.agentsquad.squad.common.model.ApiResult;
@@ -60,7 +60,7 @@ public class ArtifactController {
     @GetMapping("/artifacts/{artifactId}/content")
     public ResponseEntity<byte[]> download(HttpServletRequest servletRequest,
                                            @PathVariable String artifactId) {
-        ArtifactRow row = artifactService.content(UserContext.current(servletRequest).userId(), artifactId);
+        ArtifactDO row = artifactService.content(UserContext.current(servletRequest).userId(), artifactId);
         return ResponseEntity.ok().contentType(MediaType.parseMediaType(row.mediaType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
                         .filename(row.fileName(), StandardCharsets.UTF_8).build().toString())

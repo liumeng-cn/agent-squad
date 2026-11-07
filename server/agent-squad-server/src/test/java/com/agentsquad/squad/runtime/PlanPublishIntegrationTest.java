@@ -5,7 +5,7 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.domain.dto.ConversationResponse;
 import com.agentsquad.squad.domain.response.TaskReceiptResponse;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
-import com.agentsquad.squad.domain.entity.ProjectionTarget;
+import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.integration.agentscope.middleware.ScopedMasterToolsMiddleware;
 import com.agentsquad.squad.domain.dto.PlanNode;
@@ -358,7 +358,7 @@ class PlanPublishIntegrationTest {
             org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "commandMapper", commands);
             var transaction = new org.springframework.transaction.support.TransactionTemplate(context.getBean(org.springframework.transaction.PlatformTransactionManager.class));
             assertThat(transaction.<Boolean>execute(status -> finalizer.recoverMissingProposal(
-                    new ProjectionTarget(userId, task.taskId(), masterBinding, "master", sessionId, 0),
+                    new ProjectionTargetDO(userId, task.taskId(), masterBinding, "master", sessionId, 0),
                     new com.agentsquad.squad.integration.agentscope.NativeEventView(100, "old-end", "run/end", "old-run", "old-plan-signal", "completed", 1000, java.util.Map.of()))))
                     .isTrue();
             assertThat(jdbc.queryForObject("SELECT completion_correction_count FROM sq_goal_task WHERE task_id = ?", Integer.class, task.taskId())).isZero();

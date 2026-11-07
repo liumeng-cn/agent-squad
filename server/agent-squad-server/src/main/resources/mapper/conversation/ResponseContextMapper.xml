@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.conversation.repository.ResponseContextMapper">
 
-    <resultMap id="findSourceResult" type="com.agentsquad.squad.domain.entity.ResponseContextRow">
+    <resultMap id="findSourceResult" type="com.agentsquad.squad.domain.entity.ResponseContextDO">
         <constructor>
             <arg column="execution_id" javaType="java.lang.String"/>
             <arg column="source_message_id" javaType="java.lang.String"/>
@@ -12,7 +12,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="prefixResult" type="com.agentsquad.squad.domain.entity.ResponseHistoryRow">
+    <resultMap id="prefixResult" type="com.agentsquad.squad.domain.entity.ResponseHistoryDO">
         <constructor>
             <arg column="message_id" javaType="java.lang.String"/>
             <arg column="message_seq" javaType="_long"/>

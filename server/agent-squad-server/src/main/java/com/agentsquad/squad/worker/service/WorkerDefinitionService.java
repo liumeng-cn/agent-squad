@@ -8,7 +8,7 @@ import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.JsonSchemaValidator;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.domain.entity.WorkerDefinitionRow;
+import com.agentsquad.squad.domain.entity.WorkerDefinitionDO;
 import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
 import com.agentsquad.squad.domain.response.WorkerDefinitionPageResponse;
 import com.agentsquad.squad.domain.dto.WorkerDefinitionResponse;
@@ -71,7 +71,7 @@ public class WorkerDefinitionService {
         }
         String hash = ContentDigests.sha256(json);
 
-        WorkerDefinitionRow prior = definitionMapper.findByPublishKey(actor.userId(), idempotencyKey);
+        WorkerDefinitionDO prior = definitionMapper.findByPublishKey(actor.userId(), idempotencyKey);
         if (prior != null) {
             return requireSamePayload(prior, hash);
         }
@@ -81,7 +81,7 @@ public class WorkerDefinitionService {
             definitionMapper.insert(definitionId, request.workerKey(), request.workerVersion(),
                     json, idempotencyKey, hash, actor.userId(), actor.username());
         } catch (DuplicateKeyException exception) {
-            WorkerDefinitionRow concurrent = definitionMapper.findByPublishKey(actor.userId(), idempotencyKey);
+            WorkerDefinitionDO concurrent = definitionMapper.findByPublishKey(actor.userId(), idempotencyKey);
             if (concurrent != null) {
                 return requireSamePayload(concurrent, hash);
             }
@@ -98,7 +98,7 @@ public class WorkerDefinitionService {
     public WorkerDefinitionPageResponse list(String cursor, int limit) {
         long afterId = parseCursor(cursor);
         int pageSize = Math.clamp(limit, 1, 100);
-        List<WorkerDefinitionRow> rows = definitionMapper.listAfter(afterId, pageSize);
+        List<WorkerDefinitionDO> rows = definitionMapper.listAfter(afterId, pageSize);
         String nextCursor = rows.size() == pageSize ? String.valueOf(rows.getLast().id()) : null;
         return new WorkerDefinitionPageResponse(rows.stream().map(this::toResponse).toList(), nextCursor);
     }
@@ -109,7 +109,7 @@ public class WorkerDefinitionService {
     public WorkerDefinitionPageResponse listEnabled(String cursor, int limit) {
         long afterId = parseCursor(cursor);
         int pageSize = Math.clamp(limit, 1, 20);
-        List<WorkerDefinitionRow> rows = definitionMapper.listEnabledAfter(afterId, pageSize);
+        List<WorkerDefinitionDO> rows = definitionMapper.listEnabledAfter(afterId, pageSize);
         String nextCursor = rows.size() == pageSize ? String.valueOf(rows.get(rows.size() - 1).id()) : null;
         return new WorkerDefinitionPageResponse(rows.stream().map(this::toResponse).toList(), nextCursor);
     }
@@ -118,7 +118,7 @@ public class WorkerDefinitionService {
      * 派发前重新解析已启用的不可变能力版本；停用与撤销立即阻止新启动。
      */
     public WorkerDefinitionResponse requireEnabled(String workerKey, String workerVersion) {
-        WorkerDefinitionRow row = definitionMapper.findEnabled(workerKey, workerVersion);
+        WorkerDefinitionDO row = definitionMapper.findEnabled(workerKey, workerVersion);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "Worker 能力版本不可用");
         }
@@ -129,7 +129,7 @@ public class WorkerDefinitionService {
      * 已启动 Job 恢复时读取不可变版本正文；停用只阻止新启动，不改变在途节点契约。
      */
     public WorkerDefinitionResponse requirePublished(String workerKey, String workerVersion) {
-        WorkerDefinitionRow row = definitionMapper.findPublished(workerKey, workerVersion);
+        WorkerDefinitionDO row = definitionMapper.findPublished(workerKey, workerVersion);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND,
                     "Worker 能力版本不存在");
@@ -145,7 +145,7 @@ public class WorkerDefinitionService {
                                                  String idempotencyKey, WorkerStatusUpdateRequest request) {
         requireAdmin(actor);
         requireIdempotencyKey(idempotencyKey);
-        WorkerDefinitionRow current = requireDefinition(definitionId);
+        WorkerDefinitionDO current = requireDefinition(definitionId);
         String hash = ContentDigests.sha256(request.expectedVersion() + ":" + request.status());
         if (idempotencyKey.equals(current.lastStatusKey())
                 && actor.userId().equals(current.lastStatusActor())) {
@@ -171,22 +171,22 @@ public class WorkerDefinitionService {
         return toResponse(requireDefinition(definitionId));
     }
 
-    private WorkerDefinitionRow requireDefinition(String definitionId) {
-        WorkerDefinitionRow row = definitionMapper.findByDefinitionId(definitionId);
+    private WorkerDefinitionDO requireDefinition(String definitionId) {
+        WorkerDefinitionDO row = definitionMapper.findByDefinitionId(definitionId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "Worker 能力定义不存在");
         }
         return row;
     }
 
-    private WorkerDefinitionResponse requireSamePayload(WorkerDefinitionRow row, String hash) {
+    private WorkerDefinitionResponse requireSamePayload(WorkerDefinitionDO row, String hash) {
         if (!hash.equals(row.payloadHash())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "幂等键对应的 Worker 定义不同");
         }
         return toResponse(row);
     }
 
-    private WorkerDefinitionResponse toResponse(WorkerDefinitionRow row) {
+    private WorkerDefinitionResponse toResponse(WorkerDefinitionDO row) {
         try {
             WorkerDefinitionCreateRequest definition = objectMapper.treeToValue(
                     RuntimePayloads.readJson(objectMapper, row.definitionJson()),

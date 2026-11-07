@@ -14,7 +14,7 @@ import com.agentsquad.squad.interaction.service.InteractionQueryService;
 import com.agentsquad.squad.tools.operation.OperationExecutor;
 import com.agentsquad.squad.tools.operation.OperationService;
 import com.agentsquad.squad.tools.operation.PrepareRequest;
-import com.agentsquad.squad.domain.entity.OperationRow;
+import com.agentsquad.squad.domain.entity.OperationDO;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.event.ModelCallEndEvent;
 import io.agentscope.core.middleware.ModelCallInput;
@@ -114,7 +114,7 @@ class ScopeRuntimeOwnershipIntegrationTest {
 
         OperationService operations = context.getBean(OperationService.class);
         OperationExecutor executor = context.getBean(OperationExecutor.class);
-        OperationRow read = operations.prepare(request(execution, "read-1", "mock_lookup", "READ", null, false, 2));
+        OperationDO read = operations.prepare(request(execution, "read-1", "mock_lookup", "READ", null, false, 2));
         assertThat(read.taskId()).isNull();
         assertThat(read.scopeId()).isEqualTo(execution.scopeId());
         assertThat(executor.execute(read, key -> "{\"found\":true}")).contains("found");
@@ -122,14 +122,14 @@ class ScopeRuntimeOwnershipIntegrationTest {
         PrepareRequest anotherTurn = new PrepareRequest(userId, execution.sessionId(), "another-turn", "read-1",
                 "mock_lookup", "v1", "READ", Map.of("title", "受控测试", "detail", "仅本地模拟系统"),
                 null, false, null, 0, 2, "tester");
-        OperationRow secondRead = operations.prepare(anotherTurn);
+        OperationDO secondRead = operations.prepare(anotherTurn);
         assertThat(secondRead.budgetUsageKey()).isNotEqualTo(read.budgetUsageKey());
         assertThat(secondRead.operationId()).isNotEqualTo(read.operationId());
         executor.execute(secondRead, key -> "{}");
         operations.settle(secondRead, 2);
 
 
-        OperationRow write = operations.prepare(request(execution, "approve-1", "mock_ticket_create", "WRITE", "intent-1", true, 1000000));
+        OperationDO write = operations.prepare(request(execution, "approve-1", "mock_ticket_create", "WRITE", "intent-1", true, 1000000));
         assertThat(operations.prepare(request(execution, "other-call", "mock_ticket_create", "WRITE", "intent-1", true, 1000000)).operationId())
                 .isEqualTo(write.operationId());
         InteractionService interactions = context.getBean(InteractionService.class);
@@ -158,9 +158,9 @@ class ScopeRuntimeOwnershipIntegrationTest {
                 Integer.class, userId, execution.scopeId())).isEqualTo(2);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_goal_task WHERE user_id = ?", Integer.class, userId)).isZero();
 
-        OperationRow stopped = operations.prepare(request(execution, "stop-1", "mock_lookup", "READ", null, false, 2));
+        OperationDO stopped = operations.prepare(request(execution, "stop-1", "mock_lookup", "READ", null, false, 2));
         // 仅验证受控执行器的未知结果边界，不把连接器异常误记成“确定未执行”。
-        OperationRow uncertain = operations.prepare(request(execution, "uncertain-1", "mock_ticket_create", "WRITE", "intent-uncertain", true, 1000000));
+        OperationDO uncertain = operations.prepare(request(execution, "uncertain-1", "mock_ticket_create", "WRITE", "intent-uncertain", true, 1000000));
         AtomicInteger uncertainCalls = new AtomicInteger();
         assertThatThrownBy(() -> executor.execute(uncertain, key -> {
             uncertainCalls.incrementAndGet();

@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.presentation.repository.ConversationReadMapper">
 
-    <resultMap id="headerResult" type="com.agentsquad.squad.domain.entity.ConversationHeader">
+    <resultMap id="headerResult" type="com.agentsquad.squad.domain.entity.ConversationHeaderDO">
         <constructor>
             <arg column="conversation_id" javaType="java.lang.String"/>
             <arg column="title" javaType="java.lang.String"/>
@@ -17,7 +17,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="messagesResult" type="com.agentsquad.squad.domain.entity.ConversationMessageRow">
+    <resultMap id="messagesResult" type="com.agentsquad.squad.domain.entity.ConversationMessageDO">
         <constructor>
             <arg column="message_id" javaType="java.lang.String"/>
             <arg column="sequence" javaType="_long"/>
@@ -32,7 +32,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="activeExecutionsResult" type="com.agentsquad.squad.domain.entity.ConversationExecution">
+    <resultMap id="activeExecutionsResult" type="com.agentsquad.squad.domain.entity.ConversationExecutionDO">
         <constructor>
             <arg column="execution_id" javaType="java.lang.String"/>
             <arg column="source_message_id" javaType="java.lang.String"/>
@@ -44,7 +44,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="eventsResult" type="com.agentsquad.squad.domain.entity.ConversationEventRow">
+    <resultMap id="eventsResult" type="com.agentsquad.squad.domain.entity.ConversationEventDO">
         <constructor>
             <arg column="generation" javaType="_long"/>
             <arg column="sequence" javaType="_long"/>
@@ -54,7 +54,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="conversationsResult" type="com.agentsquad.squad.domain.entity.ConversationHeader">
+    <resultMap id="conversationsResult" type="com.agentsquad.squad.domain.entity.ConversationHeaderDO">
         <constructor>
             <arg column="conversation_id" javaType="java.lang.String"/>
             <arg column="title" javaType="java.lang.String"/>
@@ -69,7 +69,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="pageExecutionsResult" type="com.agentsquad.squad.domain.entity.ConversationExecution">
+    <resultMap id="pageExecutionsResult" type="com.agentsquad.squad.domain.entity.ConversationExecutionDO">
         <constructor>
             <arg column="execution_id" javaType="java.lang.String"/>
             <arg column="source_message_id" javaType="java.lang.String"/>
@@ -81,7 +81,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="pageTasksResult" type="com.agentsquad.squad.domain.entity.ConversationTaskState">
+    <resultMap id="pageTasksResult" type="com.agentsquad.squad.domain.entity.ConversationTaskStateDO">
         <constructor>
             <arg column="task_id" javaType="java.lang.String"/>
             <arg column="source_message_id" javaType="java.lang.String"/>

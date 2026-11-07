@@ -2,7 +2,7 @@ package com.agentsquad.squad.artifact.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.domain.entity.ArtifactRow;
+import com.agentsquad.squad.domain.entity.ArtifactDO;
 import com.agentsquad.squad.domain.response.ArtifactResponse;
 import com.agentsquad.squad.artifact.repository.ArtifactMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
@@ -73,7 +73,7 @@ public class ArtifactService {
             throw invalid("文件必须采用 UTF-8 编码");
         }
         String hash = digest(content);
-        ArtifactRow prior = mapper.findUpload(userId, key);
+        ArtifactDO prior = mapper.findUpload(userId, key);
         if (prior != null) {
             return sameUpload(userId, prior, name, hash);
         }
@@ -96,8 +96,8 @@ public class ArtifactService {
     /**
      * 下载前重验资源归属、有效期和存储摘要；不返回未经完整性校验的字节。
      */
-    public ArtifactRow content(String userId, String id) {
-        ArtifactRow row = mapper.findContent(userId, id);
+    public ArtifactDO content(String userId, String id) {
+        ArtifactDO row = mapper.findContent(userId, id);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "产物不存在、已过期或无权访问");
         }
@@ -158,22 +158,22 @@ public class ArtifactService {
         return mapper.listScopeIds(userId, scopeId).contains(id);
     }
 
-    private ArtifactResponse sameUpload(String userId, ArtifactRow row, String name, String hash) {
+    private ArtifactResponse sameUpload(String userId, ArtifactDO row, String name, String hash) {
         if (row == null || !row.fileName().equals(name) || !row.sha256().equals(hash)) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同上传键的文件不一致");
         }
         return get(userId, row.artifactId());
     }
 
-    private ArtifactRow requireOwned(String userId, String id) {
-        ArtifactRow row = mapper.findOwned(userId, id);
+    private ArtifactDO requireOwned(String userId, String id) {
+        ArtifactDO row = mapper.findOwned(userId, id);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "产物不存在、已过期或无权访问");
         }
         return row;
     }
 
-    private ArtifactResponse view(ArtifactRow row) {
+    private ArtifactResponse view(ArtifactDO row) {
         return new ArtifactResponse(row.artifactId(), row.fileName(), row.mediaType(), row.sizeBytes(),
                 row.sha256(), "READY", row.expiresAt().atOffset(ZoneOffset.UTC).toString());
     }

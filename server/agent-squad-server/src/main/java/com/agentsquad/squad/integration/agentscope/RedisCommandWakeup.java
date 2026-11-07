@@ -1,8 +1,8 @@
 package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.config.RedisWakeupProperties;
-import com.agentsquad.squad.domain.entity.CommandClaimContext;
-import com.agentsquad.squad.domain.entity.RuntimeCommandAction;
+import com.agentsquad.squad.domain.entity.CommandClaimContextDO;
+import com.agentsquad.squad.domain.enums.RuntimeCommandAction;
 import com.agentsquad.squad.conversation.repository.DeliveryMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
@@ -75,7 +75,7 @@ public class RedisCommandWakeup {
      */
     public boolean publish(String commandId) {
         try {
-            CommandClaimContext owner = commands.claimContext(commandId);
+            CommandClaimContextDO owner = commands.claimContext(commandId);
             if (owner == null) {
                 return false;
             }
@@ -130,7 +130,7 @@ public class RedisCommandWakeup {
             streams().delete(stream(channel), record.getId());
             return;
         }
-        CommandClaimContext owner = commands.claimContext(commandId);
+        CommandClaimContextDO owner = commands.claimContext(commandId);
         if (owner == null || !"1".equals(record.getValue().get("schemaVersion"))
                 || !owner.userId().equals(record.getValue().get("userId"))
                 || !owner.bindingId().equals(record.getValue().get("bindingId")) || channel(owner) != channel) {
@@ -184,7 +184,7 @@ public class RedisCommandWakeup {
         return redis.opsForStream();
     }
 
-    private RedisWakeupChannel channel(CommandClaimContext owner) {
+    private RedisWakeupChannel channel(CommandClaimContextDO owner) {
         return RuntimeCommandAction.STOP.name().equals(owner.action()) || RuntimeCommandAction.RESPOND.name().equals(owner.action())
                 ? RedisWakeupChannel.CONTROL : RedisWakeupChannel.COMMAND;
     }

@@ -1,6 +1,6 @@
 package com.agentsquad.squad.tools.repository;
 
-import com.agentsquad.squad.domain.entity.ConnectionRow;
+import com.agentsquad.squad.domain.entity.ConnectionDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -19,13 +19,13 @@ public interface ConnectionMapper {
                @Param("secretRef") String secretRef,
                @Param("createIdempotencyKey") String createIdempotencyKey);
 
-    ConnectionRow findOwned(@Param("userId") String userId,
+    ConnectionDO findOwned(@Param("userId") String userId,
                             @Param("connectionId") String connectionId);
 
-    ConnectionRow findByIdempotencyKey(@Param("userId") String userId,
+    ConnectionDO findByIdempotencyKey(@Param("userId") String userId,
                                        @Param("createIdempotencyKey") String createIdempotencyKey);
 
-    List<ConnectionRow> listByOwner(@Param("userId") String userId,
+    List<ConnectionDO> listByOwner(@Param("userId") String userId,
                                     @Param("cursorId") Long cursorId, @Param("limit") int limit);
 
     int updateOwned(@Param("userId") String userId,

@@ -7,9 +7,9 @@ import com.agentsquad.squad.common.util.CanonicalJson;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.domain.dto.ContextMaterial;
 import com.agentsquad.squad.domain.dto.ContextPreparationRequest;
-import com.agentsquad.squad.domain.entity.GoalTaskStatus;
-import com.agentsquad.squad.domain.entity.ContextPreparationRow;
-import com.agentsquad.squad.domain.entity.ContextSnapshotRow;
+import com.agentsquad.squad.domain.enums.GoalTaskStatus;
+import com.agentsquad.squad.domain.entity.ContextPreparationDO;
+import com.agentsquad.squad.domain.entity.ContextSnapshotDO;
 import com.agentsquad.squad.domain.dto.ContextSnapshotReceipt;
 import com.agentsquad.squad.runtime.repository.ContextSnapshotMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -89,7 +89,7 @@ public class ContextSnapshotService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "局部上下文键无效");
         }
         executionScopes.lockOwned(userId, executionScopes.scopeForSession(userId, sessionId), true);
-        ContextPreparationRow context = snapshotMapper.lockPreparation(userId, sessionId);
+        ContextPreparationDO context = snapshotMapper.lockPreparation(userId, sessionId);
         if (context == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "Master 会话未绑定活跃目标");
         }
@@ -100,7 +100,7 @@ public class ContextSnapshotService {
         }
 
         long goalRevision = directives.goalState(userId, context.taskId()).goalRevision();
-        ContextSnapshotRow prior = snapshotMapper.findByLogicalKey(userId, context.taskId(),
+        ContextSnapshotDO prior = snapshotMapper.findByLogicalKey(userId, context.taskId(),
                 targetNodeKey, logicalKey);
         if (prior != null) {
             if (prior.conversationGeneration() != context.conversationGeneration() || prior.goalRevision() != goalRevision) {

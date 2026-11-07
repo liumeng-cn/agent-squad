@@ -1,6 +1,6 @@
 package com.agentsquad.squad.artifact.repository;
 
-import com.agentsquad.squad.domain.entity.ArtifactStageRow;
+import com.agentsquad.squad.domain.entity.ArtifactStageDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -17,11 +17,11 @@ public interface ArtifactDeliveryMapper {
                @Param("fileName") String fileName, @Param("hash") String hash, @Param("content") byte[] content,
                @Param("expiresAt") java.time.LocalDateTime expiresAt);
 
-    ArtifactStageRow find(@Param("userId") String userId, @Param("stageId") String stageId);
+    ArtifactStageDO find(@Param("userId") String userId, @Param("stageId") String stageId);
 
-    ArtifactStageRow lock(@Param("userId") String userId, @Param("stageId") String stageId);
+    ArtifactStageDO lock(@Param("userId") String userId, @Param("stageId") String stageId);
 
-    ArtifactStageRow findPath(@Param("userId") String userId, @Param("executionId") String executionId,
+    ArtifactStageDO findPath(@Param("userId") String userId, @Param("executionId") String executionId,
                               @Param("workspaceKey") String workspaceKey);
 
     int commit(@Param("userId") String userId, @Param("stageId") String stageId,

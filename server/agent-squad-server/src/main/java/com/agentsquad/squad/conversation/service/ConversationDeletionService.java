@@ -4,12 +4,12 @@ import com.agentsquad.squad.presentation.service.TaskEventPublishingService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
-import com.agentsquad.squad.domain.entity.CommandRow;
-import com.agentsquad.squad.domain.entity.ConversationRow;
-import com.agentsquad.squad.domain.entity.ConversationStatus;
-import com.agentsquad.squad.domain.entity.GoalTaskStatus;
-import com.agentsquad.squad.domain.entity.RuntimeCommandAction;
-import com.agentsquad.squad.domain.entity.TaskRow;
+import com.agentsquad.squad.domain.entity.CommandDO;
+import com.agentsquad.squad.domain.entity.ConversationDO;
+import com.agentsquad.squad.domain.enums.ConversationStatus;
+import com.agentsquad.squad.domain.enums.GoalTaskStatus;
+import com.agentsquad.squad.domain.enums.RuntimeCommandAction;
+import com.agentsquad.squad.domain.entity.TaskDO;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.conversation.repository.TaskEventMapper;
@@ -80,7 +80,7 @@ public class ConversationDeletionService {
         if (idempotencyKey == null || idempotencyKey.isBlank() || idempotencyKey.length() > 160) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "幂等键长度必须为 1 到 160");
         }
-        ConversationRow conversation = conversationMapper.lockOwned(userId, conversationId);
+        ConversationDO conversation = conversationMapper.lockOwned(userId, conversationId);
         if (conversation == null || ConversationStatus.DELETED.name().equals(conversation.status())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "会话不存在");
         }
@@ -88,7 +88,7 @@ public class ConversationDeletionService {
         String payloadJson = RuntimePayloads.toJson(objectMapper, Map.of(
                 "action", RuntimeCommandAction.DELETE_CONVERSATION.name(), "expectedVersion", expectedVersion));
         String payloadHash = ContentDigests.sha256(payloadJson);
-        CommandRow prior = commandMapper.findByKey(userId, scopeKey, idempotencyKey);
+        CommandDO prior = commandMapper.findByKey(userId, scopeKey, idempotencyKey);
         if (prior != null) {
             if (!prior.payloadHash().equals(payloadHash)) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同幂等键的输入不一致");
@@ -118,7 +118,7 @@ public class ConversationDeletionService {
     }
 
     private void settleActiveTask(String userId, String conversationId, String taskId, LocalDateTime now) {
-        TaskRow task = taskMapper.lockOwned(userId, taskId);
+        TaskDO task = taskMapper.lockOwned(userId, taskId);
         if (task == null || GoalTaskStatus.valueOf(task.status()).isTerminal()) {
             conversationMapper.clearActiveTask(userId, conversationId, taskId);
             return;

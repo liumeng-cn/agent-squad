@@ -1,7 +1,7 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.agent.tool.RequestAcceptanceReviewTool;
-import com.agentsquad.squad.domain.entity.UserAcceptanceReview;
+import com.agentsquad.squad.domain.model.UserAcceptanceReview;
 import com.agentsquad.squad.domain.dto.AcceptanceReviewRequest;
 import com.agentsquad.squad.runtime.service.PlanAcceptanceService;
 import com.fasterxml.jackson.databind.ObjectMapper;

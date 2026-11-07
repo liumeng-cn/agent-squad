@@ -1,11 +1,16 @@
 package com.agentsquad.squad.runtime.service;
 
+import com.agentsquad.squad.domain.entity.CompletionContextDO;
+import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
+import com.agentsquad.squad.domain.enums.GoalTaskStatus;
+import com.agentsquad.squad.domain.enums.PlanJoinStage;
+import com.agentsquad.squad.domain.model.PlanAcceptanceResult;
+
 import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 
 import com.agentsquad.squad.domain.dto.CompletionSubmission;
-import com.agentsquad.squad.domain.entity.*;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.conversation.service.ResponseExecutionService;
@@ -92,14 +97,14 @@ public class CompletionProposalService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "完成候选内容无效");
         }
 
-        ExecutionScopeRow scope = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), true);
+        ExecutionScopeDO scope = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), true);
         if ("RESPONSE".equals(scope.kind())) {
             return responses.propose(userId, scopeMapper.findBindingBySession(userId, sessionId), turnId, toolCallId, outcome, finalAnswer);
         }
         if (!directives.pending(userId, scope.ownerId()).isEmpty()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "尚有用户要求待协调处理，请结束当前回合等待修改通知");
         }
-        CompletionContextRow context = completionMapper.lockByMasterSession(userId, sessionId);
+        CompletionContextDO context = completionMapper.lockByMasterSession(userId, sessionId);
         if (context == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "Master 会话未绑定目标");
         }

@@ -4,11 +4,11 @@ import com.agentsquad.squad.agent.tool.ReportJobResultTool;
 import com.agentsquad.squad.common.util.CanonicalJson;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.WorkerExecutionIdentity;
+import com.agentsquad.squad.domain.model.WorkerExecutionIdentity;
 import com.agentsquad.squad.integration.agentscope.middleware.ModelBudgetMiddleware;
 import com.agentsquad.squad.integration.agentscope.middleware.ProfiledModelBudgetMiddleware;
-import com.agentsquad.squad.domain.entity.ContextSnapshotRow;
-import com.agentsquad.squad.domain.entity.WorkerLaunchRow;
+import com.agentsquad.squad.domain.entity.ContextSnapshotDO;
+import com.agentsquad.squad.domain.entity.WorkerLaunchDO;
 import com.agentsquad.squad.runtime.repository.ContextSnapshotMapper;
 import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
 import com.agentsquad.squad.runtime.service.WorkerDispatchService;
@@ -128,7 +128,7 @@ public class WorkerFactory {
     @Scheduled(fixedDelayString = "${agentsquad.worker.prune-delay-ms:60000}")
     public void pruneFinished() {
         for (WorkerAgentHandle handle : active.values()) {
-            WorkerLaunchRow job = dispatchMapper.findByBinding(handle.userId(), handle.bindingId());
+            WorkerLaunchDO job = dispatchMapper.findByBinding(handle.userId(), handle.bindingId());
             if (job != null && java.util.Set.of("READY", "RUNNING", "WAITING_INPUT",
                     "WAITING_APPROVAL", "RECONCILING", "CANCELLING").contains(job.jobStatus())) {
                 continue;
@@ -163,9 +163,9 @@ public class WorkerFactory {
 
         context.put(WorkerExecutionIdentity.class,
                 new WorkerExecutionIdentity(bindingId, handle.guardToken()));
-        WorkerLaunchRow job = dispatchMapper.findByBinding(userId, bindingId);
+        WorkerLaunchDO job = dispatchMapper.findByBinding(userId, bindingId);
         JsonNode selectedInput = readInput(job.inputJson());
-        ContextSnapshotRow selected = snapshotMapper.findOwned(userId, job.taskId(), selectedInput.path("contextSnapshotId").asText());
+        ContextSnapshotDO selected = snapshotMapper.findOwned(userId, job.taskId(), selectedInput.path("contextSnapshotId").asText());
         java.util.List<String> ids = new java.util.ArrayList<>();
         for (JsonNode item : readInput(selected.itemsJson())) {
             if ("SKILL_REFERENCE".equals(item.path("kind").asText())) {
@@ -192,7 +192,7 @@ public class WorkerFactory {
 
     private WorkerAgentHandle create(String userId, String bindingId,
                                      String sessionId, String agentId) {
-        WorkerLaunchRow job = dispatchMapper.findByBinding(userId, bindingId);
+        WorkerLaunchDO job = dispatchMapper.findByBinding(userId, bindingId);
         if (job == null || !"ACTIVE".equals(job.planStatus())
                 || job.cancelRequestedAt() != null) {
             throw new IllegalStateException("Worker Binding 不可执行");
@@ -217,12 +217,12 @@ public class WorkerFactory {
             throw new IllegalStateException("Worker 固定输入无法读取", exception);
         }
         String snapshotId = input.path("contextSnapshotId").asText(null);
-        ContextSnapshotRow snapshot = snapshotMapper.findOwned(userId, job.taskId(), snapshotId);
+        ContextSnapshotDO snapshot = snapshotMapper.findOwned(userId, job.taskId(), snapshotId);
         if (snapshot == null || !job.nodeKey().equals(snapshot.targetNodeKey())
                 || !CanonicalJson.sha256(objectMapper, snapshot.itemsJson()).equals(snapshot.contentHash())) {
             throw new IllegalStateException("Worker 局部上下文已失效");
         }
-        WorkerLaunchRow claimed = dispatchService.claim(userId, bindingId);
+        WorkerLaunchDO claimed = dispatchService.claim(userId, bindingId);
         Toolkit toolkit = new Toolkit();
         if (definition.toolAllowlist().contains("sandbox_python")) {
             toolkit.registerAgentTool(sandboxPython);

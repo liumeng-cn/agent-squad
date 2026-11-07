@@ -9,7 +9,7 @@ import com.agentsquad.squad.conversation.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.interaction.service.InteractionService;
 import com.agentsquad.squad.common.enums.worker.PlanAcceptanceVerdict;
-import com.agentsquad.squad.domain.entity.PlanJoinStage;
+import com.agentsquad.squad.domain.enums.PlanJoinStage;
 import com.agentsquad.squad.domain.dto.AcceptanceReview;
 import com.agentsquad.squad.domain.dto.AcceptanceReviewRequest;
 import com.agentsquad.squad.domain.dto.CompletionSubmission;

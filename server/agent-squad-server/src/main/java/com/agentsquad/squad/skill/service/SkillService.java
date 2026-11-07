@@ -4,11 +4,11 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.config.SkillPackageLimits;
 import com.agentsquad.squad.domain.dto.SkillFile;
-import com.agentsquad.squad.domain.entity.SkillGrantRow;
-import com.agentsquad.squad.domain.entity.SkillPackage;
-import com.agentsquad.squad.domain.entity.SkillPackageValidator;
-import com.agentsquad.squad.domain.entity.SkillTextFile;
-import com.agentsquad.squad.domain.entity.SkillVersionRow;
+import com.agentsquad.squad.domain.entity.SkillGrantDO;
+import com.agentsquad.squad.domain.model.SkillPackage;
+import com.agentsquad.squad.domain.model.SkillPackageValidator;
+import com.agentsquad.squad.domain.entity.SkillTextFileDO;
+import com.agentsquad.squad.domain.entity.SkillVersionDO;
 import com.agentsquad.squad.domain.response.SkillDetailResponse;
 import com.agentsquad.squad.domain.request.SkillGrantRequest;
 import com.agentsquad.squad.domain.response.SkillGrantResponse;
@@ -51,7 +51,7 @@ public class SkillService {
     @Transactional
     public SkillVersionResponse importPackage(String userId, SkillImportRequest request) {
         SkillPackage skill = validate(request);
-        SkillVersionRow prior = repository.findNamedVersion(userId, skill.name(), skill.version());
+        SkillVersionDO prior = repository.findNamedVersion(userId, skill.name(), skill.version());
         if (prior != null) {
             return sameVersion(prior, skill);
         }
@@ -72,16 +72,16 @@ public class SkillService {
     }
 
     public SkillDetailResponse detail(String userId, String versionId) {
-        SkillVersionRow row = requireOwned(userId, versionId);
-        SkillGrantRow grant = repository.grant(userId, versionId);
+        SkillVersionDO row = requireOwned(userId, versionId);
+        SkillGrantDO grant = repository.grant(userId, versionId);
         return new SkillDetailResponse(versionView(row), repository.files(userId, versionId).stream().map(file -> new SkillFile(file.path(), file.content())).toList(), grantView(grant));
     }
 
     public SkillPageResponse list(String userId, String cursor, int limit) {
         int pageSize = Math.min(Math.max(limit, 1), 100);
-        List<SkillVersionRow> rows = repository.list(userId, parseCursor(cursor), pageSize + 1);
+        List<SkillVersionDO> rows = repository.list(userId, parseCursor(cursor), pageSize + 1);
         boolean hasMore = rows.size() > pageSize;
-        List<SkillVersionRow> page = rows.stream().limit(pageSize).toList();
+        List<SkillVersionDO> page = rows.stream().limit(pageSize).toList();
         return new SkillPageResponse(page.stream().map(this::versionView).toList(),
                 hasMore ? Long.toString(page.get(page.size() - 1).id()) : null);
     }
@@ -91,7 +91,7 @@ public class SkillService {
      */
     @Transactional
     public SkillGrantResponse changeGrant(String userId, String versionId, SkillGrantRequest request) {
-        SkillVersionRow row = requireLocked(userId, versionId);
+        SkillVersionDO row = requireLocked(userId, versionId);
         if (request == null || request.enabled() == null || request.expectedVersion() == null || request.expectedVersion() < 0) {
             throw invalid("授权版本无效");
         }
@@ -110,7 +110,7 @@ public class SkillService {
      */
     @Transactional
     public SkillDetailResponse revoke(String userId, String versionId, long expectedVersion) {
-        SkillVersionRow row = requireLocked(userId, versionId);
+        SkillVersionDO row = requireLocked(userId, versionId);
         if (expectedVersion < 0) {
             throw invalid("授权版本无效");
         }
@@ -126,44 +126,44 @@ public class SkillService {
     }
 
     public SkillPackage validate(SkillImportRequest request) {
-        return SkillPackageValidator.validate(request == null || request.files() == null ? null : request.files().stream().map(file -> file == null ? null : new SkillTextFile(file.path(), file.content())).toList(),
+        return SkillPackageValidator.validate(request == null || request.files() == null ? null : request.files().stream().map(file -> file == null ? null : new SkillTextFileDO(file.path(), file.content())).toList(),
                 Math.min(Math.max(limits.getMaxFiles(), 1), 64),
                 Math.min(Math.max(limits.getMaxFileBytes(), 1), 262144),
                 Math.min(Math.max(limits.getMaxPackageBytes(), 1), 16777216));
     }
 
-    private SkillVersionResponse sameVersion(SkillVersionRow prior, SkillPackage skill) {
+    private SkillVersionResponse sameVersion(SkillVersionDO prior, SkillPackage skill) {
         if (prior == null || !prior.contentHash().equals(skill.contentHash())) {
             throw conflict("同名同版本技能已存在且内容不同，请使用新版本号");
         }
         return versionView(prior);
     }
 
-    private SkillVersionRow requireLocked(String userId, String versionId) {
-        SkillVersionRow row = repository.lockVersion(userId, versionId);
+    private SkillVersionDO requireLocked(String userId, String versionId) {
+        SkillVersionDO row = repository.lockVersion(userId, versionId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "技能版本不存在或无权访问");
         }
         return row;
     }
 
-    private SkillVersionRow requireOwned(String userId, String versionId) {
-        SkillVersionRow row = repository.find(userId, versionId);
+    private SkillVersionDO requireOwned(String userId, String versionId) {
+        SkillVersionDO row = repository.find(userId, versionId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "技能版本不存在或无权访问");
         }
         return row;
     }
 
-    private SkillVersionResponse versionView(SkillVersionRow row) {
-        SkillGrantRow grant = repository.grant(row.userId(), row.skillVersionId());
+    private SkillVersionResponse versionView(SkillVersionDO row) {
+        SkillGrantDO grant = repository.grant(row.userId(), row.skillVersionId());
         String status = "REVOKED".equals(row.status()) ? "REVOKED"
                 : grant != null && grant.enabled() ? "ENABLED" : "DISABLED";
         return new SkillVersionResponse(row.skillVersionId(), row.name(), row.version(), row.contentHash(),
                 row.description(), status);
     }
 
-    private SkillGrantResponse grantView(SkillGrantRow grant) {
+    private SkillGrantResponse grantView(SkillGrantDO grant) {
         if (grant == null) {
             throw new IllegalStateException("技能授权记录缺失");
         }

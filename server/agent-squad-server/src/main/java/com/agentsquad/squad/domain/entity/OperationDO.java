@@ -1,0 +1,13 @@
+package com.agentsquad.squad.domain.entity;
+
+/**
+ * 外部操作的数据库查询结果；账本是副作用唯一权威，框架日志只是佐证
+ */
+public record OperationDO(String operationId, String userId, String taskId, String jobId,
+                           String bindingId, String frameworkTurnId, String toolCallId,
+                           String toolKey, String toolVersion, String businessIntentKey,
+                           String effect, String connectionId, long connectionRevision,
+                           long authVersion, String requestHash, String argumentsJson,
+                           String status, long version, String executorOwner, long executorFence,
+                           String externalKey, String resultJson, String scopeId, String budgetUsageKey) {
+}

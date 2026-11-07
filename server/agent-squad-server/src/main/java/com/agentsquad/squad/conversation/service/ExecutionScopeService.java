@@ -2,9 +2,9 @@ package com.agentsquad.squad.conversation.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.domain.entity.ConversationRow;
-import com.agentsquad.squad.domain.entity.ExecutionOwnerRow;
-import com.agentsquad.squad.domain.entity.ExecutionScopeRow;
+import com.agentsquad.squad.domain.entity.ConversationDO;
+import com.agentsquad.squad.domain.entity.ExecutionOwnerDO;
+import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import jakarta.annotation.Resource;
@@ -38,7 +38,7 @@ public class ExecutionScopeService {
     @Transactional
     public String createTaskScope(String userId, String taskId, String conversationId, long generation,
                                   String profileKey, long limit) {
-        ConversationRow conversation = conversations.lockOwned(userId, conversationId);
+        ConversationDO conversation = conversations.lockOwned(userId, conversationId);
         if (conversation == null || !"ACTIVE".equals(conversation.status()) || conversation.generation() != generation) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标所属会话已失效");
         }
@@ -53,8 +53,8 @@ public class ExecutionScopeService {
         return scopeId;
     }
 
-    public ExecutionScopeRow requireReadable(String userId, String scopeId) {
-        ExecutionScopeRow scope = mapper.findActiveOwned(userId, scopeId);
+    public ExecutionScopeDO requireReadable(String userId, String scopeId) {
+        ExecutionScopeDO scope = mapper.findActiveOwned(userId, scopeId);
         if (scope == null) {
             throw missing();
         }
@@ -65,16 +65,16 @@ public class ExecutionScopeService {
      * 固定会话→所有者锁序；结算可越过生命周期终态，但仍必须满足原用户与Scope归属。
      */
     @Transactional
-    public ExecutionScopeRow lockOwned(String userId, String scopeId, boolean forDispatch) {
-        ExecutionScopeRow scope = mapper.findOwned(userId, scopeId);
+    public ExecutionScopeDO lockOwned(String userId, String scopeId, boolean forDispatch) {
+        ExecutionScopeDO scope = mapper.findOwned(userId, scopeId);
         if (scope == null) {
             throw missing();
         }
-        ConversationRow conversation = conversations.lockOwned(userId, scope.conversationId());
+        ConversationDO conversation = conversations.lockOwned(userId, scope.conversationId());
         if (conversation == null) {
             throw missing();
         }
-        ExecutionOwnerRow owner = "TASK".equals(scope.kind())
+        ExecutionOwnerDO owner = "TASK".equals(scope.kind())
                 ? mapper.lockTaskOwner(userId, scope.ownerId(), scopeId)
                 : mapper.lockResponseOwner(userId, scope.ownerId(), scopeId);
         if (owner == null) {

@@ -3,7 +3,7 @@ package com.agentsquad.squad.runtime.service;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.memory.service.MemoryContextService;
-import com.agentsquad.squad.domain.entity.ExecutionContextInvalidatedException;
+import com.agentsquad.squad.domain.exception.ExecutionContextInvalidatedException;
 import com.agentsquad.squad.domain.dto.ExecutionContextSnapshot;
 import com.agentsquad.squad.skill.service.SkillRuntimeService;
 import jakarta.annotation.Resource;

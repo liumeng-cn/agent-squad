@@ -1,6 +1,6 @@
 package com.agentsquad.squad.runtime.repository;
 
-import com.agentsquad.squad.domain.entity.ExecutionFailureRow;
+import com.agentsquad.squad.domain.entity.ExecutionFailureDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -14,9 +14,9 @@ import java.util.List;
  */
 @Mapper
 public interface ExecutionFailureMapper {
-    ExecutionFailureRow latest(@Param("userId") String userId, @Param("scopeId") String scopeId, @Param("bindingId") String bindingId);
+    ExecutionFailureDO latest(@Param("userId") String userId, @Param("scopeId") String scopeId, @Param("bindingId") String bindingId);
 
-    List<ExecutionFailureRow> activeInConversation(@Param("userId") String userId, @Param("conversationId") String conversationId);
+    List<ExecutionFailureDO> activeInConversation(@Param("userId") String userId, @Param("conversationId") String conversationId);
 
     List<String> activeResponseFailures(@Param("userId") String userId, @Param("conversationId") String conversationId,
                                         @Param("generation") long generation, @Param("exceptScopeId") String exceptScopeId);
@@ -25,7 +25,7 @@ public interface ExecutionFailureMapper {
 
     int countActiveByCode(@Param("userId") String userId, @Param("scopeId") String scopeId, @Param("code") String code);
 
-    int insert(@Param("userId") String userId, @Param("row") ExecutionFailureRow row, @Param("key") String key);
+    int insert(@Param("userId") String userId, @Param("row") ExecutionFailureDO row, @Param("key") String key);
 
     int status(@Param("userId") String userId, @Param("failureId") String failureId, @Param("status") String status);
 

@@ -6,16 +6,16 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.observability.ObservationSupport;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.ConversationRow;
-import com.agentsquad.squad.domain.entity.MessageSubmissionRow;
+import com.agentsquad.squad.domain.entity.ConversationDO;
+import com.agentsquad.squad.domain.entity.MessageSubmissionDO;
 import com.agentsquad.squad.domain.request.MessageCreateRequest;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
-import com.agentsquad.squad.domain.entity.MasterAgentIdentity;
-import com.agentsquad.squad.domain.entity.ResponseExecutionStatus;
+import com.agentsquad.squad.domain.model.MasterAgentIdentity;
+import com.agentsquad.squad.domain.enums.ResponseExecutionStatus;
 import com.agentsquad.squad.domain.dto.MessageView;
 import com.agentsquad.squad.domain.dto.ResponseExecutionView;
 import com.agentsquad.squad.domain.dto.MessageAcceptedPayload;
@@ -49,7 +49,7 @@ public class MessageAcceptanceWriter {
     private com.agentsquad.squad.common.observability.ExecutionTrace executionTrace;
 
     @org.springframework.beans.factory.annotation.Value("${agentsquad.response.completion-protocol:NATURAL}")
-    private com.agentsquad.squad.domain.entity.ResponseCompletionProtocol completionProtocol;
+    private com.agentsquad.squad.domain.enums.ResponseCompletionProtocol completionProtocol;
 
     @Resource
     private com.agentsquad.squad.model.service.ModelCatalogService modelCatalog;
@@ -94,10 +94,10 @@ public class MessageAcceptanceWriter {
      * 独立受理事务保证并发唯一键失败可先回滚，再由外层补查胜出收据，避免在失败事务中继续读写
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public MessageSubmissionRow accept(String userId, String conversationId, String scopeKey, String key,
+    public MessageSubmissionDO accept(String userId, String conversationId, String scopeKey, String key,
                                        MessageCreateRequest request, String payloadHash) {
-        ConversationRow conversation = conversationId == null ? null : lockConversation(userId, conversationId);
-        MessageSubmissionRow prior = messages.findSubmission(userId, scopeKey, key);
+        ConversationDO conversation = conversationId == null ? null : lockConversation(userId, conversationId);
+        MessageSubmissionDO prior = messages.findSubmission(userId, scopeKey, key);
         if (prior != null) {
             return prior;
         }
@@ -154,8 +154,8 @@ public class MessageAcceptanceWriter {
                 new MessageAcceptedPayload(ConversationDeltaType.SCHEMA_VERSION, message, execution), now);
         appendEvent(userId, conversation, commandId, ConversationDeltaType.EXECUTION_QUEUED.code(),
                 new ExecutionChangedPayload(ConversationDeltaType.SCHEMA_VERSION, execution), now);
-        committedEvents.publishEvent(new com.agentsquad.squad.domain.entity.CommandReadySignal(commandId));
-        MessageSubmissionRow submission = messages.findSubmission(userId, scopeKey, key);
+        committedEvents.publishEvent(new com.agentsquad.squad.domain.model.CommandReadySignal(commandId));
+        MessageSubmissionDO submission = messages.findSubmission(userId, scopeKey, key);
         log.info("用户消息已受理 {}", observations.logFields(Map.of(
                 "conversationId", conversationId, "messageId", messageId, "executionId", executionId,
                 "scopeId", scopeId, "commandId", commandId, "sequence", sequence,
@@ -172,15 +172,15 @@ public class MessageAcceptanceWriter {
         return singleLine.length() <= 40 ? singleLine : singleLine.substring(0, 40) + "…";
     }
 
-    private ConversationRow lockConversation(String userId, String conversationId) {
-        ConversationRow row = conversations.lockOwned(userId, conversationId);
+    private ConversationDO lockConversation(String userId, String conversationId) {
+        ConversationDO row = conversations.lockOwned(userId, conversationId);
         if (row == null || !"ACTIVE".equals(row.status())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "对话不存在或已删除");
         }
         return row;
     }
 
-    private void appendEvent(String userId, ConversationRow conversation, String commandId, String type,
+    private void appendEvent(String userId, ConversationDO conversation, String commandId, String type,
                              Object payload, LocalDateTime now) {
         if (messages.reserveEvent(userId, conversation.conversationId()) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "会话公开水位已失效");
@@ -192,7 +192,7 @@ public class MessageAcceptanceWriter {
     }
 
     private String fallbackTitle(String text) {
-        String title = com.agentsquad.squad.domain.entity.ConversationTitles.safe(text, 32);
+        String title = com.agentsquad.squad.domain.model.ConversationTitles.safe(text, 32);
         return title.isEmpty() ? "新对话" : title;
     }
 }

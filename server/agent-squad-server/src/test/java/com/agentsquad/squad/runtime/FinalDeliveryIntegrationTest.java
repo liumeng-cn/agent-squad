@@ -9,12 +9,12 @@ import com.agentsquad.squad.conversation.service.GoalTaskCreationService;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
 import com.agentsquad.squad.conversation.service.ResponseExecutionService;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
-import com.agentsquad.squad.domain.entity.NaturalReplyEvidence;
-import com.agentsquad.squad.domain.entity.ResponseExecutionStatus;
+import com.agentsquad.squad.domain.model.NaturalReplyEvidence;
+import com.agentsquad.squad.domain.enums.ResponseExecutionStatus;
 import com.agentsquad.squad.integration.agentscope.NativeEventView;
 import com.agentsquad.squad.presentation.service.TaskEventPublishingService;
-import com.agentsquad.squad.domain.entity.MasterAgentIdentity;
-import com.agentsquad.squad.domain.entity.ProjectionTarget;
+import com.agentsquad.squad.domain.model.MasterAgentIdentity;
+import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -237,7 +237,7 @@ class FinalDeliveryIntegrationTest {
         // 此处只验证交付归属竞争，使用自然回复适配器的可信输出；SDK 日志映射由独立集成测试验证。
         var output = new NaturalReplyEvidence(
                 ResponseExecutionStatus.SUCCEEDED, answer, null);
-        service.accept(scope, new ProjectionTarget(user, null, binding, MasterAgentIdentity.AGENT_ID, session(jdbc, receipt), 0),
+        service.accept(scope, new ProjectionTargetDO(user, null, binding, MasterAgentIdentity.AGENT_ID, session(jdbc, receipt), 0),
                 new NativeEventView(1, "end", "run/end", "run", turn, "completed", 0, java.util.Map.of("naturalOutput", output)));
     }
 

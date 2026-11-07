@@ -1,8 +1,15 @@
 package com.agentsquad.squad.runtime.service;
 
+import com.agentsquad.squad.domain.entity.ExecutionFailureDO;
+import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
+import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
+import com.agentsquad.squad.domain.exception.PlanCorrectionExhaustedException;
+import com.agentsquad.squad.domain.model.ModelFailureClassifier;
+
+import com.agentsquad.squad.domain.model.FailureClassification;
+
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
-import com.agentsquad.squad.domain.entity.*;
 import com.agentsquad.squad.integration.agentscope.NativeSubmissionReceipt;
 import com.agentsquad.squad.presentation.service.TaskEventPublishingService;
 import com.agentsquad.squad.runtime.repository.PlanMapper;
@@ -98,12 +105,12 @@ public class ExecutionFailureService {
      * 完成候选或原生终态有明确业务原因时使用固定分类，不能用异常文案推测权限。
      */
     @Transactional
-    public void record(ExecutionScopeRow scope, String bindingId, String key, FailureClassification classification) {
+    public void record(ExecutionScopeDO scope, String bindingId, String key, FailureClassification classification) {
         register(scope, bindingId, key, classification);
     }
 
     @Transactional
-    public void ensureNativeFailure(ExecutionScopeRow scope, String bindingId, String key) {
+    public void ensureNativeFailure(ExecutionScopeDO scope, String bindingId, String key) {
         if (failures.latest(scope.userId(), scope.scopeId(), bindingId) == null) {
             register(scope, bindingId, key, new FailureClassification("INTERNAL", "NATIVE_RUN_INCOMPLETE", "SYSTEM", "本次处理未能完成，已保留你的内容，系统已记录问题。"));
         }
@@ -113,7 +120,7 @@ public class ExecutionFailureService {
      * 同一失败来源只建立一条恢复命令，次数、到期时间及命令原子提交；等待审批或未知写入时不安排重试。
      */
     @Transactional
-    public boolean queueTransientRetry(ExecutionScopeRow scope, String bindingId, String eventId, String turnId) {
+    public boolean queueTransientRetry(ExecutionScopeDO scope, String bindingId, String eventId, String turnId) {
         scope = scopes.lockOwned(scope.userId(), scope.scopeId(), false);
         var owner = "TASK".equals(scope.kind()) ? scopeMapper.lockTaskOwner(scope.userId(), scope.ownerId(), scope.scopeId())
                 : scopeMapper.lockResponseOwner(scope.userId(), scope.ownerId(), scope.scopeId());
@@ -217,7 +224,7 @@ public class ExecutionFailureService {
      * 同一会话已有新的有效回答，更早回复的失败提示不再指向当前状态。
      */
     @Transactional
-    public void resolveSuperseded(ExecutionScopeRow scope) {
+    public void resolveSuperseded(ExecutionScopeDO scope) {
         var superseded = failures.activeResponseFailures(scope.userId(), scope.conversationId(),
                 scope.conversationGeneration(), scope.scopeId());
         for (String failureId : superseded) {
@@ -261,7 +268,7 @@ public class ExecutionFailureService {
      * SDK确认旧协调Turn中断后按原Turn恢复；持久次数和稳定命令键排除重启后的重复恢复。
      */
     @Transactional
-    public void recoverInterrupted(ProjectionTarget target,
+    public void recoverInterrupted(ProjectionTargetDO target,
                                    NativeSubmissionReceipt receipt) {
         if (!"interrupted".equals(receipt.status()) || receipt.turnId() == null) {
             return;
@@ -298,7 +305,7 @@ public class ExecutionFailureService {
         log.info("协调中断已按原Turn排队恢复 taskId={} bindingId={} attempt={}", scope.ownerId(), target.bindingId(), attempt + 1);
     }
 
-    public String masterCommand(ProjectionTarget target) {
+    public String masterCommand(ProjectionTargetDO target) {
         return failures.latestMasterCommand(target.userId(), target.bindingId());
     }
 
@@ -326,7 +333,7 @@ public class ExecutionFailureService {
      * 明确失败且无法再恢复的目标安全收尾；保留未知账本时拒绝收尾，旧节点及其命令同步失效。
      */
     @Transactional
-    public boolean finishFailedTask(ExecutionScopeRow scope, String bindingId, String eventId) {
+    public boolean finishFailedTask(ExecutionScopeDO scope, String bindingId, String eventId) {
         if (!"TASK".equals(scope.kind())) {
             return false;
         }
@@ -361,7 +368,7 @@ public class ExecutionFailureService {
         return failures.retryAllowed(userId, executionId);
     }
 
-    private void register(ExecutionScopeRow scope, String bindingId, String key, FailureClassification classification) {
+    private void register(ExecutionScopeDO scope, String bindingId, String key, FailureClassification classification) {
         String hash = ContentDigests.sha256(key);
         if (failures.byKey(scope.userId(), scope.scopeId(), hash) != null) {
             return;
@@ -370,7 +377,7 @@ public class ExecutionFailureService {
         if (failures.countActiveByCode(scope.userId(), scope.scopeId(), classification.code()) > 0) {
             return;
         }
-        var row = new ExecutionFailureRow(UUID.randomUUID().toString(), scope.scopeId(), bindingId, classification.category(), classification.code(), classification.actor(), classification.safeMessage(), UUID.randomUUID().toString(), "ACTIVE", 0);
+        var row = new ExecutionFailureDO(UUID.randomUUID().toString(), scope.scopeId(), bindingId, classification.category(), classification.code(), classification.actor(), classification.safeMessage(), UUID.randomUUID().toString(), "ACTIVE", 0);
         failures.insert(scope.userId(), row, hash);
         if ("RESPONSE".equals(scope.kind())) {
             failures.linkFailure(scope.userId(), bindingId, row.failureId());

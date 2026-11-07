@@ -3,15 +3,15 @@ package com.agentsquad.squad.runtime.service;
 import com.agentsquad.squad.presentation.service.TaskEventPublishingService;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.RuntimeCommandAction;
+import com.agentsquad.squad.domain.enums.RuntimeCommandAction;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
 import com.agentsquad.squad.conversation.repository.DeliveryMapper;
 import com.agentsquad.squad.conversation.repository.TaskEventMapper;
 import com.agentsquad.squad.integration.agentscope.NativeSubmissionReceipt;
-import com.agentsquad.squad.domain.entity.PlanRow;
-import com.agentsquad.squad.domain.entity.ProjectionTarget;
-import com.agentsquad.squad.domain.entity.WorkerLaunchRow;
+import com.agentsquad.squad.domain.entity.PlanDO;
+import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
+import com.agentsquad.squad.domain.entity.WorkerLaunchDO;
 import com.agentsquad.squad.domain.dto.PlanNode;
 import com.agentsquad.squad.domain.dto.PlanPublish;
 import com.agentsquad.squad.runtime.repository.PlanMapper;
@@ -79,8 +79,8 @@ public class WorkerRecoveryService {
     /**
      * 投影器仅对当前运行中 Worker 检查原始 SUBMIT 的 SDK 收据。
      */
-    public String originalSubmitCommandId(ProjectionTarget target) {
-        WorkerLaunchRow job = dispatchMapper.findByBinding(target.userId(), target.bindingId());
+    public String originalSubmitCommandId(ProjectionTargetDO target) {
+        WorkerLaunchDO job = dispatchMapper.findByBinding(target.userId(), target.bindingId());
         if (job == null || !"RUNNING".equals(job.jobStatus())
                 || !"ACTIVE".equals(job.planStatus()) || job.cancelRequestedAt() != null) {
             return null;
@@ -92,14 +92,14 @@ public class WorkerRecoveryService {
      * SDK 收据来自固定 Session 的原 Command；重新锁定 Task/Plan/Job 后幂等写入恢复意图。
      */
     @Transactional
-    public void queueInterrupted(ProjectionTarget target, NativeSubmissionReceipt receipt) {
+    public void queueInterrupted(ProjectionTargetDO target, NativeSubmissionReceipt receipt) {
         if (receipt == null || !"interrupted".equals(receipt.status())
                 || receipt.turnId() == null || receipt.turnId().isBlank()) {
             return;
         }
         taskMapper.lockOwned(target.userId(), target.taskId());
         Long currentVersion = planMapper.lockTaskPlanVersion(target.userId(), target.taskId());
-        WorkerLaunchRow job = dispatchMapper.findByBinding(target.userId(), target.bindingId());
+        WorkerLaunchDO job = dispatchMapper.findByBinding(target.userId(), target.bindingId());
         if (job == null || currentVersion == null || currentVersion != job.planVersion()
                 || planMapper.countSignalEligibleTask(target.userId(), target.taskId()) == 0
                 || !"RUNNING".equals(job.jobStatus()) || job.cancelRequestedAt() != null
@@ -107,7 +107,7 @@ public class WorkerRecoveryService {
                 || !job.guardLeaseUntil().isAfter(LocalDateTime.now(ZoneOffset.UTC))) {
             return;
         }
-        PlanRow plan = planMapper.lockPlan(target.userId(), target.taskId(), job.planVersion());
+        PlanDO plan = planMapper.lockPlan(target.userId(), target.taskId(), job.planVersion());
         if (plan == null || !"ACTIVE".equals(plan.status())) {
             return;
         }
@@ -166,8 +166,8 @@ public class WorkerRecoveryService {
         if (deliveryMapper.blockRejectedResume(commandId, deliveryToken, errorCode) != 1) {
             return;
         }
-        WorkerLaunchRow job = dispatchMapper.findByBinding(userId, bindingId);
-        PlanRow plan = currentVersion == null ? null : planMapper.lockPlan(userId, taskId, currentVersion);
+        WorkerLaunchDO job = dispatchMapper.findByBinding(userId, bindingId);
+        PlanDO plan = currentVersion == null ? null : planMapper.lockPlan(userId, taskId, currentVersion);
         if (job != null && plan != null && job.planVersion() == currentVersion && "ACTIVE".equals(plan.status())
                 && dispatchMapper.markRecoveryBlocked(userId, bindingId) == 1) {
             masterSignalService.onJobStateChanged(plan);

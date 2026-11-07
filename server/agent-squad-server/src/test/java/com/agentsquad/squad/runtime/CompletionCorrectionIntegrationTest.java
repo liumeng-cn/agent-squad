@@ -1,11 +1,16 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
+import com.agentsquad.squad.domain.enums.GoalTaskStatus;
+import com.agentsquad.squad.domain.enums.NativeRunOutcome;
+import com.agentsquad.squad.domain.enums.RuntimeCommandStatus;
+import com.agentsquad.squad.domain.model.MasterAgentIdentity;
+
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.domain.dto.PlanNode;
 import com.agentsquad.squad.domain.dto.PlanPublish;
 import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
-import com.agentsquad.squad.domain.entity.*;
 import com.agentsquad.squad.integration.agentscope.NativeEventView;
 import com.agentsquad.squad.integration.agentscope.NativeProjectionService;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
@@ -47,7 +52,7 @@ class CompletionCorrectionIntegrationTest {
     @Test
     void shouldCompleteMatchedProposal(@TempDir Path tempDirectory) {
         try (ConfigurableApplicationContext context = start(tempDirectory)) {
-            ProjectionTarget target = createTask(context);
+            ProjectionTargetDO target = createTask(context);
             NativeProjectionService projection = context.getBean(NativeProjectionService.class);
             CompletionProposalService proposals = context.getBean(CompletionProposalService.class);
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
@@ -80,7 +85,7 @@ class CompletionCorrectionIntegrationTest {
     @Test
     void shouldBlockStaleCompletionCandidate(@TempDir Path tempDirectory) {
         try (ConfigurableApplicationContext context = start(tempDirectory)) {
-            ProjectionTarget target = createTask(context);
+            ProjectionTargetDO target = createTask(context);
             NativeProjectionService projection = context.getBean(NativeProjectionService.class);
             CompletionProposalService proposals = context.getBean(CompletionProposalService.class);
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
@@ -113,7 +118,7 @@ class CompletionCorrectionIntegrationTest {
     @Test
     void shouldCorrectOnceThenFailWithoutProposal(@TempDir Path tempDirectory) {
         try (ConfigurableApplicationContext context = start(tempDirectory)) {
-            ProjectionTarget target = createTask(context);
+            ProjectionTargetDO target = createTask(context);
             NativeProjectionService projection = context.getBean(NativeProjectionService.class);
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             CommandMapper commands = context.getBean(CommandMapper.class);
@@ -154,7 +159,7 @@ class CompletionCorrectionIntegrationTest {
     @Test
     void shouldHonorCancellationWhenNativeRunCompletes(@TempDir Path tempDirectory) {
         try (ConfigurableApplicationContext context = start(tempDirectory)) {
-            ProjectionTarget target = createTask(context);
+            ProjectionTargetDO target = createTask(context);
             NativeProjectionService projection = context.getBean(NativeProjectionService.class);
             TaskMapper taskMapper = context.getBean(TaskMapper.class);
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
@@ -181,7 +186,7 @@ class CompletionCorrectionIntegrationTest {
     @Test
     void shouldBlockFailedRunAndKeepTaskRecoverable(@TempDir Path tempDirectory) {
         try (ConfigurableApplicationContext context = start(tempDirectory)) {
-            ProjectionTarget target = createTask(context);
+            ProjectionTargetDO target = createTask(context);
             NativeProjectionService projection = context.getBean(NativeProjectionService.class);
             CompletionProposalService proposals = context.getBean(CompletionProposalService.class);
             CompletionMapper completions = context.getBean(CompletionMapper.class);
@@ -240,7 +245,7 @@ class CompletionCorrectionIntegrationTest {
     @Test
     void shouldCancelInsteadOfBlockingFailedRun(@TempDir Path tempDirectory) {
         try (ConfigurableApplicationContext context = start(tempDirectory)) {
-            ProjectionTarget target = createTask(context);
+            ProjectionTargetDO target = createTask(context);
             NativeProjectionService projection = context.getBean(NativeProjectionService.class);
             TaskMapper taskMapper = context.getBean(TaskMapper.class);
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
@@ -389,7 +394,7 @@ class CompletionCorrectionIntegrationTest {
                 "--agentsquad.model.name=test-model");
     }
 
-    private ProjectionTarget createTask(ConfigurableApplicationContext context) {
+    private ProjectionTargetDO createTask(ConfigurableApplicationContext context) {
         ConversationMapper conversations = context.getBean(ConversationMapper.class);
         TaskMapper tasks = context.getBean(TaskMapper.class);
         BindingMapper bindings = context.getBean(BindingMapper.class);
@@ -406,7 +411,7 @@ class CompletionCorrectionIntegrationTest {
         conversations.activateTask(USER_ID, conversationId, taskId);
         events.insertAccepted(USER_ID, taskId, "command:" + UUID.randomUUID(),
                 "{\"taskId\":\"" + taskId + "\"}", now);
-        return new ProjectionTarget(USER_ID, taskId, bindingId, MasterAgentIdentity.AGENT_ID, sessionId, 0);
+        return new ProjectionTargetDO(USER_ID, taskId, bindingId, MasterAgentIdentity.AGENT_ID, sessionId, 0);
     }
 
     private NativeEventView event(long sequence, String type, String turnId, String outcome) {

@@ -1,7 +1,7 @@
 package com.agentsquad.squad.conversation.repository;
 
-import com.agentsquad.squad.domain.entity.ResponseContextRow;
-import com.agentsquad.squad.domain.entity.ResponseHistoryRow;
+import com.agentsquad.squad.domain.entity.ResponseContextDO;
+import com.agentsquad.squad.domain.entity.ResponseHistoryDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -15,12 +15,12 @@ import java.util.List;
 @Mapper
 public interface ResponseContextMapper {
 
-    ResponseContextRow findSource(@Param("userId") String userId, @Param("bindingId") String bindingId);
+    ResponseContextDO findSource(@Param("userId") String userId, @Param("bindingId") String bindingId);
 
     long characterCount(@Param("userId") String userId, @Param("conversationId") String conversationId,
                         @Param("through") long through);
 
-    List<ResponseHistoryRow> prefix(@Param("userId") String userId,
+    List<ResponseHistoryDO> prefix(@Param("userId") String userId,
                                     @Param("conversationId") String conversationId, @Param("through") long through);
 
     List<String> artifactIds(@Param("userId") String userId, @Param("messageId") String messageId);

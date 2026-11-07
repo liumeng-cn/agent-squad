@@ -3,8 +3,8 @@ package com.agentsquad.squad.integration.agentscope.middleware;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.common.enums.worker.WorkerJobStatus;
-import com.agentsquad.squad.domain.entity.ResponseCompletionProtocol;
-import com.agentsquad.squad.domain.entity.WorkerJobRow;
+import com.agentsquad.squad.domain.enums.ResponseCompletionProtocol;
+import com.agentsquad.squad.domain.entity.WorkerJobDO;
 import io.agentscope.core.agent.Agent;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.event.AgentEvent;
@@ -84,7 +84,7 @@ public class ScopedMasterToolsMiddleware implements MiddlewareBase {
                         hidden.add("propose_completion");
                     }
                     var task = response ? null : tasks.findOwned(context.getUserId(), scope.ownerId());
-                    var jobs = task == null || task.planVersion() == 0 ? List.<WorkerJobRow>of()
+                    var jobs = task == null || task.planVersion() == 0 ? List.<WorkerJobDO>of()
                             : plans.listJobs(task.taskId(), task.planVersion());
                     boolean awaitingWorkers = jobs.stream().anyMatch(job -> EXECUTING_JOBS.contains(WorkerJobStatus.valueOf(job.status())));
                     boolean needsCoordination = jobs.stream().anyMatch(job -> WorkerJobStatus.RECOVERY_BLOCKED.name().equals(job.status())

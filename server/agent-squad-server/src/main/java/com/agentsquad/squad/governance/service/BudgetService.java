@@ -1,8 +1,8 @@
 package com.agentsquad.squad.governance.service;
 
 import com.agentsquad.squad.governance.repository.BudgetMapper;
-import com.agentsquad.squad.domain.entity.BudgetAccountRow;
-import com.agentsquad.squad.domain.entity.BudgetReservationRow;
+import com.agentsquad.squad.domain.entity.BudgetAccountDO;
+import com.agentsquad.squad.domain.entity.BudgetReservationDO;
 import com.agentsquad.squad.worker.profile.WorkerModelProfile;
 import com.agentsquad.squad.common.exception.BudgetExceededException;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
@@ -45,8 +45,8 @@ public class BudgetService {
         if (units <= 0 || usageKey == null || usageKey.isBlank() || usageKey.length() > 200) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "预算预留参数无效");
         }
-        BudgetAccountRow account = lockBudget(userId, scopeId, true);
-        BudgetReservationRow existing = budgetMapper.findReservation(userId, scopeId, usageKey);
+        BudgetAccountDO account = lockBudget(userId, scopeId, true);
+        BudgetReservationDO existing = budgetMapper.findReservation(userId, scopeId, usageKey);
         if (existing != null) {
             if (!kind.equals(existing.kind()) || units != existing.reservedUnits()) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
@@ -76,9 +76,9 @@ public class BudgetService {
                 || requestHash == null || !requestHash.matches("[0-9a-f]{64}")) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "模型预算请求键或摘要无效");
         }
-        BudgetAccountRow account = lockBudget(userId, scopeId, true);
+        BudgetAccountDO account = lockBudget(userId, scopeId, true);
         long units = Math.max(1, cost(profile.getMaxInputTokens(), profile.getMaxOutputTokens(), profile));
-        BudgetReservationRow prior = budgetMapper.findReservation(userId, scopeId, usageKey);
+        BudgetReservationDO prior = budgetMapper.findReservation(userId, scopeId, usageKey);
         if (prior != null) {
             if (!"MODEL".equals(prior.kind()) || prior.reservedUnits() != units
                     || !modelProfileKey.equals(prior.modelProfileKey())
@@ -111,7 +111,7 @@ public class BudgetService {
                     "模型用量超出 Profile 上限，预算保留待核对");
         }
         lockBudget(userId, scopeId, false);
-        BudgetReservationRow row = budgetMapper.findReservation(userId, scopeId, usageKey);
+        BudgetReservationDO row = budgetMapper.findReservation(userId, scopeId, usageKey);
         if (row == null || !"MODEL".equals(row.kind())
                 || !profile.getPricingVersion().equals(row.pricingVersion())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "模型预算预留或定价版本不匹配");
@@ -151,7 +151,7 @@ public class BudgetService {
         budgetMapper.markUnknown(userId, scopeId, usageKey);
     }
 
-    private void requireAvailable(String userId, String scopeId, BudgetAccountRow account, long units) {
+    private void requireAvailable(String userId, String scopeId, BudgetAccountDO account, long units) {
         long userConsumed = budgetMapper.sumUserConsumed(userId);
         if (userLimitMicrounits <= 0 || userConsumed > userLimitMicrounits
                 || units > userLimitMicrounits - userConsumed) {
@@ -168,11 +168,11 @@ public class BudgetService {
     /**
      * 会话与实际所有者先锁定，再锁用户总账与共享账户；已知结果结算不被取消或删除吞掉。
      */
-    private BudgetAccountRow lockBudget(String userId, String scopeId, boolean forDispatch) {
+    private BudgetAccountDO lockBudget(String userId, String scopeId, boolean forDispatch) {
         scopeService.lockOwned(userId, scopeId, forDispatch);
         budgetMapper.ensureUser(userId);
         budgetMapper.lockUser(userId);
-        BudgetAccountRow account = budgetMapper.lockAccount(userId, scopeId);
+        BudgetAccountDO account = budgetMapper.lockAccount(userId, scopeId);
         if (account == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "执行预算账户不可用");
         }
@@ -199,7 +199,7 @@ public class BudgetService {
         if (budgetMapper.settle(userId, scopeId, usageKey, settledUnits) == 1) {
             return;
         }
-        BudgetReservationRow prior = budgetMapper.findReservation(userId, scopeId, usageKey);
+        BudgetReservationDO prior = budgetMapper.findReservation(userId, scopeId, usageKey);
         if (prior == null || "MODEL".equals(prior.kind()) || !"SETTLED".equals(prior.status())
                 || prior.settledUnits() != settledUnits) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
@@ -211,7 +211,7 @@ public class BudgetService {
     @Transactional
     public void releaseUnsentTool(String userId, String scopeId, String usageKey) {
         lockBudget(userId, scopeId, false);
-        BudgetReservationRow row = budgetMapper.findReservation(userId, scopeId, usageKey);
+        BudgetReservationDO row = budgetMapper.findReservation(userId, scopeId, usageKey);
         if (row == null) {
             return;
         }

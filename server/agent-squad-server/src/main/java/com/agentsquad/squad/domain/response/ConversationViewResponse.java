@@ -1,6 +1,6 @@
 package com.agentsquad.squad.domain.response;
 
-import com.agentsquad.squad.domain.entity.ConversationHeader;
+import com.agentsquad.squad.domain.entity.ConversationHeaderDO;
 
 /**
  * 面向连续交流的会话视图。
@@ -10,7 +10,7 @@ import com.agentsquad.squad.domain.entity.ConversationHeader;
 public record ConversationViewResponse(String conversationId, String title, String titleSource, long titleVersion,
                                long generation, String status, long version, String activeTaskId,
                                String lastActivityAt) {
-    public static ConversationViewResponse from(ConversationHeader header) {
+    public static ConversationViewResponse from(ConversationHeaderDO header) {
         return new ConversationViewResponse(header.conversationId(), header.title(), header.titleSource(), header.titleVersion(),
                 header.generation(), header.status(), header.version(), header.activeTaskId(),
                 header.lastActivityAt().atOffset(java.time.ZoneOffset.UTC).toString());

@@ -9,15 +9,15 @@ import com.agentsquad.squad.common.util.CanonicalJson;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
-import com.agentsquad.squad.domain.entity.BudgetAccountRow;
+import com.agentsquad.squad.domain.entity.BudgetAccountDO;
 import com.agentsquad.squad.governance.repository.BudgetMapper;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
-import com.agentsquad.squad.domain.entity.GoalTaskStatus;
+import com.agentsquad.squad.domain.enums.GoalTaskStatus;
 import com.agentsquad.squad.conversation.repository.TaskEventMapper;
-import com.agentsquad.squad.domain.entity.PlanContextRow;
-import com.agentsquad.squad.domain.entity.PlanRow;
-import com.agentsquad.squad.domain.entity.ContextSnapshotRow;
-import com.agentsquad.squad.domain.entity.WorkerJobRow;
+import com.agentsquad.squad.domain.entity.PlanContextDO;
+import com.agentsquad.squad.domain.entity.PlanDO;
+import com.agentsquad.squad.domain.entity.ContextSnapshotDO;
+import com.agentsquad.squad.domain.entity.WorkerJobDO;
 import com.agentsquad.squad.domain.dto.PlanNode;
 import com.agentsquad.squad.domain.dto.PlanPublish;
 import com.agentsquad.squad.domain.dto.PlanReceipt;
@@ -134,7 +134,7 @@ public class PlanService {
         validateShape(publish);
 
         executionScopes.lockOwned(userId, executionScopes.scopeForSession(userId, sessionId), true);
-        PlanContextRow context = planMapper.lockMasterContext(userId, sessionId);
+        PlanContextDO context = planMapper.lockMasterContext(userId, sessionId);
         if (context == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "Master 会话未绑定目标");
         }
@@ -159,7 +159,7 @@ public class PlanService {
             }
             throw new PendingDirectivesException(context.taskId(), pending);
         }
-        PlanRow existing = planMapper.findLatestByLogicalKey(context.taskId(), publish.logicalKey());
+        PlanDO existing = planMapper.findLatestByLogicalKey(context.taskId(), publish.logicalKey());
         if (existing != null) {
             if (existing.goalRevision() != goalRevision) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "旧计划对应的目标内容已变化，请使用新的计划键");
@@ -170,7 +170,7 @@ public class PlanService {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "计划逻辑键对应的内容不同");
             }
             List<String> jobIds = planMapper.listJobs(context.taskId(), existing.planVersion())
-                    .stream().map(WorkerJobRow::jobId).toList();
+                    .stream().map(WorkerJobDO::jobId).toList();
             log.info("计划重放返回原回执 taskId={} planId={} planVersion={} jobCount={}",
                     context.taskId(), existing.planId(), existing.planVersion(), jobIds.size());
             return new PlanReceipt(existing.planId(), context.taskId(), existing.planVersion(), jobIds);
@@ -182,9 +182,9 @@ public class PlanService {
 
         validateDag(publish.nodes());
         validateContexts(context, publish.nodes());
-        List<WorkerJobRow> previousJobs = context.planVersion() == 0
+        List<WorkerJobDO> previousJobs = context.planVersion() == 0
                 ? List.of() : planMapper.listJobs(context.taskId(), context.planVersion());
-        Map<String, WorkerJobRow> reusable = new LinkedHashMap<>();
+        Map<String, WorkerJobDO> reusable = new LinkedHashMap<>();
         boolean foundReusable;
         do {
             foundReusable = false;
@@ -192,7 +192,7 @@ public class PlanService {
                 if (reusable.containsKey(node.nodeKey())) {
                     continue;
                 }
-                WorkerJobRow source = reuseService.reusableNode(
+                WorkerJobDO source = reuseService.reusableNode(
                         context.userId(), context.taskId(), node, previousJobs, reusable);
                 if (source != null) {
                     reusable.put(node.nodeKey(), source);
@@ -205,7 +205,7 @@ public class PlanService {
         long newVersion = context.planVersion() + 1;
         long priorSignalVersion = 0;
         if (context.planVersion() > 0) {
-            PlanRow previous = planMapper.lockPlan(context.userId(), context.taskId(),
+            PlanDO previous = planMapper.lockPlan(context.userId(), context.taskId(),
                     context.planVersion());
             if (previous == null) {
                 throw new IllegalStateException("当前计划头已消失");
@@ -231,7 +231,7 @@ public class PlanService {
             planMapper.insertJob(jobId, context.userId(), context.taskId(), newVersion,
                     node.nodeKey(), node.workerKey(), node.workerVersion(), status,
                     dependsJson, RuntimePayloads.toJson(objectMapper, input));
-            WorkerJobRow source = reusable.get(node.nodeKey());
+            WorkerJobDO source = reusable.get(node.nodeKey());
             if (source != null) {
                 if (planMapper.reuseResult(context.userId(), jobId,
                         source.jobId(), source.resultJson()) != 1) {
@@ -256,7 +256,7 @@ public class PlanService {
         planMapper.cancelSupersededSignals(context.taskId());
         if (!reusedJobIds.isEmpty()) {
             dependencyService.activateReadyDependents(context.userId(), context.taskId(), newVersion);
-            PlanRow activePlan = planMapper.lockPlan(context.userId(), context.taskId(), newVersion);
+            PlanDO activePlan = planMapper.lockPlan(context.userId(), context.taskId(), newVersion);
             for (String ignored : reusedJobIds.keySet()) {
                 masterSignalService.onJobStateChanged(activePlan);
             }
@@ -294,10 +294,10 @@ public class PlanService {
     /**
      * 发布前按每个节点的一次最大模型调用估算最低启动额；余额不足时整个发布事务回滚。
      */
-    private void requirePlanBudget(PlanContextRow context, List<PlanNode> nodes,
+    private void requirePlanBudget(PlanContextDO context, List<PlanNode> nodes,
                                    Set<String> reusedNodeKeys) {
         String scopeId = scopeMapper.findScopeByTask(context.userId(), context.taskId());
-        BudgetAccountRow taskBudget = budgetMapper.lockAccount(context.userId(), scopeId);
+        BudgetAccountDO taskBudget = budgetMapper.lockAccount(context.userId(), scopeId);
         if (taskBudget == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标预算不存在");
         }
@@ -327,7 +327,7 @@ public class PlanService {
     /**
      * 根节点与固定 Binding/Command 同事务落库；原生提交失败时由同一命令键重投。
      */
-    private void createRootDelivery(PlanContextRow context, PlanNode node,
+    private void createRootDelivery(PlanContextDO context, PlanNode node,
                                     String jobId, long planVersion) {
         WorkerDefinitionResponse definition = workerDefinitionService.requireEnabled(
                 node.workerKey(), node.workerVersion());
@@ -392,9 +392,9 @@ public class PlanService {
     /**
      * 节点只引用同用户、同目标、同对话代际且内容摘要未变化的已准备快照。
      */
-    private void validateContexts(PlanContextRow context, List<PlanNode> nodes) {
+    private void validateContexts(PlanContextDO context, List<PlanNode> nodes) {
         for (PlanNode node : nodes) {
-            ContextSnapshotRow snapshot = contextSnapshotMapper.findOwned(
+            ContextSnapshotDO snapshot = contextSnapshotMapper.findOwned(
                     context.userId(), context.taskId(), node.contextSnapshotId());
             if (snapshot == null || !node.nodeKey().equals(snapshot.targetNodeKey())
                     || snapshot.conversationGeneration() != context.conversationGeneration()

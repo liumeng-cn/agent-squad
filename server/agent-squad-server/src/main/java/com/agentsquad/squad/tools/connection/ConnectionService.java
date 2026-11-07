@@ -4,7 +4,7 @@ import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.ConnectionRow;
+import com.agentsquad.squad.domain.entity.ConnectionDO;
 import com.agentsquad.squad.domain.request.ConnectionCreateRequest;
 import com.agentsquad.squad.domain.response.ConnectionPageResponse;
 import com.agentsquad.squad.domain.dto.ConnectionResponse;
@@ -60,7 +60,7 @@ public class ConnectionService {
         validateCode("environment", request.environment());
         String policyJson = validatePolicy(request.resourcePolicy());
 
-        ConnectionRow prior = connectionMapper.findByIdempotencyKey(actor.userId(), idempotencyKey);
+        ConnectionDO prior = connectionMapper.findByIdempotencyKey(actor.userId(), idempotencyKey);
         if (prior != null) {
             log.info("连接创建幂等复用 userId={} connectionId={}", actor.userId(), prior.connectionId());
             return toView(prior);
@@ -80,7 +80,7 @@ public class ConnectionService {
      */
     public ConnectionPageResponse list(String userId, String cursor, int limit) {
         Long cursorId = parseCursor(cursor);
-        List<ConnectionRow> rows = connectionMapper.listByOwner(userId, cursorId,
+        List<ConnectionDO> rows = connectionMapper.listByOwner(userId, cursorId,
                 Math.min(Math.max(limit, 1), 100));
         String nextCursor = rows.size() == Math.min(Math.max(limit, 1), 100)
                 ? String.valueOf(rows.get(rows.size() - 1).id())
@@ -102,7 +102,7 @@ public class ConnectionService {
     public ConnectionResponse update(AuthView actor, String connectionId, String idempotencyKey,
                                      ConnectionUpdateRequest request) {
         requireIdempotencyKey(idempotencyKey);
-        ConnectionRow row = requireOwned(actor.userId(), connectionId);
+        ConnectionDO row = requireOwned(actor.userId(), connectionId);
         if (request.expectedVersion() == null || request.expectedVersion() != row.revision()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "连接版本已变化，请刷新后重试");
         }
@@ -120,8 +120,8 @@ public class ConnectionService {
         return toView(connectionMapper.findOwned(actor.userId(), connectionId));
     }
 
-    private ConnectionRow requireOwned(String userId, String connectionId) {
-        ConnectionRow row = connectionMapper.findOwned(userId, connectionId);
+    private ConnectionDO requireOwned(String userId, String connectionId) {
+        ConnectionDO row = connectionMapper.findOwned(userId, connectionId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "连接不存在");
         }
@@ -197,7 +197,7 @@ public class ConnectionService {
         return max;
     }
 
-    private ConnectionResponse toView(ConnectionRow row) {
+    private ConnectionResponse toView(ConnectionDO row) {
         Map<String, Object> policy;
         try {
             JsonNode node = RuntimePayloads.readJson(objectMapper, row.resourcePolicyJson());

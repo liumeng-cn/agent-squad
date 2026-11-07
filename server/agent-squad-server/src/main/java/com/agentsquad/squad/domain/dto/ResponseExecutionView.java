@@ -1,6 +1,6 @@
 package com.agentsquad.squad.domain.dto;
 
-import com.agentsquad.squad.domain.entity.ResponseExecutionStatus;
+import com.agentsquad.squad.domain.enums.ResponseExecutionStatus;
 
 import java.util.List;
 

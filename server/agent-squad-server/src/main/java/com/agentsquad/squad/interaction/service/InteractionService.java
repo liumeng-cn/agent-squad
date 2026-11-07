@@ -4,21 +4,21 @@ import com.agentsquad.squad.domain.dto.AcceptanceReviewRequest;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
-import com.agentsquad.squad.domain.entity.CommandRow;
-import com.agentsquad.squad.domain.entity.GoalTaskStatus;
+import com.agentsquad.squad.domain.entity.CommandDO;
+import com.agentsquad.squad.domain.enums.GoalTaskStatus;
 import com.agentsquad.squad.domain.response.CommandReceiptResponse;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.InteractionRow;
+import com.agentsquad.squad.domain.entity.InteractionDO;
 import com.agentsquad.squad.interaction.repository.InteractionMapper;
 import com.agentsquad.squad.tools.mock.MockTicketConnector;
 import com.agentsquad.squad.tools.operation.OperationExecutor;
 import com.agentsquad.squad.tools.operation.OperationService;
-import com.agentsquad.squad.domain.entity.OperationRow;
-import com.agentsquad.squad.domain.entity.OperationStatus;
+import com.agentsquad.squad.domain.entity.OperationDO;
+import com.agentsquad.squad.domain.enums.OperationStatus;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -113,13 +113,13 @@ public class InteractionService {
         if (scopeId == null || scopeMapper.findActiveOwned(userId, scopeId) == null) {
             return null;
         }
-        InteractionRow existing = interactionMapper.findByFrameworkRequest(userId, bindingId,
+        InteractionDO existing = interactionMapper.findByFrameworkRequest(userId, bindingId,
                 frameworkRequestId);
         if (existing != null) {
             return new BindingResult(existing.interactionId(), existing.kind());
         }
         String toolName = String.valueOf(call.get("name"));
-        OperationRow operation = frameworkTurnId == null ? null
+        OperationDO operation = frameworkTurnId == null ? null
                 : operationMapper.findByNativeCall(userId, bindingId, frameworkTurnId,
                 frameworkRequestId);
         String interactionId = UUID.randomUUID().toString();
@@ -170,8 +170,8 @@ public class InteractionService {
      * 框架侧解析事件落账：仅把 OPEN 推到 RESPONDED，幂等无害；返回最新交互行供投影发布。
      */
     @Transactional
-    public InteractionRow resolveFromFramework(String userId, String bindingId, String requestId) {
-        InteractionRow row = interactionMapper.findByFrameworkRequest(userId, bindingId, requestId);
+    public InteractionDO resolveFromFramework(String userId, String bindingId, String requestId) {
+        InteractionDO row = interactionMapper.findByFrameworkRequest(userId, bindingId, requestId);
         if (row == null) {
             return null;
         }
@@ -214,7 +214,7 @@ public class InteractionService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION,
                     "Idempotency-Key 必须是 1-160 个字符");
         }
-        InteractionRow row = interactionMapper.findOwned(actor.userId(), interactionId);
+        InteractionDO row = interactionMapper.findOwned(actor.userId(), interactionId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "交互不存在");
         }
@@ -260,7 +260,7 @@ public class InteractionService {
 
         if (!"OPEN".equals(row.status())) {
             if (sameJson(answerJsonText, row.responseJson())) {
-                CommandRow prior = commandMapper.findByKey(actor.userId(), scopeKey, idempotencyKey);
+                CommandDO prior = commandMapper.findByKey(actor.userId(), scopeKey, idempotencyKey);
                 if (prior != null) {
                     log.info("交互答复幂等复用原回执 interactionId={} commandId={}",
                             interactionId, prior.commandId());
@@ -309,8 +309,8 @@ public class InteractionService {
     /**
      * 审批决定的平台处置：批准派发连接器，拒绝取消操作；已成功操作复用结果实现重放幂等。
      */
-    private String resolveApproval(AuthView actor, InteractionRow row, boolean approve) {
-        OperationRow operation = operationMapper.findOwned(actor.userId(), row.operationId());
+    private String resolveApproval(AuthView actor, InteractionDO row, boolean approve) {
+        OperationDO operation = operationMapper.findOwned(actor.userId(), row.operationId());
         if (operation == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "审批对应的操作不存在");
         }
@@ -362,7 +362,7 @@ public class InteractionService {
         }
     }
 
-    private String buildApprovalQuestion(String toolName, OperationRow operation) {
+    private String buildApprovalQuestion(String toolName, OperationDO operation) {
         return "请求审批：" + toolName + "（" + operation.effect() + "），请核对脱敏参数及操作摘要";
     }
 

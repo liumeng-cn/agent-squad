@@ -1,6 +1,6 @@
 package com.agentsquad.squad.integration.agentscope;
 
-import com.agentsquad.squad.domain.entity.ProjectionTarget;
+import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.support.TransactionSynchronization;
 
@@ -10,7 +10,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
  * 整批业务事务提交后才记录成功，避免后续事件失败回滚时，日志却提前宣称状态已经更新。
  */
 @Slf4j
-public record NativeProjectionCommitLog(ProjectionTarget target,
+public record NativeProjectionCommitLog(ProjectionTargetDO target,
                                         NativeEventView event) implements TransactionSynchronization {
     @Override
     public void afterCommit() {

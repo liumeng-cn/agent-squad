@@ -1,8 +1,8 @@
 package com.agentsquad.squad.integration.agentscope;
 
-import com.agentsquad.squad.domain.entity.ResponseCompletionProtocol;
+import com.agentsquad.squad.domain.enums.ResponseCompletionProtocol;
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventBusinessWriter;
-import com.agentsquad.squad.domain.entity.ProjectionTarget;
+import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
 import io.agentscope.core.session.SessionEvent;
 import io.agentscope.core.session.SessionEventTypes;
 import jakarta.annotation.Resource;
@@ -29,7 +29,7 @@ public class NativeEventBusinessWriter implements RuntimeEventBusinessWriter {
     private com.agentsquad.squad.conversation.repository.ResponseRuntimeMapper replies;
 
     @Override
-    public void apply(ProjectionTarget target, SessionEvent event) {
+    public void apply(ProjectionTargetDO target, SessionEvent event) {
         Map<String, Object> data = SessionEventTypes.BUILTIN.contains(event.type()) ? event.data() : Map.of();
         Object status = "run/end".equals(event.type()) ? data.get("status") : null;
         if (target.taskId() == null && "run/end".equals(event.type()) && "completed".equals(status)

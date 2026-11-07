@@ -1,6 +1,6 @@
 package com.agentsquad.squad.agent.tool;
 
-import com.agentsquad.squad.domain.entity.ArtifactRow;
+import com.agentsquad.squad.domain.entity.ArtifactDO;
 import com.agentsquad.squad.artifact.service.ArtifactService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.util.MaterialFormatter;
@@ -83,7 +83,7 @@ public class ReadAttachmentTool implements AgentTool {
             if (!artifacts.isLinkedToScope(context.getUserId(), scopeId, artifactId)) {
                 return ToolResultBlock.error("附件不属于当前执行");
             }
-            ArtifactRow artifact = artifacts.content(context.getUserId(), artifactId);
+            ArtifactDO artifact = artifacts.content(context.getUserId(), artifactId);
             String raw = new String(artifact.content(), StandardCharsets.UTF_8);
             String formatted = MaterialFormatter.format(raw, artifact.mediaType(), MAX_READ_CHARACTERS);
             boolean truncated = formatted.length() < raw.length();

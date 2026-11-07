@@ -2,7 +2,7 @@ package com.agentsquad.squad.runtime.service;
 
 import com.agentsquad.squad.presentation.service.TaskEventStreamer;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.entity.TaskRow;
+import com.agentsquad.squad.domain.entity.TaskDO;
 import com.agentsquad.squad.conversation.repository.TaskEventMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
 import org.junit.jupiter.api.AfterEach;
@@ -37,7 +37,7 @@ class TaskEventStreamerTest {
     void rejectsConnectionsBeyondConfiguredLimit() {
         TaskMapper taskMapper = mock(TaskMapper.class);
         TaskEventMapper eventMapper = mock(TaskEventMapper.class);
-        when(taskMapper.findOwned(anyString(), anyString())).thenReturn(mock(TaskRow.class));
+        when(taskMapper.findOwned(anyString(), anyString())).thenReturn(mock(TaskDO.class));
         when(eventMapper.listAfter(anyString(), anyString(), anyLong())).thenReturn(List.of());
 
         streamer = new TaskEventStreamer();

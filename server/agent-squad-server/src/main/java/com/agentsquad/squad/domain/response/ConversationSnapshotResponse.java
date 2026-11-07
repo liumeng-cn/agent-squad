@@ -7,7 +7,7 @@ import com.agentsquad.squad.domain.dto.ResponseExecutionView;
 import com.agentsquad.squad.domain.dto.TaskDirectiveView;
 import com.agentsquad.squad.domain.dto.TaskResponse;
 
-import com.agentsquad.squad.domain.entity.ConversationTaskState;
+import com.agentsquad.squad.domain.entity.ConversationTaskStateDO;
 
 import java.util.List;
 
@@ -21,6 +21,6 @@ public record ConversationSnapshotResponse(ConversationViewResponse conversation
                                    TaskResponse activeTask, List<InteractionResponse> interactions,
                                    List<ArtifactResponse> deliverables, List<ExecutionFailureView> failures,
                                    List<String> operationIds, List<ResponseExecutionView> executions,
-                                   List<ConversationTaskState> taskStates, List<TaskDirectiveView> directives,
+                                   List<ConversationTaskStateDO> taskStates, List<TaskDirectiveView> directives,
                                    List<ExecutionActivityView> activities, String cursor) {
 }

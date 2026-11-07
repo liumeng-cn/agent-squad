@@ -3,12 +3,12 @@ package com.agentsquad.squad.runtime.service;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.enums.worker.WorkerJobStatus;
 import com.agentsquad.squad.common.enums.worker.WorkerSkipReason;
-import com.agentsquad.squad.domain.entity.WorkerDependencyNode;
-import com.agentsquad.squad.domain.entity.WorkerDependencyPolicy;
+import com.agentsquad.squad.domain.model.WorkerDependencyNode;
+import com.agentsquad.squad.domain.model.WorkerDependencyPolicy;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
-import com.agentsquad.squad.domain.entity.WorkerJobRow;
+import com.agentsquad.squad.domain.entity.WorkerJobDO;
 import com.agentsquad.squad.runtime.repository.PlanMapper;
 import com.agentsquad.squad.runtime.repository.ProjectionMapper;
 import com.agentsquad.squad.presentation.service.TaskEventPublishingService;
@@ -64,7 +64,7 @@ public class WorkerDependencyService {
      * 调用方已锁定父 Task 和 Plan；依赖读取使用当前读，避免并行分支相互看不到已提交结果。
      */
     public void activateReadyDependents(String userId, String taskId, long planVersion) {
-        List<WorkerJobRow> jobs = planMapper.lockJobs(taskId, planVersion);
+        List<WorkerJobDO> jobs = planMapper.lockJobs(taskId, planVersion);
         var nodes = jobs.stream().map(job -> new WorkerDependencyNode(job.nodeKey(),
                 WorkerJobStatus.valueOf(job.status()), dependencyNames(job))).toList();
         var skipped = WorkerDependencyPolicy.failedDependents(nodes);
@@ -73,22 +73,22 @@ public class WorkerDependencyService {
                 skip(job);
             }
         }
-        Map<String, WorkerJobRow> byNodeKey = new HashMap<>();
-        for (WorkerJobRow job : jobs) {
+        Map<String, WorkerJobDO> byNodeKey = new HashMap<>();
+        for (WorkerJobDO job : jobs) {
             byNodeKey.put(job.nodeKey(), job);
         }
-        for (WorkerJobRow job : jobs) {
+        for (WorkerJobDO job : jobs) {
             if (!WorkerJobStatus.BLOCKED.name().equals(job.status()) || skipped.contains(job.nodeKey())) {
                 continue;
             }
-            List<WorkerJobRow> dependencies = completedDependencies(job, byNodeKey);
+            List<WorkerJobDO> dependencies = completedDependencies(job, byNodeKey);
             if (dependencies != null) {
                 activate(job, dependencies);
             }
         }
     }
 
-    private List<String> dependencyNames(WorkerJobRow job) {
+    private List<String> dependencyNames(WorkerJobDO job) {
         if (job.dependsOnJson() == null) {
             return List.of();
         }
@@ -105,7 +105,7 @@ public class WorkerDependencyService {
     }
 
     /** 调用方持有当前Task/Plan锁；跳过和公开原因一起提交，重复处理不会重复生成事件。 */
-    private void skip(WorkerJobRow job) {
+    private void skip(WorkerJobDO job) {
         if (planMapper.skipBlockedJob(job.userId(), job.taskId(), job.planVersion(), job.jobId()) != 1) {
             throw new IllegalStateException("依赖失败收尾时计划或节点状态已变化");
         }
@@ -121,15 +121,15 @@ public class WorkerDependencyService {
                 job.taskId(), job.jobId(), job.planVersion(), WorkerSkipReason.DEPENDENCY_FAILED);
     }
 
-    private List<WorkerJobRow> completedDependencies(WorkerJobRow job,
-                                                     Map<String, WorkerJobRow> byNodeKey) {
+    private List<WorkerJobDO> completedDependencies(WorkerJobDO job,
+                                                     Map<String, WorkerJobDO> byNodeKey) {
         JsonNode names = readJson(job.dependsOnJson());
         if (names == null || !names.isArray() || names.isEmpty()) {
             throw new IllegalStateException("BLOCKED Job 缺少有效依赖");
         }
-        List<WorkerJobRow> dependencies = new ArrayList<>();
+        List<WorkerJobDO> dependencies = new ArrayList<>();
         for (JsonNode name : names) {
-            WorkerJobRow dependency = byNodeKey.get(name.asText());
+            WorkerJobDO dependency = byNodeKey.get(name.asText());
             if (dependency == null) {
                 throw new IllegalStateException("计划依赖节点已消失");
             }
@@ -141,7 +141,7 @@ public class WorkerDependencyService {
         return dependencies;
     }
 
-    private void activate(WorkerJobRow job, List<WorkerJobRow> dependencies) {
+    private void activate(WorkerJobDO job, List<WorkerJobDO> dependencies) {
         WorkerDefinitionResponse definition = definitionService.requireEnabled(
                 job.workerKey(), job.workerVersion());
         String bindingId = UUID.randomUUID().toString();
@@ -155,7 +155,7 @@ public class WorkerDependencyService {
 
         JsonNode input = readJson(job.inputJson());
         List<Map<String, Object>> results = new ArrayList<>();
-        for (WorkerJobRow dependency : dependencies) {
+        for (WorkerJobDO dependency : dependencies) {
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("jobId", dependency.jobId());
             result.put("nodeKey", dependency.nodeKey());

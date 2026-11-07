@@ -1,8 +1,8 @@
 package com.agentsquad.squad.skill.integration;
 
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
-import com.agentsquad.squad.domain.entity.SkillCatalog;
-import com.agentsquad.squad.domain.entity.SkillReference;
+import com.agentsquad.squad.domain.model.SkillCatalog;
+import com.agentsquad.squad.domain.entity.SkillReferenceDO;
 import com.agentsquad.squad.skill.service.SkillRuntimeService;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.skill.AgentSkill;
@@ -124,7 +124,7 @@ public class ScopeSkillRepository implements RuntimeContextSkillRepository, Lazy
         return false;
     }
 
-    private AgentSkill toFrameworkSkill(String userId, String scopeId, SkillReference skill) {
+    private AgentSkill toFrameworkSkill(String userId, String scopeId, SkillReferenceDO skill) {
         String content = skills.read(userId, scopeId, skill.skillVersionId(), "SKILL.md").content();
         var parsed = MarkdownSkillParser.parse(content);
         return AgentSkill.builder().metadata(parsed.getMetadata()).name(skill.name()).description(skill.description())

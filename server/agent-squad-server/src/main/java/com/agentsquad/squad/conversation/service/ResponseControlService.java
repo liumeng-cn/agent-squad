@@ -4,11 +4,11 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.CommandRow;
-import com.agentsquad.squad.domain.entity.ConversationRow;
+import com.agentsquad.squad.domain.entity.CommandDO;
+import com.agentsquad.squad.domain.entity.ConversationDO;
 import com.agentsquad.squad.conversation.repository.ConversationMapper;
-import com.agentsquad.squad.domain.entity.ExecutionScopeRow;
-import com.agentsquad.squad.domain.entity.ResponseRuntimeRow;
+import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
+import com.agentsquad.squad.domain.entity.ResponseRuntimeDO;
 import com.agentsquad.squad.domain.response.CommandReceiptResponse;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
@@ -66,16 +66,16 @@ public class ResponseControlService {
         String binding = replies.bindingForExecution(userId, executionId);
         String scopeId = scopeMapper.findScopeByBinding(userId, binding);
         scopes.requireReadable(userId, scopeId);
-        ExecutionScopeRow scope = scopes.lockOwned(userId, scopeId, false);
-        ConversationRow conversation = conversations.lockOwned(userId, scope.conversationId());
+        ExecutionScopeDO scope = scopes.lockOwned(userId, scopeId, false);
+        ConversationDO conversation = conversations.lockOwned(userId, scope.conversationId());
         if (!"ACTIVE".equals(conversation.status()) || conversation.generation() != scope.conversationGeneration()) {
             throw error(RuntimeExceptionCode.NOT_FOUND, "回复所属会话已失效");
         }
-        ResponseRuntimeRow row = replies.lockByBinding(userId, binding);
+        ResponseRuntimeDO row = replies.lockByBinding(userId, binding);
         String payload = RuntimePayloads.toJson(json, Map.of("expectedVersion", expectedVersion));
         String hash = ContentDigests.sha256(payload);
         String scopeKey = "response.cancel:" + executionId;
-        CommandRow prior = commands.findByKeyCurrent(userId, scopeKey, key);
+        CommandDO prior = commands.findByKeyCurrent(userId, scopeKey, key);
         if (prior != null) {
             if (!hash.equals(prior.payloadHash())) {
                 throw error(RuntimeExceptionCode.CONFLICT, "相同幂等键的输入不一致");
@@ -95,8 +95,8 @@ public class ResponseControlService {
     @Transactional
     public void cancelForDeletion(String userId, String conversationId) {
         for (String binding : replies.activeBindings(userId, conversationId)) {
-            ExecutionScopeRow scope = scopes.lockOwned(userId, scopeMapper.findScopeByBinding(userId, binding), false);
-            ResponseRuntimeRow row = replies.lockByBinding(userId, binding);
+            ExecutionScopeDO scope = scopes.lockOwned(userId, scopeMapper.findScopeByBinding(userId, binding), false);
+            ResponseRuntimeDO row = replies.lockByBinding(userId, binding);
             if (!row.cancellationRequested()) {
                 String payload = RuntimePayloads.toJson(json, Map.of("reason", "conversation-delete"));
                 queueStop(scope, row, "response.cancel:" + row.executionId(), "conversation-delete", payload, ContentDigests.sha256(payload));
@@ -104,7 +104,7 @@ public class ResponseControlService {
         }
     }
 
-    private CommandReceiptResponse queueStop(ExecutionScopeRow scope, ResponseRuntimeRow row, String scopeKey, String key, String payload, String hash) {
+    private CommandReceiptResponse queueStop(ExecutionScopeDO scope, ResponseRuntimeDO row, String scopeKey, String key, String payload, String hash) {
         replies.cancelling(scope.userId(), row.bindingId(), LocalDateTime.now(ZoneOffset.UTC));
         replies.cancelPending(scope.userId(), row.bindingId());
         operations.cancelUnstarted(scope.userId(), scope.scopeId());

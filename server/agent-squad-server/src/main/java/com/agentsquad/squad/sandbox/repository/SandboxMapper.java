@@ -1,7 +1,7 @@
 package com.agentsquad.squad.sandbox.repository;
 
-import com.agentsquad.squad.domain.entity.SandboxBindingRow;
-import com.agentsquad.squad.domain.entity.SandboxRunRow;
+import com.agentsquad.squad.domain.entity.SandboxBindingDO;
+import com.agentsquad.squad.domain.entity.SandboxRunDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -12,16 +12,16 @@ import org.apache.ibatis.annotations.Param;
  */
 @Mapper
 public interface SandboxMapper {
-    SandboxBindingRow binding(@Param("userId") String userId, @Param("sessionId") String sessionId);
+    SandboxBindingDO binding(@Param("userId") String userId, @Param("sessionId") String sessionId);
 
     int activeWorker(@Param("userId") String userId, @Param("bindingId") String bindingId,
                      @Param("guardToken") String guardToken);
 
-    SandboxRunRow prior(@Param("userId") String userId, @Param("bindingId") String bindingId,
+    SandboxRunDO prior(@Param("userId") String userId, @Param("bindingId") String bindingId,
                         @Param("logicalKey") String logicalKey, @Param("turnId") String turnId,
                         @Param("toolCallId") String toolCallId);
 
-    SandboxRunRow find(@Param("userId") String userId, @Param("executionId") String executionId);
+    SandboxRunDO find(@Param("userId") String userId, @Param("executionId") String executionId);
 
     int insert(@Param("executionId") String executionId, @Param("userId") String userId,
                @Param("scopeId") String scopeId, @Param("bindingId") String bindingId,
@@ -32,7 +32,7 @@ public interface SandboxMapper {
     int finish(@Param("userId") String userId, @Param("executionId") String executionId,
                @Param("status") String status, @Param("resultJson") String resultJson);
 
-    java.util.List<SandboxRunRow> expired();
+    java.util.List<SandboxRunDO> expired();
 
     int expireOne(@Param("userId") String userId, @Param("executionId") String executionId);
 }

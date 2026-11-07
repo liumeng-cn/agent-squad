@@ -4,8 +4,8 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.CanonicalJson;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.MessageSubmissionRow;
-import com.agentsquad.squad.domain.entity.ResponseExecutionStatus;
+import com.agentsquad.squad.domain.entity.MessageSubmissionDO;
+import com.agentsquad.squad.domain.enums.ResponseExecutionStatus;
 import com.agentsquad.squad.domain.request.MessageCreateRequest;
 import com.agentsquad.squad.domain.response.MessageReceiptResponse;
 import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
@@ -59,7 +59,7 @@ public class MessageAcceptanceService {
                         : Map.of("text", normalized.text(), "artifactIds", normalized.artifactIds(),
                         "modelId", normalized.modelId() == null ? "" : normalized.modelId(),
                         "reasoningMode", normalized.reasoningMode() == null ? "" : normalized.reasoningMode().name())));
-        MessageSubmissionRow row;
+        MessageSubmissionDO row;
         try {
             row = writer.accept(userId, conversationId, scopeKey, key, normalized, hash);
         } catch (DuplicateKeyException duplicate) {

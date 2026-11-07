@@ -6,9 +6,9 @@ import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.OperationRow;
-import com.agentsquad.squad.domain.entity.OperationStatus;
-import com.agentsquad.squad.domain.entity.ToolExecutionContextRow;
+import com.agentsquad.squad.domain.entity.OperationDO;
+import com.agentsquad.squad.domain.enums.OperationStatus;
+import com.agentsquad.squad.domain.entity.ToolExecutionContextDO;
 import com.agentsquad.squad.domain.dto.OperationPage;
 import com.agentsquad.squad.domain.dto.OperationView;
 import com.agentsquad.squad.domain.dto.OperationDetail;
@@ -67,10 +67,10 @@ public class OperationService {
      * 预检并创建操作账本记录；原生调用键或业务意图键命中即返回原记录，不产生第二行。
      */
     @Transactional
-    public OperationRow prepare(PrepareRequest request) {
+    public OperationDO prepare(PrepareRequest request) {
         String scopeId = scopeService.scopeForSession(request.userId(), request.sessionId());
         scopeService.lockOwned(request.userId(), scopeId, true);
-        ToolExecutionContextRow context = operationMapper.lockToolContext(request.userId(),
+        ToolExecutionContextDO context = operationMapper.lockToolContext(request.userId(),
                 request.sessionId());
         if (context == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "会话未绑定目标");
@@ -80,7 +80,7 @@ public class OperationService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已取消或结束，不再受理工具操作");
         }
 
-        OperationRow existing = operationMapper.findByNativeCall(request.userId(), context.bindingId(),
+        OperationDO existing = operationMapper.findByNativeCall(request.userId(), context.bindingId(),
                 request.frameworkTurnId(), request.toolCallId());
         if (existing != null) {
             log.info("工具调用幂等复用原操作 operationId={} toolCallId={}",
@@ -94,7 +94,7 @@ public class OperationService {
                     || request.businessIntentKey().length() > 160) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "写入操作缺少业务幂等键");
             }
-            OperationRow intent = operationMapper.findByBusinessIntent(request.userId(),
+            OperationDO intent = operationMapper.findByBusinessIntent(request.userId(),
                     context.scopeId(), request.toolKey(), request.businessIntentKey());
             if (intent != null) {
                 if (!intent.requestHash().equals(requestHash)) {
@@ -138,7 +138,7 @@ public class OperationService {
         scopeService.lockOwned(userId, scopeId, false);
         var unstarted = operationMapper.lockUnstartedInScope(userId, scopeId);
         operationMapper.cancelUnstartedByScope(userId, scopeId);
-        for (OperationRow operation : unstarted) {
+        for (OperationDO operation : unstarted) {
             if (operation.budgetUsageKey() != null) {
                 budgetService.releaseUnsentTool(userId, scopeId, operation.budgetUsageKey());
             }
@@ -151,7 +151,7 @@ public class OperationService {
     public OperationPage listPage(String userId, String taskId, String cursor, int limit) {
         scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         Long cursorId = parseCursor(cursor);
-        List<OperationRow> rows = operationMapper.listByTask(userId, taskId, cursorId,
+        List<OperationDO> rows = operationMapper.listByTask(userId, taskId, cursorId,
                 Math.min(Math.max(limit, 1), 100) + 1);
         boolean hasMore = rows.size() > Math.min(Math.max(limit, 1), 100);
         List<OperationView> items = rows.stream()
@@ -171,7 +171,7 @@ public class OperationService {
      * 读取当前用户单个操作视图；不存在统一按 NOT_FOUND 处理。
      */
     public OperationView getOwned(String userId, String operationId) {
-        OperationRow row = operationMapper.findOwned(userId, operationId);
+        OperationDO row = operationMapper.findOwned(userId, operationId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "操作不存在");
         }
@@ -183,7 +183,7 @@ public class OperationService {
      * 按资源归属读取脱敏详情，核对动作仅由服务端显式授权计算。
      */
     public OperationDetail detail(AuthView actor, String operationId) {
-        OperationRow row = operationMapper.findOwned(actor.userId(), operationId);
+        OperationDO row = operationMapper.findOwned(actor.userId(), operationId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "操作不存在");
         }
@@ -215,7 +215,7 @@ public class OperationService {
     /**
      * 账本行映射为公开摘要；参数与结果正文不进入列表。
      */
-    public OperationView viewOf(OperationRow row) {
+    public OperationView viewOf(OperationDO row) {
         return new OperationView(row.operationId(), row.taskId(), row.jobId(), row.toolKey(),
                 row.effect(), row.status(), row.requestHash(), row.version(),
                 row.toolKey() + " · " + row.effect() + " · " + row.status());
@@ -235,7 +235,7 @@ public class OperationService {
     /**
      * 结算该操作的预算预留；金额由调用方按工具声明传入。
      */
-    public void settle(OperationRow operation, long settledUnits) {
+    public void settle(OperationDO operation, long settledUnits) {
         budgetService.settle(operation.userId(), operation.scopeId(), usageKeyOf(operation),
                 settledUnits);
     }
@@ -243,7 +243,7 @@ public class OperationService {
     /**
      * 操作的预算稳定键；核对流程复用同一派生规则，避免两处口径漂移。
      */
-    public String usageKeyOf(OperationRow operation) {
+    public String usageKeyOf(OperationDO operation) {
         return operation.budgetUsageKey();
     }
 
