@@ -49,6 +49,8 @@ import java.util.UUID;
 @Slf4j
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class CommandDeliveryService {
+    @Resource
+    private com.agentsquad.squad.common.observability.ExecutionTrace executionTrace;
 
     private static final int LEASE_SECONDS = 60;
     private static final String ALREADY_SETTLED = "Only the latest unfinished task can continue";
@@ -212,6 +214,10 @@ public class CommandDeliveryService {
      * 单条投递不跨数据库事务等待模型；失败按有界退避重新排队。
      */
     public void deliver(String commandId) {
+        executionTrace.deliver(commandId, () -> deliverCommand(commandId));
+    }
+
+    private void deliverCommand(String commandId) {
         String token = UUID.randomUUID().toString();
         LocalDateTime claimedAt = now();
         try {

@@ -60,9 +60,11 @@ class SchemaParityTest {
             String complete = new ClassPathResource("db/migration/V1__baseline.sql").getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
             String addition = Files.readString(migrationDir.resolve("V9__execution_activity.sql"));
             assertTrue(complete.contains(addition.trim()), "完整基线必须包含同一活动表定义");
-            String previous = complete.replace(addition.trim(), "");
+            String previous = complete.replace(addition.trim(), "")
+                    .replaceAll("(?m)^    `trace(?:parent|state)`[^\\n]+\\n", "");
             ScriptUtils.executeSqlScript(prod, new org.springframework.core.io.ByteArrayResource(previous.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
             ScriptUtils.executeSqlScript(prod, new FileSystemResource(migrationDir.resolve("V9__execution_activity.sql")));
+            ScriptUtils.executeSqlScript(prod, new FileSystemResource(migrationDir.resolve("V10__execution_trace.sql")));
 
             Map<String, Map<String, String>> devSchema = readSchema(dev);
             Map<String, Map<String, String>> prodSchema = readSchema(prod);

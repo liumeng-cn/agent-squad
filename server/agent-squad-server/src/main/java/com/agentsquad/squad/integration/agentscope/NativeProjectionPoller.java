@@ -28,6 +28,8 @@ import java.util.List;
 @Slf4j
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class NativeProjectionPoller {
+    @Resource
+    private com.agentsquad.squad.common.observability.ExecutionTrace executionTrace;
 
     @Resource
     private com.agentsquad.squad.runtime.service.ExecutionAuthorizationService authorization;
@@ -85,7 +87,10 @@ public class NativeProjectionPoller {
                 for (SessionEvent event : events) {
                     receipts.receive(source, event);
                 }
-                consumption.consume(target, events);
+                if (!events.isEmpty()) {
+                    var batch = events;
+                    executionTrace.project(target.userId(), target.bindingId(), () -> consumption.consume(target, batch));
+                }
                 if (target.taskId() == null) {
                     String commandId = responses.originalCommand(target);
                     if (commandId != null) {

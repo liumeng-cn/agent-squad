@@ -76,6 +76,51 @@
             'OPEN')
     </insert>
 
+    <update id="saveTrace">
+        UPDATE sq_execution_scope
+        SET traceparent = #{traceparent},
+            tracestate  = #{tracestate}
+        WHERE user_id = #{userId}
+          AND scope_id = #{scopeId}
+          AND traceparent IS NULL
+    </update>
+
+    <update id="inheritTrace">
+        UPDATE sq_execution_scope child
+        JOIN sq_execution_scope parent
+          ON parent.user_id = child.user_id
+         AND parent.scope_id = #{parentScopeId}
+        SET child.traceparent = parent.traceparent,
+            child.tracestate  = parent.tracestate
+        WHERE child.user_id = #{userId}
+          AND child.scope_id = #{scopeId}
+          AND child.traceparent IS NULL
+          AND parent.traceparent IS NOT NULL
+    </update>
+
+    <select id="commandTrace" resultType="map">
+        SELECT s.traceparent,
+               s.tracestate
+        FROM sq_command c
+        JOIN sq_execution_scope s
+          ON s.user_id = c.user_id
+         AND s.scope_id = c.scope_id
+        WHERE c.command_id = #{commandId}
+          AND s.traceparent IS NOT NULL
+    </select>
+
+    <select id="bindingTrace" resultType="map">
+        SELECT s.traceparent,
+               s.tracestate
+        FROM sq_runtime_binding b
+        JOIN sq_execution_scope s
+          ON s.user_id = b.user_id
+         AND s.scope_id = b.scope_id
+        WHERE b.user_id = #{userId}
+          AND b.binding_id = #{bindingId}
+          AND s.traceparent IS NOT NULL
+    </select>
+
     <insert id="insertScope">
         INSERT INTO sq_execution_scope (scope_id,
             user_id,

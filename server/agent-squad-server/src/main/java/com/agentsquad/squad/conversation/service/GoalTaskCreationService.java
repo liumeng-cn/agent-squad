@@ -149,6 +149,7 @@ public class GoalTaskCreationService {
         tasks.insert(taskId, userId, source.conversationId(), input, account.limitMicrounits());
         scopeMapper.insertScope(scopeId, userId, source.conversationId(), source.conversationGeneration(),
                 "TASK", taskId, source.accountId());
+        scopeMapper.inheritTrace(userId, scopeId, source.scopeId());
         if (scopeMapper.linkTaskScope(userId, taskId, scopeId) != 1
                 || origins.linkSource(userId, taskId, message.messageId(), reply.executionId()) != 1) {
             throw new IllegalStateException("目标来源或执行归属绑定失败");

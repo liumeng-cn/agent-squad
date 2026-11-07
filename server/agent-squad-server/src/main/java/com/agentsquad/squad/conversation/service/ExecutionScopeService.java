@@ -21,6 +21,8 @@ import java.util.UUID;
  */
 @Service
 public class ExecutionScopeService {
+    @Resource
+    private com.agentsquad.squad.common.observability.ExecutionTrace executionTrace;
 
     private static final Set<String> DISPATCHABLE = Set.of("QUEUED", "RUNNING", "RECOVERING", "WAITING_WORKERS", "WAITING_INPUT", "WAITING_APPROVAL");
 
@@ -44,6 +46,7 @@ public class ExecutionScopeService {
         String scopeId = UUID.randomUUID().toString();
         mapper.insertAccount(userId, accountId, profileKey, limit);
         mapper.insertScope(scopeId, userId, conversationId, generation, "TASK", taskId, accountId);
+        executionTrace.capture(userId, scopeId);
         if (mapper.linkTaskScope(userId, taskId, scopeId) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标执行归属已变化");
         }

@@ -61,7 +61,8 @@ class SchemaVersionGateTest {
                         + "(6, '6', 'event inbox', 'SQL', 'V6__runtime_event_inbox.sql', 'test', 0, 1), "
                         + "(7, '7', 'natural reply', 'SQL', 'V7__natural_reply_protocol.sql', 'test', 0, 1), "
                         + "(8, '8', 'model choice', 'SQL', 'V8__accepted_model_selection.sql', 'test', 0, 1), "
-                        + "(9, '9', 'execution activity', 'SQL', 'V9__execution_activity.sql', 'test', 0, 1)");
+                        + "(9, '9', 'execution activity', 'SQL', 'V9__execution_activity.sql', 'test', 0, 1), "
+                        + "(10, '10', 'execution trace', 'SQL', 'V10__execution_trace.sql', 'test', 0, 1)");
             }
         }
 

@@ -400,6 +400,8 @@ CREATE TABLE IF NOT EXISTS `sq_execution_scope`
     `service_retry_attempts`   int         NOT NULL DEFAULT '0' COMMENT '已持久自动服务重试次数，不因重启清零',
     `plan_correction_attempts` int         NOT NULL DEFAULT '0' COMMENT '无效计划次数，首次失败后最多两次纠正',
     `retry_next_attempt_at`    datetime(3)          DEFAULT NULL COMMENT '已排队恢复的执行时间',
+    `traceparent`              varchar(55)    DEFAULT NULL COMMENT '受理请求的W3C父追踪标识',
+    `tracestate`               varchar(512)   DEFAULT NULL COMMENT '受理请求的W3C追踪状态',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_execution_scope` (`user_id`, `scope_id`),
     UNIQUE KEY `uk_scope_owner` (`user_id`, `kind`, `owner_id`),

@@ -12,6 +12,15 @@ import org.apache.ibatis.annotations.Param;
  */
 @Mapper
 public interface ExecutionScopeMapper {
+    int saveTrace(@Param("userId") String userId, @Param("scopeId") String scopeId,
+                  @Param("traceparent") String traceparent, @Param("tracestate") String tracestate);
+
+    int inheritTrace(@Param("userId") String userId, @Param("scopeId") String scopeId,
+                     @Param("parentScopeId") String parentScopeId);
+
+    java.util.Map<String, String> commandTrace(@Param("commandId") String commandId);
+
+    java.util.Map<String, String> bindingTrace(@Param("userId") String userId, @Param("bindingId") String bindingId);
 
     ExecutionScopeRow findActiveOwned(@Param("userId") String userId, @Param("scopeId") String scopeId);
 

@@ -31,6 +31,8 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class RuntimeProjectionDispatcher {
+    @Resource
+    private com.agentsquad.squad.common.observability.ExecutionTrace executionTrace;
     @org.springframework.beans.factory.annotation.Value("${agentsquad.projection.wakeup-enabled:true}")
     private boolean wakeupEnabled;
 
@@ -131,7 +133,7 @@ public class RuntimeProjectionDispatcher {
                         receipts.receive(source, event);
                     }
                 }
-                consumption.consume(target, events);
+                executionTrace.project(target.userId(), target.bindingId(), () -> consumption.consume(target, events));
                 if (events.size() < BATCH_SIZE) {
                     return;
                 }

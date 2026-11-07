@@ -45,6 +45,8 @@ import java.util.UUID;
 @Slf4j
 @Service
 public class MessageAcceptanceWriter {
+    @Resource
+    private com.agentsquad.squad.common.observability.ExecutionTrace executionTrace;
 
     @org.springframework.beans.factory.annotation.Value("${agentsquad.response.completion-protocol:NATURAL}")
     private com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol completionProtocol;
@@ -117,6 +119,7 @@ public class MessageAcceptanceWriter {
         }
         scopes.insertAccount(userId, accountId, "STANDARD", responseBudgetLimit);
         scopes.insertScope(scopeId, userId, conversationId, conversation.generation(), "RESPONSE", executionId, accountId);
+        executionTrace.capture(userId, scopeId);
         if (messages.reserveMessage(userId, conversationId, now) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "会话已停止接收消息");
         }

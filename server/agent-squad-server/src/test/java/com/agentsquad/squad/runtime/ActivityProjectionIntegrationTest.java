@@ -1,6 +1,8 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
+import com.agentsquad.squad.common.observability.ExecutionTrace;
+import io.micrometer.tracing.Tracer;
 import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
@@ -40,9 +42,29 @@ class ActivityProjectionIntegrationTest {
                 "--spring.datasource.username=" + MySqlTestDatabase.username(),
                 "--spring.datasource.password=" + MySqlTestDatabase.password())) {
             String user = "00000000-0000-0000-0000-000000000001";
-            var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "activity", new MessageCreateRequest("读取资料", List.of()));
+            var tracer = context.getBean(Tracer.class);
+            var parent = tracer.nextSpan().name("test.message.accept").start();
+            com.agentsquad.squad.conversation.dto.MessageReceipt receipt;
+            try (var ignored = tracer.withSpan(parent)) {
+                receipt = context.getBean(MessageAcceptanceService.class)
+                        .accept(user, null, "activity", new MessageCreateRequest("读取资料", List.of()));
+            } finally {
+                parent.end();
+            }
+            var tracing = context.getBean(ExecutionTrace.class);
+            assertThat(tracer.currentSpan()).isNull();
+            tracing.deliver(receipt.commandId(), () -> {
+                assertThat(tracer.currentSpan().context().traceId()).isEqualTo(parent.context().traceId());
+                assertThat(tracer.currentSpan().context().spanId()).isNotEqualTo(parent.context().spanId());
+            });
+            assertThat(tracer.currentSpan()).isNull();
             var jdbc = context.getBean(JdbcTemplate.class);
             String binding = jdbc.queryForObject("SELECT binding_id FROM sq_runtime_binding", String.class);
+            assertThatThrownBy(() -> tracing.project(user, binding, () -> {
+                assertThat(tracer.currentSpan().context().traceId()).isEqualTo(parent.context().traceId());
+                throw new IllegalStateException("test rollback");
+            })).isInstanceOf(IllegalStateException.class);
+            assertThat(tracer.currentSpan()).isNull();
             String scopeId = jdbc.queryForObject("SELECT scope_id FROM sq_response_execution", String.class);
             String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding", String.class);
             var scope = context.getBean(ExecutionScopeMapper.class).findOwned(user, scopeId);

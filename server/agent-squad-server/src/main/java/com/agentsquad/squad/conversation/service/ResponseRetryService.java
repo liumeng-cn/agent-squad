@@ -33,6 +33,8 @@ import java.util.UUID;
 @Service
 public class ResponseRetryService {
     @Resource
+    private com.agentsquad.squad.common.observability.ExecutionTrace executionTrace;
+    @Resource
     private com.agentsquad.squad.presentation.service.ActivityProjectionService activities;
     @org.springframework.beans.factory.annotation.Value("${agentsquad.response.completion-protocol:NATURAL}")
     private com.agentsquad.squad.conversation.domain.ResponseCompletionProtocol completionProtocol;
@@ -105,6 +107,8 @@ public class ResponseRetryService {
         String command = UUID.randomUUID().toString();
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         scopeMapper.insertScope(nextScope, userId, scope.conversationId(), scope.conversationGeneration(), "RESPONSE", next, scope.accountId());
+        executionTrace.capture(userId, nextScope);
+        scopeMapper.inheritTrace(userId, nextScope, scope.scopeId());
         bindings.insertResponse(binding, userId, nextScope, MasterAgentIdentity.AGENT_ID, UUID.randomUUID().toString(), now);
         messages.insertExecution(next, userId, scope.conversationId(), original.sourceMessageId(), nextScope, binding, completionProtocol);
         var previousModel = responses.modelChoiceByBinding(userId, oldBinding);
