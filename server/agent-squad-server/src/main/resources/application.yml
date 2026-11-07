@@ -37,6 +37,8 @@ logging:
       console: ${SQUAD_LOG_FORMAT:}
   level:
     io.agentscope.harness.agent.middleware.AgentTraceMiddleware: OFF
+    # 供应商错误由业务层分类，SDK 传输日志可能包含完整响应正文。
+    io.agentscope.core.model.transport.JdkHttpTransport: OFF
 
 management:
   health:

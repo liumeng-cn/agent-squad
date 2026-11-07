@@ -81,7 +81,7 @@ public class ExecutionTrace {
                     var span = propagator.extract(parent.get(), Map::get).name(name).start();
                     span.tag("squad.session.id", sessionId);
                     return Flux.defer(action)
-                            .doOnError(span::error)
+                            .doOnError(failure -> span.error(ObservationSupport.safeDiagnostic(failure)))
                             .doFinally(signal -> {
                                 span.tag("squad.outcome", signal.name());
                                 span.end();
@@ -100,7 +100,7 @@ public class ExecutionTrace {
         try (var ignored = tracer.withSpan(span)) {
             action.run();
         } catch (RuntimeException failure) {
-            span.error(failure);
+            span.error(ObservationSupport.safeDiagnostic(failure));
             throw failure;
         } finally {
             span.end();

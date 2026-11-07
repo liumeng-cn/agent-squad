@@ -10,7 +10,10 @@ import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.net.InetSocketAddress;
@@ -28,10 +31,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>
  * 本地HTTP模型返回结构化503，验证两次上限、未知收费保留与成功后继；不推断真实供应商质量。
  */
+@ExtendWith(OutputCaptureExtension.class)
 class TransientResponseRecoveryIntegrationTest {
     @ParameterizedTest
     @ValueSource(strings = {"http", "http-exhaust", "eof", "eof-exhaust", "partial", "partial-exhaust"})
-    void transientFailureRecoversOrStopsAtPersistentLimit(String scenario, @TempDir Path directory) throws Exception {
+    void transientFailureRecoversOrStopsAtPersistentLimit(String scenario, @TempDir Path directory, CapturedOutput logs) throws Exception {
         boolean exhaust = scenario.endsWith("-exhaust");
         AtomicInteger calls = new AtomicInteger();
         AtomicBoolean unavailable = new AtomicBoolean(exhaust);
@@ -132,6 +136,7 @@ class TransientResponseRecoveryIntegrationTest {
         } finally {
             model.stop(0);
         }
+        assertThat(logs.getAll()).contains("模型调用失败").doesNotContain("private-test-provider-detail");
     }
 
     private static String awaitStatus(JdbcTemplate jdbc, String execution) throws InterruptedException {

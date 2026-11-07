@@ -76,8 +76,9 @@ public class ExecutionContextMiddleware implements MiddlewareBase {
                                     Function<io.agentscope.core.middleware.AgentInput, Flux<AgentEvent>> next) {
         return Flux.defer(() -> next.apply(input)).doOnError(error -> {
             if (!(error instanceof ExecutionContextInvalidatedException) && !(error instanceof CancellationException)) {
-                log.warn("执行阶段失败 sessionId={} stage=agent errorType={}", context.getSessionId(),
-                        error.getClass().getSimpleName(), error);
+                log.debug("执行阶段失败 sessionId={} stage=agent errorType={}", context.getSessionId(),
+                        error.getClass().getSimpleName(),
+                        com.agentsquad.squad.common.observability.ObservationSupport.safeDiagnostic(error));
             }
         });
     }

@@ -30,6 +30,13 @@ import java.util.function.Supplier;
 @Slf4j
 @Component
 public class ObservationSupport {
+    /** 日志和追踪只保留异常类型与有限栈帧，避免上传供应商正文或业务入参。 */
+    public static Throwable safeDiagnostic(Throwable failure) {
+        var diagnostic = new IllegalStateException(failure.getClass().getName());
+        var frames = failure.getStackTrace();
+        diagnostic.setStackTrace(java.util.Arrays.copyOf(frames, Math.min(24, frames.length)));
+        return diagnostic;
+    }
 
     public static final int MAX_LOG_FIELD_BYTES = 4096;
     private static final int MAX_VALUE_CHARS = 512;
@@ -65,7 +72,7 @@ public class ObservationSupport {
         try (Observation.Scope ignored = observation.openScope()) {
             return action.get();
         } catch (RuntimeException exception) {
-            observation.error(exception);
+            observation.error(safeDiagnostic(exception));
             log.warn("追踪步骤执行失败 step={} errorType={}", name, classify(exception));
             throw exception;
         } finally {
