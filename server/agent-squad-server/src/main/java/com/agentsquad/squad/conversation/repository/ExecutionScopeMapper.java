@@ -22,6 +22,8 @@ public interface ExecutionScopeMapper {
 
     java.util.Map<String, String> bindingTrace(@Param("userId") String userId, @Param("bindingId") String bindingId);
 
+    java.util.Map<String, String> sessionTrace(@Param("userId") String userId, @Param("sessionId") String sessionId);
+
     ExecutionScopeRow findActiveOwned(@Param("userId") String userId, @Param("scopeId") String scopeId);
 
     int insertAccount(@Param("userId") String userId, @Param("accountId") String accountId,

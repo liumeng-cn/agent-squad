@@ -2,12 +2,20 @@ package com.agentsquad.squad.common.observability;
 
 import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import io.micrometer.tracing.Tracer;
+import io.micrometer.context.ContextRegistry;
 import io.micrometer.tracing.propagation.Propagator;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Supplier;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * 持久执行链路追踪
@@ -24,6 +32,11 @@ public class ExecutionTrace {
 
     @Resource
     private Propagator propagator;
+
+    @PostConstruct
+    public void registerReactorSpanAccessor() {
+        ContextRegistry.getInstance().registerThreadLocalAccessor(new ExecutionSpanAccessor(tracer));
+    }
 
     /**
      * 在新执行范围受理时记录当前请求上下文，只持久化 W3C Trace 字段。
@@ -53,6 +66,28 @@ public class ExecutionTrace {
      */
     public void project(String userId, String bindingId, Runnable action) {
         run(scopes.bindingTrace(userId, bindingId), "squad.journal.apply", "squad.binding.id", bindingId, action);
+    }
+
+    /**
+     * 每次订阅单独创建 Span，结束、失败与取消都以实际订阅生命周期为准。
+     */
+    public <T> Flux<T> session(String userId, String sessionId, String name, Supplier<Flux<T>> action) {
+        return Mono.fromCallable(() -> Optional.ofNullable(scopes.sessionTrace(userId, sessionId)))
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMapMany(parent -> {
+                    if (parent.isEmpty()) {
+                        return Flux.defer(action);
+                    }
+                    var span = propagator.extract(parent.get(), Map::get).name(name).start();
+                    span.tag("squad.session.id", sessionId);
+                    return Flux.defer(action)
+                            .doOnError(span::error)
+                            .doFinally(signal -> {
+                                span.tag("squad.outcome", signal.name());
+                                span.end();
+                            })
+                            .contextWrite(context -> context.put(ExecutionSpanAccessor.KEY, span));
+                });
     }
 
     private void run(Map<String, String> carrier, String name, String key, String id, Runnable action) {

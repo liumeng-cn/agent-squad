@@ -1,6 +1,7 @@
 package com.agentsquad.squad.presentation.stream;
 
 import com.agentsquad.squad.presentation.dto.ConversationEvent;
+import com.agentsquad.squad.presentation.dto.ReplyPreview;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 final class RecordingSseEmitter extends SseEmitter {
     final List<ConversationEvent> events = new CopyOnWriteArrayList<>();
+    final List<ReplyPreview> previews = new CopyOnWriteArrayList<>();
     final AtomicInteger completions = new AtomicInteger();
 
     @Override
@@ -21,6 +23,8 @@ final class RecordingSseEmitter extends SseEmitter {
         for (var item : builder.build()) {
             if (item.getData() instanceof ConversationEvent event) {
                 events.add(event);
+            } else if (item.getData() instanceof ReplyPreview preview) {
+                previews.add(preview);
             }
         }
     }

@@ -38,6 +38,8 @@ import java.util.function.Function;
 @lombok.extern.slf4j.Slf4j
 public class ExecutionContextMiddleware implements MiddlewareBase {
     @Resource
+    private com.agentsquad.squad.common.observability.ExecutionTrace executionTrace;
+    @Resource
     private com.agentsquad.squad.skill.service.SkillRuntimeService skills;
 
     @Resource
@@ -127,7 +129,8 @@ public class ExecutionContextMiddleware implements MiddlewareBase {
                                     + "仅在相关时使用；委派时通过prepare_context选择必要的skillVersionIds与memoryIds，不复制整段资料。\n"
                                     + RuntimePayloads.toJson(json, snapshot)).build());
                     return new ModelCallInput(messages, input.tools(), input.options(), input.model());
-                }).subscribeOn(Schedulers.boundedElastic()).flatMapMany(next)
+                }).subscribeOn(Schedulers.boundedElastic()).flatMapMany(adjusted ->
+                        executionTrace.session(context.getUserId(), context.getSessionId(), "squad.model.call", () -> next.apply(adjusted)))
                 .onErrorResume(ExecutionContextInvalidatedException.class, error -> restrict(context, error));
     }
 
@@ -159,7 +162,8 @@ public class ExecutionContextMiddleware implements MiddlewareBase {
                                 entry.skill().getSource().substring(prefix.length()), allowed == null ? Set.of() : allowed.toolNames());
                     }
                 })
-                .subscribeOn(Schedulers.boundedElastic()).thenMany(Flux.defer(() -> next.apply(input)))
+                .subscribeOn(Schedulers.boundedElastic()).thenMany(Flux.defer(() ->
+                        executionTrace.session(context.getUserId(), context.getSessionId(), "squad.tool.batch", () -> next.apply(input))))
                 .onErrorResume(com.agentsquad.squad.skill.domain.SkillCapabilityUnavailableException.class, error ->
                         Mono.fromRunnable(() -> failures.reportModel(context.getUserId(), context.getSessionId(), "skill-capability", error))
                                 .subscribeOn(Schedulers.boundedElastic()).thenMany(Flux.error(error)))

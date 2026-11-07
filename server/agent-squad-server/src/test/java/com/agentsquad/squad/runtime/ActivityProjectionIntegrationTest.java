@@ -67,6 +67,31 @@ class ActivityProjectionIntegrationTest {
             assertThat(tracer.currentSpan()).isNull();
             String scopeId = jdbc.queryForObject("SELECT scope_id FROM sq_response_execution", String.class);
             String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding", String.class);
+            var executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+            var scheduler = reactor.core.scheduler.Schedulers.fromExecutorService(executor);
+            try {
+                assertThat(tracing.session(user, session, "test.model", () -> reactor.core.publisher.Mono
+                                .fromCallable(() -> tracer.currentSpan().context().traceId()).subscribeOn(scheduler).flux())
+                        .blockLast(java.time.Duration.ofSeconds(5))).isEqualTo(parent.context().traceId());
+                assertThat(tracer.currentSpan()).isNull();
+                assertThat(executor.submit(tracer::currentSpan).get(5, java.util.concurrent.TimeUnit.SECONDS)).isNull();
+                assertThatThrownBy(() -> tracing.session(user, session, "test.tool", () -> reactor.core.publisher.Mono
+                                .error(new IllegalStateException("test tool failure")).subscribeOn(scheduler).flux())
+                        .blockLast(java.time.Duration.ofSeconds(5))).isInstanceOf(IllegalStateException.class);
+                assertThat(executor.submit(tracer::currentSpan).get(5, java.util.concurrent.TimeUnit.SECONDS)).isNull();
+                var subscribed = new java.util.concurrent.CountDownLatch(1);
+                var waiting = tracing.session(user, session, "test.cancel", () -> reactor.core.publisher.Mono
+                        .fromRunnable(subscribed::countDown).subscribeOn(scheduler)
+                        .thenMany(reactor.core.publisher.Flux.never())).subscribe();
+                try {
+                    assertThat(subscribed.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                } finally {
+                    waiting.dispose();
+                }
+                assertThat(executor.submit(tracer::currentSpan).get(5, java.util.concurrent.TimeUnit.SECONDS)).isNull();
+            } finally {
+                scheduler.dispose();
+            }
             var scope = context.getBean(ExecutionScopeMapper.class).findOwned(user, scopeId);
             var sessions = context.getBean(com.agentsquad.squad.integration.agentscope.journal.RuntimeSessionProvider.class);
             var source = new com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource(user, binding, session, 1);

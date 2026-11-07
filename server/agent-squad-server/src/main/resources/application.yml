@@ -1,4 +1,6 @@
 spring:
+  reactor:
+    context-propagation: auto
   data:
     redis:
       timeout: 300ms

@@ -74,7 +74,10 @@ public final class ConversationSubscriber {
             close();
             return;
         }
-        previews.put(preview.executionId(), preview);
+        // Redis监听回调可能并行，低版本思考帧不能覆盖同一流待发送的正文。
+        previews.compute(preview.executionId(), (id, pending) -> pending != null
+                && pending.streamId().equals(preview.streamId()) && pending.revision() >= preview.revision()
+                ? pending : preview);
         schedule();
     }
 

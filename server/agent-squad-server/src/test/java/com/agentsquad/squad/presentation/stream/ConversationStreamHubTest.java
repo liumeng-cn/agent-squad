@@ -2,6 +2,8 @@ package com.agentsquad.squad.presentation.stream;
 
 import com.agentsquad.squad.identity.UserStatusGuard;
 import com.agentsquad.squad.presentation.dto.ConversationEvent;
+import com.agentsquad.squad.presentation.dto.ReplyPreview;
+import com.agentsquad.squad.presentation.domain.ReplyPreviewPhase;
 import com.agentsquad.squad.presentation.service.ConversationQueryService;
 import com.agentsquad.squad.presentation.service.ConversationStreamHub;
 import com.agentsquad.squad.presentation.service.ConversationStreamKey;
@@ -27,6 +29,20 @@ import static org.mockito.Mockito.when;
  * 多连接只触发一次事件读取，通知竞争不丢失；慢连接和关闭仅释放自身订阅。
  */
 class ConversationStreamHubTest {
+    @Test
+    void delayedThinkingFrameCannotReplaceQueuedAnswer() {
+        var emitter = new RecordingSseEmitter();
+        var executor = new QueuedExecutor();
+        var subscription = subscriber(emitter, executor, () -> { });
+        var answer = new ReplyPreview(2, "execution", "message", "run", "stream", 2, 0,
+                "正文首段", ReplyPreviewPhase.ANSWERING, true, true);
+        subscription.preview(answer);
+        subscription.preview(new ReplyPreview(2, "execution", "message", "run", "stream", 1, 0,
+                "", ReplyPreviewPhase.THINKING, true, true));
+        executor.runNext();
+        assertThat(emitter.previews).containsExactly(answer);
+    }
+
     @Test
     void twoSubscribersShareOneCommittedEventRead() {
         var queries = mock(ConversationQueryService.class);

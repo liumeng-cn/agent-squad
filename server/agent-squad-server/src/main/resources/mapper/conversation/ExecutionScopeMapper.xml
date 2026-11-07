@@ -121,6 +121,18 @@
           AND s.traceparent IS NOT NULL
     </select>
 
+    <select id="sessionTrace" resultType="map">
+        SELECT s.traceparent,
+               s.tracestate
+        FROM sq_runtime_binding b
+        JOIN sq_execution_scope s
+          ON s.user_id = b.user_id
+         AND s.scope_id = b.scope_id
+        WHERE b.user_id = #{userId}
+          AND b.framework_session_id = #{sessionId}
+          AND s.traceparent IS NOT NULL
+    </select>
+
     <insert id="insertScope">
         INSERT INTO sq_execution_scope (scope_id,
             user_id,
