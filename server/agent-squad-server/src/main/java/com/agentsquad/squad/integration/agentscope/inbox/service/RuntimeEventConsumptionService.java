@@ -1,4 +1,16 @@
-package com.agentsquad.squad.integration.agentscope.inbox;
+package com.agentsquad.squad.integration.agentscope.inbox.service;
+
+import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource;
+
+import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventInboxStatus;
+
+import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventFingerprint;
+
+import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventFailureCode;
+
+import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventInboxMapper;
+
+import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventBusinessWriter;
 
 import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
 import com.agentsquad.squad.integration.agentscope.RuntimeEventConsumptionException;

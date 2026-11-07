@@ -1,6 +1,6 @@
 package com.agentsquad.squad.integration.agentscope;
 
-import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventConsumptionService;
+import com.agentsquad.squad.integration.agentscope.inbox.service.RuntimeEventConsumptionService;
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventInboxMapper;
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource;
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeJournalReadySignal;
@@ -57,10 +57,10 @@ public class RuntimeProjectionDispatcher {
     private RuntimeEventInboxMapper inbox;
 
     @Resource
-    private com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventReceiptService receipts;
+    private com.agentsquad.squad.integration.agentscope.inbox.service.RuntimeEventReceiptService receipts;
 
     @Resource
-    private com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventFailureService failures;
+    private com.agentsquad.squad.integration.agentscope.inbox.service.RuntimeEventFailureService failures;
 
     @Resource
     private RuntimeEventConsumptionService consumption;

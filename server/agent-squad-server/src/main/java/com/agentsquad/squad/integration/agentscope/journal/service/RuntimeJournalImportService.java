@@ -1,4 +1,8 @@
-package com.agentsquad.squad.integration.agentscope.journal;
+package com.agentsquad.squad.integration.agentscope.journal.service;
+
+import com.agentsquad.squad.integration.agentscope.journal.RuntimeSessionProvider;
+
+import com.agentsquad.squad.integration.agentscope.journal.RuntimeJournalImportResult;
 
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.session.AtomicSessionStorage;

@@ -1,5 +1,7 @@
 package com.agentsquad.squad.integration.agentscope.journal;
 
+import com.agentsquad.squad.integration.agentscope.journal.service.RuntimeJournalImportService;
+
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

@@ -11,7 +11,7 @@ import com.agentsquad.squad.domain.response.MessageReceiptResponse;
 import com.agentsquad.squad.conversation.repository.MessageAcceptanceMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
-import com.agentsquad.squad.identity.UserStatusGuard;
+import com.agentsquad.squad.identity.service.UserStatusGuard;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;

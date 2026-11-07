@@ -1,4 +1,8 @@
-package com.agentsquad.squad.integration.agentscope;
+package com.agentsquad.squad.integration.agentscope.service;
+
+import com.agentsquad.squad.integration.agentscope.NativeProjectionCommitLog;
+
+import com.agentsquad.squad.integration.agentscope.NativeEventView;
 
 import com.agentsquad.squad.domain.model.FailureClassification;
 import com.agentsquad.squad.runtime.service.ExecutionFailureService;

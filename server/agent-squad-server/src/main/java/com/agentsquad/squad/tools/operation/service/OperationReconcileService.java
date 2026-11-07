@@ -1,4 +1,4 @@
-package com.agentsquad.squad.tools.operation;
+package com.agentsquad.squad.tools.operation.service;
 
 import com.agentsquad.squad.governance.service.BudgetService;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;

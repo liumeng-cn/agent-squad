@@ -1,4 +1,10 @@
-package com.agentsquad.squad.integration.agentscope.inbox;
+package com.agentsquad.squad.integration.agentscope.inbox.service;
+
+import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource;
+
+import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventInboxMapper;
+
+import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventFailureCode;
 
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;

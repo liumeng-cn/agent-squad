@@ -2,7 +2,7 @@ package com.agentsquad.squad.presentation.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.identity.UserStatusGuard;
+import com.agentsquad.squad.identity.service.UserStatusGuard;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;

@@ -1,6 +1,6 @@
 package com.agentsquad.squad.gateway;
 
-import com.agentsquad.squad.gateway.admin.UserAccountService;
+import com.agentsquad.squad.gateway.admin.service.UserAccountService;
 import com.agentsquad.squad.common.exception.StateConflictException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

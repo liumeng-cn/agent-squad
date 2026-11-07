@@ -1,4 +1,14 @@
-package com.agentsquad.squad.gateway.auth;
+package com.agentsquad.squad.gateway.auth.service;
+
+import com.agentsquad.squad.gateway.auth.RateBucket;
+
+import com.agentsquad.squad.gateway.auth.AuthSessionRow;
+
+import com.agentsquad.squad.gateway.auth.AuthAccount;
+
+import com.agentsquad.squad.gateway.auth.AuthView;
+
+import com.agentsquad.squad.gateway.auth.AuthRepository;
 
 import com.agentsquad.squad.common.enums.identity.AccountStatus;
 import com.agentsquad.squad.common.exception.AuthenticationRequiredException;

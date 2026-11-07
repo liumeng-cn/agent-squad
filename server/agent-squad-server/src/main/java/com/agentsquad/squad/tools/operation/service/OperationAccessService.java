@@ -1,4 +1,4 @@
-package com.agentsquad.squad.tools.operation;
+package com.agentsquad.squad.tools.operation.service;
 
 import com.agentsquad.squad.common.enums.identity.AccountRole;
 import com.agentsquad.squad.identity.AuthView;

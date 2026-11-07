@@ -5,7 +5,7 @@ import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
 import com.agentsquad.squad.domain.exception.SkillCapabilityUnavailableException;
 import com.agentsquad.squad.domain.model.WorkerExecutionIdentity;
-import com.agentsquad.squad.identity.UserStatusGuard;
+import com.agentsquad.squad.identity.service.UserStatusGuard;
 import com.agentsquad.squad.domain.exception.ExecutionContextInvalidatedException;
 import com.agentsquad.squad.runtime.repository.WorkerDispatchMapper;
 import com.agentsquad.squad.runtime.service.ExecutionAuthorizationService;

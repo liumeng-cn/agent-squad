@@ -4,7 +4,7 @@ import com.agentsquad.squad.common.observability.ObservationSupport;
 import com.agentsquad.squad.domain.entity.CommandClaimContextDO;
 import com.agentsquad.squad.conversation.repository.DeliveryMapper;
 import jakarta.annotation.Resource;
-import com.agentsquad.squad.identity.UserStatusGuard;
+import com.agentsquad.squad.identity.service.UserStatusGuard;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

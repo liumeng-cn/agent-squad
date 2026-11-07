@@ -1,4 +1,16 @@
-package com.agentsquad.squad.integration.agentscope.inbox;
+package com.agentsquad.squad.integration.agentscope.inbox.service;
+
+import com.agentsquad.squad.integration.agentscope.inbox.RuntimeJournalReadySignal;
+
+import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventInboxStatus;
+
+import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventFingerprint;
+
+import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource;
+
+import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventInboxRow;
+
+import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventInboxMapper;
 
 import io.agentscope.core.session.SessionEvent;
 import jakarta.annotation.Resource;

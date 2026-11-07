@@ -1,5 +1,7 @@
 package com.agentsquad.squad.integration.agentscope;
 
+import com.agentsquad.squad.integration.agentscope.service.NativeProjectionService;
+
 import com.agentsquad.squad.domain.enums.ResponseCompletionProtocol;
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventBusinessWriter;
 import com.agentsquad.squad.domain.entity.ProjectionTargetDO;

@@ -1,4 +1,8 @@
-package com.agentsquad.squad.tools.operation;
+package com.agentsquad.squad.tools.operation.service;
+
+import com.agentsquad.squad.tools.operation.PrepareRequest;
+
+import com.agentsquad.squad.tools.operation.OperationPreview;
 
 import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
 import com.agentsquad.squad.governance.service.BudgetService;

@@ -1,4 +1,20 @@
-package com.agentsquad.squad.gateway.admin;
+package com.agentsquad.squad.gateway.admin.service;
+
+import com.agentsquad.squad.gateway.admin.UserAccountRow;
+
+import com.agentsquad.squad.gateway.admin.ResetPasswordResult;
+
+import com.agentsquad.squad.gateway.admin.AdminUserView;
+
+import com.agentsquad.squad.gateway.admin.AdminUserUpdateRequest;
+
+import com.agentsquad.squad.gateway.admin.AdminUserPage;
+
+import com.agentsquad.squad.gateway.admin.AdminUserMapper;
+
+import com.agentsquad.squad.gateway.admin.AdminUserCreateResult;
+
+import com.agentsquad.squad.gateway.admin.AdminUserCreateRequest;
 
 import com.agentsquad.squad.common.enums.identity.AccountRole;
 import com.agentsquad.squad.common.enums.identity.AccountStatus;

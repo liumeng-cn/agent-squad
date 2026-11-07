@@ -15,7 +15,7 @@ import com.agentsquad.squad.runtime.service.ContextSnapshotService;
 import com.agentsquad.squad.runtime.service.PlanService;
 import com.agentsquad.squad.runtime.service.WorkerDispatchService;
 import com.agentsquad.squad.runtime.service.WorkerResultService;
-import com.agentsquad.squad.tools.operation.OperationService;
+import com.agentsquad.squad.tools.operation.service.OperationService;
 import com.agentsquad.squad.tools.operation.PrepareRequest;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.worker.service.WorkerDefinitionService;

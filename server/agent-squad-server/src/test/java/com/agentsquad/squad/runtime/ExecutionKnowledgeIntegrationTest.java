@@ -6,7 +6,7 @@ import com.agentsquad.squad.domain.request.MessageCreateRequest;
 import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
 import com.agentsquad.squad.conversation.service.ResponseContextService;
 import com.agentsquad.squad.integration.agentscope.NativeEventView;
-import com.agentsquad.squad.integration.agentscope.NativeProjectionService;
+import com.agentsquad.squad.integration.agentscope.service.NativeProjectionService;
 import com.agentsquad.squad.domain.request.MemoryCreateRequest;
 import com.agentsquad.squad.domain.dto.MemoryWriteRequest;
 import com.agentsquad.squad.memory.service.ExplicitMemoryWriteService;

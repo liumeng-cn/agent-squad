@@ -1,7 +1,7 @@
 package com.agentsquad.squad.presentation.service;
 
 import com.agentsquad.squad.domain.dto.ReplyPreview;
-import com.agentsquad.squad.identity.UserStatusGuard;
+import com.agentsquad.squad.identity.service.UserStatusGuard;
 
 import java.util.Comparator;
 import java.util.concurrent.ConcurrentHashMap;

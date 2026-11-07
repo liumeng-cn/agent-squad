@@ -63,7 +63,7 @@ class WorkerNativeExecutionIntegrationTest {
                 "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(),
                 "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
                 "--agentsquad.delivery.enabled=false")) {
-            var importer = spring.getBean(com.agentsquad.squad.integration.agentscope.journal.RuntimeJournalImportService.class);
+            var importer = spring.getBean(com.agentsquad.squad.integration.agentscope.journal.service.RuntimeJournalImportService.class);
             var imported = importer.importWorkspace(legacy);
             assertThat(imported.sessions()).isEqualTo(1);
             assertThat(imported.bytes()).isGreaterThan(70000);

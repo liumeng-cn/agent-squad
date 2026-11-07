@@ -1,4 +1,10 @@
-package com.agentsquad.squad.domain.model;
+package com.agentsquad.squad.runtime.service;
+
+import com.agentsquad.squad.domain.model.PlanJoinJob;
+
+import com.agentsquad.squad.domain.model.PlanJoinFacts;
+
+import com.agentsquad.squad.domain.model.PlanJoinDecision;
 
 import com.agentsquad.squad.domain.enums.GoalTaskStatus;
 import com.agentsquad.squad.domain.enums.PlanJoinStage;

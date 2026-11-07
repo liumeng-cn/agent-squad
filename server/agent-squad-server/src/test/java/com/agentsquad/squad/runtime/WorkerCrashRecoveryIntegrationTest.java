@@ -5,7 +5,7 @@ import com.agentsquad.squad.domain.dto.ConversationResponse;
 import com.agentsquad.squad.domain.response.TaskReceiptResponse;
 import com.agentsquad.squad.conversation.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.integration.agentscope.CommandDeliveryService;
+import com.agentsquad.squad.integration.agentscope.service.CommandDeliveryService;
 import com.agentsquad.squad.integration.agentscope.NativeProjectionPoller;
 import com.agentsquad.squad.integration.agentscope.WorkerFactory;
 import com.agentsquad.squad.domain.dto.PlanNode;

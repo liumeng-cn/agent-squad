@@ -1,6 +1,6 @@
 package com.agentsquad.squad.presentation.stream;
 
-import com.agentsquad.squad.identity.UserStatusGuard;
+import com.agentsquad.squad.identity.service.UserStatusGuard;
 import com.agentsquad.squad.domain.dto.ConversationEvent;
 import com.agentsquad.squad.domain.dto.ReplyPreview;
 import com.agentsquad.squad.presentation.domain.ReplyPreviewPhase;

@@ -1,5 +1,7 @@
 package com.agentsquad.squad.integration.agentscope.inbox;
 
+import com.agentsquad.squad.integration.agentscope.inbox.service.RuntimeEventReceiptService;
+
 import io.agentscope.core.session.SessionEvent;
 import io.agentscope.core.session.SessionExportSink;
 

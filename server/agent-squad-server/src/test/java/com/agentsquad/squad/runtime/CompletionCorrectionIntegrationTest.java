@@ -12,7 +12,7 @@ import com.agentsquad.squad.domain.dto.PlanNode;
 import com.agentsquad.squad.domain.dto.PlanPublish;
 import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
 import com.agentsquad.squad.integration.agentscope.NativeEventView;
-import com.agentsquad.squad.integration.agentscope.NativeProjectionService;
+import com.agentsquad.squad.integration.agentscope.service.NativeProjectionService;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
 import com.agentsquad.squad.conversation.repository.CommandMapper;
 import com.agentsquad.squad.conversation.repository.DeliveryMapper;
@@ -277,10 +277,10 @@ class CompletionCorrectionIntegrationTest {
             var runtime = io.agentscope.core.agent.RuntimeContext.builder().userId(USER_ID).sessionId(workerSession).build();
             var log = store.open(new io.agentscope.core.session.SessionKey(USER_ID, workerAgent, workerSession), runtime);
             var writer = log.acquire("other-node", java.time.Duration.ofSeconds(30));
-            var operation = context.getBean(com.agentsquad.squad.tools.operation.OperationService.class).prepare(
+            var operation = context.getBean(com.agentsquad.squad.tools.operation.service.OperationService.class).prepare(
                     new com.agentsquad.squad.tools.operation.PrepareRequest(USER_ID, target.sessionId(), "turn", "write",
                             "mock_ticket_create", "v1", "WRITE", java.util.Map.of("title", "test"), "stable", false, null, 0, 1, "tester"));
-            var unstarted = context.getBean(com.agentsquad.squad.tools.operation.OperationService.class).prepare(
+            var unstarted = context.getBean(com.agentsquad.squad.tools.operation.service.OperationService.class).prepare(
                     new com.agentsquad.squad.tools.operation.PrepareRequest(USER_ID, target.sessionId(), "turn", "write-not-started",
                             "mock_ticket_create", "v1", "WRITE", java.util.Map.of("title", "next"), "another", false, null, 0, 1, "tester"));
             var interaction = context.getBean(com.agentsquad.squad.interaction.service.InteractionService.class).bindFrameworkRequest(
@@ -313,7 +313,7 @@ class CompletionCorrectionIntegrationTest {
             assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.taskId()).status()).isEqualTo("CANCELLING");
             jdbc.update("UPDATE sq_operation SET status='UNKNOWN' WHERE operation_id=?", operation.operationId());
             String workerStop = jdbc.queryForObject("SELECT command_id FROM sq_command WHERE binding_id=? AND action='STOP'", String.class, workerBinding);
-            context.getBean(com.agentsquad.squad.integration.agentscope.CommandDeliveryService.class).deliver(workerStop);
+            context.getBean(com.agentsquad.squad.integration.agentscope.service.CommandDeliveryService.class).deliver(workerStop);
             assertThat(context.getBean(CommandMapper.class).findOwned(USER_ID, workerStop).nativeStatus()).isEqualTo("no-active-run");
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_worker_job WHERE task_id=?", Long.class, target.taskId())).isZero();
             log.release(writer);
@@ -365,7 +365,7 @@ class CompletionCorrectionIntegrationTest {
                     .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
             var stops = jdbc.queryForList("SELECT command_id FROM sq_command WHERE task_id=? AND action='STOP' ORDER BY id", String.class, target.taskId());
             assertThat(stops).hasSize(3);
-            var delivery = context.getBean(com.agentsquad.squad.integration.agentscope.CommandDeliveryService.class);
+            var delivery = context.getBean(com.agentsquad.squad.integration.agentscope.service.CommandDeliveryService.class);
             for (String command : stops) {
                 delivery.deliver(command);
                 assertThat(context.getBean(CommandMapper.class).findOwned(USER_ID, command).nativeStatus()).isEqualTo("no-active-run");

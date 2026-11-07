@@ -2,14 +2,14 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.tools.connection.ConnectionService;
+import com.agentsquad.squad.tools.connection.service.ConnectionService;
 import com.agentsquad.squad.domain.request.ConnectionCreateRequest;
 import com.agentsquad.squad.domain.request.ConnectionUpdateRequest;
 import com.agentsquad.squad.tools.repository.ConnectionMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.test.util.ReflectionTestUtils;
-import com.agentsquad.squad.tools.connection.LocalSecretVault;
+import com.agentsquad.squad.tools.connection.service.LocalSecretVault;
 
 import java.nio.file.Path;
 import java.util.Base64;

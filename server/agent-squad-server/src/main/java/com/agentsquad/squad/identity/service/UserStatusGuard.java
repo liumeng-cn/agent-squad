@@ -1,4 +1,6 @@
-package com.agentsquad.squad.identity;
+package com.agentsquad.squad.identity.service;
+
+import com.agentsquad.squad.identity.UserStatusMapper;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;

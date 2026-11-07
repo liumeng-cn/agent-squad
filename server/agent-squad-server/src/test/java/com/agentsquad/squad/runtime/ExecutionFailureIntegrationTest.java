@@ -11,7 +11,7 @@ import com.agentsquad.squad.runtime.repository.ExecutionFailureMapper;
 import com.agentsquad.squad.runtime.service.ExecutionFailureService;
 import com.agentsquad.squad.domain.model.ModelFailureClassifier;
 import com.agentsquad.squad.presentation.service.ConversationQueryService;
-import com.agentsquad.squad.tools.operation.OperationService;
+import com.agentsquad.squad.tools.operation.service.OperationService;
 import com.agentsquad.squad.tools.operation.PrepareRequest;
 import io.agentscope.extensions.model.openai.exception.OpenAIException;
 import org.junit.jupiter.api.Test;

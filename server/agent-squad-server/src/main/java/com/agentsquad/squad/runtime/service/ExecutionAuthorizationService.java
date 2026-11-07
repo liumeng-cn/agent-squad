@@ -7,7 +7,7 @@ import com.agentsquad.squad.domain.exception.ExecutionContextInvalidatedExceptio
 import com.agentsquad.squad.domain.dto.ExecutionContextSnapshot;
 import com.agentsquad.squad.skill.service.SkillRuntimeService;
 import jakarta.annotation.Resource;
-import com.agentsquad.squad.identity.UserStatusGuard;
+import com.agentsquad.squad.identity.service.UserStatusGuard;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

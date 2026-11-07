@@ -57,7 +57,7 @@ public class TaskControlService {
     private BindingMapper bindingMapper;
 
     @Resource
-    private com.agentsquad.squad.tools.operation.OperationService operations;
+    private com.agentsquad.squad.tools.operation.service.OperationService operations;
 
     @Resource
     private com.agentsquad.squad.interaction.repository.InteractionMapper interactions;

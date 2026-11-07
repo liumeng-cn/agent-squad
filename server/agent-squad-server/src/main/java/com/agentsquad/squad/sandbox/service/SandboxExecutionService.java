@@ -12,7 +12,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.agentsquad.squad.domain.model.ArtifactContentPolicy;
 import jakarta.annotation.Resource;
-import com.agentsquad.squad.identity.UserStatusGuard;
+import com.agentsquad.squad.identity.service.UserStatusGuard;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 

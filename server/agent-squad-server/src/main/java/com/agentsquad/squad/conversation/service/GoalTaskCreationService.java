@@ -22,7 +22,7 @@ import com.agentsquad.squad.conversation.repository.TaskEventMapper;
 import com.agentsquad.squad.conversation.repository.TaskMapper;
 import com.agentsquad.squad.domain.entity.BudgetAccountDO;
 import com.agentsquad.squad.governance.repository.BudgetMapper;
-import com.agentsquad.squad.identity.UserStatusGuard;
+import com.agentsquad.squad.identity.service.UserStatusGuard;
 import com.agentsquad.squad.domain.model.MasterAgentIdentity;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;

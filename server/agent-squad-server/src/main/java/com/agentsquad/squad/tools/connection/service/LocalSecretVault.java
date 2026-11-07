@@ -1,4 +1,4 @@
-package com.agentsquad.squad.tools.connection;
+package com.agentsquad.squad.tools.connection.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;

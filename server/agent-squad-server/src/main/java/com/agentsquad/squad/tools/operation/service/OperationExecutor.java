@@ -1,4 +1,6 @@
-package com.agentsquad.squad.tools.operation;
+package com.agentsquad.squad.tools.operation.service;
+
+import com.agentsquad.squad.tools.operation.ExternalCall;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
@@ -8,7 +10,7 @@ import com.agentsquad.squad.domain.enums.OperationStatus;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
-import com.agentsquad.squad.identity.UserStatusGuard;
+import com.agentsquad.squad.identity.service.UserStatusGuard;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;

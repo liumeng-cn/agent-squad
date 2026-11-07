@@ -1,5 +1,7 @@
 package com.agentsquad.squad.tools.operation;
 
+import com.agentsquad.squad.tools.operation.service.OperationUnknownService;
+
 import com.agentsquad.squad.domain.entity.OperationDO;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;
 import jakarta.annotation.Resource;

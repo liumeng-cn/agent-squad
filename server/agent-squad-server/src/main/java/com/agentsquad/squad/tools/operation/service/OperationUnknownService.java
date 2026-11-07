@@ -1,4 +1,4 @@
-package com.agentsquad.squad.tools.operation;
+package com.agentsquad.squad.tools.operation.service;
 
 import com.agentsquad.squad.domain.entity.OperationDO;
 import com.agentsquad.squad.tools.operation.repository.OperationMapper;

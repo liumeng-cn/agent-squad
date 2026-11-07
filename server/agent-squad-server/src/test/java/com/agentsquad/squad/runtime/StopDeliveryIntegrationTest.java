@@ -2,7 +2,7 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.conversation.service.ExecutionScopeService;
-import com.agentsquad.squad.integration.agentscope.CommandDeliveryService;
+import com.agentsquad.squad.integration.agentscope.service.CommandDeliveryService;
 import com.agentsquad.squad.domain.model.MasterAgentIdentity;
 import com.agentsquad.squad.conversation.repository.BindingMapper;
 import com.agentsquad.squad.conversation.repository.CommandMapper;

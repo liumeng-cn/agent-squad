@@ -1,7 +1,9 @@
 package com.agentsquad.squad.gateway.auth;
 
+import com.agentsquad.squad.gateway.auth.service.AuthService;
+
 import com.agentsquad.squad.common.model.ApiResult;
-import com.agentsquad.squad.gateway.admin.UserAccountService;
+import com.agentsquad.squad.gateway.admin.service.UserAccountService;
 import com.agentsquad.squad.gateway.common.BlockingCalls;
 import com.agentsquad.squad.common.exception.AuthenticationRequiredException;
 import jakarta.annotation.Resource;
