@@ -74,6 +74,10 @@ class CrossInstanceSseIntegrationTest {
                         String line;
                         String eventName = "";
                         while ((line = reader.readLine()) != null) {
+                            if (line.isEmpty()) {
+                                eventName = "";
+                                continue;
+                            }
                             if (line.startsWith("event:")) {
                                 eventName = line.substring(6).trim();
                             }
@@ -81,10 +85,14 @@ class CrossInstanceSseIntegrationTest {
                                 var event = json.readTree(line.substring(5).trim());
                                 if ("output.preview".equals(eventName)) {
                                     assertThat(event.path("text").asText()).doesNotContain("TEST_PRIVATE_REASONING");
+                                    assertThat(event.path("preview").asBoolean()).isTrue();
+                                    if ("THINKING".equals(event.path("phase").asText())) {
+                                        continue;
+                                    }
+                                    assertThat(event.path("phase").asText()).isEqualTo("ANSWERING");
                                     if (previewSeen.getCount() > 0) {
                                         assertThat(event.path("text").asText()).isEqualTo("页面断开后，");
                                     }
-                                    assertThat(event.path("preview").asBoolean()).isTrue();
                                     previewSeen.countDown();
                                 }
                                 if ("message.completed".equals(event.path("type").asText())) {
@@ -104,7 +112,11 @@ class CrossInstanceSseIntegrationTest {
                 }
                 model.firstChunk.countDown();
                 if (!missNotice) {
-                    assertThat(previewSeen.await(5, TimeUnit.SECONDS)).isTrue();
+                    boolean arrived = previewSeen.await(5, TimeUnit.SECONDS);
+                    if (!arrived && received.isCompletedExceptionally()) {
+                        received.get();
+                    }
+                    assertThat(arrived).as("模型结束前收到首段公开正文").isTrue();
                     assertThat(model.release.getCount()).isEqualTo(1);
                 }
                 model.release.countDown();
