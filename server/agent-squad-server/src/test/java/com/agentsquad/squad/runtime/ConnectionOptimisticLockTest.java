@@ -1,20 +1,20 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.service.ConnectionService;
+import com.agentsquad.squad.mapper.ConnectionMapper;
 import com.agentsquad.squad.model.dto.ConnectionCreateDTO;
 import com.agentsquad.squad.model.dto.ConnectionUpdateDTO;
-import com.agentsquad.squad.mapper.ConnectionMapper;
+import com.agentsquad.squad.service.ConnectionService;
+import com.agentsquad.squad.service.LocalSecretVaultService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.test.util.ReflectionTestUtils;
-import com.agentsquad.squad.service.LocalSecretVaultService;
 
 import java.nio.file.Path;
 import java.util.Base64;
 import java.util.List;
-import com.agentsquad.squad.enums.AccountRole;
 import java.util.Map;
 import java.util.UUID;
 

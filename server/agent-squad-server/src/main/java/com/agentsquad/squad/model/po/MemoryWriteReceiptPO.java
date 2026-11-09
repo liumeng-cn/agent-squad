@@ -21,8 +21,12 @@ import lombok.ToString;
 @AllArgsConstructor
 @TableName("sq_memory_write_receipt")
 public class MemoryWriteReceiptPO {
-    /** 规范化工具输入摘要 */
+    /**
+     * 规范化工具输入摘要
+     */
     private String payloadHash;
-    /** 工具持久收据，删除正文不在此重复保存 */
+    /**
+     * 工具持久收据，删除正文不在此重复保存
+     */
     private String resultJson;
 }

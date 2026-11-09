@@ -1,7 +1,9 @@
 package com.agentsquad.squad.model.po;
 
 import com.baomidou.mybatisplus.annotation.TableName;
+
 import java.time.LocalDateTime;
+
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -20,14 +22,24 @@ import lombok.ToString;
 @AllArgsConstructor
 @TableName("sq_task_event")
 public class EventPO {
-    /** 目标内事件序号 */
+    /**
+     * 目标内事件序号
+     */
     private long eventSeq;
-    /** 目标ID */
+    /**
+     * 目标ID
+     */
     private String taskId;
-    /** 公开事件类型 */
+    /**
+     * 公开事件类型
+     */
     private String eventType;
-    /** 公开事件载荷 */
+    /**
+     * 公开事件载荷
+     */
     private String payloadJson;
-    /** 发生时间 */
+    /**
+     * 发生时间
+     */
     private LocalDateTime occurredAt;
 }

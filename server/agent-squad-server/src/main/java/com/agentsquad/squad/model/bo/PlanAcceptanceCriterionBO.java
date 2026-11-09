@@ -12,8 +12,8 @@ import com.fasterxml.jackson.databind.JsonNode;
  * 条件身份随不可变计划保存；旧文字条件明确标为未结构化，不能倒推历史检查已经通过。
  */
 public record PlanAcceptanceCriterionBO(String criterionId, String text, boolean required,
-                                      AcceptanceVerificationType verificationType, boolean legacy,
-                                      DeterministicAcceptanceCheck deterministicCheck) {
+                                        AcceptanceVerificationType verificationType, boolean legacy,
+                                        DeterministicAcceptanceCheck deterministicCheck) {
     public static PlanAcceptanceCriterionBO legacy(String text) {
         return new PlanAcceptanceCriterionBO("legacy-" + ContentDigests.sha256(text).substring(0, 24), text,
                 true, AcceptanceVerificationType.MODEL_REVIEW, true, null);

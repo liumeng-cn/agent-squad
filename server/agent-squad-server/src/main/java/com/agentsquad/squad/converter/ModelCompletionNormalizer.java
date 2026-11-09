@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+
 import com.agentsquad.squad.enums.ModelCompletionStatus;
 import com.agentsquad.squad.enums.ModelEvidenceIssue;
 import com.agentsquad.squad.enums.ModelFinishReason;
@@ -30,7 +31,7 @@ public final class ModelCompletionNormalizer {
      * 允许乱序交付和完全相同的重投；不接受跨尝试证据拼接，也不从 Publisher 完成推断成功。
      */
     public NormalizedModelCompletionBO normalize(String runId, String turnId, String modelCallId,
-                                               List<SessionEvent> committedEvents) {
+                                                 List<SessionEvent> committedEvents) {
         requireIdentity(runId, turnId, modelCallId);
         TreeMap<Long, SessionEvent> ordered = new TreeMap<>();
         Map<String, SessionEvent> ids = new HashMap<>();

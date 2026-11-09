@@ -24,56 +24,56 @@
 
     <insert id="insertConnection">
         INSERT INTO sq_connection
-            (connection_id,
-            user_id,
-            name,
-            provider,
-            environment,
-            resource_policy_json,
-            secret_ref,
-            create_idempotency_key,
-            revision,
-            enabled,
-            creator_id,
-            creator_name,
-            last_updater_id,
-            last_updater_name)
+        (connection_id,
+        user_id,
+        name,
+        provider,
+        environment,
+        resource_policy_json,
+        secret_ref,
+        create_idempotency_key,
+        revision,
+        enabled,
+        creator_id,
+        creator_name,
+        last_updater_id,
+        last_updater_name)
         VALUES
-            (#{connectionId},
-            #{userId},
-            #{name},
-            #{provider},
-            #{environment},
-            #{resourcePolicyJson},
-            #{secretRef},
-            #{createIdempotencyKey},
-            0,
-            1,
-            #{userId},
-            #{creatorName},
-            #{userId},
-            #{creatorName})
+        (#{connectionId},
+        #{userId},
+        #{name},
+        #{provider},
+        #{environment},
+        #{resourcePolicyJson},
+        #{secretRef},
+        #{createIdempotencyKey},
+        0,
+        1,
+        #{userId},
+        #{creatorName},
+        #{userId},
+        #{creatorName})
     </insert>
 
     <select id="listByOwner" resultMap="listByOwnerResult">
         SELECT id,
-            connection_id,
-            user_id,
-            name,
-            provider,
-            environment,
-            resource_policy_json,
-            secret_ref,
-            create_idempotency_key,
-            revision,
-            enabled,
-            creator_id,
-            creator_name,
-            last_updater_id,
-            last_updater_name
+        connection_id,
+        user_id,
+        name,
+        provider,
+        environment,
+        resource_policy_json,
+        secret_ref,
+        create_idempotency_key,
+        revision,
+        enabled,
+        creator_id,
+        creator_name,
+        last_updater_id,
+        last_updater_name
         FROM sq_connection
         WHERE user_id = #{userId} AND del_flag = '0'
-          <if test="cursorId != null">AND id &lt; #{cursorId}</if>
+        <if test="cursorId != null">AND id &lt; #{cursorId}</if>
         ORDER BY id DESC
         LIMIT #{limit}
     </select>
@@ -81,13 +81,13 @@
     <update id="updateOwned">
         UPDATE sq_connection
         SET resource_policy_json = COALESCE(#{resourcePolicyJson},
-            resource_policy_json),
-            enabled = COALESCE(#{enabled},
-            enabled),
-            revision = revision + 1,
-            last_updater_id = #{userId},
-            last_updater_name = #{updaterName}
+        resource_policy_json),
+        enabled = COALESCE(#{enabled},
+        enabled),
+        revision = revision + 1,
+        last_updater_id = #{userId},
+        last_updater_name = #{updaterName}
         WHERE user_id = #{userId} AND connection_id = #{connectionId}
-          AND revision = #{expectedRevision} AND del_flag = '0'
+        AND revision = #{expectedRevision} AND del_flag = '0'
     </update>
 </mapper>

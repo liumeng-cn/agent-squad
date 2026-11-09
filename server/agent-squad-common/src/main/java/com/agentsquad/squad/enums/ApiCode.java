@@ -25,13 +25,21 @@ public enum ApiCode {
     INTERNAL_ERROR(500, "服务暂时不可用", "INTERNAL_ERROR", "服务内部错误"),
     SERVICE_UNAVAILABLE(503, "服务暂时不可用", "SERVICE_UNAVAILABLE", "服务不可用");
 
-    /** 业务编码 */
+    /**
+     * 业务编码
+     */
     private final int code;
-    /** 默认用户提示 */
+    /**
+     * 默认用户提示
+     */
     private final String msg;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     ApiCode(int code, String msg, String name, String desc) {

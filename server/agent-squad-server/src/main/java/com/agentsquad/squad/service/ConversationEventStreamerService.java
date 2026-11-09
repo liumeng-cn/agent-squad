@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 提交后主动推送的会话SSE服务
- *
+ * <p>
  * 同一用户会话共享事件读取，连接只拥有独立有界发送队列；关闭页面不停止后台任务或消费。
  */
 @Service
@@ -68,13 +68,15 @@ public class ConversationEventStreamerService {
     private ThreadPoolExecutor executor(int threads, String name) {
         return new ThreadPoolExecutor(threads, threads, 0, TimeUnit.MILLISECONDS,
                 new ArrayBlockingQueue<>(EXECUTOR_BACKLOG), runnable -> {
-                    Thread thread = new Thread(runnable, name);
-                    thread.setDaemon(true);
-                    return thread;
-                });
+            Thread thread = new Thread(runnable, name);
+            thread.setDaemon(true);
+            return thread;
+        });
     }
 
-    /** 验证持久游标后订阅；首次补读与并发提交通过连续事件水位去重衔接。 */
+    /**
+     * 验证持久游标后订阅；首次补读与并发提交通过连续事件水位去重衔接。
+     */
     public SseEmitter stream(String userId, String conversationId, String cursor) {
         userStatus.requireActive(userId);
         var initial = queries.events(userId, conversationId, cursor);
@@ -121,13 +123,17 @@ public class ConversationEventStreamerService {
         return emitter;
     }
 
-    /** 业务事务已提交才唤醒读取；提交线程不执行网络发送，不依赖是否存在页面连接。 */
+    /**
+     * 业务事务已提交才唤醒读取；提交线程不执行网络发送，不依赖是否存在页面连接。
+     */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void committed(ConversationCommittedSignal signal) {
         wake(signal);
     }
 
-    /** 本地提交和跨实例提示共用读取入口；每批仍由查询服务验证用户及会话归属。 */
+    /**
+     * 本地提交和跨实例提示共用读取入口；每批仍由查询服务验证用户及会话归属。
+     */
     public void wake(ConversationCommittedSignal signal) {
         var hub = hubs.get(new ConversationStreamKeyBO(signal.userId(), signal.conversationId()));
         if (hub != null) {
@@ -135,7 +141,9 @@ public class ConversationEventStreamerService {
         }
     }
 
-    /** 临时文本只进入订阅队列，不占持久序号，也不触发任务创建或取消。 */
+    /**
+     * 临时文本只进入订阅队列，不占持久序号，也不触发任务创建或取消。
+     */
     @org.springframework.context.event.EventListener
     public void preview(ReplyPreviewSignal signal) {
         var hub = hubs.get(new ConversationStreamKeyBO(signal.userId(), signal.conversationId()));
@@ -144,7 +152,9 @@ public class ConversationEventStreamerService {
         }
     }
 
-    /** 低频会话级核对仅补漏；正常更新由提交通知触发，不再每连接500ms查库。 */
+    /**
+     * 低频会话级核对仅补漏；正常更新由提交通知触发，不再每连接500ms查库。
+     */
     @Scheduled(fixedDelayString = "${agentsquad.events.reconcile-delay-ms:15000}")
     public void reconcile() {
         hubs.values().forEach(ConversationStreamHubService::heartbeatAndReconcile);

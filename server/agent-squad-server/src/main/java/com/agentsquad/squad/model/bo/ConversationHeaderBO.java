@@ -19,24 +19,44 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ConversationHeaderBO {
-    /** 对话业务ID */
+    /**
+     * 对话业务ID
+     */
     private String conversationId;
-    /** 用户对话标题 */
+    /**
+     * 用户对话标题
+     */
     private String title;
-    /** 标题来源[LEGACY,FALLBACK,AUTO_PENDING,AUTO,MANUAL] */
+    /**
+     * 标题来源[LEGACY,FALLBACK,AUTO_PENDING,AUTO,MANUAL]
+     */
     private String titleSource;
-    /** 标题独立乐观版本 */
+    /**
+     * 标题独立乐观版本
+     */
     private long titleVersion;
-    /** ACTIVE/DELETING/DELETED */
+    /**
+     * ACTIVE/DELETING/DELETED
+     */
     private String status;
-    /** 会话代数 */
+    /**
+     * 会话代数
+     */
     private long generation;
-    /** 业务版本 */
+    /**
+     * 业务版本
+     */
     private long version;
-    /** 未终结目标ID */
+    /**
+     * 未终结目标ID
+     */
     private String activeTaskId;
-    /** 最近事件序号 */
+    /**
+     * 最近事件序号
+     */
     private long eventSequence;
-    /** 最后用户交流或助手交付时间 */
+    /**
+     * 最后用户交流或助手交付时间
+     */
     private java.time.LocalDateTime lastActivityAt;
 }

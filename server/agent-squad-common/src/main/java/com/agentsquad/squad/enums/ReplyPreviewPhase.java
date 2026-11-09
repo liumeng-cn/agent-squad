@@ -13,11 +13,17 @@ public enum ReplyPreviewPhase {
     ANSWERING(2, "ANSWERING", "回答中"),
     ABORTED(3, "ABORTED", "已中止");
 
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     ReplyPreviewPhase(int code, String name, String desc) {

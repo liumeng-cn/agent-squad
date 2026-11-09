@@ -76,125 +76,125 @@
 
     <insert id="insert">
         INSERT INTO sq_interaction
-            (interaction_id,
-            user_id,
-            task_id,
-            job_id,
-            binding_id,
-            operation_id,
-            origin,
-            framework_request_id,
-            kind,
-            question,
-            answer_schema_json,
-            plan_version,
-            request_hash,
-            connection_revision,
-            expires_at,
-            status,
-            version,
-            scope_id,
-            creator_id,
-            creator_name,
-            last_updater_id,
-            last_updater_name)
+        (interaction_id,
+        user_id,
+        task_id,
+        job_id,
+        binding_id,
+        operation_id,
+        origin,
+        framework_request_id,
+        kind,
+        question,
+        answer_schema_json,
+        plan_version,
+        request_hash,
+        connection_revision,
+        expires_at,
+        status,
+        version,
+        scope_id,
+        creator_id,
+        creator_name,
+        last_updater_id,
+        last_updater_name)
         VALUES
-            (#{interactionId},
-            #{userId},
-            #{taskId},
-            #{jobId},
-            #{bindingId},
-            #{operationId},
-            #{origin},
-            #{frameworkRequestId},
-            #{kind},
-            #{question},
-            #{answerSchemaJson},
-            #{planVersion},
-            #{requestHash},
-            #{connectionRevision},
-            #{expiresAt},
-            'OPEN',
-            0,
-            (SELECT scope_id FROM sq_runtime_binding WHERE user_id = #{userId} AND binding_id = #{bindingId}),
-            #{creatorId},
-            #{creatorName},
-            #{creatorId},
-            #{creatorName})
+        (#{interactionId},
+        #{userId},
+        #{taskId},
+        #{jobId},
+        #{bindingId},
+        #{operationId},
+        #{origin},
+        #{frameworkRequestId},
+        #{kind},
+        #{question},
+        #{answerSchemaJson},
+        #{planVersion},
+        #{requestHash},
+        #{connectionRevision},
+        #{expiresAt},
+        'OPEN',
+        0,
+        (SELECT scope_id FROM sq_runtime_binding WHERE user_id = #{userId} AND binding_id = #{bindingId}),
+        #{creatorId},
+        #{creatorName},
+        #{creatorId},
+        #{creatorName})
     </insert>
 
     <select id="findByFrameworkRequest" resultMap="findByFrameworkRequestResult">
         SELECT interaction_id,
-            user_id,
-            task_id,
-            job_id,
-            binding_id,
-            operation_id,
-            origin,
-            framework_request_id,
-            kind,
-            question,
-            answer_schema_json,
-            plan_version,
-            request_hash,
-            connection_revision,
-            expires_at,
-            status,
-            version,
-            scope_id,
-            response_json
+        user_id,
+        task_id,
+        job_id,
+        binding_id,
+        operation_id,
+        origin,
+        framework_request_id,
+        kind,
+        question,
+        answer_schema_json,
+        plan_version,
+        request_hash,
+        connection_revision,
+        expires_at,
+        status,
+        version,
+        scope_id,
+        response_json
         FROM sq_interaction
         WHERE user_id = #{userId} AND binding_id = #{bindingId}
-          AND framework_request_id = #{frameworkRequestId} AND del_flag = '0'
+        AND framework_request_id = #{frameworkRequestId} AND del_flag = '0'
     </select>
 
     <select id="findOwned" resultMap="findOwnedResult">
         SELECT interaction_id,
-            user_id,
-            task_id,
-            job_id,
-            binding_id,
-            operation_id,
-            origin,
-            framework_request_id,
-            kind,
-            question,
-            answer_schema_json,
-            plan_version,
-            request_hash,
-            connection_revision,
-            expires_at,
-            status,
-            version,
-            scope_id,
-            response_json
+        user_id,
+        task_id,
+        job_id,
+        binding_id,
+        operation_id,
+        origin,
+        framework_request_id,
+        kind,
+        question,
+        answer_schema_json,
+        plan_version,
+        request_hash,
+        connection_revision,
+        expires_at,
+        status,
+        version,
+        scope_id,
+        response_json
         FROM sq_interaction
         WHERE user_id = #{userId} AND interaction_id = #{interactionId} AND del_flag = '0'
     </select>
 
     <select id="listByTask" resultMap="listByTaskResult">
         SELECT interaction_id,
-            user_id,
-            task_id,
-            job_id,
-            binding_id,
-            operation_id,
-            origin,
-            framework_request_id,
-            kind,
-            question,
-            answer_schema_json,
-            plan_version,
-            request_hash,
-            connection_revision,
-            expires_at,
-            status,
-            version,
-            scope_id,
-            response_json
+        user_id,
+        task_id,
+        job_id,
+        binding_id,
+        operation_id,
+        origin,
+        framework_request_id,
+        kind,
+        question,
+        answer_schema_json,
+        plan_version,
+        request_hash,
+        connection_revision,
+        expires_at,
+        status,
+        version,
+        scope_id,
+        response_json
         FROM sq_interaction
         WHERE user_id = #{userId} AND task_id = #{taskId} AND del_flag = '0'
-          <if test="cursorId != null">AND id &lt; #{cursorId}</if>
+        <if test="cursorId != null">AND id &lt; #{cursorId}</if>
         ORDER BY id DESC
         LIMIT #{limit}
     </select>
@@ -209,7 +209,7 @@
     <select id="countOpenByKind" resultType="_int">
         SELECT COUNT(*) FROM sq_interaction
         WHERE user_id = #{userId} AND task_id = #{taskId}
-          AND kind = #{kind} AND status = 'OPEN' AND del_flag = '0'
+        AND kind = #{kind} AND status = 'OPEN' AND del_flag = '0'
     </select>
 
     <select id="cursorIdOf" resultType="java.lang.Long">
@@ -220,23 +220,23 @@
     <update id="markResponded">
         UPDATE sq_interaction
         SET status = 'RESPONDED',
-            response_json = #{responseJson},
-            version = version + 1,
-            last_updater_id = #{userId},
-            last_updater_name = #{updaterName}
+        response_json = #{responseJson},
+        version = version + 1,
+        last_updater_id = #{userId},
+        last_updater_name = #{updaterName}
         WHERE user_id = #{userId} AND interaction_id = #{interactionId}
-          AND status = 'OPEN' AND version = #{expectedVersion}
+        AND status = 'OPEN' AND version = #{expectedVersion}
     </update>
 
     <update id="markResolvedByFramework">
         UPDATE sq_interaction
         SET status = 'RESPONDED',
-            response_json = COALESCE(response_json,
-            #{responseJson}),
-            version = version + 1,
-            last_updater_id = 'framework'
+        response_json = COALESCE(response_json,
+        #{responseJson}),
+        version = version + 1,
+        last_updater_id = 'framework'
         WHERE user_id = #{userId} AND binding_id = #{bindingId}
-          AND framework_request_id = #{frameworkRequestId} AND status = 'OPEN'
+        AND framework_request_id = #{frameworkRequestId} AND status = 'OPEN'
     </update>
 
     <select id="findOpenByScope" resultType="java.lang.String">
@@ -247,24 +247,24 @@
 
     <select id="countOpenByScopeKind" resultType="_int">
         SELECT COUNT(*) FROM sq_interaction WHERE user_id = #{userId} AND scope_id = #{scopeId}
-            AND kind = #{kind} AND status = 'OPEN' AND del_flag = '0'
+        AND kind = #{kind} AND status = 'OPEN' AND del_flag = '0'
     </select>
     <update id="cancelOpenByTask">
         UPDATE sq_interaction
         SET status = 'CANCELLED',
-            version = version + 1
+        version = version + 1
         WHERE user_id = #{userId}
-          AND task_id = #{taskId}
-          AND status = 'OPEN'
-          AND del_flag = '0'
+        AND task_id = #{taskId}
+        AND status = 'OPEN'
+        AND del_flag = '0'
     </update>
     <update id="cancelOpenByScope">
         UPDATE sq_interaction
         SET status = 'CANCELLED',
-            version = version + 1
+        version = version + 1
         WHERE user_id = #{userId}
-          AND scope_id = #{scopeId}
-          AND status = 'OPEN'
-          AND del_flag = '0'
+        AND scope_id = #{scopeId}
+        AND status = 'OPEN'
+        AND del_flag = '0'
     </update>
 </mapper>

@@ -55,5 +55,5 @@ public interface TaskMapper {
                             @Param("reason") String reason);
 
     List<TaskPO> listByConversation(@Param("userId") String userId, @Param("conversationId") String conversationId,
-                                     @Param("cursorId") Long cursorId, @Param("limit") int limit);
+                                    @Param("cursorId") Long cursorId, @Param("limit") int limit);
 }

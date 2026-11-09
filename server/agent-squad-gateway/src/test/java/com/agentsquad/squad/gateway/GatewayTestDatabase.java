@@ -97,7 +97,9 @@ final class GatewayTestDatabase {
         }
     }
 
-    /** 只在本次刚创建的随机测试库加载结构并移除样例账号，禁止作用于开发库。 */
+    /**
+     * 只在本次刚创建的随机测试库加载结构并移除样例账号，禁止作用于开发库。
+     */
     private static void applySchema(String url, String schemaName) {
         if (!schemaName.matches("as_test_gw_[a-f0-9]+_[a-f0-9]{12}") || !CREATED.contains(schemaName)) {
             throw new IllegalStateException("拒绝初始化非本次创建的网关测试库");

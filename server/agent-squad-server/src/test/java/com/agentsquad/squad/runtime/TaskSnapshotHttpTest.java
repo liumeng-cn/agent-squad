@@ -1,8 +1,8 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.testsupport.ApiResultJson;
 import com.agentsquad.squad.testsupport.TestAssertion;
-import com.agentsquad.squad.AgentSquadApplication;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;

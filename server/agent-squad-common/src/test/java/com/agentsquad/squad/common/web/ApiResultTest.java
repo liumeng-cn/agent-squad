@@ -1,7 +1,7 @@
 package com.agentsquad.squad.common.web;
 
-import com.agentsquad.squad.enums.ApiCode;
 import com.agentsquad.squad.common.model.ApiResult;
+import com.agentsquad.squad.enums.ApiCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 

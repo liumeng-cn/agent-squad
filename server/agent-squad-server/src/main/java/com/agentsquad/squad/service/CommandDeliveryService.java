@@ -24,6 +24,7 @@ import jakarta.annotation.Resource;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Value;
+
 import java.util.Set;
 import java.util.LinkedHashSet;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,6 +32,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.RejectedExecutionException;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -115,7 +117,9 @@ public class CommandDeliveryService {
     @Resource
     private org.springframework.beans.factory.ObjectProvider<RedisCommandWakeup> redisWakeups;
 
-    /** 初始化后台执行线程池；线程不够用时不接手新的数据库命令。 */
+    /**
+     * 初始化后台执行线程池；线程不够用时不接手新的数据库命令。
+     */
     @PostConstruct
     public void initializeDelivery() {
         if (workers < 1 || controlWorkers < 1) {
@@ -128,13 +132,15 @@ public class CommandDeliveryService {
     private ThreadPoolExecutor executor(int size) {
         return new ThreadPoolExecutor(size, size, 0L, TimeUnit.MILLISECONDS,
                 new SynchronousQueue<>(), runnable -> {
-                    Thread thread = new Thread(runnable, "command-delivery");
-                    thread.setDaemon(true);
-                    return thread;
-                }, new ThreadPoolExecutor.AbortPolicy());
+            Thread thread = new Thread(runnable, "command-delivery");
+            thread.setDaemon(true);
+            return thread;
+        }, new ThreadPoolExecutor.AbortPolicy());
     }
 
-    /** 停机先停止领取，让已开始的 SDK 投递完成；超时保留原命令供租约恢复。 */
+    /**
+     * 停机先停止领取，让已开始的 SDK 投递完成；超时保留原命令供租约恢复。
+     */
     @PreDestroy
     public void shutdownDelivery() {
         deliveryExecutor.shutdown();
@@ -153,7 +159,9 @@ public class CommandDeliveryService {
         }
     }
 
-    /** 公平候选扫描后按容量派发；控制命令拥有独立容量，不被慢提交占满。 */
+    /**
+     * 公平候选扫描后按容量派发；控制命令拥有独立容量，不被慢提交占满。
+     */
     @Scheduled(fixedDelayString = "#{${agentsquad.redis-wakeup.enabled:false} ? ${agentsquad.redis-wakeup.compensation-delay-ms:1000} : ${agentsquad.delivery.poll-delay-ms:1000}}")
     public void deliverDue() {
         LocalDateTime scannedAt = now();
@@ -163,7 +171,9 @@ public class CommandDeliveryService {
         commandIds.forEach(this::notifyOrSchedule);
     }
 
-    /** 只在受理事务提交后异步领取，扫描保留为通知丢失与容量不足的补偿。 */
+    /**
+     * 只在受理事务提交后异步领取，扫描保留为通知丢失与容量不足的补偿。
+     */
     @org.springframework.transaction.event.TransactionalEventListener(phase = org.springframework.transaction.event.TransactionPhase.AFTER_COMMIT)
     public void ready(CommandReadySignal signal) {
         if (wakeupEnabled) {
@@ -179,7 +189,8 @@ public class CommandDeliveryService {
     }
 
     private void schedule(String commandId) {
-        scheduleFromQueue(commandId, () -> { });
+        scheduleFromQueue(commandId, () -> {
+        });
     }
 
     /**

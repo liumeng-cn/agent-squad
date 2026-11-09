@@ -25,7 +25,8 @@ import java.nio.charset.StandardCharsets;
 @Service
 @Slf4j
 public class SandboxExecutionService {
-    @Resource private UserStatusGuardService userStatus;
+    @Resource
+    private UserStatusGuardService userStatus;
     @Resource
     private com.agentsquad.squad.service.ArtifactService artifacts;
 
@@ -45,7 +46,7 @@ public class SandboxExecutionService {
     private ObjectMapper json;
 
     public SandboxExecutionResultBO execute(String userId, String sessionId, String guardToken,
-                                          String turnId, String toolCallId, SandboxExecuteRequestBO request) {
+                                            String turnId, String toolCallId, SandboxExecuteRequestBO request) {
         userStatus.requireActive(userId);
         driver.requireAvailable();
         SandboxPolicy.validate(request);

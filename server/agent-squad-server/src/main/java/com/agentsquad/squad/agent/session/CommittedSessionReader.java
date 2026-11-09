@@ -10,6 +10,7 @@ import io.agentscope.harness.agent.session.AgentSession;
 
 import java.util.List;
 import java.util.Objects;
+
 import com.agentsquad.squad.enums.NativeTaskState;
 
 /**
@@ -72,7 +73,9 @@ public final class CommittedSessionReader {
         return new AgentSession.Task(latest.id(), latest.turnId(), runId, status.nativeValue(), null);
     }
 
-    /** 日志写入者已释放或失效才可认定静止；发出 interrupt 本身不等于运行已经停止。 */
+    /**
+     * 日志写入者已释放或失效才可认定静止；发出 interrupt 本身不等于运行已经停止。
+     */
     public boolean quiescent(String userId, String agentId, String sessionId) {
         var log = open(userId, agentId, sessionId);
         var head = log.head();

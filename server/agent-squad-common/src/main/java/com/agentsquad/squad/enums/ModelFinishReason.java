@@ -15,11 +15,17 @@ public enum ModelFinishReason {
     TOOL_CALLS(4, "TOOL_CALLS", "工具调用"),
     UNKNOWN(5, "UNKNOWN", "未知");
 
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     ModelFinishReason(int code, String name, String desc) {

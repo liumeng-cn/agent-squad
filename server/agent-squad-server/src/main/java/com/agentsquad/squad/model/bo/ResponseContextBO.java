@@ -19,14 +19,24 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ResponseContextBO {
-    /** 回复执行业务ID */
+    /**
+     * 回复执行业务ID
+     */
     private String executionId;
-    /** 来源用户消息ID */
+    /**
+     * 来源用户消息ID
+     */
     private String sourceMessageId;
-    /** 来源执行序号 */
+    /**
+     * 来源执行序号
+     */
     private long sourceSequence;
-    /** 冻结的授权会话消息前缀 */
+    /**
+     * 冻结的授权会话消息前缀
+     */
     private String contextJson;
-    /** 冻结前缀SHA256摘要 */
+    /**
+     * 冻结前缀SHA256摘要
+     */
     private String contextHash;
 }

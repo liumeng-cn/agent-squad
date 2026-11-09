@@ -13,11 +13,17 @@ public enum RuntimeExceptionCode {
     EXPIRED(4, "EXPIRED", "已过期"),
     VALIDATION(5, "VALIDATION", "校验失败");
 
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     RuntimeExceptionCode(int code, String name, String desc) {

@@ -1,10 +1,10 @@
 package com.agentsquad.squad.agent.tool;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
-import com.agentsquad.squad.utils.RuntimePayloads;
-import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.agentsquad.squad.model.vo.WorkerDefinitionPageVO;
 import com.agentsquad.squad.model.vo.WorkerDefinitionVO;
+import com.agentsquad.squad.service.WorkerDefinitionService;
+import com.agentsquad.squad.utils.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.tool.AgentTool;
@@ -21,7 +21,7 @@ import java.util.Map;
 
 /**
  * Master 的 Worker 能力目录工具。
- *
+ * <p>
  * 从持久 Definition 动态发现已启用版本；列表只给规划所需摘要，精确查询才返回完整契约。
  */
 @Component

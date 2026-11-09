@@ -19,22 +19,40 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MessageSubmissionBO {
-    /** 对话业务ID */
+    /**
+     * 对话业务ID
+     */
     private String conversationId;
-    /** 消息业务标识 */
+    /**
+     * 消息业务标识
+     */
     private String messageId;
-    /** 回复执行ID */
+    /**
+     * 回复执行ID
+     */
     private String executionId;
-    /** 命令业务ID */
+    /**
+     * 命令业务ID
+     */
     private String commandId;
-    /** 统一执行作用域ID */
+    /**
+     * 统一执行作用域ID
+     */
     private String scopeId;
-    /** 规范化请求SHA256 */
+    /**
+     * 规范化请求SHA256
+     */
     private String payloadHash;
-    /** PENDING/DELIVERING/DELIVERED/APPLIED/BLOCKED */
+    /**
+     * PENDING/DELIVERING/DELIVERED/APPLIED/BLOCKED
+     */
     private String status;
-    /** 会话代际 */
+    /**
+     * 会话代际
+     */
     private long generation;
-    /** 消息受理序号 */
+    /**
+     * 消息受理序号
+     */
     private long receiptSequence;
 }

@@ -14,7 +14,7 @@ import java.util.List;
 public interface BudgetMapper {
 
     String findScopeBySession(@Param("userId") String userId,
-                             @Param("sessionId") String sessionId);
+                              @Param("sessionId") String sessionId);
 
     BudgetAccountBO lockAccount(@Param("userId") String userId, @Param("scopeId") String scopeId);
 
@@ -41,8 +41,8 @@ public interface BudgetMapper {
                     @Param("requestHash") String requestHash);
 
     BudgetReservationPO findReservation(@Param("userId") String userId,
-                                         @Param("scopeId") String scopeId,
-                                         @Param("usageKey") String usageKey);
+                                        @Param("scopeId") String scopeId,
+                                        @Param("usageKey") String usageKey);
 
     String findStatus(@Param("userId") String userId, @Param("scopeId") String scopeId,
                       @Param("usageKey") String usageKey);
@@ -68,6 +68,7 @@ public interface BudgetMapper {
 
     int markModelUnknown(@Param("userId") String userId, @Param("scopeId") String scopeId,
                          @Param("usageKey") String usageKey);
+
     int markUnknown(@Param("userId") String userId, @Param("scopeId") String scopeId,
                     @Param("usageKey") String usageKey);
 }

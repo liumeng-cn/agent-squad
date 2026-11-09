@@ -12,9 +12,13 @@ import lombok.Getter;
 @AllArgsConstructor
 public class SkillFileVO {
 
-    /** 包内相对路径 */
+    /**
+     * 包内相对路径
+     */
     private final String path;
 
-    /** 文件文本内容 */
+    /**
+     * 文件文本内容
+     */
     private final String content;
 }

@@ -15,11 +15,11 @@ import java.util.List;
 public interface ConnectionMapper extends BaseMapper<ConnectionPO> {
 
     int insertConnection(@Param("connectionId") String connectionId, @Param("userId") String userId,
-               @Param("creatorName") String creatorName, @Param("name") String name,
-               @Param("provider") String provider, @Param("environment") String environment,
-               @Param("resourcePolicyJson") String resourcePolicyJson,
-               @Param("secretRef") String secretRef,
-               @Param("createIdempotencyKey") String createIdempotencyKey);
+                         @Param("creatorName") String creatorName, @Param("name") String name,
+                         @Param("provider") String provider, @Param("environment") String environment,
+                         @Param("resourcePolicyJson") String resourcePolicyJson,
+                         @Param("secretRef") String secretRef,
+                         @Param("createIdempotencyKey") String createIdempotencyKey);
 
     default ConnectionPO findOwned(String userId, String connectionId) {
         return selectOne(new QueryWrapper<ConnectionPO>()
@@ -36,7 +36,7 @@ public interface ConnectionMapper extends BaseMapper<ConnectionPO> {
     }
 
     List<ConnectionPO> listByOwner(@Param("userId") String userId,
-                                    @Param("cursorId") Long cursorId, @Param("limit") int limit);
+                                   @Param("cursorId") Long cursorId, @Param("limit") int limit);
 
     int updateOwned(@Param("userId") String userId,
                     @Param("connectionId") String connectionId,

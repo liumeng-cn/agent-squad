@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 public interface WorkerDispatchMapper {
 
     WorkerLaunchBO findByBinding(@Param("userId") String userId,
-                                  @Param("bindingId") String bindingId);
+                                 @Param("bindingId") String bindingId);
 
     int claimGuard(@Param("userId") String userId, @Param("bindingId") String bindingId,
                    @Param("guardToken") String guardToken, @Param("now") LocalDateTime now,

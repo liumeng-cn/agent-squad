@@ -18,11 +18,17 @@ public enum ActivityWaitReason {
     RETRY_BACKOFF(7, "RETRY_BACKOFF", "重试退避"),
     EVENT_RECOVERY(8, "EVENT_RECOVERY", "事件恢复");
 
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     ActivityWaitReason(int code, String name, String desc) {

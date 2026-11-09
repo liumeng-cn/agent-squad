@@ -38,9 +38,9 @@ public interface TaskDirectiveMapper {
                 @Param("reason") TaskDirectiveWaitReason reason);
 
     List<TaskDirectivePO> pageInConversation(@Param("userId") String userId,
-                                              @Param("conversationId") String conversationId,
-                                              @Param("generation") long generation,
-                                              @Param("first") long first, @Param("last") long last);
+                                             @Param("conversationId") String conversationId,
+                                             @Param("generation") long generation,
+                                             @Param("first") long first, @Param("last") long last);
 
     int bindCommand(@Param("userId") String userId, @Param("directiveId") String directiveId, @Param("commandId") String commandId);
 

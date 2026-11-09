@@ -11,11 +11,17 @@ import lombok.Getter;
 public enum DeterministicAcceptanceCheck {
     REQUIRED_RESULTS_READY(1, "REQUIRED_RESULTS_READY", "必需结果已就绪");
 
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     DeterministicAcceptanceCheck(int code, String name, String desc) {

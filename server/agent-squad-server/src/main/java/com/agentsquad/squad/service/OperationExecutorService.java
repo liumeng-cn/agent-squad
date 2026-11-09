@@ -29,7 +29,8 @@ import java.util.UUID;
 @Service
 @Slf4j
 public class OperationExecutorService {
-    @Resource private UserStatusGuardService userStatus;
+    @Resource
+    private UserStatusGuardService userStatus;
 
     private static final long LEASE_SECONDS = 60;
 

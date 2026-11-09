@@ -9,6 +9,6 @@ import com.agentsquad.squad.enums.ReplyPreviewPhase;
  * 无持久序号，不证明执行完成，也不包含推理正文本身。
  */
 public record ReplyPreviewBO(int schemaVersion, String executionId, String sourceMessageId,
-                           String runId, String streamId, long revision, int offset,
-                           String text, ReplyPreviewPhase phase, boolean replace, boolean preview) {
+                             String runId, String streamId, long revision, int offset,
+                             String text, ReplyPreviewPhase phase, boolean replace, boolean preview) {
 }

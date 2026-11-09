@@ -19,14 +19,24 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ResponseTaskStatusFactBO {
-    /** 目标业务ID */
+    /**
+     * 目标业务ID
+     */
     private String taskId;
-    /** 来源消息标识 */
+    /**
+     * 来源消息标识
+     */
     private String sourceMessageId;
-    /** 产品状态 */
+    /**
+     * 产品状态
+     */
     private String status;
-    /** 业务版本 */
+    /**
+     * 业务版本
+     */
     private long version;
-    /** 已应用目标语义修订号 */
+    /**
+     * 已应用目标语义修订号
+     */
     private long goalRevision;
 }

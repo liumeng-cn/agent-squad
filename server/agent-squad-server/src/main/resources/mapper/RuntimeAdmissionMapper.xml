@@ -17,12 +17,12 @@
 
     <insert id="ensureCounter">
         INSERT IGNORE INTO sq_runtime_admission_counter (
-            pool_key,
-            active_count
+        pool_key,
+        active_count
         )
         VALUES (
-            #{poolKey},
-            0
+        #{poolKey},
+        0
         )
     </insert>
 
@@ -37,20 +37,20 @@
         SELECT native_event_cursor
         FROM sq_runtime_binding
         WHERE user_id = #{userId}
-          AND binding_id = #{bindingId}
+        AND binding_id = #{bindingId}
         FOR UPDATE
     </select>
 
     <select id="lockSlot" resultMap="slotResult">
         SELECT
-            user_id,
-            binding_id,
-            command_id,
-            action,
-            turn_id,
-            run_id,
-            claim_cursor,
-            status
+        user_id,
+        binding_id,
+        command_id,
+        action,
+        turn_id,
+        run_id,
+        claim_cursor,
+        status
         FROM sq_runtime_admission_slot
         WHERE binding_id = #{bindingId}
         FOR UPDATE
@@ -58,55 +58,55 @@
 
     <insert id="createSlot">
         INSERT INTO sq_runtime_admission_slot (
-            binding_id,
-            user_id,
-            command_id,
-            action,
-            turn_id,
-            run_id,
-            claim_cursor,
-            status,
-            acquired_at,
-            released_at
+        binding_id,
+        user_id,
+        command_id,
+        action,
+        turn_id,
+        run_id,
+        claim_cursor,
+        status,
+        acquired_at,
+        released_at
         )
         VALUES (
-            #{bindingId},
-            #{userId},
-            #{commandId},
-            #{action},
-            NULL,
-            NULL,
-            #{claimCursor},
-            'ACTIVE',
-            UTC_TIMESTAMP(3),
-            NULL
+        #{bindingId},
+        #{userId},
+        #{commandId},
+        #{action},
+        NULL,
+        NULL,
+        #{claimCursor},
+        'ACTIVE',
+        UTC_TIMESTAMP(3),
+        NULL
         )
     </insert>
 
     <update id="activateSlot">
         UPDATE sq_runtime_admission_slot
-        SET user_id     = #{userId},
-            command_id  = #{commandId},
-            action      = #{action},
-            turn_id      = NULL,
-            run_id       = NULL,
-            claim_cursor = #{claimCursor},
-            status       = 'ACTIVE',
-            acquired_at = UTC_TIMESTAMP(3),
-            released_at = NULL
+        SET user_id = #{userId},
+        command_id = #{commandId},
+        action = #{action},
+        turn_id = NULL,
+        run_id = NULL,
+        claim_cursor = #{claimCursor},
+        status = 'ACTIVE',
+        acquired_at = UTC_TIMESTAMP(3),
+        released_at = NULL
         WHERE binding_id = #{bindingId}
-          AND status = 'RELEASED'
-          AND user_id = #{userId}
+        AND status = 'RELEASED'
+        AND user_id = #{userId}
     </update>
 
     <update id="bindTurn">
         UPDATE sq_runtime_admission_slot
         SET turn_id = #{turnId}
         WHERE user_id = #{userId}
-          AND binding_id = #{bindingId}
-          AND command_id = #{commandId}
-          AND status = 'ACTIVE'
-          AND (turn_id IS NULL OR turn_id = #{turnId})
+        AND binding_id = #{bindingId}
+        AND command_id = #{commandId}
+        AND status = 'ACTIVE'
+        AND (turn_id IS NULL OR turn_id = #{turnId})
     </update>
 
     <!-- 恢复类仅认领冻结水位之后的原生 Run，不信任旧 Turn。 -->
@@ -114,19 +114,19 @@
         UPDATE sq_runtime_admission_slot
         SET run_id = #{runId}
         WHERE user_id = #{userId}
-          AND binding_id = #{bindingId}
-          AND action IN ('RESUME', 'RESPOND')
-          AND status = 'ACTIVE'
-          AND run_id IS NULL
-          AND claim_cursor &lt; #{eventSequence}
+        AND binding_id = #{bindingId}
+        AND action IN ('RESUME', 'RESPOND')
+        AND status = 'ACTIVE'
+        AND run_id IS NULL
+        AND claim_cursor &lt; #{eventSequence}
     </update>
 
     <select id="findCommandTurn" resultType="java.lang.String">
         SELECT native_turn_id
         FROM sq_command
         WHERE user_id = #{userId}
-          AND command_id = #{commandId}
-          AND native_turn_id IS NOT NULL
+        AND command_id = #{commandId}
+        AND native_turn_id IS NOT NULL
         LIMIT 1
     </select>
 
@@ -134,7 +134,7 @@
         SELECT last_ended_turn_id
         FROM sq_runtime_binding
         WHERE user_id = #{userId}
-          AND binding_id = #{bindingId}
+        AND binding_id = #{bindingId}
     </select>
 
     <!--
@@ -144,29 +144,29 @@
     <select id="findCounterMismatches" resultType="java.lang.String">
         SELECT drift.pool_key
         FROM (
-            SELECT
-                c.pool_key
-            FROM sq_runtime_admission_counter c
-            LEFT JOIN sq_runtime_admission_slot s
-                ON s.status = 'ACTIVE'
-               AND (
-                    c.pool_key = 'GLOBAL'
-                    OR c.pool_key = CONCAT('USER:', s.user_id)
-               )
-            GROUP BY
-                c.pool_key,
-                c.active_count
-            HAVING c.active_count &lt;&gt; COUNT(s.binding_id)
+        SELECT
+        c.pool_key
+        FROM sq_runtime_admission_counter c
+        LEFT JOIN sq_runtime_admission_slot s
+        ON s.status = 'ACTIVE'
+        AND (
+        c.pool_key = 'GLOBAL'
+        OR c.pool_key = CONCAT('USER:', s.user_id)
+        )
+        GROUP BY
+        c.pool_key,
+        c.active_count
+        HAVING c.active_count &lt;&gt; COUNT(s.binding_id)
 
-            UNION
+        UNION
 
-            SELECT
-                CONCAT('USER:', s.user_id) AS pool_key
-            FROM sq_runtime_admission_slot s
-            LEFT JOIN sq_runtime_admission_counter c
-                ON c.pool_key = CONCAT('USER:', s.user_id)
-            WHERE s.status = 'ACTIVE'
-              AND c.pool_key IS NULL
+        SELECT
+        CONCAT('USER:', s.user_id) AS pool_key
+        FROM sq_runtime_admission_slot s
+        LEFT JOIN sq_runtime_admission_counter c
+        ON c.pool_key = CONCAT('USER:', s.user_id)
+        WHERE s.status = 'ACTIVE'
+        AND c.pool_key IS NULL
         ) drift
         LIMIT #{limit}
     </select>
@@ -175,15 +175,15 @@
         SELECT native_turn_id
         FROM sq_command
         WHERE user_id = #{userId}
-          AND binding_id = #{bindingId}
-          AND action IN (
-              'SUBMIT',
-              'MESSAGE_SUBMIT',
-              'MASTER_SIGNAL',
-              'TASK_DIRECTIVE',
-              'RESUME'
-          )
-          AND native_turn_id IS NOT NULL
+        AND binding_id = #{bindingId}
+        AND action IN (
+        'SUBMIT',
+        'MESSAGE_SUBMIT',
+        'MASTER_SIGNAL',
+        'TASK_DIRECTIVE',
+        'RESUME'
+        )
+        AND native_turn_id IS NOT NULL
         ORDER BY id DESC
         LIMIT 1
     </select>
@@ -191,11 +191,11 @@
     <update id="releaseSlot">
         UPDATE sq_runtime_admission_slot
         SET status = 'RELEASED',
-            released_at = UTC_TIMESTAMP(3)
+        released_at = UTC_TIMESTAMP(3)
         WHERE user_id = #{userId}
-          AND binding_id = #{bindingId}
-          AND command_id = #{commandId}
-          AND status = 'ACTIVE'
+        AND binding_id = #{bindingId}
+        AND command_id = #{commandId}
+        AND status = 'ACTIVE'
     </update>
 
     <update id="increment">
@@ -208,6 +208,6 @@
         UPDATE sq_runtime_admission_counter
         SET active_count = active_count - 1
         WHERE pool_key = #{poolKey}
-          AND active_count &gt; 0
+        AND active_count &gt; 0
     </update>
 </mapper>

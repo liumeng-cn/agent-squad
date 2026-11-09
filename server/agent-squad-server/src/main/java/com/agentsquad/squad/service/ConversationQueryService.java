@@ -96,14 +96,16 @@ public class ConversationQueryService {
                 page.isEmpty() ? List.of() : reads.pageExecutions(userId, conversationId, page.getFirst().getSequence(), page.getLast().getSequence()).stream().map(row -> executionView(userId, row)).toList(),
                 page.isEmpty() ? List.of() : reads.pageTasks(userId, conversationId, page.getFirst().getSequence(), page.getLast().getSequence()),
                 page.isEmpty() ? List.of() : directives.pageInConversation(userId, conversationId, header.getGeneration(),
-                        page.getFirst().getSequence(), page.getLast().getSequence()).stream()
+                                page.getFirst().getSequence(), page.getLast().getSequence()).stream()
                         .map(TaskDirectiveVO::from).toList(),
                 activities.recent(userId, conversationId, header.getGeneration(), 100).stream()
                         .map(ExecutionActivityVO::from).toList(),
                 cursor(header, header.getEventSequence()));
     }
 
-    /** 仅查询当前会话代际的来源消息，按固定活动身份向前翻页。 */
+    /**
+     * 仅查询当前会话代际的来源消息，按固定活动身份向前翻页。
+     */
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public ActivityHistoryPageVO activityHistory(String userId, String conversationId, ActivityHistoryDTO query) {
         var header = requireHeader(userId, conversationId);
@@ -116,6 +118,7 @@ public class ConversationQueryService {
         String nextCursor = rows.size() > ACTIVITY_HISTORY_PAGE_SIZE ? items.getLast().activityId() : null;
         return new ActivityHistoryPageVO(items, nextCursor);
     }
+
     /**
      * 每次读取同时重验会话归属、代际和保留水位；删除后的既有订阅也不能继续读取内容。
      */

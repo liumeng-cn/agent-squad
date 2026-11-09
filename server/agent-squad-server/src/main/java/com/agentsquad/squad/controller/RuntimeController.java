@@ -1,43 +1,20 @@
 package com.agentsquad.squad.controller;
 
-import com.agentsquad.squad.model.vo.CommandReceiptVO;
-import com.agentsquad.squad.model.vo.CommandVO;
+import com.agentsquad.squad.common.model.ApiResult;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.identity.UserContext;
 import com.agentsquad.squad.model.dto.ControlDTO;
 import com.agentsquad.squad.model.dto.ConversationCreateDTO;
-import com.agentsquad.squad.model.vo.ConversationListPageVO;
-import com.agentsquad.squad.model.vo.ConversationVO;
-import com.agentsquad.squad.model.vo.GoalTaskPageVO;
 import com.agentsquad.squad.model.dto.TaskCreateDTO;
-import com.agentsquad.squad.model.vo.TaskReceiptVO;
-import com.agentsquad.squad.model.vo.TaskVO;
-import com.agentsquad.squad.model.vo.TaskSnapshotVO;
-import com.agentsquad.squad.model.vo.WorkerJobPageVO;
-
-import com.agentsquad.squad.exceptions.RuntimeBusinessException;
-import com.agentsquad.squad.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.common.model.ApiResult;
-
-import com.agentsquad.squad.identity.UserContext;
-import jakarta.servlet.http.HttpServletRequest;
-import com.agentsquad.squad.service.ConversationDeletionService;
-import com.agentsquad.squad.service.GoalTaskService;
-import com.agentsquad.squad.service.TaskControlService;
-import com.agentsquad.squad.service.TaskEventStreamerService;
-import com.agentsquad.squad.service.TaskSnapshotService;
+import com.agentsquad.squad.model.vo.*;
+import com.agentsquad.squad.service.*;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
@@ -72,8 +49,8 @@ public class RuntimeController {
      */
     @GetMapping("/tasks/{taskId}/jobs")
     public ApiResult<WorkerJobPageVO> listJobs(HttpServletRequest servletRequest,
-                                            @PathVariable String taskId,
-                                            @org.springframework.web.bind.annotation.RequestParam(required = false) Long planVersion) {
+                                               @PathVariable String taskId,
+                                               @org.springframework.web.bind.annotation.RequestParam(required = false) Long planVersion) {
         return ApiResult.success(taskSnapshotService.listJobs(UserContext.current(servletRequest).userId(), taskId, planVersion));
     }
 
@@ -166,7 +143,7 @@ public class RuntimeController {
      */
     @GetMapping("/tasks/{taskId}")
     public ApiResult<TaskVO> getTask(HttpServletRequest servletRequest,
-                                           @PathVariable String taskId) {
+                                     @PathVariable String taskId) {
         return ApiResult.success(goalTaskService.findTask(UserContext.current(servletRequest).userId(), taskId));
     }
 
@@ -175,7 +152,7 @@ public class RuntimeController {
      */
     @GetMapping("/tasks/{taskId}/snapshot")
     public ApiResult<TaskSnapshotVO> getTaskSnapshot(HttpServletRequest servletRequest,
-                                                   @PathVariable String taskId) {
+                                                     @PathVariable String taskId) {
         return ApiResult.success(taskSnapshotService.snapshot(UserContext.current(servletRequest).userId(), taskId));
     }
 
@@ -251,7 +228,7 @@ public class RuntimeController {
      */
     @GetMapping("/commands/{commandId}")
     public ApiResult<CommandVO> getCommand(HttpServletRequest servletRequest,
-                                                 @PathVariable String commandId) {
+                                           @PathVariable String commandId) {
         return ApiResult.success(goalTaskService.findCommand(UserContext.current(servletRequest).userId(), commandId));
     }
 

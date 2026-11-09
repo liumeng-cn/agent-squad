@@ -1,29 +1,21 @@
 package com.agentsquad.squad.controller;
 
 import com.agentsquad.squad.common.model.ApiResult;
-import com.agentsquad.squad.model.dto.ConversationTitleUpdateDTO;
-import com.agentsquad.squad.model.vo.ConversationViewVO;
-import com.agentsquad.squad.service.ConversationTitleService;
-import com.agentsquad.squad.model.vo.ConversationSnapshotVO;
-import com.agentsquad.squad.service.ConversationQueryService;
-import com.agentsquad.squad.service.ConversationEventStreamerService;
 import com.agentsquad.squad.identity.UserContext;
-import com.agentsquad.squad.model.vo.ActivityHistoryPageVO;
 import com.agentsquad.squad.model.dto.ActivityHistoryDTO;
-import org.springframework.web.bind.annotation.ModelAttribute;
+import com.agentsquad.squad.model.dto.ConversationTitleUpdateDTO;
+import com.agentsquad.squad.model.vo.ActivityHistoryPageVO;
+import com.agentsquad.squad.model.vo.ConversationSnapshotVO;
+import com.agentsquad.squad.model.vo.ConversationViewVO;
+import com.agentsquad.squad.service.ConversationEventStreamerService;
+import com.agentsquad.squad.service.ConversationQueryService;
+import com.agentsquad.squad.service.ConversationTitleService;
+import jakarta.annotation.Resource;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
@@ -45,14 +37,14 @@ public class ConversationReadController {
 
     @GetMapping("/snapshot")
     public ApiResult<ConversationSnapshotVO> snapshot(HttpServletRequest servletRequest,
-                                                    @PathVariable String conversationId, @RequestParam(required = false) Long beforeMessageSeq,
-                                                    @RequestParam(defaultValue = "40") int limit) {
+                                                      @PathVariable String conversationId, @RequestParam(required = false) Long beforeMessageSeq,
+                                                      @RequestParam(defaultValue = "40") int limit) {
         return ApiResult.success(queries.snapshot(UserContext.current(servletRequest).userId(), conversationId, beforeMessageSeq, limit));
     }
 
     @GetMapping("/activities")
     public ApiResult<ActivityHistoryPageVO> activities(HttpServletRequest request, @PathVariable String conversationId,
-                                                     @ModelAttribute ActivityHistoryDTO query) {
+                                                       @ModelAttribute ActivityHistoryDTO query) {
         return ApiResult.success(queries.activityHistory(UserContext.current(request).userId(), conversationId, query));
     }
 

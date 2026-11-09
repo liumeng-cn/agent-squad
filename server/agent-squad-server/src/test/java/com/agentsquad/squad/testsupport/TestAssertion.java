@@ -24,7 +24,9 @@ public final class TestAssertion {
     private TestAssertion() {
     }
 
-    /** 按当前 MockMvc 请求的方法和路径生成断言，附加到请求头。 */
+    /**
+     * 按当前 MockMvc 请求的方法和路径生成断言，附加到请求头。
+     */
     public static RequestPostProcessor as(String userId, String... roles) {
         return request -> {
             List<String> roleList = roles == null || roles.length == 0 ? List.of("USER") : List.of(roles);

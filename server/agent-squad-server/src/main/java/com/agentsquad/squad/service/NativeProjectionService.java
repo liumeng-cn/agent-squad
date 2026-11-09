@@ -195,7 +195,9 @@ public class NativeProjectionService {
                 NativeRunOutcome outcome = NativeRunOutcome.fromCode(event.outcome());
                 boolean completed = outcome == NativeRunOutcome.COMPLETED
                         && workerResultService.finalizeSuccess(target.getUserId(), target.getBindingId(), event.turnId());
-                if (completed) { failures.resolve(target.getUserId(), target.getBindingId()); }
+                if (completed) {
+                    failures.resolve(target.getUserId(), target.getBindingId());
+                }
                 if (!completed && outcome == NativeRunOutcome.FAILED) {
                     var scope = scopeMapper.findOwned(target.getUserId(), scopeMapper.findScopeByBinding(target.getUserId(), target.getBindingId()));
                     if (failures.queueTransientRetry(scope, target.getBindingId(), event.eventId(), event.turnId())) {

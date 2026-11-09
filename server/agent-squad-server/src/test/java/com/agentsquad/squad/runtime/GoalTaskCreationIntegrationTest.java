@@ -1,16 +1,13 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
-import com.agentsquad.squad.service.ArtifactService;
-
-import java.nio.charset.StandardCharsets;
-
 import com.agentsquad.squad.model.bo.GoalTaskCreateBO;
 import com.agentsquad.squad.model.dto.MessageCreateDTO;
 import com.agentsquad.squad.model.vo.TaskReceiptVO;
+import com.agentsquad.squad.service.ArtifactService;
+import com.agentsquad.squad.service.BudgetService;
 import com.agentsquad.squad.service.GoalTaskCreationService;
 import com.agentsquad.squad.service.MessageAcceptanceService;
-import com.agentsquad.squad.service.BudgetService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -18,6 +15,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
@@ -158,7 +156,7 @@ class GoalTaskCreationIntegrationTest {
     }
 
     private static TaskReceiptVO concurrent(ConfigurableApplicationContext context, String user, String session, GoalTaskCreateBO request,
-                                          CountDownLatch ready, CountDownLatch go) throws Exception {
+                                            CountDownLatch ready, CountDownLatch go) throws Exception {
         ready.countDown();
         if (!go.await(10, TimeUnit.SECONDS)) {
             throw new IllegalStateException("并发测试超时");

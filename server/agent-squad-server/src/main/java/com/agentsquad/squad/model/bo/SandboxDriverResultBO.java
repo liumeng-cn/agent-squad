@@ -7,5 +7,5 @@ package com.agentsquad.squad.model.bo;
  * 用于沙箱执行或产物传输，不接受宿主路径或模型提供的用户身份。
  */
 public record SandboxDriverResultBO(int exitCode, String stdout, String stderr, boolean truncated,
-                                  java.util.List<SandboxOutputBO> outputs) {
+                                    java.util.List<SandboxOutputBO> outputs) {
 }

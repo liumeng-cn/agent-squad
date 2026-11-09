@@ -1,8 +1,7 @@
 package com.agentsquad.squad.identity;
 
-import com.agentsquad.squad.service.UserStatusGuardService;
-
 import com.agentsquad.squad.enums.AccountRole;
+import com.agentsquad.squad.service.UserStatusGuardService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletRequest;

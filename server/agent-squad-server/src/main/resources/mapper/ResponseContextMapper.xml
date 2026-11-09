@@ -24,32 +24,32 @@
 
     <select id="findSource" resultMap="findSourceResult">
         SELECT r.execution_id,
-            r.source_message_id,
-            m.message_seq,
-            r.context_json,
-            r.context_hash
+        r.source_message_id,
+        m.message_seq,
+        r.context_json,
+        r.context_hash
         FROM sq_response_execution r JOIN sq_message m
-          ON m.user_id = r.user_id AND m.message_id = r.source_message_id
-          AND m.conversation_id = r.conversation_id
+        ON m.user_id = r.user_id AND m.message_id = r.source_message_id
+        AND m.conversation_id = r.conversation_id
         WHERE r.user_id = #{userId} AND r.binding_id = #{bindingId} AND r.del_flag = '0'
-          AND m.del_flag = '0' AND m.role = 'USER' AND m.completed = TRUE FOR UPDATE
+        AND m.del_flag = '0' AND m.role = 'USER' AND m.completed = TRUE FOR UPDATE
     </select>
 
     <select id="characterCount" resultType="_long">
         SELECT COALESCE(SUM(CHAR_LENGTH(content)),
-            0) FROM sq_message
+        0) FROM sq_message
         WHERE user_id = #{userId} AND conversation_id = #{conversationId}
-          AND message_seq &lt;= #{through} AND completed = TRUE AND del_flag = '0'
+        AND message_seq &lt;= #{through} AND completed = TRUE AND del_flag = '0'
     </select>
 
     <select id="prefix" resultMap="prefixResult">
         SELECT message_id,
-            message_seq,
-            role,
-            content,
-            revision
+        message_seq,
+        role,
+        content,
+        revision
         FROM sq_message WHERE user_id = #{userId} AND conversation_id = #{conversationId}
-          AND message_seq &lt;= #{through} AND completed = TRUE AND del_flag = '0'
+        AND message_seq &lt;= #{through} AND completed = TRUE AND del_flag = '0'
         ORDER BY message_seq FOR UPDATE
     </select>
 
@@ -60,7 +60,7 @@
 
     <update id="freeze">
         UPDATE sq_response_execution SET context_json = #{json},
-            context_hash = #{hash}
+        context_hash = #{hash}
         WHERE user_id = #{userId} AND execution_id = #{executionId} AND context_json IS NULL
     </update>
 </mapper>

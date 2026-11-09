@@ -33,11 +33,17 @@ public enum ActivityType {
     USER_INTERACTION(22, "USER_INTERACTION", "用户交互"),
     TOOL_CALL(23, "TOOL_CALL", "工具调用");
 
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     ActivityType(int code, String name, String desc) {

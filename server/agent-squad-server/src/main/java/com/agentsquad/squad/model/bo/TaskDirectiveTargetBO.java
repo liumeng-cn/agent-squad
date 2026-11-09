@@ -19,10 +19,16 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TaskDirectiveTargetBO {
-    /** 目标修订指令业务ID */
+    /**
+     * 目标修订指令业务ID
+     */
     private String directiveId;
-    /** 归属用户ID */
+    /**
+     * 归属用户ID
+     */
     private String userId;
-    /** 当前受权目标ID */
+    /**
+     * 当前受权目标ID
+     */
     private String taskId;
 }

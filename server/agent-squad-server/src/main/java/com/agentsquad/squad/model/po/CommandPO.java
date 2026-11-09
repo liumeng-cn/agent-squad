@@ -19,22 +19,40 @@ import lombok.ToString;
 @AllArgsConstructor
 @TableName("sq_command")
 public class CommandPO {
-    /** 命令业务ID */
+    /**
+     * 命令业务ID
+     */
     private String commandId;
-    /** 资源归属用户ID */
+    /**
+     * 资源归属用户ID
+     */
     private String userId;
-    /** 所属目标ID；删除类命令可为空 */
+    /**
+     * 所属目标ID；删除类命令可为空
+     */
     private String taskId;
-    /** 原生会话绑定ID；删除类命令可为空 */
+    /**
+     * 原生会话绑定ID；删除类命令可为空
+     */
     private String bindingId;
-    /** 规范化请求SHA256 */
+    /**
+     * 规范化请求SHA256
+     */
     private String payloadHash;
-    /** PENDING/DELIVERING/DELIVERED/APPLIED/BLOCKED */
+    /**
+     * PENDING/DELIVERING/DELIVERED/APPLIED/BLOCKED
+     */
     private String status;
-    /** AgentScope 原生回合ID */
+    /**
+     * AgentScope 原生回合ID
+     */
     private String nativeTurnId;
-    /** AgentScope 原生运行ID */
+    /**
+     * AgentScope 原生运行ID
+     */
     private String nativeRunId;
-    /** AgentScope 提交时状态 */
+    /**
+     * AgentScope 提交时状态
+     */
     private String nativeStatus;
 }

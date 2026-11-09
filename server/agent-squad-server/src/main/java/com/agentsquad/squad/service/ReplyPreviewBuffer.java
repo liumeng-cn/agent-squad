@@ -80,7 +80,9 @@ public final class ReplyPreviewBuffer {
         lastSent = System.nanoTime();
     }
 
-    /** 失败或取消只撤销本次临时流；保留稳定流身份，迟到增量不能重新激活旧草稿。 */
+    /**
+     * 失败或取消只撤销本次临时流；保留稳定流身份，迟到增量不能重新激活旧草稿。
+     */
     public synchronized void abort() {
         if (!closed) {
             closed = true;

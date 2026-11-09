@@ -44,6 +44,7 @@ public class MessageCreateDTO {
         this.modelId = modelId;
         this.reasoningMode = reasoningMode;
     }
+
     public MessageCreateDTO(String text, List<String> artifactIds) {
         this(text, artifactIds, null, null);
     }

@@ -53,7 +53,7 @@ public class HarnessDockerSandboxDriver {
      * 仅将服务层已校验的字节投影到容器；SDK工作空间保持空，避免其文件物化逻辑写到宿主。
      */
     public SandboxDriverResultBO execute(SandboxExecuteRequestBO request,
-                                       java.util.List<SandboxInputFileBO> inputFiles) throws Exception {
+                                         java.util.List<SandboxInputFileBO> inputFiles) throws Exception {
         requireAvailable();
         SandboxPolicy.validate(request);
         WorkspaceSpec workspace = new WorkspaceSpec();

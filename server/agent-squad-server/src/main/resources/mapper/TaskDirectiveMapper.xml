@@ -110,141 +110,141 @@
 
     <select id="lock" resultMap="lockResult">
         SELECT directive_id,
-            user_id,
-            conversation_id,
-            conversation_generation,
-            source_message_id,
-            source_scope_id,
-            task_id,
-            logical_key,
-            payload_hash,
-            expected_version,
-            expected_goal_revision,
-            kind,
-            content,
-            source_text,
-            artifact_ids_json,
-            status,
-            command_id,
-            applied_version,
-            applied_goal_revision,
-            reason_code,
-            reason_message
+        user_id,
+        conversation_id,
+        conversation_generation,
+        source_message_id,
+        source_scope_id,
+        task_id,
+        logical_key,
+        payload_hash,
+        expected_version,
+        expected_goal_revision,
+        kind,
+        content,
+        source_text,
+        artifact_ids_json,
+        status,
+        command_id,
+        applied_version,
+        applied_goal_revision,
+        reason_code,
+        reason_message
         FROM sq_task_directive
         WHERE user_id = #{userId}
-          AND directive_id = #{directiveId}
-          AND del_flag = '0' FOR UPDATE
+        AND directive_id = #{directiveId}
+        AND del_flag = '0' FOR UPDATE
     </select>
 
     <select id="findByKey" resultMap="findByKeyResult">
         SELECT directive_id,
-            user_id,
-            conversation_id,
-            conversation_generation,
-            source_message_id,
-            source_scope_id,
-            task_id,
-            logical_key,
-            payload_hash,
-            expected_version,
-            expected_goal_revision,
-            kind,
-            content,
-            source_text,
-            artifact_ids_json,
-            status,
-            command_id,
-            applied_version,
-            applied_goal_revision,
-            reason_code,
-            reason_message
+        user_id,
+        conversation_id,
+        conversation_generation,
+        source_message_id,
+        source_scope_id,
+        task_id,
+        logical_key,
+        payload_hash,
+        expected_version,
+        expected_goal_revision,
+        kind,
+        content,
+        source_text,
+        artifact_ids_json,
+        status,
+        command_id,
+        applied_version,
+        applied_goal_revision,
+        reason_code,
+        reason_message
         FROM sq_task_directive
         WHERE user_id = #{userId}
-          AND source_scope_id = #{scopeId}
-          AND logical_key = #{key} FOR UPDATE
+        AND source_scope_id = #{scopeId}
+        AND logical_key = #{key} FOR UPDATE
     </select>
 
     <select id="applied" resultMap="appliedResult">
         SELECT directive_id,
-            user_id,
-            conversation_id,
-            conversation_generation,
-            source_message_id,
-            source_scope_id,
-            task_id,
-            logical_key,
-            payload_hash,
-            expected_version,
-            expected_goal_revision,
-            kind,
-            content,
-            source_text,
-            artifact_ids_json,
-            status,
-            command_id,
-            applied_version,
-            applied_goal_revision,
-            reason_code,
-            reason_message
+        user_id,
+        conversation_id,
+        conversation_generation,
+        source_message_id,
+        source_scope_id,
+        task_id,
+        logical_key,
+        payload_hash,
+        expected_version,
+        expected_goal_revision,
+        kind,
+        content,
+        source_text,
+        artifact_ids_json,
+        status,
+        command_id,
+        applied_version,
+        applied_goal_revision,
+        reason_code,
+        reason_message
         FROM sq_task_directive
         WHERE user_id = #{userId}
-          AND task_id = #{taskId}
-          AND status = 'APPLIED'
-          AND applied_goal_revision &gt;= #{revision}
-          AND del_flag = '0'
+        AND task_id = #{taskId}
+        AND status = 'APPLIED'
+        AND applied_goal_revision &gt;= #{revision}
+        AND del_flag = '0'
         ORDER BY applied_goal_revision FOR UPDATE
     </select>
 
     <insert id="insert">
         INSERT INTO sq_task_directive (
-            directive_id,
-            user_id,
-            conversation_id,
-            conversation_generation,
-            source_message_id,
-            source_scope_id,
-            task_id,
-            logical_key,
-            payload_hash,
-            expected_version,
-            expected_goal_revision,
-            kind,
-            content,
-            source_text,
-            artifact_ids_json,
-            status,
-            next_attempt_at,
-            creator_id,
-            last_updater_id
+        directive_id,
+        user_id,
+        conversation_id,
+        conversation_generation,
+        source_message_id,
+        source_scope_id,
+        task_id,
+        logical_key,
+        payload_hash,
+        expected_version,
+        expected_goal_revision,
+        kind,
+        content,
+        source_text,
+        artifact_ids_json,
+        status,
+        next_attempt_at,
+        creator_id,
+        last_updater_id
         ) VALUES (
-            #{row.directiveId},
-            #{row.userId},
-            #{row.conversationId},
-            #{row.generation},
-            #{row.sourceMessageId},
-            #{row.sourceScopeId},
-            #{row.taskId},
-            #{row.logicalKey},
-            #{row.payloadHash},
-            #{row.expectedVersion},
-            #{row.expectedGoalRevision},
-            #{row.kind},
-            #{row.content},
-            #{row.sourceText},
-            #{row.artifactIdsJson},
-            'ACCEPTED',
-            #{now},
-            #{row.userId},
-            #{row.userId}
+        #{row.directiveId},
+        #{row.userId},
+        #{row.conversationId},
+        #{row.generation},
+        #{row.sourceMessageId},
+        #{row.sourceScopeId},
+        #{row.taskId},
+        #{row.logicalKey},
+        #{row.payloadHash},
+        #{row.expectedVersion},
+        #{row.expectedGoalRevision},
+        #{row.kind},
+        #{row.content},
+        #{row.sourceText},
+        #{row.artifactIdsJson},
+        'ACCEPTED',
+        #{now},
+        #{row.userId},
+        #{row.userId}
         )
     </insert>
 
     <select id="goalState" resultMap="goalStateResult">
         SELECT goal_revision,
-            input_json
+        input_json
         FROM sq_goal_task
         WHERE user_id = #{userId}
-          AND task_id = #{taskId}
+        AND task_id = #{taskId}
         FOR UPDATE
     </select>
 
@@ -252,23 +252,23 @@
         SELECT directive_id
         FROM sq_task_directive
         WHERE user_id = #{userId}
-          AND task_id = #{taskId}
-          AND status = 'ACCEPTED'
-          AND del_flag = '0'
+        AND task_id = #{taskId}
+        AND status = 'ACCEPTED'
+        AND del_flag = '0'
         ORDER BY id
         FOR UPDATE
     </select>
 
     <select id="due" resultMap="dueResult">
         SELECT directive_id,
-            user_id,
-            task_id
+        user_id,
+        task_id
         FROM sq_task_directive
         WHERE status = 'ACCEPTED'
-          AND next_attempt_at &lt;= #{now}
-          AND del_flag = '0'
+        AND next_attempt_at &lt;= #{now}
+        AND del_flag = '0'
         ORDER BY next_attempt_at,
-            id
+        id
         LIMIT 20
     </select>
 
@@ -276,53 +276,53 @@
         UPDATE sq_task_directive
         SET next_attempt_at = #{next}
         WHERE user_id = #{userId}
-          AND directive_id = #{directiveId}
-          AND status = 'ACCEPTED'
+        AND directive_id = #{directiveId}
+        AND status = 'ACCEPTED'
     </update>
 
     <update id="waiting">
         UPDATE sq_task_directive
         SET reason_code = #{reason},
-            reason_message = NULL
+        reason_message = NULL
         WHERE user_id = #{userId}
-          AND directive_id = #{directiveId}
-          AND status = 'ACCEPTED'
-          AND (reason_code IS NULL OR reason_code != #{reason})
+        AND directive_id = #{directiveId}
+        AND status = 'ACCEPTED'
+        AND (reason_code IS NULL OR reason_code != #{reason})
     </update>
 
     <!-- 只读取本页来源消息的修改记录；不加行锁，也不派发协调命令。 -->
     <select id="pageInConversation" resultMap="lockResult">
         SELECT d.directive_id,
-            d.user_id,
-            d.conversation_id,
-            d.conversation_generation,
-            d.source_message_id,
-            d.source_scope_id,
-            d.task_id,
-            d.logical_key,
-            d.payload_hash,
-            d.expected_version,
-            d.expected_goal_revision,
-            d.kind,
-            d.content,
-            d.source_text,
-            d.artifact_ids_json,
-            d.status,
-            d.command_id,
-            d.applied_version,
-            d.applied_goal_revision,
-            d.reason_code,
-            d.reason_message
+        d.user_id,
+        d.conversation_id,
+        d.conversation_generation,
+        d.source_message_id,
+        d.source_scope_id,
+        d.task_id,
+        d.logical_key,
+        d.payload_hash,
+        d.expected_version,
+        d.expected_goal_revision,
+        d.kind,
+        d.content,
+        d.source_text,
+        d.artifact_ids_json,
+        d.status,
+        d.command_id,
+        d.applied_version,
+        d.applied_goal_revision,
+        d.reason_code,
+        d.reason_message
         FROM sq_task_directive d
         JOIN sq_message m ON m.user_id = d.user_id
-            AND m.conversation_id = d.conversation_id
-            AND m.message_id = d.source_message_id
-            AND m.del_flag = '0'
+        AND m.conversation_id = d.conversation_id
+        AND m.message_id = d.source_message_id
+        AND m.del_flag = '0'
         WHERE d.user_id = #{userId}
-          AND d.conversation_id = #{conversationId}
-          AND d.conversation_generation = #{generation}
-          AND d.del_flag = '0'
-          AND m.message_seq BETWEEN #{first} AND #{last}
+        AND d.conversation_id = #{conversationId}
+        AND d.conversation_generation = #{generation}
+        AND d.del_flag = '0'
+        AND m.message_seq BETWEEN #{first} AND #{last}
         ORDER BY d.id
     </select>
 
@@ -330,65 +330,65 @@
         UPDATE sq_task_directive
         SET command_id = #{commandId}
         WHERE user_id = #{userId}
-          AND directive_id = #{directiveId}
-          AND status = 'ACCEPTED'
-          AND command_id IS NULL
+        AND directive_id = #{directiveId}
+        AND status = 'ACCEPTED'
+        AND command_id IS NULL
     </update>
 
     <update id="finish">
         UPDATE sq_task_directive
-        SET status                = #{status},
-            applied_version       = #{version},
-            applied_goal_revision = #{revision},
-            reason_code           = #{code},
-            reason_message        = #{message}
+        SET status = #{status},
+        applied_version = #{version},
+        applied_goal_revision = #{revision},
+        reason_code = #{code},
+        reason_message = #{message}
         WHERE user_id = #{userId}
-          AND directive_id = #{directiveId}
-          AND status = 'ACCEPTED'
+        AND directive_id = #{directiveId}
+        AND status = 'ACCEPTED'
     </update>
 
     <update id="applyGoal">
         UPDATE sq_goal_task
-        SET goal_revision               = goal_revision + 1,
-            version                     = version + 1,
-            answer_revision             = answer_revision + 1,
-            input_json                  = #{input},
-            completion_proposal_json    = NULL,
-            proposal_binding_id         = NULL,
-            proposal_turn_id            = NULL,
-            proposal_tool_call_id       = NULL,
-            proposal_hash               = NULL
+        SET goal_revision = goal_revision + 1,
+        version = version + 1,
+        answer_revision = answer_revision + 1,
+        input_json = #{input},
+        completion_proposal_json = NULL,
+        proposal_binding_id = NULL,
+        proposal_turn_id = NULL,
+        proposal_tool_call_id = NULL,
+        proposal_hash = NULL
         WHERE user_id = #{userId}
-          AND task_id = #{taskId}
-          AND version = #{version}
-          AND goal_revision = #{revision}
-          AND cancel_requested_at IS NULL
-          AND status IN ('QUEUED',
-            'RUNNING')
+        AND task_id = #{taskId}
+        AND version = #{version}
+        AND goal_revision = #{revision}
+        AND cancel_requested_at IS NULL
+        AND status IN ('QUEUED',
+        'RUNNING')
     </update>
 
     <update id="clearCandidate">
         UPDATE sq_goal_task
         SET completion_proposal_json = NULL,
-            proposal_binding_id      = NULL,
-            proposal_turn_id         = NULL,
-            proposal_tool_call_id    = NULL,
-            proposal_hash            = NULL
+        proposal_binding_id = NULL,
+        proposal_turn_id = NULL,
+        proposal_tool_call_id = NULL,
+        proposal_hash = NULL
         WHERE user_id = #{userId}
-          AND task_id = #{taskId}
+        AND task_id = #{taskId}
     </update>
 
     <select id="openOperations" resultType="java.lang.String">
         SELECT operation_id
         FROM sq_operation
         WHERE user_id = #{userId}
-          AND scope_id = #{scopeId}
-          AND status IN ('PREPARED',
-            'WAITING_APPROVAL',
-            'IN_FLIGHT',
-            'UNKNOWN',
-            'RECONCILING')
-          AND del_flag = '0'
+        AND scope_id = #{scopeId}
+        AND status IN ('PREPARED',
+        'WAITING_APPROVAL',
+        'IN_FLIGHT',
+        'UNKNOWN',
+        'RECONCILING')
+        AND del_flag = '0'
         FOR UPDATE
     </select>
 
@@ -396,25 +396,25 @@
         SELECT interaction_id
         FROM sq_interaction
         WHERE user_id = #{userId}
-          AND scope_id = #{scopeId}
-          AND status = 'OPEN'
-          AND del_flag = '0'
+        AND scope_id = #{scopeId}
+        AND status = 'OPEN'
+        AND del_flag = '0'
         FOR UPDATE
     </select>
 
     <select id="latestFacts" resultMap="latestFactsResult">
         SELECT directive_id,
-            source_message_id,
-            kind,
-            status,
-            applied_version,
-            applied_goal_revision,
-            reason_code,
-            reason_message
+        source_message_id,
+        kind,
+        status,
+        applied_version,
+        applied_goal_revision,
+        reason_code,
+        reason_message
         FROM sq_task_directive
         WHERE user_id = #{userId}
-          AND task_id = #{taskId}
-          AND del_flag = '0'
+        AND task_id = #{taskId}
+        AND del_flag = '0'
         ORDER BY id DESC
         LIMIT 20
         FOR UPDATE
@@ -424,10 +424,10 @@
         SELECT applied_goal_revision
         FROM sq_task_directive
         WHERE user_id = #{userId}
-          AND task_id = #{taskId}
-          AND kind = 'REPLACE'
-          AND status = 'APPLIED'
-          AND del_flag = '0'
+        AND task_id = #{taskId}
+        AND kind = 'REPLACE'
+        AND status = 'APPLIED'
+        AND del_flag = '0'
         ORDER BY applied_goal_revision DESC
         LIMIT 1 FOR UPDATE
     </select>
@@ -436,14 +436,14 @@
         SELECT c.command_id
         FROM sq_command c
         JOIN sq_runtime_binding b ON b.user_id = c.user_id
-            AND b.binding_id = c.binding_id
+        AND b.binding_id = c.binding_id
         WHERE c.user_id = #{userId}
-          AND c.task_id = #{taskId}
-          AND b.role = 'MASTER'
-          AND c.action IN ('RESUME',
-            'RESPOND')
-          AND c.status IN ('PENDING',
-            'DELIVERING')
+        AND c.task_id = #{taskId}
+        AND b.role = 'MASTER'
+        AND c.action IN ('RESUME',
+        'RESPOND')
+        AND c.status IN ('PENDING',
+        'DELIVERING')
         FOR UPDATE
     </select>
 </mapper>

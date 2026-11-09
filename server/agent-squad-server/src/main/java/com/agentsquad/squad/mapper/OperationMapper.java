@@ -29,20 +29,20 @@ public interface OperationMapper {
                @Param("creatorName") String creatorName, @Param("budgetUsageKey") String budgetUsageKey);
 
     OperationPO findByNativeCall(@Param("userId") String userId,
-                                  @Param("bindingId") String bindingId,
-                                  @Param("frameworkTurnId") String frameworkTurnId,
-                                  @Param("toolCallId") String toolCallId);
+                                 @Param("bindingId") String bindingId,
+                                 @Param("frameworkTurnId") String frameworkTurnId,
+                                 @Param("toolCallId") String toolCallId);
 
     OperationPO findByBusinessIntent(@Param("userId") String userId,
-                                      @Param("scopeId") String scopeId,
-                                      @Param("toolKey") String toolKey,
-                                      @Param("businessIntentKey") String businessIntentKey);
+                                     @Param("scopeId") String scopeId,
+                                     @Param("toolKey") String toolKey,
+                                     @Param("businessIntentKey") String businessIntentKey);
 
     OperationPO findOwned(@Param("userId") String userId,
-                           @Param("operationId") String operationId);
+                          @Param("operationId") String operationId);
 
     List<OperationPO> listByTask(@Param("userId") String userId, @Param("taskId") String taskId,
-                                  @Param("cursorId") Long cursorId, @Param("limit") int limit);
+                                 @Param("cursorId") Long cursorId, @Param("limit") int limit);
 
     Long cursorIdOf(@Param("userId") String userId, @Param("operationId") String operationId);
 
@@ -69,7 +69,7 @@ public interface OperationMapper {
                     @Param("updaterId") String updaterId);
 
     List<OperationPO> findExpiredInFlight(@Param("now") LocalDateTime now,
-                                           @Param("limit") int limit);
+                                          @Param("limit") int limit);
 
     int reconcileOutcome(@Param("userId") String userId,
                          @Param("operationId") String operationId,
@@ -91,6 +91,8 @@ public interface OperationMapper {
                               @Param("updaterId") String updaterId);
 
     List<String> findUncertainInConversation(@Param("userId") String userId, @Param("scopeId") String scopeId);
+
     int cancelUnstartedByScope(@Param("userId") String userId, @Param("scopeId") String scopeId);
+
     java.util.List<OperationPO> lockUnstartedInScope(@Param("userId") String userId, @Param("scopeId") String scopeId);
 }

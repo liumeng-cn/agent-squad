@@ -27,6 +27,7 @@ public class SkillFileDTO {
         this.path = path;
         this.content = content;
     }
+
     /**
      * 请求校验时拒绝模型或客户端附加的身份、链接及未声明字段
      */

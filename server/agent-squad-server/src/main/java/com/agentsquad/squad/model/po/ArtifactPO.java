@@ -1,7 +1,9 @@
 package com.agentsquad.squad.model.po;
 
 import com.baomidou.mybatisplus.annotation.TableName;
+
 import java.time.LocalDateTime;
+
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -22,22 +24,40 @@ import lombok.ToString;
 @AllArgsConstructor
 @TableName("sq_artifact")
 public class ArtifactPO {
-    /** 产物业务ID */
+    /**
+     * 产物业务ID
+     */
     private String artifactId;
-    /** 归属用户ID */
+    /**
+     * 归属用户ID
+     */
     private String userId;
-    /** 安全展示文件名 */
+    /**
+     * 安全展示文件名
+     */
     private String fileName;
-    /** 服务端判定媒体类型 */
+    /**
+     * 服务端判定媒体类型
+     */
     private String mediaType;
-    /** 内容字节数 */
+    /**
+     * 内容字节数
+     */
     private long sizeBytes;
-    /** 内容SHA256摘要 */
+    /**
+     * 内容SHA256摘要
+     */
     private String sha256;
-    /** 归属用户内的上传幂等键 */
+    /**
+     * 归属用户内的上传幂等键
+     */
     private String uploadKey;
-    /** 文件二进制内容 */
+    /**
+     * 文件二进制内容
+     */
     private byte[] content;
-    /** 读取有效期 */
+    /**
+     * 读取有效期
+     */
     private LocalDateTime expiresAt;
 }

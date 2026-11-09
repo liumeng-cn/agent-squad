@@ -9,7 +9,7 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
- * 协作计划与委派节点的 
+ * 协作计划与委派节点的
  * <p>
  * 计划头与全部节点在同一平台事务内插入；重放按 taskId + logicalKey 定位原计划。
  */
@@ -27,23 +27,23 @@ public interface PlanMapper {
             + "result_json, binding_id, reused_from_job_id, cancel_requested_at, version";
 
     PlanContextBO lockMasterContext(@Param("userId") String userId,
-                                     @Param("sessionId") String sessionId);
+                                    @Param("sessionId") String sessionId);
 
     PlanPO findLatestByLogicalKey(@Param("taskId") String taskId,
-                                   @Param("logicalKey") String logicalKey);
+                                  @Param("logicalKey") String logicalKey);
 
     Long lockTaskPlanVersion(@Param("userId") String userId, @Param("taskId") String taskId);
 
     int countSignalEligibleTask(@Param("userId") String userId, @Param("taskId") String taskId);
 
     PlanPO lockPlan(@Param("userId") String userId, @Param("taskId") String taskId,
-                     @Param("planVersion") long planVersion);
+                    @Param("planVersion") long planVersion);
 
     int countUnfinishedJobs(@Param("userId") String userId, @Param("taskId") String taskId,
                             @Param("planVersion") long planVersion);
 
     int countActiveJobs(@Param("userId") String userId, @Param("taskId") String taskId,
-                         @Param("planVersion") long planVersion);
+                        @Param("planVersion") long planVersion);
 
     int countActivePlan(@Param("userId") String userId, @Param("taskId") String taskId,
                         @Param("planVersion") long planVersion);
@@ -52,10 +52,10 @@ public interface PlanMapper {
                              @Param("planVersion") long planVersion);
 
     List<WorkerJobPO> listJobs(@Param("taskId") String taskId,
-                                @Param("planVersion") long planVersion);
+                               @Param("planVersion") long planVersion);
 
     List<WorkerJobPO> lockJobs(@Param("taskId") String taskId,
-                                 @Param("planVersion") long planVersion);
+                               @Param("planVersion") long planVersion);
 
     int insertPlan(@Param("planId") String planId, @Param("userId") String userId,
                    @Param("taskId") String taskId, @Param("planVersion") long planVersion,

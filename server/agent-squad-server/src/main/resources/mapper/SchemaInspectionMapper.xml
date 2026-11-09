@@ -5,39 +5,39 @@
         SELECT COUNT(DISTINCT CAST(version AS UNSIGNED))
         FROM flyway_schema_history
         WHERE success = 1
-          AND version REGEXP '^[0-9]+$'
-          AND CAST(version AS UNSIGNED) BETWEEN 1 AND #{expectedVersion}
+        AND version REGEXP '^[0-9]+$'
+        AND CAST(version AS UNSIGNED) BETWEEN 1 AND #{expectedVersion}
     </select>
 
     <select id="countRequiredTables" resultType="int">
         SELECT COUNT(*)
         FROM information_schema.tables
         WHERE table_schema = DATABASE()
-          AND table_name IN
-          <foreach collection="tableNames" item="tableName" open="(" separator="," close=")">
-              #{tableName}
-          </foreach>
+        AND table_name IN
+        <foreach collection="tableNames" item="tableName" open="(" separator="," close=")">
+            #{tableName}
+        </foreach>
     </select>
 
     <select id="countPendingWithoutDelivery" resultType="long">
         SELECT COUNT(*)
         FROM (
-            SELECT user_id,
-                   source_message_id
-            FROM sq_response_execution
-            WHERE status NOT IN ('SUCCEEDED', 'PARTIAL', 'FAILED', 'CANCELLED')
-            UNION
-            SELECT user_id,
-                   origin_message_id AS source_message_id
-            FROM sq_goal_task
-            WHERE origin_message_id IS NOT NULL
-              AND status NOT IN ('SUCCEEDED', 'PARTIAL', 'FAILED', 'CANCELLED')
+        SELECT user_id,
+        source_message_id
+        FROM sq_response_execution
+        WHERE status NOT IN ('SUCCEEDED', 'PARTIAL', 'FAILED', 'CANCELLED')
+        UNION
+        SELECT user_id,
+        origin_message_id AS source_message_id
+        FROM sq_goal_task
+        WHERE origin_message_id IS NOT NULL
+        AND status NOT IN ('SUCCEEDED', 'PARTIAL', 'FAILED', 'CANCELLED')
         ) pending
         WHERE NOT EXISTS (
-            SELECT 1
-            FROM sq_final_delivery delivery
-            WHERE delivery.user_id = pending.user_id
-              AND delivery.source_message_id = pending.source_message_id
+        SELECT 1
+        FROM sq_final_delivery delivery
+        WHERE delivery.user_id = pending.user_id
+        AND delivery.source_message_id = pending.source_message_id
         )
     </select>
 </mapper>

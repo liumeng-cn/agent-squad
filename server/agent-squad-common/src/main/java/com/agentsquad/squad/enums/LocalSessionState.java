@@ -13,11 +13,17 @@ public enum LocalSessionState {
     STOP_REQUESTED(2, "STOP_REQUESTED", "已请求停止"),
     FINISHED(3, "FINISHED", "已结束");
 
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     LocalSessionState(int code, String name, String desc) {

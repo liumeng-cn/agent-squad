@@ -30,7 +30,7 @@
 
     <select id="lockAccount" resultMap="lockAccountResult">
         SELECT a.profile_key AS budget_profile_key,
-            a.limit_microunits AS budget_limit_microunits
+        a.limit_microunits AS budget_limit_microunits
         FROM sq_budget_account a JOIN sq_execution_scope s ON s.user_id = a.user_id AND s.account_id = a.account_id
         WHERE s.user_id = #{userId} AND s.scope_id = #{scopeId} AND a.status = 'OPEN' FOR UPDATE
     </select>
@@ -50,82 +50,84 @@
 
     <insert id="insert">
         INSERT INTO sq_budget_reservation
-            (reservation_id,
-            user_id,
-            task_id,
-            scope_id,
-            account_id,
-            usage_key,
-            kind,
-            reserved_units,
-            status,
-            creator_id,
-            creator_name,
-            last_updater_id,
-            last_updater_name)
+        (reservation_id,
+        user_id,
+        task_id,
+        scope_id,
+        account_id,
+        usage_key,
+        kind,
+        reserved_units,
+        status,
+        creator_id,
+        creator_name,
+        last_updater_id,
+        last_updater_name)
         VALUES
-            (#{reservationId},
-            #{userId},
-            (SELECT CASE WHEN kind = 'TASK' THEN owner_id ELSE NULL END FROM sq_execution_scope WHERE user_id = #{userId} AND scope_id = #{scopeId}),
-            #{scopeId},
-            (SELECT account_id FROM sq_execution_scope WHERE user_id = #{userId} AND scope_id = #{scopeId}),
-            #{usageKey},
-            #{kind},
-            #{reservedUnits},
-            'RESERVED',
-            #{userId},
-            #{creatorName},
-            #{userId},
-            #{creatorName})
+        (#{reservationId},
+        #{userId},
+        (SELECT CASE WHEN kind = 'TASK' THEN owner_id ELSE NULL END FROM sq_execution_scope WHERE user_id = #{userId}
+        AND scope_id = #{scopeId}),
+        #{scopeId},
+        (SELECT account_id FROM sq_execution_scope WHERE user_id = #{userId} AND scope_id = #{scopeId}),
+        #{usageKey},
+        #{kind},
+        #{reservedUnits},
+        'RESERVED',
+        #{userId},
+        #{creatorName},
+        #{userId},
+        #{creatorName})
     </insert>
 
     <insert id="insertModel">
         INSERT INTO sq_budget_reservation
-            (reservation_id,
-            user_id,
-            task_id,
-            scope_id,
-            account_id,
-            usage_key,
-            kind,
-            reserved_units,
-            model_profile_key,
-            pricing_version,
-            request_hash,
-            status,
-            creator_id,
-            creator_name,
-            last_updater_id,
-            last_updater_name)
+        (reservation_id,
+        user_id,
+        task_id,
+        scope_id,
+        account_id,
+        usage_key,
+        kind,
+        reserved_units,
+        model_profile_key,
+        pricing_version,
+        request_hash,
+        status,
+        creator_id,
+        creator_name,
+        last_updater_id,
+        last_updater_name)
         VALUES
-            (#{reservationId},
-            #{userId},
-            (SELECT CASE WHEN kind = 'TASK' THEN owner_id ELSE NULL END FROM sq_execution_scope WHERE user_id = #{userId} AND scope_id = #{scopeId}),
-            #{scopeId},
-            (SELECT account_id FROM sq_execution_scope WHERE user_id = #{userId} AND scope_id = #{scopeId}),
-            #{usageKey},
-            'MODEL',
-            #{reservedUnits},
-            #{modelProfileKey},
-            #{pricingVersion},
-            #{requestHash},
-            'RESERVED',
-            #{userId},
-            '',
-            #{userId},
-            '')
+        (#{reservationId},
+        #{userId},
+        (SELECT CASE WHEN kind = 'TASK' THEN owner_id ELSE NULL END FROM sq_execution_scope WHERE user_id = #{userId}
+        AND scope_id = #{scopeId}),
+        #{scopeId},
+        (SELECT account_id FROM sq_execution_scope WHERE user_id = #{userId} AND scope_id = #{scopeId}),
+        #{usageKey},
+        'MODEL',
+        #{reservedUnits},
+        #{modelProfileKey},
+        #{pricingVersion},
+        #{requestHash},
+        'RESERVED',
+        #{userId},
+        '',
+        #{userId},
+        '')
     </insert>
 
     <select id="findReservation" resultMap="findReservationResult">
         SELECT kind,
-            status,
-            reserved_units,
-            settled_units,
-            model_profile_key,
-            pricing_version,
-            request_hash,
-            input_tokens,
-            output_tokens
+        status,
+        reserved_units,
+        settled_units,
+        model_profile_key,
+        pricing_version,
+        request_hash,
+        input_tokens,
+        output_tokens
         FROM sq_budget_reservation
         WHERE user_id = #{userId} AND scope_id = #{scopeId} AND usage_key = #{usageKey} FOR UPDATE
     </select>
@@ -143,49 +145,49 @@
     <select id="listAccountConsumed" resultType="java.lang.Long">
         SELECT CASE WHEN r.status = 'SETTLED' THEN r.settled_units ELSE r.reserved_units END
         FROM sq_budget_reservation r JOIN sq_execution_scope s
-            ON s.user_id = r.user_id AND s.account_id = r.account_id
+        ON s.user_id = r.user_id AND s.account_id = r.account_id
         WHERE s.user_id = #{userId} AND s.scope_id = #{scopeId} AND r.del_flag = '0' FOR UPDATE
     </select>
 
     <update id="settle">
         UPDATE sq_budget_reservation
         SET status = 'SETTLED',
-            settled_units = #{settledUnits},
-            version = version + 1,
-            last_updater_id = user_id
+        settled_units = #{settledUnits},
+        version = version + 1,
+        last_updater_id = user_id
         WHERE user_id = #{userId} AND scope_id = #{scopeId} AND usage_key = #{usageKey}
-          AND kind &lt;&gt; 'MODEL' AND status = 'RESERVED'
-          AND reserved_units &gt;= #{settledUnits}
+        AND kind &lt;&gt; 'MODEL' AND status = 'RESERVED'
+        AND reserved_units &gt;= #{settledUnits}
     </update>
 
     <update id="settleModel">
         UPDATE sq_budget_reservation
         SET status = 'SETTLED',
-            settled_units = #{settledUnits},
-            input_tokens = #{inputTokens},
-            output_tokens = #{outputTokens},
-            version = version + 1,
-            last_updater_id = user_id
+        settled_units = #{settledUnits},
+        input_tokens = #{inputTokens},
+        output_tokens = #{outputTokens},
+        version = version + 1,
+        last_updater_id = user_id
         WHERE user_id = #{userId} AND scope_id = #{scopeId} AND usage_key = #{usageKey}
-          AND kind = 'MODEL' AND status = 'RESERVED'
-          AND reserved_units &gt;= #{settledUnits}
+        AND kind = 'MODEL' AND status = 'RESERVED'
+        AND reserved_units &gt;= #{settledUnits}
     </update>
 
     <update id="markModelUnknown">
         UPDATE sq_budget_reservation
         SET status = 'UNKNOWN',
-            version = version + 1,
-            last_updater_id = user_id
+        version = version + 1,
+        last_updater_id = user_id
         WHERE user_id = #{userId} AND scope_id = #{scopeId} AND usage_key = #{usageKey}
-          AND kind = 'MODEL' AND status = 'RESERVED'
+        AND kind = 'MODEL' AND status = 'RESERVED'
     </update>
 
     <update id="markUnknown">
         UPDATE sq_budget_reservation
         SET status = 'UNKNOWN',
-            version = version + 1,
-            last_updater_id = user_id
+        version = version + 1,
+        last_updater_id = user_id
         WHERE user_id = #{userId} AND scope_id = #{scopeId} AND usage_key = #{usageKey}
-          AND status = 'RESERVED'
+        AND status = 'RESERVED'
     </update>
 </mapper>

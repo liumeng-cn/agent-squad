@@ -12,7 +12,7 @@ import java.util.List;
  * 检查人、证据与目标和计划版本共同保存，后续发布不能使用其他版本的检查结果。
  */
 public record PlanAcceptanceResultBO(String criterionId, String text, boolean required,
-                                   AcceptanceVerificationType verificationType,
-                                   PlanAcceptanceVerdict verdict, String verifier, List<String> evidenceRefs,
-                                   long planVersion, long goalRevision) {
+                                     AcceptanceVerificationType verificationType,
+                                     PlanAcceptanceVerdict verdict, String verifier, List<String> evidenceRefs,
+                                     long planVersion, long goalRevision) {
 }

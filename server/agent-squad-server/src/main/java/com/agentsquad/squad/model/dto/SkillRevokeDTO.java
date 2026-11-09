@@ -24,6 +24,7 @@ public class SkillRevokeDTO {
             @JsonProperty(value = "expectedVersion", required = true) Long expectedVersion) {
         this.expectedVersion = expectedVersion;
     }
+
     /**
      * 请求校验时拒绝模型或客户端附加的身份、链接及未声明字段
      */

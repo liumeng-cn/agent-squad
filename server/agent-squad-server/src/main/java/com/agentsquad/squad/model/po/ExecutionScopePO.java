@@ -21,18 +21,32 @@ import lombok.ToString;
 @AllArgsConstructor
 @TableName("sq_execution_scope")
 public class ExecutionScopePO {
-    /** 执行作用域业务ID */
+    /**
+     * 执行作用域业务ID
+     */
     private String scopeId;
-    /** 资源归属用户ID */
+    /**
+     * 资源归属用户ID
+     */
     private String userId;
-    /** 所属会话ID */
+    /**
+     * 所属会话ID
+     */
     private String conversationId;
-    /** 请求受理时的会话版本号 */
+    /**
+     * 请求受理时的会话版本号
+     */
     private long conversationGeneration;
-    /** 归属类型[RESPONSE,TASK] */
+    /**
+     * 归属类型[RESPONSE,TASK]
+     */
     private String kind;
-    /** 回复执行或目标业务ID */
+    /**
+     * 回复执行或目标业务ID
+     */
     private String ownerId;
-    /** 共享预算账户ID */
+    /**
+     * 共享预算账户ID
+     */
     private String accountId;
 }

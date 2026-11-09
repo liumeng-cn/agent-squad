@@ -13,6 +13,6 @@ import java.time.LocalDateTime;
  */
 @TableName("sq_user")
 public record UserAccountPO(String userId, String username, String displayName, String passwordHash,
-                             AccountRole role, AccountStatus status, long authVersion, boolean mustChangePassword,
-                             long version, LocalDateTime createTime) {
+                            AccountRole role, AccountStatus status, long authVersion, boolean mustChangePassword,
+                            long version, LocalDateTime createTime) {
 }

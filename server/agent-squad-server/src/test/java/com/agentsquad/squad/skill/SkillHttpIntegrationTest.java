@@ -1,18 +1,18 @@
 package com.agentsquad.squad.skill;
 
-import com.agentsquad.squad.testsupport.ApiResultJson;
-import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
+import com.agentsquad.squad.agent.skill.ScopeSkillRepository;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
-import com.agentsquad.squad.model.dto.MessageCreateDTO;
-import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.model.bo.SkillCatalogBO;
+import com.agentsquad.squad.model.dto.MessageCreateDTO;
 import com.agentsquad.squad.model.dto.SkillFileDTO;
 import com.agentsquad.squad.model.dto.SkillGrantDTO;
 import com.agentsquad.squad.model.dto.SkillImportDTO;
-import com.agentsquad.squad.agent.skill.ScopeSkillRepository;
+import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.SkillRuntimeService;
 import com.agentsquad.squad.service.SkillService;
+import com.agentsquad.squad.testsupport.ApiResultJson;
+import com.agentsquad.squad.testsupport.TestAssertion;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;
@@ -25,10 +25,10 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.context.WebApplicationContext;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -36,9 +36,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**

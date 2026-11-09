@@ -17,11 +17,17 @@ public enum ReasoningMode {
     MEDIUM(6, "MEDIUM", "中"),
     HIGH(7, "HIGH", "高");
 
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     ReasoningMode(int code, String name, String desc) {

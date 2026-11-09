@@ -85,7 +85,7 @@ public class ResponseExecutionService {
      */
     @Transactional
     public CompletionProposalReceiptBO propose(String userId, String bindingId, String turnId, String callId,
-                                             String outcome, String answer) {
+                                               String outcome, String answer) {
         if (turnId == null || turnId.isBlank() || callId == null || callId.isBlank()
                 || !Set.of("SUCCEEDED", "PARTIAL").contains(outcome) || answer == null || answer.isBlank()
                 || answer.length() > 200000) {
@@ -217,7 +217,9 @@ public class ResponseExecutionService {
         recover(target, receipt, null);
     }
 
-    /** 核对结束后仅使用持久原生日志恢复自然答案；缺少证据保持核对，不转入旧候选纠正回合。 */
+    /**
+     * 核对结束后仅使用持久原生日志恢复自然答案；缺少证据保持核对，不转入旧候选纠正回合。
+     */
     @Transactional
     public void recover(ProjectionTargetBO target, NativeSubmissionReceiptBO receipt, NaturalReplyEvidenceBO evidence) {
         ExecutionScopePO scope = lock(target.getUserId(), target.getBindingId(), false);

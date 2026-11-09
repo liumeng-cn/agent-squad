@@ -15,13 +15,21 @@ public enum RuntimeEventFailureCode {
     RECEIPT_MISMATCH(RuntimeEventInboxStatus.BLOCKED, 4, "RECEIPT_MISMATCH", "回执不一致"),
     UNSUPPORTED_REQUIRED(RuntimeEventInboxStatus.BLOCKED, 5, "UNSUPPORTED_REQUIRED", "必需事件不支持");
 
-    /** 收件处理状态 */
+    /**
+     * 收件处理状态
+     */
     private final RuntimeEventInboxStatus status;
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     RuntimeEventFailureCode(RuntimeEventInboxStatus status, int code, String name, String desc) {

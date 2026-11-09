@@ -25,14 +25,14 @@ public interface InteractionMapper {
                @Param("creatorId") String creatorId, @Param("creatorName") String creatorName);
 
     InteractionPO findByFrameworkRequest(@Param("userId") String userId,
-                                          @Param("bindingId") String bindingId,
-                                          @Param("frameworkRequestId") String frameworkRequestId);
+                                         @Param("bindingId") String bindingId,
+                                         @Param("frameworkRequestId") String frameworkRequestId);
 
     InteractionPO findOwned(@Param("userId") String userId,
-                             @Param("interactionId") String interactionId);
+                            @Param("interactionId") String interactionId);
 
     List<InteractionPO> listByTask(@Param("userId") String userId, @Param("taskId") String taskId,
-                                    @Param("cursorId") Long cursorId, @Param("limit") int limit);
+                                   @Param("cursorId") Long cursorId, @Param("limit") int limit);
 
     List<String> findOpenIds(@Param("userId") String userId, @Param("taskId") String taskId);
 
@@ -55,7 +55,9 @@ public interface InteractionMapper {
     List<String> findOpenByScope(@Param("userId") String userId, @Param("scopeId") String scopeId);
 
     int countOpenByScopeKind(@Param("userId") String userId, @Param("scopeId") String scopeId,
-                            @Param("kind") String kind);
+                             @Param("kind") String kind);
+
     int cancelOpenByTask(@Param("userId") String userId, @Param("taskId") String taskId);
+
     int cancelOpenByScope(@Param("userId") String userId, @Param("scopeId") String scopeId);
 }

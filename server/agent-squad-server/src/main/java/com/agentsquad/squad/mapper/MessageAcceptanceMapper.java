@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 public interface MessageAcceptanceMapper {
 
     MessageSubmissionBO findSubmission(@Param("userId") String userId, @Param("scopeKey") String scopeKey,
-                                        @Param("key") String key);
+                                       @Param("key") String key);
 
     int reserveMessage(@Param("userId") String userId, @Param("conversationId") String conversationId,
                        @Param("now") LocalDateTime now);

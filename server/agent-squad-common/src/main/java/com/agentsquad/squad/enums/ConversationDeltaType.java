@@ -17,11 +17,17 @@ public enum ConversationDeltaType {
     JOB_REUSED("job.reused", "JOB_REUSED", "工作已复用");
 
     public static final int SCHEMA_VERSION = 2;
-    /** 事件编码 */
+    /**
+     * 事件编码
+     */
     private final String code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     ConversationDeltaType(String code, String name, String desc) {

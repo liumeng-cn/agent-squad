@@ -10,8 +10,8 @@ import com.agentsquad.squad.enums.RuntimeEventInboxStatus;
  */
 @TableName("sq_runtime_event_inbox")
 public record RuntimeEventInboxPO(String inboxId, String userId, String bindingId, String sessionId,
-                                   long nativeSeq, String nativeEventId, String nativeType,
-                                   String runId, String turnId, long occurredAtMillis, boolean required,
-                                   int nativeSchemaVersion, String payloadDigest, int mappingVersion,
-                                   RuntimeEventInboxStatus status) {
+                                  long nativeSeq, String nativeEventId, String nativeType,
+                                  String runId, String turnId, long occurredAtMillis, boolean required,
+                                  int nativeSchemaVersion, String payloadDigest, int mappingVersion,
+                                  RuntimeEventInboxStatus status) {
 }

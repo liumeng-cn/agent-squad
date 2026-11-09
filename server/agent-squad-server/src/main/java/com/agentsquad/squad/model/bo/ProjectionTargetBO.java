@@ -17,16 +17,28 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProjectionTargetBO {
-    /** 资源归属用户ID */
+    /**
+     * 资源归属用户ID
+     */
     private String userId;
-    /** 可选所属目标ID；普通回复为空 */
+    /**
+     * 可选所属目标ID；普通回复为空
+     */
     private String taskId;
-    /** 绑定业务ID */
+    /**
+     * 绑定业务ID
+     */
     private String bindingId;
-    /** 固定能力版本标识 */
+    /**
+     * 固定能力版本标识
+     */
     private String agentId;
-    /** 原生会话标识 */
+    /**
+     * 原生会话标识
+     */
     private String sessionId;
-    /** 事件读取游标 */
+    /**
+     * 事件读取游标
+     */
     private long cursor;
 }

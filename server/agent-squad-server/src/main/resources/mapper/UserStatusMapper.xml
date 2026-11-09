@@ -6,7 +6,7 @@
         SELECT status
         FROM sq_user
         WHERE user_id = #{userId}
-          AND del_flag = '0'
+        AND del_flag = '0'
         LIMIT 1
     </select>
 </mapper>

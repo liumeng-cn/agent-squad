@@ -2,13 +2,13 @@ package com.agentsquad.squad.controller;
 
 import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.identity.UserContext;
-import com.agentsquad.squad.service.ConnectionService;
-import jakarta.servlet.http.HttpServletRequest;
 import com.agentsquad.squad.model.dto.ConnectionCreateDTO;
+import com.agentsquad.squad.model.dto.ConnectionUpdateDTO;
 import com.agentsquad.squad.model.vo.ConnectionPageVO;
 import com.agentsquad.squad.model.vo.ConnectionVO;
-import com.agentsquad.squad.model.dto.ConnectionUpdateDTO;
+import com.agentsquad.squad.service.ConnectionService;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;

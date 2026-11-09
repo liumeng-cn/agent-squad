@@ -24,32 +24,52 @@ import lombok.ToString;
 @AllArgsConstructor
 @TableName("sq_skill_version")
 public class SkillVersionPO {
-    /** 存储主键ID */
+    /**
+     * 存储主键ID
+     */
     @TableId(type = IdType.AUTO)
     private long id;
-    /** 技能版本业务ID */
+    /**
+     * 技能版本业务ID
+     */
     @TableField("skill_version_id")
     private String skillVersionId;
-    /** 所属用户ID */
+    /**
+     * 所属用户ID
+     */
     @TableField("user_id")
     private String userId;
-    /** 显示名称 */
+    /**
+     * 显示名称
+     */
     @TableField("skill_name")
     private String name;
-    /** 版本号 */
+    /**
+     * 版本号
+     */
     @TableField("skill_version")
     private String version;
-    /** 技能目录描述 */
+    /**
+     * 技能目录描述
+     */
     private String description;
-    /** 规范化文本包SHA256摘要 */
+    /**
+     * 规范化文本包SHA256摘要
+     */
     @TableField("content_hash")
     private String contentHash;
-    /** 使用技能所需工具名称列表 */
+    /**
+     * 使用技能所需工具名称列表
+     */
     @TableField("required_tools_json")
     private String requiredToolsJson;
-    /** 版本状态[ENABLED,REVOKED] */
+    /**
+     * 版本状态[ENABLED,REVOKED]
+     */
     private String status;
-    /** 安全授权版本号 */
+    /**
+     * 安全授权版本号
+     */
     @TableField("authorization_revision")
     private long authorizationRevision;
 }

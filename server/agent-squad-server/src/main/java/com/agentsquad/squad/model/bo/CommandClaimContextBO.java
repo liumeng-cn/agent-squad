@@ -19,12 +19,20 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CommandClaimContextBO {
-    /** 资源归属用户ID */
+    /**
+     * 资源归属用户ID
+     */
     private String userId;
-    /** 统一执行作用域ID */
+    /**
+     * 统一执行作用域ID
+     */
     private String scopeId;
-    /** 命令动作 */
+    /**
+     * 命令动作
+     */
     private String action;
-    /** 原生会话绑定ID；删除类命令可为空 */
+    /**
+     * 原生会话绑定ID；删除类命令可为空
+     */
     private String bindingId;
 }

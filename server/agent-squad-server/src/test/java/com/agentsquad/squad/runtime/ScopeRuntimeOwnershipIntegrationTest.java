@@ -1,21 +1,16 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
+import com.agentsquad.squad.agent.middleware.ModelBudgetMiddleware;
 import com.agentsquad.squad.config.properties.WorkerProfileRegistry;
-import com.agentsquad.squad.service.ArtifactService;
+import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.mapper.BindingMapper;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
-import com.agentsquad.squad.service.GoalTaskService;
-import com.agentsquad.squad.service.BudgetService;
-import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.agent.middleware.ModelBudgetMiddleware;
-import com.agentsquad.squad.service.InteractionService;
-import com.agentsquad.squad.service.InteractionQueryService;
-import com.agentsquad.squad.service.OperationExecutorService;
-import com.agentsquad.squad.service.OperationService;
 import com.agentsquad.squad.model.bo.PrepareRequestBO;
 import com.agentsquad.squad.model.po.OperationPO;
+import com.agentsquad.squad.service.*;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.event.ModelCallEndEvent;
 import io.agentscope.core.middleware.ModelCallInput;
@@ -27,15 +22,14 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
-import reactor.core.publisher.Flux;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import reactor.core.publisher.Flux;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
-import com.agentsquad.squad.enums.AccountRole;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -301,7 +295,7 @@ class ScopeRuntimeOwnershipIntegrationTest {
     }
 
     private static PrepareRequestBO request(ScopeTestExecution execution, String callId, String tool, String effect,
-                                          String intent, boolean approval, long units) {
+                                            String intent, boolean approval, long units) {
         return new PrepareRequestBO(execution.userId(), execution.sessionId(), "fixed-scope-turn", callId, tool, "v1",
                 effect, Map.of("title", "受控测试", "detail", "仅本地模拟系统"), intent, approval, null, 0, units, "tester");
     }

@@ -15,7 +15,7 @@ import java.util.List;
 public interface ConversationMapper extends BaseMapper<ConversationPO> {
 
     int insertConversation(@Param("conversationId") String conversationId, @Param("userId") String userId,
-               @Param("title") String title);
+                           @Param("title") String title);
 
     ConversationPO lockOwned(@Param("userId") String userId, @Param("conversationId") String conversationId);
 
@@ -26,7 +26,7 @@ public interface ConversationMapper extends BaseMapper<ConversationPO> {
     }
 
     List<ConversationPO> listByOwner(@Param("userId") String userId, @Param("cursorId") Long cursorId,
-                                      @Param("limit") int limit);
+                                     @Param("limit") int limit);
 
     int activateTask(@Param("userId") String userId, @Param("conversationId") String conversationId,
                      @Param("taskId") String taskId);

@@ -12,11 +12,17 @@ public enum PlanJoinPolicy {
     ALL_REQUIRED(1, "ALL_REQUIRED", "全部必需完成"),
     BEST_EFFORT(2, "BEST_EFFORT", "尽力交付");
 
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     PlanJoinPolicy(int code, String name, String desc) {

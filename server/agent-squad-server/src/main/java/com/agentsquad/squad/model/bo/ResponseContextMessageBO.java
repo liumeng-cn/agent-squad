@@ -1,6 +1,7 @@
 package com.agentsquad.squad.model.bo;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+
 import java.util.List;
 
 /**
@@ -10,7 +11,8 @@ import java.util.List;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ResponseContextMessageBO(String messageId, long sequence, String role, String text,
-                                     long revision, List<String> artifactIds, List<ResponseContextMaterialBO> materials) {
+                                       long revision, List<String> artifactIds,
+                                       List<ResponseContextMaterialBO> materials) {
     public ResponseContextMessageBO {
         if (materials == null) {
             materials = List.of();

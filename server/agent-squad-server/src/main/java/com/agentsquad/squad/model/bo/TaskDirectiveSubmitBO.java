@@ -5,5 +5,6 @@ package com.agentsquad.squad.model.bo;
  * <p>
  * 用户、会话和来源消息由SDK绑定推导；expectedVersion必须匹配当前目标。
  */
-public record TaskDirectiveSubmitBO(String logicalKey, String taskId, long expectedVersion, String kind, String content) {
+public record TaskDirectiveSubmitBO(String logicalKey, String taskId, long expectedVersion, String kind,
+                                    String content) {
 }

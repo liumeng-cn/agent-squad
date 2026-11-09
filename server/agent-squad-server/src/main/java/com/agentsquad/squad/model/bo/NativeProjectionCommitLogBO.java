@@ -10,7 +10,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
  */
 @Slf4j
 public record NativeProjectionCommitLogBO(ProjectionTargetBO target,
-                                        NativeEventViewBO event) implements TransactionSynchronization {
+                                          NativeEventViewBO event) implements TransactionSynchronization {
     @Override
     public void afterCommit() {
         log.info("Agent执行事件已更新到业务状态 taskId={} bindingId={} sourceSeq={} nativeEventId={} type={} turnId={} outcome={}",

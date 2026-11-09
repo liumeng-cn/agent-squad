@@ -134,7 +134,9 @@ public class OperationService {
         return operationMapper.findOwned(request.userId(), operationId);
     }
 
-    /** 在取消事务内关闭尚未派发的工具并释放已知预留；不触碰在途或未知结果的写入。 */
+    /**
+     * 在取消事务内关闭尚未派发的工具并释放已知预留；不触碰在途或未知结果的写入。
+     */
     @Transactional
     public void cancelUnstarted(String userId, String scopeId) {
         scopeService.lockOwned(userId, scopeId, false);

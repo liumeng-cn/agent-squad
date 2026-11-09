@@ -14,7 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class ExecutionAuthorizationService {
-    @Resource private UserStatusGuardService userStatus;
+    @Resource
+    private UserStatusGuardService userStatus;
     @Resource
     private ExecutionScopeService scopes;
 

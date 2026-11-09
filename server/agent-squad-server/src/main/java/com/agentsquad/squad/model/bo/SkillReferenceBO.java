@@ -19,16 +19,28 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SkillReferenceBO {
-    /** 技能版本业务ID */
+    /**
+     * 技能版本业务ID
+     */
     private String skillVersionId;
-    /** 显示名称 */
+    /**
+     * 显示名称
+     */
     private String name;
-    /** 版本号 */
+    /**
+     * 版本号
+     */
     private String version;
-    /** 技能目录描述 */
+    /**
+     * 技能目录描述
+     */
     private String description;
-    /** 规范化文本包SHA256摘要 */
+    /**
+     * 规范化文本包SHA256摘要
+     */
     private String contentHash;
-    /** 安全授权版本号 */
+    /**
+     * 安全授权版本号
+     */
     private long authorizationRevision;
 }

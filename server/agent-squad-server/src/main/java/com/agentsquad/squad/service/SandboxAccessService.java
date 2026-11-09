@@ -25,7 +25,7 @@ public class SandboxAccessService {
     private ExecutionAuthorizationService authorization;
 
     public SandboxExecutionContextBO resolve(String userId, String sessionId, String guardToken,
-                                           String turnId, String toolCallId) {
+                                             String turnId, String toolCallId) {
         if (turnId == null || turnId.isBlank() || toolCallId == null || toolCallId.isBlank()
                 || turnId.length() > 160 || toolCallId.length() > 160) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "缺少稳定原生调用身份");

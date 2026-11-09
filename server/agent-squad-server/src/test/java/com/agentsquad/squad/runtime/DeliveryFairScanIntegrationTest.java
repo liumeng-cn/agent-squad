@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * 到期命令公平扫描验证。
- *
+ * <p>
  * 使用真实 MySQL 与正式 Mapper SQL，检查按用户轮次选取、到期与租约过滤、
  * 禁用账号排除及同用户稳定顺序；不调用模型或外部服务。
  */
@@ -68,7 +68,7 @@ class DeliveryFairScanIntegrationTest {
             transaction.executeWithoutResult(status -> admission.acquire(userA, bindingA, commandA, "SUBMIT"));
             transaction.executeWithoutResult(status -> admission.acquire(userA, bindingA, commandA, "SUBMIT"));
             org.assertj.core.api.Assertions.assertThatThrownBy(() -> transaction.executeWithoutResult(
-                    status -> admission.acquire(userB, bindingB, commandB, "SUBMIT")))
+                            status -> admission.acquire(userB, bindingB, commandB, "SUBMIT")))
                     .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeAdmissionBusyException.class);
             admission.releaseUnsubmitted(userA, bindingA, "stale-command");
             assertThat(jdbc.queryForObject("SELECT active_count FROM sq_runtime_admission_counter WHERE pool_key = 'GLOBAL'",
@@ -194,11 +194,11 @@ class DeliveryFairScanIntegrationTest {
                            LocalDateTime dueAt, LocalDateTime leaseUntil) {
         String commandId = UUID.randomUUID().toString();
         jdbc.update("""
-                INSERT INTO sq_command
-                    (command_id, user_id, scope_key, idempotency_key, payload_hash,
-                     action, payload_json, status, due_at, delivery_lease_until)
-                VALUES (?, ?, ?, ?, ?, 'SUBMIT', '{}', ?, ?, ?)
-                """,
+                        INSERT INTO sq_command
+                            (command_id, user_id, scope_key, idempotency_key, payload_hash,
+                             action, payload_json, status, due_at, delivery_lease_until)
+                        VALUES (?, ?, ?, ?, ?, 'SUBMIT', '{}', ?, ?, ?)
+                        """,
                 commandId,
                 userId,
                 "scope-" + commandId,

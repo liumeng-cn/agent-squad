@@ -21,8 +21,12 @@ import lombok.ToString;
 @AllArgsConstructor
 @TableName("sq_skill_file")
 public class SkillTextFilePO {
-    /** 技能文件相对路径 */
+    /**
+     * 技能文件相对路径
+     */
     private String path;
-    /** 技能文件内容 */
+    /**
+     * 技能文件内容
+     */
     private String content;
 }

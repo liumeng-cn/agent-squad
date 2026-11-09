@@ -22,24 +22,40 @@ import lombok.ToString;
 @AllArgsConstructor
 @TableName("sq_conversation")
 public class ConversationPO {
-    /** 存储主键ID */
+    /**
+     * 存储主键ID
+     */
     @TableId(type = IdType.AUTO)
     private long id;
-    /** 对话业务ID */
+    /**
+     * 对话业务ID
+     */
     @TableField("conversation_id")
     private String conversationId;
-    /** 资源归属用户ID */
+    /**
+     * 资源归属用户ID
+     */
     @TableField("user_id")
     private String userId;
-    /** 用户对话标题 */
+    /**
+     * 用户对话标题
+     */
     private String title;
-    /** ACTIVE/DELETING/DELETED */
+    /**
+     * ACTIVE/DELETING/DELETED
+     */
     private String status;
-    /** 未终结目标ID */
+    /**
+     * 未终结目标ID
+     */
     @TableField("active_task_id")
     private String activeTaskId;
-    /** 会话代数 */
+    /**
+     * 会话代数
+     */
     private long generation;
-    /** 业务版本 */
+    /**
+     * 业务版本
+     */
     private long version;
 }

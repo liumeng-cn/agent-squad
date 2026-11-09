@@ -94,7 +94,9 @@ public class TaskSnapshotService {
         return listJobs(userId, taskId, null);
     }
 
-    /** 按真实计划版本读取历史；权限仍以当前会话和目标归属判断，旧节点不混入当前完成数。 */
+    /**
+     * 按真实计划版本读取历史；权限仍以当前会话和目标归属判断，旧节点不混入当前完成数。
+     */
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public WorkerJobPageVO listJobs(String userId, String taskId, Long requestedPlanVersion) {
         TaskPO task = taskMapper.findOwned(userId, taskId);
@@ -111,7 +113,9 @@ public class TaskSnapshotService {
                 version, task.getPlanVersion());
     }
 
-    /** 只展示正式结束任务的检查结论；候选检查尚未取得发布资格，不提前显示为已完成。 */
+    /**
+     * 只展示正式结束任务的检查结论；候选检查尚未取得发布资格，不提前显示为已完成。
+     */
     private List<AcceptanceCheckVO> acceptanceChecks(TaskPO task) {
         if (task.getPlanVersion() == 0 || !java.util.Set.of("SUCCEEDED", "PARTIAL", "FAILED").contains(task.getStatus())) {
             return List.of();

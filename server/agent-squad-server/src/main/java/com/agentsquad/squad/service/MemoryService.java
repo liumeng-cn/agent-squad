@@ -57,7 +57,7 @@ public class MemoryService {
      */
     @Transactional
     public MemoryMutationVO createFromSource(String userId, MemoryCreateDTO request,
-                                                 String sourceMessageId, String sourceQuote) {
+                                             String sourceMessageId, String sourceQuote) {
         MemoryRules.requireContent(request.key(), request.content(), utc(request.expiresAt()), now());
         lockRevision(userId);
         MemoryPO prior = mapper.findActiveKey(userId, request.key());
@@ -90,7 +90,7 @@ public class MemoryService {
 
     @Transactional
     public MemoryMutationVO updateFromSource(String userId, String memoryId, MemoryUpdateDTO request,
-                                                 String sourceMessageId, String sourceQuote) {
+                                             String sourceMessageId, String sourceQuote) {
         lockRevision(userId);
         MemoryPO current = requireOwned(userId, memoryId);
         MemoryRules.requireContent(current.getKey(), request.content(), utc(request.expiresAt()), now());

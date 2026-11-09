@@ -18,8 +18,8 @@ public interface SandboxMapper {
                      @Param("guardToken") String guardToken);
 
     SandboxRunPO prior(@Param("userId") String userId, @Param("bindingId") String bindingId,
-                        @Param("logicalKey") String logicalKey, @Param("turnId") String turnId,
-                        @Param("toolCallId") String toolCallId);
+                       @Param("logicalKey") String logicalKey, @Param("turnId") String turnId,
+                       @Param("toolCallId") String toolCallId);
 
     SandboxRunPO find(@Param("userId") String userId, @Param("executionId") String executionId);
 

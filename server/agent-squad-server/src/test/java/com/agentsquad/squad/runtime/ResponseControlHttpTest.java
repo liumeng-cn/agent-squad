@@ -1,13 +1,11 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.enums.AccountRole;
-
-import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.service.ConversationCleanupSchedulerService;
 import com.agentsquad.squad.service.ConversationDeletionService;
 import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.service.ResponseExecutionService;
-
+import com.agentsquad.squad.testsupport.TestAssertion;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -23,8 +21,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * 回答停止与会话删除的HTTP归属验证。

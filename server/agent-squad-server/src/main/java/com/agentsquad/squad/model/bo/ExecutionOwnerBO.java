@@ -19,10 +19,16 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ExecutionOwnerBO {
-    /** 状态[STAGED,COMMITTED,EXPIRED] */
+    /**
+     * 状态[STAGED,COMMITTED,EXPIRED]
+     */
     private String status;
-    /** 是否已请求取消 */
+    /**
+     * 是否已请求取消
+     */
     private boolean cancellationRequested;
-    /** 是否已删除 */
+    /**
+     * 是否已删除
+     */
     private String deleted;
 }

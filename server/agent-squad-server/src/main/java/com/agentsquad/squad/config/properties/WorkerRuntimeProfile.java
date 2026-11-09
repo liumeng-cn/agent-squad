@@ -5,7 +5,7 @@ import lombok.Setter;
 
 /**
  * Worker 运行限制配置
- *
+ * <p>
  * 控制单个 Worker 的模型、工具与恢复上限；不能放宽父目标的共享预算或并行上限。
  */
 @Getter

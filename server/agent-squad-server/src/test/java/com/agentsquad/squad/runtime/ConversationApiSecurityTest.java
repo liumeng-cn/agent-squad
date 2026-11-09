@@ -1,8 +1,6 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.enums.AccountRole;
-
-
 import com.agentsquad.squad.testsupport.TestAssertion;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -14,9 +12,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**

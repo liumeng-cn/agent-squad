@@ -104,9 +104,9 @@ public class InteractionService {
      */
     @Transactional
     public BindingResultBO bindFrameworkRequest(String userId, String taskId, String bindingId,
-                                              String jobId, String frameworkTurnId,
-                                              String frameworkRequestId,
-                                              Map<String, Object> call) {
+                                                String jobId, String frameworkTurnId,
+                                                String frameworkRequestId,
+                                                Map<String, Object> call) {
         String scopeId = scopeMapper.findScopeByBinding(userId, bindingId);
         if (scopeId == null || scopeMapper.findActiveOwned(userId, scopeId) == null) {
             return null;
@@ -206,8 +206,8 @@ public class InteractionService {
      */
     @Transactional
     public CommandReceiptVO respond(AuthView actor, String interactionId, String idempotencyKey,
-                                  long expectedVersion, String answerKind, Boolean approve,
-                                  String confirmedRequestHash, Map<String, Object> inputValue) {
+                                    long expectedVersion, String answerKind, Boolean approve,
+                                    String confirmedRequestHash, Map<String, Object> inputValue) {
         if (idempotencyKey == null || idempotencyKey.isBlank() || idempotencyKey.length() > 160) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION,
                     "Idempotency-Key 必须是 1-160 个字符");

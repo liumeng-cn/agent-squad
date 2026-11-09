@@ -10,5 +10,5 @@ import java.util.List;
  * 校验结果按路径排序，摘要涵盖元数据与完整文件文本。
  */
 public record SkillPackageBO(String name, String version, String description, List<String> requiredTools,
-                           List<SkillTextFilePO> files, String contentHash) {
+                             List<SkillTextFilePO> files, String contentHash) {
 }

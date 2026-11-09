@@ -19,18 +19,32 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ConversationExecutionBO {
-    /** 回复执行业务ID */
+    /**
+     * 回复执行业务ID
+     */
     private String executionId;
-    /** 来源用户消息ID */
+    /**
+     * 来源用户消息ID
+     */
     private String sourceMessageId;
-    /** 回复生命周期状态 */
+    /**
+     * 回复生命周期状态
+     */
     private String status;
-    /** 业务乐观版本 */
+    /**
+     * 业务乐观版本
+     */
     private long version;
-    /** 是否已请求取消 */
+    /**
+     * 是否已请求取消
+     */
     private boolean cancellationRequested;
-    /** 授权助手回答消息ID */
+    /**
+     * 授权助手回答消息ID
+     */
     private String answerMessageId;
-    /** 最近结构化故障ID */
+    /**
+     * 最近结构化故障ID
+     */
     private String failureId;
 }

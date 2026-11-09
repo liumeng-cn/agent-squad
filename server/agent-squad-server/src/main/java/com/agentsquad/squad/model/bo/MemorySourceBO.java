@@ -19,8 +19,12 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MemorySourceBO {
-    /** 消息业务ID */
+    /**
+     * 消息业务ID
+     */
     private String messageId;
-    /** 用户消息或授权助手正文 */
+    /**
+     * 用户消息或授权助手正文
+     */
     private String content;
 }

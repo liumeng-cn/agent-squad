@@ -62,6 +62,7 @@ public class TaskDirectiveVO {
         this.reasonCode = reasonCode;
         this.reasonMessage = reasonMessage;
     }
+
     /**
      * 已有历史受理记录没有等待原因时，保守显示等待安全处理点，不推测已经开始协调。
      */

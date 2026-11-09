@@ -19,8 +19,12 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ResponseJobFactBO {
-    /** 计划内节点键 */
+    /**
+     * 计划内节点键
+     */
     private String nodeKey;
-    /** BLOCKED/READY/RUNNING/SUCCEEDED/PARTIAL/FAILED/WAITING_INPUT/WAITING_APPROVAL/RECOVERY_BLOCKED/RECONCILING/CANCELLING/CANCELLED/SUPERSEDED */
+    /**
+     * BLOCKED/READY/RUNNING/SUCCEEDED/PARTIAL/FAILED/WAITING_INPUT/WAITING_APPROVAL/RECOVERY_BLOCKED/RECONCILING/CANCELLING/CANCELLED/SUPERSEDED
+     */
     private String status;
 }

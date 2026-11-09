@@ -1,14 +1,14 @@
 package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.model.vo.ConversationVO;
-import com.agentsquad.squad.model.vo.TaskReceiptVO;
-import com.agentsquad.squad.service.GoalTaskService;
-import com.agentsquad.squad.service.BudgetService;
-import com.agentsquad.squad.mapper.BudgetMapper;
 import com.agentsquad.squad.agent.middleware.ModelBudgetMiddleware;
 import com.agentsquad.squad.config.properties.WorkerModelProfile;
 import com.agentsquad.squad.config.properties.WorkerProfileRegistry;
+import com.agentsquad.squad.mapper.BudgetMapper;
+import com.agentsquad.squad.model.vo.ConversationVO;
+import com.agentsquad.squad.model.vo.TaskReceiptVO;
+import com.agentsquad.squad.service.BudgetService;
+import com.agentsquad.squad.service.GoalTaskService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.event.ModelCallEndEvent;
@@ -33,7 +33,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * 模型预算中间件的实际 SDK 事件流边界验证。
- *
+ * <p>
  * 使用固定原生回合和模拟模型事件，不向真实模型发送请求；检查预留、结算和重复请求拦截。
  */
 class ModelBudgetMiddlewareTest {
@@ -78,7 +78,7 @@ class ModelBudgetMiddlewareTest {
                     GenerateOptions.builder().maxTokens(10).build(), null);
 
             assertThatThrownBy(() -> fixture.middleware.onModelCall(null, fixture.context,
-                    input, ignored -> Flux.just(new ModelCallEndEvent("reply", null)))
+                            input, ignored -> Flux.just(new ModelCallEndEvent("reply", null)))
                     .blockLast()).isInstanceOf(RuntimeException.class);
             assertThat(fixture.jdbc.queryForObject(
                     "SELECT status FROM sq_budget_reservation WHERE task_id = ?",

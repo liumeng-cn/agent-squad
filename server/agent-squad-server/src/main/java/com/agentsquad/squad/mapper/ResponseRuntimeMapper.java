@@ -72,5 +72,6 @@ public interface ResponseRuntimeMapper {
     String originalCommand(@Param("userId") String userId, @Param("bindingId") String bindingId);
 
     List<String> activeBindings(@Param("userId") String userId, @Param("conversationId") String conversationId);
+
     List<ProjectionTargetBO> cancellationTargets(@Param("afterBinding") String afterBinding);
 }

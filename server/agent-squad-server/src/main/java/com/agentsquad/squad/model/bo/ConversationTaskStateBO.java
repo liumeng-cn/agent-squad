@@ -19,12 +19,20 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ConversationTaskStateBO {
-    /** 目标任务ID */
+    /**
+     * 目标任务ID
+     */
     private String taskId;
-    /** 来源用户消息ID */
+    /**
+     * 来源用户消息ID
+     */
     private String sourceMessageId;
-    /** 活动状态 */
+    /**
+     * 活动状态
+     */
     private String status;
-    /** 公开活动版本 */
+    /**
+     * 公开活动版本
+     */
     private long version;
 }

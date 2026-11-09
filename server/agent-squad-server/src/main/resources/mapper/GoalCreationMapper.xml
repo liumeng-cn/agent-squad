@@ -6,18 +6,18 @@
         SELECT task_id
         FROM sq_goal_task
         WHERE user_id = #{userId}
-          AND origin_execution_id = #{executionId}
+        AND origin_execution_id = #{executionId}
         ORDER BY id
         LIMIT 1
     </select>
 
     <update id="linkSource">
         UPDATE sq_goal_task
-        SET origin_message_id   = #{messageId},
-            origin_execution_id = #{executionId}
+        SET origin_message_id = #{messageId},
+        origin_execution_id = #{executionId}
         WHERE user_id = #{userId}
-          AND task_id = #{taskId}
-          AND origin_message_id IS NULL
-          AND origin_execution_id IS NULL
+        AND task_id = #{taskId}
+        AND origin_message_id IS NULL
+        AND origin_execution_id IS NULL
     </update>
 </mapper>

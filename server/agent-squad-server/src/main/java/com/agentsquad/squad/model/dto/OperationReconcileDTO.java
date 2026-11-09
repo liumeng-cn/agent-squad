@@ -3,11 +3,12 @@ package com.agentsquad.squad.model.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+
 import java.util.List;
 
 /**
  * 有版本和证据约束的操作核对请求。
- *
+ * <p>
  * 只能确认已成功、未执行或继续未知；证据必须引用当前用户可读取的产物。
  */
 @lombok.Getter

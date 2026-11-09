@@ -21,10 +21,16 @@ import lombok.ToString;
 @AllArgsConstructor
 @TableName("sq_memory_scope")
 public class MemoryScopePinPO {
-    /** 受权执行作用域业务ID */
+    /**
+     * 受权执行作用域业务ID
+     */
     private String scopeId;
-    /** 上下文固定时的用户记忆版本号 */
+    /**
+     * 上下文固定时的用户记忆版本号
+     */
     private long memoryRevision;
-    /** 上下文可用状态[CURRENT-可用,BLOCKED-禁止使用] */
+    /**
+     * 上下文可用状态[CURRENT-可用,BLOCKED-禁止使用]
+     */
     private String barrierStatus;
 }

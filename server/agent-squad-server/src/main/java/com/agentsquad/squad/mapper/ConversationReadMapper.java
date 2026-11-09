@@ -23,7 +23,7 @@ public interface ConversationReadMapper {
     List<ConversationMessagePO> messages(@Param("userId") String userId, @Param("conversationId") String conversationId, @Param("before") Long before, @Param("limit") int limit);
 
     ConversationExecutionBO execution(@Param("userId") String userId, @Param("conversationId") String conversationId,
-                                     @Param("executionId") String executionId);
+                                      @Param("executionId") String executionId);
 
     List<ConversationExecutionBO> activeExecutions(@Param("userId") String userId, @Param("conversationId") String conversationId);
 
@@ -52,8 +52,8 @@ public interface ConversationReadMapper {
     List<String> uncertainOperationIds(@Param("userId") String userId, @Param("conversationId") String conversationId);
 
     List<ConversationExecutionBO> pageExecutions(@Param("userId") String userId, @Param("conversationId") String conversationId,
-                                               @Param("first") long first, @Param("last") long last);
+                                                 @Param("first") long first, @Param("last") long last);
 
     List<ConversationTaskStateBO> pageTasks(@Param("userId") String userId, @Param("conversationId") String conversationId,
-                                          @Param("first") long first, @Param("last") long last);
+                                            @Param("first") long first, @Param("last") long last);
 }

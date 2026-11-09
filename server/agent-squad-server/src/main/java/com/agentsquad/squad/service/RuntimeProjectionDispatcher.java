@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
 import com.agentsquad.squad.exceptions.RuntimeEventConsumptionException;
 
 /**
@@ -102,7 +103,9 @@ public class RuntimeProjectionDispatcher {
         }
     }
 
-    /** Redis引用不作为消费游标；业务批次成功提交后才通知确认，失败或容量不足保留pending。 */
+    /**
+     * Redis引用不作为消费游标；业务批次成功提交后才通知确认，失败或容量不足保留pending。
+     */
     public void scheduleFromQueue(RuntimeEventSourceBO source, java.util.function.Consumer<Boolean> acknowledged) {
         if (!scheduled.add(source)) {
             return;

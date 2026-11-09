@@ -33,17 +33,17 @@
         SELECT c.command_id
         FROM sq_command c
         WHERE c.action IN ('STOP', 'RESPOND')
-          AND (
-              (c.status = 'PENDING' AND c.due_at &lt;= #{now})
-              OR (c.status = 'DELIVERING' AND c.delivery_lease_until &lt; #{now})
-          )
-          AND NOT EXISTS (
-              SELECT 1
-              FROM sq_user blocked_user
-              WHERE blocked_user.user_id = c.user_id
-                AND blocked_user.status = 'DISABLED'
-                AND blocked_user.del_flag = '0'
-          )
+        AND (
+        (c.status = 'PENDING' AND c.due_at &lt;= #{now})
+        OR (c.status = 'DELIVERING' AND c.delivery_lease_until &lt; #{now})
+        )
+        AND NOT EXISTS (
+        SELECT 1
+        FROM sq_user blocked_user
+        WHERE blocked_user.user_id = c.user_id
+        AND blocked_user.status = 'DISABLED'
+        AND blocked_user.del_flag = '0'
+        )
         ORDER BY c.due_at, c.id
         LIMIT 20
     </select>
@@ -51,115 +51,115 @@
     <select id="findDueIds" resultType="java.lang.String">
         SELECT due.command_id
         FROM (
-            SELECT
-                c.command_id,
-                c.id,
-                CASE
-                    WHEN c.status = 'DELIVERING' THEN c.delivery_lease_until
-                    ELSE c.due_at
-                END AS eligible_at,
-                ROW_NUMBER() OVER (
-                    PARTITION BY c.user_id
-                    ORDER BY
-                        CASE
-                            WHEN c.status = 'DELIVERING' THEN c.delivery_lease_until
-                            ELSE c.due_at
-                        END,
-                        c.id
-                ) AS user_position
-            FROM sq_command c
-            WHERE c.action IN (
-                'SUBMIT',
-                'MESSAGE_SUBMIT',
-                'MASTER_SIGNAL',
-                'TASK_DIRECTIVE',
-                'STOP',
-                'RESUME',
-                'RESPOND'
-            )
-              AND (
-                (c.status = 'PENDING' AND c.due_at &lt;= #{now})
-                OR (c.status = 'DELIVERING' AND c.delivery_lease_until &lt; #{now})
-              )
-              AND NOT EXISTS (
-                SELECT 1
-                FROM sq_user blocked_user
-                WHERE blocked_user.user_id = c.user_id
-                  AND blocked_user.status = 'DISABLED'
-                  AND blocked_user.del_flag = '0'
-              )
-              AND (
-                c.action &lt;&gt; 'MESSAGE_SUBMIT'
-                OR NOT EXISTS (
-                    SELECT 1
-                    FROM sq_response_execution current_reply
-                    INNER JOIN sq_execution_scope current_scope
-                        ON current_scope.user_id = current_reply.user_id
-                       AND current_scope.scope_id = current_reply.scope_id
-                    INNER JOIN sq_message current_message
-                        ON current_message.user_id = current_reply.user_id
-                       AND current_message.message_id = current_reply.source_message_id
-                    INNER JOIN sq_response_execution earlier_reply
-                        ON earlier_reply.user_id = current_reply.user_id
-                       AND earlier_reply.conversation_id = current_reply.conversation_id
-                    INNER JOIN sq_execution_scope earlier_scope
-                        ON earlier_scope.user_id = earlier_reply.user_id
-                       AND earlier_scope.scope_id = earlier_reply.scope_id
-                       AND earlier_scope.conversation_generation = current_scope.conversation_generation
-                    INNER JOIN sq_message earlier_message
-                        ON earlier_message.user_id = earlier_reply.user_id
-                       AND earlier_message.message_id = earlier_reply.source_message_id
-                    WHERE current_reply.user_id = c.user_id
-                      AND current_reply.binding_id = c.binding_id
-                      AND COALESCE(
-                            earlier_reply.dispatch_sequence,
-                            earlier_message.message_seq
-                          ) &lt; COALESCE(
-                            current_reply.dispatch_sequence,
-                            current_message.message_seq
-                          )
-                      AND earlier_reply.del_flag = '0'
-                      AND earlier_reply.status IN (
-                            'QUEUED',
-                            'RUNNING',
-                            'RECOVERING',
-                            'RECONCILING',
-                            'CANCELLING'
-                          )
-                )
-              )
+        SELECT
+        c.command_id,
+        c.id,
+        CASE
+        WHEN c.status = 'DELIVERING' THEN c.delivery_lease_until
+        ELSE c.due_at
+        END AS eligible_at,
+        ROW_NUMBER() OVER (
+        PARTITION BY c.user_id
+        ORDER BY
+        CASE
+        WHEN c.status = 'DELIVERING' THEN c.delivery_lease_until
+        ELSE c.due_at
+        END,
+        c.id
+        ) AS user_position
+        FROM sq_command c
+        WHERE c.action IN (
+        'SUBMIT',
+        'MESSAGE_SUBMIT',
+        'MASTER_SIGNAL',
+        'TASK_DIRECTIVE',
+        'STOP',
+        'RESUME',
+        'RESPOND'
+        )
+        AND (
+        (c.status = 'PENDING' AND c.due_at &lt;= #{now})
+        OR (c.status = 'DELIVERING' AND c.delivery_lease_until &lt; #{now})
+        )
+        AND NOT EXISTS (
+        SELECT 1
+        FROM sq_user blocked_user
+        WHERE blocked_user.user_id = c.user_id
+        AND blocked_user.status = 'DISABLED'
+        AND blocked_user.del_flag = '0'
+        )
+        AND (
+        c.action &lt;&gt; 'MESSAGE_SUBMIT'
+        OR NOT EXISTS (
+        SELECT 1
+        FROM sq_response_execution current_reply
+        INNER JOIN sq_execution_scope current_scope
+        ON current_scope.user_id = current_reply.user_id
+        AND current_scope.scope_id = current_reply.scope_id
+        INNER JOIN sq_message current_message
+        ON current_message.user_id = current_reply.user_id
+        AND current_message.message_id = current_reply.source_message_id
+        INNER JOIN sq_response_execution earlier_reply
+        ON earlier_reply.user_id = current_reply.user_id
+        AND earlier_reply.conversation_id = current_reply.conversation_id
+        INNER JOIN sq_execution_scope earlier_scope
+        ON earlier_scope.user_id = earlier_reply.user_id
+        AND earlier_scope.scope_id = earlier_reply.scope_id
+        AND earlier_scope.conversation_generation = current_scope.conversation_generation
+        INNER JOIN sq_message earlier_message
+        ON earlier_message.user_id = earlier_reply.user_id
+        AND earlier_message.message_id = earlier_reply.source_message_id
+        WHERE current_reply.user_id = c.user_id
+        AND current_reply.binding_id = c.binding_id
+        AND COALESCE(
+        earlier_reply.dispatch_sequence,
+        earlier_message.message_seq
+        ) &lt; COALESCE(
+        current_reply.dispatch_sequence,
+        current_message.message_seq
+        )
+        AND earlier_reply.del_flag = '0'
+        AND earlier_reply.status IN (
+        'QUEUED',
+        'RUNNING',
+        'RECOVERING',
+        'RECONCILING',
+        'CANCELLING'
+        )
+        )
+        )
         ) due
         ORDER BY
-            due.user_position,
-            due.eligible_at,
-            due.id
+        due.user_position,
+        due.eligible_at,
+        due.id
         LIMIT 20
     </select>
 
     <update id="claim">
         UPDATE sq_command
         SET status = 'DELIVERING',
-            delivery_token = #{token},
-            delivery_lease_until = #{leaseUntil},
-            delivery_attempts = delivery_attempts + 1,
-            last_error_code = NULL
+        delivery_token = #{token},
+        delivery_lease_until = #{leaseUntil},
+        delivery_attempts = delivery_attempts + 1,
+        last_error_code = NULL
         WHERE command_id = #{commandId}
-          AND action IN ('SUBMIT',
-            'MESSAGE_SUBMIT',
-            'MASTER_SIGNAL',
-            'TASK_DIRECTIVE',
-            'STOP',
-            'RESUME',
-            'RESPOND')
-          AND ((status = 'PENDING' AND due_at &lt;= #{now})
-               OR (status = 'DELIVERING' AND delivery_lease_until &lt; #{now}))
+        AND action IN ('SUBMIT',
+        'MESSAGE_SUBMIT',
+        'MASTER_SIGNAL',
+        'TASK_DIRECTIVE',
+        'STOP',
+        'RESUME',
+        'RESPOND')
+        AND ((status = 'PENDING' AND due_at &lt;= #{now})
+        OR (status = 'DELIVERING' AND delivery_lease_until &lt; #{now}))
     </update>
 
     <select id="claimContext" resultMap="claimContextResult">
         SELECT user_id,
-            scope_id,
-            action,
-            binding_id
+        scope_id,
+        action,
+        binding_id
         FROM sq_command
         WHERE command_id = #{commandId}
     </select>
@@ -168,124 +168,124 @@
         SELECT earlier_reply.execution_id
         FROM sq_response_execution current_reply
         JOIN sq_execution_scope current_scope
-          ON current_scope.user_id = current_reply.user_id
-         AND current_scope.scope_id = current_reply.scope_id
+        ON current_scope.user_id = current_reply.user_id
+        AND current_scope.scope_id = current_reply.scope_id
         JOIN sq_message current_message
-          ON current_message.user_id = current_reply.user_id
-         AND current_message.message_id = current_reply.source_message_id
+        ON current_message.user_id = current_reply.user_id
+        AND current_message.message_id = current_reply.source_message_id
         JOIN sq_response_execution earlier_reply
-          ON earlier_reply.user_id = current_reply.user_id
-         AND earlier_reply.conversation_id = current_reply.conversation_id
+        ON earlier_reply.user_id = current_reply.user_id
+        AND earlier_reply.conversation_id = current_reply.conversation_id
         JOIN sq_execution_scope earlier_scope
-          ON earlier_scope.user_id = earlier_reply.user_id
-         AND earlier_scope.scope_id = earlier_reply.scope_id
-         AND earlier_scope.conversation_generation = current_scope.conversation_generation
+        ON earlier_scope.user_id = earlier_reply.user_id
+        AND earlier_scope.scope_id = earlier_reply.scope_id
+        AND earlier_scope.conversation_generation = current_scope.conversation_generation
         JOIN sq_message earlier_message
-          ON earlier_message.user_id = earlier_reply.user_id
-         AND earlier_message.message_id = earlier_reply.source_message_id
+        ON earlier_message.user_id = earlier_reply.user_id
+        AND earlier_message.message_id = earlier_reply.source_message_id
         WHERE current_reply.user_id = #{userId}
-          AND current_reply.binding_id = #{bindingId}
-          AND COALESCE(earlier_reply.dispatch_sequence,
-            earlier_message.message_seq) &lt; COALESCE(current_reply.dispatch_sequence,
-            current_message.message_seq)
-          AND earlier_reply.del_flag = '0'
-          AND earlier_reply.status IN ('QUEUED',
-            'RUNNING',
-            'RECOVERING',
-            'RECONCILING',
-            'CANCELLING')
+        AND current_reply.binding_id = #{bindingId}
+        AND COALESCE(earlier_reply.dispatch_sequence,
+        earlier_message.message_seq) &lt; COALESCE(current_reply.dispatch_sequence,
+        current_message.message_seq)
+        AND earlier_reply.del_flag = '0'
+        AND earlier_reply.status IN ('QUEUED',
+        'RUNNING',
+        'RECOVERING',
+        'RECONCILING',
+        'CANCELLING')
         FOR UPDATE
     </select>
 
     <select id="findClaimed" resultMap="findClaimedResult">
         SELECT c.command_id,
-            c.user_id,
-            c.task_id,
-            c.binding_id,
-            c.action,
-            c.payload_json,
-            c.delivery_attempts,
-            b.agent_id,
-            b.framework_session_id
+        c.user_id,
+        c.task_id,
+        c.binding_id,
+        c.action,
+        c.payload_json,
+        c.delivery_attempts,
+        b.agent_id,
+        b.framework_session_id
         FROM sq_command c
         JOIN sq_runtime_binding b ON b.user_id = c.user_id
-            AND b.binding_id = c.binding_id AND b.scope_id = c.scope_id
+        AND b.binding_id = c.binding_id AND b.scope_id = c.scope_id
         WHERE c.command_id = #{commandId} AND c.delivery_token = #{token}
-          AND c.status = 'DELIVERING'
+        AND c.status = 'DELIVERING'
     </select>
 
     <select id="findSubmitTurnId" resultType="java.lang.String">
         SELECT native_turn_id FROM sq_command
         WHERE user_id = #{userId}
-          AND binding_id = #{bindingId} AND action IN ('SUBMIT',
-            'MESSAGE_SUBMIT',
-            'MASTER_SIGNAL',
-            'TASK_DIRECTIVE')
-          AND native_turn_id IS NOT NULL
+        AND binding_id = #{bindingId} AND action IN ('SUBMIT',
+        'MESSAGE_SUBMIT',
+        'MASTER_SIGNAL',
+        'TASK_DIRECTIVE')
+        AND native_turn_id IS NOT NULL
         ORDER BY id DESC LIMIT 1
     </select>
 
     <update id="saveReceipt">
         UPDATE sq_command SET status = CASE WHEN #{nativeStatus} = 'rejected' THEN 'BLOCKED'
-                                             WHEN action IN ('SUBMIT',
-            'MASTER_SIGNAL',
-            'TASK_DIRECTIVE') AND EXISTS (
-                 SELECT 1 FROM sq_runtime_binding b
-                 WHERE b.binding_id = sq_command.binding_id
-                   AND b.user_id = sq_command.user_id
-                   AND b.role = 'MASTER'
-                   AND b.task_id IS NOT NULL
-                   AND b.last_ended_turn_id = #{turnId}
-             ) THEN 'APPLIED' ELSE 'DELIVERED' END,
-            delivery_token = NULL,
-            delivery_lease_until = NULL,
-            native_turn_id = #{turnId},
-            native_run_id = #{runId},
-            native_status = #{nativeStatus},
-            last_error_code = NULL
+        WHEN action IN ('SUBMIT',
+        'MASTER_SIGNAL',
+        'TASK_DIRECTIVE') AND EXISTS (
+        SELECT 1 FROM sq_runtime_binding b
+        WHERE b.binding_id = sq_command.binding_id
+        AND b.user_id = sq_command.user_id
+        AND b.role = 'MASTER'
+        AND b.task_id IS NOT NULL
+        AND b.last_ended_turn_id = #{turnId}
+        ) THEN 'APPLIED' ELSE 'DELIVERED' END,
+        delivery_token = NULL,
+        delivery_lease_until = NULL,
+        native_turn_id = #{turnId},
+        native_run_id = #{runId},
+        native_status = #{nativeStatus},
+        last_error_code = NULL
         WHERE command_id = #{commandId} AND delivery_token = #{token}
-          AND status = 'DELIVERING' AND delivery_lease_until &gt; #{now}
+        AND status = 'DELIVERING' AND delivery_lease_until &gt; #{now}
     </update>
 
     <update id="retry">
         UPDATE sq_command SET status = 'PENDING',
-            delivery_token = NULL,
-            delivery_lease_until = NULL,
-            due_at = #{dueAt},
-            last_error_code = #{errorCode}
+        delivery_token = NULL,
+        delivery_lease_until = NULL,
+        due_at = #{dueAt},
+        last_error_code = #{errorCode}
         WHERE command_id = #{commandId} AND delivery_token = #{token}
-          AND status = 'DELIVERING'
+        AND status = 'DELIVERING'
     </update>
 
     <update id="blockUnknownPending">
         UPDATE sq_command
         SET status = 'BLOCKED',
-            last_error_code = 'UNKNOWN_ACTION'
+        last_error_code = 'UNKNOWN_ACTION'
         WHERE status = 'PENDING'
-          AND due_at &lt;= #{now}
-          AND action NOT IN ('SUBMIT', 'MESSAGE_SUBMIT', 'MASTER_SIGNAL',
-                             'TASK_DIRECTIVE', 'STOP', 'RESUME', 'RESPOND', 'DELETE_CONVERSATION')
+        AND due_at &lt;= #{now}
+        AND action NOT IN ('SUBMIT', 'MESSAGE_SUBMIT', 'MASTER_SIGNAL',
+        'TASK_DIRECTIVE', 'STOP', 'RESUME', 'RESPOND', 'DELETE_CONVERSATION')
         ORDER BY id
         LIMIT 100
     </update>
 
     <update id="blockInvalid">
         UPDATE sq_command
-        SET status               = 'BLOCKED',
-            delivery_token       = NULL,
-            delivery_lease_until = NULL,
-            last_error_code      = #{errorCode}
+        SET status = 'BLOCKED',
+        delivery_token = NULL,
+        delivery_lease_until = NULL,
+        last_error_code = #{errorCode}
         WHERE command_id = #{commandId}
-          AND delivery_token = #{token}
-          AND status = 'DELIVERING'
+        AND delivery_token = #{token}
+        AND status = 'DELIVERING'
     </update>
 
     <update id="blockRejectedResume">
         UPDATE sq_command SET status = 'BLOCKED',
-            delivery_token = NULL,
-            delivery_lease_until = NULL,
-            last_error_code = #{errorCode}
+        delivery_token = NULL,
+        delivery_lease_until = NULL,
+        last_error_code = #{errorCode}
         WHERE command_id = #{commandId} AND delivery_token = #{token}
-          AND status = 'DELIVERING' AND action = 'RESUME'
+        AND status = 'DELIVERING' AND action = 'RESUME'
     </update>
 </mapper>

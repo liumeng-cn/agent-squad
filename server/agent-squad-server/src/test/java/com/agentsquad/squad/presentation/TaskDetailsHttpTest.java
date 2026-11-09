@@ -1,15 +1,15 @@
 package com.agentsquad.squad.presentation;
 
-import com.agentsquad.squad.testsupport.ApiResultJson;
-import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.service.ArtifactService;
-import com.agentsquad.squad.model.vo.ArtifactVO;
-import com.agentsquad.squad.service.GoalTaskService;
-
+import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.mapper.InteractionMapper;
+import com.agentsquad.squad.model.vo.ArtifactVO;
+import com.agentsquad.squad.service.ArtifactService;
+import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.service.InputFormSchemaService;
+import com.agentsquad.squad.testsupport.ApiResultJson;
+import com.agentsquad.squad.testsupport.TestAssertion;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -26,14 +26,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
-import com.agentsquad.squad.enums.AccountRole;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**

@@ -1,21 +1,15 @@
 package com.agentsquad.squad.controller;
 
 import com.agentsquad.squad.common.model.ApiResult;
+import com.agentsquad.squad.identity.UserContext;
 import com.agentsquad.squad.model.dto.MessageCreateDTO;
 import com.agentsquad.squad.model.vo.MessageReceiptVO;
 import com.agentsquad.squad.service.MessageAcceptanceService;
-import com.agentsquad.squad.identity.UserContext;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 对话消息提交接口
@@ -32,17 +26,17 @@ public class MessageController {
     @PostMapping("/messages")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public ApiResult<MessageReceiptVO> first(HttpServletRequest servletRequest,
-                                           @RequestHeader("Idempotency-Key") String key,
-                                           @Valid @RequestBody MessageCreateDTO request) {
+                                             @RequestHeader("Idempotency-Key") String key,
+                                             @Valid @RequestBody MessageCreateDTO request) {
         return ApiResult.success(messages.accept(UserContext.current(servletRequest).userId(), null, key, request));
     }
 
     @PostMapping("/{conversationId}/messages")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public ApiResult<MessageReceiptVO> append(HttpServletRequest servletRequest,
-                                            @PathVariable String conversationId,
-                                            @RequestHeader("Idempotency-Key") String key,
-                                            @Valid @RequestBody MessageCreateDTO request) {
+                                              @PathVariable String conversationId,
+                                              @RequestHeader("Idempotency-Key") String key,
+                                              @Valid @RequestBody MessageCreateDTO request) {
         return ApiResult.success(messages.accept(UserContext.current(servletRequest).userId(), conversationId, key, request));
     }
 }

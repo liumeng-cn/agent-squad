@@ -53,7 +53,7 @@ public class ConnectionService {
      */
     @Transactional
     public ConnectionVO create(AuthView actor, String idempotencyKey,
-                                     ConnectionCreateDTO request) {
+                               ConnectionCreateDTO request) {
         requireIdempotencyKey(idempotencyKey);
         validateName(request.name());
         validateCode("provider", request.provider());
@@ -100,7 +100,7 @@ public class ConnectionService {
      */
     @Transactional
     public ConnectionVO update(AuthView actor, String connectionId, String idempotencyKey,
-                                     ConnectionUpdateDTO request) {
+                               ConnectionUpdateDTO request) {
         requireIdempotencyKey(idempotencyKey);
         ConnectionPO row = requireOwned(actor.userId(), connectionId);
         if (request.expectedVersion() == null || request.expectedVersion() != row.getRevision()) {

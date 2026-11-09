@@ -32,7 +32,9 @@ public class ApiExceptionHandler {
     @Resource
     private ObservationSupport observations;
 
-    /** 浏览器断开后的异步响应已不可写；结束请求，不包装JSON或记录业务失败。 */
+    /**
+     * 浏览器断开后的异步响应已不可写；结束请求，不包装JSON或记录业务失败。
+     */
     @ExceptionHandler(org.springframework.web.context.request.async.AsyncRequestNotUsableException.class)
     public void disconnected() {
         log.debug("页面异步连接已断开");
@@ -60,9 +62,9 @@ public class ApiExceptionHandler {
     /**
      * 已识别的业务拒绝使用 HTTP 200，具体原因由响应业务码表达。
      */
-    @ExceptionHandler({ AuthConflictException.class, AuthForbiddenException.class, InvalidRequestException.class,
+    @ExceptionHandler({AuthConflictException.class, AuthForbiddenException.class, InvalidRequestException.class,
             PasswordChangeRequiredException.class, PermissionDeniedException.class, RateLimitedException.class,
-            ResourceNotFoundException.class, StateConflictException.class, ValidationFailedException.class })
+            ResourceNotFoundException.class, StateConflictException.class, ValidationFailedException.class})
     public ResponseEntity<ApiResult<Void>> rejected(RuntimeException exception) {
         ApiCode code;
         if (exception instanceof AuthConflictException || exception instanceof StateConflictException) {
@@ -85,8 +87,8 @@ public class ApiExceptionHandler {
     /**
      * 处理参数校验与请求体不可读，保持与框架默认一致的 400 响应。
      */
-    @ExceptionHandler({ MethodArgumentNotValidException.class, ConstraintViolationException.class,
-            MethodArgumentTypeMismatchException.class, HttpMessageNotReadableException.class })
+    @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class,
+            MethodArgumentTypeMismatchException.class, HttpMessageNotReadableException.class})
     public ResponseEntity<ApiResult<Void>> validationError(Exception exception, HttpServletRequest request) {
         log.warn("请求参数错误 {}", observations.logFields(Map.of(
                 "method", request.getMethod(), "path", request.getRequestURI(),

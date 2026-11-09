@@ -299,7 +299,9 @@ public class TaskDirectiveService {
         log.info("目标修改协调已排队 directiveId={} taskId={} commandId={}", row.getDirectiveId(), task.getTaskId(), commandId);
     }
 
-    /** 等待原因只在实际变化时写入并通知；重复扫描不产生重复进度事件。 */
+    /**
+     * 等待原因只在实际变化时写入并通知；重复扫描不产生重复进度事件。
+     */
     private void waiting(ExecutionScopePO scope, TaskDirectivePO row, TaskDirectiveWaitReason reason) {
         if (directives.waiting(scope.getUserId(), row.getDirectiveId(), reason) == 1) {
             publish(scope, row, "ACCEPTED", null, null, reason.name(), null);

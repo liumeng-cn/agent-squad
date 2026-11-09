@@ -23,20 +23,23 @@
     </sql>
 
     <select id="findUserById" resultMap="userRow">
-        SELECT <include refid="userColumns"/>
+        SELECT
+        <include refid="userColumns"/>
         FROM sq_user
         WHERE user_id = #{userId} AND del_flag = '0'
     </select>
 
     <select id="findUserForUpdate" resultMap="userRow">
-        SELECT <include refid="userColumns"/>
+        SELECT
+        <include refid="userColumns"/>
         FROM sq_user
         WHERE user_id = #{userId} AND del_flag = '0'
         FOR UPDATE
     </select>
 
     <select id="listUsers" resultMap="userRow">
-        SELECT <include refid="userColumns"/>
+        SELECT
+        <include refid="userColumns"/>
         FROM sq_user
         WHERE del_flag = '0'
         <if test="cursor != null">AND user_id &gt; #{cursor}</if>
@@ -66,27 +69,27 @@
 
     <insert id="insertUser">
         INSERT INTO sq_user (user_id, username, display_name, password_hash, role, status,
-            auth_version, must_change_password, version, creator_id, creator_name,
-            last_updater_id, last_updater_name)
+        auth_version, must_change_password, version, creator_id, creator_name,
+        last_updater_id, last_updater_name)
         VALUES (#{userId}, #{username}, #{displayName}, #{passwordHash}, #{role}, 'ACTIVE',
-            0, #{mustChangePassword}, 0, #{actorId}, #{actorName}, #{actorId}, #{actorName})
+        0, #{mustChangePassword}, 0, #{actorId}, #{actorName}, #{actorId}, #{actorName})
     </insert>
 
     <update id="updateProfile">
         UPDATE sq_user
         SET display_name = #{displayName}, role = #{role}, status = #{status},
-            version = version + 1, auth_version = auth_version + #{authBump},
-            last_updater_id = #{actorId}, last_updater_name = #{actorName},
-            last_update_time = CURRENT_TIMESTAMP(3)
+        version = version + 1, auth_version = auth_version + #{authBump},
+        last_updater_id = #{actorId}, last_updater_name = #{actorName},
+        last_update_time = CURRENT_TIMESTAMP(3)
         WHERE user_id = #{userId} AND version = #{expectedVersion} AND del_flag = '0'
     </update>
 
     <update id="updatePassword">
         UPDATE sq_user
         SET password_hash = #{passwordHash}, must_change_password = #{mustChangePassword},
-            auth_version = auth_version + 1, version = version + 1,
-            last_updater_id = #{actorId}, last_updater_name = #{actorName},
-            last_update_time = CURRENT_TIMESTAMP(3)
+        auth_version = auth_version + 1, version = version + 1,
+        last_updater_id = #{actorId}, last_updater_name = #{actorName},
+        last_update_time = CURRENT_TIMESTAMP(3)
         WHERE user_id = #{userId} AND del_flag = '0'
     </update>
 

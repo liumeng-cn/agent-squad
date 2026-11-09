@@ -21,7 +21,7 @@ public interface ResponseContextMapper {
                         @Param("through") long through);
 
     List<ResponseHistoryBO> prefix(@Param("userId") String userId,
-                                    @Param("conversationId") String conversationId, @Param("through") long through);
+                                   @Param("conversationId") String conversationId, @Param("through") long through);
 
     List<String> artifactIds(@Param("userId") String userId, @Param("messageId") String messageId);
 

@@ -1,13 +1,13 @@
 package com.agentsquad.squad.presentation.stream;
 
-import com.agentsquad.squad.service.UserStatusGuardService;
-import com.agentsquad.squad.model.bo.ConversationEventBO;
-import com.agentsquad.squad.model.bo.ReplyPreviewBO;
 import com.agentsquad.squad.enums.ReplyPreviewPhase;
+import com.agentsquad.squad.model.bo.ConversationEventBO;
+import com.agentsquad.squad.model.bo.ConversationStreamKeyBO;
+import com.agentsquad.squad.model.bo.ReplyPreviewBO;
 import com.agentsquad.squad.service.ConversationQueryService;
 import com.agentsquad.squad.service.ConversationStreamHubService;
-import com.agentsquad.squad.model.bo.ConversationStreamKeyBO;
 import com.agentsquad.squad.service.ConversationSubscriberService;
+import com.agentsquad.squad.service.UserStatusGuardService;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import org.junit.jupiter.api.Test;
 
@@ -17,10 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * 会话共享推送及连接隔离验证
@@ -32,7 +29,8 @@ class ConversationStreamHubTest {
     void delayedThinkingFrameCannotReplaceQueuedAnswer() {
         var emitter = new RecordingSseEmitter();
         var executor = new QueuedExecutor();
-        var subscription = subscriber(emitter, executor, () -> { });
+        var subscription = subscriber(emitter, executor, () -> {
+        });
         var answer = new ReplyPreviewBO(2, "execution", "message", "run", "stream", 2, 0,
                 "正文首段", ReplyPreviewPhase.ANSWERING, true, true);
         subscription.preview(answer);

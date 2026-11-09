@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 
 /**
  * 交互答复的传输结构。
- *
+ * <p>
  * expectedVersion 对应交互版本，answer 的类型由服务端持久交互决定。
  */
 @lombok.Getter

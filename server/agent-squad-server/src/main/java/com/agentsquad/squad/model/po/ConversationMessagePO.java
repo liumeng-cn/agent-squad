@@ -21,24 +21,44 @@ import lombok.ToString;
 @AllArgsConstructor
 @TableName("sq_message")
 public class ConversationMessagePO {
-    /** 消息业务ID */
+    /**
+     * 消息业务ID
+     */
     private String messageId;
-    /** 消息序号 */
+    /**
+     * 消息序号
+     */
     private long sequence;
-    /** 消息角色[USER,ASSISTANT] */
+    /**
+     * 消息角色[USER,ASSISTANT]
+     */
     private String role;
-    /** 消息正文 */
+    /**
+     * 消息正文
+     */
     private String text;
-    /** 正文替换版本 */
+    /**
+     * 正文替换版本
+     */
     private long revision;
-    /** 正文是否完成 */
+    /**
+     * 正文是否完成
+     */
     private boolean completed;
-    /** 回复所关联的用户消息ID */
+    /**
+     * 回复所关联的用户消息ID
+     */
     private String sourceMessageId;
-    /** 回复执行ID；旧任务消息为空 */
+    /**
+     * 回复执行ID；旧任务消息为空
+     */
     private String executionId;
-    /** 可选关联目标ID */
+    /**
+     * 可选关联目标ID
+     */
     private String taskId;
-    /** 消息发生时间 */
+    /**
+     * 消息发生时间
+     */
     private java.time.LocalDateTime occurredAt;
 }

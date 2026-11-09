@@ -1,44 +1,32 @@
 package com.agentsquad.squad.agent;
 
-import com.agentsquad.squad.agent.tool.ApplyTaskDirectiveTool;
-import com.agentsquad.squad.agent.tool.AbandonFailedJobTool;
-import com.agentsquad.squad.agent.tool.CreateGoalTaskTool;
-import com.agentsquad.squad.agent.tool.ListWorkerCapabilitiesTool;
-import com.agentsquad.squad.agent.tool.PrepareContextTool;
-import com.agentsquad.squad.agent.tool.ProposeCompletionTool;
-import com.agentsquad.squad.agent.tool.PublishPlanTool;
-import com.agentsquad.squad.agent.tool.RequestInputTool;
-import com.agentsquad.squad.agent.tool.SubmitTaskDirectiveTool;
-import com.agentsquad.squad.enums.LocalSessionState;
-import com.agentsquad.squad.model.bo.DeliveryBO;
-import com.agentsquad.squad.model.bo.RuntimeEventSourceBO;
-import com.agentsquad.squad.service.ResponseContextService;
-import com.agentsquad.squad.utils.RuntimePayloads;
 import com.agentsquad.squad.agent.middleware.ExecutionContextMiddleware;
 import com.agentsquad.squad.agent.middleware.ModelBudgetMiddleware;
-import com.agentsquad.squad.model.bo.NativeEventViewBO;
-import com.agentsquad.squad.agent.session.NativeSessionGateway;
-import com.agentsquad.squad.model.bo.NativeSubmissionReceiptBO;
-import com.agentsquad.squad.agent.skill.PlatformSkillVisibility;
 import com.agentsquad.squad.agent.middleware.ScopedMasterToolsMiddleware;
 import com.agentsquad.squad.agent.middleware.SelectedReplyModelMiddleware;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.agentsquad.squad.model.bo.ProjectionTargetBO;
+import com.agentsquad.squad.agent.session.CommittedSessionReader;
+import com.agentsquad.squad.agent.session.NativeSessionGateway;
+import com.agentsquad.squad.agent.skill.PlatformSkillVisibility;
+import com.agentsquad.squad.agent.tool.*;
 import com.agentsquad.squad.agent.tool.mock.MockLookupTool;
 import com.agentsquad.squad.agent.tool.mock.MockTicketCreateTool;
+import com.agentsquad.squad.enums.LocalSessionState;
+import com.agentsquad.squad.model.bo.*;
+import com.agentsquad.squad.service.ResponseContextService;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;
+import io.agentscope.core.model.ExecutionConfig;
 import io.agentscope.core.session.SessionEvent;
-import com.agentsquad.squad.agent.session.CommittedSessionReader;
 import io.agentscope.core.tool.Toolkit;
 import io.agentscope.extensions.jdbc.JdbcDistributedStore;
 import io.agentscope.extensions.jdbc.dialect.AbstractJdbcDialect;
 import io.agentscope.extensions.model.openai.OpenAIChatModel;
-import io.agentscope.core.model.ExecutionConfig;
 import io.agentscope.harness.agent.HarnessAgent;
-import io.agentscope.harness.agent.tools.ToolsConfig;
 import io.agentscope.harness.agent.IsolationScope;
 import io.agentscope.harness.agent.filesystem.spec.RemoteFilesystemSpec;
 import io.agentscope.harness.agent.session.AgentSession;
+import io.agentscope.harness.agent.tools.ToolsConfig;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
@@ -48,8 +36,8 @@ import org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitializat
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
-import java.util.List;
 import java.time.Duration;
+import java.util.List;
 
 /**
  * 当前 Master 的 AgentScope 原生会话适配器。
@@ -383,7 +371,9 @@ public class MasterAgent implements NativeSessionGateway {
                 "load_skill_through_path", "request_input", "request_acceptance_review", "propose_completion", "list_worker_capabilities",
                 "create_goal_task", "submit_task_directive", "prepare_context", "publish_plan", "apply_task_directive", "abandon_failed_job",
                 "write_explicit_memory", "mock_lookup", "mock_ticket_create", "read_attachment"));
-        if (sandboxEnabled) { allowedTools.addAll(java.util.Set.of("sandbox_python", "commit_artifact")); }
+        if (sandboxEnabled) {
+            allowedTools.addAll(java.util.Set.of("sandbox_python", "commit_artifact"));
+        }
         context.put(com.agentsquad.squad.agent.skill.ScopeSkillCapabilities.class,
                 new com.agentsquad.squad.agent.skill.ScopeSkillCapabilities(allowedTools));
         return localSessions.register(userId, bindingId, master.session(context));
@@ -403,7 +393,9 @@ public class MasterAgent implements NativeSessionGateway {
         return committedReader.read(target.getUserId(), target.getAgentId(), target.getSessionId(), after, limit);
     }
 
-    /** 后台恢复显式启动调度，保留原有授权、Worker领取和续租检查，不由读接口触发。 */
+    /**
+     * 后台恢复显式启动调度，保留原有授权、Worker领取和续租检查，不由读接口触发。
+     */
     @Override
     public void startPending(ProjectionTargetBO target) {
         if (controlBindings.localSessionState(target.getUserId(), target.getBindingId())

@@ -1,6 +1,8 @@
 package com.agentsquad.squad.dto;
 
-/** 已登录用户修改密码。 */
+/**
+ * 已登录用户修改密码。
+ */
 @lombok.Getter
 @lombok.EqualsAndHashCode
 @lombok.experimental.Accessors(fluent = true)

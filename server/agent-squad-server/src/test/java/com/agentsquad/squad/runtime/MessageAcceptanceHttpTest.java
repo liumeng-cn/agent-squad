@@ -1,12 +1,12 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.AgentSquadApplication;
+import com.agentsquad.squad.enums.AccountRole;
+import com.agentsquad.squad.model.vo.MessageReceiptVO;
+import com.agentsquad.squad.service.ArtifactService;
+import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.testsupport.ApiResultJson;
 import com.agentsquad.squad.testsupport.TestAssertion;
-import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.service.ArtifactService;
-import com.agentsquad.squad.model.vo.MessageReceiptVO;
-import com.agentsquad.squad.service.GoalTaskService;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -21,7 +21,6 @@ import org.springframework.web.context.WebApplicationContext;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
-import com.agentsquad.squad.enums.AccountRole;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -205,7 +204,7 @@ class MessageAcceptanceHttpTest {
     }
 
     static MessageReceiptVO send(ConfigurableApplicationContext context, MessageTestActor actor, String path,
-                               String key, Map<String, Object> body) throws Exception {
+                                 String key, Map<String, Object> body) throws Exception {
         ObjectMapper json = context.getBean(ObjectMapper.class);
         String response = mvc(context).perform(post(path).with(TestAssertion.as(actor.view().userId(), "USER"))
                         .header("Idempotency-Key", key)
@@ -215,7 +214,7 @@ class MessageAcceptanceHttpTest {
     }
 
     private static MessageReceiptVO concurrentSend(ConfigurableApplicationContext context, MessageTestActor actor,
-                                                 CountDownLatch ready, CountDownLatch start) throws Exception {
+                                                   CountDownLatch ready, CountDownLatch start) throws Exception {
         ready.countDown();
         if (!start.await(10, TimeUnit.SECONDS)) {
             throw new IllegalStateException("消息并发测试启动超时");

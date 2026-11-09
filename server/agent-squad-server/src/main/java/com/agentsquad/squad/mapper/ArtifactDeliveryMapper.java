@@ -22,7 +22,7 @@ public interface ArtifactDeliveryMapper {
     ArtifactStagePO lock(@Param("userId") String userId, @Param("stageId") String stageId);
 
     ArtifactStagePO findPath(@Param("userId") String userId, @Param("executionId") String executionId,
-                              @Param("workspaceKey") String workspaceKey);
+                             @Param("workspaceKey") String workspaceKey);
 
     int commit(@Param("userId") String userId, @Param("stageId") String stageId,
                @Param("artifactId") String artifactId);

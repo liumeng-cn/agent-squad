@@ -28,6 +28,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.agentsquad.squad.enums.RedisWakeupChannel;
 
 /**

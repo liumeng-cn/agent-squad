@@ -1,12 +1,12 @@
 package com.agentsquad.squad.governance;
 
 import com.agentsquad.squad.AgentSquadApplication;
+import com.agentsquad.squad.config.properties.WorkerModelProfile;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.vo.ConversationVO;
 import com.agentsquad.squad.model.vo.TaskReceiptVO;
-import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.service.BudgetService;
-import com.agentsquad.squad.config.properties.WorkerModelProfile;
+import com.agentsquad.squad.service.GoalTaskService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
@@ -24,7 +24,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * 父目标预算的并发预留验证。
- *
+ * <p>
  * 两个模型请求同时竞争同一余额，数据库目标行锁必须只允许一笔预留通过。
  */
 class BudgetReservationConcurrencyTest {
@@ -149,6 +149,7 @@ class BudgetReservationConcurrencyTest {
             return false;
         }
     }
+
     private String scopeId(JdbcTemplate jdbc, String taskId) {
         return jdbc.queryForObject("SELECT scope_id FROM sq_goal_task WHERE task_id = ?", String.class, taskId);
     }

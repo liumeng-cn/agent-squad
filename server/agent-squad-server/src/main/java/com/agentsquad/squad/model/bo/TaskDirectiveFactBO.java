@@ -19,20 +19,36 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TaskDirectiveFactBO {
-    /** 目标修订指令业务ID */
+    /**
+     * 目标修订指令业务ID
+     */
     private String directiveId;
-    /** 受权用户消息ID */
+    /**
+     * 受权用户消息ID
+     */
     private String sourceMessageId;
-    /** 类型[SUPPLEMENT,REPLACE] */
+    /**
+     * 类型[SUPPLEMENT,REPLACE]
+     */
     private String kind;
-    /** 状态[ACCEPTED,APPLIED,REJECTED] */
+    /**
+     * 状态[ACCEPTED,APPLIED,REJECTED]
+     */
     private String status;
-    /** 实际应用后的目标运行版本 */
+    /**
+     * 实际应用后的目标运行版本
+     */
     private Long appliedVersion;
-    /** 目标修订版本 */
+    /**
+     * 目标修订版本
+     */
     private Long goalRevision;
-    /** 未应用的结构化原因码 */
+    /**
+     * 未应用的结构化原因码
+     */
     private String reasonCode;
-    /** 可向用户解释的安全原因 */
+    /**
+     * 可向用户解释的安全原因
+     */
     private String reasonMessage;
 }

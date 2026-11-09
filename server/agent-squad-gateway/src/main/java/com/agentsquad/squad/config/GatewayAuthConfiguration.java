@@ -26,7 +26,9 @@ public class GatewayAuthConfiguration {
     @Resource
     private Environment environment;
 
-    /** 生产认证参数被外部覆盖时拒绝启动，避免降级到开发账号或非安全 Cookie。 */
+    /**
+     * 生产认证参数被外部覆盖时拒绝启动，避免降级到开发账号或非安全 Cookie。
+     */
     @PostConstruct
     public void validateProductionAuthentication() {
         if (environment.acceptsProfiles(Profiles.of("prod"))

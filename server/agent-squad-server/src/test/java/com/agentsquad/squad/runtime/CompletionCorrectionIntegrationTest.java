@@ -1,32 +1,15 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.AgentSquadApplication;
+import com.agentsquad.squad.agent.MasterAgentIdentity;
 import com.agentsquad.squad.enums.AccountRole;
-import com.agentsquad.squad.model.bo.ProjectionTargetBO;
 import com.agentsquad.squad.enums.GoalTaskStatus;
 import com.agentsquad.squad.enums.NativeRunOutcome;
 import com.agentsquad.squad.enums.RuntimeCommandStatus;
-import com.agentsquad.squad.agent.MasterAgentIdentity;
-
-import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.model.bo.PrepareRequestBO;
-import com.agentsquad.squad.service.ExecutionScopeService;
-import com.agentsquad.squad.model.bo.PlanNodeBO;
-import com.agentsquad.squad.model.bo.PlanPublishBO;
+import com.agentsquad.squad.mapper.*;
+import com.agentsquad.squad.model.bo.*;
 import com.agentsquad.squad.model.dto.WorkerDefinitionCreateDTO;
-import com.agentsquad.squad.model.bo.NativeEventViewBO;
-import com.agentsquad.squad.service.NativeProjectionService;
-import com.agentsquad.squad.mapper.BindingMapper;
-import com.agentsquad.squad.mapper.CommandMapper;
-import com.agentsquad.squad.mapper.DeliveryMapper;
-import com.agentsquad.squad.mapper.ConversationMapper;
-import com.agentsquad.squad.mapper.TaskEventMapper;
-import com.agentsquad.squad.mapper.TaskMapper;
-import com.agentsquad.squad.mapper.CompletionMapper;
-import com.agentsquad.squad.mapper.ProjectionMapper;
-import com.agentsquad.squad.service.CompletionProposalService;
-import com.agentsquad.squad.service.GoalTaskService;
-import com.agentsquad.squad.service.TaskControlService;
-import com.agentsquad.squad.service.TaskSnapshotService;
+import com.agentsquad.squad.service.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;

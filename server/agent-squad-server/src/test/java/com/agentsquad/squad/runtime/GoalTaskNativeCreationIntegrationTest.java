@@ -1,17 +1,18 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.model.dto.MessageCreateDTO;
-import com.agentsquad.squad.service.MessageAcceptanceService;
+import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.service.WorkerDefinitionService;
+import com.agentsquad.squad.model.dto.MessageCreateDTO;
 import com.agentsquad.squad.model.dto.WorkerDefinitionCreateDTO;
+import com.agentsquad.squad.service.MessageAcceptanceService;
+import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -20,12 +21,11 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
-import com.agentsquad.squad.enums.AccountRole;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -104,28 +104,32 @@ class GoalTaskNativeCreationIntegrationTest {
                 long version = db.queryForObject("SELECT version FROM sq_goal_task", Long.class);
                 response = switch (call) {
                     case 1 -> toolResponse(json, "apply_task_directive", Map.of("directiveId", id,
-                            "expectedVersion", version, "decision", "APPLY"), 300+call);
-                    case 2 -> toolResponse(json, "prepare_context", Map.of("targetNodeKey", "outline", "logicalKey", "outline-updated"), 300+call);
-                    case 3 -> toolResponse(json, "prepare_context", Map.of("targetNodeKey", "draft", "logicalKey", "draft-updated"), 300+call);
-                    case 4 -> toolResponse(json, "publish_plan", Map.of("logicalKey", "updated-plan", "expectedPlanVersion", 1,
-                            "nodes", List.of(Map.of("nodeKey", "outline", "workerKey", "draft-writer", "workerVersion", "1.0.0",
-                                    "goal", "拟活泼的提纲", "contextSnapshotId", db.queryForObject("SELECT snapshot_id FROM sq_context_snapshot WHERE logical_key='outline-updated'", String.class),
-                                    "dependsOn", List.of(), "required", true, "maxRecoveryAttempts", 1),
-                                    Map.of("nodeKey", "draft", "workerKey", "draft-writer", "workerVersion", "1.0.0",
-                                    "goal", "写活泼的短文", "contextSnapshotId", db.queryForObject("SELECT snapshot_id FROM sq_context_snapshot WHERE logical_key='draft-updated'", String.class),
-                                    "dependsOn", List.of("outline"), "required", true, "maxRecoveryAttempts", 1)),
-                            "joinPolicy", "ALL_REQUIRED", "acceptanceCriteria", List.of("活泼短文完成")), 300+call);
-                    case 5 -> textResponse("等待更新后的工作完成", 300+call);
-                    case 6 -> toolResponse(json, "propose_completion", com.agentsquad.squad.testsupport.ModelAcceptanceFixture.completion(
-                            json, jdbcRef.get(), "SUCCEEDED", "短文已完成：活泼成稿"), 300+call);
-                    default -> textResponse("等待平台发布新答案", 300+call);
+                            "expectedVersion", version, "decision", "APPLY"), 300 + call);
+                    case 2 ->
+                            toolResponse(json, "prepare_context", Map.of("targetNodeKey", "outline", "logicalKey", "outline-updated"), 300 + call);
+                    case 3 ->
+                            toolResponse(json, "prepare_context", Map.of("targetNodeKey", "draft", "logicalKey", "draft-updated"), 300 + call);
+                    case 4 ->
+                            toolResponse(json, "publish_plan", Map.of("logicalKey", "updated-plan", "expectedPlanVersion", 1,
+                                    "nodes", List.of(Map.of("nodeKey", "outline", "workerKey", "draft-writer", "workerVersion", "1.0.0",
+                                                    "goal", "拟活泼的提纲", "contextSnapshotId", db.queryForObject("SELECT snapshot_id FROM sq_context_snapshot WHERE logical_key='outline-updated'", String.class),
+                                                    "dependsOn", List.of(), "required", true, "maxRecoveryAttempts", 1),
+                                            Map.of("nodeKey", "draft", "workerKey", "draft-writer", "workerVersion", "1.0.0",
+                                                    "goal", "写活泼的短文", "contextSnapshotId", db.queryForObject("SELECT snapshot_id FROM sq_context_snapshot WHERE logical_key='draft-updated'", String.class),
+                                                    "dependsOn", List.of("outline"), "required", true, "maxRecoveryAttempts", 1)),
+                                    "joinPolicy", "ALL_REQUIRED", "acceptanceCriteria", List.of("活泼短文完成")), 300 + call);
+                    case 5 -> textResponse("等待更新后的工作完成", 300 + call);
+                    case 6 ->
+                            toolResponse(json, "propose_completion", com.agentsquad.squad.testsupport.ModelAcceptanceFixture.completion(
+                                    json, jdbcRef.get(), "SUCCEEDED", "短文已完成：活泼成稿"), 300 + call);
+                    default -> textResponse("等待平台发布新答案", 300 + call);
                 };
             } else if (request.path("messages").toString().contains("请改成活泼风格")) {
                 int call = directiveReplyCalls.incrementAndGet();
                 response = call == 1 ? toolResponse(json, "submit_task_directive", Map.of("logicalKey", "style-change",
                         "taskId", taskIdRef.get(), "expectedVersion", jdbcRef.get().queryForObject("SELECT version FROM sq_goal_task", Long.class),
-                        "kind", "SUPPLEMENT", "content", "将文章改成活泼风格"), 400+call)
-                        : textResponse("已收到风格要求，正在调整。", 400+call);
+                        "kind", "SUPPLEMENT", "content", "将文章改成活泼风格"), 400 + call)
+                        : textResponse("已收到风格要求，正在调整。", 400 + call);
             } else if (request.path("messages").toString().contains("目前做到哪一步了")) {
                 progressRequest.set(request.path("messages").toString());
                 progressCalls.incrementAndGet();
@@ -228,7 +232,9 @@ class GoalTaskNativeCreationIntegrationTest {
                     ResponseNativeExecutionIntegrationTest.await(spring, progress, "SUCCEEDED");
                     if (directive) {
                         for (int attempt = 0; attempt < 200; attempt++) {
-                            if (jdbc.queryForObject("SELECT COUNT(*) FROM sq_plan WHERE plan_version=2", Integer.class) == 1) { break; }
+                            if (jdbc.queryForObject("SELECT COUNT(*) FROM sq_plan WHERE plan_version=2", Integer.class) == 1) {
+                                break;
+                            }
                             Thread.sleep(100);
                         }
                         assertThat(jdbc.queryForObject("SELECT status FROM sq_task_directive", String.class)).isEqualTo("APPLIED");
@@ -294,7 +300,9 @@ class GoalTaskNativeCreationIntegrationTest {
         }
     }
 
-    /** 按真实请求的stream参数响应，避免把旧JSON桩当成流式供应商并误报缺少用量。 */
+    /**
+     * 按真实请求的stream参数响应，避免把旧JSON桩当成流式供应商并误报缺少用量。
+     */
     private String providerResponse(ObjectMapper json, String response, boolean streaming) throws java.io.IOException {
         if (!streaming) {
             return response;

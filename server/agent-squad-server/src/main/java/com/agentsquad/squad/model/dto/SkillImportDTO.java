@@ -24,6 +24,7 @@ public class SkillImportDTO {
             @JsonProperty(value = "files", required = true) List<SkillFileDTO> files) {
         this.files = files;
     }
+
     /**
      * 请求校验时拒绝模型或客户端附加的身份、链接及未声明字段
      */

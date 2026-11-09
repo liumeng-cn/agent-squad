@@ -19,14 +19,24 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SandboxBindingBO {
-    /** 资源归属用户ID */
+    /**
+     * 资源归属用户ID
+     */
     private String userId;
-    /** 统一执行作用域ID */
+    /**
+     * 统一执行作用域ID
+     */
     private String scopeId;
-    /** 绑定业务ID */
+    /**
+     * 绑定业务ID
+     */
     private String bindingId;
-    /** 原生会话标识 */
+    /**
+     * 原生会话标识
+     */
     private String sessionId;
-    /** MASTER/WORKER */
+    /**
+     * MASTER/WORKER
+     */
     private String role;
 }

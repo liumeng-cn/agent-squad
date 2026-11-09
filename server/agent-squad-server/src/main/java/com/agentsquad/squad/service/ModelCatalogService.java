@@ -78,7 +78,9 @@ public class ModelCatalogService {
         return profile;
     }
 
-    /** 默认模型切换后，旧回复仅能匹配配置指纹完全相同的显式配置，不静默换模。 */
+    /**
+     * 默认模型切换后，旧回复仅能匹配配置指纹完全相同的显式配置，不静默换模。
+     */
     public AcceptedModelChoiceBO canonicalize(AcceptedModelChoiceBO choice) {
         if (!"default".equals(choice.modelId())
                 || version(registry.requirePricedModel("default")).equals(choice.configurationVersion())) {
@@ -92,7 +94,9 @@ public class ModelCatalogService {
                 .findFirst().orElse(choice);
     }
 
-    /** 将目录声明的思考模式翻译成供应商参数；聊天、协调与 Worker 共用，避免模型与参数协议错配。 */
+    /**
+     * 将目录声明的思考模式翻译成供应商参数；聊天、协调与 Worker 共用，避免模型与参数协议错配。
+     */
     public GenerateOptions.Builder applyReasoning(
             GenerateOptions.Builder options, WorkerModelProfile profile, ReasoningMode mode) {
         if (!supported(profile.getReasoningAdapter(), mode)) {

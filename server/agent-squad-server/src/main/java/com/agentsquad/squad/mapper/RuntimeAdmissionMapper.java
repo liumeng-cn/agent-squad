@@ -8,7 +8,7 @@ import java.util.List;
 
 /**
  * 持久原生运行占位的接口。
- *
+ * <p>
  * 全局及用户容量计数由同一事务锁定并更新；每个 Binding 保留唯一占位记录，
  * 运行结束后可复用记录，但必须保留原命令归属用于审计与恢复。
  */
@@ -53,7 +53,7 @@ public interface RuntimeAdmissionMapper {
                          @Param("bindingId") String bindingId);
 
     String findLastProjectedEndedTurn(@Param("userId") String userId,
-                                     @Param("bindingId") String bindingId);
+                                      @Param("bindingId") String bindingId);
 
     List<String> findCounterMismatches(@Param("limit") int limit);
 

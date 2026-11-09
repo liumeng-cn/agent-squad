@@ -17,22 +17,40 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DeliveryBO {
-    /** 命令业务ID */
+    /**
+     * 命令业务ID
+     */
     private String commandId;
-    /** 资源归属用户ID */
+    /**
+     * 资源归属用户ID
+     */
     private String userId;
-    /** 所属目标ID；删除类命令可为空 */
+    /**
+     * 所属目标ID；删除类命令可为空
+     */
     private String taskId;
-    /** 原生会话绑定ID；删除类命令可为空 */
+    /**
+     * 原生会话绑定ID；删除类命令可为空
+     */
     private String bindingId;
-    /** 命令动作 */
+    /**
+     * 命令动作
+     */
     private String action;
-    /** 规范化命令输入 */
+    /**
+     * 规范化命令输入
+     */
     private String payloadJson;
-    /** 消费失败重试次数 */
+    /**
+     * 消费失败重试次数
+     */
     private int attempts;
-    /** 固定能力版本标识 */
+    /**
+     * 固定能力版本标识
+     */
     private String agentId;
-    /** 原生会话标识 */
+    /**
+     * 原生会话标识
+     */
     private String sessionId;
 }

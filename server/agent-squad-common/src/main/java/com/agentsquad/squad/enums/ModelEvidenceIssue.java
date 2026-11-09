@@ -24,11 +24,17 @@ public enum ModelEvidenceIssue {
     INVALID_USAGE(13, "INVALID_USAGE", "用量非法"),
     CONFLICTING_USAGE(14, "CONFLICTING_USAGE", "用量冲突");
 
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     ModelEvidenceIssue(int code, String name, String desc) {

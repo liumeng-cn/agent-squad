@@ -91,6 +91,7 @@ public class ExecutionActivityVO {
         this.endedAt = endedAt;
         this.version = version;
     }
+
     public static ExecutionActivityVO from(ExecutionActivityPO row) {
         return new ExecutionActivityVO(row.getActivityId(), row.getSourceMessageId(), row.getExecutionId(), row.getTaskId(),
                 row.getJobId(), row.getPlanVersion(), row.getType(), row.getGroup(), row.getStatus(), row.getWaitReason(), row.getSummary(),

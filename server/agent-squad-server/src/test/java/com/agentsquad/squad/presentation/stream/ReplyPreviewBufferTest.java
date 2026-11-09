@@ -1,9 +1,9 @@
 package com.agentsquad.squad.presentation.stream;
 
-import com.agentsquad.squad.model.bo.ReplyPreviewTargetBO;
-import com.agentsquad.squad.service.ReplyPreviewBuffer;
 import com.agentsquad.squad.enums.ReplyPreviewPhase;
 import com.agentsquad.squad.event.ReplyPreviewSignal;
+import com.agentsquad.squad.model.bo.ReplyPreviewTargetBO;
+import com.agentsquad.squad.service.ReplyPreviewBuffer;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

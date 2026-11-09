@@ -68,7 +68,7 @@ public class SandboxRunTransactionService {
 
     @Transactional
     public SandboxExecutionResultBO finish(SandboxExecutionContextBO context, String executionId,
-                                         SandboxExecuteRequestBO request, SandboxDriverResultBO result) {
+                                           SandboxExecuteRequestBO request, SandboxDriverResultBO result) {
         access.requireCurrent(context);
         List<ArtifactStageViewBO> stages = new ArrayList<>();
         if (result.exitCode() == 0) {

@@ -15,69 +15,69 @@
 
     <select id="findDueTargets" resultMap="findDueTargetsResult">
         SELECT b.user_id,
-            b.task_id,
-            b.binding_id,
-            b.agent_id,
-            b.framework_session_id,
-            b.native_event_cursor
+        b.task_id,
+        b.binding_id,
+        b.agent_id,
+        b.framework_session_id,
+        b.native_event_cursor
         FROM sq_runtime_binding b
         LEFT JOIN sq_goal_task t ON t.user_id = b.user_id AND t.task_id = b.task_id
         LEFT JOIN sq_response_execution r ON r.user_id = b.user_id AND r.binding_id = b.binding_id
         WHERE b.next_projection_at &lt;= #{now}
-          AND ((t.task_id IS NOT NULL AND t.status NOT IN ('SUCCEEDED',
-            'PARTIAL',
-            'FAILED',
-            'CANCELLED',
-            'RECOVERY_BLOCKED'))
-            OR (r.execution_id IS NOT NULL AND r.status NOT IN ('SUCCEEDED',
-            'PARTIAL',
-            'FAILED',
-            'CANCELLED')))
-          AND EXISTS (SELECT 1 FROM sq_command c
-                      WHERE c.user_id = b.user_id AND c.binding_id = b.binding_id
-                        AND c.status IN ('DELIVERED',
-            'APPLIED'))
-          AND (b.role = 'MASTER' OR EXISTS (
-              SELECT 1 FROM sq_worker_job j
-              WHERE j.user_id = b.user_id AND j.binding_id = b.binding_id
-                AND j.status IN ('READY',
-            'RUNNING',
-            'WAITING_INPUT',
-            'WAITING_APPROVAL',
-            'RECONCILING',
-            'CANCELLING')))
+        AND ((t.task_id IS NOT NULL AND t.status NOT IN ('SUCCEEDED',
+        'PARTIAL',
+        'FAILED',
+        'CANCELLED',
+        'RECOVERY_BLOCKED'))
+        OR (r.execution_id IS NOT NULL AND r.status NOT IN ('SUCCEEDED',
+        'PARTIAL',
+        'FAILED',
+        'CANCELLED')))
+        AND EXISTS (SELECT 1 FROM sq_command c
+        WHERE c.user_id = b.user_id AND c.binding_id = b.binding_id
+        AND c.status IN ('DELIVERED',
+        'APPLIED'))
+        AND (b.role = 'MASTER' OR EXISTS (
+        SELECT 1 FROM sq_worker_job j
+        WHERE j.user_id = b.user_id AND j.binding_id = b.binding_id
+        AND j.status IN ('READY',
+        'RUNNING',
+        'WAITING_INPUT',
+        'WAITING_APPROVAL',
+        'RECONCILING',
+        'CANCELLING')))
         ORDER BY b.next_projection_at,
-            b.id LIMIT 20
+        b.id LIMIT 20
     </select>
 
     <select id="findReconciliationTargets" resultMap="findDueTargetsResult">
         SELECT b.user_id,
-               b.task_id,
-               b.binding_id,
-               b.agent_id,
-               b.framework_session_id,
-               b.native_event_cursor
+        b.task_id,
+        b.binding_id,
+        b.agent_id,
+        b.framework_session_id,
+        b.native_event_cursor
         FROM sq_runtime_binding b
         WHERE b.del_flag = '0'
-          AND b.next_projection_at &lt;= #{now}
-          AND EXISTS (SELECT 1 FROM sq_command c
-                      WHERE c.user_id = b.user_id
-                        AND c.binding_id = b.binding_id
-                        AND c.status IN ('DELIVERED', 'APPLIED'))
+        AND b.next_projection_at &lt;= #{now}
+        AND EXISTS (SELECT 1 FROM sq_command c
+        WHERE c.user_id = b.user_id
+        AND c.binding_id = b.binding_id
+        AND c.status IN ('DELIVERED', 'APPLIED'))
         ORDER BY b.next_projection_at, b.id
         LIMIT 20
     </select>
 
     <select id="findTarget" resultMap="findDueTargetsResult">
         SELECT user_id,
-               task_id,
-               binding_id,
-               agent_id,
-               framework_session_id,
-               native_event_cursor
+        task_id,
+        binding_id,
+        agent_id,
+        framework_session_id,
+        native_event_cursor
         FROM sq_runtime_binding
         WHERE user_id = #{userId}
-          AND binding_id = #{bindingId}
+        AND binding_id = #{bindingId}
     </select>
 
     <select id="lockCursor" resultType="java.lang.Long">
@@ -88,7 +88,7 @@
     <update id="advanceCursor">
         UPDATE sq_runtime_binding SET native_event_cursor = #{next}
         WHERE user_id = #{userId} AND binding_id = #{bindingId}
-          AND native_event_cursor = #{previous}
+        AND native_event_cursor = #{previous}
     </update>
 
     <update id="defer">
@@ -107,7 +107,7 @@
 
     <update id="markRunning">
         UPDATE sq_goal_task SET status = 'RUNNING',
-            version = version + 1
+        version = version + 1
         WHERE user_id = #{userId} AND task_id = #{taskId} AND status = 'QUEUED'
     </update>
 
@@ -115,16 +115,16 @@
         UPDATE sq_runtime_binding
         SET last_ended_turn_id = #{turnId}
         WHERE user_id = #{userId}
-          AND binding_id = #{bindingId}
+        AND binding_id = #{bindingId}
     </update>
 
     <update id="settleControls">
         UPDATE sq_command
         SET status = 'APPLIED'
         WHERE user_id = #{userId}
-          AND binding_id = #{bindingId}
-          AND action IN ('RESUME',
-            'RESPOND')
-          AND status = 'DELIVERED'
+        AND binding_id = #{bindingId}
+        AND action IN ('RESUME',
+        'RESPOND')
+        AND status = 'DELIVERED'
     </update>
 </mapper>

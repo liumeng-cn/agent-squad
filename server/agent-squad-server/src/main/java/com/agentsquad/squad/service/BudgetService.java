@@ -206,7 +206,9 @@ public class BudgetService {
         }
     }
 
-    /** 未派发工具经账本确认取消后按零消耗结算；未知收费和已有结算不撤销。 */
+    /**
+     * 未派发工具经账本确认取消后按零消耗结算；未知收费和已有结算不撤销。
+     */
     @Transactional
     public void releaseUnsentTool(String userId, String scopeId, String usageKey) {
         lockBudget(userId, scopeId, false);

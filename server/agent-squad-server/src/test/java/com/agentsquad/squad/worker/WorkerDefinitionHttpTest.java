@@ -1,11 +1,11 @@
 package com.agentsquad.squad.worker;
 
+import com.agentsquad.squad.AgentSquadApplication;
+import com.agentsquad.squad.config.properties.WorkerProfileRegistry;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.agentsquad.squad.testsupport.ApiResultJson;
 import com.agentsquad.squad.testsupport.TestAssertion;
-import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.exceptions.RuntimeBusinessException;
-import com.agentsquad.squad.config.properties.WorkerProfileRegistry;
-import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;

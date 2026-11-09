@@ -1,12 +1,12 @@
 package com.agentsquad.squad.agent.tool;
 
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.service.ExecutionFailureService;
+import com.agentsquad.squad.exceptions.PendingDirectivesException;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.bo.PlanPublishBO;
 import com.agentsquad.squad.model.bo.PlanReceiptBO;
+import com.agentsquad.squad.service.ExecutionFailureService;
 import com.agentsquad.squad.service.PlanService;
-import com.agentsquad.squad.exceptions.PendingDirectivesException;
 import com.agentsquad.squad.utils.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;
@@ -31,7 +31,9 @@ import java.util.Map;
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class PublishPlanTool implements AgentTool {
 
-    /** 计划发布成功后立即交还调度器，Worker完成后另起协调回合，不让模型在当前回合空转。 */
+    /**
+     * 计划发布成功后立即交还调度器，Worker完成后另起协调回合，不让模型在当前回合空转。
+     */
     @Override
     public boolean isReturnDirect() {
         return true;

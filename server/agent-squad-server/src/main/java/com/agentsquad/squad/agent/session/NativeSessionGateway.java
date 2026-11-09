@@ -21,7 +21,9 @@ public interface NativeSessionGateway {
      */
     boolean stop(DeliveryBO delivery);
 
-    /** 只读检查原生写入者与运行，不构建业务 Worker 或启动调度；未知时保守不收尾。 */
+    /**
+     * 只读检查原生写入者与运行，不构建业务 Worker 或启动调度；未知时保守不收尾。
+     */
     default boolean quiescent(ProjectionTargetBO target) {
         return false;
     }
@@ -39,10 +41,14 @@ public interface NativeSessionGateway {
 
     List<NativeEventViewBO> readEvents(ProjectionTargetBO target, long after, int limit);
 
-    /** 内部收件读取完整已提交信封，只在内存校验，不写原始载荷到平台表。 */
+    /**
+     * 内部收件读取完整已提交信封，只在内存校验，不写原始载荷到平台表。
+     */
     List<SessionEvent> readCommittedEvents(ProjectionTargetBO target, long after, int limit);
 
-    /** 后台恢复明确启动已获授权绑定的待执行调度；查询入口不得隐式调用。 */
+    /**
+     * 后台恢复明确启动已获授权绑定的待执行调度；查询入口不得隐式调用。
+     */
     void startPending(ProjectionTargetBO target);
 
     /**

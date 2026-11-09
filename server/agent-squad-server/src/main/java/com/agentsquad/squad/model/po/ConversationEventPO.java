@@ -21,14 +21,24 @@ import lombok.ToString;
 @AllArgsConstructor
 @TableName("sq_conversation_event")
 public class ConversationEventPO {
-    /** 事件所属会话版本号 */
+    /**
+     * 事件所属会话版本号
+     */
     private long generation;
-    /** 事件序号 */
+    /**
+     * 事件序号
+     */
     private long sequence;
-    /** 事件类型 */
+    /**
+     * 事件类型
+     */
     private String type;
-    /** 脱敏公开事件载荷 */
+    /**
+     * 脱敏公开事件载荷
+     */
     private String payloadJson;
-    /** 发生时间 */
+    /**
+     * 发生时间
+     */
     private java.time.LocalDateTime occurredAt;
 }

@@ -102,7 +102,9 @@ public class WorkerDependencyService {
         return result;
     }
 
-    /** 调用方持有当前Task/Plan锁；跳过和公开原因一起提交，重复处理不会重复生成事件。 */
+    /**
+     * 调用方持有当前Task/Plan锁；跳过和公开原因一起提交，重复处理不会重复生成事件。
+     */
     private void skip(WorkerJobPO job) {
         if (planMapper.skipBlockedJob(job.getUserId(), job.getTaskId(), job.getPlanVersion(), job.getJobId()) != 1) {
             throw new IllegalStateException("依赖失败收尾时计划或节点状态已变化");
@@ -120,7 +122,7 @@ public class WorkerDependencyService {
     }
 
     private List<WorkerJobPO> completedDependencies(WorkerJobPO job,
-                                                     Map<String, WorkerJobPO> byNodeKey) {
+                                                    Map<String, WorkerJobPO> byNodeKey) {
         JsonNode names = readJson(job.getDependsOnJson());
         if (names == null || !names.isArray() || names.isEmpty()) {
             throw new IllegalStateException("BLOCKED Job 缺少有效依赖");

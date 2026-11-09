@@ -1,10 +1,10 @@
 package com.agentsquad.squad.config;
 
-import org.springframework.context.annotation.Configuration;
-import jakarta.annotation.Resource;
 import com.agentsquad.squad.identity.UserContextInterceptor;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import jakarta.annotation.Resource;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**

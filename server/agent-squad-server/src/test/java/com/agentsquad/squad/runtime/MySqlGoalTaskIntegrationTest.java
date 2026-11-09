@@ -3,16 +3,16 @@ package com.agentsquad.squad.runtime;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.model.vo.ConversationVO;
 import com.agentsquad.squad.model.vo.TaskReceiptVO;
-import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.service.ArtifactService;
+import com.agentsquad.squad.service.GoalTaskService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
-import java.util.UUID;
-import java.util.List;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

@@ -138,7 +138,7 @@ public class GoalTaskService {
      */
     @Transactional
     public TaskReceiptVO submit(String userId, String conversationId, String idempotencyKey, String message,
-                               List<String> artifactIds) {
+                                List<String> artifactIds) {
         if (artifactIds != null && artifactIds.stream().anyMatch(id -> id == null || id.isBlank())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "附件引用不能为空");
         }

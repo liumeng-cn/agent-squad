@@ -60,6 +60,7 @@ public class ConversationViewVO {
         this.activeTaskId = activeTaskId;
         this.lastActivityAt = lastActivityAt;
     }
+
     public static ConversationViewVO from(ConversationHeaderBO header) {
         return new ConversationViewVO(header.getConversationId(), header.getTitle(), header.getTitleSource(), header.getTitleVersion(),
                 header.getGeneration(), header.getStatus(), header.getVersion(), header.getActiveTaskId(),

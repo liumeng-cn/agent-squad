@@ -10,11 +10,17 @@ public enum AccountStatus {
     ACTIVE(1, "ACTIVE", "启用"),
     DISABLED(2, "DISABLED", "停用");
 
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     AccountStatus(int code, String name, String desc) {

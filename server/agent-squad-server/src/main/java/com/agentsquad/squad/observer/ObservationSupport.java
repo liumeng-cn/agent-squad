@@ -30,7 +30,9 @@ import java.util.function.Supplier;
 @Slf4j
 @Component
 public class ObservationSupport {
-    /** 日志和追踪只保留异常类型与有限栈帧，避免上传供应商正文或业务入参。 */
+    /**
+     * 日志和追踪只保留异常类型与有限栈帧，避免上传供应商正文或业务入参。
+     */
     public static Throwable safeDiagnostic(Throwable failure) {
         var diagnostic = new IllegalStateException(failure.getClass().getName());
         var frames = failure.getStackTrace();

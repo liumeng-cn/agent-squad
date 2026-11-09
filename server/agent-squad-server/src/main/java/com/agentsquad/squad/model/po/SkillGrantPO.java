@@ -21,12 +21,20 @@ import lombok.ToString;
 @AllArgsConstructor
 @TableName("sq_skill_grant")
 public class SkillGrantPO {
-    /** 授权用户ID */
+    /**
+     * 授权用户ID
+     */
     private String userId;
-    /** 被授权技能版本ID */
+    /**
+     * 被授权技能版本ID
+     */
     private String skillVersionId;
-    /** 是否允许新执行选择 */
+    /**
+     * 是否允许新执行选择
+     */
     private boolean enabled;
-    /** 授权乐观版本 */
+    /**
+     * 授权乐观版本
+     */
     private long version;
 }

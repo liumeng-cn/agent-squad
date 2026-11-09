@@ -199,7 +199,7 @@ public class WorkerFactory {
     }
 
     private WorkerAgentHandleBO create(String userId, String bindingId,
-                                     String sessionId, String agentId) {
+                                       String sessionId, String agentId) {
         WorkerLaunchBO job = dispatchMapper.findByBinding(userId, bindingId);
         if (job == null || !"ACTIVE".equals(job.getPlanStatus())
                 || job.getCancelRequestedAt() != null) {

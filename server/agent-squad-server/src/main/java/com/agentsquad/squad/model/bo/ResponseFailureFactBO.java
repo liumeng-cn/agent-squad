@@ -19,14 +19,24 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ResponseFailureFactBO {
-    /** 故障分类 */
+    /**
+     * 故障分类
+     */
     private String category;
-    /** 处理责任[SYSTEM,USER,OPERATOR] */
+    /**
+     * 处理责任[SYSTEM,USER,OPERATOR]
+     */
     private String actor;
-    /** 面向用户的安全说明 */
+    /**
+     * 面向用户的安全说明
+     */
     private String safeMessage;
-    /** 来源消息标识 */
+    /**
+     * 来源消息标识
+     */
     private String sourceMessageId;
-    /** 目标业务标识 */
+    /**
+     * 目标业务标识
+     */
     private String taskId;
 }

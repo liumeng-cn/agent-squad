@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import jakarta.annotation.Resource;
 import com.agentsquad.squad.mapper.SchemaInspectionMapper;
 import org.springframework.dao.DataAccessException;
+
 import java.util.List;
 
 /**
@@ -45,7 +46,9 @@ public class SchemaVersionGate implements InitializingBean {
     @Value("${agentsquad.identity.allow-unsigned-local:false}")
     private boolean allowUnsignedLocal;
 
-    /** 先拒绝危险配置，再由MyBatis只读核验受控迁移结果。 */
+    /**
+     * 先拒绝危险配置，再由MyBatis只读核验受控迁移结果。
+     */
     @Override
     public void afterPropertiesSet() {
         if (!"never".equalsIgnoreCase(sqlInitMode) || !strictIdentity
@@ -80,7 +83,9 @@ public class SchemaVersionGate implements InitializingBean {
         }
     }
 
-    /** 旧在途请求不能猜测终稿归属，缺位时阻止升级后启动。 */
+    /**
+     * 旧在途请求不能猜测终稿归属，缺位时阻止升级后启动。
+     */
     private void requireDeliveryBackfill() {
         if (schemaInspection.countPendingWithoutDelivery() > 0) {
             throw new IllegalStateException("存在缺少最终交付权的在途请求，请排空或核对回填后再启动");

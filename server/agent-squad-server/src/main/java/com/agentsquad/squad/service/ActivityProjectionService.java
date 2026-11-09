@@ -128,7 +128,9 @@ public class ActivityProjectionService {
         completed(scope, activities.masterBinding(scope.getUserId(), scope.getScopeId()), fact);
     }
 
-    /** 指定实际触发业务事件的绑定，重试记录归属到对应的执行节点。 */
+    /**
+     * 指定实际触发业务事件的绑定，重试记录归属到对应的执行节点。
+     */
     @Transactional(propagation = Propagation.MANDATORY)
     public void completed(ExecutionScopePO scope, String bindingId, ActivityBusinessFactBO fact) {
         if (bindingId == null) {
@@ -139,11 +141,14 @@ public class ActivityProjectionService {
             return;
         }
         var classification = switch (fact.type()) {
-            case CONTEXT_PREPARE -> new ActivityClassificationBO(fact.type(), ActivityGroup.PREPARATION, "准备对话资料");
+            case CONTEXT_PREPARE ->
+                    new ActivityClassificationBO(fact.type(), ActivityGroup.PREPARATION, "准备对话资料");
             case WORKER_DISPATCH -> new ActivityClassificationBO(fact.type(), ActivityGroup.PLANNING, "任务已接手");
             case ANSWER_PUBLISH -> new ActivityClassificationBO(fact.type(), ActivityGroup.DELIVERY, "交付回答");
-            case AUTO_RETRY_SCHEDULED -> new ActivityClassificationBO(fact.type(), ActivityGroup.EXECUTION, "已安排自动重试");
-            case USER_RETRY_SCHEDULED -> new ActivityClassificationBO(fact.type(), ActivityGroup.EXECUTION, "已受理你的重试请求");
+            case AUTO_RETRY_SCHEDULED ->
+                    new ActivityClassificationBO(fact.type(), ActivityGroup.EXECUTION, "已安排自动重试");
+            case USER_RETRY_SCHEDULED ->
+                    new ActivityClassificationBO(fact.type(), ActivityGroup.EXECUTION, "已受理你的重试请求");
             default -> throw new IllegalArgumentException("不支持的业务活动边界");
         };
         var job = workers.findByBinding(scope.getUserId(), bindingId);

@@ -3,7 +3,9 @@ package com.agentsquad.squad.testsupport;
 import org.junit.jupiter.api.Test;
 import com.agentsquad.squad.config.SchemaVersionGate;
 import org.springframework.test.util.ReflectionTestUtils;
+
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.jdbc.datasource.init.ScriptUtils;

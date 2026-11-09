@@ -8,7 +8,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * Master 完成候选和最终状态裁决的 
+ * Master 完成候选和最终状态裁决的
  */
 @Mapper
 public interface CompletionMapper {
@@ -16,7 +16,7 @@ public interface CompletionMapper {
     int countPendingEffects(@Param("userId") String userId, @Param("taskId") String taskId);
 
     CompletionContextBO lockByMasterSession(@Param("userId") String userId,
-                                             @Param("sessionId") String sessionId);
+                                            @Param("sessionId") String sessionId);
 
     int saveProposal(@Param("userId") String userId, @Param("taskId") String taskId,
                      @Param("bindingId") String bindingId, @Param("turnId") String turnId,

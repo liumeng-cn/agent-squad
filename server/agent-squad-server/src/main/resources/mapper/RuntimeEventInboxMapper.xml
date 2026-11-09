@@ -5,9 +5,9 @@
         SELECT framework_session_id
         FROM sq_runtime_binding
         WHERE user_id = #{source.userId}
-          AND binding_id = #{source.bindingId}
-          AND framework_session_id = #{source.sessionId}
-          AND del_flag = '0'
+        AND binding_id = #{source.bindingId}
+        AND framework_session_id = #{source.sessionId}
+        AND del_flag = '0'
         FOR UPDATE
     </select>
 
@@ -15,30 +15,30 @@
         SELECT framework_session_id
         FROM sq_runtime_binding
         WHERE user_id = #{source.userId}
-          AND binding_id = #{source.bindingId}
-          AND framework_session_id = #{source.sessionId}
-          AND del_flag = '0'
+        AND binding_id = #{source.bindingId}
+        AND framework_session_id = #{source.sessionId}
+        AND del_flag = '0'
     </select>
 
     <select id="findBoundAgent" resultType="java.lang.String">
         SELECT agent_id
         FROM sq_runtime_binding
         WHERE user_id = #{source.userId}
-          AND binding_id = #{source.bindingId}
-          AND framework_session_id = #{source.sessionId}
-          AND del_flag = '0'
+        AND binding_id = #{source.bindingId}
+        AND framework_session_id = #{source.sessionId}
+        AND del_flag = '0'
     </select>
 
     <select id="pendingSources" resultType="com.agentsquad.squad.model.bo.RuntimeEventSourceBO">
         SELECT i.user_id AS userId,
-               i.binding_id AS bindingId,
-               i.session_id AS sessionId,
-               i.mapping_version AS mappingVersion
+        i.binding_id AS bindingId,
+        i.session_id AS sessionId,
+        i.mapping_version AS mappingVersion
         FROM sq_runtime_event_inbox i
         JOIN sq_runtime_binding b ON b.user_id = i.user_id AND b.binding_id = i.binding_id
         WHERE b.del_flag = '0'
-          AND i.native_seq &gt; b.native_event_cursor
-          AND (i.status = 'RECEIVED' OR (i.status = 'RETRY' AND i.next_attempt_at &lt;= #{now}))
+        AND i.native_seq &gt; b.native_event_cursor
+        AND (i.status = 'RECEIVED' OR (i.status = 'RETRY' AND i.next_attempt_at &lt;= #{now}))
         GROUP BY i.user_id, i.binding_id, i.session_id, i.mapping_version
         ORDER BY MIN(i.id)
         LIMIT 100
@@ -48,77 +48,78 @@
         SELECT agent_id
         FROM sq_runtime_binding
         WHERE user_id = #{source.userId}
-          AND binding_id = #{source.bindingId}
-          AND framework_session_id = #{source.sessionId}
-          AND del_flag = '0'
+        AND binding_id = #{source.bindingId}
+        AND framework_session_id = #{source.sessionId}
+        AND del_flag = '0'
         FOR SHARE
     </select>
 
     <insert id="insertIfAbsent">
         INSERT INTO sq_runtime_event_inbox
-            (inbox_id,
-             user_id,
-             binding_id,
-             session_id,
-             native_seq,
-             native_event_id,
-             native_type,
-             run_id,
-             turn_id,
-             occurred_at_millis,
-             native_required,
-             native_schema_version,
-             payload_digest,
-             mapping_version,
-             status,
-             creator_id,
-             last_updater_id)
+        (inbox_id,
+        user_id,
+        binding_id,
+        session_id,
+        native_seq,
+        native_event_id,
+        native_type,
+        run_id,
+        turn_id,
+        occurred_at_millis,
+        native_required,
+        native_schema_version,
+        payload_digest,
+        mapping_version,
+        status,
+        creator_id,
+        last_updater_id)
         VALUES (#{event.inboxId},
-                #{event.userId},
-                #{event.bindingId},
-                #{event.sessionId},
-                #{event.nativeSeq},
-                #{event.nativeEventId},
-                #{event.nativeType},
-                #{event.runId},
-                #{event.turnId},
-                #{event.occurredAtMillis},
-                #{event.required},
-                #{event.nativeSchemaVersion},
-                #{event.payloadDigest},
-                #{event.mappingVersion},
-                #{event.status},
-                #{event.userId},
-                #{event.userId})
+        #{event.userId},
+        #{event.bindingId},
+        #{event.sessionId},
+        #{event.nativeSeq},
+        #{event.nativeEventId},
+        #{event.nativeType},
+        #{event.runId},
+        #{event.turnId},
+        #{event.occurredAtMillis},
+        #{event.required},
+        #{event.nativeSchemaVersion},
+        #{event.payloadDigest},
+        #{event.mappingVersion},
+        #{event.status},
+        #{event.userId},
+        #{event.userId})
         ON DUPLICATE KEY UPDATE id = id
     </insert>
 
     <select id="findCollisions" resultType="com.agentsquad.squad.model.po.RuntimeEventInboxPO">
-        SELECT <include refid="receiptColumns"/>
+        SELECT
+        <include refid="receiptColumns"/>
         FROM sq_runtime_event_inbox
         WHERE user_id = #{event.userId}
-          AND binding_id = #{event.bindingId}
-          AND (native_seq = #{event.nativeSeq} OR native_event_id = #{event.nativeEventId})
+        AND binding_id = #{event.bindingId}
+        AND (native_seq = #{event.nativeSeq} OR native_event_id = #{event.nativeEventId})
         ORDER BY native_seq
         FOR UPDATE
     </select>
 
     <sql id="receiptColumns">
-        inbox_id              AS inboxId,
-        user_id               AS userId,
-        binding_id            AS bindingId,
-        session_id            AS sessionId,
-        native_seq            AS nativeSeq,
-        native_event_id       AS nativeEventId,
-        native_type           AS nativeType,
-        run_id                AS runId,
-        turn_id               AS turnId,
-        occurred_at_millis    AS occurredAtMillis,
-        native_required       AS required,
+        inbox_id AS inboxId,
+        user_id AS userId,
+        binding_id AS bindingId,
+        session_id AS sessionId,
+        native_seq AS nativeSeq,
+        native_event_id AS nativeEventId,
+        native_type AS nativeType,
+        run_id AS runId,
+        turn_id AS turnId,
+        occurred_at_millis AS occurredAtMillis,
+        native_required AS required,
         native_schema_version AS nativeSchemaVersion,
-        payload_digest        AS payloadDigest,
-        mapping_version       AS mappingVersion,
-        status                AS status
+        payload_digest AS payloadDigest,
+        mapping_version AS mappingVersion,
+        status AS status
     </sql>
 
     <sql id="sequencePredicate">
@@ -130,35 +131,41 @@
     </sql>
 
     <select id="findBySequence" resultType="com.agentsquad.squad.model.po.RuntimeEventInboxPO">
-        SELECT <include refid="receiptColumns"/>
+        SELECT
+        <include refid="receiptColumns"/>
         FROM sq_runtime_event_inbox
-        WHERE <include refid="sequencePredicate"/>
+        WHERE
+        <include refid="sequencePredicate"/>
     </select>
 
     <select id="lockBySequence" resultType="com.agentsquad.squad.model.po.RuntimeEventInboxPO">
-        SELECT <include refid="receiptColumns"/>
+        SELECT
+        <include refid="receiptColumns"/>
         FROM sq_runtime_event_inbox
-        WHERE <include refid="sequencePredicate"/>
+        WHERE
+        <include refid="sequencePredicate"/>
         FOR UPDATE
     </select>
 
     <update id="markApplied">
         UPDATE sq_runtime_event_inbox
         SET status = 'APPLIED',
-            error_code = NULL,
-            last_updater_id = #{source.userId}
-        WHERE <include refid="sequencePredicate"/>
-          AND status != 'APPLIED'
+        error_code = NULL,
+        last_updater_id = #{source.userId}
+        WHERE
+        <include refid="sequencePredicate"/>
+        AND status != 'APPLIED'
     </update>
 
     <update id="recordFailure">
         UPDATE sq_runtime_event_inbox
         SET status = #{status},
-            error_code = #{code},
-            attempts = attempts + 1,
-            next_attempt_at = #{nextAttemptAt},
-            last_updater_id = #{source.userId}
-        WHERE <include refid="sequencePredicate"/>
-          AND status != 'APPLIED'
+        error_code = #{code},
+        attempts = attempts + 1,
+        next_attempt_at = #{nextAttemptAt},
+        last_updater_id = #{source.userId}
+        WHERE
+        <include refid="sequencePredicate"/>
+        AND status != 'APPLIED'
     </update>
 </mapper>

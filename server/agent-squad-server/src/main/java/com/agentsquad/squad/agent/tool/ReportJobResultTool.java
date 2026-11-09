@@ -51,7 +51,9 @@ public class ReportJobResultTool implements AgentTool {
         return "report_job_result";
     }
 
-    /** 候选保存成功即结束当前回合，避免模型继续修改并重复提交已经固定的结果。 */
+    /**
+     * 候选保存成功即结束当前回合，避免模型继续修改并重复提交已经固定的结果。
+     */
     @Override
     public boolean isReturnDirect() {
         return true;
@@ -70,7 +72,9 @@ public class ReportJobResultTool implements AgentTool {
                 "required", List.of("result"), "additionalProperties", false);
     }
 
-    /** 注册前绑定已发布版本的输出契约，让模型直接提交对应 JSON 类型，仍由服务端再次校验。 */
+    /**
+     * 注册前绑定已发布版本的输出契约，让模型直接提交对应 JSON 类型，仍由服务端再次校验。
+     */
     public ReportJobResultTool outputSchema(JsonNode schema) {
         outputSchema = objectMapper.convertValue(schema,
                 objectMapper.getTypeFactory().constructMapType(Map.class, String.class, Object.class));

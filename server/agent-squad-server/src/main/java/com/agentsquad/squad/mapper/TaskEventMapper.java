@@ -23,10 +23,10 @@ public interface TaskEventMapper {
                         @Param("occurredAt") LocalDateTime occurredAt);
 
     List<EventPO> listAfter(@Param("userId") String userId, @Param("taskId") String taskId,
-                             @Param("after") long after);
+                            @Param("after") long after);
 
     long maxSeq(@Param("userId") String userId, @Param("taskId") String taskId);
 
     EventPO findLatestAnswerEvent(@Param("userId") String userId, @Param("taskId") String taskId,
-                                   @Param("revision") long revision);
+                                  @Param("revision") long revision);
 }

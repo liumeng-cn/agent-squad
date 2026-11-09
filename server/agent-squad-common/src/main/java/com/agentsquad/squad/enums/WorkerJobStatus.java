@@ -25,11 +25,17 @@ public enum WorkerJobStatus {
     SKIPPED(14, "SKIPPED", "已跳过"),
     SUPERSEDED(15, "SUPERSEDED", "已替换");
 
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     WorkerJobStatus(int code, String name, String desc) {

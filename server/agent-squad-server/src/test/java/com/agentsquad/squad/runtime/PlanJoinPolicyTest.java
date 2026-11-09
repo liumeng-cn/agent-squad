@@ -106,7 +106,7 @@ class PlanJoinPolicyTest {
     }
 
     private PlanJoinFactsBO facts(PlanJoinPolicy strategy, List<PlanJoinJobBO> jobs, boolean effects,
-                                List<PlanAcceptanceVerdict> verdicts, boolean deliverable) {
+                                  List<PlanAcceptanceVerdict> verdicts, boolean deliverable) {
         return new PlanJoinFactsBO(2, strategy, jobs, effects, verdicts, deliverable);
     }
 }

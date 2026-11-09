@@ -30,6 +30,7 @@ public class SkillGrantDTO {
         this.enabled = enabled;
         this.expectedVersion = expectedVersion;
     }
+
     /**
      * 请求校验时拒绝模型或客户端附加的身份、链接及未声明字段
      */

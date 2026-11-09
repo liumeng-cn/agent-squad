@@ -10,7 +10,7 @@ import lombok.ToString;
 
 /**
  * 原生运行容量占位。
- *
+ * <p>
  * 一条 Binding 同时最多持有一个活动占位；命令与原生 Turn 是持久归属，
  * 恢复命令须有后续新原生 Run 身份，不能凭旧 Turn 判定回收。
  */
@@ -22,21 +22,37 @@ import lombok.ToString;
 @AllArgsConstructor
 @TableName("sq_runtime_admission_slot")
 public class RuntimeAdmissionSlotPO {
-    /** 归属用户标识 */
+    /**
+     * 归属用户标识
+     */
     private String userId;
-    /** 固定原生会话绑定标识 */
+    /**
+     * 固定原生会话绑定标识
+     */
     private String bindingId;
-    /** 持有占位的原始命令标识 */
+    /**
+     * 持有占位的原始命令标识
+     */
     private String commandId;
-    /** 原始命令动作 */
+    /**
+     * 原始命令动作
+     */
     private String action;
-    /** 原生执行回合ID */
+    /**
+     * 原生执行回合ID
+     */
     private String turnId;
-    /** 恢复命令的新原生Run标识 */
+    /**
+     * 恢复命令的新原生Run标识
+     */
     private String runId;
-    /** 领取命令时已同步到业务记录的 AgentScope 事件序号 */
+    /**
+     * 领取命令时已同步到业务记录的 AgentScope 事件序号
+     */
     private long claimCursor;
-    /** ACTIVE或RELEASED */
+    /**
+     * ACTIVE或RELEASED
+     */
     private String status;
 
     /**

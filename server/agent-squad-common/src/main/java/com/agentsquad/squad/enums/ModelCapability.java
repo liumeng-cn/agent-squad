@@ -15,11 +15,17 @@ public enum ModelCapability {
     TOOL_USE(4, "TOOL_USE", "工具使用"),
     VISION(5, "VISION", "视觉");
 
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     ModelCapability(int code, String name, String desc) {

@@ -3,6 +3,7 @@ package com.agentsquad.squad.service;
 import com.agentsquad.squad.model.bo.ReplyPreviewBO;
 
 import com.agentsquad.squad.model.bo.ConversationStreamKeyBO;
+
 import java.util.Comparator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -26,7 +27,7 @@ public final class ConversationStreamHubService {
     private final AtomicBoolean dirty = new AtomicBoolean();
 
     public ConversationStreamHubService(ConversationStreamKeyBO key, ConversationQueryService queries,
-                                 UserStatusGuardService users, Executor executor) {
+                                        UserStatusGuardService users, Executor executor) {
         this.key = key;
         this.queries = queries;
         this.users = users;

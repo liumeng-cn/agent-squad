@@ -45,8 +45,8 @@ public class AdminUserController {
 
     @GetMapping
     public Mono<ApiResult<AdminUserPageVO>> list(@RequestParam(required = false) String cursor,
-                                               @RequestParam(required = false) Integer limit,
-                                               ServerHttpRequest request, ServerHttpResponse response) {
+                                                 @RequestParam(required = false) Integer limit,
+                                                 ServerHttpRequest request, ServerHttpResponse response) {
         response.getHeaders().setCacheControl("no-store");
         String token = SessionRequestSupport.readToken(request);
         return BlockingCalls.mono(() -> userAccountService.list(authService.authenticate(token), cursor, limit))
@@ -56,7 +56,7 @@ public class AdminUserController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<ApiResult<AdminUserCreateVO>> create(@RequestBody AdminUserCreateDTO body,
-                                                         ServerHttpRequest request, ServerHttpResponse response) {
+                                                     ServerHttpRequest request, ServerHttpResponse response) {
         response.getHeaders().setCacheControl("no-store");
         String requestId = SessionRequestSupport.requestId(request);
         return BlockingCalls.mono(() -> userAccountService.create(
@@ -67,7 +67,7 @@ public class AdminUserController {
 
     @PatchMapping("/{userId}")
     public Mono<ApiResult<AdminUserVO>> update(@PathVariable String userId, @RequestBody AdminUserUpdateDTO body,
-                                                 ServerHttpRequest request, ServerHttpResponse response) {
+                                               ServerHttpRequest request, ServerHttpResponse response) {
         response.getHeaders().setCacheControl("no-store");
         String requestId = SessionRequestSupport.requestId(request);
         return BlockingCalls.mono(() -> userAccountService.update(
@@ -78,7 +78,7 @@ public class AdminUserController {
 
     @PostMapping("/{userId}/reset-password")
     public Mono<ApiResult<ResetPasswordVO>> resetPassword(@PathVariable String userId,
-                                                              ServerHttpRequest request, ServerHttpResponse response) {
+                                                          ServerHttpRequest request, ServerHttpResponse response) {
         response.getHeaders().setCacheControl("no-store");
         String requestId = SessionRequestSupport.requestId(request);
         return BlockingCalls.mono(() -> userAccountService.resetPassword(

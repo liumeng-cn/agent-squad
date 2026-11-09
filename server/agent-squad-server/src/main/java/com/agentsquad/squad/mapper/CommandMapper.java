@@ -27,10 +27,10 @@ public interface CommandMapper {
     int cancelPendingByTask(@Param("userId") String userId, @Param("taskId") String taskId);
 
     CommandPO findByKey(@Param("userId") String userId, @Param("scopeKey") String scopeKey,
-                         @Param("idempotencyKey") String idempotencyKey);
+                        @Param("idempotencyKey") String idempotencyKey);
 
     CommandPO findByKeyCurrent(@Param("userId") String userId, @Param("scopeKey") String scopeKey,
-                         @Param("idempotencyKey") String idempotencyKey);
+                               @Param("idempotencyKey") String idempotencyKey);
 
     CommandPO findOwned(@Param("userId") String userId, @Param("commandId") String commandId);
 
@@ -44,10 +44,10 @@ public interface CommandMapper {
                               @Param("turnId") String turnId);
 
     int countUnprocessedMasterCommands(@Param("userId") String userId,
-                                        @Param("taskId") String taskId);
+                                       @Param("taskId") String taskId);
 
     String findWorkerSubmitCommandId(@Param("userId") String userId,
-                                      @Param("bindingId") String bindingId);
+                                     @Param("bindingId") String bindingId);
 
     int countWorkerResumes(@Param("userId") String userId, @Param("bindingId") String bindingId);
 

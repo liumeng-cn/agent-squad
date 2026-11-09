@@ -95,7 +95,7 @@ public class MessageAcceptanceWriterService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public MessageSubmissionBO accept(String userId, String conversationId, String scopeKey, String key,
-                                       MessageCreateDTO request, String payloadHash) {
+                                      MessageCreateDTO request, String payloadHash) {
         ConversationPO conversation = conversationId == null ? null : lockConversation(userId, conversationId);
         MessageSubmissionBO prior = messages.findSubmission(userId, scopeKey, key);
         if (prior != null) {

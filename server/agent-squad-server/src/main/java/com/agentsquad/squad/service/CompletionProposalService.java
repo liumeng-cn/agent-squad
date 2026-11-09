@@ -72,12 +72,14 @@ public class CompletionProposalService {
      */
     @Transactional
     public CompletionProposalReceiptBO propose(String userId, String sessionId, String turnId,
-                                             String toolCallId, String outcome, String finalAnswer) {
+                                               String toolCallId, String outcome, String finalAnswer) {
         return submit(new CompletionSubmissionBO(userId, sessionId, turnId,
                 toolCallId, outcome, finalAnswer, List.of()));
     }
 
-    /** 保存当前计划逐项检查结果；没有证据的成功声明被拒绝，发布前还需再次核对。 */
+    /**
+     * 保存当前计划逐项检查结果；没有证据的成功声明被拒绝，发布前还需再次核对。
+     */
     @Transactional
     public CompletionProposalReceiptBO submit(CompletionSubmissionBO submission) {
         String userId = submission.userId();

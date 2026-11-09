@@ -19,14 +19,24 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ResponseHistoryBO {
-    /** 消息业务ID */
+    /**
+     * 消息业务ID
+     */
     private String messageId;
-    /** 回复序号 */
+    /**
+     * 回复序号
+     */
     private long sequence;
-    /** 消息角色[USER,ASSISTANT] */
+    /**
+     * 消息角色[USER,ASSISTANT]
+     */
     private String role;
-    /** 回复正文 */
+    /**
+     * 回复正文
+     */
     private String text;
-    /** 正文替换版本 */
+    /**
+     * 正文替换版本
+     */
     private long revision;
 }

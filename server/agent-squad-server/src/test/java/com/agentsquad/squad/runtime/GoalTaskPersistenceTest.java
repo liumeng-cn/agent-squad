@@ -1,10 +1,10 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.vo.ConversationVO;
 import com.agentsquad.squad.model.vo.TaskReceiptVO;
 import com.agentsquad.squad.service.GoalTaskService;
-import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;

@@ -2,8 +2,8 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.model.dto.MessageCreateDTO;
-import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.ConversationEventStreamerService;
+import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.RedisConversationNotificationsService;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.fasterxml.jackson.databind.ObjectMapper;

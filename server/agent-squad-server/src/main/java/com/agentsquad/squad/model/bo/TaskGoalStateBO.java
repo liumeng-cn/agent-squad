@@ -19,8 +19,12 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TaskGoalStateBO {
-    /** 已应用目标语义修订号 */
+    /**
+     * 已应用目标语义修订号
+     */
     private long goalRevision;
-    /** 规范化用户输入 */
+    /**
+     * 规范化用户输入
+     */
     private String inputJson;
 }

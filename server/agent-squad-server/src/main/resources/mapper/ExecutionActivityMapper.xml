@@ -53,51 +53,51 @@
     </sql>
     <insert id="insert">
         INSERT INTO sq_execution_activity (
-            activity_id,
-            user_id,
-            scope_id,
-            conversation_id,
-            source_message_id,
-            execution_id,
-            task_id,
-            job_id,
-            binding_id,
-            run_id,
-            turn_id,
-            source_key,
-            plan_version,
-            activity_type,
-            activity_group,
-            status,
-            wait_reason,
-            safe_summary,
-            started_at,
-            ended_at,
-            version,
-            native_sequence
+        activity_id,
+        user_id,
+        scope_id,
+        conversation_id,
+        source_message_id,
+        execution_id,
+        task_id,
+        job_id,
+        binding_id,
+        run_id,
+        turn_id,
+        source_key,
+        plan_version,
+        activity_type,
+        activity_group,
+        status,
+        wait_reason,
+        safe_summary,
+        started_at,
+        ended_at,
+        version,
+        native_sequence
         ) VALUES (
-            #{activityId},
-            #{userId},
-            #{scopeId},
-            #{conversationId},
-            #{sourceMessageId},
-            #{executionId},
-            #{taskId},
-            #{jobId},
-            #{bindingId},
-            #{runId},
-            #{turnId},
-            #{sourceKey},
-            #{planVersion},
-            #{type},
-            #{group},
-            #{status},
-            #{waitReason},
-            #{summary},
-            #{startedAt},
-            #{endedAt},
-            #{version},
-            #{nativeSequence}
+        #{activityId},
+        #{userId},
+        #{scopeId},
+        #{conversationId},
+        #{sourceMessageId},
+        #{executionId},
+        #{taskId},
+        #{jobId},
+        #{bindingId},
+        #{runId},
+        #{turnId},
+        #{sourceKey},
+        #{planVersion},
+        #{type},
+        #{group},
+        #{status},
+        #{waitReason},
+        #{summary},
+        #{startedAt},
+        #{endedAt},
+        #{version},
+        #{nativeSequence}
         )
     </insert>
     <select id="masterBinding" resultType="java.lang.String">
@@ -113,36 +113,39 @@
         WHERE s.user_id = #{userId} AND s.scope_id = #{scopeId} AND s.del_flag = '0'
     </select>
     <select id="find" resultMap="activity">
-        SELECT <include refid="columns"/>
+        SELECT
+        <include refid="columns"/>
         FROM sq_execution_activity
         WHERE user_id = #{userId} AND binding_id = #{bindingId} AND source_key = #{sourceKey} AND del_flag = '0'
     </select>
     <update id="update">
         UPDATE sq_execution_activity
         SET status = #{status},
-            wait_reason = #{waitReason},
-            started_at = #{startedAt},
-            ended_at = #{endedAt},
-            version = #{version},
-            native_sequence = #{nativeSequence}
+        wait_reason = #{waitReason},
+        started_at = #{startedAt},
+        ended_at = #{endedAt},
+        version = #{version},
+        native_sequence = #{nativeSequence}
         WHERE user_id = #{userId} AND activity_id = #{activityId}
-          AND native_sequence &lt; #{nativeSequence} AND version = #{version} - 1
+        AND native_sequence &lt; #{nativeSequence} AND version = #{version} - 1
     </update>
     <select id="activeRun" resultMap="activity">
-        SELECT <include refid="columns"/>
+        SELECT
+        <include refid="columns"/>
         FROM sq_execution_activity
         WHERE user_id = #{userId} AND binding_id = #{bindingId} AND run_id = #{runId}
-          AND status IN ('QUEUED', 'RUNNING', 'WAITING') AND del_flag = '0'
+        AND status IN ('QUEUED', 'RUNNING', 'WAITING') AND del_flag = '0'
     </select>
     <select id="recent" resultMap="activity">
-        SELECT <include refid="columns"/>
+        SELECT
+        <include refid="columns"/>
         FROM sq_execution_activity
         WHERE user_id = #{userId} AND conversation_id = #{conversationId} AND del_flag = '0'
-          AND scope_id IN (
-              SELECT scope_id FROM sq_execution_scope
-              WHERE user_id = #{userId} AND conversation_id = #{conversationId}
-                AND conversation_generation = #{generation} AND del_flag = '0'
-          )
+        AND scope_id IN (
+        SELECT scope_id FROM sq_execution_scope
+        WHERE user_id = #{userId} AND conversation_id = #{conversationId}
+        AND conversation_generation = #{generation} AND del_flag = '0'
+        )
         ORDER BY CASE WHEN status IN ('QUEUED', 'RUNNING', 'WAITING') THEN 0 ELSE 1 END, id DESC
         LIMIT #{limit}
     </select>
@@ -152,24 +155,27 @@
         AND source_message_id = #{query.sourceMessageId}
         AND del_flag = '0'
         AND scope_id IN (
-            SELECT scope_id
-            FROM sq_execution_scope
-            WHERE user_id = #{userId}
-              AND conversation_id = #{conversationId}
-              AND conversation_generation = #{generation}
-              AND del_flag = '0'
+        SELECT scope_id
+        FROM sq_execution_scope
+        WHERE user_id = #{userId}
+        AND conversation_id = #{conversationId}
+        AND conversation_generation = #{generation}
+        AND del_flag = '0'
         )
     </sql>
     <select id="history" resultMap="activity">
-        SELECT <include refid="columns"/>
+        SELECT
+        <include refid="columns"/>
         FROM sq_execution_activity
-        WHERE <include refid="historyScope"/>
+        WHERE
+        <include refid="historyScope"/>
         <if test="query.beforeActivityId != null">
             AND id &lt; (
-                SELECT id
-                FROM sq_execution_activity
-                WHERE activity_id = #{query.beforeActivityId}
-                  AND <include refid="historyScope"/>
+            SELECT id
+            FROM sq_execution_activity
+            WHERE activity_id = #{query.beforeActivityId}
+            AND
+            <include refid="historyScope"/>
             )
         </if>
         ORDER BY id DESC

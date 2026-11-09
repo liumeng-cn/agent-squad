@@ -8,5 +8,5 @@ import java.util.List;
  * 用户和会话来自受控运行上下文；逐项意见仍需服务端验证，不能直接决定目标成功。
  */
 public record CompletionSubmissionBO(String userId, String sessionId, String turnId, String toolCallId,
-                                   String outcome, String finalAnswer, List<AcceptanceReviewBO> reviews) {
+                                     String outcome, String finalAnswer, List<AcceptanceReviewBO> reviews) {
 }

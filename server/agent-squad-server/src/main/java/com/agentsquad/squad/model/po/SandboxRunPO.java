@@ -21,18 +21,32 @@ import lombok.ToString;
 @AllArgsConstructor
 @TableName("sq_sandbox_execution")
 public class SandboxRunPO {
-    /** 沙箱执行业务ID */
+    /**
+     * 沙箱执行业务ID
+     */
     private String executionId;
-    /** 归属用户ID */
+    /**
+     * 归属用户ID
+     */
     private String userId;
-    /** 执行作用域ID */
+    /**
+     * 执行作用域ID
+     */
     private String scopeId;
-    /** 固定原生绑定ID */
+    /**
+     * 固定原生绑定ID
+     */
     private String bindingId;
-    /** 固定请求SHA256摘要 */
+    /**
+     * 固定请求SHA256摘要
+     */
     private String requestHash;
-    /** 执行状态[IN_FLIGHT,SUCCEEDED,FAILED,UNKNOWN] */
+    /**
+     * 执行状态[IN_FLIGHT,SUCCEEDED,FAILED,UNKNOWN]
+     */
     private String status;
-    /** 已知执行结果与暂存产物引用 */
+    /**
+     * 已知执行结果与暂存产物引用
+     */
     private String resultJson;
 }

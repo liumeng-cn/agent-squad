@@ -19,13 +19,21 @@ public enum NativeTaskState {
     REJECTED("rejected", 8, "REJECTED", "已拒绝"),
     UNKNOWN("unknown", 9, "UNKNOWN", "未知");
 
-    /** 原生状态值 */
+    /**
+     * 原生状态值
+     */
     private final String nativeValue;
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     NativeTaskState(String nativeValue, int code, String name, String desc) {

@@ -13,11 +13,17 @@ public enum ConversationStatus {
     DELETING(2, "DELETING", "删除中"),
     DELETED(3, "DELETED", "已删除");
 
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     ConversationStatus(int code, String name, String desc) {

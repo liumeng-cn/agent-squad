@@ -13,11 +13,17 @@ public enum AcceptanceVerificationType {
     MODEL_REVIEW(2, "MODEL_REVIEW", "模型评价"),
     USER_REVIEW(3, "USER_REVIEW", "用户确认");
 
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     AcceptanceVerificationType(int code, String name, String desc) {

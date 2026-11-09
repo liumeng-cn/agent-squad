@@ -29,7 +29,9 @@ public final class RuntimeJournalStore implements SessionLogStore {
         delegate = new WorkspaceSessionLogStore(filesystem);
     }
 
-    /** 离线导入只通过SDK原子存储搬运日志对象，不自行访问SDK数据库表。 */
+    /**
+     * 离线导入只通过SDK原子存储搬运日志对象，不自行访问SDK数据库表。
+     */
     public AtomicSessionStorage migrationStorage(RuntimeContext context) {
         requireUser(context);
         return filesystem.sessionStorage(context);

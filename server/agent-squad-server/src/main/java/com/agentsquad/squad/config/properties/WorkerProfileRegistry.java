@@ -12,7 +12,7 @@ import java.util.Map;
 
 /**
  * Worker 模型与运行 Profile 注册表。
- *
+ * <p>
  * 已发布 Definition 只保存引用键；发布与启动均由该服务端配置解析，未知键不得回退默认值。
  */
 @Component

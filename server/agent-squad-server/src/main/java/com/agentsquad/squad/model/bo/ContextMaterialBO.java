@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ContextMaterialBO(String kind, String sourceId, String sourceVersion, String trust,
-                              String content, String contentHash, Long authorizationRevision) {
+                                String content, String contentHash, Long authorizationRevision) {
     public ContextMaterialBO(String kind, String sourceId, String sourceVersion, String trust, String content) {
         this(kind, sourceId, sourceVersion, trust, content, null, null);
     }

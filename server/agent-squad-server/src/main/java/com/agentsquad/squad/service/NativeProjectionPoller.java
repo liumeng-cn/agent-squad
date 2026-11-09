@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+
 import com.agentsquad.squad.exceptions.RuntimeEventConsumptionException;
 
 /**
@@ -116,7 +117,9 @@ public class NativeProjectionPoller {
                     String commandId = failures.masterCommand(target);
                     if (commandId != null) {
                         NativeSubmissionReceiptBO receipt = nativeSessionGateway.inspectTask(target, commandId);
-                        if (commandId.equals(receipt.commandId())) { failures.recoverInterrupted(target, receipt); }
+                        if (commandId.equals(receipt.commandId())) {
+                            failures.recoverInterrupted(target, receipt);
+                        }
                     }
                 }
                 projectionMapper.defer(target.getUserId(), target.getBindingId(),

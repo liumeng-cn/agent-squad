@@ -77,7 +77,7 @@ public class AuthController {
      */
     @PostMapping("/logout")
     public Mono<ApiResult<Void>> logout(ServerHttpRequest request, ServerHttpResponse response,
-                       @RequestHeader("X-CSRF-Token") String csrfToken) {
+                                        @RequestHeader("X-CSRF-Token") String csrfToken) {
         response.getHeaders().set(HttpHeaders.CACHE_CONTROL, "no-store");
         return Mono.fromRunnable(() -> {
             authService.authenticateWrite(readToken(request), csrfToken);
@@ -90,7 +90,7 @@ public class AuthController {
 
     @PostMapping("/password")
     public Mono<ApiResult<Void>> changePassword(ServerHttpRequest request, ServerHttpResponse response,
-            @RequestHeader("X-CSRF-Token") String csrf, @RequestBody PasswordChangeDTO change) {
+                                                @RequestHeader("X-CSRF-Token") String csrf, @RequestBody PasswordChangeDTO change) {
         response.getHeaders().set(HttpHeaders.CACHE_CONTROL, "no-store");
         String requestId = SessionRequestSupport.requestId(request);
         return BlockingCalls.run(() -> {

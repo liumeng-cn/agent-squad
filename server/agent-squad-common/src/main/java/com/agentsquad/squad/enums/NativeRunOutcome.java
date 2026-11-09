@@ -1,6 +1,7 @@
 package com.agentsquad.squad.enums;
 
 import java.util.Arrays;
+
 import lombok.Getter;
 
 /**
@@ -16,11 +17,17 @@ public enum NativeRunOutcome {
     INTERRUPTED("interrupted", "INTERRUPTED", "已中断"),
     UNKNOWN("unknown", "UNKNOWN", "未知");
 
-    /** 原生结果编码 */
+    /**
+     * 原生结果编码
+     */
     private final String code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     NativeRunOutcome(String code, String name, String desc) {

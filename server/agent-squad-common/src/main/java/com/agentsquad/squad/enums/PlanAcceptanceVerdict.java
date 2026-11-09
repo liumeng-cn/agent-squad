@@ -13,11 +13,17 @@ public enum PlanAcceptanceVerdict {
     FAIL(2, "FAIL", "不通过"),
     UNKNOWN(3, "UNKNOWN", "未知");
 
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     PlanAcceptanceVerdict(int code, String name, String desc) {

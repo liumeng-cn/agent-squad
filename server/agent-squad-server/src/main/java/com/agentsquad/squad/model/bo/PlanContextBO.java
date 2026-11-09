@@ -19,20 +19,36 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PlanContextBO {
-    /** 资源归属用户ID */
+    /**
+     * 资源归属用户ID
+     */
     private String userId;
-    /** 可选所属目标ID；普通回复为空 */
+    /**
+     * 可选所属目标ID；普通回复为空
+     */
     private String taskId;
-    /** 所属绑定 */
+    /**
+     * 所属绑定
+     */
     private String bindingId;
-    /** 绑定计划版本 */
+    /**
+     * 绑定计划版本
+     */
     private long planVersion;
-    /** 目标任务状态 */
+    /**
+     * 目标任务状态
+     */
     private String taskStatus;
-    /** 是否已请求取消 */
+    /**
+     * 是否已请求取消
+     */
     private boolean cancellationRequested;
-    /** 会话代际 */
+    /**
+     * 会话代际
+     */
     private long conversationGeneration;
-    /** 会话状态 */
+    /**
+     * 会话状态
+     */
     private String conversationStatus;
 }

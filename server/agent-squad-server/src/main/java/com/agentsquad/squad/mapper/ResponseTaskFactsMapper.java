@@ -18,11 +18,11 @@ public interface ResponseTaskFactsMapper {
     Long scopeGeneration(@Param("userId") String userId, @Param("taskId") String taskId);
 
     List<ResponseJobFactBO> jobs(@Param("userId") String userId, @Param("taskId") String taskId,
-                               @Param("planVersion") long planVersion);
+                                 @Param("planVersion") long planVersion);
 
     List<ResponseTaskStatusFactBO> recentTasks(@Param("userId") String userId,
-                                             @Param("conversationId") String conversationId, @Param("generation") long generation, @Param("through") long through);
+                                               @Param("conversationId") String conversationId, @Param("generation") long generation, @Param("through") long through);
 
     List<ResponseFailureFactBO> recentFailures(@Param("userId") String userId,
-                                             @Param("conversationId") String conversationId, @Param("generation") long generation, @Param("through") long through);
+                                               @Param("conversationId") String conversationId, @Param("generation") long generation, @Param("through") long through);
 }

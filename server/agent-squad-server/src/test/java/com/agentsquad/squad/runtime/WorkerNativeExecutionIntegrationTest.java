@@ -1,17 +1,18 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.model.vo.ConversationVO;
-import com.agentsquad.squad.model.vo.TaskReceiptVO;
-import com.agentsquad.squad.service.GoalTaskService;
+import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.model.bo.PlanNodeBO;
 import com.agentsquad.squad.model.bo.PlanPublishBO;
 import com.agentsquad.squad.model.bo.PlanReceiptBO;
+import com.agentsquad.squad.model.dto.WorkerDefinitionCreateDTO;
+import com.agentsquad.squad.model.vo.ConversationVO;
+import com.agentsquad.squad.model.vo.TaskReceiptVO;
 import com.agentsquad.squad.service.ContextSnapshotService;
+import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.service.PlanService;
 import com.agentsquad.squad.service.WorkerDefinitionService;
-import com.agentsquad.squad.model.dto.WorkerDefinitionCreateDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
@@ -24,14 +25,13 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
-import com.agentsquad.squad.enums.AccountRole;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * 新 Worker Definition 从计划根节点到原生回合及 Job 终态的正向实验。
- *
+ * <p>
  * 模型端由本地 OpenAI 兼容桩提供，验证真实 SDK 会话和平台投递、投影；不代表外部模型可用性。
  */
 class WorkerNativeExecutionIntegrationTest {

@@ -43,94 +43,94 @@
 
     <insert id="insertConversation">
         INSERT INTO sq_conversation (conversation_id,
-            user_id,
-            title,
-            status)
+        user_id,
+        title,
+        status)
         VALUES (#{conversationId},
-            #{userId},
-            #{title},
-            'ACTIVE')
+        #{userId},
+        #{title},
+        'ACTIVE')
     </insert>
 
     <select id="lockOwned" resultMap="lockOwnedResult">
         SELECT id,
-            conversation_id,
-            user_id,
-            title,
-            status,
-            active_task_id,
-            generation,
-            version
+        conversation_id,
+        user_id,
+        title,
+        status,
+        active_task_id,
+        generation,
+        version
         FROM sq_conversation WHERE user_id = #{userId} AND conversation_id = #{conversationId}
         FOR UPDATE
     </select>
 
     <select id="listByOwner" resultMap="listByOwnerResult">
         SELECT id,
-            conversation_id,
-            user_id,
-            title,
-            status,
-            active_task_id,
-            generation,
-            version
+        conversation_id,
+        user_id,
+        title,
+        status,
+        active_task_id,
+        generation,
+        version
         FROM sq_conversation WHERE user_id = #{userId}
-          AND (#{cursorId} IS NULL OR id &lt; #{cursorId})
-          AND status = 'ACTIVE'
+        AND (#{cursorId} IS NULL OR id &lt; #{cursorId})
+        AND status = 'ACTIVE'
         ORDER BY id DESC LIMIT #{limit}
     </select>
 
     <update id="activateTask">
         UPDATE sq_conversation SET active_task_id = #{taskId},
-            version = version + 1
+        version = version + 1
         WHERE user_id = #{userId} AND conversation_id = #{conversationId}
-          AND status = 'ACTIVE' AND active_task_id IS NULL
+        AND status = 'ACTIVE' AND active_task_id IS NULL
     </update>
 
     <update id="clearActiveTask">
         UPDATE sq_conversation SET active_task_id = NULL,
-            version = version + 1
+        version = version + 1
         WHERE user_id = #{userId} AND conversation_id = #{conversationId}
-          AND active_task_id = #{taskId}
+        AND active_task_id = #{taskId}
     </update>
 
     <update id="markDeleting">
         UPDATE sq_conversation
         SET status = 'DELETING',
-            generation = generation + 1,
-            version = version + 1
+        generation = generation + 1,
+        version = version + 1
         WHERE user_id = #{userId} AND conversation_id = #{conversationId}
-          AND status = 'ACTIVE' AND version = #{expectedVersion}
+        AND status = 'ACTIVE' AND version = #{expectedVersion}
     </update>
 
     <update id="markDeleted">
         UPDATE sq_conversation SET status = 'DELETED',
-            version = version + 1
+        version = version + 1
         WHERE user_id = #{userId} AND conversation_id = #{conversationId}
-          AND status = 'DELETING'
-          AND NOT EXISTS (SELECT 1 FROM sq_response_execution r WHERE r.user_id=sq_conversation.user_id
-              AND r.conversation_id=sq_conversation.conversation_id AND r.status NOT IN ('SUCCEEDED',
-            'PARTIAL',
-            'FAILED',
-            'CANCELLED'))
+        AND status = 'DELETING'
+        AND NOT EXISTS (SELECT 1 FROM sq_response_execution r WHERE r.user_id=sq_conversation.user_id
+        AND r.conversation_id=sq_conversation.conversation_id AND r.status NOT IN ('SUCCEEDED',
+        'PARTIAL',
+        'FAILED',
+        'CANCELLED'))
     </update>
 
     <select id="findDeletable" resultMap="findDeletableResult">
         SELECT id,
-            conversation_id,
-            user_id,
-            title,
-            status,
-            active_task_id,
-            generation,
-            version
+        conversation_id,
+        user_id,
+        title,
+        status,
+        active_task_id,
+        generation,
+        version
         FROM sq_conversation
         WHERE status = 'DELETING' AND active_task_id IS NULL
-          AND NOT EXISTS (SELECT 1 FROM sq_response_execution r WHERE r.user_id=sq_conversation.user_id
-              AND r.conversation_id=sq_conversation.conversation_id AND r.status NOT IN ('SUCCEEDED',
-            'PARTIAL',
-            'FAILED',
-            'CANCELLED'))
+        AND NOT EXISTS (SELECT 1 FROM sq_response_execution r WHERE r.user_id=sq_conversation.user_id
+        AND r.conversation_id=sq_conversation.conversation_id AND r.status NOT IN ('SUCCEEDED',
+        'PARTIAL',
+        'FAILED',
+        'CANCELLED'))
         ORDER BY id LIMIT #{limit}
     </select>
 </mapper>

@@ -14,11 +14,17 @@ public enum ReasoningAdapter {
     QWEN_THINKING(3, "QWEN_THINKING", "通义思考"),
     OPENAI_EFFORT(4, "OPENAI_EFFORT", "OpenAI 推理强度");
 
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     ReasoningAdapter(int code, String name, String desc) {

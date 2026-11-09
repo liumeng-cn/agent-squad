@@ -6,5 +6,5 @@ package com.agentsquad.squad.model.bo;
  * 模型只表达动作与匹配的用户原话，实际来源由服务端会话绑定推导。
  */
 public record MemoryWriteRequestBO(String logicalKey, String action, String key, String content, Long expectedVersion,
-                                 java.time.OffsetDateTime expiresAt, String sourceQuote) {
+                                   java.time.OffsetDateTime expiresAt, String sourceQuote) {
 }

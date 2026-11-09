@@ -21,9 +21,9 @@ public interface WorkerDefinitionMapper extends BaseMapper<WorkerDefinitionPO> {
             + "definition_json, publish_key, payload_hash, last_status_key, last_status_actor, last_status_hash";
 
     int insertDefinition(@Param("definitionId") String definitionId, @Param("workerKey") String workerKey,
-               @Param("workerVersion") String workerVersion, @Param("definitionJson") String definitionJson,
-               @Param("publishKey") String publishKey, @Param("payloadHash") String payloadHash,
-               @Param("actorId") String actorId, @Param("actorName") String actorName);
+                         @Param("workerVersion") String workerVersion, @Param("definitionJson") String definitionJson,
+                         @Param("publishKey") String publishKey, @Param("payloadHash") String payloadHash,
+                         @Param("actorId") String actorId, @Param("actorName") String actorName);
 
     WorkerDefinitionPO findByPublishKey(@Param("actorId") String actorId, @Param("publishKey") String publishKey);
 
@@ -43,11 +43,11 @@ public interface WorkerDefinitionMapper extends BaseMapper<WorkerDefinitionPO> {
                      @Param("workerVersion") String workerVersion);
 
     List<WorkerDefinitionPO> listEnabledAfter(@Param("afterId") long afterId,
-                                                @Param("limit") int limit);
+                                              @Param("limit") int limit);
 
     WorkerDefinitionPO findEnabled(@Param("workerKey") String workerKey,
-                                    @Param("workerVersion") String workerVersion);
+                                   @Param("workerVersion") String workerVersion);
 
     WorkerDefinitionPO findPublished(@Param("workerKey") String workerKey,
-                                      @Param("workerVersion") String workerVersion);
+                                     @Param("workerVersion") String workerVersion);
 }

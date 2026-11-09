@@ -14,11 +14,17 @@ public enum PlanJoinStage {
     WAITING_EFFECTS(3, "WAITING_EFFECTS", "等待效果核对"),
     READY(4, "READY", "可汇总");
 
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     PlanJoinStage(int code, String name, String desc) {

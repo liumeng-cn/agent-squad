@@ -1,24 +1,14 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
+import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.identity.AuthView;
+import com.agentsquad.squad.model.bo.*;
+import com.agentsquad.squad.model.dto.WorkerDefinitionCreateDTO;
 import com.agentsquad.squad.model.vo.ConversationVO;
 import com.agentsquad.squad.model.vo.TaskReceiptVO;
-import com.agentsquad.squad.service.GoalTaskService;
-import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.model.bo.WorkerLaunchBO;
-import com.agentsquad.squad.model.bo.PlanNodeBO;
-import com.agentsquad.squad.model.bo.PlanPublishBO;
-import com.agentsquad.squad.model.bo.PlanReceiptBO;
-import com.agentsquad.squad.service.ContextSnapshotService;
-import com.agentsquad.squad.service.PlanService;
-import com.agentsquad.squad.service.WorkerDispatchService;
-import com.agentsquad.squad.service.WorkerResultService;
-import com.agentsquad.squad.service.WorkerRecoveryService;
-import com.agentsquad.squad.model.bo.NativeSubmissionReceiptBO;
-import com.agentsquad.squad.model.bo.ProjectionTargetBO;
-import com.agentsquad.squad.service.WorkerDefinitionService;
-import com.agentsquad.squad.model.dto.WorkerDefinitionCreateDTO;
+import com.agentsquad.squad.service.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -30,7 +20,6 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import com.agentsquad.squad.enums.AccountRole;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Worker 节点 guard 与结果候选的持久竞争测试。
- *
+ * <p>
  * 仅验证平台事务边界；真实 AgentScope writer lease 需另做原生运行实验。
  */
 class WorkerGuardIntegrationTest {

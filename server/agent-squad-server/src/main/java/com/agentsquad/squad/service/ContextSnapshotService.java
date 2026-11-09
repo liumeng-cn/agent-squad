@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
 
 /**
  * Worker 局部上下文冻结服务。
- *
+ * <p>
  * 仅从当前用户目标的原始输入生成受控快照，不接受模型自行标注的来源或整段会话；
  * 同一逻辑键重放返回同一快照，后续发布和投递仍须复核归属与对话代际。
  */
@@ -58,7 +58,7 @@ public class ContextSnapshotService {
      */
     @Transactional
     public ContextSnapshotReceiptBO prepare(String userId, String sessionId,
-                                          String targetNodeKey, String logicalKey) {
+                                            String targetNodeKey, String logicalKey) {
         return prepare(userId, sessionId, new ContextPreparationRequestBO(
                 targetNodeKey, logicalKey, List.of(), List.of()));
     }
@@ -68,7 +68,7 @@ public class ContextSnapshotService {
      */
     @Transactional
     public ContextSnapshotReceiptBO prepare(String userId, String sessionId,
-            ContextPreparationRequestBO request) {
+                                            ContextPreparationRequestBO request) {
         String targetNodeKey = request.targetNodeKey();
         String logicalKey = request.logicalKey();
         if (request.skillVersionIds().size() > 64 || request.memoryIds().size() > 20
@@ -109,8 +109,12 @@ public class ContextSnapshotService {
             var priorSkills = new java.util.HashSet<String>();
             var priorMemories = new java.util.HashSet<String>();
             for (var item : priorItems) {
-                if ("SKILL_REFERENCE".equals(item.path("kind").asText())) { priorSkills.add(item.path("sourceId").asText()); }
-                if ("EXPLICIT_MEMORY".equals(item.path("kind").asText())) { priorMemories.add(item.path("sourceId").asText()); }
+                if ("SKILL_REFERENCE".equals(item.path("kind").asText())) {
+                    priorSkills.add(item.path("sourceId").asText());
+                }
+                if ("EXPLICIT_MEMORY".equals(item.path("kind").asText())) {
+                    priorMemories.add(item.path("sourceId").asText());
+                }
             }
             if (!priorSkills.equals(java.util.Set.copyOf(request.skillVersionIds()))
                     || !priorMemories.equals(java.util.Set.copyOf(request.memoryIds()))) {

@@ -40,8 +40,8 @@ public class WorkerResultReuseService {
      * 调用方持有 Task 锁，旧结果不会并发变化。
      */
     public WorkerJobPO reusableNode(String userId, String taskId, PlanNodeBO node,
-                                     List<WorkerJobPO> previousJobs,
-                                     Map<String, WorkerJobPO> reusedDependencies) {
+                                    List<WorkerJobPO> previousJobs,
+                                    Map<String, WorkerJobPO> reusedDependencies) {
         List<String> dependencies = node.dependsOn() == null ? List.of() : node.dependsOn();
         if (!reusedDependencies.keySet().containsAll(dependencies)) {
             return null;

@@ -23,7 +23,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * 业务服务身份接入边界验证。
- *
+ * <p>
  * 覆盖签名优先、严格模式拒绝未签名头、本地兼容开关和本地身份格式校验。
  */
 class UserContextInterceptorTest {

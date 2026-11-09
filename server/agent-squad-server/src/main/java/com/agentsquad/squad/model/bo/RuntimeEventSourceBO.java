@@ -8,6 +8,7 @@ package com.agentsquad.squad.model.bo;
 public record RuntimeEventSourceBO(String userId, String bindingId, String sessionId, int mappingVersion) {
     public static final int CURRENT_MAPPING_VERSION = 1;
     private static final int MAX_IDENTITY_LENGTH = 36;
+
     public RuntimeEventSourceBO {
         requireIdentity(userId);
         requireIdentity(bindingId);

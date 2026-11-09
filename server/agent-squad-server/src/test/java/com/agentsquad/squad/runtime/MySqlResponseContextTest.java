@@ -56,7 +56,7 @@ class MySqlResponseContextTest {
     }
 
     private ResponseContextSnapshotBO freeze(ResponseContextService service, String owner, String binding,
-                                           CountDownLatch ready, CountDownLatch start) throws InterruptedException {
+                                             CountDownLatch ready, CountDownLatch start) throws InterruptedException {
         ready.countDown();
         if (!start.await(10, TimeUnit.SECONDS)) {
             throw new IllegalStateException("上下文并发测试启动超时");

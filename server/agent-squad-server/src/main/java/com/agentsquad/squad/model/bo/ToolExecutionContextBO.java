@@ -18,14 +18,24 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ToolExecutionContextBO {
-    /** 所属目标ID；删除类命令可为空 */
+    /**
+     * 所属目标ID；删除类命令可为空
+     */
     private String taskId;
-    /** 原生会话绑定ID；删除类命令可为空 */
+    /**
+     * 原生会话绑定ID；删除类命令可为空
+     */
     private String bindingId;
-    /** 目标任务状态 */
+    /**
+     * 目标任务状态
+     */
     private String taskStatus;
-    /** 是否已请求取消 */
+    /**
+     * 是否已请求取消
+     */
     private boolean cancellationRequested;
-    /** 统一执行作用域ID */
+    /**
+     * 统一执行作用域ID
+     */
     private String scopeId;
 }

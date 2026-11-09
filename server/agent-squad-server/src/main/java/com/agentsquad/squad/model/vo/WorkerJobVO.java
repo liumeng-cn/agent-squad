@@ -3,6 +3,7 @@ package com.agentsquad.squad.model.vo;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.agentsquad.squad.enums.WorkerJobStatus;
 import com.agentsquad.squad.enums.WorkerSkipReason;
+
 import java.util.List;
 
 /**

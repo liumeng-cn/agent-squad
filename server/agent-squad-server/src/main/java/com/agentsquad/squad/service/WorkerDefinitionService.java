@@ -61,7 +61,7 @@ public class WorkerDefinitionService {
      * 管理员按幂等键发布不可变版本；相同键换内容和同版本重复发布均拒绝。
      */
     public WorkerDefinitionVO publish(AuthView actor, String idempotencyKey,
-                                            WorkerDefinitionCreateDTO request) {
+                                      WorkerDefinitionCreateDTO request) {
         requireAdmin(actor);
         requireIdempotencyKey(idempotencyKey);
         validateDefinition(request);
@@ -142,7 +142,7 @@ public class WorkerDefinitionService {
      */
     @Transactional
     public WorkerDefinitionVO changeStatus(AuthView actor, String definitionId,
-                                                 String idempotencyKey, WorkerStatusUpdateDTO request) {
+                                           String idempotencyKey, WorkerStatusUpdateDTO request) {
         requireAdmin(actor);
         requireIdempotencyKey(idempotencyKey);
         WorkerDefinitionPO current = requireDefinition(definitionId);

@@ -11,7 +11,7 @@ import java.util.TreeMap;
 
 /**
  * 持久 JSON 的规范化摘要工具。
- *
+ * <p>
  * MySQL JSON 列可能重排对象键；摘要在写入前和读取后都先按键排序，再计算内容哈希。
  */
 public final class CanonicalJson {

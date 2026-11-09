@@ -16,11 +16,17 @@ public enum TaskDirectiveWaitReason {
     WAITING_COORDINATOR(5, "WAITING_COORDINATOR", "等待协调者"),
     COORDINATING(6, "COORDINATING", "协调中");
 
-    /** 编码 */
+    /**
+     * 编码
+     */
     private final int code;
-    /** 英文名 */
+    /**
+     * 英文名
+     */
     private final String name;
-    /** 中文描述 */
+    /**
+     * 中文描述
+     */
     private final String desc;
 
     TaskDirectiveWaitReason(int code, String name, String desc) {

@@ -1,6 +1,7 @@
 package com.agentsquad.squad.po;
 
 import com.baomidou.mybatisplus.annotation.TableName;
+
 import java.time.LocalDateTime;
 
 /**

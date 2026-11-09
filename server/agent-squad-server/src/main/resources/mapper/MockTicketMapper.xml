@@ -4,15 +4,15 @@
 
     <insert id="insert">
         INSERT INTO sq_mock_ticket (user_id,
-            external_key,
-            request_hash,
-            title,
-            detail)
+        external_key,
+        request_hash,
+        title,
+        detail)
         VALUES (#{userId},
-            #{externalKey},
-            #{requestHash},
-            #{title},
-            #{detail})
+        #{externalKey},
+        #{requestHash},
+        #{title},
+        #{detail})
     </insert>
 
     <select id="countByKey" resultType="_int">
