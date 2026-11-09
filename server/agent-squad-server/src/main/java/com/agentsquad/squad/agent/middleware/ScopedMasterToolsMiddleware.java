@@ -1,5 +1,10 @@
 package com.agentsquad.squad.agent.middleware;
 
+import com.agentsquad.squad.agent.skill.ScopeSkillCapabilities;
+import com.agentsquad.squad.mapper.GoalCreationMapper;
+import com.agentsquad.squad.mapper.PlanMapper;
+import com.agentsquad.squad.mapper.ResponseRuntimeMapper;
+import com.agentsquad.squad.mapper.TaskMapper;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.service.ExecutionScopeService;
 import com.agentsquad.squad.enums.WorkerJobStatus;
@@ -40,7 +45,7 @@ public class ScopedMasterToolsMiddleware implements MiddlewareBase {
             WorkerJobStatus.RECONCILING, WorkerJobStatus.CANCELLING);
 
     @Resource
-    private com.agentsquad.squad.mapper.ResponseRuntimeMapper replies;
+    private ResponseRuntimeMapper replies;
 
     @Resource
     private ExecutionScopeService scopes;
@@ -49,13 +54,13 @@ public class ScopedMasterToolsMiddleware implements MiddlewareBase {
     private ExecutionScopeMapper scopeMapper;
 
     @Resource
-    private com.agentsquad.squad.mapper.TaskMapper tasks;
+    private TaskMapper tasks;
 
     @Resource
-    private com.agentsquad.squad.mapper.PlanMapper plans;
+    private PlanMapper plans;
 
     @Resource
-    private com.agentsquad.squad.mapper.GoalCreationMapper origins;
+    private GoalCreationMapper origins;
 
     @Override
     public Set<ExtensionPoint> activePoints() {
@@ -141,8 +146,8 @@ public class ScopedMasterToolsMiddleware implements MiddlewareBase {
                     }
                     messages.add(position, Msg.builder().role(MsgRole.SYSTEM).textContent(roleInstruction).build());
                     var tools = input.tools().stream().filter(tool -> !hidden.contains(tool.getName())).toList();
-                    context.put(com.agentsquad.squad.agent.skill.ScopeSkillCapabilities.class,
-                            new com.agentsquad.squad.agent.skill.ScopeSkillCapabilities(
+                    context.put(ScopeSkillCapabilities.class,
+                            new ScopeSkillCapabilities(
                                     tools.stream().map(tool -> tool.getName()).collect(java.util.stream.Collectors.toSet())));
                     return new ModelCallInput(messages, tools, input.options(), input.model());
                 }).subscribeOn(Schedulers.boundedElastic())

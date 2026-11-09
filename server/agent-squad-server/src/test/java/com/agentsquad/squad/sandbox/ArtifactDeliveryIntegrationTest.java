@@ -1,5 +1,6 @@
 package com.agentsquad.squad.sandbox;
 
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.model.bo.SandboxDriverResultBO;
 import com.agentsquad.squad.model.bo.SandboxExecuteRequestBO;
@@ -77,8 +78,8 @@ class ArtifactDeliveryIntegrationTest {
 
     private ConfigurableApplicationContext start(Path directory, String userId) {
         return SpringApplication.run(AgentSquadApplication.class, "--server.port=0",
-                "--spring.datasource.url=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("sandbox")),
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.url=" + MySqlTestDatabase.url(directory.resolve("sandbox")),
+                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
                 "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver", "--agentsquad.delivery.enabled=false",
                 "--agentsquad.auth.user-id=" + userId, "--agentsquad.auth.username=tester",
                 "--agentsquad.auth.password=test-only");

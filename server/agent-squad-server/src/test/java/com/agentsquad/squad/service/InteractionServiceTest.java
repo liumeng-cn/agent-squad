@@ -32,7 +32,7 @@ class InteractionServiceTest {
         ReflectionTestUtils.setField(service, "interactionMapper", interactionMapper);
         ReflectionTestUtils.setField(service, "operationMapper", operationMapper);
         ReflectionTestUtils.setField(service, "objectMapper", new ObjectMapper());
-        ReflectionTestUtils.setField(service, "scopeService", mock(com.agentsquad.squad.service.ExecutionScopeService.class));
+        ReflectionTestUtils.setField(service, "scopeService", mock(ExecutionScopeService.class));
 
         AuthView actor = new AuthView("user-1", "tester", List.of(AccountRole.USER), "csrf");
         InteractionPO row = new InteractionPO("interaction-1", actor.userId(), "task-1",

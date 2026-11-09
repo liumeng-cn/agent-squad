@@ -1,4 +1,4 @@
-package com.agentsquad.squad.runner;
+package com.agentsquad.squad.config.runner;
 
 import com.agentsquad.squad.service.RuntimeJournalImportService;
 

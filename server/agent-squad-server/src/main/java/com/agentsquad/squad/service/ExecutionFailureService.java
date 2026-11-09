@@ -45,7 +45,7 @@ import java.util.UUID;
 @Slf4j
 public class ExecutionFailureService {
     @Resource
-    private com.agentsquad.squad.service.ActivityProjectionService activities;
+    private ActivityProjectionService activities;
     @Resource
     private TaskMapper tasks;
 

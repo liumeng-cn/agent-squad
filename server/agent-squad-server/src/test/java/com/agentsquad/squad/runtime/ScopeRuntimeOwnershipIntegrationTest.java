@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.agent.middleware.ModelBudgetMiddleware;
 import com.agentsquad.squad.config.properties.WorkerProfileProperties;
@@ -49,21 +50,21 @@ class ScopeRuntimeOwnershipIntegrationTest {
 
     @Test
     void responseCanUseGovernedCapabilitiesWithoutTask(@TempDir Path directory) {
-        try (ConfigurableApplicationContext context = start(databaseUrl(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), 50000000)) {
+        try (ConfigurableApplicationContext context = start(databaseUrl(directory), MySqlTestDatabase.username(), MySqlTestDatabase.password(), 50000000)) {
             verifyCapabilitiesWithoutTask(context);
         }
     }
 
     @Test
     void concurrentScopesCannotExceedUserBudget(@TempDir Path directory) throws Exception {
-        try (ConfigurableApplicationContext context = start(databaseUrl(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), 100)) {
+        try (ConfigurableApplicationContext context = start(databaseUrl(directory), MySqlTestDatabase.username(), MySqlTestDatabase.password(), 100)) {
             verifyConcurrentUserBudget(context);
         }
     }
 
     @Test
     void sharedAccountAndUnknownChargeSurviveScopeChanges(@TempDir Path directory) {
-        try (ConfigurableApplicationContext context = start(databaseUrl(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), 1000)) {
+        try (ConfigurableApplicationContext context = start(databaseUrl(directory), MySqlTestDatabase.username(), MySqlTestDatabase.password(), 1000)) {
             verifySharedAccount(context);
         }
     }
@@ -301,6 +302,6 @@ class ScopeRuntimeOwnershipIntegrationTest {
     }
 
     private String databaseUrl(Path directory) {
-        return com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("scope"));
+        return MySqlTestDatabase.url(directory.resolve("scope"));
     }
 }

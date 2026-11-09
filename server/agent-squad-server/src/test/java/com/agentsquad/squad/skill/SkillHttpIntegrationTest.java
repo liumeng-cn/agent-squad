@@ -1,5 +1,6 @@
 package com.agentsquad.squad.skill;
 
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.agent.skill.ScopeSkillRepository;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
@@ -258,8 +259,8 @@ class SkillHttpIntegrationTest {
 
     private ConfigurableApplicationContext start(Path directory) {
         return SpringApplication.run(AgentSquadApplication.class,
-                "--server.port=0", "--spring.datasource.url=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("skills")),
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--server.port=0", "--spring.datasource.url=" + MySqlTestDatabase.url(directory.resolve("skills")),
+                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.auth.username=local-user", "--agentsquad.auth.password=local-password",
                 "--agentsquad.auth.user-id=" + USER, "--agentsquad.delivery.enabled=false");
     }

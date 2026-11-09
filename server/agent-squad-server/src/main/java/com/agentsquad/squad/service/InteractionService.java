@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.agentsquad.squad.mapper.ProjectionMapper;
 import com.agentsquad.squad.model.bo.AcceptanceReviewRequestBO;
 import com.agentsquad.squad.model.bo.BindingResultBO;
 import com.agentsquad.squad.identity.AuthView;
@@ -90,10 +91,10 @@ public class InteractionService {
     private ObjectMapper objectMapper;
 
     @Resource
-    private com.agentsquad.squad.service.PlanAcceptanceService planAcceptance;
+    private PlanAcceptanceService planAcceptance;
 
     @Resource
-    private com.agentsquad.squad.mapper.ProjectionMapper projections;
+    private ProjectionMapper projections;
 
     @Value("${agentsquad.interaction.ttl-hours:24}")
     private long ttlHours;

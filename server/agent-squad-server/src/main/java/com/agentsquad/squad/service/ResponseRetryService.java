@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.agentsquad.squad.observer.ExecutionTrace;
 import com.agentsquad.squad.enums.ActivityType;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
@@ -35,9 +36,9 @@ import java.util.UUID;
 @Service
 public class ResponseRetryService {
     @Resource
-    private com.agentsquad.squad.observer.ExecutionTrace executionTrace;
+    private ExecutionTrace executionTrace;
     @Resource
-    private com.agentsquad.squad.service.ActivityProjectionService activities;
+    private ActivityProjectionService activities;
     @org.springframework.beans.factory.annotation.Value("${agentsquad.response.completion-protocol:NATURAL}")
     private ResponseCompletionProtocol completionProtocol;
 

@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.bo.ResponseContextSnapshotBO;
 import com.agentsquad.squad.model.vo.MessageReceiptVO;
@@ -32,7 +33,7 @@ class ResponseContextIntegrationTest {
         String owner = UUID.randomUUID().toString();
         String binding;
         ResponseContextSnapshotBO frozen;
-        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url, com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), owner)) {
+        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url, MySqlTestDatabase.username(), MySqlTestDatabase.password(), owner)) {
             MessageTestActor actor = MessageAcceptanceHttpTest.actor(context);
             MessageReceiptVO first = MessageAcceptanceHttpTest.send(context, actor, "/api/v1/conversations/messages",
                     "first", Map.of("text", "主角叫小明"));
@@ -52,7 +53,7 @@ class ResponseContextIntegrationTest {
             assertThat(context.getBean(ResponseContextService.class).freeze(owner, binding)).isEqualTo(frozen);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_goal_task", Long.class)).isZero();
         }
-        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url, com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), owner)) {
+        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url, MySqlTestDatabase.username(), MySqlTestDatabase.password(), owner)) {
             assertThat(context.getBean(ResponseContextService.class).freeze(owner, binding)).isEqualTo(frozen);
             assertThatThrownBy(() -> context.getBean(ResponseContextService.class).freeze(UUID.randomUUID().toString(), binding))
                     .isInstanceOf(RuntimeBusinessException.class);
@@ -65,7 +66,7 @@ class ResponseContextIntegrationTest {
     @Test
     void expiredMaterialBlocksEvenFrozenContext(@TempDir Path directory) throws Exception {
         String owner = UUID.randomUUID().toString();
-        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), owner)) {
+        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url(directory), MySqlTestDatabase.username(), MySqlTestDatabase.password(), owner)) {
             String file = context.getBean(ArtifactService.class).upload(owner, "input", "facts.txt",
                     "材料".getBytes(StandardCharsets.UTF_8)).artifactId();
             MessageReceiptVO receipt = MessageAcceptanceHttpTest.send(context, MessageAcceptanceHttpTest.actor(context),
@@ -82,7 +83,7 @@ class ResponseContextIntegrationTest {
     @Test
     void overLimitFailsWithoutSilentlyDroppingHistoryOrSavingSnapshot(@TempDir Path directory) throws Exception {
         String owner = UUID.randomUUID().toString();
-        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), owner)) {
+        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url(directory), MySqlTestDatabase.username(), MySqlTestDatabase.password(), owner)) {
             MessageReceiptVO receipt = MessageAcceptanceHttpTest.send(context, MessageAcceptanceHttpTest.actor(context),
                     "/api/v1/conversations/messages", "large", Map.of("text", "开始"));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
@@ -97,7 +98,7 @@ class ResponseContextIntegrationTest {
     @Test
     void freezesMaterialContentIntoSnapshot(@TempDir Path directory) throws Exception {
         String owner = UUID.randomUUID().toString();
-        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), owner)) {
+        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url(directory), MySqlTestDatabase.username(), MySqlTestDatabase.password(), owner)) {
             String file = context.getBean(ArtifactService.class).upload(owner, "material", "facts.json",
                     "{\"name\":\"小明\"}".getBytes(StandardCharsets.UTF_8)).artifactId();
             MessageReceiptVO receipt = MessageAcceptanceHttpTest.send(context, MessageAcceptanceHttpTest.actor(context),
@@ -115,7 +116,7 @@ class ResponseContextIntegrationTest {
     @Test
     void largeMaterialIsTruncatedWithMarker(@TempDir Path directory) throws Exception {
         String owner = UUID.randomUUID().toString();
-        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), owner)) {
+        try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url(directory), MySqlTestDatabase.username(), MySqlTestDatabase.password(), owner)) {
             String big = "x".repeat(25000);
             String file = context.getBean(ArtifactService.class).upload(owner, "big-material", "large.txt",
                     big.getBytes(StandardCharsets.UTF_8)).artifactId();
@@ -135,6 +136,6 @@ class ResponseContextIntegrationTest {
     }
 
     private String url(Path directory) {
-        return com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("context"));
+        return MySqlTestDatabase.url(directory.resolve("context"));
     }
 }

@@ -1,5 +1,7 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.service.WorkerFailureResolutionService;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.enums.WorkerJobStatus;
@@ -75,11 +77,11 @@ class WorkerDependencyFailureIntegrationTest {
             jdbc.update("UPDATE sq_command SET status='DELIVERED' WHERE binding_id=?", binding);
             context.getBean(WorkerDispatchService.class).claim(user, binding);
             var results = context.getBean(WorkerResultService.class);
-            var resolutions = context.getBean(com.agentsquad.squad.service.WorkerFailureResolutionService.class);
+            var resolutions = context.getBean(WorkerFailureResolutionService.class);
             String rootJob = jdbc.queryForObject("SELECT job_id FROM sq_worker_job WHERE node_key='root'", String.class);
             var decision = new AbandonFailedJobRequestBO(rootJob, 1);
             assertThatThrownBy(() -> resolutions.abandon(user, session, decision))
-                    .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
+                    .isInstanceOf(RuntimeBusinessException.class);
             if (!permanentFailure) {
                 results.markRecoveryBlocked(user, binding);
                 var waiting = context.getBean(TaskSnapshotService.class).listJobs(user, task.taskId()).items();
@@ -89,14 +91,14 @@ class WorkerDependencyFailureIntegrationTest {
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_task_event WHERE task_id=? AND event_type='job.skipped'", Integer.class, task.taskId())).isZero();
                 assertThatThrownBy(() -> resolutions.abandon(user, session,
                         new AbandonFailedJobRequestBO(rootJob, 2)))
-                        .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
+                        .isInstanceOf(RuntimeBusinessException.class);
                 jdbc.update("""
                         INSERT INTO sq_interaction (interaction_id,user_id,task_id,origin,kind,question,
                             answer_schema_json,request_hash,expires_at,status)
                         VALUES ('pending-test',?,?,'BUSINESS','INPUT','test','{}','test',DATE_ADD(NOW(),INTERVAL 1 HOUR),'OPEN')
                         """, user, task.taskId());
                 assertThatThrownBy(() -> resolutions.abandon(user, session, decision))
-                        .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
+                        .isInstanceOf(RuntimeBusinessException.class);
                 jdbc.update("UPDATE sq_interaction SET status='CANCELLED' WHERE interaction_id='pending-test'");
                 assertThat(resolutions.abandon(user, session, decision).status()).isEqualTo(WorkerJobStatus.FAILED);
                 assertThat(resolutions.abandon(user, session, decision).status()).isEqualTo(WorkerJobStatus.FAILED);
@@ -132,7 +134,7 @@ class WorkerDependencyFailureIntegrationTest {
             context.getBean(PlanService.class).publish(user, session,
                     new PlanPublishBO("replacement", 1, nodes, "ALL_REQUIRED", List.of("文章整理完成")));
             assertThatThrownBy(() -> resolutions.abandon(user, session, decision))
-                    .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
+                    .isInstanceOf(RuntimeBusinessException.class);
             results.markFailed(user, binding);
             var replacement = context.getBean(TaskSnapshotService.class).listJobs(user, task.taskId()).items();
             assertThat(replacement).allMatch(job -> job.planVersion() == 2 && job.status() != WorkerJobStatus.SKIPPED);

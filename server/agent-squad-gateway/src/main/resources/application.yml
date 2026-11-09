@@ -44,6 +44,7 @@ mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   configuration:
     map-underscore-to-camel-case: false
+    log-impl: com.agentsquad.squad.config.SqlTemplateLog
 
 management:
   tracing:
@@ -74,4 +75,7 @@ logging:
     format:
       console: ${SQUAD_LOG_FORMAT:}
   level:
-    com.agentsquad.squad.gateway: INFO
+    root: INFO
+    com.agentsquad.squad: DEBUG
+    # MyBatis 只输出 SQL 模板，绑定值和结果行由日志适配器过滤。
+    com.agentsquad.squad.mapper: DEBUG

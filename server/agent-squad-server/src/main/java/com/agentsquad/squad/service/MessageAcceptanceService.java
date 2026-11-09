@@ -47,6 +47,7 @@ public class MessageAcceptanceService {
      * 先持久消息与回复命令；同键同规范化输入只返回原身份，在途目标不阻断新消息。
      */
     public MessageReceiptVO accept(String userId, String conversationId, String key, MessageCreateDTO request) {
+        log.debug("开始受理消息 conversationId={}", conversationId);
         userStatus.requireActive(userId);
         if (key == null || key.isBlank() || key.length() > 160) {
             throw invalid("消息幂等键长度必须为1到160");
@@ -61,6 +62,8 @@ public class MessageAcceptanceService {
                         "reasoningMode", normalized.reasoningMode() == null ? "" : normalized.reasoningMode().name())));
         MessageSubmissionBO row;
         try {
+            // 受理事务内落库消息和待投递命令。
+            log.debug("调用消息受理事务 conversationId={} artifactCount={}", conversationId, normalized.artifactIds().size());
             row = writer.accept(userId, conversationId, scopeKey, key, normalized, hash);
         } catch (DuplicateKeyException duplicate) {
             // 独立写事务已回滚；唯一键胜出者已提交，才能从新读视图补回执。
@@ -78,6 +81,7 @@ public class MessageAcceptanceService {
         scopeService.requireReadable(userId, row.getScopeId());
         log.info("消息受理回执 conversationId={} messageId={} executionId={} commandId={}",
                 row.getConversationId(), row.getMessageId(), row.getExecutionId(), row.getCommandId());
+        log.debug("消息受理完成 messageId={} executionId={}", row.getMessageId(), row.getExecutionId());
         return new MessageReceiptVO(row.getConversationId(), row.getMessageId(), row.getExecutionId(), row.getCommandId(),
                 ResponseExecutionStatus.valueOf(row.getStatus()),
                 row.getConversationId() + ":" + row.getGeneration() + ":" + row.getReceiptSequence());

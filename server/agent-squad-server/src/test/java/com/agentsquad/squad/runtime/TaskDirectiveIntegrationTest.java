@@ -1,5 +1,8 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.service.ConversationQueryService;
+import com.agentsquad.squad.service.TaskControlService;
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.enums.TaskDirectiveStatus;
 import com.agentsquad.squad.enums.TaskDirectiveWaitReason;
@@ -61,7 +64,7 @@ class TaskDirectiveIntegrationTest {
             long version = version(jdbc, task.taskId());
             var one = service.submit(user, replySession(jdbc, first.executionId()), new TaskDirectiveSubmitBO("one", task.taskId(), version, "SUPPLEMENT", "活泼"));
             var two = service.submit(user, replySession(jdbc, second.executionId()), new TaskDirectiveSubmitBO("two", task.taskId(), version, "SUPPLEMENT", "正式"));
-            var query = context.getBean(com.agentsquad.squad.service.ConversationQueryService.class);
+            var query = context.getBean(ConversationQueryService.class);
             Long commands = jdbc.queryForObject("SELECT COUNT(*) FROM sq_command WHERE user_id=?", Long.class, user);
             query.snapshot(user, source.conversationId(), null, 40);
             query.snapshot(user, source.conversationId(), null, 40);
@@ -101,9 +104,9 @@ class TaskDirectiveIntegrationTest {
             long version = version(jdbc, task.taskId());
             var service = context.getBean(TaskDirectiveService.class);
             var receipt = service.submit(user, replySession(jdbc, change.executionId()), new TaskDirectiveSubmitBO("change", task.taskId(), version, "SUPPLEMENT", "活泼"));
-            context.getBean(com.agentsquad.squad.service.TaskControlService.class).cancel(user, task.taskId(), "stop", version);
+            context.getBean(TaskControlService.class).cancel(user, task.taskId(), "stop", version);
             service.dispatch(new TaskDirectiveTargetBO(receipt.directiveId(), user, task.taskId()));
-            var snapshot = context.getBean(com.agentsquad.squad.service.ConversationQueryService.class)
+            var snapshot = context.getBean(ConversationQueryService.class)
                     .snapshot(user, source.conversationId(), null, 40);
             assertThat(snapshot.directives()).singleElement().satisfies(item -> {
                 assertThat(item.status()).isEqualTo(TaskDirectiveStatus.REJECTED);
@@ -141,7 +144,7 @@ class TaskDirectiveIntegrationTest {
         var receipt = directives.submit(user, session, request);
         assertThat(receipt.status()).isEqualTo("ACCEPTED");
         assertThat(receipt.appliedVersion()).isNull();
-        var query = context.getBean(com.agentsquad.squad.service.ConversationQueryService.class);
+        var query = context.getBean(ConversationQueryService.class);
         var acceptedSnapshot = query.snapshot(user, source.conversationId(), null, 40);
         assertThat(acceptedSnapshot.directives()).singleElement().satisfies(item -> {
             assertThat(item.status()).isEqualTo(TaskDirectiveStatus.ACCEPTED);
@@ -200,7 +203,7 @@ class TaskDirectiveIntegrationTest {
         jdbc.update("UPDATE sq_command SET status='APPLIED' WHERE task_id=?", task.taskId());
         service.dispatch(new TaskDirectiveTargetBO(receipt.directiveId(), user, task.taskId()));
         assertThat(jdbc.queryForObject("SELECT command_id FROM sq_task_directive WHERE directive_id=?", String.class, receipt.directiveId())).isNull();
-        var query = context.getBean(com.agentsquad.squad.service.ConversationQueryService.class);
+        var query = context.getBean(ConversationQueryService.class);
         var waiting = query.snapshot(user, source.conversationId(), null, 40);
         assertThat(waiting.directives()).singleElement().satisfies(item -> {
             assertThat(item.status()).isEqualTo(TaskDirectiveStatus.ACCEPTED);
@@ -231,6 +234,6 @@ class TaskDirectiveIntegrationTest {
     }
 
     private ConfigurableApplicationContext start(Path directory) {
-        return MessageAcceptanceHttpTest.start(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("directive")), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), UUID.randomUUID().toString());
+        return MessageAcceptanceHttpTest.start(MySqlTestDatabase.url(directory.resolve("directive")), MySqlTestDatabase.username(), MySqlTestDatabase.password(), UUID.randomUUID().toString());
     }
 }

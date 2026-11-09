@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.agent.MasterAgentIdentity;
 import com.agentsquad.squad.mapper.*;
@@ -31,11 +32,11 @@ class StopDeliveryIntegrationTest {
 
     @Test
     void shouldFinalizeCancelledTaskWhenNoActiveNativeRun(@TempDir Path tempDirectory) {
-        String databaseUrl = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(tempDirectory.resolve("squad"));
+        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("squad"));
         String[] properties = {
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
                 "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.delivery.enabled=true",
                 "--agentsquad.delivery.poll-delay-ms=60000",

@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.identity.AuthView;
@@ -86,12 +87,12 @@ class AutonomousWritingFlowIntegrationTest {
         });
         model.start();
         try {
-            String database = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("squad"));
+            String database = MySqlTestDatabase.url(directory.resolve("squad"));
             String baseUrl = "http://127.0.0.1:" + model.getAddress().getPort() + "/v1";
             String[] properties = {
                     "--spring.main.web-application-type=none",
                     "--spring.datasource.url=" + database,
-                    "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                    "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
                     "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                     "--agentsquad.model.api-key=test-only",
                     "--agentsquad.model.base-url=" + baseUrl,

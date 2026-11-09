@@ -36,7 +36,7 @@ public class OperationReconcileService {
     private static final String OUTCOME_UNRESOLVED = "UNRESOLVED";
 
     @Resource
-    private com.agentsquad.squad.service.ExecutionFailureService failures;
+    private ExecutionFailureService failures;
 
     @Resource
     private ExecutionScopeService scopeService;

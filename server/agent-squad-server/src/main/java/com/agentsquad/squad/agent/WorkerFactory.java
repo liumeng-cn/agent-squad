@@ -1,6 +1,13 @@
 package com.agentsquad.squad.agent;
 
 
+import com.agentsquad.squad.agent.session.RuntimeSessionProvider;
+import com.agentsquad.squad.agent.skill.ScopeSkillCapabilities;
+import com.agentsquad.squad.agent.skill.ScopeSkillRepository;
+import com.agentsquad.squad.agent.tool.CommitArtifactTool;
+import com.agentsquad.squad.agent.tool.SandboxPythonTool;
+import com.agentsquad.squad.observer.RuntimeEventSinkFactory;
+import com.agentsquad.squad.service.ModelCatalogService;
 import com.agentsquad.squad.agent.middleware.ExecutionContextMiddleware;
 import com.agentsquad.squad.agent.skill.PlatformSkillVisibility;
 import com.agentsquad.squad.model.bo.WorkerAgentHandleBO;
@@ -67,7 +74,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class WorkerFactory {
 
     @Resource
-    private com.agentsquad.squad.observer.RuntimeEventSinkFactory eventSinks;
+    private RuntimeEventSinkFactory eventSinks;
 
     @Resource
     private DataSource dataSource;
@@ -97,7 +104,7 @@ public class WorkerFactory {
     private ObjectMapper objectMapper;
 
     @Resource
-    private com.agentsquad.squad.agent.skill.ScopeSkillRepository scopeSkillRepository;
+    private ScopeSkillRepository scopeSkillRepository;
 
     @Resource
     private PlatformSkillVisibility skillVisibility;
@@ -106,10 +113,10 @@ public class WorkerFactory {
     private ExecutionContextMiddleware executionContext;
 
     @Resource
-    private com.agentsquad.squad.agent.tool.SandboxPythonTool sandboxPython;
+    private SandboxPythonTool sandboxPython;
 
     @Resource
-    private com.agentsquad.squad.agent.tool.CommitArtifactTool commitArtifact;
+    private CommitArtifactTool commitArtifact;
 
     @org.springframework.beans.factory.annotation.Value("${agentsquad.sandbox.enabled:false}")
     private boolean sandboxEnabled;
@@ -120,13 +127,13 @@ public class WorkerFactory {
     private final Map<String, WorkerAgentHandleBO> active = new ConcurrentHashMap<>();
 
     @Resource
-    private com.agentsquad.squad.service.ModelCatalogService modelCatalog;
+    private ModelCatalogService modelCatalog;
 
     @Resource
     private LocalSessionStopper localSessions;
 
     @Resource
-    private com.agentsquad.squad.agent.session.RuntimeSessionProvider runtimeSessions;
+    private RuntimeSessionProvider runtimeSessions;
 
     private AbstractJdbcDialect dialect;
 
@@ -184,8 +191,8 @@ public class WorkerFactory {
         var allowedTools = new java.util.HashSet<>(definitionService.requirePublished(job.getWorkerKey(), job.getWorkerVersion()).toolAllowlist());
         allowedTools.add("load_skill_through_path");
         allowedTools.add("report_job_result");
-        context.put(com.agentsquad.squad.agent.skill.ScopeSkillCapabilities.class,
-                new com.agentsquad.squad.agent.skill.ScopeSkillCapabilities(allowedTools));
+        context.put(ScopeSkillCapabilities.class,
+                new ScopeSkillCapabilities(allowedTools));
         return localSessions.register(userId, bindingId, handle.agent().session(context));
     }
 

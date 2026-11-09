@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.vo.ConversationVO;
@@ -24,11 +25,11 @@ class GoalTaskPersistenceTest {
 
     @Test
     void shouldKeepTaskCommandAndEventAcrossApplicationRestart(@TempDir Path tempDirectory) {
-        String databaseUrl = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(tempDirectory.resolve("squad"));
+        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("squad"));
         String[] properties = {
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
                 "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
         };
         String userId = "00000000-0000-0000-0000-000000000001";

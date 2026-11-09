@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.agentsquad.squad.observer.ExecutionTrace;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.model.po.ConversationPO;
@@ -22,7 +23,7 @@ import java.util.UUID;
 @Service
 public class ExecutionScopeService {
     @Resource
-    private com.agentsquad.squad.observer.ExecutionTrace executionTrace;
+    private ExecutionTrace executionTrace;
 
     private static final Set<String> DISPATCHABLE = Set.of("QUEUED", "RUNNING", "RECOVERING", "WAITING_WORKERS", "WAITING_INPUT", "WAITING_APPROVAL");
 

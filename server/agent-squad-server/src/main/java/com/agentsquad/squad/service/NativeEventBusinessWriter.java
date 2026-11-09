@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.agentsquad.squad.mapper.ResponseRuntimeMapper;
 import com.agentsquad.squad.model.bo.NativeEventViewBO;
 
 
@@ -28,7 +29,7 @@ public class NativeEventBusinessWriter implements RuntimeEventBusinessWriter {
     private NaturalReplyOutputReader naturalOutputs;
 
     @Resource
-    private com.agentsquad.squad.mapper.ResponseRuntimeMapper replies;
+    private ResponseRuntimeMapper replies;
 
     @Override
     public void apply(ProjectionTargetBO target, SessionEvent event) {

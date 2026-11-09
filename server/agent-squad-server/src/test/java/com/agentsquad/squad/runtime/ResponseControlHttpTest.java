@@ -1,5 +1,7 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.identity.AuthView;
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.scheduler.ConversationCleanupTask;
 import com.agentsquad.squad.service.ConversationDeletionService;
@@ -55,7 +57,7 @@ class ResponseControlHttpTest {
             assertThat(again).isEqualTo(first);
             assertThat(tasks.getConversation(user, conversation).activeTaskId()).isEqualTo(task);
             assertThat(tasks.findTask(user, task).status()).isEqualTo("QUEUED");
-            MessageTestActor other = new MessageTestActor(new com.agentsquad.squad.identity.AuthView(UUID.randomUUID().toString(), "other", java.util.List.of(AccountRole.USER), null));
+            MessageTestActor other = new MessageTestActor(new AuthView(UUID.randomUUID().toString(), "other", java.util.List.of(AccountRole.USER), null));
             mvc.perform(post(path).with(TestAssertion.as(other.view().userId(), "USER")).header("Idempotency-Key", "foreign")
                     .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")).andExpect(status().isOk()).andExpect(jsonPath("$.code").value(404));
         }
@@ -84,6 +86,6 @@ class ResponseControlHttpTest {
     }
 
     private ConfigurableApplicationContext start(Path directory) {
-        return MessageAcceptanceHttpTest.start(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("controls")), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), UUID.randomUUID().toString());
+        return MessageAcceptanceHttpTest.start(MySqlTestDatabase.url(directory.resolve("controls")), MySqlTestDatabase.username(), MySqlTestDatabase.password(), UUID.randomUUID().toString());
     }
 }

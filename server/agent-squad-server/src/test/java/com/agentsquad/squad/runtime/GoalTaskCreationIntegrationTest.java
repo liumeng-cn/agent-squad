@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.bo.GoalTaskCreateBO;
 import com.agentsquad.squad.model.dto.MessageCreateDTO;
@@ -169,6 +170,6 @@ class GoalTaskCreationIntegrationTest {
     }
 
     private ConfigurableApplicationContext start(Path directory) {
-        return MessageAcceptanceHttpTest.start(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("goals")), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), UUID.randomUUID().toString());
+        return MessageAcceptanceHttpTest.start(MySqlTestDatabase.url(directory.resolve("goals")), MySqlTestDatabase.username(), MySqlTestDatabase.password(), UUID.randomUUID().toString());
     }
 }

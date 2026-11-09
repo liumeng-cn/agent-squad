@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.converter.ModelFailureClassifier;
 import com.agentsquad.squad.exceptions.PlanCorrectionExhaustedException;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
@@ -65,7 +66,7 @@ class ExecutionFailureIntegrationTest {
 
     @Test
     void billingFailureOffersManualRetryButDoesNotAutomaticallyRetry(@TempDir Path directory) {
-        try (var context = start(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory))) {
+        try (var context = start(MySqlTestDatabase.url(directory))) {
             String user = UUID.randomUUID().toString();
             var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "billing", new MessageCreateDTO("你好", List.of()));
             var jdbc = context.getBean(JdbcTemplate.class);
@@ -92,7 +93,7 @@ class ExecutionFailureIntegrationTest {
 
     @Test
     void retainsRetryLimitAcrossRestartAndCreatesOneSuccessor(@TempDir Path directory) {
-        String database = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("failure"));
+        String database = MySqlTestDatabase.url(directory.resolve("failure"));
         String user = UUID.randomUUID().toString();
         String execution;
         String session;
@@ -142,7 +143,7 @@ class ExecutionFailureIntegrationTest {
 
     @Test
     void unknownWriteBlocksAutomaticAndManualRetry(@TempDir Path directory) {
-        try (var context = start(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("unknown")))) {
+        try (var context = start(MySqlTestDatabase.url(directory.resolve("unknown")))) {
             String user = UUID.randomUUID().toString();
             var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateDTO("处理这项工作", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
@@ -169,7 +170,7 @@ class ExecutionFailureIntegrationTest {
 
     @Test
     void invalidPlanLimitSurvivesRestart(@TempDir Path directory) {
-        String database = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("plan-limit"));
+        String database = MySqlTestDatabase.url(directory.resolve("plan-limit"));
         String user = UUID.randomUUID().toString();
         String session;
         String scopeId;
@@ -201,6 +202,6 @@ class ExecutionFailureIntegrationTest {
     }
 
     private static ConfigurableApplicationContext start(String database) {
-        return MessageAcceptanceHttpTest.start(database, com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), UUID.randomUUID().toString());
+        return MessageAcceptanceHttpTest.start(database, MySqlTestDatabase.username(), MySqlTestDatabase.password(), UUID.randomUUID().toString());
     }
 }

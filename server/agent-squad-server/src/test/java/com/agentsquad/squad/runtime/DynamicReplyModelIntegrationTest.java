@@ -1,5 +1,7 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.agent.tool.ReportJobResultTool;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.config.properties.WorkerModelProfileProperties;
 import com.agentsquad.squad.config.properties.WorkerProfileProperties;
@@ -32,7 +34,7 @@ class DynamicReplyModelIntegrationTest {
     void exposesPublishedWorkerResultSchemaToModel() throws Exception {
         var json = new ObjectMapper();
         var schema = json.readTree("{\"type\":\"object\",\"required\":[\"poem\"],\"properties\":{\"poem\":{\"type\":\"string\"}}}");
-        var tool = new com.agentsquad.squad.agent.tool.ReportJobResultTool(null, json,
+        var tool = new ReportJobResultTool(null, json,
                 "user", "session", "binding", "guard").outputSchema(schema);
         assertThat(json.valueToTree(tool.getParameters()).path("properties").path("result")).isEqualTo(schema);
     }
@@ -47,7 +49,7 @@ class DynamicReplyModelIntegrationTest {
         assertThat(off.getAdditionalBodyParams()).containsEntry("enable_thinking", false).doesNotContainKey("thinking");
         assertThat(on.getAdditionalBodyParams()).containsEntry("enable_thinking", true).doesNotContainKey("thinking");
         assertThatThrownBy(() -> catalog.applyReasoning(io.agentscope.core.model.GenerateOptions.builder(), profile, ReasoningMode.AUTO))
-                .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
+                .isInstanceOf(RuntimeBusinessException.class);
     }
 
     @Test
@@ -74,7 +76,7 @@ class DynamicReplyModelIntegrationTest {
         assertThat(catalog.resolve(accepted)).isSameAs(previous);
         previous.setMaxOutputTokens(512);
         assertThatThrownBy(() -> catalog.resolve(accepted))
-                .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
+                .isInstanceOf(RuntimeBusinessException.class);
     }
 
     @Test
@@ -130,15 +132,15 @@ class DynamicReplyModelIntegrationTest {
             assertThat(secondRequest.path("model").asText()).isEqualTo("second-model");
             assertThat(secondRequest.path("thinking").path("type").asText()).isEqualTo("enabled");
             assertThat(jdbc.queryForList("SELECT DISTINCT model_profile_key FROM sq_budget_reservation WHERE user_id=?", String.class, user)).containsExactlyInAnyOrder("default", "second");
-            assertThatThrownBy(() -> messages.accept(user, first.conversationId(), "next-choice", new MessageCreateDTO("第二条", List.of(), "default", ReasoningMode.OFF))).isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
-            assertThatThrownBy(() -> catalog.accept("second", ReasoningMode.HIGH)).isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
-            assertThatThrownBy(() -> catalog.accept("missing", ReasoningMode.DEFAULT)).isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
+            assertThatThrownBy(() -> messages.accept(user, first.conversationId(), "next-choice", new MessageCreateDTO("第二条", List.of(), "default", ReasoningMode.OFF))).isInstanceOf(RuntimeBusinessException.class);
+            assertThatThrownBy(() -> catalog.accept("second", ReasoningMode.HIGH)).isInstanceOf(RuntimeBusinessException.class);
+            assertThatThrownBy(() -> catalog.accept("missing", ReasoningMode.DEFAULT)).isInstanceOf(RuntimeBusinessException.class);
             var choice = catalog.accept("second", ReasoningMode.DEFAULT);
             var registry = context.getBean(WorkerProfileProperties.class);
             registry.getModelProfiles().get("second").setApiKey("rotated-key");
             assertThat(catalog.resolve(choice).getModelName()).isEqualTo("second-model");
             registry.getModelProfiles().get("second").setModelName("silently-replaced");
-            assertThatThrownBy(() -> catalog.resolve(choice)).isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
+            assertThatThrownBy(() -> catalog.resolve(choice)).isInstanceOf(RuntimeBusinessException.class);
         }
     }
 }

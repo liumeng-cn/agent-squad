@@ -1,5 +1,6 @@
 package com.agentsquad.squad.agent.middleware;
 
+import com.agentsquad.squad.event.ReplyPreviewSignal;
 import com.agentsquad.squad.service.ReplyPreviewBuffer;
 
 import com.agentsquad.squad.mapper.ResponseRuntimeMapper;
@@ -70,7 +71,7 @@ public class ReplyPreviewMiddleware implements MiddlewareBase {
     /**
      * 页面推送故障不能中止模型；只记录分类，临时文本允许丢失。
      */
-    private void publish(com.agentsquad.squad.event.ReplyPreviewSignal signal) {
+    private void publish(ReplyPreviewSignal signal) {
         try {
             previews.publishEvent(signal);
         } catch (RuntimeException unavailable) {

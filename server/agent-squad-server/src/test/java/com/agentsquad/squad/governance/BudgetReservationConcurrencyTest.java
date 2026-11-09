@@ -1,5 +1,6 @@
 package com.agentsquad.squad.governance;
 
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.config.properties.WorkerModelProfileProperties;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
@@ -31,11 +32,11 @@ class BudgetReservationConcurrencyTest {
 
     @Test
     void concurrentReservationsCannotExceedTaskLimit(@TempDir Path tempDirectory) throws Exception {
-        String databaseUrl = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(tempDirectory.resolve("squad"));
+        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("squad"));
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
                 "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.budget.max-microunits-per-task=100")) {
             String userId = "00000000-0000-0000-0000-000000000001";
@@ -80,11 +81,11 @@ class BudgetReservationConcurrencyTest {
 
     @Test
     void modelReservationSettlesTrustedUsageAndRetainsUnknownCharge(@TempDir Path tempDirectory) {
-        String databaseUrl = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(tempDirectory.resolve("squad"));
+        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("squad"));
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
                 "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.budget.max-microunits-per-task=100")) {
             String userId = "00000000-0000-0000-0000-000000000001";

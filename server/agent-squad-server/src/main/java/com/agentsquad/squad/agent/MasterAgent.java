@@ -1,5 +1,18 @@
 package com.agentsquad.squad.agent;
 
+import com.agentsquad.squad.agent.middleware.ReplyPreviewMiddleware;
+import com.agentsquad.squad.agent.session.RuntimeSessionProvider;
+import com.agentsquad.squad.agent.skill.ScopeSkillCapabilities;
+import com.agentsquad.squad.agent.skill.ScopeSkillRepository;
+import com.agentsquad.squad.agent.tool.CommitArtifactTool;
+import com.agentsquad.squad.agent.tool.ReadAttachmentTool;
+import com.agentsquad.squad.agent.tool.RequestAcceptanceReviewTool;
+import com.agentsquad.squad.agent.tool.SandboxPythonTool;
+import com.agentsquad.squad.agent.tool.WriteExplicitMemoryTool;
+import com.agentsquad.squad.mapper.BindingMapper;
+import com.agentsquad.squad.observer.RuntimeEventSinkFactory;
+import com.agentsquad.squad.service.LocalSessionStopper;
+import com.agentsquad.squad.service.RuntimeWorkspace;
 import com.agentsquad.squad.agent.middleware.ExecutionContextMiddleware;
 import com.agentsquad.squad.agent.middleware.ModelBudgetMiddleware;
 import com.agentsquad.squad.agent.middleware.ScopedMasterToolsMiddleware;
@@ -50,7 +63,7 @@ import java.util.List;
 public class MasterAgent implements NativeSessionGateway {
 
     @Resource
-    private com.agentsquad.squad.observer.RuntimeEventSinkFactory eventSinks;
+    private RuntimeEventSinkFactory eventSinks;
 
     @Resource
     private SubmitTaskDirectiveTool submitTaskDirectiveTool;
@@ -86,7 +99,7 @@ public class MasterAgent implements NativeSessionGateway {
     private RequestInputTool requestInputTool;
 
     @Resource
-    private com.agentsquad.squad.agent.tool.RequestAcceptanceReviewTool requestAcceptanceReview;
+    private RequestAcceptanceReviewTool requestAcceptanceReview;
 
     @Resource
     private PublishPlanTool publishPlanTool;
@@ -98,7 +111,7 @@ public class MasterAgent implements NativeSessionGateway {
     private ListWorkerCapabilitiesTool listWorkerCapabilitiesTool;
 
     @Resource
-    private com.agentsquad.squad.agent.middleware.ReplyPreviewMiddleware replyPreview;
+    private ReplyPreviewMiddleware replyPreview;
 
     @Resource
     private SelectedReplyModelMiddleware selectedModel;
@@ -122,7 +135,7 @@ public class MasterAgent implements NativeSessionGateway {
     private ScopedMasterToolsMiddleware scopedTools;
 
     @Resource
-    private com.agentsquad.squad.agent.skill.ScopeSkillRepository scopeSkillRepository;
+    private ScopeSkillRepository scopeSkillRepository;
 
     @Resource
     private PlatformSkillVisibility skillVisibility;
@@ -131,35 +144,35 @@ public class MasterAgent implements NativeSessionGateway {
     private ExecutionContextMiddleware executionContext;
 
     @Resource
-    private com.agentsquad.squad.agent.tool.WriteExplicitMemoryTool writeExplicitMemory;
+    private WriteExplicitMemoryTool writeExplicitMemory;
 
     @Resource
-    private com.agentsquad.squad.agent.tool.SandboxPythonTool sandboxPython;
+    private SandboxPythonTool sandboxPython;
 
     @Resource
-    private com.agentsquad.squad.agent.tool.CommitArtifactTool commitArtifact;
+    private CommitArtifactTool commitArtifact;
 
     @Resource
-    private com.agentsquad.squad.agent.tool.ReadAttachmentTool readAttachment;
+    private ReadAttachmentTool readAttachment;
 
     @org.springframework.beans.factory.annotation.Value("${agentsquad.sandbox.enabled:false}")
     private boolean sandboxEnabled;
 
     @Resource
-    private com.agentsquad.squad.service.RuntimeWorkspace runtimeWorkspace;
+    private RuntimeWorkspace runtimeWorkspace;
 
     private HarnessAgent master;
 
     @Resource
-    private com.agentsquad.squad.service.LocalSessionStopper localSessions;
+    private LocalSessionStopper localSessions;
 
     @Resource
-    private com.agentsquad.squad.mapper.BindingMapper controlBindings;
+    private BindingMapper controlBindings;
 
     private CommittedSessionReader committedReader;
 
     @Resource
-    private com.agentsquad.squad.agent.session.RuntimeSessionProvider runtimeSessions;
+    private RuntimeSessionProvider runtimeSessions;
 
     /**
      * 启用投递前检查模型配置和数据库表结构，再创建长生命周期 Master。
@@ -374,8 +387,8 @@ public class MasterAgent implements NativeSessionGateway {
         if (sandboxEnabled) {
             allowedTools.addAll(java.util.Set.of("sandbox_python", "commit_artifact"));
         }
-        context.put(com.agentsquad.squad.agent.skill.ScopeSkillCapabilities.class,
-                new com.agentsquad.squad.agent.skill.ScopeSkillCapabilities(allowedTools));
+        context.put(ScopeSkillCapabilities.class,
+                new ScopeSkillCapabilities(allowedTools));
         return localSessions.register(userId, bindingId, master.session(context));
     }
 

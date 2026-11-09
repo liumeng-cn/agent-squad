@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.exceptions.ExecutionContextInvalidatedException;
 import com.agentsquad.squad.model.bo.ExecutionContextSnapshotBO;
@@ -71,7 +72,7 @@ public class ExecutionAuthorizationService {
         try {
             skills.validate(userId, scopeId);
             memories.requireCurrent(userId, scopeId);
-        } catch (com.agentsquad.squad.exceptions.RuntimeBusinessException exception) {
+        } catch (RuntimeBusinessException exception) {
             throw new ExecutionContextInvalidatedException(exception);
         }
     }

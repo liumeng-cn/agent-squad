@@ -1,5 +1,8 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.identity.AuthView;
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.TestUserDirectory;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.model.vo.MessageReceiptVO;
@@ -40,21 +43,21 @@ class MessageAcceptanceHttpTest {
 
     @Test
     void concurrentFirstSendCreatesOneConversationAndReceipt(@TempDir Path directory) throws Exception {
-        try (ConfigurableApplicationContext context = start(databaseUrl(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), UUID.randomUUID().toString())) {
+        try (ConfigurableApplicationContext context = start(databaseUrl(directory), MySqlTestDatabase.username(), MySqlTestDatabase.password(), UUID.randomUUID().toString())) {
             verifyFirstSend(context);
         }
     }
 
     @Test
     void invalidAttachmentRollsBackWholeFirstSend(@TempDir Path directory) throws Exception {
-        try (ConfigurableApplicationContext context = start(databaseUrl(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), UUID.randomUUID().toString())) {
+        try (ConfigurableApplicationContext context = start(databaseUrl(directory), MySqlTestDatabase.username(), MySqlTestDatabase.password(), UUID.randomUUID().toString())) {
             verifyAttachments(context);
         }
     }
 
     @Test
     void activeTaskDoesNotRejectNewMessages(@TempDir Path directory) throws Exception {
-        try (ConfigurableApplicationContext context = start(databaseUrl(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), UUID.randomUUID().toString())) {
+        try (ConfigurableApplicationContext context = start(databaseUrl(directory), MySqlTestDatabase.username(), MySqlTestDatabase.password(), UUID.randomUUID().toString())) {
             verifyDuringTask(context);
         }
     }
@@ -64,11 +67,11 @@ class MessageAcceptanceHttpTest {
         String ownerId = UUID.randomUUID().toString();
         String url = databaseUrl(directory);
         MessageReceiptVO original;
-        try (ConfigurableApplicationContext context = start(url, com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), ownerId)) {
+        try (ConfigurableApplicationContext context = start(url, MySqlTestDatabase.username(), MySqlTestDatabase.password(), ownerId)) {
             original = send(context, actor(context), "/api/v1/conversations/messages", "restart-first",
                     Map.of("text", "重启后继续交流"));
         }
-        try (ConfigurableApplicationContext context = start(url, com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), ownerId)) {
+        try (ConfigurableApplicationContext context = start(url, MySqlTestDatabase.username(), MySqlTestDatabase.password(), ownerId)) {
             assertThat(send(context, actor(context), "/api/v1/conversations/messages", "restart-first",
                     Map.of("text", "重启后继续交流"))).isEqualTo(original);
             assertThat(count(context, "sq_conversation", ownerId)).isEqualTo(1);
@@ -84,7 +87,7 @@ class MessageAcceptanceHttpTest {
                 "--agentsquad.delivery.enabled=false", "--agentsquad.auth.username=tester",
                 "--agentsquad.auth.password=test-only", "--agentsquad.auth.role=USER",
                 "--agentsquad.auth.user-id=" + ownerId);
-        com.agentsquad.squad.testsupport.TestUserDirectory.activate(context, ownerId);
+        TestUserDirectory.activate(context, ownerId);
         return context;
     }
 
@@ -131,8 +134,8 @@ class MessageAcceptanceHttpTest {
         mvc.perform(post(path).with(TestAssertion.as(actor.view().userId(), "USER"))
                 .header("Idempotency-Key", "concurrent-first").contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(Map.of("text", "变更内容")))).andExpect(status().isConflict());
-        MessageTestActor other = new MessageTestActor(new com.agentsquad.squad.identity.AuthView(UUID.randomUUID().toString(), "other", java.util.List.of(AccountRole.USER), null));
-        com.agentsquad.squad.testsupport.TestUserDirectory.activate(context, other.view().userId());
+        MessageTestActor other = new MessageTestActor(new AuthView(UUID.randomUUID().toString(), "other", java.util.List.of(AccountRole.USER), null));
+        TestUserDirectory.activate(context, other.view().userId());
         mvc.perform(post("/api/v1/conversations/{id}/messages", first.conversationId()).with(TestAssertion.as(other.view().userId(), "USER"))
                         .header("Idempotency-Key", "foreign")
                         .contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"不能读写别人的对话\"}"))
@@ -200,7 +203,7 @@ class MessageAcceptanceHttpTest {
 
     static MessageTestActor actor(ConfigurableApplicationContext context) {
         String userId = context.getEnvironment().getProperty("agentsquad.auth.user-id");
-        return new MessageTestActor(new com.agentsquad.squad.identity.AuthView(userId, "tester", java.util.List.of(AccountRole.USER), null));
+        return new MessageTestActor(new AuthView(userId, "tester", java.util.List.of(AccountRole.USER), null));
     }
 
     static MessageReceiptVO send(ConfigurableApplicationContext context, MessageTestActor actor, String path,
@@ -231,6 +234,6 @@ class MessageAcceptanceHttpTest {
     }
 
     private String databaseUrl(Path directory) {
-        return com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("messages"));
+        return MySqlTestDatabase.url(directory.resolve("messages"));
     }
 }

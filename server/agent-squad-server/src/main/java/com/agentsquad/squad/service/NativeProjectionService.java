@@ -44,7 +44,7 @@ import java.util.Map;
 public class NativeProjectionService {
 
     @Resource
-    private com.agentsquad.squad.service.ExecutionAuthorizationService authorization;
+    private ExecutionAuthorizationService authorization;
 
     @Resource
     private ExecutionFailureService failures;
@@ -92,13 +92,14 @@ public class NativeProjectionService {
     private RuntimeAdmissionService admission;
 
     @Resource
-    private com.agentsquad.squad.service.ActivityProjectionService activities;
+    private ActivityProjectionService activities;
 
     /**
      * 重复事件只跳过；缺少前序事件则回滚并等待重新读取完整前缀。
      */
     @Transactional
     public void accept(ProjectionTargetBO target, NativeEventViewBO event) {
+        log.debug("开始投影原生事件 bindingId={} sequence={}", target.getBindingId(), event.sequence());
         ExecutionScopePO scope = scopeService.lockOwned(target.getUserId(), scopeMapper.findScopeByBinding(target.getUserId(), target.getBindingId()), false);
         authorization.requireScopeCurrent(target.getUserId(), scope.getScopeId());
         Long cursor = projectionMapper.lockCursor(target.getUserId(), target.getBindingId());
@@ -106,6 +107,7 @@ public class NativeProjectionService {
             throw new IllegalStateException("原生会话绑定已消失");
         }
         if (event.sequence() <= cursor) {
+            log.debug("跳过已投影事件 bindingId={} sequence={}", target.getBindingId(), event.sequence());
             return;
         }
         if (event.sequence() != cursor + 1) {
@@ -171,6 +173,7 @@ public class NativeProjectionService {
         if ("run/start".equals(event.type()) || "run/end".equals(event.type())) {
             TransactionSynchronizationManager.registerSynchronization(new NativeProjectionCommitLogBO(target, event));
         }
+        log.debug("原生事件投影处理完成 bindingId={} sequence={}", target.getBindingId(), event.sequence());
     }
 
     /**

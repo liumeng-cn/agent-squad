@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
@@ -34,11 +35,11 @@ class WorkerGuardIntegrationTest {
 
     @Test
     void onlyOneGuardCanRunAndCandidateNeedsMatchingTurn(@TempDir Path directory) throws Exception {
-        String databaseUrl = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("squad"));
+        String databaseUrl = MySqlTestDatabase.url(directory.resolve("squad"));
         try (ConfigurableApplicationContext spring = SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
                 "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver")) {
             String userId = "00000000-0000-0000-0000-000000000001";
             GoalTaskService tasks = spring.getBean(GoalTaskService.class);
@@ -112,7 +113,7 @@ class WorkerGuardIntegrationTest {
             try (ConfigurableApplicationContext peer = SpringApplication.run(AgentSquadApplication.class,
                     "--spring.main.web-application-type=none",
                     "--spring.datasource.url=" + databaseUrl,
-                    "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                    "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
                     "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver")) {
                 WorkerDispatchService peerDispatch = peer.getBean(WorkerDispatchService.class);
                 WorkerResultService peerResults = peer.getBean(WorkerResultService.class);

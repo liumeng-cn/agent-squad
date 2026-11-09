@@ -36,6 +36,10 @@ logging:
     format:
       console: ${SQUAD_LOG_FORMAT:}
   level:
+    root: INFO
+    com.agentsquad.squad: DEBUG
+    # MyBatis 只输出 SQL 模板，绑定值和结果行由日志适配器过滤。
+    com.agentsquad.squad.mapper: DEBUG
     io.agentscope.harness.agent.middleware.AgentTraceMiddleware: OFF
     # 供应商错误由业务层分类，SDK 传输日志可能包含完整响应正文。
     io.agentscope.core.model.transport.JdkHttpTransport: OFF
@@ -151,3 +155,4 @@ mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   configuration:
     map-underscore-to-camel-case: false
+    log-impl: com.agentsquad.squad.config.SqlTemplateLog

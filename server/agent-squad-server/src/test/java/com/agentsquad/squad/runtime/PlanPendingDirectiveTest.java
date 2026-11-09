@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.exceptions.PendingDirectivesException;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.po.TaskDirectivePO;
 import com.agentsquad.squad.model.bo.TaskGoalStateBO;
@@ -64,7 +65,7 @@ class PlanPendingDirectiveTest {
                 "ALL_REQUIRED", List.of("done"));
         RuntimeBusinessException failure = assertThrows(RuntimeBusinessException.class,
                 () -> service.publish("user", "session", request));
-        var pending = (com.agentsquad.squad.exceptions.PendingDirectivesException) failure;
+        var pending = (PendingDirectivesException) failure;
         assertThat(pending.directives()).hasSize(2);
         assertThat(pending.directives().get(0).directiveId()).isEqualTo("first");
         assertThat(pending.directives().get(1).directiveId()).isEqualTo("second");

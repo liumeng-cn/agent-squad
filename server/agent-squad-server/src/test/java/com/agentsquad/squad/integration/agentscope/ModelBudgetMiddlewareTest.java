@@ -1,5 +1,8 @@
 package com.agentsquad.squad.integration.agentscope;
 
+import com.agentsquad.squad.service.ExecutionFailureService;
+import com.agentsquad.squad.service.UserStatusGuardService;
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.agent.middleware.ModelBudgetMiddleware;
 import com.agentsquad.squad.config.properties.WorkerModelProfileProperties;
@@ -89,8 +92,8 @@ class ModelBudgetMiddlewareTest {
     private ConfigurableApplicationContext start(Path directory) {
         return SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=none",
-                "--spring.datasource.url=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("squad")),
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.url=" + MySqlTestDatabase.url(directory.resolve("squad")),
+                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
                 "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver");
     }
 
@@ -123,13 +126,13 @@ class ModelBudgetMiddlewareTest {
         profiles.setModelProfiles(Map.of("default", profile));
 
         ModelBudgetMiddleware middleware = new ModelBudgetMiddleware();
-        ReflectionTestUtils.setField(middleware, "failures", spring.getBean(com.agentsquad.squad.service.ExecutionFailureService.class));
+        ReflectionTestUtils.setField(middleware, "failures", spring.getBean(ExecutionFailureService.class));
         ReflectionTestUtils.setField(middleware, "budgetMapper", spring.getBean(BudgetMapper.class));
         ReflectionTestUtils.setField(middleware, "budgetService", spring.getBean(BudgetService.class));
         ReflectionTestUtils.setField(middleware, "profileRegistry", profiles);
         ReflectionTestUtils.setField(middleware, "objectMapper", spring.getBean(ObjectMapper.class));
         ReflectionTestUtils.setField(middleware, "userStatusGuard",
-                spring.getBean(com.agentsquad.squad.service.UserStatusGuardService.class));
+                spring.getBean(UserStatusGuardService.class));
         return new Fixture(middleware, runtime, jdbc, task.taskId());
     }
 

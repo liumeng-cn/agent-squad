@@ -1,6 +1,8 @@
 package com.agentsquad.squad.scheduler;
 
 
+import com.agentsquad.squad.agent.session.NativeSessionGateway;
+import com.agentsquad.squad.mapper.ResponseRuntimeMapper;
 import com.agentsquad.squad.service.ResponseExecutionService;
 import com.agentsquad.squad.service.TaskFinalizerService;
 
@@ -29,13 +31,13 @@ public class CancellationSettlementTask {
     private TaskFinalizerService finalizer;
 
     @Resource
-    private com.agentsquad.squad.mapper.ResponseRuntimeMapper replies;
+    private ResponseRuntimeMapper replies;
 
     @Resource
-    private com.agentsquad.squad.service.ResponseExecutionService responses;
+    private ResponseExecutionService responses;
 
     @Resource
-    private com.agentsquad.squad.agent.session.NativeSessionGateway gateway;
+    private NativeSessionGateway gateway;
 
     /**
      * 按游标分批检查待收尾记录，单条暂未收尾时继续检查本轮其他记录。

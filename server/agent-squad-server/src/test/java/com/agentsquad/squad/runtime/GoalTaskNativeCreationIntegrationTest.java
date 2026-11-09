@@ -1,5 +1,7 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.testsupport.ModelAcceptanceFixture;
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.identity.AuthView;
@@ -120,7 +122,7 @@ class GoalTaskNativeCreationIntegrationTest {
                                     "joinPolicy", "ALL_REQUIRED", "acceptanceCriteria", List.of("活泼短文完成")), 300 + call);
                     case 5 -> textResponse("等待更新后的工作完成", 300 + call);
                     case 6 ->
-                            toolResponse(json, "propose_completion", com.agentsquad.squad.testsupport.ModelAcceptanceFixture.completion(
+                            toolResponse(json, "propose_completion", ModelAcceptanceFixture.completion(
                                     json, jdbcRef.get(), "SUCCEEDED", "短文已完成：活泼成稿"), 300 + call);
                     default -> textResponse("等待平台发布新答案", 300 + call);
                 };
@@ -169,7 +171,7 @@ class GoalTaskNativeCreationIntegrationTest {
                                     "joinPolicy", "ALL_REQUIRED", "acceptanceCriteria", List.of("短文完成")), call);
                     case 5 -> textResponse("计划已发布，等待 Worker。", call);
                     case 6 -> toolResponse(json, "propose_completion",
-                            com.agentsquad.squad.testsupport.ModelAcceptanceFixture.completion(json, jdbcRef.get(), "SUCCEEDED", "短文已完成：成稿"), call);
+                            ModelAcceptanceFixture.completion(json, jdbcRef.get(), "SUCCEEDED", "短文已完成：成稿"), call);
                     default -> textResponse("等待平台发布答案。", call);
                 };
             }
@@ -183,12 +185,12 @@ class GoalTaskNativeCreationIntegrationTest {
         });
         model.start();
         try {
-            String database = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("squad"));
+            String database = MySqlTestDatabase.url(directory.resolve("squad"));
             String baseUrl = "http://127.0.0.1:" + model.getAddress().getPort() + "/v1";
             String[] properties = {
                     "--spring.main.web-application-type=none",
                     "--spring.datasource.url=" + database,
-                    "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                    "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
                     "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                     "--agentsquad.model.api-key=test-only",
                     "--agentsquad.model.base-url=" + baseUrl,
@@ -322,7 +324,7 @@ class GoalTaskNativeCreationIntegrationTest {
     private String toolResponse(ObjectMapper json, String toolName,
                                 Map<String, Object> arguments, int sequence) throws java.io.IOException {
         String encoded = json.writeValueAsString(json.writeValueAsString("publish_plan".equals(toolName)
-                ? com.agentsquad.squad.testsupport.ModelAcceptanceFixture.structuredPlan(arguments) : arguments));
+                ? ModelAcceptanceFixture.structuredPlan(arguments) : arguments));
         return """
                 {"id":"chatcmpl-%d","object":"chat.completion","created":%d,"model":"test-model",
                  "choices":[{"index":0,"message":{"role":"assistant","content":null,

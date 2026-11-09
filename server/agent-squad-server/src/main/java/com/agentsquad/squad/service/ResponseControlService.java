@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.agentsquad.squad.mapper.InteractionMapper;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.utils.ContentDigests;
@@ -50,10 +51,10 @@ public class ResponseControlService {
     private ConversationEventWriterService events;
 
     @Resource
-    private com.agentsquad.squad.service.OperationService operations;
+    private OperationService operations;
 
     @Resource
-    private com.agentsquad.squad.mapper.InteractionMapper interactions;
+    private InteractionMapper interactions;
 
     @Resource
     private ObjectMapper json;

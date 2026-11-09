@@ -1,6 +1,7 @@
 package com.agentsquad.squad.service;
 
 
+import com.agentsquad.squad.observer.ExecutionTrace;
 import com.agentsquad.squad.exceptions.RuntimeAdmissionBusyException;
 import com.agentsquad.squad.model.bo.NativeSubmissionReceiptBO;
 
@@ -55,7 +56,7 @@ import java.util.UUID;
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class CommandDeliveryService {
     @Resource
-    private com.agentsquad.squad.observer.ExecutionTrace executionTrace;
+    private ExecutionTrace executionTrace;
 
     private static final int LEASE_SECONDS = 60;
     private static final String ALREADY_SETTLED = "Only the latest unfinished task can continue";
@@ -63,13 +64,13 @@ public class CommandDeliveryService {
     private static final int MAX_RESUME_ATTEMPTS = 5;
 
     @Resource
-    private com.agentsquad.squad.service.ExecutionAuthorizationService authorization;
+    private ExecutionAuthorizationService authorization;
 
     @Resource
-    private com.agentsquad.squad.service.ExecutionRestrictionService restrictions;
+    private ExecutionRestrictionService restrictions;
 
     @Resource
-    private com.agentsquad.squad.service.ExecutionScopeService scopes;
+    private ExecutionScopeService scopes;
 
     @Resource
     private ResponseExecutionService responses;
@@ -227,7 +228,12 @@ public class CommandDeliveryService {
      * 单条投递不跨数据库事务等待模型；失败按有界退避重新排队。
      */
     public void deliver(String commandId) {
-        executionTrace.deliver(commandId, () -> deliverCommand(commandId));
+        log.debug("开始投递运行命令 commandId={}", commandId);
+        try {
+            executionTrace.deliver(commandId, () -> deliverCommand(commandId));
+        } finally {
+            log.debug("运行命令投递调用结束 commandId={}", commandId);
+        }
     }
 
     private void deliverCommand(String commandId) {
@@ -269,6 +275,8 @@ public class CommandDeliveryService {
                 String scopeId = scopes.scopeForSession(delivery.getUserId(), delivery.getSessionId());
                 authorization.prepare(delivery.getUserId(), scopeId);
             }
+            // 领取成功后按持久命令类型调用原生执行。
+            log.debug("分派运行命令 commandId={} action={} bindingId={}", commandId, action, delivery.getBindingId());
             switch (action) {
                 case SUBMIT, MESSAGE_SUBMIT, MASTER_SIGNAL, TASK_DIRECTIVE -> deliverSubmit(commandId, token, delivery);
                 case STOP -> deliverStop(commandId, token, delivery);

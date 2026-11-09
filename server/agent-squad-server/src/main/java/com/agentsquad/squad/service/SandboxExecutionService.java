@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.agentsquad.squad.mapper.ArtifactMapper;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.model.bo.SandboxExecutionContextBO;
@@ -28,10 +29,10 @@ public class SandboxExecutionService {
     @Resource
     private UserStatusGuardService userStatus;
     @Resource
-    private com.agentsquad.squad.service.ArtifactService artifacts;
+    private ArtifactService artifacts;
 
     @Resource
-    private com.agentsquad.squad.mapper.ArtifactMapper artifactMapper;
+    private ArtifactMapper artifactMapper;
 
     @Resource
     private SandboxAccessService access;

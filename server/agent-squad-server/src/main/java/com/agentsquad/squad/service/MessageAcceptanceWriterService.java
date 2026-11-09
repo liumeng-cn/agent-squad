@@ -1,5 +1,8 @@
 package com.agentsquad.squad.service;
 
+import com.agentsquad.squad.event.CommandReadySignal;
+import com.agentsquad.squad.observer.ExecutionTrace;
+import com.agentsquad.squad.utils.ConversationTitles;
 import com.agentsquad.squad.enums.ResponseCompletionProtocol;
 import com.agentsquad.squad.mapper.ArtifactMapper;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
@@ -46,13 +49,13 @@ import java.util.UUID;
 @Service
 public class MessageAcceptanceWriterService {
     @Resource
-    private com.agentsquad.squad.observer.ExecutionTrace executionTrace;
+    private ExecutionTrace executionTrace;
 
     @org.springframework.beans.factory.annotation.Value("${agentsquad.response.completion-protocol:NATURAL}")
     private ResponseCompletionProtocol completionProtocol;
 
     @Resource
-    private com.agentsquad.squad.service.ModelCatalogService modelCatalog;
+    private ModelCatalogService modelCatalog;
 
     @Resource
     private ApplicationEventPublisher committedEvents;
@@ -154,7 +157,7 @@ public class MessageAcceptanceWriterService {
                 new MessageAcceptedPayloadBO(ConversationDeltaType.SCHEMA_VERSION, message, execution), now);
         appendEvent(userId, conversation, commandId, ConversationDeltaType.EXECUTION_QUEUED.code(),
                 new ExecutionChangedPayloadBO(ConversationDeltaType.SCHEMA_VERSION, execution), now);
-        committedEvents.publishEvent(new com.agentsquad.squad.event.CommandReadySignal(commandId));
+        committedEvents.publishEvent(new CommandReadySignal(commandId));
         MessageSubmissionBO submission = messages.findSubmission(userId, scopeKey, key);
         log.info("用户消息已受理 {}", observations.logFields(Map.of(
                 "conversationId", conversationId, "messageId", messageId, "executionId", executionId,
@@ -192,7 +195,7 @@ public class MessageAcceptanceWriterService {
     }
 
     private String fallbackTitle(String text) {
-        String title = com.agentsquad.squad.utils.ConversationTitles.safe(text, 32);
+        String title = ConversationTitles.safe(text, 32);
         return title.isEmpty() ? "新对话" : title;
     }
 }

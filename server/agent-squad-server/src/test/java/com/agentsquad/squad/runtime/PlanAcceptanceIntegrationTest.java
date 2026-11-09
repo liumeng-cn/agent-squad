@@ -1,5 +1,9 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.mapper.ProjectionMapper;
+import com.agentsquad.squad.service.ConversationQueryService;
+import com.agentsquad.squad.service.TaskFinalizerService;
+import com.agentsquad.squad.service.TaskSnapshotService;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.enums.AcceptanceVerificationType;
@@ -91,7 +95,7 @@ class PlanAcceptanceIntegrationTest {
             db.update("UPDATE sq_goal_task SET status='RUNNING' WHERE task_id=?", task.taskId());
             String job = db.queryForObject("SELECT job_id FROM sq_worker_job WHERE task_id=? AND node_key='write'", String.class, task.taskId());
             var unknown = evaluation.evaluate(user, task.taskId(), 1, List.of());
-            assertThat(context.getBean(com.agentsquad.squad.service.TaskSnapshotService.class).listJobs(user, task.taskId()).items())
+            assertThat(context.getBean(TaskSnapshotService.class).listJobs(user, task.taskId()).items())
                     .anyMatch(item -> item.nodeKey().equals("optional") && Boolean.FALSE.equals(item.required()));
             assertThat(unknown.acceptanceResults()).extracting(result -> result.verdict())
                     .containsExactly(PlanAcceptanceVerdict.PASS, PlanAcceptanceVerdict.UNKNOWN, PlanAcceptanceVerdict.UNKNOWN);
@@ -123,13 +127,13 @@ class PlanAcceptanceIntegrationTest {
             assertThat(proposal.path("acceptanceResults")).hasSize(3);
             assertThat(proposal.path("acceptanceResults").get(2).path("verifier").asText()).isEqualTo("USER:" + user);
             if (accepted && "true".equals(System.getenv("SQUAD_ACCEPTANCE_BROWSER_PROBE"))) {
-                var target = context.getBean(com.agentsquad.squad.mapper.ProjectionMapper.class).findTarget(user, binding);
-                assertThat(context.getBean(com.agentsquad.squad.service.TaskFinalizerService.class).tryComplete(target,
+                var target = context.getBean(ProjectionMapper.class).findTarget(user, binding);
+                assertThat(context.getBean(TaskFinalizerService.class).tryComplete(target,
                         new NativeEventViewBO(1, "finished", "turn/output", "run",
                                 "turn", "completed", System.currentTimeMillis(), Map.of()))).isTrue();
-                var views = context.getBean(com.agentsquad.squad.service.TaskSnapshotService.class).listJobs(user, task.taskId());
+                var views = context.getBean(TaskSnapshotService.class).listJobs(user, task.taskId());
                 assertThat(views.acceptanceChecks()).hasSize(3);
-                assertThat(context.getBean(com.agentsquad.squad.service.ConversationQueryService.class)
+                assertThat(context.getBean(ConversationQueryService.class)
                         .snapshot(user, conversation.conversationId(), null, 30).taskStates())
                         .extracting(state -> state.getTaskId()).contains(task.taskId());
                 var ready = Path.of("/tmp/squad-browser-probe.json");
@@ -149,7 +153,7 @@ class PlanAcceptanceIntegrationTest {
                 return;
             }
             context.getBean(PlanService.class).publish(user, session, new PlanPublishBO("replacement", 1, nodes, "ALL_REQUIRED", criteria));
-            var snapshotService = context.getBean(com.agentsquad.squad.service.TaskSnapshotService.class);
+            var snapshotService = context.getBean(TaskSnapshotService.class);
             assertThat(snapshotService.listJobs(user, task.taskId(), 1L).items()).allMatch(item -> item.planVersion() == 1);
             assertThat(snapshotService.listJobs(user, task.taskId()).items()).anyMatch(item -> job.equals(item.reusedFromJobId()));
             var publicReuse = json.readTree(db.queryForObject("SELECT payload_json FROM sq_conversation_event WHERE conversation_id=? AND event_type='job.reused' ORDER BY id DESC LIMIT 1",
@@ -166,14 +170,14 @@ class PlanAcceptanceIntegrationTest {
             assertThat(old.acceptanceCriteria().get(0).legacy()).isTrue();
             db.update("UPDATE sq_worker_job SET status='FAILED',result_json=NULL WHERE task_id=? AND plan_version=2 AND node_key='optional'", task.taskId());
             completion.submit(new CompletionSubmissionBO(user, session, "turn-new", "call-new", "PARTIAL", "保留已有结果", List.of()));
-            var target = context.getBean(com.agentsquad.squad.mapper.ProjectionMapper.class).findTarget(user, binding);
-            assertThat(context.getBean(com.agentsquad.squad.service.TaskFinalizerService.class).tryComplete(target,
+            var target = context.getBean(ProjectionMapper.class).findTarget(user, binding);
+            assertThat(context.getBean(TaskFinalizerService.class).tryComplete(target,
                     new NativeEventViewBO(1, "old-ended", "turn/output", "run",
                             "turn", "completed", System.currentTimeMillis(), Map.of()))).isFalse();
             assertThat(db.queryForObject("SELECT status FROM sq_goal_task WHERE task_id=?", String.class, task.taskId()))
                     .isEqualTo("RUNNING");
             db.update("UPDATE sq_worker_job SET status='RECOVERY_BLOCKED' WHERE task_id=? AND plan_version=2", task.taskId());
-            assertThat(context.getBean(com.agentsquad.squad.service.TaskFinalizerService.class).tryComplete(target,
+            assertThat(context.getBean(TaskFinalizerService.class).tryComplete(target,
                     new NativeEventViewBO(1, "ended", "turn/output", "run",
                             "turn-new", "completed", System.currentTimeMillis(), Map.of()))).isTrue();
             assertThat(db.queryForObject("SELECT status FROM sq_goal_task WHERE task_id=?", String.class, task.taskId()))

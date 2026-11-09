@@ -1,5 +1,6 @@
 package com.agentsquad.squad.memory;
 
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.model.dto.MemoryCreateDTO;
 import com.agentsquad.squad.service.MemoryService;
@@ -29,8 +30,8 @@ class MemoryHttpTest {
     void enforcesIdentityAndConflictAtManagementBoundary(@TempDir Path directory) throws Exception {
         String user = UUID.randomUUID().toString();
         try (var context = SpringApplication.run(AgentSquadApplication.class, "--server.port=0",
-                "--spring.datasource.url=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("http")),
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.url=" + MySqlTestDatabase.url(directory.resolve("http")),
+                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.delivery.enabled=false", "--agentsquad.auth.username=tester", "--agentsquad.auth.password=test-only",
                 "--agentsquad.auth.user-id=" + user, "--agentsquad.auth.role=USER")) {
             MockMvc mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();

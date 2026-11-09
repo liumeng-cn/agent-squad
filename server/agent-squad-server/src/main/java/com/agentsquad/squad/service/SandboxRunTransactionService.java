@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.agentsquad.squad.utils.RuntimePayloads;
 import com.agentsquad.squad.model.bo.ArtifactStageViewBO;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
@@ -114,7 +115,7 @@ public class SandboxRunTransactionService {
                     "沙箱执行已受理但结果待核对，不能自动重放");
         }
         try {
-            return json.treeToValue(com.agentsquad.squad.utils.RuntimePayloads.readJson(json, prior.getResultJson()), SandboxExecutionResultBO.class);
+            return json.treeToValue(RuntimePayloads.readJson(json, prior.getResultJson()), SandboxExecutionResultBO.class);
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("沙箱持久结果损坏", exception);
         }

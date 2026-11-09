@@ -1,5 +1,7 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.agent.session.RuntimeSessionProvider;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.model.bo.RuntimeEventSourceBO;
 import com.agentsquad.squad.observer.ExecutionTrace;
@@ -95,7 +97,7 @@ class ActivityProjectionIntegrationTest {
                 scheduler.dispose();
             }
             var scope = context.getBean(ExecutionScopeMapper.class).findOwned(user, scopeId);
-            var sessions = context.getBean(com.agentsquad.squad.agent.session.RuntimeSessionProvider.class);
+            var sessions = context.getBean(RuntimeSessionProvider.class);
             var source = new RuntimeEventSourceBO(user, binding, session, 1);
             String agent = jdbc.queryForObject("SELECT agent_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
             int journalObjects = jdbc.queryForObject("SELECT COUNT(*) FROM agentscope_store", Integer.class);
@@ -145,7 +147,7 @@ class ActivityProjectionIntegrationTest {
             assertThat(jdbc.queryForList("SELECT payload_json FROM sq_conversation_event WHERE event_type='activity.updated'", String.class))
                     .allMatch(payload -> !payload.contains("private-"));
             assertThatThrownBy(() -> reads.snapshot("00000000-0000-0000-0000-000000000002", receipt.conversationId(), null, 40))
-                    .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
+                    .isInstanceOf(RuntimeBusinessException.class);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_execution_activity", Integer.class)).isEqualTo(4);
             transaction.executeWithoutResult(status -> {
                 for (int i = 10; i <= 50; i++) {
@@ -163,7 +165,7 @@ class ActivityProjectionIntegrationTest {
             assertThat(reads.activityHistory(user, receipt.conversationId(), new ActivityHistoryDTO("other-message", first.nextCursor())).items()).isEmpty();
             assertThatThrownBy(() -> reads.activityHistory("00000000-0000-0000-0000-000000000002", receipt.conversationId(),
                     new ActivityHistoryDTO(receipt.messageId(), null)))
-                    .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
+                    .isInstanceOf(RuntimeBusinessException.class);
         }
     }
 }

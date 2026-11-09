@@ -1,5 +1,7 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.identity.AuthView;
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.testsupport.TestAssertion;
 import org.junit.jupiter.api.Test;
@@ -22,7 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ConversationApiSecurityTest {
     @Test
     void readRenameAndRetryRequireCorrectIdentityAndVersion(@TempDir Path directory) throws Exception {
-        try (var context = MessageAcceptanceHttpTest.start(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("api")), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), UUID.randomUUID().toString())) {
+        try (var context = MessageAcceptanceHttpTest.start(MySqlTestDatabase.url(directory.resolve("api")), MySqlTestDatabase.username(), MySqlTestDatabase.password(), UUID.randomUUID().toString())) {
             var actor = MessageAcceptanceHttpTest.actor(context);
             var receipt = MessageAcceptanceHttpTest.send(context, actor, "/api/v1/conversations/messages", "first", Map.of("text", "接口验证"));
             var mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();
@@ -38,7 +40,7 @@ class ConversationApiSecurityTest {
             String retry = "/api/v1/executions/" + receipt.executionId() + "/retry";
             mvc.perform(post(retry).header("Idempotency-Key", "retry").contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")).andExpect(status().isUnauthorized());
             mvc.perform(post(retry).with(TestAssertion.as(actor.view().userId(), "USER")).header("Idempotency-Key", "retry").contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")).andExpect(status().isConflict());
-            var other = new MessageTestActor(new com.agentsquad.squad.identity.AuthView(UUID.randomUUID().toString(), "other", java.util.List.of(AccountRole.USER), null));
+            var other = new MessageTestActor(new AuthView(UUID.randomUUID().toString(), "other", java.util.List.of(AccountRole.USER), null));
             mvc.perform(get(base + "/snapshot").with(TestAssertion.as(other.view().userId(), "USER"))).andExpect(status().isNotFound());
             mvc.perform(get(base + "/snapshot").with(TestAssertion.as(other.view().userId(), "ADMIN"))).andExpect(status().isNotFound());
             mvc.perform(get(base + "/events").with(TestAssertion.as(other.view().userId(), "USER")).param("after", receipt.conversationId() + ":1:0")).andExpect(status().isNotFound());

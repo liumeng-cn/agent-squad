@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.testsupport.ApiResultJson;
 import com.agentsquad.squad.testsupport.TestAssertion;
@@ -28,11 +29,11 @@ class ConversationDeletionHttpTest {
 
     @Test
     void shouldAcceptDeleteAndBlockReadsAndSubmits(@TempDir Path tempDirectory) throws Exception {
-        String databaseUrl = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(tempDirectory.resolve("squad"));
+        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("squad"));
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class,
                 "--server.port=0",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
                 "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.auth.username=local-user",
                 "--agentsquad.auth.password=local-password")) {
@@ -75,11 +76,11 @@ class ConversationDeletionHttpTest {
 
     @Test
     void shouldReplaySameDeleteAndRejectStaleVersion(@TempDir Path tempDirectory) throws Exception {
-        String databaseUrl = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(tempDirectory.resolve("squad"));
+        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("squad"));
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class,
                 "--server.port=0",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
                 "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.auth.username=local-user",
                 "--agentsquad.auth.password=local-password")) {

@@ -1,5 +1,11 @@
 package com.agentsquad.squad.agent.middleware;
 
+import com.agentsquad.squad.agent.skill.ScopeSkillCapabilities;
+import com.agentsquad.squad.agent.skill.ScopeSkillRepository;
+import com.agentsquad.squad.observer.ExecutionTrace;
+import com.agentsquad.squad.observer.ObservationSupport;
+import com.agentsquad.squad.service.ExecutionFailureService;
+import com.agentsquad.squad.service.SkillRuntimeService;
 import com.agentsquad.squad.model.bo.SkillResourceRequestBO;
 
 import com.agentsquad.squad.model.bo.SkillSelectionBO;
@@ -43,12 +49,12 @@ import java.util.function.Function;
 @lombok.extern.slf4j.Slf4j
 public class ExecutionContextMiddleware implements MiddlewareBase {
     @Resource
-    private com.agentsquad.squad.observer.ExecutionTrace executionTrace;
+    private ExecutionTrace executionTrace;
     @Resource
-    private com.agentsquad.squad.service.SkillRuntimeService skills;
+    private SkillRuntimeService skills;
 
     @Resource
-    private com.agentsquad.squad.service.ExecutionFailureService failures;
+    private ExecutionFailureService failures;
 
     @Resource
     private ExecutionAuthorizationService authorization;
@@ -83,7 +89,7 @@ public class ExecutionContextMiddleware implements MiddlewareBase {
             if (!(error instanceof ExecutionContextInvalidatedException) && !(error instanceof CancellationException)) {
                 log.debug("执行阶段失败 sessionId={} stage=agent errorType={}", context.getSessionId(),
                         error.getClass().getSimpleName(),
-                        com.agentsquad.squad.observer.ObservationSupport.safeDiagnostic(error));
+                        ObservationSupport.safeDiagnostic(error));
             }
         });
     }
@@ -119,8 +125,8 @@ public class ExecutionContextMiddleware implements MiddlewareBase {
                         var tools = selection != null && selection.skillVersionIds().isEmpty()
                                 ? input.tools().stream().filter(tool -> !"load_skill_through_path".equals(tool.getName())).toList()
                                 : input.tools();
-                        context.put(com.agentsquad.squad.agent.skill.ScopeSkillCapabilities.class,
-                                new com.agentsquad.squad.agent.skill.ScopeSkillCapabilities(tools.stream()
+                        context.put(ScopeSkillCapabilities.class,
+                                new ScopeSkillCapabilities(tools.stream()
                                         .map(tool -> tool.getName()).collect(java.util.stream.Collectors.toSet())));
                         return new ModelCallInput(input.messages(), tools, input.options(), input.model());
                     }
@@ -159,11 +165,11 @@ public class ExecutionContextMiddleware implements MiddlewareBase {
                         if (entry == null) {
                             continue;
                         }
-                        String prefix = com.agentsquad.squad.agent.skill.ScopeSkillRepository.SOURCE_PREFIX;
+                        String prefix = ScopeSkillRepository.SOURCE_PREFIX;
                         if (!entry.skill().getSource().startsWith(prefix)) {
                             throw new ExecutionContextInvalidatedException(new IllegalStateException("非平台技能来源"));
                         }
-                        var allowed = context.get(com.agentsquad.squad.agent.skill.ScopeSkillCapabilities.class);
+                        var allowed = context.get(ScopeSkillCapabilities.class);
                         skills.requireCapabilities(context.getUserId(), scopes.scopeForSession(context.getUserId(), context.getSessionId()),
                                 entry.skill().getSource().substring(prefix.length()), allowed == null ? Set.of() : allowed.toolNames());
                     }

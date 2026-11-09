@@ -1,5 +1,6 @@
 package com.agentsquad.squad.controller;
 
+import com.agentsquad.squad.service.ConversationTitleService;
 import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
@@ -27,7 +28,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class RuntimeController {
 
     @Resource
-    private com.agentsquad.squad.service.ConversationTitleService conversationTitles;
+    private ConversationTitleService conversationTitles;
 
     @Resource
     private GoalTaskService goalTaskService;

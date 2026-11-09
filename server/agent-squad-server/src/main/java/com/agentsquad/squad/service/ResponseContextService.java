@@ -45,7 +45,7 @@ import java.util.List;
 public class ResponseContextService {
 
     @Resource
-    private com.agentsquad.squad.service.MemoryContextService memories;
+    private MemoryContextService memories;
 
     private static final int MAX_CONTEXT_CHARACTERS = 200000;
 
@@ -82,7 +82,7 @@ public class ResponseContextService {
     private ObjectMapper objectMapper;
 
     @Resource
-    private com.agentsquad.squad.service.ActivityProjectionService activities;
+    private ActivityProjectionService activities;
 
     /**
      * SDK 提交前独立调用并提交快照；事务不接触模型，失败不会留下半份上下文。

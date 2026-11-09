@@ -1,5 +1,6 @@
 package com.agentsquad.squad.filter;
 
+import com.agentsquad.squad.exceptions.AuthForbiddenException;
 import com.agentsquad.squad.service.AuthService;
 import com.agentsquad.squad.vo.AuthVO;
 import com.agentsquad.squad.gateway.auth.InternalIdentitySigner;
@@ -39,7 +40,7 @@ public class GatewayAuthenticationFilter implements GlobalFilter, Ordered {
                     : authService.authenticateWrite(token, exchange.getRequest().getHeaders().getFirst("X-CSRF-Token"));
         }).subscribeOn(Schedulers.boundedElastic()).flatMap(user -> {
             if (user.mustChangePassword())
-                return Mono.error(new com.agentsquad.squad.exceptions.AuthForbiddenException());
+                return Mono.error(new AuthForbiddenException());
             String assertion = signer.sign(user, exchange.getRequest().getMethod().name(),
                     exchange.getRequest().getURI().getRawPath());
             var request = exchange.getRequest().mutate().headers(headers -> {

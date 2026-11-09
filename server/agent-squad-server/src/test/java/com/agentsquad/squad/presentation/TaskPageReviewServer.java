@@ -1,5 +1,6 @@
 package com.agentsquad.squad.presentation;
 
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.identity.AuthView;
@@ -28,8 +29,8 @@ public final class TaskPageReviewServer {
     public static void main(String[] args) throws Exception {
         Path directory = Files.createTempDirectory("agentsquad-page-review-");
         var context = SpringApplication.run(AgentSquadApplication.class,
-                "--server.port=18080", "--spring.datasource.url=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("squad")),
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--server.port=18080", "--spring.datasource.url=" + MySqlTestDatabase.url(directory.resolve("squad")),
+                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.auth.username=review", "--agentsquad.auth.password=local-review",
                 "--agentsquad.auth.role=OPERATOR", "--agentsquad.model.api-key=test-only",
                 "--agentsquad.model.name=test-model", "--agentsquad.model.base-url=http://127.0.0.1:1/v1",

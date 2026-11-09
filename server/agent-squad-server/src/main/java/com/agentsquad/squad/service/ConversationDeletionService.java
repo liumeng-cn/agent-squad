@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.agentsquad.squad.mapper.CompletionMapper;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 
@@ -45,7 +46,7 @@ public class ConversationDeletionService {
     private TaskControlService taskControls;
 
     @Resource
-    private com.agentsquad.squad.mapper.CompletionMapper completion;
+    private CompletionMapper completion;
 
     @Resource
     private ResponseControlService responseControls;

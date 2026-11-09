@@ -1,5 +1,6 @@
 package com.agentsquad.squad.agent.middleware;
 
+import com.agentsquad.squad.utils.ContentDigests;
 import com.agentsquad.squad.enums.ReasoningAdapter;
 import com.agentsquad.squad.mapper.ResponseRuntimeMapper;
 import com.agentsquad.squad.model.bo.CachedReplyModelBO;
@@ -68,7 +69,7 @@ public class SelectedReplyModelMiddleware implements MiddlewareBase {
                         options.maxTokens(profile.getMaxOutputTokens());
                     }
                     catalog.applyReasoning(options, profile, choice.reasoningMode());
-                    String stamp = choice.configurationVersion() + com.agentsquad.squad.utils.ContentDigests.sha256(profile.getApiKey());
+                    String stamp = choice.configurationVersion() + ContentDigests.sha256(profile.getApiKey());
                     var client = clients.compute(choice.modelId(), (id, previous) -> previous != null && previous.configurationStamp().equals(stamp)
                             ? previous : new CachedReplyModelBO(stamp, OpenAIChatModel.builder().apiKey(profile.getApiKey()).baseUrl(profile.getBaseUrl())
                             .modelName(profile.getModelName()).stream(false).build()));

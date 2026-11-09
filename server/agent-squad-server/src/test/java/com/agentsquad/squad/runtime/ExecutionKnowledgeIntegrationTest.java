@@ -1,5 +1,7 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.agent.session.NativeSessionGateway;
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.agent.MasterAgentIdentity;
 import com.agentsquad.squad.model.bo.*;
@@ -50,10 +52,10 @@ class ExecutionKnowledgeIntegrationTest {
                 String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
                 String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
                 var target = new ProjectionTargetBO(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
-                var diagnostic = context.getBean(com.agentsquad.squad.agent.session.NativeSessionGateway.class)
+                var diagnostic = context.getBean(NativeSessionGateway.class)
                         .readEvents(target, 0, 100).stream().filter(event -> event.type().contains("error") || "run/end".equals(event.type())).toList();
                 var master = (io.agentscope.harness.agent.HarnessAgent) org.springframework.test.util.ReflectionTestUtils.getField(
-                        context.getBean(com.agentsquad.squad.agent.session.NativeSessionGateway.class), "master");
+                        context.getBean(NativeSessionGateway.class), "master");
                 String error = master.session(io.agentscope.core.agent.RuntimeContext.builder().userId(USER).sessionId(session).build())
                         .task(receipt.commandId()).error();
                 assertThat(status).as("SDK error=%s; events=%s; modelCalls=%s", error, diagnostic, model.calls.get()).isEqualTo("SUCCEEDED");
@@ -108,8 +110,8 @@ class ExecutionKnowledgeIntegrationTest {
 
     private ConfigurableApplicationContext start(Path directory, D4SkillModelStub model, boolean fast) {
         return SpringApplication.run(AgentSquadApplication.class, "--spring.main.web-application-type=none",
-                "--spring.datasource.url=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("knowledge")),
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.url=" + MySqlTestDatabase.url(directory.resolve("knowledge")),
+                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.delivery.enabled=true", "--agentsquad.delivery.poll-delay-ms=" + (fast ? 100 : 3600000),
                 "--agentsquad.projection.poll-delay-ms=" + (fast ? 100 : 3600000), "--agentsquad.model.api-key=test-only",
                 "--agentsquad.model.base-url=" + model.baseUrl(), "--agentsquad.model.name=test-model",

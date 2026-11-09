@@ -1,5 +1,7 @@
 package com.agentsquad.squad.presentation;
 
+import com.agentsquad.squad.mapper.TaskEventMapper;
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.identity.AuthView;
@@ -42,8 +44,8 @@ class TaskDetailsHttpTest {
     @Test
     void protectsArtifactsReconciliationAndInteraction(@TempDir Path directory) throws Exception {
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class,
-                "--server.port=0", "--spring.datasource.url=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("squad")),
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--server.port=0", "--spring.datasource.url=" + MySqlTestDatabase.url(directory.resolve("squad")),
+                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.auth.username=tester", "--agentsquad.auth.password=test-only",
                 "--agentsquad.model.api-key=test-only", "--agentsquad.model.base-url=http://127.0.0.1:1/v1",
                 "--agentsquad.model.name=test-model",
@@ -152,7 +154,7 @@ class TaskDetailsHttpTest {
                         .contentType(MediaType.APPLICATION_JSON).content(response)).andExpect(status().isAccepted());
             }
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_command WHERE action = 'RESPOND'", Integer.class)).isEqualTo(1);
-            var events = context.getBean(com.agentsquad.squad.mapper.TaskEventMapper.class);
+            var events = context.getBean(TaskEventMapper.class);
             events.insertProjected(actor.userId(), taskId, 2, "answer-old", "answer.completed",
                     "{\"text\":\"旧回答\",\"revision\":0}", LocalDateTime.now());
             events.insertProjected(actor.userId(), taskId, 3, "answer-new", "answer.replaced",

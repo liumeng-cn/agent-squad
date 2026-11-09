@@ -37,7 +37,7 @@ public class ContextSnapshotService {
     private ExecutionAuthorizationService authorization;
 
     @Resource
-    private com.agentsquad.squad.service.MemoryContextService memories;
+    private MemoryContextService memories;
 
     private static final Pattern NODE_KEY = Pattern.compile("[a-z][a-z0-9_-]{0,79}");
 

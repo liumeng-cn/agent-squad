@@ -1,5 +1,7 @@
 package com.agentsquad.squad.service;
 
+import com.agentsquad.squad.agent.session.NativeSessionGateway;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.bo.FinalizationBO;
 import com.agentsquad.squad.enums.GoalTaskStatus;
 import com.agentsquad.squad.enums.PlanJoinStage;
@@ -53,7 +55,7 @@ public class TaskFinalizerService {
     private static final String MISSING_PROPOSAL_ANSWER = "本次目标未能生成有效的最终回答，请重新发起。";
 
     @Resource
-    private com.agentsquad.squad.agent.session.NativeSessionGateway nativeGateway;
+    private NativeSessionGateway nativeGateway;
 
     @Resource
     private ExecutionFailureService failures;
@@ -143,7 +145,7 @@ public class TaskFinalizerService {
                     return true;
                 }
             } catch (RuntimeException exception) {
-                if (!(exception instanceof com.agentsquad.squad.exceptions.RuntimeBusinessException)
+                if (!(exception instanceof RuntimeBusinessException)
                         && !(exception instanceof IllegalArgumentException)) {
                     throw exception;
                 }

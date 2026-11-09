@@ -1,5 +1,8 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.exceptions.RuntimeAdmissionBusyException;
+import com.agentsquad.squad.service.RuntimeAdmissionService;
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.mapper.DeliveryMapper;
 import org.junit.jupiter.api.Test;
@@ -46,7 +49,7 @@ class DeliveryFairScanIntegrationTest {
     void runtimeSlotsEnforceGlobalCapacityAndReleaseIdempotently(@TempDir Path directory) {
         try (ConfigurableApplicationContext context = start(directory)) {
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            var admission = context.getBean(com.agentsquad.squad.service.RuntimeAdmissionService.class);
+            var admission = context.getBean(RuntimeAdmissionService.class);
             org.springframework.test.util.ReflectionTestUtils.setField(admission, "enabled", true);
             org.springframework.test.util.ReflectionTestUtils.setField(admission, "globalLimit", 1);
             org.springframework.test.util.ReflectionTestUtils.setField(admission, "perUserLimit", 1);
@@ -69,7 +72,7 @@ class DeliveryFairScanIntegrationTest {
             transaction.executeWithoutResult(status -> admission.acquire(userA, bindingA, commandA, "SUBMIT"));
             org.assertj.core.api.Assertions.assertThatThrownBy(() -> transaction.executeWithoutResult(
                             status -> admission.acquire(userB, bindingB, commandB, "SUBMIT")))
-                    .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeAdmissionBusyException.class);
+                    .isInstanceOf(RuntimeAdmissionBusyException.class);
             admission.releaseUnsubmitted(userA, bindingA, "stale-command");
             assertThat(jdbc.queryForObject("SELECT active_count FROM sq_runtime_admission_counter WHERE pool_key = 'GLOBAL'",
                     Integer.class)).isEqualTo(1);
@@ -213,9 +216,9 @@ class DeliveryFairScanIntegrationTest {
     private ConfigurableApplicationContext start(Path directory) {
         return SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=none",
-                "--spring.datasource.url=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("squad")),
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(),
-                "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.url=" + MySqlTestDatabase.url(directory.resolve("squad")),
+                "--spring.datasource.username=" + MySqlTestDatabase.username(),
+                "--spring.datasource.password=" + MySqlTestDatabase.password(),
                 "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.delivery.enabled=false");
     }

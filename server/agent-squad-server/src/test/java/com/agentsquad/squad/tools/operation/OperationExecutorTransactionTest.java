@@ -1,5 +1,7 @@
 package com.agentsquad.squad.tools.operation;
 
+import com.agentsquad.squad.service.UserStatusGuardService;
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.mapper.OperationMapper;
 import com.agentsquad.squad.model.po.OperationPO;
 import com.agentsquad.squad.service.OperationDispatchService;
@@ -38,14 +40,14 @@ class OperationExecutorTransactionTest {
                 anyLong(), anyString(), anyString(), anyString())).thenReturn(1);
 
         OperationExecutorService target = new OperationExecutorService();
-        ReflectionTestUtils.setField(target, "userStatus", mock(com.agentsquad.squad.service.UserStatusGuardService.class));
+        ReflectionTestUtils.setField(target, "userStatus", mock(UserStatusGuardService.class));
         ReflectionTestUtils.setField(target, "operationMapper", operationMapper);
         OperationDispatchService dispatch = mock(OperationDispatchService.class);
         when(dispatch.begin(any(), anyString(), anyLong(), any(), anyString())).thenReturn(1);
         ReflectionTestUtils.setField(target, "dispatchService", dispatch);
         ReflectionTestUtils.setField(target, "objectMapper", new ObjectMapper());
         DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(
-                new DriverManagerDataSource(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(java.nio.file.Path.of(System.getProperty("java.io.tmpdir"), "operation-boundary-" + java.util.UUID.randomUUID())), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password()));
+                new DriverManagerDataSource(MySqlTestDatabase.url(java.nio.file.Path.of(System.getProperty("java.io.tmpdir"), "operation-boundary-" + java.util.UUID.randomUUID())), MySqlTestDatabase.username(), MySqlTestDatabase.password()));
         ProxyFactory proxyFactory = new ProxyFactory(target);
         proxyFactory.setProxyTargetClass(true);
         proxyFactory.addAdvice(new TransactionInterceptor(transactionManager,

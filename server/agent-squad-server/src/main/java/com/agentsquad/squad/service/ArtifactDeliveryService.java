@@ -27,10 +27,10 @@ import java.util.UUID;
 @Service
 public class ArtifactDeliveryService {
     @Resource
-    private com.agentsquad.squad.service.ExecutionScopeService scopes;
+    private ExecutionScopeService scopes;
 
     @Resource
-    private com.agentsquad.squad.service.ConversationEventWriterService events;
+    private ConversationEventWriterService events;
 
     @Resource
     private ArtifactDeliveryMapper stages;

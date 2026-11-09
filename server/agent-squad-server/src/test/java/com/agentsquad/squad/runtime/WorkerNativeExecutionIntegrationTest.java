@@ -1,5 +1,9 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.agent.session.RuntimeSessionProvider;
+import com.agentsquad.squad.service.RuntimeJournalImportService;
+import com.agentsquad.squad.testsupport.ModelAcceptanceFixture;
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.identity.AuthView;
@@ -59,15 +63,15 @@ class WorkerNativeExecutionIntegrationTest {
         inbox.release(inboxWriter);
         try (var spring = SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=none",
-                "--spring.datasource.url=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("database")),
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(),
-                "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.url=" + MySqlTestDatabase.url(directory.resolve("database")),
+                "--spring.datasource.username=" + MySqlTestDatabase.username(),
+                "--spring.datasource.password=" + MySqlTestDatabase.password(),
                 "--agentsquad.delivery.enabled=false")) {
-            var importer = spring.getBean(com.agentsquad.squad.service.RuntimeJournalImportService.class);
+            var importer = spring.getBean(RuntimeJournalImportService.class);
             var imported = importer.importWorkspace(legacy);
             assertThat(imported.sessions()).isEqualTo(1);
             assertThat(imported.bytes()).isGreaterThan(70000);
-            var store = spring.getBean(com.agentsquad.squad.agent.session.RuntimeSessionProvider.class).logStore();
+            var store = spring.getBean(RuntimeSessionProvider.class).logStore();
             var target = store.open(key, context);
             assertThat(target.readAfter(0, 10)).containsExactly(event);
             assertThat(target.inbox().readAfter(0, 10)).containsExactly(input);
@@ -105,12 +109,12 @@ class WorkerNativeExecutionIntegrationTest {
         });
         model.start();
         try {
-            String database = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("squad"));
+            String database = MySqlTestDatabase.url(directory.resolve("squad"));
             String baseUrl = "http://127.0.0.1:" + model.getAddress().getPort() + "/v1";
             String[] base = {
                     "--spring.main.web-application-type=none",
                     "--spring.datasource.url=" + database,
-                    "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                    "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
                     "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                     "--agentsquad.model.api-key=test-only",
                     "--agentsquad.model.base-url=" + baseUrl,
@@ -244,7 +248,7 @@ class WorkerNativeExecutionIntegrationTest {
     private String completionToolCallResponse(JdbcTemplate jdbc) {
         var json = new ObjectMapper();
         String arguments = json.valueToTree(json.valueToTree(
-                com.agentsquad.squad.testsupport.ModelAcceptanceFixture.completion(json, jdbc,
+                ModelAcceptanceFixture.completion(json, jdbc,
                         "SUCCEEDED", "摘要已完成：hello")).toString()).toString();
         return """
                 {"id":"chatcmpl-master-1","object":"chat.completion","created":3,"model":"test-model",

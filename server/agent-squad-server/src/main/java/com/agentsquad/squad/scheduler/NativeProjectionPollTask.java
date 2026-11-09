@@ -1,6 +1,9 @@
-package com.agentsquad.squad.poller;
+package com.agentsquad.squad.scheduler;
 
 
+import com.agentsquad.squad.mapper.ExecutionScopeMapper;
+import com.agentsquad.squad.mapper.ResponseRuntimeMapper;
+import com.agentsquad.squad.observer.ExecutionTrace;
 import com.agentsquad.squad.service.ExecutionAuthorizationService;
 import com.agentsquad.squad.service.ExecutionFailureService;
 import com.agentsquad.squad.service.ExecutionRestrictionService;
@@ -43,25 +46,25 @@ import com.agentsquad.squad.exceptions.RuntimeEventConsumptionException;
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class NativeProjectionPollTask {
     @Resource
-    private com.agentsquad.squad.observer.ExecutionTrace executionTrace;
+    private ExecutionTrace executionTrace;
 
     @Resource
-    private com.agentsquad.squad.service.ExecutionAuthorizationService authorization;
+    private ExecutionAuthorizationService authorization;
 
     @Resource
-    private com.agentsquad.squad.service.ExecutionRestrictionService restrictions;
+    private ExecutionRestrictionService restrictions;
 
     @Resource
-    private com.agentsquad.squad.mapper.ExecutionScopeMapper scopeMapper;
+    private ExecutionScopeMapper scopeMapper;
 
     @Resource
-    private com.agentsquad.squad.service.ExecutionFailureService failures;
+    private ExecutionFailureService failures;
 
     @Resource
     private NaturalReplyOutputReader naturalOutputs;
 
     @Resource
-    private com.agentsquad.squad.mapper.ResponseRuntimeMapper replies;
+    private ResponseRuntimeMapper replies;
 
     @Resource
     private ResponseExecutionService responses;

@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.agentsquad.squad.mapper.InteractionMapper;
 import com.agentsquad.squad.model.po.CommandPO;
 import com.agentsquad.squad.model.po.TaskPO;
 import com.agentsquad.squad.enums.GoalTaskStatus;
@@ -61,10 +62,10 @@ public class TaskControlService {
     private BindingMapper bindingMapper;
 
     @Resource
-    private com.agentsquad.squad.service.OperationService operations;
+    private OperationService operations;
 
     @Resource
-    private com.agentsquad.squad.mapper.InteractionMapper interactions;
+    private InteractionMapper interactions;
 
     @Resource
     private WorkerDispatchMapper workerDispatch;

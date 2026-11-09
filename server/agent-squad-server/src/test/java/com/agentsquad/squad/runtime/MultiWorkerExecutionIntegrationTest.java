@@ -1,5 +1,8 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.service.TaskControlService;
+import com.agentsquad.squad.testsupport.ModelAcceptanceFixture;
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.identity.AuthView;
@@ -102,7 +105,7 @@ class MultiWorkerExecutionIntegrationTest {
                 response = completion(json, "abandon_failed_job", json.writeValueAsString(java.util.Map.of("jobId", failedJob, "expectedPlanVersion", 1)));
             } else {
                 response = completion(json, "propose_completion", json.writeValueAsString(
-                        com.agentsquad.squad.testsupport.ModelAcceptanceFixture.completion(json, activeDatabase.get(),
+                        ModelAcceptanceFixture.completion(json, activeDatabase.get(),
                                 failSecond ? "PARTIAL" : "SUCCEEDED", failSecond
                                         ? "草稿已完成；第二项未产生可用结果，需要补充处理" : "两个子任务已汇总")));
             }
@@ -116,8 +119,8 @@ class MultiWorkerExecutionIntegrationTest {
         model.start();
         String url = "http://127.0.0.1:" + model.getAddress().getPort() + "/v1";
         String[] base = {"--spring.main.web-application-type=none",
-                "--spring.datasource.url=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("squad")),
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.url=" + MySqlTestDatabase.url(directory.resolve("squad")),
+                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.model.api-key=test-only", "--agentsquad.model.base-url=" + url,
                 "--agentsquad.model.name=test-model", "--agentsquad.worker.model-profiles.default.api-key=test-only",
                 "--agentsquad.worker.model-profiles.default.base-url=" + url,
@@ -156,7 +159,7 @@ class MultiWorkerExecutionIntegrationTest {
                 if (cancel) {
                     assertThat(firstCalls.await(10, TimeUnit.SECONDS)).isTrue();
                     long version = jdbc.queryForObject("SELECT version FROM sq_goal_task WHERE task_id=?", Long.class, taskId);
-                    context.getBean(com.agentsquad.squad.service.TaskControlService.class).cancel(userId, taskId, "stop-both", version);
+                    context.getBean(TaskControlService.class).cancel(userId, taskId, "stop-both", version);
                     String cancelled = null;
                     for (int attempt = 0; attempt < 150; attempt++) {
                         cancelled = jdbc.queryForObject("SELECT status FROM sq_goal_task WHERE task_id=?", String.class, taskId);

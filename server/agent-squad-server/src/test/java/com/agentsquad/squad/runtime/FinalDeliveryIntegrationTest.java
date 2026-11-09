@@ -1,5 +1,7 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.service.TaskSnapshotService;
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.bo.GoalTaskCreateBO;
 import com.agentsquad.squad.model.dto.MessageCreateDTO;
@@ -215,12 +217,12 @@ class FinalDeliveryIntegrationTest {
                     "{\"text\":\"同版本不同正文\",\"revision\":2}", LocalDateTime.now()));
             assertThat(jdbc.queryForObject("SELECT content FROM sq_message WHERE user_id=? AND role='ASSISTANT'", String.class, user)).isEqualTo("修订终稿");
             assertThat(jdbc.queryForObject("SELECT revision FROM sq_message WHERE user_id=? AND role='ASSISTANT'", Long.class, user)).isEqualTo(2);
-            var snapshot = context.getBean(com.agentsquad.squad.service.TaskSnapshotService.class).snapshot(user, taskId);
+            var snapshot = context.getBean(TaskSnapshotService.class).snapshot(user, taskId);
             assertThat(snapshot.answer().text()).isEqualTo("修订终稿");
             assertThat(snapshot.answer().revision()).isEqualTo(2);
             // 历史完成事件缺修订号时，只能按已发布同正文消息的确切版本恢复。
             jdbc.update("UPDATE sq_task_event SET payload_json='{\"text\":\"修订终稿\"}' WHERE user_id=? AND producer_key='revision-two'", user);
-            var historical = context.getBean(com.agentsquad.squad.service.TaskSnapshotService.class).snapshot(user, taskId);
+            var historical = context.getBean(TaskSnapshotService.class).snapshot(user, taskId);
             assertThat(historical.answer().text()).isEqualTo("修订终稿");
             assertThat(historical.answer().revision()).isEqualTo(2);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_conversation_event WHERE user_id=? AND event_type='message.completed'", Long.class, user)).isEqualTo(eventCount);
@@ -259,8 +261,8 @@ class FinalDeliveryIntegrationTest {
     }
 
     private ConfigurableApplicationContext start(Path directory) {
-        return MessageAcceptanceHttpTest.start(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory),
-                com.agentsquad.squad.testsupport.MySqlTestDatabase.username(),
-                com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), UUID.randomUUID().toString());
+        return MessageAcceptanceHttpTest.start(MySqlTestDatabase.url(directory),
+                MySqlTestDatabase.username(),
+                MySqlTestDatabase.password(), UUID.randomUUID().toString());
     }
 }

@@ -1,5 +1,14 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.mapper.CommandMapper;
+import com.agentsquad.squad.mapper.CompletionMapper;
+import com.agentsquad.squad.mapper.ExecutionScopeMapper;
+import com.agentsquad.squad.mapper.PlanMapper;
+import com.agentsquad.squad.mapper.TaskDirectiveMapper;
+import com.agentsquad.squad.mapper.TaskMapper;
+import com.agentsquad.squad.service.ExecutionScopeService;
+import com.agentsquad.squad.service.TaskFinalizerService;
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.agent.middleware.ScopedMasterToolsMiddleware;
 import com.agentsquad.squad.enums.AccountRole;
@@ -33,13 +42,13 @@ class PlanPublishIntegrationTest {
 
     @Test
     void shouldReuseMatchingSerialResults(@TempDir Path tempDirectory) throws Exception {
-        String databaseUrl = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(tempDirectory.resolve("reuse"));
+        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("reuse"));
         String userId = "00000000-0000-0000-0000-000000000001";
         try (ConfigurableApplicationContext context = SpringApplication.run(
                 AgentSquadApplication.class,
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
                 "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver")) {
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             WorkerDefinitionService definitions = context.getBean(WorkerDefinitionService.class);
@@ -147,11 +156,11 @@ class PlanPublishIntegrationTest {
 
     @Test
     void shouldPublishPlanAndRejectInvalidDag(@TempDir Path tempDirectory) throws Exception {
-        String databaseUrl = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(tempDirectory.resolve("squad"));
+        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("squad"));
         String[] properties = {
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
                 "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
         };
         String userId = "00000000-0000-0000-0000-000000000001";
@@ -337,15 +346,15 @@ class PlanPublishIntegrationTest {
 
             // 旧版汇总回合发布了新版计划时，只等待新版工作，不排入完成纠正。
             jdbc.update("UPDATE sq_command SET native_turn_id = 'old-plan-signal' WHERE task_id = ? AND action = 'MASTER_SIGNAL'", task.taskId());
-            var commands = context.getBean(com.agentsquad.squad.mapper.CommandMapper.class);
+            var commands = context.getBean(CommandMapper.class);
             assertThat(commands.countPlanSignalTurn(userId, task.taskId(), "old-plan-signal", 1)).isEqualTo(1);
             assertThat(commands.countPlanSignalTurn(userId, task.taskId(), "old-plan-signal", 2)).isZero();
             jdbc.update("UPDATE sq_goal_task SET status = 'RUNNING' WHERE task_id = ?", task.taskId());
             String masterBinding = jdbc.queryForObject("SELECT binding_id FROM sq_runtime_binding WHERE framework_session_id = ?", String.class, sessionId);
-            var finalizer = new com.agentsquad.squad.service.TaskFinalizerService();
-            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "directives", context.getBean(com.agentsquad.squad.mapper.TaskDirectiveMapper.class));
-            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "completionMapper", context.getBean(com.agentsquad.squad.mapper.CompletionMapper.class));
-            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "planMapper", context.getBean(com.agentsquad.squad.mapper.PlanMapper.class));
+            var finalizer = new TaskFinalizerService();
+            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "directives", context.getBean(TaskDirectiveMapper.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "completionMapper", context.getBean(CompletionMapper.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "planMapper", context.getBean(PlanMapper.class));
             org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "commandMapper", commands);
             var transaction = new org.springframework.transaction.support.TransactionTemplate(context.getBean(org.springframework.transaction.PlatformTransactionManager.class));
             assertThat(transaction.<Boolean>execute(status -> finalizer.recoverMissingProposal(
@@ -356,10 +365,10 @@ class PlanPublishIntegrationTest {
 
             // 实际执行时等待，恢复受阻时开放协调工具，不能同时要求 Master 空等。
             var middleware = new ScopedMasterToolsMiddleware();
-            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "scopes", context.getBean(com.agentsquad.squad.service.ExecutionScopeService.class));
-            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "scopeMapper", context.getBean(com.agentsquad.squad.mapper.ExecutionScopeMapper.class));
-            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "tasks", context.getBean(com.agentsquad.squad.mapper.TaskMapper.class));
-            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "plans", context.getBean(com.agentsquad.squad.mapper.PlanMapper.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "scopes", context.getBean(ExecutionScopeService.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "scopeMapper", context.getBean(ExecutionScopeMapper.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "tasks", context.getBean(TaskMapper.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "plans", context.getBean(PlanMapper.class));
             for (String state : List.of("READY", "RECOVERY_BLOCKED")) {
                 jdbc.update("UPDATE sq_worker_job SET status = ? WHERE job_id = ?", state, secondReceipt.jobIds().getFirst());
                 middleware.onModelCall(null, io.agentscope.core.agent.RuntimeContext.builder().userId(userId).sessionId(sessionId).build(),

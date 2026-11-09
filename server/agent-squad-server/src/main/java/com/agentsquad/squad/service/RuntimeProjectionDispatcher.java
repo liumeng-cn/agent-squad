@@ -1,6 +1,7 @@
 package com.agentsquad.squad.service;
 
 
+import com.agentsquad.squad.observer.ExecutionTrace;
 import com.agentsquad.squad.agent.session.NativeSessionGateway;
 
 import com.agentsquad.squad.enums.RuntimeEventInboxStatus;
@@ -36,7 +37,7 @@ import com.agentsquad.squad.exceptions.RuntimeEventConsumptionException;
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class RuntimeProjectionDispatcher {
     @Resource
-    private com.agentsquad.squad.observer.ExecutionTrace executionTrace;
+    private ExecutionTrace executionTrace;
     @org.springframework.beans.factory.annotation.Value("${agentsquad.projection.wakeup-enabled:true}")
     private boolean wakeupEnabled;
 
@@ -61,10 +62,10 @@ public class RuntimeProjectionDispatcher {
     private RuntimeEventInboxMapper inbox;
 
     @Resource
-    private com.agentsquad.squad.service.RuntimeEventReceiptService receipts;
+    private RuntimeEventReceiptService receipts;
 
     @Resource
-    private com.agentsquad.squad.service.RuntimeEventFailureService failures;
+    private RuntimeEventFailureService failures;
 
     @Resource
     private RuntimeEventConsumptionService consumption;

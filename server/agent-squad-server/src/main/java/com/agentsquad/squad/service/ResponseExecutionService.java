@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.agentsquad.squad.mapper.GoalCreationMapper;
 import com.agentsquad.squad.enums.*;
 import com.agentsquad.squad.model.bo.*;
 import com.agentsquad.squad.model.po.ConversationPO;
@@ -42,9 +43,9 @@ import java.util.UUID;
 @Slf4j
 public class ResponseExecutionService {
     @Resource
-    private com.agentsquad.squad.mapper.GoalCreationMapper goalOrigins;
+    private GoalCreationMapper goalOrigins;
     @Resource
-    private com.agentsquad.squad.service.ActivityProjectionService activities;
+    private ActivityProjectionService activities;
     private static final Set<String> TERMINAL = Set.of("SUCCEEDED", "PARTIAL", "FAILED", "CANCELLED");
 
     @Resource

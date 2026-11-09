@@ -1,5 +1,19 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.agent.session.RuntimeSessionProvider;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.identity.AuthView;
+import com.agentsquad.squad.scheduler.CancellationSettlementTask;
+import com.agentsquad.squad.service.CommandDeliveryService;
+import com.agentsquad.squad.service.ContextSnapshotService;
+import com.agentsquad.squad.service.ConversationDeletionService;
+import com.agentsquad.squad.service.InteractionService;
+import com.agentsquad.squad.service.OperationService;
+import com.agentsquad.squad.service.PlanService;
+import com.agentsquad.squad.service.TaskFinalizerService;
+import com.agentsquad.squad.service.WorkerDefinitionService;
+import com.agentsquad.squad.service.WorkerDispatchService;
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.agent.MasterAgentIdentity;
 import com.agentsquad.squad.enums.AccountRole;
@@ -259,17 +273,17 @@ class CompletionCorrectionIntegrationTest {
             String workerAgent = UUID.randomUUID().toString().replace("-", "");
             String workerSession = UUID.randomUUID().toString();
             bindings.insertWorker(workerBinding, USER_ID, target.getTaskId(), workerAgent, workerSession, LocalDateTime.now(ZoneOffset.UTC));
-            var store = context.getBean(com.agentsquad.squad.agent.session.RuntimeSessionProvider.class).logStore();
+            var store = context.getBean(RuntimeSessionProvider.class).logStore();
             var runtime = io.agentscope.core.agent.RuntimeContext.builder().userId(USER_ID).sessionId(workerSession).build();
             var log = store.open(new io.agentscope.core.session.SessionKey(USER_ID, workerAgent, workerSession), runtime);
             var writer = log.acquire("other-node", java.time.Duration.ofSeconds(30));
-            var operation = context.getBean(com.agentsquad.squad.service.OperationService.class).prepare(
+            var operation = context.getBean(OperationService.class).prepare(
                     new PrepareRequestBO(USER_ID, target.getSessionId(), "turn", "write",
                             "mock_ticket_create", "v1", "WRITE", java.util.Map.of("title", "test"), "stable", false, null, 0, 1, "tester"));
-            var unstarted = context.getBean(com.agentsquad.squad.service.OperationService.class).prepare(
+            var unstarted = context.getBean(OperationService.class).prepare(
                     new PrepareRequestBO(USER_ID, target.getSessionId(), "turn", "write-not-started",
                             "mock_ticket_create", "v1", "WRITE", java.util.Map.of("title", "next"), "another", false, null, 0, 1, "tester"));
-            var interaction = context.getBean(com.agentsquad.squad.service.InteractionService.class).bindFrameworkRequest(
+            var interaction = context.getBean(InteractionService.class).bindFrameworkRequest(
                     USER_ID, target.getTaskId(), target.getBindingId(), null, "turn", "input-request",
                     java.util.Map.of("name", "request_input", "input", java.util.Map.of("question", "请确认要求")));
             jdbc.update("UPDATE sq_operation SET status='UNKNOWN' WHERE operation_id=?", operation.getOperationId());
@@ -277,7 +291,7 @@ class CompletionCorrectionIntegrationTest {
             var receipt = control.cancel(USER_ID, target.getTaskId(), "stop-all", 0);
             assertThat(control.cancel(USER_ID, target.getTaskId(), "stop-all", 0)).isEqualTo(receipt);
             org.assertj.core.api.Assertions.assertThatThrownBy(() -> control.cancel(USER_ID, target.getTaskId(), "another-stop", 1))
-                    .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
+                    .isInstanceOf(RuntimeBusinessException.class);
             assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id=?", String.class, unstarted.getOperationId())).isEqualTo("CANCELLED");
             assertThat(jdbc.queryForObject("SELECT status FROM sq_budget_reservation WHERE user_id=? AND usage_key=?", String.class,
                     USER_ID, unstarted.getBudgetUsageKey())).isEqualTo("SETTLED");
@@ -286,11 +300,11 @@ class CompletionCorrectionIntegrationTest {
             assertThat(jdbc.queryForObject("SELECT status FROM sq_interaction WHERE interaction_id=?", String.class, interaction.interactionId())).isEqualTo("CANCELLED");
             var conversation = context.getBean(ConversationMapper.class).findOwned(USER_ID,
                     context.getBean(GoalTaskService.class).findTask(USER_ID, target.getTaskId()).conversationId());
-            context.getBean(com.agentsquad.squad.service.ConversationDeletionService.class)
+            context.getBean(ConversationDeletionService.class)
                     .delete(USER_ID, conversation.getConversationId(), "delete-while-stopping", conversation.getVersion());
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_command WHERE task_id=? AND action='STOP' AND status='CANCELLED'", Long.class, target.getTaskId())).isZero();
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_command WHERE task_id=? AND action='STOP'", Long.class, target.getTaskId())).isEqualTo(2);
-            var finalizer = context.getBean(com.agentsquad.squad.service.TaskFinalizerService.class);
+            var finalizer = context.getBean(TaskFinalizerService.class);
             finalizer.finalizeCancelledTask(USER_ID, target.getTaskId());
             assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.getTaskId()).getStatus()).isEqualTo("CANCELLING");
             assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id=?", String.class, operation.getOperationId())).isEqualTo("UNKNOWN");
@@ -299,7 +313,7 @@ class CompletionCorrectionIntegrationTest {
             assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.getTaskId()).getStatus()).isEqualTo("CANCELLING");
             jdbc.update("UPDATE sq_operation SET status='UNKNOWN' WHERE operation_id=?", operation.getOperationId());
             String workerStop = jdbc.queryForObject("SELECT command_id FROM sq_command WHERE binding_id=? AND action='STOP'", String.class, workerBinding);
-            context.getBean(com.agentsquad.squad.service.CommandDeliveryService.class).deliver(workerStop);
+            context.getBean(CommandDeliveryService.class).deliver(workerStop);
             assertThat(context.getBean(CommandMapper.class).findOwned(USER_ID, workerStop).getNativeStatus()).isEqualTo("no-active-run");
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_worker_job WHERE task_id=?", Long.class, target.getTaskId())).isZero();
             log.release(writer);
@@ -315,7 +329,7 @@ class CompletionCorrectionIntegrationTest {
             assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.getTaskId()).getStatus()).isEqualTo("CANCELLING");
             assertThat(jdbc.queryForObject("SELECT status FROM sq_sandbox_execution WHERE execution_id=?", String.class, sandbox)).isEqualTo("UNKNOWN");
             jdbc.update("UPDATE sq_sandbox_execution SET status='SUCCEEDED' WHERE execution_id=?", sandbox);
-            context.getBean(com.agentsquad.squad.scheduler.CancellationSettlementTask.class).settle();
+            context.getBean(CancellationSettlementTask.class).settle();
             assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.getTaskId()).getStatus()).isEqualTo("CANCELLED");
             assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id=?", String.class, operation.getOperationId())).isEqualTo("SUCCEEDED");
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_worker_job WHERE task_id=?", Long.class, target.getTaskId())).isZero();
@@ -329,29 +343,29 @@ class CompletionCorrectionIntegrationTest {
             var jdbc = context.getBean(JdbcTemplate.class);
             var json = context.getBean(com.fasterxml.jackson.databind.ObjectMapper.class);
             String key = "writer-" + UUID.randomUUID();
-            context.getBean(com.agentsquad.squad.service.WorkerDefinitionService.class).publish(
-                    new com.agentsquad.squad.identity.AuthView(USER_ID, "admin", java.util.List.of(AccountRole.ADMIN), null), key,
+            context.getBean(WorkerDefinitionService.class).publish(
+                    new AuthView(USER_ID, "admin", java.util.List.of(AccountRole.ADMIN), null), key,
                     new WorkerDefinitionCreateDTO(key, "1.0.0", "写作", json.readTree("{}"), json.readTree("{}"), java.util.List.of(), "default", "default"));
-            var snapshots = context.getBean(com.agentsquad.squad.service.ContextSnapshotService.class);
+            var snapshots = context.getBean(ContextSnapshotService.class);
             String one = snapshots.prepare(USER_ID, target.getSessionId(), "one", "one").snapshotId();
             String two = snapshots.prepare(USER_ID, target.getSessionId(), "two", "two").snapshotId();
-            var plan = context.getBean(com.agentsquad.squad.service.PlanService.class).publish(USER_ID, target.getSessionId(),
+            var plan = context.getBean(PlanService.class).publish(USER_ID, target.getSessionId(),
                     new PlanPublishBO("plan", 0, java.util.List.of(
                             new PlanNodeBO("one", key, "1.0.0", "分析一", one, java.util.List.of(), true, 1),
                             new PlanNodeBO("two", key, "1.0.0", "分析二", two, java.util.List.of(), true, 1)), "ALL_REQUIRED", java.util.List.of("完成")));
             String firstBinding = jdbc.queryForObject("SELECT binding_id FROM sq_worker_job WHERE job_id=?", String.class, plan.jobIds().getFirst());
             String secondBinding = jdbc.queryForObject("SELECT binding_id FROM sq_worker_job WHERE job_id=?", String.class, plan.jobIds().getLast());
-            var dispatch = context.getBean(com.agentsquad.squad.service.WorkerDispatchService.class);
+            var dispatch = context.getBean(WorkerDispatchService.class);
             var claimed = dispatch.claim(USER_ID, firstBinding);
             long version = context.getBean(TaskMapper.class).findOwned(USER_ID, target.getTaskId()).getVersion();
             context.getBean(TaskControlService.class).cancel(USER_ID, target.getTaskId(), "stop-jobs", version);
             org.assertj.core.api.Assertions.assertThatThrownBy(() -> dispatch.renew(USER_ID, firstBinding, claimed.getGuardToken()))
-                    .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
+                    .isInstanceOf(RuntimeBusinessException.class);
             org.assertj.core.api.Assertions.assertThatThrownBy(() -> dispatch.claim(USER_ID, secondBinding))
-                    .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
+                    .isInstanceOf(RuntimeBusinessException.class);
             var stops = jdbc.queryForList("SELECT command_id FROM sq_command WHERE task_id=? AND action='STOP' ORDER BY id", String.class, target.getTaskId());
             assertThat(stops).hasSize(3);
-            var delivery = context.getBean(com.agentsquad.squad.service.CommandDeliveryService.class);
+            var delivery = context.getBean(CommandDeliveryService.class);
             for (String command : stops) {
                 delivery.deliver(command);
                 assertThat(context.getBean(CommandMapper.class).findOwned(USER_ID, command).getNativeStatus()).isEqualTo("no-active-run");
@@ -366,11 +380,11 @@ class CompletionCorrectionIntegrationTest {
     }
 
     private ConfigurableApplicationContext start(Path tempDirectory) {
-        String databaseUrl = com.agentsquad.squad.testsupport.MySqlTestDatabase.url(tempDirectory.resolve("squad"));
+        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("squad"));
         return SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
+                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
                 "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.delivery.enabled=true",
                 "--agentsquad.delivery.poll-delay-ms=3600000",

@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.identity.AuthView;
@@ -30,9 +31,9 @@ class ConnectionOptimisticLockTest {
     @Test
     void staleRevisionCannotOverwriteCommittedConnection(@TempDir Path directory) {
         String owner = UUID.randomUUID().toString();
-        try (var context = MessageAcceptanceHttpTest.start(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory),
-                com.agentsquad.squad.testsupport.MySqlTestDatabase.username(),
-                com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), owner)) {
+        try (var context = MessageAcceptanceHttpTest.start(MySqlTestDatabase.url(directory),
+                MySqlTestDatabase.username(),
+                MySqlTestDatabase.password(), owner)) {
             byte[] key = new byte[32];
             new java.security.SecureRandom().nextBytes(key);
             ReflectionTestUtils.setField(context.getBean(LocalSecretVaultService.class), "masterKeyBase64",

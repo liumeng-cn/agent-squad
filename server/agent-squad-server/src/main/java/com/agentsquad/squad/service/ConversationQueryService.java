@@ -1,5 +1,7 @@
 package com.agentsquad.squad.service;
 
+import com.agentsquad.squad.mapper.ExecutionActivityMapper;
+import com.agentsquad.squad.mapper.TaskDirectiveMapper;
 import com.agentsquad.squad.model.vo.ActivityHistoryPageVO;
 import com.agentsquad.squad.model.dto.ActivityHistoryDTO;
 import com.agentsquad.squad.model.bo.ConversationEventBO;
@@ -62,13 +64,13 @@ public class ConversationQueryService {
     private TaskMapper tasks;
 
     @Resource
-    private com.agentsquad.squad.mapper.TaskDirectiveMapper directives;
+    private TaskDirectiveMapper directives;
 
     @Resource
     private ObjectMapper json;
 
     @Resource
-    private com.agentsquad.squad.mapper.ExecutionActivityMapper activities;
+    private ExecutionActivityMapper activities;
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public ConversationSnapshotVO snapshot(String userId, String conversationId, Long before, int limit) {

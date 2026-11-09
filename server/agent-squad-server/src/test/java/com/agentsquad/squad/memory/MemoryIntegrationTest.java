@@ -1,5 +1,6 @@
 package com.agentsquad.squad.memory;
 
+import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.exceptions.MemoryContextInvalidatedException;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
@@ -216,8 +217,8 @@ class MemoryIntegrationTest {
     void upgradesV17TombstonesWithoutChangingTheirIdentity(@TempDir Path directory) throws Exception {
         String url = database(directory);
         var dataSource = new org.springframework.jdbc.datasource.DriverManagerDataSource(url,
-                com.agentsquad.squad.testsupport.MySqlTestDatabase.username(),
-                com.agentsquad.squad.testsupport.MySqlTestDatabase.password());
+                MySqlTestDatabase.username(),
+                MySqlTestDatabase.password());
         JdbcTemplate beforeUpgrade = new JdbcTemplate(dataSource);
         org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(
                 beforeUpgrade.getDataSource().getConnection(),
@@ -244,7 +245,7 @@ class MemoryIntegrationTest {
     }
 
     private String database(Path directory) {
-        return com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("memory"));
+        return MySqlTestDatabase.url(directory.resolve("memory"));
     }
 
     private ConfigurableApplicationContext start(String database) {
@@ -254,7 +255,7 @@ class MemoryIntegrationTest {
     private ConfigurableApplicationContext start(String database, String locations) {
         return SpringApplication.run(AgentSquadApplication.class, "--server.port=0",
                 "--spring.sql.init.schema-locations=" + locations, "--spring.datasource.url=" + database,
-                "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
                 "--agentsquad.delivery.enabled=false", "--agentsquad.auth.username=tester", "--agentsquad.auth.password=test-only",
                 "--agentsquad.auth.role=USER", "--agentsquad.auth.user-id=" + UUID.randomUUID());
     }
