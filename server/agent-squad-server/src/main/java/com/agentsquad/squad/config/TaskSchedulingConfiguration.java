@@ -19,14 +19,12 @@ import com.agentsquad.squad.service.RuntimeProjectionDispatcher;
 import com.agentsquad.squad.config.properties.RedisWakeupProperties;
 import com.agentsquad.squad.config.properties.TaskScheduleProperties;
 import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 
-import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
 /**
@@ -35,7 +33,6 @@ import java.util.function.LongSupplier;
  * <p>按类型读取任务配置并注册已启用的任务，每轮结束后按当前间隔安排下一轮。</p>
  */
 @Configuration
-@Slf4j
 @EnableConfigurationProperties(TaskScheduleProperties.class)
 public class TaskSchedulingConfiguration implements SchedulingConfigurer {
 
@@ -96,33 +93,33 @@ public class TaskSchedulingConfiguration implements SchedulingConfigurer {
     @Override
     public void configureTasks(ScheduledTaskRegistrar registrar) {
         artifactRetentionTaskProvider.ifAvailable(task ->
-                register(registrar, "purgeExpired", task::purgeExpired, properties::getArtifactRetentionDelayMs));
+                register(registrar, task::purgeExpired, properties::getArtifactRetentionDelayMs));
         cancellationSettlementTaskProvider.ifAvailable(task ->
-                register(registrar, "settle", task::settle, properties::getCancellationSettlementDelayMs));
-        register(registrar, "cleanupDeletingConversations", conversationCleanupTask::cleanupDeletingConversations, properties::getConversationCleanupDelayMs);
-        register(registrar, "sweep", operationUnknownSweepTask::sweep, properties::getOperationUnknownSweepDelayMs);
+                register(registrar, task::settle, properties::getCancellationSettlementDelayMs));
+        register(registrar, conversationCleanupTask::cleanupDeletingConversations, properties::getConversationCleanupDelayMs);
+        register(registrar, operationUnknownSweepTask::sweep, properties::getOperationUnknownSweepDelayMs);
         sandboxRecoveryTaskProvider.ifAvailable(task ->
-                register(registrar, "markUnknown", task::markUnknown, properties::getSandboxRecoveryDelayMs));
+                register(registrar, task::markUnknown, properties::getSandboxRecoveryDelayMs));
         taskDirectiveScanTaskProvider.ifAvailable(task ->
-                register(registrar, "dispatchDue", task::dispatchDue, properties::getTaskDirectiveScanDelayMs));
+                register(registrar, task::dispatchDue, properties::getTaskDirectiveScanDelayMs));
         nativeProjectionPollTaskProvider.ifAvailable(task ->
-                register(registrar, "projectDue", task::projectDue, properties::getNativeProjectionPollDelayMs));
+                register(registrar, task::projectDue, properties::getNativeProjectionPollDelayMs));
         workerFactoryProvider.ifAvailable(task ->
-                register(registrar, "pruneFinished", task::pruneFinished, properties::getWorkerPruneDelayMs));
+                register(registrar, task::pruneFinished, properties::getWorkerPruneDelayMs));
         commandDeliveryServiceProvider.ifAvailable(task ->
-                register(registrar, "deliverDue", task::deliverDue, this::commandDeliveryDelay));
-        register(registrar, "reconcile", conversationEventStreamerService::reconcile, properties::getConversationEventReconcileDelayMs);
+                register(registrar, task::deliverDue, this::commandDeliveryDelay));
+        register(registrar, conversationEventStreamerService::reconcile, properties::getConversationEventReconcileDelayMs);
         localSessionStopperProvider.ifAvailable(task ->
-                register(registrar, "stopRequested", task::stopRequested, properties::getLocalSessionStopCheckDelayMs));
+                register(registrar, task::stopRequested, properties::getLocalSessionStopCheckDelayMs));
         redisCommandWakeupProvider.ifAvailable(task ->
-                register(registrar, "redisCommandReceive", task::receive, properties::getRedisCommandPollDelayMs));
+                register(registrar, task::receive, properties::getRedisCommandPollDelayMs));
         redisConversationNotificationsServiceProvider.ifAvailable(task ->
-                register(registrar, "ensureSubscribed", task::ensureSubscribed, properties::getRedisConversationReconnectDelayMs));
+                register(registrar, task::ensureSubscribed, properties::getRedisConversationReconnectDelayMs));
         redisProjectionWakeupProvider.ifAvailable(task ->
-                register(registrar, "redisProjectionReceive", task::receive, properties::getRedisProjectionPollDelayMs));
-        register(registrar, "auditCounters", runtimeAdmissionService::auditCounters, properties::getRuntimeAdmissionAuditDelayMs);
+                register(registrar, task::receive, properties::getRedisProjectionPollDelayMs));
+        register(registrar, runtimeAdmissionService::auditCounters, properties::getRuntimeAdmissionAuditDelayMs);
         runtimeProjectionDispatcherProvider.ifAvailable(task ->
-                register(registrar, "retryPending", task::retryPending, properties::getProjectionWakeupRetryDelayMs));
+                register(registrar, task::retryPending, properties::getProjectionWakeupRetryDelayMs));
     }
 
     private long commandDeliveryDelay() {
@@ -131,19 +128,8 @@ public class TaskSchedulingConfiguration implements SchedulingConfigurer {
                 : properties.getCommandDeliveryPollDelayMs();
     }
 
-    private void register(ScheduledTaskRegistrar registrar, String taskName, Runnable task, LongSupplier delay) {
-        registrar.addTriggerTask(() -> {
-            long started = System.nanoTime();
-            log.debug("定时任务开始 task={}", taskName);
-            try {
-                task.run();
-                log.debug("定时任务完成 task={} elapsedMs={}", taskName,
-                        TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started));
-            } catch (RuntimeException exception) {
-                log.debug("定时任务异常结束 task={} errorType={}", taskName, exception.getClass().getSimpleName());
-                throw exception;
-            }
-        }, context -> {
+    private void register(ScheduledTaskRegistrar registrar, Runnable task, LongSupplier delay) {
+        registrar.addTriggerTask(task, context -> {
             var completion = context.lastCompletion();
             return completion == null ? context.getClock().instant() : completion.plusMillis(delay.getAsLong());
         });
