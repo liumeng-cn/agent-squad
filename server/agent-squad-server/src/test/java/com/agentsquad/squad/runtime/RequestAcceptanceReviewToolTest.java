@@ -1,8 +1,8 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.agent.tool.RequestAcceptanceReviewTool;
-import com.agentsquad.squad.bo.UserAcceptanceReviewBO;
-import com.agentsquad.squad.bo.AcceptanceReviewRequestBO;
+import com.agentsquad.squad.model.bo.UserAcceptanceReviewBO;
+import com.agentsquad.squad.model.bo.AcceptanceReviewRequestBO;
 import com.agentsquad.squad.service.PlanAcceptanceService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;

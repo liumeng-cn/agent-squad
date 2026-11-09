@@ -1,8 +1,8 @@
 package com.agentsquad.squad.agent.tool;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
-import com.agentsquad.squad.bo.ContextPreparationRequestBO;
-import com.agentsquad.squad.bo.ContextSnapshotReceiptBO;
+import com.agentsquad.squad.model.bo.ContextPreparationRequestBO;
+import com.agentsquad.squad.model.bo.ContextSnapshotReceiptBO;
 import com.agentsquad.squad.service.ContextSnapshotService;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.ToolResultBlock;

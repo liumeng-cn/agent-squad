@@ -1,14 +1,14 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.agent.session.NativeSessionGateway;
-import com.agentsquad.squad.bo.NativeSubmissionReceiptBO;
+import com.agentsquad.squad.model.bo.NativeSubmissionReceiptBO;
 
 import com.agentsquad.squad.exceptions.ExecutionContextInvalidatedException;
 import com.agentsquad.squad.enums.ResponseCompletionProtocol;
-import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.model.bo.ProjectionTargetBO;
 import com.agentsquad.squad.mapper.ProjectionMapper;
 import com.agentsquad.squad.agent.MasterAgentIdentity;
-import com.agentsquad.squad.bo.RuntimeEventSourceBO;
+import com.agentsquad.squad.model.bo.RuntimeEventSourceBO;
 import com.agentsquad.squad.enums.RuntimeEventFailureCode;
 import io.agentscope.core.session.SessionEvent;
 import jakarta.annotation.Resource;

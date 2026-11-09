@@ -4,7 +4,7 @@ import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.service.ExecutionScopeService;
 import com.agentsquad.squad.enums.WorkerJobStatus;
 import com.agentsquad.squad.enums.ResponseCompletionProtocol;
-import com.agentsquad.squad.po.WorkerJobPO;
+import com.agentsquad.squad.model.po.WorkerJobPO;
 import io.agentscope.core.agent.Agent;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.event.AgentEvent;

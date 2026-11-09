@@ -1,18 +1,18 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.bo.CompletionContextBO;
-import com.agentsquad.squad.po.ExecutionScopePO;
+import com.agentsquad.squad.model.bo.CompletionContextBO;
+import com.agentsquad.squad.model.po.ExecutionScopePO;
 import com.agentsquad.squad.enums.GoalTaskStatus;
 import com.agentsquad.squad.enums.PlanJoinStage;
-import com.agentsquad.squad.bo.PlanAcceptanceResultBO;
+import com.agentsquad.squad.model.bo.PlanAcceptanceResultBO;
 
 import com.agentsquad.squad.mapper.TaskDirectiveMapper;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 
-import com.agentsquad.squad.bo.CompletionSubmissionBO;
+import com.agentsquad.squad.model.bo.CompletionSubmissionBO;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
-import com.agentsquad.squad.bo.CompletionProposalReceiptBO;
+import com.agentsquad.squad.model.bo.CompletionProposalReceiptBO;
 import com.agentsquad.squad.mapper.CompletionMapper;
 import com.agentsquad.squad.mapper.PlanMapper;
 import com.agentsquad.squad.utils.ContentDigests;

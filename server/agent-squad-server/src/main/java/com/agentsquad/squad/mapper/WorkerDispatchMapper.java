@@ -1,6 +1,6 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.bo.WorkerLaunchBO;
+import com.agentsquad.squad.model.bo.WorkerLaunchBO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

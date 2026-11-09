@@ -1,10 +1,10 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.bo.PlanJoinJobBO;
+import com.agentsquad.squad.model.bo.PlanJoinJobBO;
 
-import com.agentsquad.squad.bo.PlanJoinFactsBO;
+import com.agentsquad.squad.model.bo.PlanJoinFactsBO;
 
-import com.agentsquad.squad.bo.PlanJoinDecisionBO;
+import com.agentsquad.squad.model.bo.PlanJoinDecisionBO;
 
 import com.agentsquad.squad.enums.GoalTaskStatus;
 import com.agentsquad.squad.enums.PlanJoinStage;

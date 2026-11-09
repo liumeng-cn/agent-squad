@@ -2,14 +2,14 @@ package com.agentsquad.squad.memory;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
-import com.agentsquad.squad.dto.MessageCreateDTO;
+import com.agentsquad.squad.model.dto.MessageCreateDTO;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.ExecutionScopeService;
 import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.exceptions.MemoryContextInvalidatedException;
-import com.agentsquad.squad.dto.MemoryCreateDTO;
-import com.agentsquad.squad.dto.MemoryUpdateDTO;
-import com.agentsquad.squad.bo.MemoryWriteRequestBO;
+import com.agentsquad.squad.model.dto.MemoryCreateDTO;
+import com.agentsquad.squad.model.dto.MemoryUpdateDTO;
+import com.agentsquad.squad.model.bo.MemoryWriteRequestBO;
 import com.agentsquad.squad.service.ExplicitMemoryWriteService;
 import com.agentsquad.squad.service.MemoryContextService;
 import com.agentsquad.squad.service.MemoryService;

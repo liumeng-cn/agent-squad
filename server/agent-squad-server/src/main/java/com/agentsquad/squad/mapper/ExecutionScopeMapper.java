@@ -1,7 +1,7 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.po.ExecutionScopePO;
-import com.agentsquad.squad.bo.ExecutionOwnerBO;
+import com.agentsquad.squad.model.po.ExecutionScopePO;
+import com.agentsquad.squad.model.bo.ExecutionOwnerBO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

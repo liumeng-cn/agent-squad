@@ -1,10 +1,10 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.properties.RedisWakeupProperties;
+import com.agentsquad.squad.config.properties.RedisWakeupProperties;
 import com.agentsquad.squad.event.ConversationCommittedSignal;
-import com.agentsquad.squad.bo.ConversationWakeupNoticeBO;
-import com.agentsquad.squad.bo.ConversationPreviewNoticeBO;
-import com.agentsquad.squad.bo.ReplyPreviewBO;
+import com.agentsquad.squad.model.bo.ConversationWakeupNoticeBO;
+import com.agentsquad.squad.model.bo.ConversationPreviewNoticeBO;
+import com.agentsquad.squad.model.bo.ReplyPreviewBO;
 import com.agentsquad.squad.event.ReplyPreviewSignal;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;

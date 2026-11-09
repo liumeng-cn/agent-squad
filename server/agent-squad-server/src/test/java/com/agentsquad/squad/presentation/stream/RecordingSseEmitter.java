@@ -1,7 +1,7 @@
 package com.agentsquad.squad.presentation.stream;
 
-import com.agentsquad.squad.bo.ConversationEventBO;
-import com.agentsquad.squad.bo.ReplyPreviewBO;
+import com.agentsquad.squad.model.bo.ConversationEventBO;
+import com.agentsquad.squad.model.bo.ReplyPreviewBO;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;

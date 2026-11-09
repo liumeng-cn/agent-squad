@@ -1,17 +1,17 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.vo.ConversationVO;
-import com.agentsquad.squad.vo.TaskReceiptVO;
+import com.agentsquad.squad.model.vo.ConversationVO;
+import com.agentsquad.squad.model.vo.TaskReceiptVO;
 import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.bo.PlanNodeBO;
-import com.agentsquad.squad.bo.PlanPublishBO;
-import com.agentsquad.squad.bo.PlanReceiptBO;
+import com.agentsquad.squad.model.bo.PlanNodeBO;
+import com.agentsquad.squad.model.bo.PlanPublishBO;
+import com.agentsquad.squad.model.bo.PlanReceiptBO;
 import com.agentsquad.squad.service.ContextSnapshotService;
 import com.agentsquad.squad.service.PlanService;
 import com.agentsquad.squad.service.WorkerDefinitionService;
-import com.agentsquad.squad.dto.WorkerDefinitionCreateDTO;
+import com.agentsquad.squad.model.dto.WorkerDefinitionCreateDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;

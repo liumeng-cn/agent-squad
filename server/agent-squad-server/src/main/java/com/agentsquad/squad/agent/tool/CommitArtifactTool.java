@@ -1,12 +1,12 @@
 package com.agentsquad.squad.agent.tool;
 
-import com.agentsquad.squad.bo.ArtifactCommitRequestBO;
+import com.agentsquad.squad.model.bo.ArtifactCommitRequestBO;
 import com.agentsquad.squad.service.ArtifactDeliveryService;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.utils.RuntimePayloads;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
-import com.agentsquad.squad.bo.WorkerExecutionIdentityBO;
+import com.agentsquad.squad.model.bo.WorkerExecutionIdentityBO;
 import com.agentsquad.squad.mapper.WorkerDispatchMapper;
 import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;

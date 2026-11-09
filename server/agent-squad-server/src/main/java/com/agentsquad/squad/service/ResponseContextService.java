@@ -3,24 +3,25 @@ package com.agentsquad.squad.service;
 import com.agentsquad.squad.enums.ActivityType;
 import com.agentsquad.squad.mapper.TaskDirectiveMapper;
 import com.agentsquad.squad.mapper.ArtifactMapper;
-import com.agentsquad.squad.po.ArtifactPO;
+import com.agentsquad.squad.model.bo.ActivityBusinessFactBO;
+import com.agentsquad.squad.model.po.ArtifactPO;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.utils.ContentDigests;
 import com.agentsquad.squad.utils.MaterialFormatter;
 import com.agentsquad.squad.utils.RuntimePayloads;
-import com.agentsquad.squad.po.ExecutionScopePO;
-import com.agentsquad.squad.po.ConversationPO;
-import com.agentsquad.squad.po.TaskPO;
-import com.agentsquad.squad.bo.ResponseTaskFactsBO;
+import com.agentsquad.squad.model.po.ExecutionScopePO;
+import com.agentsquad.squad.model.po.ConversationPO;
+import com.agentsquad.squad.model.po.TaskPO;
+import com.agentsquad.squad.model.bo.ResponseTaskFactsBO;
 import com.agentsquad.squad.mapper.ConversationMapper;
 import com.agentsquad.squad.mapper.TaskMapper;
 import com.agentsquad.squad.mapper.ResponseTaskFactsMapper;
-import com.agentsquad.squad.bo.ResponseContextMessageBO;
-import com.agentsquad.squad.bo.ResponseContextMaterialBO;
-import com.agentsquad.squad.bo.ResponseContextBO;
-import com.agentsquad.squad.bo.ResponseHistoryBO;
-import com.agentsquad.squad.bo.ResponseContextSnapshotBO;
+import com.agentsquad.squad.model.bo.ResponseContextMessageBO;
+import com.agentsquad.squad.model.bo.ResponseContextMaterialBO;
+import com.agentsquad.squad.model.bo.ResponseContextBO;
+import com.agentsquad.squad.model.bo.ResponseHistoryBO;
+import com.agentsquad.squad.model.bo.ResponseContextSnapshotBO;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.mapper.ResponseContextMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -143,7 +144,7 @@ public class ResponseContextService {
         if (mapper.freeze(userId, source.getExecutionId(), json, ContentDigests.sha256(json)) != 1) {
             throw new IllegalStateException("回复上下文冻结发生竞争");
         }
-        activities.completed(scope, new com.agentsquad.squad.bo.ActivityBusinessFactBO(
+        activities.completed(scope, new ActivityBusinessFactBO(
                 ActivityType.CONTEXT_PREPARE, source.getExecutionId()));
         log.info("回复上下文已冻结 conversationId={} messageCount={} materialCount={} contextChars={}",
                 scope.getConversationId(), messages.size(),

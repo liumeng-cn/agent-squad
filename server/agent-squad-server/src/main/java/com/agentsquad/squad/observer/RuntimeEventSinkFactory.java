@@ -1,6 +1,6 @@
 package com.agentsquad.squad.observer;
 
-import com.agentsquad.squad.bo.RuntimeEventSourceBO;
+import com.agentsquad.squad.model.bo.RuntimeEventSourceBO;
 
 import com.agentsquad.squad.service.RuntimeEventReceiptService;
 

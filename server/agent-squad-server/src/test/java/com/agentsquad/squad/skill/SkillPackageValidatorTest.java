@@ -1,9 +1,9 @@
 package com.agentsquad.squad.skill;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
-import com.agentsquad.squad.bo.SkillPackageBO;
+import com.agentsquad.squad.model.bo.SkillPackageBO;
 import com.agentsquad.squad.validator.SkillPackageValidator;
-import com.agentsquad.squad.po.SkillTextFilePO;
+import com.agentsquad.squad.model.po.SkillTextFilePO;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

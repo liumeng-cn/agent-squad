@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.mapper.ResponseRuntimeMapper">
 
-    <resultMap id="lockByBindingResult" type="com.agentsquad.squad.po.ResponseRuntimePO">
+    <resultMap id="lockByBindingResult" type="com.agentsquad.squad.model.po.ResponseRuntimePO">
         <constructor>
             <arg column="execution_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -191,7 +191,7 @@
         WHERE r.user_id = #{userId} AND b.framework_session_id = #{sessionId}
           AND r.del_flag = '0' AND b.del_flag = '0'
     </select>
-    <select id="previewTarget" resultType="com.agentsquad.squad.bo.ReplyPreviewTargetBO">
+    <select id="previewTarget" resultType="com.agentsquad.squad.model.bo.ReplyPreviewTargetBO">
         SELECT r.user_id AS userId,
                r.conversation_id AS conversationId,
                r.execution_id AS executionId,

@@ -1,6 +1,6 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.model.bo.ProjectionTargetBO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

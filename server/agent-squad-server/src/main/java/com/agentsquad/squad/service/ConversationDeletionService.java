@@ -3,12 +3,12 @@ package com.agentsquad.squad.service;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 
-import com.agentsquad.squad.po.CommandPO;
-import com.agentsquad.squad.po.ConversationPO;
+import com.agentsquad.squad.model.po.CommandPO;
+import com.agentsquad.squad.model.po.ConversationPO;
 import com.agentsquad.squad.enums.ConversationStatus;
 import com.agentsquad.squad.enums.GoalTaskStatus;
 import com.agentsquad.squad.enums.RuntimeCommandAction;
-import com.agentsquad.squad.po.TaskPO;
+import com.agentsquad.squad.model.po.TaskPO;
 import com.agentsquad.squad.mapper.CommandMapper;
 import com.agentsquad.squad.mapper.ConversationMapper;
 import com.agentsquad.squad.mapper.TaskEventMapper;

@@ -1,7 +1,7 @@
 package com.agentsquad.squad.memory;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
-import com.agentsquad.squad.po.MemoryPO;
+import com.agentsquad.squad.model.po.MemoryPO;
 import com.agentsquad.squad.policy.MemoryRules;
 import org.junit.jupiter.api.Test;
 

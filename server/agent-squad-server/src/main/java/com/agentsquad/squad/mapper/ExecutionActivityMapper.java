@@ -1,7 +1,7 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.po.ExecutionActivityPO;
-import com.agentsquad.squad.dto.ActivityHistoryDTO;
+import com.agentsquad.squad.model.po.ExecutionActivityPO;
+import com.agentsquad.squad.model.dto.ActivityHistoryDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

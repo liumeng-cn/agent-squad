@@ -10,19 +10,20 @@ import com.agentsquad.squad.agent.tool.PublishPlanTool;
 import com.agentsquad.squad.agent.tool.RequestInputTool;
 import com.agentsquad.squad.agent.tool.SubmitTaskDirectiveTool;
 import com.agentsquad.squad.enums.LocalSessionState;
-import com.agentsquad.squad.bo.DeliveryBO;
+import com.agentsquad.squad.model.bo.DeliveryBO;
+import com.agentsquad.squad.model.bo.RuntimeEventSourceBO;
 import com.agentsquad.squad.service.ResponseContextService;
 import com.agentsquad.squad.utils.RuntimePayloads;
 import com.agentsquad.squad.agent.middleware.ExecutionContextMiddleware;
 import com.agentsquad.squad.agent.middleware.ModelBudgetMiddleware;
-import com.agentsquad.squad.bo.NativeEventViewBO;
+import com.agentsquad.squad.model.bo.NativeEventViewBO;
 import com.agentsquad.squad.agent.session.NativeSessionGateway;
-import com.agentsquad.squad.bo.NativeSubmissionReceiptBO;
+import com.agentsquad.squad.model.bo.NativeSubmissionReceiptBO;
 import com.agentsquad.squad.agent.skill.PlatformSkillVisibility;
 import com.agentsquad.squad.agent.middleware.ScopedMasterToolsMiddleware;
 import com.agentsquad.squad.agent.middleware.SelectedReplyModelMiddleware;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.model.bo.ProjectionTargetBO;
 import com.agentsquad.squad.agent.tool.mock.MockLookupTool;
 import com.agentsquad.squad.agent.tool.mock.MockTicketCreateTool;
 import io.agentscope.core.agent.RuntimeContext;
@@ -374,9 +375,9 @@ public class MasterAgent implements NativeSessionGateway {
                 .sessionId(sessionId)
                 .build();
         context.put(io.agentscope.core.session.SessionExportSink.CONTEXT_KEY,
-                eventSinks.bind(new com.agentsquad.squad.bo.RuntimeEventSourceBO(
+                eventSinks.bind(new RuntimeEventSourceBO(
                         userId, bindingId, sessionId,
-                        com.agentsquad.squad.bo.RuntimeEventSourceBO.CURRENT_MAPPING_VERSION)));
+                        RuntimeEventSourceBO.CURRENT_MAPPING_VERSION)));
 
         java.util.Set<String> allowedTools = new java.util.HashSet<>(java.util.Set.of(
                 "load_skill_through_path", "request_input", "request_acceptance_review", "propose_completion", "list_worker_capabilities",

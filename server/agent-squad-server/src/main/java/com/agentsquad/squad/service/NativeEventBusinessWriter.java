@@ -1,10 +1,10 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.bo.NativeEventViewBO;
+import com.agentsquad.squad.model.bo.NativeEventViewBO;
 
 
 import com.agentsquad.squad.enums.ResponseCompletionProtocol;
-import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.model.bo.ProjectionTargetBO;
 import io.agentscope.core.session.SessionEvent;
 import io.agentscope.core.session.SessionEventTypes;
 import jakarta.annotation.Resource;

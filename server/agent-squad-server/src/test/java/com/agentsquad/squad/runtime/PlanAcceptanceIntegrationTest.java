@@ -5,24 +5,19 @@ import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.enums.AcceptanceVerificationType;
 import com.agentsquad.squad.enums.DeterministicAcceptanceCheck;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.model.bo.*;
 import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.service.InteractionService;
 import com.agentsquad.squad.enums.PlanAcceptanceVerdict;
 import com.agentsquad.squad.enums.PlanJoinStage;
-import com.agentsquad.squad.bo.AcceptanceReviewBO;
-import com.agentsquad.squad.bo.AcceptanceReviewRequestBO;
-import com.agentsquad.squad.bo.CompletionSubmissionBO;
-import com.agentsquad.squad.bo.PlanAcceptanceCriterionBO;
-import com.agentsquad.squad.bo.PlanNodeBO;
-import com.agentsquad.squad.bo.PlanPublishBO;
 import com.agentsquad.squad.service.CompletionProposalService;
 import com.agentsquad.squad.service.ContextSnapshotService;
 import com.agentsquad.squad.service.PlanAcceptanceService;
 import com.agentsquad.squad.service.PlanCompletionEvaluationService;
 import com.agentsquad.squad.service.PlanService;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
-import com.agentsquad.squad.dto.WorkerDefinitionCreateDTO;
+import com.agentsquad.squad.model.dto.WorkerDefinitionCreateDTO;
 import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -130,7 +125,7 @@ class PlanAcceptanceIntegrationTest {
             if (accepted && "true".equals(System.getenv("SQUAD_ACCEPTANCE_BROWSER_PROBE"))) {
                 var target = context.getBean(com.agentsquad.squad.mapper.ProjectionMapper.class).findTarget(user, binding);
                 assertThat(context.getBean(com.agentsquad.squad.service.TaskFinalizerService.class).tryComplete(target,
-                        new com.agentsquad.squad.bo.NativeEventViewBO(1, "finished", "turn/output", "run",
+                        new NativeEventViewBO(1, "finished", "turn/output", "run",
                                 "turn", "completed", System.currentTimeMillis(), Map.of()))).isTrue();
                 var views = context.getBean(com.agentsquad.squad.service.TaskSnapshotService.class).listJobs(user, task.taskId());
                 assertThat(views.acceptanceChecks()).hasSize(3);
@@ -173,13 +168,13 @@ class PlanAcceptanceIntegrationTest {
             completion.submit(new CompletionSubmissionBO(user, session, "turn-new", "call-new", "PARTIAL", "保留已有结果", List.of()));
             var target = context.getBean(com.agentsquad.squad.mapper.ProjectionMapper.class).findTarget(user, binding);
             assertThat(context.getBean(com.agentsquad.squad.service.TaskFinalizerService.class).tryComplete(target,
-                    new com.agentsquad.squad.bo.NativeEventViewBO(1, "old-ended", "turn/output", "run",
+                    new NativeEventViewBO(1, "old-ended", "turn/output", "run",
                             "turn", "completed", System.currentTimeMillis(), Map.of()))).isFalse();
             assertThat(db.queryForObject("SELECT status FROM sq_goal_task WHERE task_id=?", String.class, task.taskId()))
                     .isEqualTo("RUNNING");
             db.update("UPDATE sq_worker_job SET status='RECOVERY_BLOCKED' WHERE task_id=? AND plan_version=2", task.taskId());
             assertThat(context.getBean(com.agentsquad.squad.service.TaskFinalizerService.class).tryComplete(target,
-                    new com.agentsquad.squad.bo.NativeEventViewBO(1, "ended", "turn/output", "run",
+                    new NativeEventViewBO(1, "ended", "turn/output", "run",
                             "turn-new", "completed", System.currentTimeMillis(), Map.of()))).isTrue();
             assertThat(db.queryForObject("SELECT status FROM sq_goal_task WHERE task_id=?", String.class, task.taskId()))
                     .isEqualTo("RECOVERY_BLOCKED");

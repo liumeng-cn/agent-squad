@@ -1,6 +1,6 @@
 package com.agentsquad.squad.converter;
 
-import com.agentsquad.squad.bo.FailureClassificationBO;
+import com.agentsquad.squad.model.bo.FailureClassificationBO;
 
 import com.agentsquad.squad.exceptions.BudgetExceededException;
 import com.agentsquad.squad.exceptions.ExecutionContextInvalidatedException;

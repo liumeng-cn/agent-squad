@@ -2,7 +2,7 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.exceptions.ExecutionContextInvalidatedException;
-import com.agentsquad.squad.bo.ExecutionContextSnapshotBO;
+import com.agentsquad.squad.model.bo.ExecutionContextSnapshotBO;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

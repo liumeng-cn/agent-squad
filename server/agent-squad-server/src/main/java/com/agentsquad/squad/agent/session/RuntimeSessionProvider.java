@@ -2,7 +2,7 @@ package com.agentsquad.squad.agent.session;
 
 import com.agentsquad.squad.mapper.RuntimeEventInboxMapper;
 import com.agentsquad.squad.observer.RuntimeEventSinkFactory;
-import com.agentsquad.squad.bo.RuntimeEventSourceBO;
+import com.agentsquad.squad.model.bo.RuntimeEventSourceBO;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.session.SessionEvent;
 import io.agentscope.core.session.SessionExportSink;

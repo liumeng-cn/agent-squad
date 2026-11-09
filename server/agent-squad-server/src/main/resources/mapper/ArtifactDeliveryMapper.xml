@@ -33,7 +33,7 @@
             #{userId})
     </insert>
 
-    <select id="find" resultType="com.agentsquad.squad.po.ArtifactStagePO">
+    <select id="find" resultType="com.agentsquad.squad.model.po.ArtifactStagePO">
         SELECT stage_id,
             user_id,
             scope_id,
@@ -49,7 +49,7 @@
           AND expires_at &gt; CURRENT_TIMESTAMP AND del_flag = '0'
     </select>
 
-    <select id="lock" resultType="com.agentsquad.squad.po.ArtifactStagePO">
+    <select id="lock" resultType="com.agentsquad.squad.model.po.ArtifactStagePO">
         SELECT stage_id,
             user_id,
             scope_id,
@@ -65,7 +65,7 @@
           AND expires_at &gt; CURRENT_TIMESTAMP AND del_flag = '0' FOR UPDATE
     </select>
 
-    <select id="findPath" resultType="com.agentsquad.squad.po.ArtifactStagePO">
+    <select id="findPath" resultType="com.agentsquad.squad.model.po.ArtifactStagePO">
         SELECT stage_id,
             user_id,
             scope_id,

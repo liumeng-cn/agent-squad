@@ -1,7 +1,7 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.bo.ResponseContextBO;
-import com.agentsquad.squad.bo.ResponseHistoryBO;
+import com.agentsquad.squad.model.bo.ResponseContextBO;
+import com.agentsquad.squad.model.bo.ResponseHistoryBO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

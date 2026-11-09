@@ -1,7 +1,7 @@
 package com.agentsquad.squad.converter;
 
-import com.agentsquad.squad.po.SkillTextFilePO;
-import com.agentsquad.squad.vo.SkillFileVO;
+import com.agentsquad.squad.model.po.SkillTextFilePO;
+import com.agentsquad.squad.model.vo.SkillFileVO;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingConstants;
 import org.mapstruct.ReportingPolicy;

@@ -1,8 +1,8 @@
 package com.agentsquad.squad.controller;
 
 import com.agentsquad.squad.common.model.ApiResult;
-import com.agentsquad.squad.dto.MessageCreateDTO;
-import com.agentsquad.squad.vo.MessageReceiptVO;
+import com.agentsquad.squad.model.dto.MessageCreateDTO;
+import com.agentsquad.squad.model.vo.MessageReceiptVO;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.identity.UserContext;
 import jakarta.servlet.http.HttpServletRequest;

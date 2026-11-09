@@ -1,8 +1,8 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.bo.ResponseJobFactBO;
-import com.agentsquad.squad.bo.ResponseFailureFactBO;
-import com.agentsquad.squad.bo.ResponseTaskStatusFactBO;
+import com.agentsquad.squad.model.bo.ResponseJobFactBO;
+import com.agentsquad.squad.model.bo.ResponseFailureFactBO;
+import com.agentsquad.squad.model.bo.ResponseTaskStatusFactBO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

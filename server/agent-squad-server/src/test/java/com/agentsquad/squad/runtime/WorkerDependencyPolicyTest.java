@@ -1,7 +1,7 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.enums.WorkerJobStatus;
-import com.agentsquad.squad.bo.WorkerDependencyNodeBO;
+import com.agentsquad.squad.model.bo.WorkerDependencyNodeBO;
 import com.agentsquad.squad.policy.WorkerDependencyPolicy;
 import org.junit.jupiter.api.Test;
 

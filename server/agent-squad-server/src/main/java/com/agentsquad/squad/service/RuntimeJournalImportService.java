@@ -2,7 +2,7 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.agent.session.RuntimeSessionProvider;
 
-import com.agentsquad.squad.bo.RuntimeJournalImportResultBO;
+import com.agentsquad.squad.model.bo.RuntimeJournalImportResultBO;
 
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.session.AtomicSessionStorage;

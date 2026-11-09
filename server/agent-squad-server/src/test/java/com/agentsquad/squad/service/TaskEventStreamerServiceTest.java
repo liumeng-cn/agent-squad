@@ -1,7 +1,7 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
-import com.agentsquad.squad.po.TaskPO;
+import com.agentsquad.squad.model.po.TaskPO;
 import com.agentsquad.squad.mapper.TaskEventMapper;
 import com.agentsquad.squad.mapper.TaskMapper;
 import org.junit.jupiter.api.AfterEach;

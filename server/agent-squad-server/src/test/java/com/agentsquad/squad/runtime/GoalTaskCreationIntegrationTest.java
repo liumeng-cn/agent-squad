@@ -5,9 +5,9 @@ import com.agentsquad.squad.service.ArtifactService;
 
 import java.nio.charset.StandardCharsets;
 
-import com.agentsquad.squad.bo.GoalTaskCreateBO;
-import com.agentsquad.squad.dto.MessageCreateDTO;
-import com.agentsquad.squad.vo.TaskReceiptVO;
+import com.agentsquad.squad.model.bo.GoalTaskCreateBO;
+import com.agentsquad.squad.model.dto.MessageCreateDTO;
+import com.agentsquad.squad.model.vo.TaskReceiptVO;
 import com.agentsquad.squad.service.GoalTaskCreationService;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.BudgetService;

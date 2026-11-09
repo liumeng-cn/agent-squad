@@ -1,12 +1,13 @@
 package com.agentsquad.squad.agent.middleware;
 
+import com.agentsquad.squad.model.bo.AcceptedModelChoiceBO;
 import com.agentsquad.squad.service.ExecutionFailureService;
 import com.agentsquad.squad.utils.ContentDigests;
 import com.agentsquad.squad.service.BudgetService;
 import com.agentsquad.squad.mapper.BudgetMapper;
 import com.agentsquad.squad.service.UserStatusGuardService;
-import com.agentsquad.squad.properties.WorkerModelProfile;
-import com.agentsquad.squad.properties.WorkerProfileRegistry;
+import com.agentsquad.squad.config.properties.WorkerModelProfile;
+import com.agentsquad.squad.config.properties.WorkerProfileRegistry;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.Agent;
@@ -69,7 +70,7 @@ public class ModelBudgetMiddleware implements MiddlewareBase {
     @Override
     public Flux<AgentEvent> onModelCall(Agent agent, RuntimeContext context, ModelCallInput input,
                                         Function<ModelCallInput, Flux<AgentEvent>> next) {
-        var choice = context.get(com.agentsquad.squad.bo.AcceptedModelChoiceBO.class);
+        var choice = context.get(AcceptedModelChoiceBO.class);
         return onModelCallForProfile(choice == null ? "default" : choice.modelId(), context, input, next);
     }
 

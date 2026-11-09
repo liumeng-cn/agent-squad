@@ -1,14 +1,14 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.exceptions.RuntimeAdmissionBusyException;
-import com.agentsquad.squad.bo.NativeSubmissionReceiptBO;
+import com.agentsquad.squad.model.bo.NativeSubmissionReceiptBO;
 
 
 import com.agentsquad.squad.agent.session.NativeSessionGateway;
 
-import com.agentsquad.squad.bo.CommandClaimContextBO;
-import com.agentsquad.squad.bo.DeliveryBO;
-import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.model.bo.CommandClaimContextBO;
+import com.agentsquad.squad.model.bo.DeliveryBO;
+import com.agentsquad.squad.model.bo.ProjectionTargetBO;
 import com.agentsquad.squad.enums.RuntimeCommandAction;
 import com.agentsquad.squad.exceptions.ExecutionContextInvalidatedException;
 

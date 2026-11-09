@@ -4,7 +4,7 @@ import com.agentsquad.squad.testsupport.ApiResultJson;
 import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.service.ArtifactService;
-import com.agentsquad.squad.vo.ArtifactVO;
+import com.agentsquad.squad.model.vo.ArtifactVO;
 import com.agentsquad.squad.service.GoalTaskService;
 
 import com.agentsquad.squad.identity.AuthView;

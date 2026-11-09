@@ -4,7 +4,7 @@ import com.agentsquad.squad.service.OperationExecutorService;
 
 import com.agentsquad.squad.service.OperationDispatchService;
 
-import com.agentsquad.squad.po.OperationPO;
+import com.agentsquad.squad.model.po.OperationPO;
 import com.agentsquad.squad.mapper.OperationMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;

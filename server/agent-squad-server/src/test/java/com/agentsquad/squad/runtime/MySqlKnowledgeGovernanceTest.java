@@ -1,15 +1,15 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.dto.MessageCreateDTO;
+import com.agentsquad.squad.model.dto.MessageCreateDTO;
 import com.agentsquad.squad.service.MessageAcceptanceService;
-import com.agentsquad.squad.dto.MemoryCreateDTO;
-import com.agentsquad.squad.dto.MemoryUpdateDTO;
+import com.agentsquad.squad.model.dto.MemoryCreateDTO;
+import com.agentsquad.squad.model.dto.MemoryUpdateDTO;
 import com.agentsquad.squad.service.MemoryService;
 import com.agentsquad.squad.service.ExecutionAuthorizationService;
-import com.agentsquad.squad.dto.SkillFileDTO;
-import com.agentsquad.squad.dto.SkillGrantDTO;
-import com.agentsquad.squad.dto.SkillImportDTO;
+import com.agentsquad.squad.model.dto.SkillFileDTO;
+import com.agentsquad.squad.model.dto.SkillGrantDTO;
+import com.agentsquad.squad.model.dto.SkillImportDTO;
 import com.agentsquad.squad.service.SkillService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;

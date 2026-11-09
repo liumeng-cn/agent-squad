@@ -1,6 +1,7 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
+import com.agentsquad.squad.config.properties.WorkerProfileRegistry;
 import com.agentsquad.squad.service.ArtifactService;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.mapper.BindingMapper;
@@ -13,8 +14,8 @@ import com.agentsquad.squad.service.InteractionService;
 import com.agentsquad.squad.service.InteractionQueryService;
 import com.agentsquad.squad.service.OperationExecutorService;
 import com.agentsquad.squad.service.OperationService;
-import com.agentsquad.squad.bo.PrepareRequestBO;
-import com.agentsquad.squad.po.OperationPO;
+import com.agentsquad.squad.model.bo.PrepareRequestBO;
+import com.agentsquad.squad.model.po.OperationPO;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.event.ModelCallEndEvent;
 import io.agentscope.core.middleware.ModelCallInput;
@@ -230,7 +231,7 @@ class ScopeRuntimeOwnershipIntegrationTest {
         assertThatThrownBy(() -> budget.reserve(userId, second.scopeId(), "two", "TOOL", 40, "tester"))
                 .isInstanceOf(RuntimeBusinessException.class);
         budget.reserveModel(userId, second.scopeId(), "unknown-model", "a".repeat(64), "default",
-                context.getBean(com.agentsquad.squad.properties.WorkerProfileRegistry.class).requireExecutableModel("default"));
+                context.getBean(WorkerProfileRegistry.class).requireExecutableModel("default"));
         budget.markModelUnknown(userId, second.scopeId(), "unknown-model");
         assertThatThrownBy(() -> budget.reserve(userId, first.scopeId(), "three", "TOOL", 11, "tester"))
                 .isInstanceOf(RuntimeBusinessException.class);

@@ -1,18 +1,19 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.enums.AccountRole;
-import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.model.bo.ProjectionTargetBO;
 import com.agentsquad.squad.enums.GoalTaskStatus;
 import com.agentsquad.squad.enums.NativeRunOutcome;
 import com.agentsquad.squad.enums.RuntimeCommandStatus;
 import com.agentsquad.squad.agent.MasterAgentIdentity;
 
 import com.agentsquad.squad.AgentSquadApplication;
+import com.agentsquad.squad.model.bo.PrepareRequestBO;
 import com.agentsquad.squad.service.ExecutionScopeService;
-import com.agentsquad.squad.bo.PlanNodeBO;
-import com.agentsquad.squad.bo.PlanPublishBO;
-import com.agentsquad.squad.dto.WorkerDefinitionCreateDTO;
-import com.agentsquad.squad.bo.NativeEventViewBO;
+import com.agentsquad.squad.model.bo.PlanNodeBO;
+import com.agentsquad.squad.model.bo.PlanPublishBO;
+import com.agentsquad.squad.model.dto.WorkerDefinitionCreateDTO;
+import com.agentsquad.squad.model.bo.NativeEventViewBO;
 import com.agentsquad.squad.service.NativeProjectionService;
 import com.agentsquad.squad.mapper.BindingMapper;
 import com.agentsquad.squad.mapper.CommandMapper;
@@ -280,10 +281,10 @@ class CompletionCorrectionIntegrationTest {
             var log = store.open(new io.agentscope.core.session.SessionKey(USER_ID, workerAgent, workerSession), runtime);
             var writer = log.acquire("other-node", java.time.Duration.ofSeconds(30));
             var operation = context.getBean(com.agentsquad.squad.service.OperationService.class).prepare(
-                    new com.agentsquad.squad.bo.PrepareRequestBO(USER_ID, target.getSessionId(), "turn", "write",
+                    new PrepareRequestBO(USER_ID, target.getSessionId(), "turn", "write",
                             "mock_ticket_create", "v1", "WRITE", java.util.Map.of("title", "test"), "stable", false, null, 0, 1, "tester"));
             var unstarted = context.getBean(com.agentsquad.squad.service.OperationService.class).prepare(
-                    new com.agentsquad.squad.bo.PrepareRequestBO(USER_ID, target.getSessionId(), "turn", "write-not-started",
+                    new PrepareRequestBO(USER_ID, target.getSessionId(), "turn", "write-not-started",
                             "mock_ticket_create", "v1", "WRITE", java.util.Map.of("title", "next"), "another", false, null, 0, 1, "tester"));
             var interaction = context.getBean(com.agentsquad.squad.service.InteractionService.class).bindFrameworkRequest(
                     USER_ID, target.getTaskId(), target.getBindingId(), null, "turn", "input-request",

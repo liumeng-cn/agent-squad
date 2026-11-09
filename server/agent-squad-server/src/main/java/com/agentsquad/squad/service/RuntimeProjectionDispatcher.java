@@ -4,7 +4,7 @@ import com.agentsquad.squad.agent.session.NativeSessionGateway;
 
 import com.agentsquad.squad.enums.RuntimeEventInboxStatus;
 import com.agentsquad.squad.mapper.RuntimeEventInboxMapper;
-import com.agentsquad.squad.bo.RuntimeEventSourceBO;
+import com.agentsquad.squad.model.bo.RuntimeEventSourceBO;
 import com.agentsquad.squad.event.RuntimeJournalReadySignal;
 import com.agentsquad.squad.mapper.ProjectionMapper;
 import jakarta.annotation.PreDestroy;

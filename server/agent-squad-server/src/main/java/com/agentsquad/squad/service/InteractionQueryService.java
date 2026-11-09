@@ -1,15 +1,15 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.vo.InteractionVO;
-import com.agentsquad.squad.vo.InteractionPageVO;
+import com.agentsquad.squad.model.vo.InteractionVO;
+import com.agentsquad.squad.model.vo.InteractionPageVO;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.utils.RuntimePayloads;
-import com.agentsquad.squad.po.InteractionPO;
+import com.agentsquad.squad.model.po.InteractionPO;
 import com.agentsquad.squad.mapper.InteractionMapper;
-import com.agentsquad.squad.po.OperationPO;
+import com.agentsquad.squad.model.po.OperationPO;
 import com.agentsquad.squad.mapper.OperationMapper;
-import com.agentsquad.squad.bo.OperationPreviewBO;
+import com.agentsquad.squad.model.bo.OperationPreviewBO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

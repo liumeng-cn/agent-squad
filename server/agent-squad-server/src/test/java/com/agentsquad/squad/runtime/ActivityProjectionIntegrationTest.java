@@ -1,18 +1,19 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
+import com.agentsquad.squad.model.bo.RuntimeEventSourceBO;
 import com.agentsquad.squad.observer.ExecutionTrace;
-import com.agentsquad.squad.vo.MessageReceiptVO;
+import com.agentsquad.squad.model.vo.MessageReceiptVO;
 import io.micrometer.tracing.Tracer;
-import com.agentsquad.squad.dto.MessageCreateDTO;
+import com.agentsquad.squad.model.dto.MessageCreateDTO;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.service.MessageAcceptanceService;
-import com.agentsquad.squad.bo.NativeEventViewBO;
+import com.agentsquad.squad.model.bo.NativeEventViewBO;
 import com.agentsquad.squad.service.ActivityProjectionService;
-import com.agentsquad.squad.dto.ActivityHistoryDTO;
-import com.agentsquad.squad.vo.ExecutionActivityVO;
+import com.agentsquad.squad.model.dto.ActivityHistoryDTO;
+import com.agentsquad.squad.model.vo.ExecutionActivityVO;
 import com.agentsquad.squad.service.ConversationQueryService;
-import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.model.bo.ProjectionTargetBO;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -95,7 +96,7 @@ class ActivityProjectionIntegrationTest {
             }
             var scope = context.getBean(ExecutionScopeMapper.class).findOwned(user, scopeId);
             var sessions = context.getBean(com.agentsquad.squad.agent.session.RuntimeSessionProvider.class);
-            var source = new com.agentsquad.squad.bo.RuntimeEventSourceBO(user, binding, session, 1);
+            var source = new RuntimeEventSourceBO(user, binding, session, 1);
             String agent = jdbc.queryForObject("SELECT agent_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
             int journalObjects = jdbc.queryForObject("SELECT COUNT(*) FROM agentscope_store", Integer.class);
             assertThat(sessions.executionContext(source).getSessionId()).isEqualTo(session);

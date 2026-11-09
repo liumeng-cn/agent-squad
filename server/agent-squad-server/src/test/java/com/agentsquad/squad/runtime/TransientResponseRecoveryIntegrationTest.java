@@ -1,8 +1,8 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.dto.ActivityHistoryDTO;
-import com.agentsquad.squad.dto.MessageCreateDTO;
+import com.agentsquad.squad.model.dto.ActivityHistoryDTO;
+import com.agentsquad.squad.model.dto.MessageCreateDTO;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.ResponseRetryService;
 import com.agentsquad.squad.service.ConversationQueryService;

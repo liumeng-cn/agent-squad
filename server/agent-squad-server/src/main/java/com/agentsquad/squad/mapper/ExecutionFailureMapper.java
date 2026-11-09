@@ -1,6 +1,6 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.po.ExecutionFailurePO;
+import com.agentsquad.squad.model.po.ExecutionFailurePO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

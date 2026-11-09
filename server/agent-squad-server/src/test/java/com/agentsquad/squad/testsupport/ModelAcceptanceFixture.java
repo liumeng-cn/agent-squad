@@ -1,6 +1,6 @@
 package com.agentsquad.squad.testsupport;
 
-import com.agentsquad.squad.bo.PlanPublishBO;
+import com.agentsquad.squad.model.bo.PlanPublishBO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 

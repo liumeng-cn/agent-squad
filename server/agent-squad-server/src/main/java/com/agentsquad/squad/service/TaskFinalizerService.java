@@ -1,17 +1,17 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.bo.FinalizationBO;
+import com.agentsquad.squad.model.bo.FinalizationBO;
 import com.agentsquad.squad.enums.GoalTaskStatus;
 import com.agentsquad.squad.enums.PlanJoinStage;
 import com.agentsquad.squad.enums.RuntimeCommandAction;
-import com.agentsquad.squad.bo.FailureClassificationBO;
+import com.agentsquad.squad.model.bo.FailureClassificationBO;
 
 import com.agentsquad.squad.enums.NativeRunOutcome;
 
-import com.agentsquad.squad.bo.AcceptanceReviewBO;
+import com.agentsquad.squad.model.bo.AcceptanceReviewBO;
 import com.agentsquad.squad.mapper.TaskDirectiveMapper;
-import com.agentsquad.squad.bo.NativeEventViewBO;
-import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.model.bo.NativeEventViewBO;
+import com.agentsquad.squad.model.bo.ProjectionTargetBO;
 import com.agentsquad.squad.mapper.CommandMapper;
 import com.agentsquad.squad.mapper.ConversationMapper;
 import com.agentsquad.squad.mapper.TaskEventMapper;

@@ -1,0 +1,40 @@
+package com.agentsquad.squad.model.dto;
+
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
+
+
+/**
+ * 技能使用授权修改请求。
+ * <p>
+ * expectedVersion 防止管理页面覆盖另一笔启停操作。
+ */
+@lombok.Getter
+@lombok.EqualsAndHashCode
+@lombok.experimental.Accessors(fluent = true)
+public class SkillGrantDTO {
+
+    @JsonProperty(value = "enabled", required = true)
+    @NotNull
+    private final Boolean enabled;
+
+    @JsonProperty(value = "expectedVersion", required = true)
+    @NotNull
+    private final Long expectedVersion;
+
+    @com.fasterxml.jackson.annotation.JsonCreator
+    public SkillGrantDTO(
+            @JsonProperty(value = "enabled", required = true) Boolean enabled,
+            @JsonProperty(value = "expectedVersion", required = true) Long expectedVersion) {
+        this.enabled = enabled;
+        this.expectedVersion = expectedVersion;
+    }
+    /**
+     * 请求校验时拒绝模型或客户端附加的身份、链接及未声明字段
+     */
+    @JsonAnySetter
+    public void rejectUnknownField(String name, Object value) {
+        throw new IllegalArgumentException("技能请求包含不支持的字段");
+    }
+}

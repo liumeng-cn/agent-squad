@@ -1,14 +1,14 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.agent.session.NativeSessionGateway;
-import com.agentsquad.squad.bo.NativeSubmissionReceiptBO;
+import com.agentsquad.squad.model.bo.NativeSubmissionReceiptBO;
 
-import com.agentsquad.squad.bo.NaturalReplyEvidenceBO;
+import com.agentsquad.squad.model.bo.NaturalReplyEvidenceBO;
 import com.agentsquad.squad.enums.ResponseExecutionStatus;
 import com.agentsquad.squad.converter.ModelCompletionNormalizer;
 import com.agentsquad.squad.enums.ModelEvidenceIssue;
 import com.agentsquad.squad.enums.ModelFinishReason;
-import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.model.bo.ProjectionTargetBO;
 import io.agentscope.core.message.GenerateReason;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;

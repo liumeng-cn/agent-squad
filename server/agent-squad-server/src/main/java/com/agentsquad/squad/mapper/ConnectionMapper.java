@@ -1,6 +1,6 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.po.ConnectionPO;
+import com.agentsquad.squad.model.po.ConnectionPO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;

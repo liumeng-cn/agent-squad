@@ -1,21 +1,21 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.bo.AcceptanceReviewRequestBO;
-import com.agentsquad.squad.bo.BindingResultBO;
+import com.agentsquad.squad.model.bo.AcceptanceReviewRequestBO;
+import com.agentsquad.squad.model.bo.BindingResultBO;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
-import com.agentsquad.squad.po.CommandPO;
+import com.agentsquad.squad.model.po.CommandPO;
 import com.agentsquad.squad.enums.GoalTaskStatus;
-import com.agentsquad.squad.vo.CommandReceiptVO;
+import com.agentsquad.squad.model.vo.CommandReceiptVO;
 import com.agentsquad.squad.mapper.CommandMapper;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.utils.ContentDigests;
 import com.agentsquad.squad.utils.RuntimePayloads;
-import com.agentsquad.squad.po.InteractionPO;
+import com.agentsquad.squad.model.po.InteractionPO;
 import com.agentsquad.squad.mapper.InteractionMapper;
 import com.agentsquad.squad.connector.MockTicketConnector;
-import com.agentsquad.squad.po.OperationPO;
+import com.agentsquad.squad.model.po.OperationPO;
 import com.agentsquad.squad.enums.OperationStatus;
 import com.agentsquad.squad.mapper.OperationMapper;
 import com.fasterxml.jackson.databind.JsonNode;

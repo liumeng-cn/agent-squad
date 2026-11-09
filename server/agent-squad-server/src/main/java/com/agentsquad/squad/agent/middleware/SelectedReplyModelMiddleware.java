@@ -2,8 +2,8 @@ package com.agentsquad.squad.agent.middleware;
 
 import com.agentsquad.squad.enums.ReasoningAdapter;
 import com.agentsquad.squad.mapper.ResponseRuntimeMapper;
-import com.agentsquad.squad.bo.CachedReplyModelBO;
-import com.agentsquad.squad.bo.AcceptedModelChoiceBO;
+import com.agentsquad.squad.model.bo.CachedReplyModelBO;
+import com.agentsquad.squad.model.bo.AcceptedModelChoiceBO;
 import com.agentsquad.squad.service.ModelCatalogService;
 import io.agentscope.core.agent.Agent;
 import io.agentscope.core.agent.RuntimeContext;

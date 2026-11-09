@@ -1,6 +1,6 @@
 package com.agentsquad.squad.policy;
 
-import com.agentsquad.squad.po.MemoryPO;
+import com.agentsquad.squad.model.po.MemoryPO;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;

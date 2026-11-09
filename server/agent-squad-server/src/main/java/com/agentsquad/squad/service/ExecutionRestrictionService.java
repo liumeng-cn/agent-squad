@@ -1,6 +1,6 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.bo.FailureClassificationBO;
+import com.agentsquad.squad.model.bo.FailureClassificationBO;
 import com.agentsquad.squad.mapper.ExecutionRestrictionMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

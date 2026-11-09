@@ -1,6 +1,6 @@
 package com.agentsquad.squad.tools.operation;
 
-import com.agentsquad.squad.bo.OperationPreviewBO;
+import com.agentsquad.squad.model.bo.OperationPreviewBO;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;

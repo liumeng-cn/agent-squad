@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.mapper.ExecutionFailureMapper">
 
-    <resultMap id="latestResult" type="com.agentsquad.squad.po.ExecutionFailurePO">
+    <resultMap id="latestResult" type="com.agentsquad.squad.model.po.ExecutionFailurePO">
         <constructor>
             <arg column="failure_id" javaType="java.lang.String"/>
             <arg column="scope_id" javaType="java.lang.String"/>
@@ -17,7 +17,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="activeInConversationResult" type="com.agentsquad.squad.po.ExecutionFailurePO">
+    <resultMap id="activeInConversationResult" type="com.agentsquad.squad.model.po.ExecutionFailurePO">
         <constructor>
             <arg column="failure_id" javaType="java.lang.String"/>
             <arg column="scope_id" javaType="java.lang.String"/>

@@ -1,12 +1,12 @@
 package com.agentsquad.squad.presentation.stream;
 
 import com.agentsquad.squad.service.UserStatusGuardService;
-import com.agentsquad.squad.bo.ConversationEventBO;
-import com.agentsquad.squad.bo.ReplyPreviewBO;
+import com.agentsquad.squad.model.bo.ConversationEventBO;
+import com.agentsquad.squad.model.bo.ReplyPreviewBO;
 import com.agentsquad.squad.enums.ReplyPreviewPhase;
 import com.agentsquad.squad.service.ConversationQueryService;
 import com.agentsquad.squad.service.ConversationStreamHubService;
-import com.agentsquad.squad.bo.ConversationStreamKeyBO;
+import com.agentsquad.squad.model.bo.ConversationStreamKeyBO;
 import com.agentsquad.squad.service.ConversationSubscriberService;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import org.junit.jupiter.api.Test;

@@ -1,12 +1,10 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.enums.*;
-import com.agentsquad.squad.po.ConversationPO;
-import com.agentsquad.squad.po.ExecutionScopePO;
-import com.agentsquad.squad.po.ResponseRuntimePO;
-import com.agentsquad.squad.bo.FailureClassificationBO;
-
-import com.agentsquad.squad.bo.NaturalReplyEvidenceBO;
+import com.agentsquad.squad.model.bo.*;
+import com.agentsquad.squad.model.po.ConversationPO;
+import com.agentsquad.squad.model.po.ExecutionScopePO;
+import com.agentsquad.squad.model.po.ResponseRuntimePO;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.utils.ContentDigests;
@@ -16,15 +14,12 @@ import com.agentsquad.squad.mapper.ConversationMapper;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.mapper.MessageAcceptanceMapper;
 import com.agentsquad.squad.mapper.ResponseRuntimeMapper;
-import com.agentsquad.squad.bo.NativeEventViewBO;
-import com.agentsquad.squad.bo.NativeSubmissionReceiptBO;
-import com.agentsquad.squad.bo.CompletionProposalReceiptBO;
-import com.agentsquad.squad.bo.MessageCompletedPayloadBO;
-import com.agentsquad.squad.bo.ExecutionChangedPayloadBO;
+import com.agentsquad.squad.model.bo.NativeEventViewBO;
+import com.agentsquad.squad.model.bo.CompletionProposalReceiptBO;
 import com.agentsquad.squad.mapper.ConversationReadMapper;
-import com.agentsquad.squad.vo.MessageVO;
-import com.agentsquad.squad.vo.ResponseExecutionVO;
-import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.model.vo.MessageVO;
+import com.agentsquad.squad.model.vo.ResponseExecutionVO;
+import com.agentsquad.squad.model.bo.ProjectionTargetBO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -381,7 +376,7 @@ public class ResponseExecutionService {
                     row.getSourceMessageId(), row.getExecutionId(), null, answerTime.atOffset(ZoneOffset.UTC).toString(), java.util.List.of());
             events.publish(scope, "response:" + row.getExecutionId() + ":answer", ConversationDeltaType.MESSAGE_COMPLETED.code(),
                     new MessageCompletedPayloadBO(ConversationDeltaType.SCHEMA_VERSION, message));
-            activities.completed(scope, new com.agentsquad.squad.bo.ActivityBusinessFactBO(
+            activities.completed(scope, new ActivityBusinessFactBO(
                     ActivityType.ANSWER_PUBLISH, answerId));
         }
         if ("CANCELLED".equals(status)) {

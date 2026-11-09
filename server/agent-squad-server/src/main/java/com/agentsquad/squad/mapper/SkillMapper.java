@@ -1,9 +1,9 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.po.SkillVersionPO;
-import com.agentsquad.squad.po.SkillTextFilePO;
-import com.agentsquad.squad.po.SkillGrantPO;
-import com.agentsquad.squad.bo.SkillReferenceBO;
+import com.agentsquad.squad.model.po.SkillVersionPO;
+import com.agentsquad.squad.model.po.SkillTextFilePO;
+import com.agentsquad.squad.model.po.SkillGrantPO;
+import com.agentsquad.squad.model.bo.SkillReferenceBO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;

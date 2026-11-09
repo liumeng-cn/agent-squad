@@ -2,11 +2,11 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.bo.SandboxExecutionContextBO;
-import com.agentsquad.squad.bo.SandboxInputFileBO;
+import com.agentsquad.squad.model.bo.SandboxExecutionContextBO;
+import com.agentsquad.squad.model.bo.SandboxInputFileBO;
 import com.agentsquad.squad.policy.SandboxPolicy;
-import com.agentsquad.squad.bo.SandboxExecuteRequestBO;
-import com.agentsquad.squad.bo.SandboxExecutionResultBO;
+import com.agentsquad.squad.model.bo.SandboxExecuteRequestBO;
+import com.agentsquad.squad.model.bo.SandboxExecutionResultBO;
 import com.agentsquad.squad.driver.HarnessDockerSandboxDriver;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.mapper.InteractionMapper">
 
-    <resultMap id="findByFrameworkRequestResult" type="com.agentsquad.squad.po.InteractionPO">
+    <resultMap id="findByFrameworkRequestResult" type="com.agentsquad.squad.model.po.InteractionPO">
         <constructor>
             <arg column="interaction_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -26,7 +26,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="findOwnedResult" type="com.agentsquad.squad.po.InteractionPO">
+    <resultMap id="findOwnedResult" type="com.agentsquad.squad.model.po.InteractionPO">
         <constructor>
             <arg column="interaction_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -50,7 +50,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="listByTaskResult" type="com.agentsquad.squad.po.InteractionPO">
+    <resultMap id="listByTaskResult" type="com.agentsquad.squad.model.po.InteractionPO">
         <constructor>
             <arg column="interaction_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>

@@ -1,14 +1,14 @@
 package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.vo.ConversationVO;
-import com.agentsquad.squad.vo.TaskReceiptVO;
+import com.agentsquad.squad.model.vo.ConversationVO;
+import com.agentsquad.squad.model.vo.TaskReceiptVO;
 import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.service.BudgetService;
 import com.agentsquad.squad.mapper.BudgetMapper;
 import com.agentsquad.squad.agent.middleware.ModelBudgetMiddleware;
-import com.agentsquad.squad.properties.WorkerModelProfile;
-import com.agentsquad.squad.properties.WorkerProfileRegistry;
+import com.agentsquad.squad.config.properties.WorkerModelProfile;
+import com.agentsquad.squad.config.properties.WorkerProfileRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.event.ModelCallEndEvent;

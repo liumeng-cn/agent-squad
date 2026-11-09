@@ -3,7 +3,7 @@ package com.agentsquad.squad.service;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.event.ConversationCommittedSignal;
-import com.agentsquad.squad.bo.ConversationStreamKeyBO;
+import com.agentsquad.squad.model.bo.ConversationStreamKeyBO;
 import com.agentsquad.squad.event.ReplyPreviewSignal;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;

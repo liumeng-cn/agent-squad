@@ -1,6 +1,6 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.bo.LocalSessionHandleBO;
+import com.agentsquad.squad.model.bo.LocalSessionHandleBO;
 
 import com.agentsquad.squad.mapper.BindingMapper;
 import com.agentsquad.squad.enums.LocalSessionState;

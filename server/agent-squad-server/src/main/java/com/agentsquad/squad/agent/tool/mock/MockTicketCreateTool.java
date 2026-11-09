@@ -2,8 +2,8 @@ package com.agentsquad.squad.agent.tool.mock;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.service.OperationService;
-import com.agentsquad.squad.bo.PrepareRequestBO;
-import com.agentsquad.squad.po.OperationPO;
+import com.agentsquad.squad.model.bo.PrepareRequestBO;
+import com.agentsquad.squad.model.po.OperationPO;
 import com.agentsquad.squad.enums.OperationStatus;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.tool.AgentTool;

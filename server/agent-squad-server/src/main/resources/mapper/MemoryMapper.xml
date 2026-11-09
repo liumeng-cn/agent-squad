@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.mapper.MemoryMapper">
 
-    <resultMap id="findResult" type="com.agentsquad.squad.po.MemoryPO">
+    <resultMap id="findResult" type="com.agentsquad.squad.model.po.MemoryPO">
         <constructor>
             <arg column="memory_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -17,7 +17,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="findActiveKeyResult" type="com.agentsquad.squad.po.MemoryPO">
+    <resultMap id="findActiveKeyResult" type="com.agentsquad.squad.model.po.MemoryPO">
         <constructor>
             <arg column="memory_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -32,7 +32,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="listResult" type="com.agentsquad.squad.po.MemoryPO">
+    <resultMap id="listResult" type="com.agentsquad.squad.model.po.MemoryPO">
         <constructor>
             <arg column="memory_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -47,7 +47,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="activeResult" type="com.agentsquad.squad.po.MemoryPO">
+    <resultMap id="activeResult" type="com.agentsquad.squad.model.po.MemoryPO">
         <constructor>
             <arg column="memory_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -62,7 +62,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="pinResult" type="com.agentsquad.squad.po.MemoryScopePinPO">
+    <resultMap id="pinResult" type="com.agentsquad.squad.model.po.MemoryScopePinPO">
         <constructor>
             <arg column="scope_id" javaType="java.lang.String"/>
             <arg column="memory_revision" javaType="_long"/>
@@ -70,14 +70,14 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="sourceResult" type="com.agentsquad.squad.bo.MemorySourceBO">
+    <resultMap id="sourceResult" type="com.agentsquad.squad.model.bo.MemorySourceBO">
         <constructor>
             <arg column="message_id" javaType="java.lang.String"/>
             <arg column="content" javaType="java.lang.String"/>
         </constructor>
     </resultMap>
 
-    <resultMap id="receiptResult" type="com.agentsquad.squad.po.MemoryWriteReceiptPO">
+    <resultMap id="receiptResult" type="com.agentsquad.squad.model.po.MemoryWriteReceiptPO">
         <constructor>
             <arg column="payload_hash" javaType="java.lang.String"/>
             <arg column="result_json" javaType="java.lang.String"/>

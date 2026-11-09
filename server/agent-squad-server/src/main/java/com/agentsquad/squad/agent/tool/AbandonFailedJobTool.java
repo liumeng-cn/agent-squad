@@ -2,7 +2,7 @@ package com.agentsquad.squad.agent.tool;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.utils.RuntimePayloads;
-import com.agentsquad.squad.bo.AbandonFailedJobRequestBO;
+import com.agentsquad.squad.model.bo.AbandonFailedJobRequestBO;
 import com.agentsquad.squad.service.WorkerFailureResolutionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.message.ToolResultBlock;

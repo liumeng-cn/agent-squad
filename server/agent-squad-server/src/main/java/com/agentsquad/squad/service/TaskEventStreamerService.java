@@ -3,8 +3,8 @@ package com.agentsquad.squad.service;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 
-import com.agentsquad.squad.po.EventPO;
-import com.agentsquad.squad.bo.TaskEventResponseBO;
+import com.agentsquad.squad.model.po.EventPO;
+import com.agentsquad.squad.model.bo.TaskEventResponseBO;
 import com.agentsquad.squad.mapper.TaskEventMapper;
 import com.agentsquad.squad.mapper.TaskMapper;
 import jakarta.annotation.PostConstruct;

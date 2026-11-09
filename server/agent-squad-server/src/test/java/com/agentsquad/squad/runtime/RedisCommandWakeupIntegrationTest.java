@@ -1,7 +1,7 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.dto.MessageCreateDTO;
+import com.agentsquad.squad.model.dto.MessageCreateDTO;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.RedisCommandWakeup;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;

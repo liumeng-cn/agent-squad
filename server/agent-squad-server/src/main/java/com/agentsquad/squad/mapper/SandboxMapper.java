@@ -1,7 +1,7 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.bo.SandboxBindingBO;
-import com.agentsquad.squad.po.SandboxRunPO;
+import com.agentsquad.squad.model.bo.SandboxBindingBO;
+import com.agentsquad.squad.model.po.SandboxRunPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

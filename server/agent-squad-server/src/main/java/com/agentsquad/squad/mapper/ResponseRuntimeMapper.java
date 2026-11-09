@@ -1,8 +1,8 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.bo.ProjectionTargetBO;
-import com.agentsquad.squad.po.ResponseRuntimePO;
-import com.agentsquad.squad.bo.ReplyPreviewTargetBO;
+import com.agentsquad.squad.model.bo.ProjectionTargetBO;
+import com.agentsquad.squad.model.po.ResponseRuntimePO;
+import com.agentsquad.squad.model.bo.ReplyPreviewTargetBO;
 import com.agentsquad.squad.enums.ResponseCompletionProtocol;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;

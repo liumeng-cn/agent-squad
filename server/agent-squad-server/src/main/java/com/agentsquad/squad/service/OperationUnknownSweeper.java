@@ -1,7 +1,7 @@
 package com.agentsquad.squad.service;
 
 
-import com.agentsquad.squad.po.OperationPO;
+import com.agentsquad.squad.model.po.OperationPO;
 import com.agentsquad.squad.mapper.OperationMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

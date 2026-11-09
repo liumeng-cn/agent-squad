@@ -2,11 +2,11 @@ package com.agentsquad.squad.governance;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
-import com.agentsquad.squad.vo.ConversationVO;
-import com.agentsquad.squad.vo.TaskReceiptVO;
+import com.agentsquad.squad.model.vo.ConversationVO;
+import com.agentsquad.squad.model.vo.TaskReceiptVO;
 import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.service.BudgetService;
-import com.agentsquad.squad.properties.WorkerModelProfile;
+import com.agentsquad.squad.config.properties.WorkerModelProfile;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;

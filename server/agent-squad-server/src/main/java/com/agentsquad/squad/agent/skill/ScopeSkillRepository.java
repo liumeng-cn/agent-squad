@@ -1,10 +1,10 @@
 package com.agentsquad.squad.agent.skill;
 
-import com.agentsquad.squad.bo.SkillSelectionBO;
+import com.agentsquad.squad.model.bo.SkillSelectionBO;
 
 import com.agentsquad.squad.service.ExecutionScopeService;
-import com.agentsquad.squad.bo.SkillCatalogBO;
-import com.agentsquad.squad.bo.SkillReferenceBO;
+import com.agentsquad.squad.model.bo.SkillCatalogBO;
+import com.agentsquad.squad.model.bo.SkillReferenceBO;
 import com.agentsquad.squad.service.SkillRuntimeService;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.skill.AgentSkill;

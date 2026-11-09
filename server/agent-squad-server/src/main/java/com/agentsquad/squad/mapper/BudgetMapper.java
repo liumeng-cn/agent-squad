@@ -1,7 +1,7 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.po.BudgetReservationPO;
-import com.agentsquad.squad.bo.BudgetAccountBO;
+import com.agentsquad.squad.model.po.BudgetReservationPO;
+import com.agentsquad.squad.model.bo.BudgetAccountBO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

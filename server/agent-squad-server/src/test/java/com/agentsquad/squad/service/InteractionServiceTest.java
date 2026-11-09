@@ -2,7 +2,7 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
-import com.agentsquad.squad.po.InteractionPO;
+import com.agentsquad.squad.model.po.InteractionPO;
 import com.agentsquad.squad.mapper.InteractionMapper;
 import com.agentsquad.squad.mapper.OperationMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;

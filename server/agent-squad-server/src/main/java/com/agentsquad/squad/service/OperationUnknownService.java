@@ -1,8 +1,8 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.po.OperationPO;
+import com.agentsquad.squad.model.po.OperationPO;
 import com.agentsquad.squad.mapper.OperationMapper;
-import com.agentsquad.squad.bo.FailureClassificationBO;
+import com.agentsquad.squad.model.bo.FailureClassificationBO;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

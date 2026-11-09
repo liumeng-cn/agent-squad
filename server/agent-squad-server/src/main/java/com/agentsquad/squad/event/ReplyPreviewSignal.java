@@ -1,6 +1,6 @@
 package com.agentsquad.squad.event;
 
-import com.agentsquad.squad.bo.ReplyPreviewBO;
+import com.agentsquad.squad.model.bo.ReplyPreviewBO;
 
 /**
  * 临时公开正文的内存通知

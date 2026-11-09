@@ -1,8 +1,8 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
-import com.agentsquad.squad.dto.ConversationTitleUpdateDTO;
-import com.agentsquad.squad.dto.MessageCreateDTO;
+import com.agentsquad.squad.model.dto.ConversationTitleUpdateDTO;
+import com.agentsquad.squad.model.dto.MessageCreateDTO;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.ConversationTitleService;
 import com.agentsquad.squad.service.ConversationQueryService;

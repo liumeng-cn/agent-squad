@@ -1,15 +1,15 @@
 package com.agentsquad.squad.controller;
 
 import com.agentsquad.squad.common.model.ApiResult;
-import com.agentsquad.squad.dto.ConversationTitleUpdateDTO;
-import com.agentsquad.squad.vo.ConversationViewVO;
+import com.agentsquad.squad.model.dto.ConversationTitleUpdateDTO;
+import com.agentsquad.squad.model.vo.ConversationViewVO;
 import com.agentsquad.squad.service.ConversationTitleService;
-import com.agentsquad.squad.vo.ConversationSnapshotVO;
+import com.agentsquad.squad.model.vo.ConversationSnapshotVO;
 import com.agentsquad.squad.service.ConversationQueryService;
 import com.agentsquad.squad.service.ConversationEventStreamerService;
 import com.agentsquad.squad.identity.UserContext;
-import com.agentsquad.squad.vo.ActivityHistoryPageVO;
-import com.agentsquad.squad.dto.ActivityHistoryDTO;
+import com.agentsquad.squad.model.vo.ActivityHistoryPageVO;
+import com.agentsquad.squad.model.dto.ActivityHistoryDTO;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletRequest;

@@ -1,7 +1,7 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.properties.RedisWakeupProperties;
-import com.agentsquad.squad.bo.RuntimeEventSourceBO;
+import com.agentsquad.squad.config.properties.RedisWakeupProperties;
+import com.agentsquad.squad.model.bo.RuntimeEventSourceBO;
 import com.agentsquad.squad.mapper.ProjectionMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;

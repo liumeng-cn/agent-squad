@@ -2,7 +2,7 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.enums.ActivityGroup;
 import com.agentsquad.squad.enums.ActivityType;
-import com.agentsquad.squad.bo.ActivityClassificationBO;
+import com.agentsquad.squad.model.bo.ActivityClassificationBO;
 
 /**
  * 当前工具的用户过程分类

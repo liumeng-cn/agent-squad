@@ -1,7 +1,7 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.po.CommandPO;
-import com.agentsquad.squad.po.TaskPO;
+import com.agentsquad.squad.model.po.CommandPO;
+import com.agentsquad.squad.model.po.TaskPO;
 import com.agentsquad.squad.enums.GoalTaskStatus;
 import com.agentsquad.squad.enums.RuntimeCommandAction;
 import com.agentsquad.squad.enums.RuntimeCommandStatus;
@@ -9,7 +9,7 @@ import com.agentsquad.squad.enums.RuntimeCommandStatus;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 
-import com.agentsquad.squad.vo.CommandReceiptVO;
+import com.agentsquad.squad.model.vo.CommandReceiptVO;
 import com.agentsquad.squad.mapper.BindingMapper;
 import com.agentsquad.squad.mapper.CommandMapper;
 import com.agentsquad.squad.mapper.DeliveryMapper;

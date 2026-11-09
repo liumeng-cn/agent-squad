@@ -1,9 +1,9 @@
 package com.agentsquad.squad.mapper;
 
 import com.agentsquad.squad.enums.RuntimeEventFailureCode;
-import com.agentsquad.squad.po.RuntimeEventInboxPO;
+import com.agentsquad.squad.model.po.RuntimeEventInboxPO;
 import com.agentsquad.squad.enums.RuntimeEventInboxStatus;
-import com.agentsquad.squad.bo.RuntimeEventSourceBO;
+import com.agentsquad.squad.model.bo.RuntimeEventSourceBO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

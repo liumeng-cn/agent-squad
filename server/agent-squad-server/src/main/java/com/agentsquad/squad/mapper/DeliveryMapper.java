@@ -1,7 +1,7 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.bo.DeliveryBO;
-import com.agentsquad.squad.bo.CommandClaimContextBO;
+import com.agentsquad.squad.model.bo.DeliveryBO;
+import com.agentsquad.squad.model.bo.CommandClaimContextBO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

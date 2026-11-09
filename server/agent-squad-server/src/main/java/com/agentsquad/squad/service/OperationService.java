@@ -1,19 +1,19 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.bo.PrepareRequestBO;
+import com.agentsquad.squad.model.bo.PrepareRequestBO;
 
-import com.agentsquad.squad.bo.OperationPreviewBO;
+import com.agentsquad.squad.model.bo.OperationPreviewBO;
 
 import com.agentsquad.squad.mapper.TaskDirectiveMapper;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.utils.RuntimePayloads;
-import com.agentsquad.squad.po.OperationPO;
+import com.agentsquad.squad.model.po.OperationPO;
 import com.agentsquad.squad.enums.OperationStatus;
-import com.agentsquad.squad.bo.ToolExecutionContextBO;
-import com.agentsquad.squad.vo.OperationPageVO;
-import com.agentsquad.squad.vo.OperationVO;
-import com.agentsquad.squad.vo.OperationDetailVO;
+import com.agentsquad.squad.model.bo.ToolExecutionContextBO;
+import com.agentsquad.squad.model.vo.OperationPageVO;
+import com.agentsquad.squad.model.vo.OperationVO;
+import com.agentsquad.squad.model.vo.OperationDetailVO;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.mapper.OperationMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;

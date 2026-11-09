@@ -1,6 +1,6 @@
 package com.agentsquad.squad.presentation.stream;
 
-import com.agentsquad.squad.bo.ReplyPreviewTargetBO;
+import com.agentsquad.squad.model.bo.ReplyPreviewTargetBO;
 import com.agentsquad.squad.service.ReplyPreviewBuffer;
 import com.agentsquad.squad.enums.ReplyPreviewPhase;
 import com.agentsquad.squad.event.ReplyPreviewSignal;

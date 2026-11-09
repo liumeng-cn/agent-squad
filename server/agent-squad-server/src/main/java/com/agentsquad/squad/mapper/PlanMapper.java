@@ -1,8 +1,8 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.bo.PlanContextBO;
-import com.agentsquad.squad.po.PlanPO;
-import com.agentsquad.squad.po.WorkerJobPO;
+import com.agentsquad.squad.model.bo.PlanContextBO;
+import com.agentsquad.squad.model.po.PlanPO;
+import com.agentsquad.squad.model.po.WorkerJobPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

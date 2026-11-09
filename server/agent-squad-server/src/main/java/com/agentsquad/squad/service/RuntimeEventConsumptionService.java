@@ -1,6 +1,6 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.bo.RuntimeEventSourceBO;
+import com.agentsquad.squad.model.bo.RuntimeEventSourceBO;
 
 import com.agentsquad.squad.enums.RuntimeEventInboxStatus;
 
@@ -11,7 +11,7 @@ import com.agentsquad.squad.enums.RuntimeEventFailureCode;
 import com.agentsquad.squad.mapper.RuntimeEventInboxMapper;
 
 
-import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.model.bo.ProjectionTargetBO;
 import com.agentsquad.squad.exceptions.RuntimeEventConsumptionException;
 import io.agentscope.core.session.SessionEvent;
 import io.agentscope.core.session.SessionEventTypes;

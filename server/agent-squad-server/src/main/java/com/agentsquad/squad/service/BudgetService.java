@@ -1,9 +1,9 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.mapper.BudgetMapper;
-import com.agentsquad.squad.bo.BudgetAccountBO;
-import com.agentsquad.squad.po.BudgetReservationPO;
-import com.agentsquad.squad.properties.WorkerModelProfile;
+import com.agentsquad.squad.model.bo.BudgetAccountBO;
+import com.agentsquad.squad.model.po.BudgetReservationPO;
+import com.agentsquad.squad.config.properties.WorkerModelProfile;
 import com.agentsquad.squad.exceptions.BudgetExceededException;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;

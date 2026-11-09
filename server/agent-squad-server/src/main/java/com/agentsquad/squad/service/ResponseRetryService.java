@@ -3,9 +3,10 @@ package com.agentsquad.squad.service;
 import com.agentsquad.squad.enums.ActivityType;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.model.bo.ActivityBusinessFactBO;
 import com.agentsquad.squad.utils.ContentDigests;
 import com.agentsquad.squad.utils.RuntimePayloads;
-import com.agentsquad.squad.vo.MessageReceiptVO;
+import com.agentsquad.squad.model.vo.MessageReceiptVO;
 import com.agentsquad.squad.enums.ResponseExecutionStatus;
 import com.agentsquad.squad.mapper.BindingMapper;
 import com.agentsquad.squad.mapper.CommandMapper;
@@ -124,7 +125,7 @@ public class ResponseRetryService {
         commands.insertControl(command, userId, scopeKey, key, hash, null, binding, "MESSAGE_SUBMIT", payload, now);
         var created = scopeMapper.findOwned(userId, nextScope);
         events.publish(created, "command:" + command + ":execution.queued", "execution.queued", Map.of("executionId", next, "sourceMessageId", original.getSourceMessageId(), "retryOfExecutionId", executionId, "status", "QUEUED"));
-        activities.completed(created, binding, new com.agentsquad.squad.bo.ActivityBusinessFactBO(
+        activities.completed(created, binding, new ActivityBusinessFactBO(
                 ActivityType.USER_RETRY_SCHEDULED, command));
         return new MessageReceiptVO(scope.getConversationId(), original.getSourceMessageId(), next, command, ResponseExecutionStatus.QUEUED, scope.getConversationId() + ":" + scope.getConversationGeneration() + ":" + messages.eventSequence(userId, scope.getConversationId()));
     }

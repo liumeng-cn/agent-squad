@@ -2,7 +2,7 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.po.FinalDeliveryPO;
+import com.agentsquad.squad.model.po.FinalDeliveryPO;
 import com.agentsquad.squad.mapper.FinalDeliveryMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

@@ -1,21 +1,21 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.vo.ActivityHistoryPageVO;
-import com.agentsquad.squad.dto.ActivityHistoryDTO;
-import com.agentsquad.squad.bo.ConversationEventBO;
-import com.agentsquad.squad.vo.ConversationSnapshotVO;
-import com.agentsquad.squad.vo.ConversationViewVO;
-import com.agentsquad.squad.vo.ExecutionActivityVO;
-import com.agentsquad.squad.vo.MessageVO;
-import com.agentsquad.squad.vo.ResponseExecutionVO;
-import com.agentsquad.squad.vo.TaskDirectiveVO;
-import com.agentsquad.squad.vo.TaskVO;
+import com.agentsquad.squad.model.vo.ActivityHistoryPageVO;
+import com.agentsquad.squad.model.dto.ActivityHistoryDTO;
+import com.agentsquad.squad.model.bo.ConversationEventBO;
+import com.agentsquad.squad.model.vo.ConversationSnapshotVO;
+import com.agentsquad.squad.model.vo.ConversationViewVO;
+import com.agentsquad.squad.model.vo.ExecutionActivityVO;
+import com.agentsquad.squad.model.vo.MessageVO;
+import com.agentsquad.squad.model.vo.ResponseExecutionVO;
+import com.agentsquad.squad.model.vo.TaskDirectiveVO;
+import com.agentsquad.squad.model.vo.TaskVO;
 
-import com.agentsquad.squad.bo.ConversationExecutionBO;
+import com.agentsquad.squad.model.bo.ConversationExecutionBO;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.utils.RuntimePayloads;
-import com.agentsquad.squad.bo.ConversationHeaderBO;
+import com.agentsquad.squad.model.bo.ConversationHeaderBO;
 import com.agentsquad.squad.enums.ResponseExecutionStatus;
 import com.agentsquad.squad.mapper.ConversationReadMapper;
 import com.agentsquad.squad.mapper.ResponseContextMapper;

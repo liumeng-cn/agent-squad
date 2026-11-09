@@ -1,6 +1,6 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.po.RuntimeAdmissionSlotPO;
+import com.agentsquad.squad.model.po.RuntimeAdmissionSlotPO;
 import com.agentsquad.squad.mapper.RuntimeAdmissionMapper;
 import com.agentsquad.squad.exceptions.RuntimeAdmissionBusyException;
 import jakarta.annotation.Resource;

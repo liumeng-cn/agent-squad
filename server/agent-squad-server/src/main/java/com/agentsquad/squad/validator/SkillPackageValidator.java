@@ -1,8 +1,8 @@
 package com.agentsquad.squad.validator;
 
-import com.agentsquad.squad.bo.SkillPackageBO;
+import com.agentsquad.squad.model.bo.SkillPackageBO;
 
-import com.agentsquad.squad.po.SkillTextFilePO;
+import com.agentsquad.squad.model.po.SkillTextFilePO;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;

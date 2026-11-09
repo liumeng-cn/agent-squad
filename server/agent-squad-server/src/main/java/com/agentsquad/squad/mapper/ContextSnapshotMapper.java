@@ -1,7 +1,7 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.bo.ContextPreparationBO;
-import com.agentsquad.squad.po.ContextSnapshotPO;
+import com.agentsquad.squad.model.bo.ContextPreparationBO;
+import com.agentsquad.squad.model.po.ContextSnapshotPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

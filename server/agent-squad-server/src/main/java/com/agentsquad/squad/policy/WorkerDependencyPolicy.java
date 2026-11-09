@@ -1,6 +1,6 @@
 package com.agentsquad.squad.policy;
 
-import com.agentsquad.squad.bo.WorkerDependencyNodeBO;
+import com.agentsquad.squad.model.bo.WorkerDependencyNodeBO;
 
 import com.agentsquad.squad.enums.WorkerJobStatus;
 

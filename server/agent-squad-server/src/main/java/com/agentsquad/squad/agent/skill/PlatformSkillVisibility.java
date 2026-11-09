@@ -1,6 +1,6 @@
 package com.agentsquad.squad.agent.skill;
 
-import com.agentsquad.squad.bo.SkillSelectionBO;
+import com.agentsquad.squad.model.bo.SkillSelectionBO;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.skill.AgentSkill;
 import io.agentscope.harness.agent.skill.curator.SkillVisibilityFilter;

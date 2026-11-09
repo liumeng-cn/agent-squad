@@ -2,9 +2,9 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.po.ConversationPO;
-import com.agentsquad.squad.bo.ExecutionOwnerBO;
-import com.agentsquad.squad.po.ExecutionScopePO;
+import com.agentsquad.squad.model.po.ConversationPO;
+import com.agentsquad.squad.model.bo.ExecutionOwnerBO;
+import com.agentsquad.squad.model.po.ExecutionScopePO;
 import com.agentsquad.squad.mapper.ConversationMapper;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import jakarta.annotation.Resource;

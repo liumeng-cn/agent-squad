@@ -1,10 +1,10 @@
 package com.agentsquad.squad.mapper;
 
 import com.agentsquad.squad.enums.TaskDirectiveWaitReason;
-import com.agentsquad.squad.po.TaskDirectivePO;
-import com.agentsquad.squad.bo.TaskDirectiveTargetBO;
-import com.agentsquad.squad.bo.TaskDirectiveFactBO;
-import com.agentsquad.squad.bo.TaskGoalStateBO;
+import com.agentsquad.squad.model.po.TaskDirectivePO;
+import com.agentsquad.squad.model.bo.TaskDirectiveTargetBO;
+import com.agentsquad.squad.model.bo.TaskDirectiveFactBO;
+import com.agentsquad.squad.model.bo.TaskGoalStateBO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

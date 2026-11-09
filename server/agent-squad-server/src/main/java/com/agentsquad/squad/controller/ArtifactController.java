@@ -1,7 +1,7 @@
 package com.agentsquad.squad.controller;
 
-import com.agentsquad.squad.po.ArtifactPO;
-import com.agentsquad.squad.vo.ArtifactVO;
+import com.agentsquad.squad.model.po.ArtifactPO;
+import com.agentsquad.squad.model.vo.ArtifactVO;
 import com.agentsquad.squad.service.ArtifactService;
 import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.identity.UserContext;

@@ -3,22 +3,23 @@ package com.agentsquad.squad.runtime;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.enums.WorkerJobStatus;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
-import com.agentsquad.squad.vo.ConversationVO;
-import com.agentsquad.squad.vo.TaskReceiptVO;
+import com.agentsquad.squad.model.bo.NativeEventViewBO;
+import com.agentsquad.squad.model.vo.ConversationVO;
+import com.agentsquad.squad.model.vo.TaskReceiptVO;
 import com.agentsquad.squad.service.GoalTaskService;
-import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.model.bo.ProjectionTargetBO;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.agent.middleware.ScopedMasterToolsMiddleware;
-import com.agentsquad.squad.bo.PlanNodeBO;
-import com.agentsquad.squad.bo.PlanPublishBO;
-import com.agentsquad.squad.bo.PlanReceiptBO;
+import com.agentsquad.squad.model.bo.PlanNodeBO;
+import com.agentsquad.squad.model.bo.PlanPublishBO;
+import com.agentsquad.squad.model.bo.PlanReceiptBO;
 import com.agentsquad.squad.service.ContextSnapshotService;
 import com.agentsquad.squad.service.MasterSignalService;
 import com.agentsquad.squad.service.PlanService;
 import com.agentsquad.squad.service.WorkerDispatchService;
 import com.agentsquad.squad.service.WorkerResultService;
 import com.agentsquad.squad.service.TaskSnapshotService;
-import com.agentsquad.squad.dto.WorkerDefinitionCreateDTO;
+import com.agentsquad.squad.model.dto.WorkerDefinitionCreateDTO;
 import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -360,7 +361,7 @@ class PlanPublishIntegrationTest {
             var transaction = new org.springframework.transaction.support.TransactionTemplate(context.getBean(org.springframework.transaction.PlatformTransactionManager.class));
             assertThat(transaction.<Boolean>execute(status -> finalizer.recoverMissingProposal(
                     new ProjectionTargetBO(userId, task.taskId(), masterBinding, "master", sessionId, 0),
-                    new com.agentsquad.squad.bo.NativeEventViewBO(100, "old-end", "run/end", "old-run", "old-plan-signal", "completed", 1000, java.util.Map.of()))))
+                    new NativeEventViewBO(100, "old-end", "run/end", "old-run", "old-plan-signal", "completed", 1000, java.util.Map.of()))))
                     .isTrue();
             assertThat(jdbc.queryForObject("SELECT completion_correction_count FROM sq_goal_task WHERE task_id = ?", Integer.class, task.taskId())).isZero();
 

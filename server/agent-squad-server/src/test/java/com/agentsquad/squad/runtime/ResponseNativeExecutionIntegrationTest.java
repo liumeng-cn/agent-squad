@@ -1,21 +1,21 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.bo.DeliveryBO;
-import com.agentsquad.squad.dto.MessageCreateDTO;
-import com.agentsquad.squad.vo.MessageReceiptVO;
+import com.agentsquad.squad.model.bo.DeliveryBO;
+import com.agentsquad.squad.model.dto.MessageCreateDTO;
+import com.agentsquad.squad.model.vo.MessageReceiptVO;
 import com.agentsquad.squad.mapper.DeliveryMapper;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.ResponseControlService;
 import com.agentsquad.squad.service.CommandDeliveryService;
 import com.agentsquad.squad.service.NativeProjectionService;
-import com.agentsquad.squad.bo.NativeEventViewBO;
+import com.agentsquad.squad.model.bo.NativeEventViewBO;
 import com.agentsquad.squad.service.CompletionProposalService;
 import com.agentsquad.squad.service.ResponseExecutionService;
 import com.agentsquad.squad.mapper.OperationMapper;
 import com.agentsquad.squad.agent.session.NativeSessionGateway;
 import com.agentsquad.squad.agent.MasterAgentIdentity;
-import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.model.bo.ProjectionTargetBO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;

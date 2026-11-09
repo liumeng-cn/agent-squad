@@ -1,8 +1,8 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.bo.ReplyPreviewBO;
+import com.agentsquad.squad.model.bo.ReplyPreviewBO;
 
-import com.agentsquad.squad.bo.ConversationStreamKeyBO;
+import com.agentsquad.squad.model.bo.ConversationStreamKeyBO;
 import java.util.Comparator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;

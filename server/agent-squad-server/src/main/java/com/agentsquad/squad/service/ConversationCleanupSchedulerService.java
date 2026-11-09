@@ -1,6 +1,6 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.po.ConversationPO;
+import com.agentsquad.squad.model.po.ConversationPO;
 import com.agentsquad.squad.mapper.ConversationMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

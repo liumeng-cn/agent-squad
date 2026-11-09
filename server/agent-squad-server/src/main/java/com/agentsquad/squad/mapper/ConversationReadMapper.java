@@ -1,10 +1,10 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.bo.ConversationTaskStateBO;
-import com.agentsquad.squad.bo.ConversationHeaderBO;
-import com.agentsquad.squad.po.ConversationMessagePO;
-import com.agentsquad.squad.bo.ConversationExecutionBO;
-import com.agentsquad.squad.po.ConversationEventPO;
+import com.agentsquad.squad.model.bo.ConversationTaskStateBO;
+import com.agentsquad.squad.model.bo.ConversationHeaderBO;
+import com.agentsquad.squad.model.po.ConversationMessagePO;
+import com.agentsquad.squad.model.bo.ConversationExecutionBO;
+import com.agentsquad.squad.model.po.ConversationEventPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

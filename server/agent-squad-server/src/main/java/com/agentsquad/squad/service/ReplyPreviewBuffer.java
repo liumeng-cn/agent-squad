@@ -1,8 +1,8 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.bo.ReplyPreviewTargetBO;
+import com.agentsquad.squad.model.bo.ReplyPreviewTargetBO;
 import com.agentsquad.squad.enums.ReplyPreviewPhase;
-import com.agentsquad.squad.bo.ReplyPreviewBO;
+import com.agentsquad.squad.model.bo.ReplyPreviewBO;
 import com.agentsquad.squad.event.ReplyPreviewSignal;
 
 import java.util.UUID;

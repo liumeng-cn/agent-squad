@@ -1,11 +1,11 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.bo.ExternalCallBO;
+import com.agentsquad.squad.model.bo.ExternalCallBO;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.utils.RuntimePayloads;
-import com.agentsquad.squad.po.OperationPO;
+import com.agentsquad.squad.model.po.OperationPO;
 import com.agentsquad.squad.enums.OperationStatus;
 import com.agentsquad.squad.mapper.OperationMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;

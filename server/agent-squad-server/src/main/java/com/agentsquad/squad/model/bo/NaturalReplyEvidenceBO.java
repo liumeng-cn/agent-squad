@@ -1,0 +1,11 @@
+package com.agentsquad.squad.model.bo;
+
+import com.agentsquad.squad.enums.ResponseExecutionStatus;
+
+/**
+ * 自然回复的已提交输出证据
+ * <p>
+ * 仅由官方日志适配生成；正文与完成程度分开，不将模型运行结束直接等同于业务成功。
+ */
+public record NaturalReplyEvidenceBO(ResponseExecutionStatus status, String text, String notice) {
+}

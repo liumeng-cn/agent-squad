@@ -1,6 +1,7 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.bo.ConversationEventBO;
+import com.agentsquad.squad.model.bo.ConversationEventBO;
+import com.agentsquad.squad.model.bo.ReplyPreviewBO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -27,7 +28,7 @@ public final class ConversationSubscriberService {
     private final AtomicBoolean closed = new AtomicBoolean();
     private final AtomicBoolean sending = new AtomicBoolean();
     private final AtomicBoolean heartbeatPending = new AtomicBoolean();
-    private final java.util.concurrent.ConcurrentHashMap<String, com.agentsquad.squad.bo.ReplyPreviewBO> previews = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentHashMap<String, ReplyPreviewBO> previews = new java.util.concurrent.ConcurrentHashMap<>();
     private volatile String cursor;
 
     public ConversationSubscriberService(SseEmitter emitter, String cursor, Executor sender, Runnable onClosed, Runnable authorize) {
@@ -68,7 +69,7 @@ public final class ConversationSubscriberService {
     /**
      * 每个回复只保留最新可替换预览，慢连接不会积累逐token队列。
      */
-    public void preview(com.agentsquad.squad.bo.ReplyPreviewBO preview) {
+    public void preview(ReplyPreviewBO preview) {
         if (closed.get()) {
             return;
         }

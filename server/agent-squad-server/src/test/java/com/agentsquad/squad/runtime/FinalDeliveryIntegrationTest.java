@@ -1,20 +1,20 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
-import com.agentsquad.squad.bo.GoalTaskCreateBO;
-import com.agentsquad.squad.dto.MessageCreateDTO;
-import com.agentsquad.squad.vo.MessageReceiptVO;
+import com.agentsquad.squad.model.bo.GoalTaskCreateBO;
+import com.agentsquad.squad.model.dto.MessageCreateDTO;
+import com.agentsquad.squad.model.vo.MessageReceiptVO;
 import com.agentsquad.squad.service.FinalDeliveryService;
 import com.agentsquad.squad.service.GoalTaskCreationService;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.ResponseExecutionService;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
-import com.agentsquad.squad.bo.NaturalReplyEvidenceBO;
+import com.agentsquad.squad.model.bo.NaturalReplyEvidenceBO;
 import com.agentsquad.squad.enums.ResponseExecutionStatus;
-import com.agentsquad.squad.bo.NativeEventViewBO;
+import com.agentsquad.squad.model.bo.NativeEventViewBO;
 import com.agentsquad.squad.service.TaskEventPublishingService;
 import com.agentsquad.squad.agent.MasterAgentIdentity;
-import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.model.bo.ProjectionTargetBO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.context.ConfigurableApplicationContext;

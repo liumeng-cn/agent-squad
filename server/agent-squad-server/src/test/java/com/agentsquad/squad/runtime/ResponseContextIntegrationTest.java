@@ -2,8 +2,8 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.service.ArtifactService;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
-import com.agentsquad.squad.bo.ResponseContextSnapshotBO;
-import com.agentsquad.squad.vo.MessageReceiptVO;
+import com.agentsquad.squad.model.bo.ResponseContextSnapshotBO;
+import com.agentsquad.squad.model.vo.MessageReceiptVO;
 import com.agentsquad.squad.service.ResponseContextService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

@@ -2,7 +2,7 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.bo.WorkerLaunchBO;
+import com.agentsquad.squad.model.bo.WorkerLaunchBO;
 import com.agentsquad.squad.mapper.WorkerDispatchMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;

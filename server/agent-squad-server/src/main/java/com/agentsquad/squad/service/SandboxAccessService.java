@@ -2,8 +2,8 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.bo.SandboxBindingBO;
-import com.agentsquad.squad.bo.SandboxExecutionContextBO;
+import com.agentsquad.squad.model.bo.SandboxBindingBO;
+import com.agentsquad.squad.model.bo.SandboxExecutionContextBO;
 import com.agentsquad.squad.mapper.SandboxMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;

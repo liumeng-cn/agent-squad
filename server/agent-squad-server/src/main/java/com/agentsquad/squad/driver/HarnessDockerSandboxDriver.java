@@ -1,10 +1,10 @@
 package com.agentsquad.squad.driver;
 
-import com.agentsquad.squad.bo.SandboxInputFileBO;
+import com.agentsquad.squad.model.bo.SandboxInputFileBO;
 import com.agentsquad.squad.policy.SandboxPolicy;
-import com.agentsquad.squad.bo.SandboxDriverResultBO;
-import com.agentsquad.squad.bo.SandboxExecuteRequestBO;
-import com.agentsquad.squad.bo.SandboxOutputBO;
+import com.agentsquad.squad.model.bo.SandboxDriverResultBO;
+import com.agentsquad.squad.model.bo.SandboxExecuteRequestBO;
+import com.agentsquad.squad.model.bo.SandboxOutputBO;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import io.agentscope.harness.agent.sandbox.ExecResult;

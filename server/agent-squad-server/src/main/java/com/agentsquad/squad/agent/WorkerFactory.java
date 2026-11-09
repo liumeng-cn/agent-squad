@@ -2,7 +2,9 @@ package com.agentsquad.squad.agent;
 
 import com.agentsquad.squad.agent.middleware.ExecutionContextMiddleware;
 import com.agentsquad.squad.agent.skill.PlatformSkillVisibility;
-import com.agentsquad.squad.bo.WorkerAgentHandleBO;
+import com.agentsquad.squad.model.bo.WorkerAgentHandleBO;
+import com.agentsquad.squad.model.bo.RuntimeEventSourceBO;
+import com.agentsquad.squad.model.bo.SkillSelectionBO;
 import com.agentsquad.squad.service.LocalSessionStopper;
 import com.agentsquad.squad.service.RuntimeWorkspace;
 
@@ -10,20 +12,20 @@ import com.agentsquad.squad.agent.tool.ReportJobResultTool;
 import com.agentsquad.squad.utils.CanonicalJson;
 import com.agentsquad.squad.utils.ContentDigests;
 import com.agentsquad.squad.utils.RuntimePayloads;
-import com.agentsquad.squad.bo.WorkerExecutionIdentityBO;
+import com.agentsquad.squad.model.bo.WorkerExecutionIdentityBO;
 import com.agentsquad.squad.agent.middleware.ModelBudgetMiddleware;
 import com.agentsquad.squad.agent.middleware.ProfiledModelBudgetMiddleware;
-import com.agentsquad.squad.po.ContextSnapshotPO;
-import com.agentsquad.squad.bo.WorkerLaunchBO;
+import com.agentsquad.squad.model.po.ContextSnapshotPO;
+import com.agentsquad.squad.model.bo.WorkerLaunchBO;
 import com.agentsquad.squad.mapper.ContextSnapshotMapper;
 import com.agentsquad.squad.mapper.WorkerDispatchMapper;
 import com.agentsquad.squad.service.WorkerDispatchService;
 import com.agentsquad.squad.service.WorkerResultService;
 import com.agentsquad.squad.service.WorkerDefinitionService;
-import com.agentsquad.squad.vo.WorkerDefinitionVO;
-import com.agentsquad.squad.properties.WorkerModelProfile;
-import com.agentsquad.squad.properties.WorkerProfileRegistry;
-import com.agentsquad.squad.properties.WorkerRuntimeProfile;
+import com.agentsquad.squad.model.vo.WorkerDefinitionVO;
+import com.agentsquad.squad.config.properties.WorkerModelProfile;
+import com.agentsquad.squad.config.properties.WorkerProfileRegistry;
+import com.agentsquad.squad.config.properties.WorkerRuntimeProfile;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;
@@ -163,9 +165,9 @@ public class WorkerFactory {
         dispatchService.renew(userId, bindingId, handle.guardToken());
         RuntimeContext context = RuntimeContext.builder().userId(userId).sessionId(sessionId).build();
         context.put(io.agentscope.core.session.SessionExportSink.CONTEXT_KEY,
-                eventSinks.bind(new com.agentsquad.squad.bo.RuntimeEventSourceBO(
+                eventSinks.bind(new RuntimeEventSourceBO(
                         userId, bindingId, sessionId,
-                        com.agentsquad.squad.bo.RuntimeEventSourceBO.CURRENT_MAPPING_VERSION)));
+                        RuntimeEventSourceBO.CURRENT_MAPPING_VERSION)));
 
         context.put(WorkerExecutionIdentityBO.class,
                 new WorkerExecutionIdentityBO(bindingId, handle.guardToken()));
@@ -178,8 +180,8 @@ public class WorkerFactory {
                 ids.add(item.path("sourceId").asText());
             }
         }
-        context.put(com.agentsquad.squad.bo.SkillSelectionBO.class,
-                new com.agentsquad.squad.bo.SkillSelectionBO(ids));
+        context.put(SkillSelectionBO.class,
+                new SkillSelectionBO(ids));
         var allowedTools = new java.util.HashSet<>(definitionService.requirePublished(job.getWorkerKey(), job.getWorkerVersion()).toolAllowlist());
         allowedTools.add("load_skill_through_path");
         allowedTools.add("report_job_result");

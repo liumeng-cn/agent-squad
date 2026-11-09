@@ -1,17 +1,18 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.enums.ActivityType;
-import com.agentsquad.squad.po.ExecutionFailurePO;
-import com.agentsquad.squad.po.ExecutionScopePO;
-import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.model.bo.ActivityBusinessFactBO;
+import com.agentsquad.squad.model.po.ExecutionFailurePO;
+import com.agentsquad.squad.model.po.ExecutionScopePO;
+import com.agentsquad.squad.model.bo.ProjectionTargetBO;
 import com.agentsquad.squad.exceptions.PlanCorrectionExhaustedException;
 import com.agentsquad.squad.converter.ModelFailureClassifier;
 
-import com.agentsquad.squad.bo.FailureClassificationBO;
+import com.agentsquad.squad.model.bo.FailureClassificationBO;
 
 import com.agentsquad.squad.mapper.ConversationMapper;
 import com.agentsquad.squad.mapper.TaskMapper;
-import com.agentsquad.squad.bo.NativeSubmissionReceiptBO;
+import com.agentsquad.squad.model.bo.NativeSubmissionReceiptBO;
 import com.agentsquad.squad.mapper.PlanMapper;
 import com.agentsquad.squad.mapper.ProjectionMapper;
 import com.agentsquad.squad.utils.ContentDigests;
@@ -20,7 +21,7 @@ import com.agentsquad.squad.mapper.CommandMapper;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.mapper.ResponseRuntimeMapper;
 import com.agentsquad.squad.mapper.TaskDirectiveMapper;
-import com.agentsquad.squad.vo.ExecutionFailureVO;
+import com.agentsquad.squad.model.vo.ExecutionFailureVO;
 import com.agentsquad.squad.mapper.ExecutionFailureMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -153,7 +154,7 @@ public class ExecutionFailureService {
         commands.insertControl(UUID.randomUUID().toString(), scope.getUserId(), key, eventId, ContentDigests.sha256(payload),
                 "TASK".equals(scope.getKind()) ? scope.getOwnerId() : null, bindingId, "RESUME", payload, next);
         failures.approveRetry(scope.getUserId(), failure.getFailureId(), attempt + 1);
-        activities.completed(scope, bindingId, new com.agentsquad.squad.bo.ActivityBusinessFactBO(
+        activities.completed(scope, bindingId, new ActivityBusinessFactBO(
                 ActivityType.AUTO_RETRY_SCHEDULED, eventId));
         events.publish(scope, "retry:" + failure.getFailureId() + ":" + (attempt + 1), "failure.updated", Map.of("failureId", failure.getFailureId(), "status", "RETRYING", "attempt", attempt + 1, "maxAttempts", 2, "nextAttemptAt", next.toString()));
         log.info("暂时服务故障已排队恢复 scopeId={} failureId={} attempt={} nextAttemptAt={}", scope.getScopeId(), failure.getFailureId(), attempt + 1, next);

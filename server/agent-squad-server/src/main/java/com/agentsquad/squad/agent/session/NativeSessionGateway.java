@@ -1,10 +1,10 @@
 package com.agentsquad.squad.agent.session;
 
-import com.agentsquad.squad.bo.NativeEventViewBO;
-import com.agentsquad.squad.bo.NativeSubmissionReceiptBO;
+import com.agentsquad.squad.model.bo.NativeEventViewBO;
+import com.agentsquad.squad.model.bo.NativeSubmissionReceiptBO;
 
-import com.agentsquad.squad.bo.DeliveryBO;
-import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.model.bo.DeliveryBO;
+import com.agentsquad.squad.model.bo.ProjectionTargetBO;
 import io.agentscope.core.session.SessionEvent;
 
 import java.util.List;

@@ -1,17 +1,17 @@
 package com.agentsquad.squad.controller;
 
-import com.agentsquad.squad.vo.CommandReceiptVO;
-import com.agentsquad.squad.vo.CommandVO;
-import com.agentsquad.squad.dto.ControlDTO;
-import com.agentsquad.squad.dto.ConversationCreateDTO;
-import com.agentsquad.squad.vo.ConversationListPageVO;
-import com.agentsquad.squad.vo.ConversationVO;
-import com.agentsquad.squad.vo.GoalTaskPageVO;
-import com.agentsquad.squad.dto.TaskCreateDTO;
-import com.agentsquad.squad.vo.TaskReceiptVO;
-import com.agentsquad.squad.vo.TaskVO;
-import com.agentsquad.squad.vo.TaskSnapshotVO;
-import com.agentsquad.squad.vo.WorkerJobPageVO;
+import com.agentsquad.squad.model.vo.CommandReceiptVO;
+import com.agentsquad.squad.model.vo.CommandVO;
+import com.agentsquad.squad.model.dto.ControlDTO;
+import com.agentsquad.squad.model.dto.ConversationCreateDTO;
+import com.agentsquad.squad.model.vo.ConversationListPageVO;
+import com.agentsquad.squad.model.vo.ConversationVO;
+import com.agentsquad.squad.model.vo.GoalTaskPageVO;
+import com.agentsquad.squad.model.dto.TaskCreateDTO;
+import com.agentsquad.squad.model.vo.TaskReceiptVO;
+import com.agentsquad.squad.model.vo.TaskVO;
+import com.agentsquad.squad.model.vo.TaskSnapshotVO;
+import com.agentsquad.squad.model.vo.WorkerJobPageVO;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;

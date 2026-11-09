@@ -2,7 +2,7 @@ package com.agentsquad.squad.agent.skill;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.po.SkillTextFilePO;
+import com.agentsquad.squad.model.po.SkillTextFilePO;
 import com.agentsquad.squad.service.SkillRuntimeService;
 import io.agentscope.harness.agent.skill.SkillResources;
 

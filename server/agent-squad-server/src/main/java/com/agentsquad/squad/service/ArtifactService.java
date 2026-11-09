@@ -2,8 +2,8 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.po.ArtifactPO;
-import com.agentsquad.squad.vo.ArtifactVO;
+import com.agentsquad.squad.model.po.ArtifactPO;
+import com.agentsquad.squad.model.vo.ArtifactVO;
 import com.agentsquad.squad.mapper.ArtifactMapper;
 import com.agentsquad.squad.mapper.TaskMapper;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;

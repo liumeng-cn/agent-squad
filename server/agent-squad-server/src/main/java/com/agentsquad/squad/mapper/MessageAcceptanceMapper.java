@@ -1,6 +1,6 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.bo.MessageSubmissionBO;
+import com.agentsquad.squad.model.bo.MessageSubmissionBO;
 import com.agentsquad.squad.enums.ResponseCompletionProtocol;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;

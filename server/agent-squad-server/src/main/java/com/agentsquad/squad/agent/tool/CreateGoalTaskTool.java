@@ -1,7 +1,7 @@
 package com.agentsquad.squad.agent.tool;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
-import com.agentsquad.squad.bo.GoalTaskCreateBO;
+import com.agentsquad.squad.model.bo.GoalTaskCreateBO;
 import com.agentsquad.squad.service.GoalTaskCreationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;

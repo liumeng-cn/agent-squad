@@ -1,7 +1,7 @@
 package com.agentsquad.squad.converter;
 
-import com.agentsquad.squad.bo.ModelTokenUsageBO;
-import com.agentsquad.squad.bo.NormalizedModelCompletionBO;
+import com.agentsquad.squad.model.bo.ModelTokenUsageBO;
+import com.agentsquad.squad.model.bo.NormalizedModelCompletionBO;
 
 import io.agentscope.core.session.SessionEvent;
 

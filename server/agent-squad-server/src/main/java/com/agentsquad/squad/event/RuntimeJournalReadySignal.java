@@ -1,6 +1,6 @@
 package com.agentsquad.squad.event;
 
-import com.agentsquad.squad.bo.RuntimeEventSourceBO;
+import com.agentsquad.squad.model.bo.RuntimeEventSourceBO;
 
 /**
  * 原生持久收件的绑定唤醒

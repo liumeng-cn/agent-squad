@@ -1,11 +1,11 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.dto.MessageCreateDTO;
+import com.agentsquad.squad.model.dto.MessageCreateDTO;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.service.WorkerDefinitionService;
-import com.agentsquad.squad.dto.WorkerDefinitionCreateDTO;
+import com.agentsquad.squad.model.dto.WorkerDefinitionCreateDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;

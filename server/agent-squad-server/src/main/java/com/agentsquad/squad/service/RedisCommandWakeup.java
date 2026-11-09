@@ -1,8 +1,8 @@
 package com.agentsquad.squad.service;
 
 
-import com.agentsquad.squad.properties.RedisWakeupProperties;
-import com.agentsquad.squad.bo.CommandClaimContextBO;
+import com.agentsquad.squad.config.properties.RedisWakeupProperties;
+import com.agentsquad.squad.model.bo.CommandClaimContextBO;
 import com.agentsquad.squad.enums.RuntimeCommandAction;
 import com.agentsquad.squad.mapper.DeliveryMapper;
 import jakarta.annotation.PostConstruct;

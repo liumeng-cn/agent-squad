@@ -2,7 +2,7 @@ package com.agentsquad.squad.policy;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.bo.SandboxExecuteRequestBO;
+import com.agentsquad.squad.model.bo.SandboxExecuteRequestBO;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;

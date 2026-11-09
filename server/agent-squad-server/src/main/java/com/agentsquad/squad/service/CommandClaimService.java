@@ -1,7 +1,7 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.observer.ObservationSupport;
-import com.agentsquad.squad.bo.CommandClaimContextBO;
+import com.agentsquad.squad.model.bo.CommandClaimContextBO;
 import com.agentsquad.squad.mapper.DeliveryMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

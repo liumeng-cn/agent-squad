@@ -1,10 +1,10 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.utils.RuntimePayloads;
-import com.agentsquad.squad.po.ExecutionScopePO;
+import com.agentsquad.squad.model.po.ExecutionScopePO;
 import com.agentsquad.squad.mapper.MessageAcceptanceMapper;
 import com.agentsquad.squad.mapper.ConversationMapper;
-import com.agentsquad.squad.po.ConversationPO;
+import com.agentsquad.squad.model.po.ConversationPO;
 import com.agentsquad.squad.event.ConversationCommittedSignal;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;

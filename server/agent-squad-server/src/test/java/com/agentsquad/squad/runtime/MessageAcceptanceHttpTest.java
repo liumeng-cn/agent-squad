@@ -4,7 +4,7 @@ import com.agentsquad.squad.testsupport.ApiResultJson;
 import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.service.ArtifactService;
-import com.agentsquad.squad.vo.MessageReceiptVO;
+import com.agentsquad.squad.model.vo.MessageReceiptVO;
 import com.agentsquad.squad.service.GoalTaskService;
 
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -1,23 +1,23 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.bo.BindingResultBO;
-import com.agentsquad.squad.bo.NativeProjectionCommitLogBO;
+import com.agentsquad.squad.model.bo.BindingResultBO;
+import com.agentsquad.squad.model.bo.NativeProjectionCommitLogBO;
 
-import com.agentsquad.squad.bo.NativeEventViewBO;
+import com.agentsquad.squad.model.bo.NativeEventViewBO;
 
-import com.agentsquad.squad.bo.FailureClassificationBO;
+import com.agentsquad.squad.model.bo.FailureClassificationBO;
 import com.agentsquad.squad.enums.GoalTaskStatus;
-import com.agentsquad.squad.po.ExecutionScopePO;
+import com.agentsquad.squad.model.po.ExecutionScopePO;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.enums.NativeRunOutcome;
 import com.agentsquad.squad.agent.MasterAgentIdentity;
-import com.agentsquad.squad.bo.WorkerLaunchBO;
-import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.model.bo.WorkerLaunchBO;
+import com.agentsquad.squad.model.bo.ProjectionTargetBO;
 import com.agentsquad.squad.mapper.ProjectionMapper;
 import com.agentsquad.squad.mapper.WorkerDispatchMapper;
 import com.agentsquad.squad.mapper.TaskEventMapper;
 import com.agentsquad.squad.utils.RuntimePayloads;
-import com.agentsquad.squad.po.InteractionPO;
+import com.agentsquad.squad.model.po.InteractionPO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

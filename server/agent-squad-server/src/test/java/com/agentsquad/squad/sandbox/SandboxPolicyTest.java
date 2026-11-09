@@ -1,8 +1,8 @@
 package com.agentsquad.squad.sandbox;
 
 import com.agentsquad.squad.policy.SandboxPolicy;
-import com.agentsquad.squad.bo.SandboxExecuteRequestBO;
-import com.agentsquad.squad.bo.SandboxFileBO;
+import com.agentsquad.squad.model.bo.SandboxExecuteRequestBO;
+import com.agentsquad.squad.model.bo.SandboxFileBO;
 import com.agentsquad.squad.policy.ArtifactContentPolicy;
 import org.junit.jupiter.api.Test;
 

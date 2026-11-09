@@ -1,6 +1,6 @@
 package com.agentsquad.squad.agent.tool;
 
-import com.agentsquad.squad.po.ArtifactPO;
+import com.agentsquad.squad.model.po.ArtifactPO;
 import com.agentsquad.squad.service.ArtifactService;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.utils.MaterialFormatter;

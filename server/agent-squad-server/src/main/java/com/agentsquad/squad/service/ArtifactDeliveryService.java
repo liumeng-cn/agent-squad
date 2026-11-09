@@ -1,14 +1,14 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.mapper.ArtifactMapper;
-import com.agentsquad.squad.vo.ArtifactVO;
+import com.agentsquad.squad.model.vo.ArtifactVO;
 import com.agentsquad.squad.policy.ArtifactContentPolicy;
-import com.agentsquad.squad.po.ArtifactStagePO;
-import com.agentsquad.squad.bo.ArtifactStageViewBO;
+import com.agentsquad.squad.model.po.ArtifactStagePO;
+import com.agentsquad.squad.model.bo.ArtifactStageViewBO;
 import com.agentsquad.squad.mapper.ArtifactDeliveryMapper;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.bo.SandboxExecutionContextBO;
+import com.agentsquad.squad.model.bo.SandboxExecutionContextBO;
 import com.agentsquad.squad.policy.SandboxPolicy;
 import com.agentsquad.squad.mapper.SandboxMapper;
 import jakarta.annotation.Resource;

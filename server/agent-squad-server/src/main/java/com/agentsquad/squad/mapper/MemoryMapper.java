@@ -1,9 +1,9 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.po.MemoryPO;
-import com.agentsquad.squad.po.MemoryScopePinPO;
-import com.agentsquad.squad.bo.MemorySourceBO;
-import com.agentsquad.squad.po.MemoryWriteReceiptPO;
+import com.agentsquad.squad.model.po.MemoryPO;
+import com.agentsquad.squad.model.po.MemoryScopePinPO;
+import com.agentsquad.squad.model.bo.MemorySourceBO;
+import com.agentsquad.squad.model.po.MemoryWriteReceiptPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

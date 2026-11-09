@@ -1,9 +1,9 @@
 package com.agentsquad.squad.controller;
 
 import com.agentsquad.squad.common.model.ApiResult;
-import com.agentsquad.squad.vo.CommandReceiptVO;
-import com.agentsquad.squad.dto.ControlDTO;
-import com.agentsquad.squad.vo.MessageReceiptVO;
+import com.agentsquad.squad.model.vo.CommandReceiptVO;
+import com.agentsquad.squad.model.dto.ControlDTO;
+import com.agentsquad.squad.model.vo.MessageReceiptVO;
 import com.agentsquad.squad.service.ResponseRetryService;
 import com.agentsquad.squad.service.ResponseControlService;
 import com.agentsquad.squad.identity.UserContext;
