@@ -99,7 +99,7 @@ public class WorkerDefinitionService {
         long afterId = parseCursor(cursor);
         int pageSize = Math.clamp(limit, 1, 100);
         List<WorkerDefinitionDO> rows = definitionMapper.listAfter(afterId, pageSize);
-        String nextCursor = rows.size() == pageSize ? String.valueOf(rows.getLast().id()) : null;
+        String nextCursor = rows.size() == pageSize ? String.valueOf(rows.getLast().getId()) : null;
         return new WorkerDefinitionPageResponse(rows.stream().map(this::toResponse).toList(), nextCursor);
     }
 
@@ -110,7 +110,7 @@ public class WorkerDefinitionService {
         long afterId = parseCursor(cursor);
         int pageSize = Math.clamp(limit, 1, 20);
         List<WorkerDefinitionDO> rows = definitionMapper.listEnabledAfter(afterId, pageSize);
-        String nextCursor = rows.size() == pageSize ? String.valueOf(rows.get(rows.size() - 1).id()) : null;
+        String nextCursor = rows.size() == pageSize ? String.valueOf(rows.get(rows.size() - 1).getId()) : null;
         return new WorkerDefinitionPageResponse(rows.stream().map(this::toResponse).toList(), nextCursor);
     }
 
@@ -147,18 +147,18 @@ public class WorkerDefinitionService {
         requireIdempotencyKey(idempotencyKey);
         WorkerDefinitionDO current = requireDefinition(definitionId);
         String hash = ContentDigests.sha256(request.expectedVersion() + ":" + request.status());
-        if (idempotencyKey.equals(current.lastStatusKey())
-                && actor.userId().equals(current.lastStatusActor())) {
-            if (!hash.equals(current.lastStatusHash())) {
+        if (idempotencyKey.equals(current.getLastStatusKey())
+                && actor.userId().equals(current.getLastStatusActor())) {
+            if (!hash.equals(current.getLastStatusHash())) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "幂等键对应的状态请求不同");
             }
             return toResponse(current);
         }
-        WorkerDefinitionStatus status = current.status();
+        WorkerDefinitionStatus status = current.getStatus();
         if (!status.canChangeTo(request.status())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "已撤销的 Worker 版本不能重新启用");
         }
-        if (current.version() != request.expectedVersion()) {
+        if (current.getVersion() != request.expectedVersion()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "Worker 状态版本已变化");
         }
         int updated = definitionMapper.updateStatus(definitionId, request.expectedVersion(),
@@ -167,7 +167,7 @@ public class WorkerDefinitionService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "Worker 状态版本已变化");
         }
         log.info("Worker 能力状态已更新 definitionId={} status={} version={}",
-                definitionId, request.status(), current.version() + 1);
+                definitionId, request.status(), current.getVersion() + 1);
         return toResponse(requireDefinition(definitionId));
     }
 
@@ -180,7 +180,7 @@ public class WorkerDefinitionService {
     }
 
     private WorkerDefinitionResponse requireSamePayload(WorkerDefinitionDO row, String hash) {
-        if (!hash.equals(row.payloadHash())) {
+        if (!hash.equals(row.getPayloadHash())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "幂等键对应的 Worker 定义不同");
         }
         return toResponse(row);
@@ -189,14 +189,14 @@ public class WorkerDefinitionService {
     private WorkerDefinitionResponse toResponse(WorkerDefinitionDO row) {
         try {
             WorkerDefinitionCreateRequest definition = objectMapper.treeToValue(
-                    RuntimePayloads.readJson(objectMapper, row.definitionJson()),
+                    RuntimePayloads.readJson(objectMapper, row.getDefinitionJson()),
                     WorkerDefinitionCreateRequest.class);
-            return new WorkerDefinitionResponse(row.definitionId(), row.workerKey(), row.workerVersion(),
+            return new WorkerDefinitionResponse(row.getDefinitionId(), row.getWorkerKey(), row.getWorkerVersion(),
                     definition.description(), definition.inputSchema(), definition.outputSchema(),
                     definition.toolAllowlist(), definition.modelProfileKey(), definition.runtimeProfileKey(),
-                    row.status(), row.version());
+                    row.getStatus(), row.getVersion());
         } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("Worker 定义内容无法读取: " + row.definitionId(), exception);
+            throw new IllegalStateException("Worker 定义内容无法读取: " + row.getDefinitionId(), exception);
         }
     }
 

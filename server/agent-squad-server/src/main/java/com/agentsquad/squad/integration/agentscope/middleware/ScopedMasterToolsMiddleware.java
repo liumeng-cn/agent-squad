@@ -71,11 +71,11 @@ public class ScopedMasterToolsMiddleware implements MiddlewareBase {
         return Mono.fromCallable(() -> {
                     String scopeId = scopes.scopeForSession(context.getUserId(), context.getSessionId());
                     var scope = scopeMapper.findOwned(context.getUserId(), scopeId);
-                    boolean response = "RESPONSE".equals(scope.kind());
+                    boolean response = "RESPONSE".equals(scope.getKind());
                     boolean natural = response && replies.completionProtocolBySession(context.getUserId(), context.getSessionId())
                             == ResponseCompletionProtocol.NATURAL;
                     var hidden = new java.util.HashSet<>(response ? TASK_ONLY : RESPONSE_ONLY);
-                    boolean handedOff = response && origins.taskForSourceExecution(context.getUserId(), scope.ownerId()) != null;
+                    boolean handedOff = response && origins.taskForSourceExecution(context.getUserId(), scope.getOwnerId()) != null;
                     if (handedOff) {
                         hidden.add("create_goal_task");
                         hidden.add("submit_task_directive");
@@ -83,12 +83,12 @@ public class ScopedMasterToolsMiddleware implements MiddlewareBase {
                     if (natural) {
                         hidden.add("propose_completion");
                     }
-                    var task = response ? null : tasks.findOwned(context.getUserId(), scope.ownerId());
-                    var jobs = task == null || task.planVersion() == 0 ? List.<WorkerJobDO>of()
-                            : plans.listJobs(task.taskId(), task.planVersion());
-                    boolean awaitingWorkers = jobs.stream().anyMatch(job -> EXECUTING_JOBS.contains(WorkerJobStatus.valueOf(job.status())));
-                    boolean needsCoordination = jobs.stream().anyMatch(job -> WorkerJobStatus.RECOVERY_BLOCKED.name().equals(job.status())
-                            || WorkerJobStatus.BLOCKED.name().equals(job.status()));
+                    var task = response ? null : tasks.findOwned(context.getUserId(), scope.getOwnerId());
+                    var jobs = task == null || task.getPlanVersion() == 0 ? List.<WorkerJobDO>of()
+                            : plans.listJobs(task.getTaskId(), task.getPlanVersion());
+                    boolean awaitingWorkers = jobs.stream().anyMatch(job -> EXECUTING_JOBS.contains(WorkerJobStatus.valueOf(job.getStatus())));
+                    boolean needsCoordination = jobs.stream().anyMatch(job -> WorkerJobStatus.RECOVERY_BLOCKED.name().equals(job.getStatus())
+                            || WorkerJobStatus.BLOCKED.name().equals(job.getStatus()));
                     if (awaitingWorkers) {
                         hidden.add("propose_completion");
                         hidden.add("request_acceptance_review");
@@ -123,7 +123,7 @@ public class ScopedMasterToolsMiddleware implements MiddlewareBase {
                                 + "publish_plan是完整替换当前安排，不是追加补做：必须保留原目标仍需要的成功节点，"
                                 + "保持其nodeKey、goal、worker版本和contextSnapshotId不变，由平台检查能否复用。"
                                 + "不要只发布失败节点而丢掉已成功的成果；新计划发布后结束本轮，等待新的汇总通知。";
-                    } else if (task != null && task.planVersion() > 0) {
+                    } else if (task != null && task.getPlanVersion() > 0) {
                         roleInstruction = "当前计划的Worker已经收尾，这是结果核验与最终交付阶段，不是初次派工。"
                                 + "先读取本轮通知携带的节点结果与验收条件，已有成果满足用户要求时不要重新发布计划。"
                                 + "仅USER_REVIEW条件调用request_acceptance_review并等待用户确认；MODEL_REVIEW引用本计划成功jobId如实评价，"

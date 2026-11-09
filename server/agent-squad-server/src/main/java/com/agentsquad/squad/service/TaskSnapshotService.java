@@ -70,11 +70,11 @@ public class TaskSnapshotService {
         }
         scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         long maxSeq = taskEventMapper.maxSeq(userId, taskId);
-        TaskResponse taskResponse = new TaskResponse(task.taskId(), task.conversationId(), task.status(),
-                task.version(), task.planVersion(), task.answerRevision(),
-                formatTime(task.cancelRequestedAt()), task.blockedReason(),
-                formatTime(task.createTime()), formatTime(task.lastUpdateTime()));
-        AnswerView answer = buildAnswer(userId, taskId, task.answerRevision());
+        TaskResponse taskResponse = new TaskResponse(task.getTaskId(), task.getConversationId(), task.getStatus(),
+                task.getVersion(), task.getPlanVersion(), task.getAnswerRevision(),
+                formatTime(task.getCancelRequestedAt()), task.getBlockedReason(),
+                formatTime(task.getCreateTime()), formatTime(task.getLastUpdateTime()));
+        AnswerView answer = buildAnswer(userId, taskId, task.getAnswerRevision());
         List<InteractionResponse> pending = interactionQueryService.listOpenByTask(userId, taskId).stream()
                 .map(row -> interactionQueryService.viewOf(userId, row))
                 .toList();
@@ -102,21 +102,21 @@ public class TaskSnapshotService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
         }
         scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
-        long version = requestedPlanVersion == null ? task.planVersion() : requestedPlanVersion;
-        if (version < 0 || (requestedPlanVersion != null && version == 0) || version > task.planVersion()) {
+        long version = requestedPlanVersion == null ? task.getPlanVersion() : requestedPlanVersion;
+        if (version < 0 || (requestedPlanVersion != null && version == 0) || version > task.getPlanVersion()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "这版工作安排不存在");
         }
         var jobs = version == 0 ? List.<WorkerJob>of() : planMapper.listJobs(taskId, version).stream().map(this::jobView).toList();
-        return new WorkerJobPageResponse(jobs, null, version == task.planVersion() ? acceptanceChecks(task) : List.of(),
-                version, task.planVersion());
+        return new WorkerJobPageResponse(jobs, null, version == task.getPlanVersion() ? acceptanceChecks(task) : List.of(),
+                version, task.getPlanVersion());
     }
 
     /** 只展示正式结束任务的检查结论；候选检查尚未取得发布资格，不提前显示为已完成。 */
     private List<AcceptanceCheckView> acceptanceChecks(TaskDO task) {
-        if (task.planVersion() == 0 || !java.util.Set.of("SUCCEEDED", "PARTIAL", "FAILED").contains(task.status())) {
+        if (task.getPlanVersion() == 0 || !java.util.Set.of("SUCCEEDED", "PARTIAL", "FAILED").contains(task.getStatus())) {
             return List.of();
         }
-        String proposal = planMapper.completionProposal(task.userId(), task.taskId(), task.planVersion());
+        String proposal = planMapper.completionProposal(task.getUserId(), task.getTaskId(), task.getPlanVersion());
         if (proposal == null) {
             return List.of();
         }
@@ -127,7 +127,7 @@ public class TaskSnapshotService {
             }
             var views = new java.util.ArrayList<AcceptanceCheckView>();
             for (var check : checks) {
-                if (check.path("planVersion").asLong(-1) != task.planVersion()) {
+                if (check.path("planVersion").asLong(-1) != task.getPlanVersion()) {
                     return List.of();
                 }
                 views.add(new AcceptanceCheckView(check.path("criterionId").asText(),
@@ -145,36 +145,36 @@ public class TaskSnapshotService {
      * 已经完成的节点只公开经终态裁决的结果，候选与固定输入留在运行端。
      */
     private List<WorkerJob> currentJobs(TaskDO task) {
-        if (task.planVersion() == 0) {
+        if (task.getPlanVersion() == 0) {
             return List.of();
         }
-        return planMapper.listJobs(task.taskId(), task.planVersion()).stream()
+        return planMapper.listJobs(task.getTaskId(), task.getPlanVersion()).stream()
                 .map(this::jobView)
                 .toList();
     }
 
     private WorkerJob jobView(WorkerJobDO row) {
         JsonNode result = null;
-        if ("SUCCEEDED".equals(row.status()) && row.resultJson() != null) {
+        if ("SUCCEEDED".equals(row.getStatus()) && row.getResultJson() != null) {
             try {
-                result = RuntimePayloads.readJson(objectMapper, row.resultJson());
+                result = RuntimePayloads.readJson(objectMapper, row.getResultJson());
             } catch (JsonProcessingException exception) {
                 log.warn("Worker 最终结果无法解析 taskId={} jobId={}",
-                        row.taskId(), row.jobId(), exception);
+                        row.getTaskId(), row.getJobId(), exception);
             }
         }
-        var state = com.agentsquad.squad.common.enums.worker.WorkerJobStatus.valueOf(row.status());
+        var state = com.agentsquad.squad.common.enums.worker.WorkerJobStatus.valueOf(row.getStatus());
         try {
-            var input = RuntimePayloads.readJson(objectMapper, row.inputJson());
-            String goal = input.path("goal").asText(row.nodeKey());
+            var input = RuntimePayloads.readJson(objectMapper, row.getInputJson());
+            String goal = input.path("goal").asText(row.getNodeKey());
             int end = goal.offsetByCodePoints(0, Math.min(80, goal.codePointCount(0, goal.length())));
             List<String> dependencies = new java.util.ArrayList<>();
-            if (row.dependsOnJson() != null) {
-                RuntimePayloads.readJson(objectMapper, row.dependsOnJson()).forEach(name -> dependencies.add(name.asText()));
+            if (row.getDependsOnJson() != null) {
+                RuntimePayloads.readJson(objectMapper, row.getDependsOnJson()).forEach(name -> dependencies.add(name.asText()));
             }
-            return new WorkerJob(row.jobId(), row.taskId(), row.nodeKey(), row.planVersion(),
-                    row.workerKey(), row.workerVersion(), state, row.version(),
-                    row.bindingId(), row.reusedFromJobId(), result, goal.substring(0, end), List.copyOf(dependencies),
+            return new WorkerJob(row.getJobId(), row.getTaskId(), row.getNodeKey(), row.getPlanVersion(),
+                    row.getWorkerKey(), row.getWorkerVersion(), state, row.getVersion(),
+                    row.getBindingId(), row.getReusedFromJobId(), result, goal.substring(0, end), List.copyOf(dependencies),
                     state == com.agentsquad.squad.common.enums.worker.WorkerJobStatus.SKIPPED
                             ? com.agentsquad.squad.common.enums.worker.WorkerSkipReason.DEPENDENCY_FAILED : null,
                     input.path("required").isBoolean() ? input.get("required").asBoolean() : null);
@@ -205,10 +205,10 @@ public class TaskSnapshotService {
             return new AnswerView(answerRevision, "", false);
         }
         try {
-            JsonNode payload = RuntimePayloads.readJson(objectMapper, event.payloadJson());
+            JsonNode payload = RuntimePayloads.readJson(objectMapper, event.getPayloadJson());
             String text = payload.path("text").asText("");
             return new AnswerView(payload.path("revision").asLong(answerRevision), text,
-                    "answer.completed".equals(event.eventType()));
+                    "answer.completed".equals(event.getEventType()));
         } catch (JsonProcessingException exception) {
             log.warn("答案事件载荷无法解析 userId={} taskId={}", userId, taskId, exception);
             return new AnswerView(answerRevision, "", false);

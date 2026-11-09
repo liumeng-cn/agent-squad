@@ -37,17 +37,17 @@ public class ConversationEventWriterService {
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void publish(ExecutionScopeDO scope, String key, String type, Object payload) {
-        ConversationDO conversation = conversations.lockOwned(scope.userId(), scope.conversationId());
-        if (conversation == null || !"ACTIVE".equals(conversation.status())
-                || conversation.generation() != scope.conversationGeneration()) {
+        ConversationDO conversation = conversations.lockOwned(scope.getUserId(), scope.getConversationId());
+        if (conversation == null || !"ACTIVE".equals(conversation.getStatus())
+                || conversation.getGeneration() != scope.getConversationGeneration()) {
             return;
         }
-        if (messages.reserveEvent(scope.userId(), scope.conversationId()) != 1) {
+        if (messages.reserveEvent(scope.getUserId(), scope.getConversationId()) != 1) {
             return;
         }
-        messages.insertEvent(scope.userId(), scope.conversationId(), scope.conversationGeneration(),
-                messages.eventSequence(scope.userId(), scope.conversationId()), key, type,
+        messages.insertEvent(scope.getUserId(), scope.getConversationId(), scope.getConversationGeneration(),
+                messages.eventSequence(scope.getUserId(), scope.getConversationId()), key, type,
                 RuntimePayloads.toJson(json, payload), LocalDateTime.now(ZoneOffset.UTC));
-        committedEvents.publishEvent(new ConversationCommittedSignal(scope.userId(), scope.conversationId()));
+        committedEvents.publishEvent(new ConversationCommittedSignal(scope.getUserId(), scope.getConversationId()));
     }
 }

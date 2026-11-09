@@ -62,7 +62,7 @@ public class ConnectionService {
 
         ConnectionDO prior = connectionMapper.findByIdempotencyKey(actor.userId(), idempotencyKey);
         if (prior != null) {
-            log.info("连接创建幂等复用 userId={} connectionId={}", actor.userId(), prior.connectionId());
+            log.info("连接创建幂等复用 userId={} connectionId={}", actor.userId(), prior.getConnectionId());
             return toView(prior);
         }
 
@@ -83,7 +83,7 @@ public class ConnectionService {
         List<ConnectionDO> rows = connectionMapper.listByOwner(userId, cursorId,
                 Math.min(Math.max(limit, 1), 100));
         String nextCursor = rows.size() == Math.min(Math.max(limit, 1), 100)
-                ? String.valueOf(rows.get(rows.size() - 1).id())
+                ? String.valueOf(rows.get(rows.size() - 1).getId())
                 : null;
         return new ConnectionPageResponse(rows.stream().map(this::toView).toList(), nextCursor);
     }
@@ -103,20 +103,20 @@ public class ConnectionService {
                                      ConnectionUpdateRequest request) {
         requireIdempotencyKey(idempotencyKey);
         ConnectionDO row = requireOwned(actor.userId(), connectionId);
-        if (request.expectedVersion() == null || request.expectedVersion() != row.revision()) {
+        if (request.expectedVersion() == null || request.expectedVersion() != row.getRevision()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "连接版本已变化，请刷新后重试");
         }
         String policyJson = request.resourcePolicy() == null ? null : validatePolicy(request.resourcePolicy());
         if (request.secret() != null) {
-            secretVault.rotate(row.secretRef(), request.secret());
+            secretVault.rotate(row.getSecretRef(), request.secret());
         }
-        int updated = connectionMapper.updateOwned(actor.userId(), connectionId, row.revision(),
+        int updated = connectionMapper.updateOwned(actor.userId(), connectionId, row.getRevision(),
                 policyJson, request.enabled(), actor.username());
         if (updated != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "连接版本已变化，请刷新后重试");
         }
         log.info("连接更新成功 userId={} connectionId={} fromRevision={} secretRotated={}",
-                actor.userId(), connectionId, row.revision(), request.secret() != null);
+                actor.userId(), connectionId, row.getRevision(), request.secret() != null);
         return toView(connectionMapper.findOwned(actor.userId(), connectionId));
     }
 
@@ -200,13 +200,13 @@ public class ConnectionService {
     private ConnectionResponse toView(ConnectionDO row) {
         Map<String, Object> policy;
         try {
-            JsonNode node = RuntimePayloads.readJson(objectMapper, row.resourcePolicyJson());
+            JsonNode node = RuntimePayloads.readJson(objectMapper, row.getResourcePolicyJson());
             policy = objectMapper.convertValue(node, objectMapper.getTypeFactory()
                     .constructMapType(Map.class, String.class, Object.class));
         } catch (Exception exception) {
             throw new IllegalStateException("连接资源策略无法解析", exception);
         }
-        return new ConnectionResponse(row.connectionId(), row.name(), row.provider(),
-                row.environment(), policy, true, row.revision(), row.enabled());
+        return new ConnectionResponse(row.getConnectionId(), row.getName(), row.getProvider(),
+                row.getEnvironment(), policy, true, row.getRevision(), row.isEnabled());
     }
 }

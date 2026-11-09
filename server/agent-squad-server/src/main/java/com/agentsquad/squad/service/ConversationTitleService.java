@@ -52,7 +52,7 @@ public class ConversationTitleService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "标题不能为空或只含控制字符");
         }
         var row = conversations.lockOwned(userId, conversationId);
-        if (row == null || !"ACTIVE".equals(row.status())) {
+        if (row == null || !"ACTIVE".equals(row.getStatus())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "对话不存在");
         }
         if (reads.rename(userId, conversationId, title, request.expectedTitleVersion()) != 1) {
@@ -60,7 +60,7 @@ public class ConversationTitleService {
         }
         var updated = reads.header(userId, conversationId);
         events.reserveEvent(userId, conversationId);
-        events.insertEvent(userId, conversationId, row.generation(), events.eventSequence(userId, conversationId), "title:" + conversationId + ":" + updated.titleVersion(), "conversation.title_updated", RuntimePayloads.toJson(json, Map.of("title", title, "titleVersion", updated.titleVersion())), LocalDateTime.now(ZoneOffset.UTC));
+        events.insertEvent(userId, conversationId, row.getGeneration(), events.eventSequence(userId, conversationId), "title:" + conversationId + ":" + updated.getTitleVersion(), "conversation.title_updated", RuntimePayloads.toJson(json, Map.of("title", title, "titleVersion", updated.getTitleVersion())), LocalDateTime.now(ZoneOffset.UTC));
         committedEvents.publishEvent(new ConversationCommittedSignal(userId, conversationId));
         return ConversationViewResponse.from(updated);
     }
@@ -92,7 +92,7 @@ public class ConversationTitleService {
         String next = null;
         if (rows.size() > limit) {
             var last = page.getLast();
-            next = Base64.getUrlEncoder().withoutPadding().encodeToString((userId + "|" + last.lastActivityAt() + "|" + reads.conversationId(userId, last.conversationId())).getBytes(StandardCharsets.UTF_8));
+            next = Base64.getUrlEncoder().withoutPadding().encodeToString((userId + "|" + last.getLastActivityAt() + "|" + reads.conversationId(userId, last.getConversationId())).getBytes(StandardCharsets.UTF_8));
         }
         return new ConversationListPageResponse(page.stream().map(ConversationViewResponse::from).toList(), next);
     }

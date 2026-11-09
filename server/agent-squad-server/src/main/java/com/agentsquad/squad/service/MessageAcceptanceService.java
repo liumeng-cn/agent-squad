@@ -71,15 +71,15 @@ public class MessageAcceptanceService {
         if (row == null) {
             throw new IllegalStateException("消息事务未形成完整受理收据");
         }
-        if (!hash.equals(row.payloadHash())) {
+        if (!hash.equals(row.getPayloadHash())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同幂等键的消息或附件不一致");
         }
-        scopeService.requireReadable(userId, row.scopeId());
+        scopeService.requireReadable(userId, row.getScopeId());
         log.info("消息受理回执 conversationId={} messageId={} executionId={} commandId={}",
-                row.conversationId(), row.messageId(), row.executionId(), row.commandId());
-        return new MessageReceiptResponse(row.conversationId(), row.messageId(), row.executionId(), row.commandId(),
-                ResponseExecutionStatus.valueOf(row.status()),
-                row.conversationId() + ":" + row.generation() + ":" + row.receiptSequence());
+                row.getConversationId(), row.getMessageId(), row.getExecutionId(), row.getCommandId());
+        return new MessageReceiptResponse(row.getConversationId(), row.getMessageId(), row.getExecutionId(), row.getCommandId(),
+                ResponseExecutionStatus.valueOf(row.getStatus()),
+                row.getConversationId() + ":" + row.getGeneration() + ":" + row.getReceiptSequence());
     }
 
     private MessageCreateRequest normalize(MessageCreateRequest request) {

@@ -78,7 +78,7 @@ public class ContextSnapshotService {
         String scopeId = executionScopes.scopeForSession(userId, sessionId);
         var fixed = authorization.prepare(userId, scopeId);
         var selectedSkills = fixed.skills().skills().stream()
-                .filter(skill -> request.skillVersionIds().contains(skill.skillVersionId())).toList();
+                .filter(skill -> request.skillVersionIds().contains(skill.getSkillVersionId())).toList();
         if (selectedSkills.size() != request.skillVersionIds().size()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "局部技能不属于当前固定目录");
         }
@@ -92,20 +92,20 @@ public class ContextSnapshotService {
         if (context == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "Master 会话未绑定活跃目标");
         }
-        if (context.cancellationRequested() || !"ACTIVE".equals(context.conversationStatus())
-                || !(GoalTaskStatus.QUEUED.name().equals(context.taskStatus())
-                || GoalTaskStatus.RUNNING.name().equals(context.taskStatus()))) {
+        if (context.isCancellationRequested() || !"ACTIVE".equals(context.getConversationStatus())
+                || !(GoalTaskStatus.QUEUED.name().equals(context.getTaskStatus())
+                || GoalTaskStatus.RUNNING.name().equals(context.getTaskStatus()))) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已不能准备局部上下文");
         }
 
-        long goalRevision = directives.goalState(userId, context.taskId()).goalRevision();
-        ContextSnapshotDO prior = snapshotMapper.findByLogicalKey(userId, context.taskId(),
+        long goalRevision = directives.goalState(userId, context.getTaskId()).getGoalRevision();
+        ContextSnapshotDO prior = snapshotMapper.findByLogicalKey(userId, context.getTaskId(),
                 targetNodeKey, logicalKey);
         if (prior != null) {
-            if (prior.conversationGeneration() != context.conversationGeneration() || prior.goalRevision() != goalRevision) {
+            if (prior.getConversationGeneration() != context.getConversationGeneration() || prior.getGoalRevision() != goalRevision) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "上下文所属对话代际已变化");
             }
-            var priorItems = readItems(prior.itemsJson());
+            var priorItems = readItems(prior.getItemsJson());
             var priorSkills = new java.util.HashSet<String>();
             var priorMemories = new java.util.HashSet<String>();
             for (var item : priorItems) {
@@ -116,24 +116,24 @@ public class ContextSnapshotService {
                     || !priorMemories.equals(java.util.Set.copyOf(request.memoryIds()))) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同上下文逻辑键的资料选择不一致");
             }
-            return new ContextSnapshotReceipt(prior.snapshotId(), targetNodeKey, prior.contentHash());
+            return new ContextSnapshotReceipt(prior.getSnapshotId(), targetNodeKey, prior.getContentHash());
         }
 
-        String message = originalMessage(context.inputJson());
-        var applied = directives.effectiveApplied(userId, context.taskId());
+        String message = originalMessage(context.getInputJson());
+        var applied = directives.effectiveApplied(userId, context.getTaskId());
         var items = new java.util.ArrayList<ContextMaterial>();
-        boolean replaced = applied.stream().anyMatch(item -> "REPLACE".equals(item.kind()));
+        boolean replaced = applied.stream().anyMatch(item -> "REPLACE".equals(item.getKind()));
         items.add(new ContextMaterial(
-                replaced ? "USER_ORIGIN_REFERENCE" : "USER_CONSTRAINT", context.taskId(), "1", "USER", message));
+                replaced ? "USER_ORIGIN_REFERENCE" : "USER_CONSTRAINT", context.getTaskId(), "1", "USER", message));
         for (var directive : applied) {
             items.add(new ContextMaterial(
-                    "REPLACE".equals(directive.kind()) ? "USER_GOAL_REPLACEMENT" : "USER_SUPPLEMENT",
-                    directive.sourceMessageId(), String.valueOf(directive.appliedGoalRevision()), "USER", directive.sourceText()));
-            message += "\n" + directive.sourceText();
+                    "REPLACE".equals(directive.getKind()) ? "USER_GOAL_REPLACEMENT" : "USER_SUPPLEMENT",
+                    directive.getSourceMessageId(), String.valueOf(directive.getAppliedGoalRevision()), "USER", directive.getSourceText()));
+            message += "\n" + directive.getSourceText();
         }
         for (var skill : selectedSkills) {
-            items.add(new ContextMaterial("SKILL_REFERENCE", skill.skillVersionId(),
-                    skill.version(), "UNTRUSTED", skill.description(), skill.contentHash(), skill.authorizationRevision()));
+            items.add(new ContextMaterial("SKILL_REFERENCE", skill.getSkillVersionId(),
+                    skill.getVersion(), "UNTRUSTED", skill.getDescription(), skill.getContentHash(), skill.getAuthorizationRevision()));
         }
         for (var memory : selectedMemory.memories()) {
             items.add(new ContextMaterial("EXPLICIT_MEMORY", memory.memoryId(),
@@ -143,10 +143,10 @@ public class ContextSnapshotService {
         String snapshotId = UUID.randomUUID().toString();
         String contentHash = CanonicalJson.sha256(objectMapper, itemsJson);
         long tokenEstimate = Math.max(1, (itemsJson.codePointCount(0, itemsJson.length()) + 3L) / 4L);
-        snapshotMapper.insert(snapshotId, userId, context.taskId(), targetNodeKey, logicalKey,
-                context.conversationGeneration(), itemsJson, tokenEstimate, contentHash, goalRevision, selectedMemory.memoryRevision());
+        snapshotMapper.insert(snapshotId, userId, context.getTaskId(), targetNodeKey, logicalKey,
+                context.getConversationGeneration(), itemsJson, tokenEstimate, contentHash, goalRevision, selectedMemory.memoryRevision());
         log.info("局部上下文已冻结 taskId={} nodeKey={} snapshotId={} tokenEstimate={}",
-                context.taskId(), targetNodeKey, snapshotId, tokenEstimate);
+                context.getTaskId(), targetNodeKey, snapshotId, tokenEstimate);
         return new ContextSnapshotReceipt(snapshotId, targetNodeKey, contentHash);
     }
 

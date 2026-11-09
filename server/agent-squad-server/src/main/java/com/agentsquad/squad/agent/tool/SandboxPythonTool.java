@@ -97,7 +97,7 @@ public class SandboxPythonTool implements AgentTool {
         if (worker == null) {
             return null;
         }
-        if (!definitions.requirePublished(worker.workerKey(), worker.workerVersion()).toolAllowlist().contains(getName())) {
+        if (!definitions.requirePublished(worker.getWorkerKey(), worker.getWorkerVersion()).toolAllowlist().contains(getName())) {
             throw new com.agentsquad.squad.common.exception.RuntimeBusinessException(
                     com.agentsquad.squad.common.exception.RuntimeExceptionCode.FORBIDDEN, "该Worker没有沙箱执行权限");
         }

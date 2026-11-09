@@ -92,7 +92,7 @@ public class GoalTaskService {
         List<ConversationDO> rows = conversationMapper.listByOwner(userId, cursorId,
                 Math.min(Math.max(limit, 1), 100));
         List<ConversationResponse> items = rows.stream().map(this::toResponse).toList();
-        String nextCursor = rows.isEmpty() ? null : String.valueOf(rows.get(rows.size() - 1).id());
+        String nextCursor = rows.isEmpty() ? null : String.valueOf(rows.get(rows.size() - 1).getId());
         return new ConversationPage(items, nextCursor);
     }
 
@@ -101,15 +101,15 @@ public class GoalTaskService {
      */
     public ConversationResponse getConversation(String userId, String conversationId) {
         ConversationDO row = conversationMapper.findOwned(userId, conversationId);
-        if (row == null || !ConversationStatus.ACTIVE.name().equals(row.status())) {
+        if (row == null || !ConversationStatus.ACTIVE.name().equals(row.getStatus())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "会话不存在");
         }
         return toResponse(row);
     }
 
     private ConversationResponse toResponse(ConversationDO row) {
-        return new ConversationResponse(row.conversationId(), row.title(), row.generation(),
-                row.status(), row.version(), row.activeTaskId());
+        return new ConversationResponse(row.getConversationId(), row.getTitle(), row.getGeneration(),
+                row.getStatus(), row.getVersion(), row.getActiveTaskId());
     }
 
     private Long parseCursor(String cursor) {
@@ -150,7 +150,7 @@ public class GoalTaskService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "目标内容长度必须为 1 到 20000");
         }
         ConversationDO conversation = conversationMapper.lockOwned(userId, conversationId);
-        if (conversation == null || !ConversationStatus.ACTIVE.name().equals(conversation.status())) {
+        if (conversation == null || !ConversationStatus.ACTIVE.name().equals(conversation.getStatus())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "会话不存在");
         }
         String scopeKey = "task.create:" + conversationId;
@@ -159,12 +159,12 @@ public class GoalTaskService {
         String payloadHash = ContentDigests.sha256(payloadJson);
         CommandDO prior = commandMapper.findByKey(userId, scopeKey, idempotencyKey);
         if (prior != null) {
-            if (!prior.payloadHash().equals(payloadHash)) {
+            if (!prior.getPayloadHash().equals(payloadHash)) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同幂等键的输入不一致");
             }
-            return new TaskReceiptResponse(prior.taskId(), prior.commandId(), GoalTaskStatus.QUEUED.name());
+            return new TaskReceiptResponse(prior.getTaskId(), prior.getCommandId(), GoalTaskStatus.QUEUED.name());
         }
-        if (conversation.activeTaskId() != null) {
+        if (conversation.getActiveTaskId() != null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "会话已有未完成目标");
         }
         String taskId = UUID.randomUUID().toString();
@@ -175,7 +175,7 @@ public class GoalTaskService {
             throw new IllegalStateException("目标预算上限必须大于 0");
         }
         taskMapper.insert(taskId, userId, conversationId, payloadJson, budgetLimitMicrounits);
-        executionScopeService.createTaskScope(userId, taskId, conversationId, conversation.generation(),
+        executionScopeService.createTaskScope(userId, taskId, conversationId, conversation.getGeneration(),
                 "STANDARD", budgetLimitMicrounits);
         artifactService.attach(userId, taskId, attachments);
         bindingMapper.insertMaster(bindingId, userId, taskId, MasterAgentIdentity.AGENT_ID,
@@ -212,15 +212,15 @@ public class GoalTaskService {
         List<TaskDO> rows = taskMapper.listByConversation(userId, conversationId, cursorId,
                 Math.min(Math.max(limit, 1), 100));
         List<TaskResponse> items = rows.stream().map(this::toResponse).toList();
-        String nextCursor = rows.isEmpty() ? null : String.valueOf(rows.get(rows.size() - 1).id());
+        String nextCursor = rows.isEmpty() ? null : String.valueOf(rows.get(rows.size() - 1).getId());
         return new GoalTaskPageResponse(items, nextCursor);
     }
 
     private TaskResponse toResponse(TaskDO task) {
-        return new TaskResponse(task.taskId(), task.conversationId(), task.status(), task.version(),
-                task.planVersion(), task.answerRevision(),
-                formatTime(task.cancelRequestedAt()), task.blockedReason(),
-                formatTime(task.createTime()), formatTime(task.lastUpdateTime()));
+        return new TaskResponse(task.getTaskId(), task.getConversationId(), task.getStatus(), task.getVersion(),
+                task.getPlanVersion(), task.getAnswerRevision(),
+                formatTime(task.getCancelRequestedAt()), task.getBlockedReason(),
+                formatTime(task.getCreateTime()), formatTime(task.getLastUpdateTime()));
     }
 
     private String formatTime(java.time.LocalDateTime time) {
@@ -239,8 +239,8 @@ public class GoalTaskService {
         if (executionScopeId != null) {
             executionScopeService.requireReadable(userId, executionScopeId);
         }
-        return new CommandResponse(command.commandId(), command.taskId(), command.status(),
-                command.nativeTurnId(), command.nativeRunId(), command.nativeStatus());
+        return new CommandResponse(command.getCommandId(), command.getTaskId(), command.getStatus(),
+                command.getNativeTurnId(), command.getNativeRunId(), command.getNativeStatus());
     }
 
     /**
@@ -254,8 +254,8 @@ public class GoalTaskService {
     }
 
     private TaskEventResponse toEventResponse(EventDO row) {
-        return new TaskEventResponse(row.eventSeq(), row.taskId(), row.eventType(),
-                row.payloadJson(), row.occurredAt());
+        return new TaskEventResponse(row.getEventSeq(), row.getTaskId(), row.getEventType(),
+                row.getPayloadJson(), row.getOccurredAt());
     }
 
 }

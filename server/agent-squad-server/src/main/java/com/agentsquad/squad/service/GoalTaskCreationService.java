@@ -99,39 +99,39 @@ public class GoalTaskCreationService {
         validate(request);
         userStatusGuard.requireActive(userId);
         ExecutionScopeDO source = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), false);
-        if (!"RESPONSE".equals(source.kind())) {
+        if (!"RESPONSE".equals(source.getKind())) {
             throw error(RuntimeExceptionCode.FORBIDDEN, "只有消息回复可以建立独立目标");
         }
-        ConversationDO conversation = conversations.lockOwned(userId, source.conversationId());
-        if (!"ACTIVE".equals(conversation.status()) || conversation.generation() != source.conversationGeneration()) {
+        ConversationDO conversation = conversations.lockOwned(userId, source.getConversationId());
+        if (!"ACTIVE".equals(conversation.getStatus()) || conversation.getGeneration() != source.getConversationGeneration()) {
             throw error(RuntimeExceptionCode.NOT_FOUND, "来源会话已失效");
         }
         String sourceBinding = scopeMapper.findBindingBySession(userId, sessionId);
         ResponseRuntimeDO reply = replies.lockByBinding(userId, sourceBinding);
-        if (reply == null || !reply.sourceMessageId().equals(request.sourceMessageId())) {
+        if (reply == null || !reply.getSourceMessageId().equals(request.sourceMessageId())) {
             throw error(RuntimeExceptionCode.FORBIDDEN, "目标来源必须是当前受权消息");
         }
-        String scopeKey = "goal.create:" + source.scopeId();
+        String scopeKey = "goal.create:" + source.getScopeId();
         String requestJson = RuntimePayloads.toJson(json, request);
         String hash = CanonicalJson.sha256(json, requestJson);
         CommandDO prior = commands.findByKeyCurrent(userId, scopeKey, request.logicalKey());
         if (prior != null) {
-            if (!hash.equals(prior.payloadHash())) {
+            if (!hash.equals(prior.getPayloadHash())) {
                 throw error(RuntimeExceptionCode.CONFLICT, "同一目标创建键的内容不一致");
             }
-            return new TaskReceiptResponse(prior.taskId(), prior.commandId(), "QUEUED");
+            return new TaskReceiptResponse(prior.getTaskId(), prior.getCommandId(), "QUEUED");
         }
-        if (reply.cancellationRequested() || !Set.of("QUEUED", "RUNNING", "RECOVERING").contains(reply.status())) {
+        if (reply.isCancellationRequested() || !Set.of("QUEUED", "RUNNING", "RECOVERING").contains(reply.getStatus())) {
             throw error(RuntimeExceptionCode.CONFLICT, "当前回复已不能创建目标");
         }
-        if (conversation.activeTaskId() != null) {
+        if (conversation.getActiveTaskId() != null) {
             throw error(RuntimeExceptionCode.CONFLICT, "会话已有未完成目标，请先处理当前目标");
         }
 
         ResponseContextMessage message = contexts.freeze(userId, sourceBinding).messages().getLast();
         budgets.ensureUser(userId);
         budgets.lockUser(userId);
-        BudgetAccountDO account = budgets.lockAccount(userId, source.scopeId());
+        BudgetAccountDO account = budgets.lockAccount(userId, source.getScopeId());
         if (account == null) {
             throw error(RuntimeExceptionCode.CONFLICT, "来源预算账户已不可用");
         }
@@ -144,15 +144,15 @@ public class GoalTaskCreationService {
         String input = RuntimePayloads.toJson(json, Map.of("message", message.text(), "title", request.title(),
                 "objective", request.objective(), "sourceMessageId", request.sourceMessageId(),
                 "artifactIds", message.artifactIds()));
-        tasks.insert(taskId, userId, source.conversationId(), input, account.limitMicrounits());
-        scopeMapper.insertScope(scopeId, userId, source.conversationId(), source.conversationGeneration(),
-                "TASK", taskId, source.accountId());
-        scopeMapper.inheritTrace(userId, scopeId, source.scopeId());
+        tasks.insert(taskId, userId, source.getConversationId(), input, account.getLimitMicrounits());
+        scopeMapper.insertScope(scopeId, userId, source.getConversationId(), source.getConversationGeneration(),
+                "TASK", taskId, source.getAccountId());
+        scopeMapper.inheritTrace(userId, scopeId, source.getScopeId());
         if (scopeMapper.linkTaskScope(userId, taskId, scopeId) != 1
-                || origins.linkSource(userId, taskId, message.messageId(), reply.executionId()) != 1) {
+                || origins.linkSource(userId, taskId, message.messageId(), reply.getExecutionId()) != 1) {
             throw new IllegalStateException("目标来源或执行归属绑定失败");
         }
-        finalDeliveries.transfer(userId, message.messageId(), reply.executionId(), taskId);
+        finalDeliveries.transfer(userId, message.messageId(), reply.getExecutionId(), taskId);
         artifacts.attach(userId, taskId, message.artifactIds());
         bindings.insertMaster(bindingId, userId, taskId, MasterAgentIdentity.AGENT_ID, UUID.randomUUID().toString(), now);
         String initialMessage = "请推进已经建立的独立目标，可使用计划与Worker能力。不要再次创建目标。"
@@ -161,14 +161,14 @@ public class GoalTaskCreationService {
         commands.insertSubmit(commandId, userId, scopeKey, request.logicalKey(), hash, taskId, bindingId, payload, now);
         taskEvents.insertAccepted(userId, taskId, "command:" + commandId,
                 RuntimePayloads.toJson(json, Map.of("taskId", taskId, "commandId", commandId)), now);
-        if (conversations.activateTask(userId, source.conversationId(), taskId) != 1) {
+        if (conversations.activateTask(userId, source.getConversationId(), taskId) != 1) {
             throw error(RuntimeExceptionCode.CONFLICT, "会话目标占用已变化");
         }
         events.publish(source, "task-created:" + taskId, "task.created", Map.of("taskId", taskId,
-                "sourceMessageId", message.messageId(), "sourceExecutionId", reply.executionId(),
+                "sourceMessageId", message.messageId(), "sourceExecutionId", reply.getExecutionId(),
                 "title", request.title(), "status", "QUEUED"));
         log.info("Master独立目标创建事实已写入 conversationId={} executionId={} taskId={} commandId={}",
-                source.conversationId(), reply.executionId(), taskId, commandId);
+                source.getConversationId(), reply.getExecutionId(), taskId, commandId);
         return new TaskReceiptResponse(taskId, commandId, "QUEUED");
     }
 

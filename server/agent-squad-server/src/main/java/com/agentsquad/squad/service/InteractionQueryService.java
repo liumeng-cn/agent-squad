@@ -69,7 +69,7 @@ public class InteractionQueryService {
         String nextCursor = null;
         if (hasMore) {
             Long lastCursorId = interactionMapper.cursorIdOf(userId,
-                    rows.get(Math.min(Math.max(limit, 1), 100) - 1).interactionId());
+                    rows.get(Math.min(Math.max(limit, 1), 100) - 1).getInteractionId());
             nextCursor = lastCursorId == null ? null : String.valueOf(lastCursorId);
         }
         return new InteractionPageResponse(items, nextCursor);
@@ -83,7 +83,7 @@ public class InteractionQueryService {
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "交互不存在");
         }
-        scopeService.requireReadable(userId, row.scopeId());
+        scopeService.requireReadable(userId, row.getScopeId());
         return viewOf(userId, row);
     }
 
@@ -94,7 +94,7 @@ public class InteractionQueryService {
         scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         return interactionMapper.findOpenIds(userId, taskId).stream()
                 .map(id -> interactionMapper.findOwned(userId, id))
-                .filter(row -> row != null && "OPEN".equals(row.status()))
+                .filter(row -> row != null && "OPEN".equals(row.getStatus()))
                 .toList();
     }
 
@@ -102,7 +102,7 @@ public class InteractionQueryService {
         scopeService.requireReadable(userId, scopeId);
         return interactionMapper.findOpenByScope(userId, scopeId).stream()
                 .map(id -> interactionMapper.findOwned(userId, id))
-                .filter(row -> row != null && "OPEN".equals(row.status()))
+                .filter(row -> row != null && "OPEN".equals(row.getStatus()))
                 .toList();
     }
 
@@ -111,25 +111,25 @@ public class InteractionQueryService {
      */
     public InteractionResponse viewOf(String userId, InteractionDO row) {
         Object approvalContext = null;
-        if (KIND_APPROVAL.equals(row.kind()) && row.operationId() != null) {
-            OperationDO operation = operationMapper.findOwned(userId, row.operationId());
+        if (KIND_APPROVAL.equals(row.getKind()) && row.getOperationId() != null) {
+            OperationDO operation = operationMapper.findOwned(userId, row.getOperationId());
             if (operation != null) {
                 Map<String, Object> context = new LinkedHashMap<>();
-                context.put("operationId", operation.operationId());
-                context.put("toolKey", operation.toolKey());
-                context.put("effect", operation.effect());
-                context.put("argumentsPreview", operationPreview.arguments(operation.argumentsJson()));
-                context.put("resourceSummary", operation.toolKey() + " · " + operation.effect());
-                context.put("requestHash", operation.requestHash());
+                context.put("operationId", operation.getOperationId());
+                context.put("toolKey", operation.getToolKey());
+                context.put("effect", operation.getEffect());
+                context.put("argumentsPreview", operationPreview.arguments(operation.getArgumentsJson()));
+                context.put("resourceSummary", operation.getToolKey() + " · " + operation.getEffect());
+                context.put("requestHash", operation.getRequestHash());
                 approvalContext = context;
             }
         }
-        return new InteractionResponse(row.interactionId(), row.taskId(), row.jobId(), row.kind(),
-                row.origin(), KIND_APPROVAL.equals(row.kind()) ? "请确认此操作的影响后决定是否执行" : row.question(),
-                parseJsonOrNull(row.answerSchemaJson()),
-                row.requestHash(), row.planVersion(),
-                row.expiresAt() == null ? null : row.expiresAt().atOffset(java.time.ZoneOffset.UTC).toString(),
-                row.status(), row.version(), approvalContext);
+        return new InteractionResponse(row.getInteractionId(), row.getTaskId(), row.getJobId(), row.getKind(),
+                row.getOrigin(), KIND_APPROVAL.equals(row.getKind()) ? "请确认此操作的影响后决定是否执行" : row.getQuestion(),
+                parseJsonOrNull(row.getAnswerSchemaJson()),
+                row.getRequestHash(), row.getPlanVersion(),
+                row.getExpiresAt() == null ? null : row.getExpiresAt().atOffset(java.time.ZoneOffset.UTC).toString(),
+                row.getStatus(), row.getVersion(), approvalContext);
     }
 
     private Object parseJsonOrNull(String json) {

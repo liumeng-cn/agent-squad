@@ -52,7 +52,7 @@ public class ExplicitMemoryWriteService {
         validateShape(request);
         String scopeId = scopes.scopeForSession(userId, sessionId);
         ExecutionScopeDO scope = scopes.lockOwned(userId, scopeId, true);
-        if (!"RESPONSE".equals(scope.kind())) {
+        if (!"RESPONSE".equals(scope.getKind())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "只有受权用户消息的回复可以写入显式记忆");
         }
         mapper.ensureRevision(userId);
@@ -61,14 +61,14 @@ public class ExplicitMemoryWriteService {
         String hash = CanonicalJson.sha256(json, payload);
         MemoryWriteReceiptDO prior = mapper.receipt(userId, scopeId, request.logicalKey());
         if (prior != null) {
-            if (!prior.payloadHash().equals(hash)) {
+            if (!prior.getPayloadHash().equals(hash)) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同记忆逻辑键的输入不同");
             }
-            return readReceipt(prior.resultJson());
+            return readReceipt(prior.getResultJson());
         }
         contexts.requireCurrent(userId, scopeId);
         MemorySourceDO source = mapper.source(userId, scopeId);
-        if (source == null || !source.content().contains(request.sourceQuote())) {
+        if (source == null || !source.getContent().contains(request.sourceQuote())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "显式记忆必须引用本次受权用户消息中的原话");
         }
 
@@ -85,7 +85,7 @@ public class ExplicitMemoryWriteService {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "创建记忆不接受旧版本");
             }
             return memories.createFromSource(userId, new MemoryCreateRequest(request.key(), request.content(), request.expiresAt()),
-                    source.messageId(), request.sourceQuote());
+                    source.getMessageId(), request.sourceQuote());
         }
         MemoryDO current = mapper.findActiveKey(userId, request.key());
         if (current == null) {
@@ -95,11 +95,11 @@ public class ExplicitMemoryWriteService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "纠正或删除记忆必须提供读取时的版本");
         }
         if ("DELETE".equals(request.action())) {
-            return memories.delete(userId, current.memoryId(), request.expectedVersion());
+            return memories.delete(userId, current.getMemoryId(), request.expectedVersion());
         }
-        return memories.updateFromSource(userId, current.memoryId(),
+        return memories.updateFromSource(userId, current.getMemoryId(),
                 new MemoryUpdateRequest(request.expectedVersion(), request.content(), request.expiresAt()),
-                source.messageId(), request.sourceQuote());
+                source.getMessageId(), request.sourceQuote());
     }
 
     private void validateShape(MemoryWriteRequest request) {

@@ -96,23 +96,23 @@ public class TaskFinalizerService {
      */
     @Transactional
     public boolean tryComplete(ProjectionTargetDO target, NativeEventView event) {
-        if (!directives.pending(target.userId(), target.taskId()).isEmpty()) {
+        if (!directives.pending(target.getUserId(), target.getTaskId()).isEmpty()) {
             return false;
         }
-        FinalizationDO row = completionMapper.lockTask(target.userId(), target.taskId());
-        if (row == null || !GoalTaskStatus.RUNNING.name().equals(row.status()) || row.cancellationRequested()
-                || row.proposalJson() == null) {
+        FinalizationDO row = completionMapper.lockTask(target.getUserId(), target.getTaskId());
+        if (row == null || !GoalTaskStatus.RUNNING.name().equals(row.getStatus()) || row.isCancellationRequested()
+                || row.getProposalJson() == null) {
             return false;
         }
-        if (!target.bindingId().equals(row.proposalBindingId())
-                || event.turnId() == null || !event.turnId().equals(row.proposalTurnId())) {
+        if (!target.getBindingId().equals(row.getProposalBindingId())
+                || event.turnId() == null || !event.turnId().equals(row.getProposalTurnId())) {
             log.debug("忽略不属于当前完成候选的迟到回合 taskId={} bindingId={} turnId={}",
-                    row.taskId(), target.bindingId(), event.turnId());
+                    row.getTaskId(), target.getBindingId(), event.turnId());
             return false;
         }
         JsonNode proposal;
         try {
-            proposal = parseProposal(row.proposalJson());
+            proposal = parseProposal(row.getProposalJson());
         } catch (IllegalStateException exception) {
             blockInvalidProposal(row, target);
             return true;
@@ -121,19 +121,19 @@ public class TaskFinalizerService {
         String answer = proposal.path("finalAnswer").asText();
         if (!ALLOWED_OUTCOMES.contains(outcome) || answer.isBlank()
                 || !proposal.path("evidenceRefs").isArray()
-                || proposal.path("planVersion").asLong(-1) != row.planVersion()
-                || proposal.path("answerRevision").asLong(-1) != row.answerRevision()
-                || !target.bindingId().equals(proposal.path("sourceBindingId").asText())
+                || proposal.path("planVersion").asLong(-1) != row.getPlanVersion()
+                || proposal.path("answerRevision").asLong(-1) != row.getAnswerRevision()
+                || !target.getBindingId().equals(proposal.path("sourceBindingId").asText())
                 || !event.turnId().equals(proposal.path("sourceTurnId").asText())) {
             blockInvalidProposal(row, target);
             return true;
         }
-        if (row.planVersion() > 0) {
+        if (row.getPlanVersion() > 0) {
             try {
                 List<AcceptanceReview> reviews = objectMapper.convertValue(proposal.path("acceptanceReviews"),
                         objectMapper.getTypeFactory().constructCollectionType(List.class,
                                 AcceptanceReview.class));
-                var evaluation = planEvaluation.evaluate(row.userId(), row.taskId(), row.planVersion(), reviews);
+                var evaluation = planEvaluation.evaluate(row.getUserId(), row.getTaskId(), row.getPlanVersion(), reviews);
                 if (evaluation.decision().stage() != PlanJoinStage.READY
                         || (GoalTaskStatus.SUCCEEDED.name().equals(outcome)
                         && evaluation.decision().outcome() != GoalTaskStatus.SUCCEEDED)
@@ -151,20 +151,20 @@ public class TaskFinalizerService {
                 return true;
             }
         }
-        if (completionMapper.completeTask(row.userId(), row.taskId(), target.bindingId(),
-                event.turnId(), outcome, row.planVersion(), row.answerRevision()) != 1) {
+        if (completionMapper.completeTask(row.getUserId(), row.getTaskId(), target.getBindingId(),
+                event.turnId(), outcome, row.getPlanVersion(), row.getAnswerRevision()) != 1) {
             throw new IllegalStateException("目标终态写入竞争");
         }
-        if (conversationMapper.clearActiveTask(row.userId(), row.conversationId(), row.taskId()) != 1) {
+        if (conversationMapper.clearActiveTask(row.getUserId(), row.getConversationId(), row.getTaskId()) != 1) {
             throw new IllegalStateException("对话目标占用与终态不一致");
         }
-        String producerPrefix = "completion:" + row.taskId() + ":" + event.turnId();
+        String producerPrefix = "completion:" + row.getTaskId() + ":" + event.turnId();
         publish(row, producerPrefix + ":answer.completed", "answer.completed",
-                Map.of("text", answer, "revision", row.answerRevision() + 1, "evidenceRefs", List.of()));
+                Map.of("text", answer, "revision", row.getAnswerRevision() + 1, "evidenceRefs", List.of()));
         publish(row, producerPrefix + ":task.completed", "task.completed",
-                Map.of("status", outcome, "version", row.version() + 1));
+                Map.of("status", outcome, "version", row.getVersion() + 1));
         log.info("目标已终结 taskId={} bindingId={} turnId={} outcome={}",
-                row.taskId(), target.bindingId(), event.turnId(), outcome);
+                row.getTaskId(), target.getBindingId(), event.turnId(), outcome);
         return true;
     }
 
@@ -173,12 +173,12 @@ public class TaskFinalizerService {
      */
     private void blockInvalidProposal(FinalizationDO row, ProjectionTargetDO target) {
         String reason = "完成候选校验未通过，需核对后恢复";
-        if (completionMapper.blockForRecovery(row.userId(), row.taskId(), reason) != 1) {
+        if (completionMapper.blockForRecovery(row.getUserId(), row.getTaskId(), reason) != 1) {
             throw new IllegalStateException("失效完成候选阻塞状态写入竞争");
         }
-        publish(row, "recovery:invalid-proposal:" + target.bindingId() + ":" + row.proposalTurnId(),
+        publish(row, "recovery:invalid-proposal:" + target.getBindingId() + ":" + row.getProposalTurnId(),
                 "task.recovery_blocked", Map.of("reason", reason));
-        log.warn("完成候选失效，目标等待恢复核对 taskId={} bindingId={}", row.taskId(), target.bindingId());
+        log.warn("完成候选失效，目标等待恢复核对 taskId={} bindingId={}", row.getTaskId(), target.getBindingId());
     }
 
     /**
@@ -186,8 +186,8 @@ public class TaskFinalizerService {
      */
     @Transactional
     public boolean tryCancelAfterStop(ProjectionTargetDO target, NativeEventView event) {
-        return finalizeCancelled(target.userId(), target.taskId(),
-                "native:" + target.bindingId() + ":" + event.turnId() + ":task.completed");
+        return finalizeCancelled(target.getUserId(), target.getTaskId(),
+                "native:" + target.getBindingId() + ":" + event.turnId() + ":task.completed");
     }
 
     /**
@@ -196,59 +196,59 @@ public class TaskFinalizerService {
      */
     @Transactional
     public boolean recoverMissingProposal(ProjectionTargetDO target, NativeEventView event) {
-        if (!directives.pending(target.userId(), target.taskId()).isEmpty()) {
+        if (!directives.pending(target.getUserId(), target.getTaskId()).isEmpty()) {
             return true;
         }
-        FinalizationDO row = completionMapper.lockTask(target.userId(), target.taskId());
-        if (row == null || !GoalTaskStatus.RUNNING.name().equals(row.status()) || row.cancellationRequested()
-                || row.proposalJson() != null || event.turnId() == null) {
+        FinalizationDO row = completionMapper.lockTask(target.getUserId(), target.getTaskId());
+        if (row == null || !GoalTaskStatus.RUNNING.name().equals(row.getStatus()) || row.isCancellationRequested()
+                || row.getProposalJson() != null || event.turnId() == null) {
             return false;
         }
         // 旧计划的汇总回合可能刚发布新版；它不能代替新版完成通知，更不能消耗完成纠正次数。
-        if (row.planVersion() > 0
-                && planMapper.countActivePlan(row.userId(), row.taskId(), row.planVersion()) > 0
-                && commandMapper.countPlanSignalTurn(row.userId(), row.taskId(), event.turnId(), row.planVersion()) == 0) {
+        if (row.getPlanVersion() > 0
+                && planMapper.countActivePlan(row.getUserId(), row.getTaskId(), row.getPlanVersion()) > 0
+                && commandMapper.countPlanSignalTurn(row.getUserId(), row.getTaskId(), event.turnId(), row.getPlanVersion()) == 0) {
             log.info("Master 规划回合已结束，等待 Worker 汇合 taskId={} planVersion={} turnId={}",
-                    row.taskId(), row.planVersion(), event.turnId());
+                    row.getTaskId(), row.getPlanVersion(), event.turnId());
             return true;
         }
-        if (row.correctionCount() == 0) {
-            if (completionMapper.markCorrectionRequested(row.userId(), row.taskId()) != 1) {
+        if (row.getCorrectionCount() == 0) {
+            if (completionMapper.markCorrectionRequested(row.getUserId(), row.getTaskId()) != 1) {
                 throw new IllegalStateException("完成纠正次数写入竞争");
             }
             String commandId = UUID.randomUUID().toString();
             String payloadJson = RuntimePayloads.toJson(objectMapper, Map.of("message", CORRECTION_MESSAGE));
-            if (commandMapper.insertControl(commandId, row.userId(),
-                    "task.completion-correction:" + row.taskId(), event.turnId(),
-                    ContentDigests.sha256(payloadJson), row.taskId(), target.bindingId(),
+            if (commandMapper.insertControl(commandId, row.getUserId(),
+                    "task.completion-correction:" + row.getTaskId(), event.turnId(),
+                    ContentDigests.sha256(payloadJson), row.getTaskId(), target.getBindingId(),
                     RuntimeCommandAction.SUBMIT.name(), payloadJson,
                     LocalDateTime.now(ZoneOffset.UTC)) != 1) {
                 throw new IllegalStateException("完成纠正命令写入失败");
             }
             log.info("完成候选缺失，已排入一次纠正 taskId={} bindingId={} turnId={} commandId={}",
-                    row.taskId(), target.bindingId(), event.turnId(), commandId);
+                    row.getTaskId(), target.getBindingId(), event.turnId(), commandId);
             return true;
         }
-        if (row.correctionCount() != 1) {
+        if (row.getCorrectionCount() != 1) {
             throw new IllegalStateException("完成纠正次数超出约束");
         }
-        if (completionMapper.failWithoutProposal(row.userId(), row.taskId()) != 1) {
+        if (completionMapper.failWithoutProposal(row.getUserId(), row.getTaskId()) != 1) {
             throw new IllegalStateException("无完成候选的任务终态写入竞争");
         }
-        if (conversationMapper.clearActiveTask(row.userId(), row.conversationId(), row.taskId()) != 1) {
+        if (conversationMapper.clearActiveTask(row.getUserId(), row.getConversationId(), row.getTaskId()) != 1) {
             throw new IllegalStateException("对话目标占用与失败终态不一致");
         }
-        var scope = scopes.lockOwned(row.userId(), scopes.scopeForSession(row.userId(), target.sessionId()), false);
-        failures.record(scope, target.bindingId(), "completion-correction-exhausted:" + event.turnId(),
+        var scope = scopes.lockOwned(row.getUserId(), scopes.scopeForSession(row.getUserId(), target.getSessionId()), false);
+        failures.record(scope, target.getBindingId(), "completion-correction-exhausted:" + event.turnId(),
                 new FailureClassification("LOGIC_INVALID", "COMPLETION_CORRECTION_EXHAUSTED", "SYSTEM",
                         "本次未能形成有效的完整结果，已保留你的内容。"));
-        String producerPrefix = "completion:" + row.taskId() + ":" + event.turnId();
+        String producerPrefix = "completion:" + row.getTaskId() + ":" + event.turnId();
         publish(row, producerPrefix + ":answer.completed", "answer.completed",
-                Map.of("text", MISSING_PROPOSAL_ANSWER, "revision", row.answerRevision() + 1, "evidenceRefs", List.of()));
+                Map.of("text", MISSING_PROPOSAL_ANSWER, "revision", row.getAnswerRevision() + 1, "evidenceRefs", List.of()));
         publish(row, producerPrefix + ":task.completed", "task.completed",
-                Map.of("status", GoalTaskStatus.FAILED.name(), "version", row.version() + 1));
+                Map.of("status", GoalTaskStatus.FAILED.name(), "version", row.getVersion() + 1));
         log.warn("纠正后仍无完成候选，目标已失败 taskId={} bindingId={} turnId={}",
-                row.taskId(), target.bindingId(), event.turnId());
+                row.getTaskId(), target.getBindingId(), event.turnId());
         return true;
     }
 
@@ -259,10 +259,10 @@ public class TaskFinalizerService {
     @Transactional
     public boolean blockAfterNativeRun(ProjectionTargetDO target, NativeEventView event,
                                        NativeRunOutcome outcome) {
-        FinalizationDO row = completionMapper.lockTask(target.userId(), target.taskId());
-        if (row == null || row.cancellationRequested()
-                || !GoalTaskStatus.RUNNING.name().equals(row.status())
-                && !GoalTaskStatus.QUEUED.name().equals(row.status())) {
+        FinalizationDO row = completionMapper.lockTask(target.getUserId(), target.getTaskId());
+        if (row == null || row.isCancellationRequested()
+                || !GoalTaskStatus.RUNNING.name().equals(row.getStatus())
+                && !GoalTaskStatus.QUEUED.name().equals(row.getStatus())) {
             return false;
         }
         String reason = switch (outcome) {
@@ -272,13 +272,13 @@ public class TaskFinalizerService {
             case UNKNOWN -> "原生回合状态未知，需核对后恢复";
             case COMPLETED -> throw new IllegalArgumentException("成功回合不得进入恢复阻塞");
         };
-        if (completionMapper.blockForRecovery(row.userId(), row.taskId(), reason) != 1) {
+        if (completionMapper.blockForRecovery(row.getUserId(), row.getTaskId(), reason) != 1) {
             throw new IllegalStateException("恢复阻塞状态写入竞争");
         }
-        publish(row, "recovery:" + target.bindingId() + ":" + event.eventId(),
+        publish(row, "recovery:" + target.getBindingId() + ":" + event.eventId(),
                 "task.recovery_blocked", Map.of("reason", reason, "nativeOutcome", outcome.code()));
         log.warn("原生回合未成功，目标等待恢复核对 taskId={} bindingId={} turnId={} outcome={}",
-                row.taskId(), target.bindingId(), event.turnId(), outcome.code());
+                row.getTaskId(), target.getBindingId(), event.turnId(), outcome.code());
         return true;
     }
 
@@ -289,19 +289,19 @@ public class TaskFinalizerService {
     @Transactional
     public boolean waitForInteraction(ProjectionTargetDO target, NativeEventView event,
                                       String status, String reason) {
-        FinalizationDO row = completionMapper.lockTask(target.userId(), target.taskId());
-        if (row == null || row.cancellationRequested()
-                || !GoalTaskStatus.RUNNING.name().equals(row.status())
-                && !GoalTaskStatus.QUEUED.name().equals(row.status())) {
+        FinalizationDO row = completionMapper.lockTask(target.getUserId(), target.getTaskId());
+        if (row == null || row.isCancellationRequested()
+                || !GoalTaskStatus.RUNNING.name().equals(row.getStatus())
+                && !GoalTaskStatus.QUEUED.name().equals(row.getStatus())) {
             return false;
         }
-        if (completionMapper.waitForInteraction(row.userId(), row.taskId(), status, reason) != 1) {
+        if (completionMapper.waitForInteraction(row.getUserId(), row.getTaskId(), status, reason) != 1) {
             throw new IllegalStateException("交互等待状态写入竞争");
         }
-        publish(row, "recovery:interaction:" + target.bindingId() + ":" + event.eventId(),
-                "task.state_changed", Map.of("status", status, "version", row.version() + 1));
+        publish(row, "recovery:interaction:" + target.getBindingId() + ":" + event.eventId(),
+                "task.state_changed", Map.of("status", status, "version", row.getVersion() + 1));
         log.info("目标等待用户交互 taskId={} bindingId={} status={} interactionEvent={}",
-                row.taskId(), target.bindingId(), status, event.eventId());
+                row.getTaskId(), target.getBindingId(), status, event.eventId());
         return true;
     }
 
@@ -313,9 +313,9 @@ public class TaskFinalizerService {
         if (completionMapper.resumeFromInteraction(userId, taskId) == 1) {
             FinalizationDO row = completionMapper.lockTask(userId, taskId);
             if (row != null) {
-                publish(row, "control:interaction-resume:" + taskId + ":" + row.version(),
+                publish(row, "control:interaction-resume:" + taskId + ":" + row.getVersion(),
                         "task.state_changed", Map.of("status", GoalTaskStatus.RUNNING.name(),
-                                "version", row.version()));
+                                "version", row.getVersion()));
                 log.info("交互答复后目标恢复运行 taskId={}", taskId);
             }
         }
@@ -332,9 +332,9 @@ public class TaskFinalizerService {
     private boolean finalizeCancelled(String userId, String taskId, String producerKey) {
         scopes.lockOwned(userId, scopes.scopeForTask(userId, taskId), false);
         FinalizationDO row = completionMapper.lockTask(userId, taskId);
-        if (row == null || !row.cancellationRequested()
-                || !GoalTaskStatus.RUNNING.name().equals(row.status())
-                && !GoalTaskStatus.CANCELLING.name().equals(row.status())) {
+        if (row == null || !row.isCancellationRequested()
+                || !GoalTaskStatus.RUNNING.name().equals(row.getStatus())
+                && !GoalTaskStatus.CANCELLING.name().equals(row.getStatus())) {
             return false;
         }
         if (!completionMapper.lockCancellationOperations(userId, taskId).isEmpty()
@@ -347,27 +347,27 @@ public class TaskFinalizerService {
             return false;
         }
         completionMapper.cancelJobs(userId, taskId);
-        if (completionMapper.cancelTask(row.userId(), row.taskId()) != 1) {
+        if (completionMapper.cancelTask(row.getUserId(), row.getTaskId()) != 1) {
             return false;
         }
-        if (conversationMapper.clearActiveTask(row.userId(), row.conversationId(), row.taskId()) != 1) {
+        if (conversationMapper.clearActiveTask(row.getUserId(), row.getConversationId(), row.getTaskId()) != 1) {
             throw new IllegalStateException("对话目标占用与取消终态不一致");
         }
         publish(row, producerKey, "task.completed",
-                Map.of("status", GoalTaskStatus.CANCELLED.name(), "version", row.version() + 1));
-        log.info("目标已随停止意图取消 taskId={} userId={}", row.taskId(), userId);
+                Map.of("status", GoalTaskStatus.CANCELLED.name(), "version", row.getVersion() + 1));
+        log.info("目标已随停止意图取消 taskId={} userId={}", row.getTaskId(), userId);
         return true;
     }
 
     private void publish(FinalizationDO row, String producerKey, String type, Object payload) {
-        if (projectionMapper.reserveEventSequence(row.userId(), row.taskId()) != 1) {
+        if (projectionMapper.reserveEventSequence(row.getUserId(), row.getTaskId()) != 1) {
             throw new IllegalStateException("最终事件序号保留失败");
         }
-        Long sequence = projectionMapper.eventSequence(row.userId(), row.taskId());
+        Long sequence = projectionMapper.eventSequence(row.getUserId(), row.getTaskId());
         if (sequence == null) {
             throw new IllegalStateException("最终事件序号读取失败");
         }
-        conversationProjection.insertProjected(row.userId(), row.taskId(), sequence,
+        conversationProjection.insertProjected(row.getUserId(), row.getTaskId(), sequence,
                 producerKey, type, RuntimePayloads.toJson(objectMapper, payload),
                 LocalDateTime.now(ZoneOffset.UTC));
     }

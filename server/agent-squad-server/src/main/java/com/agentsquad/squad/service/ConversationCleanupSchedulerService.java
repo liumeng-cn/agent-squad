@@ -31,8 +31,8 @@ public class ConversationCleanupSchedulerService {
     public void cleanupDeletingConversations() {
         List<ConversationDO> deletable = conversationMapper.findDeletable(CLEANUP_BATCH);
         for (ConversationDO row : deletable) {
-            if (conversationMapper.markDeleted(row.userId(), row.conversationId()) == 1) {
-                log.info("会话已逻辑删除 conversationId={} userId={}", row.conversationId(), row.userId());
+            if (conversationMapper.markDeleted(row.getUserId(), row.getConversationId()) == 1) {
+                log.info("会话已逻辑删除 conversationId={} userId={}", row.getConversationId(), row.getUserId());
             }
         }
     }

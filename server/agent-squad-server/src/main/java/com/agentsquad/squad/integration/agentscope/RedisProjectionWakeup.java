@@ -130,13 +130,13 @@ public class RedisProjectionWakeup {
         if (target == null || !"1".equals(fields.get("schemaVersion"))
                 || !RedisWakeupChannel.PROJECTION.name().equals(fields.get("kind"))
                 || !String.valueOf(RuntimeEventSource.CURRENT_MAPPING_VERSION).equals(fields.get("mappingVersion"))
-                || !target.sessionId().equals(fields.get("sessionId"))) {
+                || !target.getSessionId().equals(fields.get("sessionId"))) {
             log.warn("Redis投影引用归属校验未通过 bindingId={} streamId={}", bindingId, record.getId());
             acknowledge(record, null, false);
             return;
         }
         Object observed = redis.opsForHash().get(state(bindingId), "dirtyVersion");
-        var source = new RuntimeEventSource(userId, bindingId, target.sessionId(), RuntimeEventSource.CURRENT_MAPPING_VERSION);
+        var source = new RuntimeEventSource(userId, bindingId, target.getSessionId(), RuntimeEventSource.CURRENT_MAPPING_VERSION);
         dispatcher.getObject().scheduleFromQueue(source,
                 more -> acknowledge(record, observed == null ? "0" : observed.toString(), more));
     }

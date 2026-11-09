@@ -104,48 +104,48 @@ public class TaskDirectiveService {
     public TaskDirectiveReceipt submit(String userId, String sessionId, TaskDirectiveSubmit request) {
         validate(request);
         ExecutionScopeDO source = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), false);
-        if (!"RESPONSE".equals(source.kind())) {
+        if (!"RESPONSE".equals(source.getKind())) {
             throw error(RuntimeExceptionCode.FORBIDDEN, "只有消息回复可以提交目标修改");
         }
-        ConversationDO conversation = conversations.lockOwned(userId, source.conversationId());
+        ConversationDO conversation = conversations.lockOwned(userId, source.getConversationId());
         requireConversation(source, conversation);
         String hash = CanonicalJson.sha256(json, RuntimePayloads.toJson(json, request));
-        TaskDirectiveDO prior = directives.findByKey(userId, source.scopeId(), request.logicalKey());
+        TaskDirectiveDO prior = directives.findByKey(userId, source.getScopeId(), request.logicalKey());
         if (prior != null) {
-            if (!hash.equals(prior.payloadHash())) {
+            if (!hash.equals(prior.getPayloadHash())) {
                 throw error(RuntimeExceptionCode.CONFLICT, "相同修改键的内容不一致");
             }
             return receipt(prior);
         }
         ResponseRuntimeDO reply = replies.lockByBinding(userId, scopeMapper.findBindingBySession(userId, sessionId));
-        if (reply == null || reply.cancellationRequested() || !Set.of("QUEUED", "RUNNING", "RECOVERING").contains(reply.status())) {
+        if (reply == null || reply.isCancellationRequested() || !Set.of("QUEUED", "RUNNING", "RECOVERING").contains(reply.getStatus())) {
             throw error(RuntimeExceptionCode.CONFLICT, "当前回复已不能提交修改");
         }
-        if (!request.taskId().equals(conversation.activeTaskId())) {
+        if (!request.taskId().equals(conversation.getActiveTaskId())) {
             throw error(RuntimeExceptionCode.NOT_FOUND, "目标不是当前会话的在途目标");
         }
         TaskDO task = tasks.lockOwnedRow(userId, request.taskId());
-        if (task == null || !source.conversationId().equals(task.conversationId()) || task.cancelRequestedAt() != null || TERMINAL.contains(task.status())) {
+        if (task == null || !source.getConversationId().equals(task.getConversationId()) || task.getCancelRequestedAt() != null || TERMINAL.contains(task.getStatus())) {
             throw error(RuntimeExceptionCode.CONFLICT, "目标已停止或结束");
         }
-        if (task.version() != request.expectedVersion()) {
-            throw error(RuntimeExceptionCode.CONFLICT, "目标版本已变化，当前版本为" + task.version());
+        if (task.getVersion() != request.expectedVersion()) {
+            throw error(RuntimeExceptionCode.CONFLICT, "目标版本已变化，当前版本为" + task.getVersion());
         }
-        var snapshot = contexts.freeze(userId, reply.bindingId());
-        TaskGoalStateDO goal = directives.goalState(userId, task.taskId());
-        if (snapshot.activeTask() == null || !task.taskId().equals(snapshot.activeTask().taskId())
-                || snapshot.activeTask().goalRevision() != goal.goalRevision()) {
+        var snapshot = contexts.freeze(userId, reply.getBindingId());
+        TaskGoalStateDO goal = directives.goalState(userId, task.getTaskId());
+        if (snapshot.activeTask() == null || !task.getTaskId().equals(snapshot.activeTask().taskId())
+                || snapshot.activeTask().goalRevision() != goal.getGoalRevision()) {
             throw error(RuntimeExceptionCode.CONFLICT, "目标内容已变化，请确认当前目标后再提交修改");
         }
         var message = snapshot.messages().getLast();
-        TaskDirectiveDO row = new TaskDirectiveDO(UUID.randomUUID().toString(), userId, source.conversationId(),
-                source.conversationGeneration(), message.messageId(), source.scopeId(), task.taskId(), request.logicalKey(), hash,
-                task.version(), goal.goalRevision(), request.kind(), request.content(), message.text(),
+        TaskDirectiveDO row = new TaskDirectiveDO(UUID.randomUUID().toString(), userId, source.getConversationId(),
+                source.getConversationGeneration(), message.messageId(), source.getScopeId(), task.getTaskId(), request.logicalKey(), hash,
+                task.getVersion(), goal.getGoalRevision(), request.kind(), request.content(), message.text(),
                 RuntimePayloads.toJson(json, message.artifactIds()), "ACCEPTED", null, null, null, null, null);
         directives.insert(row, now());
         publish(source, row, "ACCEPTED", null, null, null, null);
         log.info("目标修改已持久受理 directiveId={} taskId={} sourceMessageId={} kind={} expectedVersion={}",
-                row.directiveId(), task.taskId(), row.sourceMessageId(), row.kind(), row.expectedVersion());
+                row.getDirectiveId(), task.getTaskId(), row.getSourceMessageId(), row.getKind(), row.getExpectedVersion());
         return receipt(row);
     }
 
@@ -161,33 +161,33 @@ public class TaskDirectiveService {
             throw error(RuntimeExceptionCode.VALIDATION, "修改决定参数无效");
         }
         ExecutionScopeDO target = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), false);
-        if (!"TASK".equals(target.kind()) || !scopeMapper.findBindingBySession(userId, sessionId)
-                .equals(bindings.findMasterBindingId(userId, target.ownerId()))) {
+        if (!"TASK".equals(target.getKind()) || !scopeMapper.findBindingBySession(userId, sessionId)
+                .equals(bindings.findMasterBindingId(userId, target.getOwnerId()))) {
             throw error(RuntimeExceptionCode.FORBIDDEN, "只有目标协调会话可以应用修改");
         }
-        requireConversation(target, conversations.lockOwned(userId, target.conversationId()));
-        TaskDO task = tasks.lockOwnedRow(userId, target.ownerId());
+        requireConversation(target, conversations.lockOwned(userId, target.getConversationId()));
+        TaskDO task = tasks.lockOwnedRow(userId, target.getOwnerId());
         TaskDirectiveDO row = directives.lock(userId, request.directiveId());
-        if (row == null || !task.taskId().equals(row.taskId()) || row.generation() != target.conversationGeneration()) {
+        if (row == null || !task.getTaskId().equals(row.getTaskId()) || row.getGeneration() != target.getConversationGeneration()) {
             throw error(RuntimeExceptionCode.NOT_FOUND, "修改指令不存在或不属于当前目标");
         }
-        if (!"ACCEPTED".equals(row.status())) {
+        if (!"ACCEPTED".equals(row.getStatus())) {
             return receipt(row);
         }
-        if (task.cancelRequestedAt() != null || TERMINAL.contains(task.status())) {
+        if (task.getCancelRequestedAt() != null || TERMINAL.contains(task.getStatus())) {
             return reject(target, task, row, "TASK_ENDED", "目标已停止，修改未应用");
         }
-        TaskGoalStateDO goal = directives.goalState(userId, task.taskId());
-        if (goal.goalRevision() != row.expectedGoalRevision()) {
+        TaskGoalStateDO goal = directives.goalState(userId, task.getTaskId());
+        if (goal.getGoalRevision() != row.getExpectedGoalRevision()) {
             return reject(target, task, row, "GOAL_CHANGED", "目标内容已被其他修改更新，请重新确认本次要求");
         }
-        if (task.version() != request.expectedVersion()) {
-            throw error(RuntimeExceptionCode.CONFLICT, "目标版本已变化，当前版本为" + task.version());
+        if (task.getVersion() != request.expectedVersion()) {
+            throw error(RuntimeExceptionCode.CONFLICT, "目标版本已变化，当前版本为" + task.getVersion());
         }
         if ("REJECT".equals(request.decision())) {
             return reject(target, task, row, "COORDINATOR_REJECTED", request.reason());
         }
-        if (!Set.of("QUEUED", "RUNNING").contains(task.status()) || hasOpenEffects(target)) {
+        if (!Set.of("QUEUED", "RUNNING").contains(task.getStatus()) || hasOpenEffects(target)) {
             throw error(RuntimeExceptionCode.CONFLICT, "当前操作或交互尚未处理完成，修改仍为已收到，暂不应用");
         }
         List<String> files = artifactIds(row);
@@ -196,42 +196,42 @@ public class TaskDirectiveService {
                 return reject(target, task, row, "MATERIAL_UNAVAILABLE", "补充材料已失效，请重新添加材料");
             }
         }
-        List<TaskDirectiveDO> effective = "REPLACE".equals(row.kind()) ? List.of() : directives.effectiveApplied(userId, task.taskId());
-        long size = original(goal.inputJson()).length() + row.sourceText().length()
-                + effective.stream().mapToLong(item -> item.sourceText().length()).sum();
+        List<TaskDirectiveDO> effective = "REPLACE".equals(row.getKind()) ? List.of() : directives.effectiveApplied(userId, task.getTaskId());
+        long size = original(goal.getInputJson()).length() + row.getSourceText().length()
+                + effective.stream().mapToLong(item -> item.getSourceText().length()).sum();
         if (size > 200000) {
             return reject(target, task, row, "CONTEXT_LIMIT", "修改后的材料超过当前处理范围，请精简材料");
         }
-        ObjectNode input = object(goal.inputJson());
-        if ("REPLACE".equals(row.kind())) {
-            input.put("objective", row.content());
+        ObjectNode input = object(goal.getInputJson());
+        if ("REPLACE".equals(row.getKind())) {
+            input.put("objective", row.getContent());
         }
-        input.put("goalRevision", goal.goalRevision() + 1);
-        if (directives.applyGoal(userId, task.taskId(), task.version(), goal.goalRevision(), RuntimePayloads.toJson(json, input)) != 1) {
+        input.put("goalRevision", goal.getGoalRevision() + 1);
+        if (directives.applyGoal(userId, task.getTaskId(), task.getVersion(), goal.getGoalRevision(), RuntimePayloads.toJson(json, input)) != 1) {
             throw error(RuntimeExceptionCode.CONFLICT, "应用修改时目标版本已变化");
         }
         // 仍保留旧计划和证据，但它们不能再激活依赖、提交结果或复用旧材料进入新计划。
-        long barrierVersion = task.planVersion() + 1;
-        plans.supersedePlans(task.taskId(), barrierVersion);
-        plans.supersedeUnstartedJobs(task.taskId(), barrierVersion);
-        plans.barrierInFlightJobs(task.taskId(), barrierVersion);
-        plans.cancelSupersededCommands(task.taskId(), barrierVersion);
-        plans.cancelSupersededSignals(task.taskId());
-        var existingFiles = artifactMapper.listTaskIds(userId, task.taskId());
-        artifacts.attach(userId, task.taskId(), files.stream().filter(id -> !existingFiles.contains(id)).toList());
-        directives.finish(userId, row.directiveId(), "APPLIED", task.version() + 1, goal.goalRevision() + 1, null, null);
-        publish(target, row, "APPLIED", task.version() + 1, goal.goalRevision() + 1, null, null);
-        events.publish(target, "goal-change:" + row.directiveId(), "task.goal_changed", Map.of(
-                "taskId", task.taskId(), "version", task.version() + 1, "goalRevision", goal.goalRevision() + 1,
-                "sourceMessageId", row.sourceMessageId()));
-        for (String pending : directives.pending(userId, task.taskId())) {
+        long barrierVersion = task.getPlanVersion() + 1;
+        plans.supersedePlans(task.getTaskId(), barrierVersion);
+        plans.supersedeUnstartedJobs(task.getTaskId(), barrierVersion);
+        plans.barrierInFlightJobs(task.getTaskId(), barrierVersion);
+        plans.cancelSupersededCommands(task.getTaskId(), barrierVersion);
+        plans.cancelSupersededSignals(task.getTaskId());
+        var existingFiles = artifactMapper.listTaskIds(userId, task.getTaskId());
+        artifacts.attach(userId, task.getTaskId(), files.stream().filter(id -> !existingFiles.contains(id)).toList());
+        directives.finish(userId, row.getDirectiveId(), "APPLIED", task.getVersion() + 1, goal.getGoalRevision() + 1, null, null);
+        publish(target, row, "APPLIED", task.getVersion() + 1, goal.getGoalRevision() + 1, null, null);
+        events.publish(target, "goal-change:" + row.getDirectiveId(), "task.goal_changed", Map.of(
+                "taskId", task.getTaskId(), "version", task.getVersion() + 1, "goalRevision", goal.getGoalRevision() + 1,
+                "sourceMessageId", row.getSourceMessageId()));
+        for (String pending : directives.pending(userId, task.getTaskId())) {
             TaskDirectiveDO other = directives.lock(userId, pending);
-            if (other.expectedGoalRevision() != goal.goalRevision() + 1) {
+            if (other.getExpectedGoalRevision() != goal.getGoalRevision() + 1) {
                 reject(target, task, other, "GOAL_CHANGED", "目标内容已变化，本次并发修改未应用，请重新确认");
             }
         }
-        log.info("目标修改已应用 directiveId={} taskId={} goalRevision={} version={}", row.directiveId(), task.taskId(), goal.goalRevision() + 1, task.version() + 1);
-        return receipt(directives.lock(userId, row.directiveId()));
+        log.info("目标修改已应用 directiveId={} taskId={} goalRevision={} version={}", row.getDirectiveId(), task.getTaskId(), goal.getGoalRevision() + 1, task.getVersion() + 1);
+        return receipt(directives.lock(userId, row.getDirectiveId()));
     }
 
     /**
@@ -239,98 +239,98 @@ public class TaskDirectiveService {
      */
     @Transactional
     public void dispatch(TaskDirectiveTargetDO candidate) {
-        String userId = candidate.userId();
-        ExecutionScopeDO target = scopes.lockOwned(userId, scopes.scopeForTask(userId, candidate.taskId()), false);
-        TaskDO task = tasks.lockOwnedRow(userId, candidate.taskId());
-        TaskDirectiveDO row = directives.lock(userId, candidate.directiveId());
-        if (row == null || !"ACCEPTED".equals(row.status())) {
+        String userId = candidate.getUserId();
+        ExecutionScopeDO target = scopes.lockOwned(userId, scopes.scopeForTask(userId, candidate.getTaskId()), false);
+        TaskDO task = tasks.lockOwnedRow(userId, candidate.getTaskId());
+        TaskDirectiveDO row = directives.lock(userId, candidate.getDirectiveId());
+        if (row == null || !"ACCEPTED".equals(row.getStatus())) {
             return;
         }
-        ConversationDO conversation = conversations.lockOwned(userId, target.conversationId());
-        if (!"ACTIVE".equals(conversation.status()) || conversation.generation() != row.generation()
-                || task.cancelRequestedAt() != null || TERMINAL.contains(task.status())) {
+        ConversationDO conversation = conversations.lockOwned(userId, target.getConversationId());
+        if (!"ACTIVE".equals(conversation.getStatus()) || conversation.getGeneration() != row.getGeneration()
+                || task.getCancelRequestedAt() != null || TERMINAL.contains(task.getStatus())) {
             reject(target, task, row, "TASK_ENDED", "目标已停止或会话已失效，修改未应用");
             return;
         }
-        TaskGoalStateDO goal = directives.goalState(userId, task.taskId());
-        if (goal.goalRevision() != row.expectedGoalRevision()) {
+        TaskGoalStateDO goal = directives.goalState(userId, task.getTaskId());
+        if (goal.getGoalRevision() != row.getExpectedGoalRevision()) {
             reject(target, task, row, "GOAL_CHANGED", "目标内容已变化，请重新确认本次修改");
             return;
         }
-        directives.defer(userId, row.directiveId(), now().plusSeconds(2));
-        if (!directives.openOperations(userId, target.scopeId()).isEmpty()) {
+        directives.defer(userId, row.getDirectiveId(), now().plusSeconds(2));
+        if (!directives.openOperations(userId, target.getScopeId()).isEmpty()) {
             waiting(target, row, TaskDirectiveWaitReason.WAITING_OPERATION);
             return;
         }
-        if (!directives.openInteractions(userId, target.scopeId()).isEmpty()) {
+        if (!directives.openInteractions(userId, target.getScopeId()).isEmpty()) {
             waiting(target, row, TaskDirectiveWaitReason.WAITING_USER);
             return;
         }
-        if (!Set.of("QUEUED", "RUNNING").contains(task.status())
-                || commands.countUnprocessedMasterCommands(userId, task.taskId()) > 0
-                || directives.pendingControls(userId, task.taskId()) > 0) {
+        if (!Set.of("QUEUED", "RUNNING").contains(task.getStatus())
+                || commands.countUnprocessedMasterCommands(userId, task.getTaskId()) > 0
+                || directives.pendingControls(userId, task.getTaskId()) > 0) {
             waiting(target, row, TaskDirectiveWaitReason.WAITING_COORDINATOR);
             return;
         }
-        if (row.commandId() != null) {
-            var command = commands.findOwned(userId, row.commandId());
-            if (command != null && Set.of("APPLIED", "BLOCKED", "CANCELLED").contains(command.status())) {
+        if (row.getCommandId() != null) {
+            var command = commands.findOwned(userId, row.getCommandId());
+            if (command != null && Set.of("APPLIED", "BLOCKED", "CANCELLED").contains(command.getStatus())) {
                 reject(target, task, row, "NO_DECISION", "此次修改未得到有效处理，原要求已保留，请重新确认");
             }
             return;
         }
-        String first = directives.pending(userId, task.taskId()).getFirst();
-        if (!first.equals(row.directiveId())) {
+        String first = directives.pending(userId, task.getTaskId()).getFirst();
+        if (!first.equals(row.getDirectiveId())) {
             return;
         }
-        directives.clearCandidate(userId, task.taskId());
-        String binding = bindings.findMasterBindingId(userId, task.taskId());
+        directives.clearCandidate(userId, task.getTaskId());
+        String binding = bindings.findMasterBindingId(userId, task.getTaskId());
         String commandId = UUID.randomUUID().toString();
         String message = "用户对当前目标提出修改。只在本目标协调会话处理，先调用apply_task_directive作出APPLY或REJECT决定。"
                 + "ACCEPTED仅表示收到，未应用不能声称生效；有待审批或结果未知的操作先处理，不能重放未知写入。"
                 + "应用后必须用新目标修订号准备新的局部上下文并重发计划，旧结果不是新目标的交付。参数与来源原文：\n"
-                + RuntimePayloads.toJson(json, Map.of("directiveId", row.directiveId(), "expectedVersion", task.version(),
-                "kind", row.kind(), "content", row.content(), "userMessage", row.sourceText()));
-        String payload = RuntimePayloads.toJson(json, Map.of("message", message, "directiveId", row.directiveId()));
-        commands.insertControl(commandId, userId, "directive-coordinate:" + row.directiveId(), "initial",
-                ContentDigests.sha256(payload), task.taskId(), binding, "TASK_DIRECTIVE", payload, now());
-        directives.bindCommand(userId, row.directiveId(), commandId);
+                + RuntimePayloads.toJson(json, Map.of("directiveId", row.getDirectiveId(), "expectedVersion", task.getVersion(),
+                "kind", row.getKind(), "content", row.getContent(), "userMessage", row.getSourceText()));
+        String payload = RuntimePayloads.toJson(json, Map.of("message", message, "directiveId", row.getDirectiveId()));
+        commands.insertControl(commandId, userId, "directive-coordinate:" + row.getDirectiveId(), "initial",
+                ContentDigests.sha256(payload), task.getTaskId(), binding, "TASK_DIRECTIVE", payload, now());
+        directives.bindCommand(userId, row.getDirectiveId(), commandId);
         waiting(target, row, TaskDirectiveWaitReason.COORDINATING);
-        log.info("目标修改协调已排队 directiveId={} taskId={} commandId={}", row.directiveId(), task.taskId(), commandId);
+        log.info("目标修改协调已排队 directiveId={} taskId={} commandId={}", row.getDirectiveId(), task.getTaskId(), commandId);
     }
 
     /** 等待原因只在实际变化时写入并通知；重复扫描不产生重复进度事件。 */
     private void waiting(ExecutionScopeDO scope, TaskDirectiveDO row, TaskDirectiveWaitReason reason) {
-        if (directives.waiting(scope.userId(), row.directiveId(), reason) == 1) {
+        if (directives.waiting(scope.getUserId(), row.getDirectiveId(), reason) == 1) {
             publish(scope, row, "ACCEPTED", null, null, reason.name(), null);
         }
     }
 
     private boolean hasOpenEffects(ExecutionScopeDO scope) {
-        return !directives.openOperations(scope.userId(), scope.scopeId()).isEmpty()
-                || !directives.openInteractions(scope.userId(), scope.scopeId()).isEmpty();
+        return !directives.openOperations(scope.getUserId(), scope.getScopeId()).isEmpty()
+                || !directives.openInteractions(scope.getUserId(), scope.getScopeId()).isEmpty();
     }
 
     private TaskDirectiveReceipt reject(ExecutionScopeDO scope, TaskDO task, TaskDirectiveDO row, String code, String reason) {
-        directives.finish(scope.userId(), row.directiveId(), "REJECTED", null, null, code, reason);
+        directives.finish(scope.getUserId(), row.getDirectiveId(), "REJECTED", null, null, code, reason);
         publish(scope, row, "REJECTED", null, null, code, reason);
-        if (task.cancelRequestedAt() == null && !TERMINAL.contains(task.status()) && task.planVersion() > 0) {
-            PlanDO plan = plans.lockPlan(scope.userId(), task.taskId(), task.planVersion());
-            if (plan != null && "ACTIVE".equals(plan.status())) {
+        if (task.getCancelRequestedAt() == null && !TERMINAL.contains(task.getStatus()) && task.getPlanVersion() > 0) {
+            PlanDO plan = plans.lockPlan(scope.getUserId(), task.getTaskId(), task.getPlanVersion());
+            if (plan != null && "ACTIVE".equals(plan.getStatus())) {
                 signals.onJobStateChanged(plan);
             }
         }
-        log.info("目标修改未应用 directiveId={} taskId={} reasonCode={}", row.directiveId(), row.taskId(), code);
-        return receipt(directives.lock(scope.userId(), row.directiveId()));
+        log.info("目标修改未应用 directiveId={} taskId={} reasonCode={}", row.getDirectiveId(), row.getTaskId(), code);
+        return receipt(directives.lock(scope.getUserId(), row.getDirectiveId()));
     }
 
     private void publish(ExecutionScopeDO scope, TaskDirectiveDO row, String status, Long version, Long revision, String code, String reason) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("schemaVersion", 2);
-        payload.put("directive", TaskDirectiveView.from(directives.lock(scope.userId(), row.directiveId())));
-        payload.put("directiveId", row.directiveId());
-        payload.put("taskId", row.taskId());
-        payload.put("sourceMessageId", row.sourceMessageId());
+        payload.put("directive", TaskDirectiveView.from(directives.lock(scope.getUserId(), row.getDirectiveId())));
+        payload.put("directiveId", row.getDirectiveId());
+        payload.put("taskId", row.getTaskId());
+        payload.put("sourceMessageId", row.getSourceMessageId());
         payload.put("status", status);
         if (version != null) {
             payload.put("appliedVersion", version);
@@ -340,17 +340,17 @@ public class TaskDirectiveService {
             payload.put("reasonCode", code);
             payload.put("reasonMessage", reason);
         }
-        events.publish(scope, "directive:" + row.directiveId() + ":" + status + ":" + UUID.randomUUID(), "directive.status_changed", payload);
+        events.publish(scope, "directive:" + row.getDirectiveId() + ":" + status + ":" + UUID.randomUUID(), "directive.status_changed", payload);
     }
 
     private TaskDirectiveReceipt receipt(TaskDirectiveDO row) {
-        return new TaskDirectiveReceipt(row.directiveId(), row.taskId(), row.sourceMessageId(), row.status(),
-                row.appliedVersion(), row.appliedGoalRevision(), row.reasonCode(), row.reasonMessage());
+        return new TaskDirectiveReceipt(row.getDirectiveId(), row.getTaskId(), row.getSourceMessageId(), row.getStatus(),
+                row.getAppliedVersion(), row.getAppliedGoalRevision(), row.getReasonCode(), row.getReasonMessage());
     }
 
     private List<String> artifactIds(TaskDirectiveDO row) {
         try {
-            return java.util.Arrays.asList(json.treeToValue(RuntimePayloads.readJson(json, row.artifactIdsJson()), String[].class));
+            return java.util.Arrays.asList(json.treeToValue(RuntimePayloads.readJson(json, row.getArtifactIdsJson()), String[].class));
         } catch (Exception exception) {
             throw new IllegalStateException("修改材料引用无法读取", exception);
         }
@@ -369,7 +369,7 @@ public class TaskDirectiveService {
     }
 
     private void requireConversation(ExecutionScopeDO scope, ConversationDO conversation) {
-        if (!"ACTIVE".equals(conversation.status()) || conversation.generation() != scope.conversationGeneration()) {
+        if (!"ACTIVE".equals(conversation.getStatus()) || conversation.getGeneration() != scope.getConversationGeneration()) {
             throw error(RuntimeExceptionCode.NOT_FOUND, "会话已失效");
         }
     }

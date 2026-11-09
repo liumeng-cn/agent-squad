@@ -34,8 +34,8 @@ public class NativeEventBusinessWriter implements RuntimeEventBusinessWriter {
     public void apply(ProjectionTargetDO target, SessionEvent event) {
         Map<String, Object> data = SessionEventTypes.BUILTIN.contains(event.type()) ? event.data() : Map.of();
         Object status = "run/end".equals(event.type()) ? data.get("status") : null;
-        if (target.taskId() == null && "run/end".equals(event.type()) && "completed".equals(status)
-                && replies.completionProtocol(target.userId(), target.bindingId())
+        if (target.getTaskId() == null && "run/end".equals(event.type()) && "completed".equals(status)
+                && replies.completionProtocol(target.getUserId(), target.getBindingId())
                 == ResponseCompletionProtocol.NATURAL) {
             data = new java.util.LinkedHashMap<>(data);
             data.put("naturalOutput", naturalOutputs.read(target, event));

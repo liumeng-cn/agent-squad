@@ -193,8 +193,8 @@ public class CommandDeliveryService {
         }
         try {
             CommandClaimContextDO context = deliveryMapper.claimContext(commandId);
-            boolean control = context != null && ("STOP".equals(context.action())
-                    || "RESPOND".equals(context.action()));
+            boolean control = context != null && ("STOP".equals(context.getAction())
+                    || "RESPOND".equals(context.getAction()));
             (control ? controlExecutor : deliveryExecutor).execute(() -> {
                 try {
                     deliver(commandId);
@@ -242,7 +242,7 @@ public class CommandDeliveryService {
             // 尚未调用原生 SDK，缺失 Binding 不可能产生本次原生运行。
             CommandClaimContextDO context = deliveryMapper.claimContext(commandId);
             if (context != null) {
-                admission.releaseUnsubmitted(context.userId(), context.bindingId(), commandId);
+                admission.releaseUnsubmitted(context.getUserId(), context.getBindingId(), commandId);
             }
             retry(commandId, token, 1, "BINDING_MISSING");
             return;
@@ -250,15 +250,15 @@ public class CommandDeliveryService {
         try {
             RuntimeCommandAction action;
             try {
-                action = RuntimeCommandAction.valueOf(delivery.action());
+                action = RuntimeCommandAction.valueOf(delivery.getAction());
             } catch (IllegalArgumentException exception) {
-                admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
-                fail(commandId, token, delivery.attempts(), "UNKNOWN_ACTION");
+                admission.releaseUnsubmitted(delivery.getUserId(), delivery.getBindingId(), commandId);
+                fail(commandId, token, delivery.getAttempts(), "UNKNOWN_ACTION");
                 return;
             }
             if (action != RuntimeCommandAction.STOP && action != RuntimeCommandAction.DELETE_CONVERSATION) {
-                String scopeId = scopes.scopeForSession(delivery.userId(), delivery.sessionId());
-                authorization.prepare(delivery.userId(), scopeId);
+                String scopeId = scopes.scopeForSession(delivery.getUserId(), delivery.getSessionId());
+                authorization.prepare(delivery.getUserId(), scopeId);
             }
             switch (action) {
                 case SUBMIT, MESSAGE_SUBMIT, MASTER_SIGNAL, TASK_DIRECTIVE -> deliverSubmit(commandId, token, delivery);
@@ -266,17 +266,17 @@ public class CommandDeliveryService {
                 case RESUME -> deliverResume(commandId, token, delivery);
                 case RESPOND -> deliverRespond(commandId, token, delivery);
                 case DELETE_CONVERSATION -> {
-                    admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
-                    fail(commandId, token, delivery.attempts(), "UNDELIVERABLE_ACTION");
+                    admission.releaseUnsubmitted(delivery.getUserId(), delivery.getBindingId(), commandId);
+                    fail(commandId, token, delivery.getAttempts(), "UNDELIVERABLE_ACTION");
                 }
             }
         } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
-            admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
-            fail(commandId, token, delivery.attempts(), "INVALID_PAYLOAD");
+            admission.releaseUnsubmitted(delivery.getUserId(), delivery.getBindingId(), commandId);
+            fail(commandId, token, delivery.getAttempts(), "INVALID_PAYLOAD");
         } catch (ExecutionContextInvalidatedException exception) {
-            restrictions.restrict(delivery.userId(), scopes.scopeForSession(delivery.userId(), delivery.sessionId()), delivery.bindingId());
+            restrictions.restrict(delivery.getUserId(), scopes.scopeForSession(delivery.getUserId(), delivery.getSessionId()), delivery.getBindingId());
         } catch (Exception exception) {
-            retry(commandId, token, delivery.attempts(), "NATIVE_SUBMIT_FAILED");
+            retry(commandId, token, delivery.getAttempts(), "NATIVE_SUBMIT_FAILED");
             Map<String, Object> fields = commandFields(commandId, delivery);
             fields.put("errorType", observations.classify(exception));
             log.warn("AgentScope命令提交失败，将使用同一命令编号重试 {}", observations.logFields(fields));
@@ -284,11 +284,11 @@ public class CommandDeliveryService {
     }
 
     private void deliverSubmit(String commandId, String token, DeliveryDO delivery) throws Exception {
-        JsonNode payload = RuntimePayloads.readJson(objectMapper, delivery.payloadJson());
+        JsonNode payload = RuntimePayloads.readJson(objectMapper, delivery.getPayloadJson());
         String message = payload == null ? null : payload.path("message").textValue();
         if (message == null || message.isBlank()) {
-            admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
-            fail(commandId, token, delivery.attempts(), "INVALID_PAYLOAD");
+            admission.releaseUnsubmitted(delivery.getUserId(), delivery.getBindingId(), commandId);
+            fail(commandId, token, delivery.getAttempts(), "INVALID_PAYLOAD");
             return;
         }
         NativeSubmissionReceipt receipt = nativeSessionGateway.submit(delivery, message);
@@ -304,14 +304,14 @@ public class CommandDeliveryService {
     private void deliverStop(String commandId, String token, DeliveryDO delivery) {
         boolean interrupted = nativeSessionGateway.stop(delivery);
         if (!interrupted) {
-            if (delivery.taskId() == null) {
-                var target = new ProjectionTargetDO(delivery.userId(), null,
-                        delivery.bindingId(), delivery.agentId(), delivery.sessionId(), 0);
+            if (delivery.getTaskId() == null) {
+                var target = new ProjectionTargetDO(delivery.getUserId(), null,
+                        delivery.getBindingId(), delivery.getAgentId(), delivery.getSessionId(), 0);
                 if (nativeSessionGateway.quiescent(target)) {
-                    responses.stopped(delivery.userId(), delivery.bindingId());
+                    responses.stopped(delivery.getUserId(), delivery.getBindingId());
                 }
             } else {
-                taskFinalizerService.finalizeCancelledTask(delivery.userId(), delivery.taskId());
+                taskFinalizerService.finalizeCancelledTask(delivery.getUserId(), delivery.getTaskId());
             }
         }
         saveReceipt(commandId, token, delivery, null, null,
@@ -322,12 +322,12 @@ public class CommandDeliveryService {
      * 投递恢复意图；恢复前必须已存在原生回合，未受理目标先等 SUBMIT 投递成功。
      */
     private void deliverResume(String commandId, String token, DeliveryDO delivery) {
-        String turnId = deliveryMapper.findSubmitTurnId(delivery.userId(), delivery.taskId(),
-                delivery.bindingId());
+        String turnId = deliveryMapper.findSubmitTurnId(delivery.getUserId(), delivery.getTaskId(),
+                delivery.getBindingId());
         if (turnId == null) {
             // 未进入 SDK，恢复命令确定没有启动新的原生 Run。
-            admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
-            retry(commandId, token, delivery.attempts(), "NATIVE_TURN_MISSING");
+            admission.releaseUnsubmitted(delivery.getUserId(), delivery.getBindingId(), commandId);
+            retry(commandId, token, delivery.getAttempts(), "NATIVE_TURN_MISSING");
             return;
         }
         try {
@@ -338,26 +338,26 @@ public class CommandDeliveryService {
                 saveReceipt(commandId, token, delivery, turnId, null, "resumed");
                 return;
             }
-            if (message.contains(ALREADY_SETTLED) || delivery.attempts() >= MAX_RESUME_ATTEMPTS) {
+            if (message.contains(ALREADY_SETTLED) || delivery.getAttempts() >= MAX_RESUME_ATTEMPTS) {
                 String errorCode = message.contains(ALREADY_SETTLED)
                         ? "NATIVE_TURN_SETTLED" : "NATIVE_RESUME_REJECTED";
-                if (delivery.taskId() == null) {
+                if (delivery.getTaskId() == null) {
                     workerRecoveryService.discardSettledResume(commandId, token);
                     if (!message.contains(ALREADY_SETTLED)) {
-                        responses.rejectedResume(delivery.userId(), delivery.bindingId());
+                        responses.rejectedResume(delivery.getUserId(), delivery.getBindingId());
                     }
-                } else if (MasterAgentIdentity.AGENT_ID.equals(delivery.agentId())) {
-                    taskControlService.blockRejectedResume(delivery.userId(), delivery.taskId(),
+                } else if (MasterAgentIdentity.AGENT_ID.equals(delivery.getAgentId())) {
+                    taskControlService.blockRejectedResume(delivery.getUserId(), delivery.getTaskId(),
                             commandId, token, errorCode);
                 } else if (message.contains(ALREADY_SETTLED)) {
                     workerRecoveryService.discardSettledResume(commandId, token);
                 } else {
-                    workerRecoveryService.blockRejectedResume(delivery.userId(), delivery.taskId(),
-                            delivery.bindingId(), commandId, token, errorCode);
+                    workerRecoveryService.blockRejectedResume(delivery.getUserId(), delivery.getTaskId(),
+                            delivery.getBindingId(), commandId, token, errorCode);
                 }
                 return;
             }
-            retry(commandId, token, delivery.attempts(), "NATIVE_RESUME_REJECTED");
+            retry(commandId, token, delivery.getAttempts(), "NATIVE_RESUME_REJECTED");
             return;
         }
         saveReceipt(commandId, token, delivery, turnId, null, "resumed");
@@ -368,16 +368,16 @@ public class CommandDeliveryService {
      * 原生请求已消失说明交互已被框架侧解析，按终局受理不再重试。
      */
     private void deliverRespond(String commandId, String token, DeliveryDO delivery) throws Exception {
-        JsonNode payload = RuntimePayloads.readJson(objectMapper, delivery.payloadJson());
+        JsonNode payload = RuntimePayloads.readJson(objectMapper, delivery.getPayloadJson());
         String requestId = payload == null ? null : payload.path("requestId").textValue();
         String answerText = payload == null ? null : payload.path("answerText").textValue();
         if (requestId == null || requestId.isBlank() || answerText == null) {
-            admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
-            fail(commandId, token, delivery.attempts(), "INVALID_PAYLOAD");
+            admission.releaseUnsubmitted(delivery.getUserId(), delivery.getBindingId(), commandId);
+            fail(commandId, token, delivery.getAttempts(), "INVALID_PAYLOAD");
             return;
         }
-        if (delivery.taskId() != null) {
-            taskFinalizerService.resumeFromInteraction(delivery.userId(), delivery.taskId());
+        if (delivery.getTaskId() != null) {
+            taskFinalizerService.resumeFromInteraction(delivery.getUserId(), delivery.getTaskId());
         }
         String nativeStatus = nativeSessionGateway.respond(delivery, requestId, answerText);
         saveReceipt(commandId, token, delivery, null, null, nativeStatus);
@@ -389,10 +389,10 @@ public class CommandDeliveryService {
         if (saved == 1) {
             if ("rejected".equals(nativeStatus)) {
                 // SDK 已明确拒绝受理，未生成新的原生运行。
-                admission.releaseUnsubmitted(delivery.userId(), delivery.bindingId(), commandId);
+                admission.releaseUnsubmitted(delivery.getUserId(), delivery.getBindingId(), commandId);
             } else {
-                admission.bindReceipt(delivery.userId(), delivery.bindingId(),
-                        commandId, delivery.action(), turnId);
+                admission.bindReceipt(delivery.getUserId(), delivery.getBindingId(),
+                        commandId, delivery.getAction(), turnId);
             }
             Map<String, Object> fields = commandFields(commandId, delivery);
             fields.put("nativeStatus", nativeStatus);
@@ -409,11 +409,11 @@ public class CommandDeliveryService {
     private Map<String, Object> commandFields(String commandId, DeliveryDO delivery) {
         Map<String, Object> fields = new LinkedHashMap<>();
         fields.put("commandId", commandId);
-        if (delivery.taskId() != null) {
-            fields.put("taskId", delivery.taskId());
+        if (delivery.getTaskId() != null) {
+            fields.put("taskId", delivery.getTaskId());
         }
-        fields.put("action", delivery.action());
-        fields.put("attempt", delivery.attempts());
+        fields.put("action", delivery.getAction());
+        fields.put("attempt", delivery.getAttempts());
         return fields;
     }
 

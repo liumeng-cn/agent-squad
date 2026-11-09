@@ -80,7 +80,7 @@ public class ConversationDeletionService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "幂等键长度必须为 1 到 160");
         }
         ConversationDO conversation = conversationMapper.lockOwned(userId, conversationId);
-        if (conversation == null || ConversationStatus.DELETED.name().equals(conversation.status())) {
+        if (conversation == null || ConversationStatus.DELETED.name().equals(conversation.getStatus())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "会话不存在");
         }
         String scopeKey = "conversation.delete:" + conversationId;
@@ -89,15 +89,15 @@ public class ConversationDeletionService {
         String payloadHash = ContentDigests.sha256(payloadJson);
         CommandDO prior = commandMapper.findByKey(userId, scopeKey, idempotencyKey);
         if (prior != null) {
-            if (!prior.payloadHash().equals(payloadHash)) {
+            if (!prior.getPayloadHash().equals(payloadHash)) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同幂等键的输入不一致");
             }
             return;
         }
-        if (!ConversationStatus.ACTIVE.name().equals(conversation.status())) {
+        if (!ConversationStatus.ACTIVE.name().equals(conversation.getStatus())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "会话正在删除");
         }
-        if (conversation.version() != expectedVersion) {
+        if (conversation.getVersion() != expectedVersion) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "会话版本已变化");
         }
         if (conversationMapper.markDeleting(userId, conversationId, expectedVersion) != 1) {
@@ -105,7 +105,7 @@ public class ConversationDeletionService {
         }
         responseControls.cancelForDeletion(userId, conversationId);
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
-        String activeTaskId = conversation.activeTaskId();
+        String activeTaskId = conversation.getActiveTaskId();
         if (activeTaskId != null) {
             settleActiveTask(userId, conversationId, activeTaskId, now);
         }
@@ -118,16 +118,16 @@ public class ConversationDeletionService {
 
     private void settleActiveTask(String userId, String conversationId, String taskId, LocalDateTime now) {
         TaskDO task = taskMapper.lockOwned(userId, taskId);
-        if (task == null || GoalTaskStatus.valueOf(task.status()).isTerminal()) {
+        if (task == null || GoalTaskStatus.valueOf(task.getStatus()).isTerminal()) {
             conversationMapper.clearActiveTask(userId, conversationId, taskId);
             return;
         }
-        if (task.cancelRequestedAt() != null) {
+        if (task.getCancelRequestedAt() != null) {
             // 已受理的停止命令继续执行，删除不能撤销这些命令再重新创建一组。
             return;
         }
         commandMapper.cancelPendingByTask(userId, taskId);
-        if (GoalTaskStatus.QUEUED.name().equals(task.status()) && task.planVersion() == 0
+        if (GoalTaskStatus.QUEUED.name().equals(task.getStatus()) && task.getPlanVersion() == 0
                 && taskMapper.countStartedCommands(userId, taskId) == 0
                 && completion.countPendingEffects(userId, taskId) == 0) {
             if (taskMapper.updateCancelled(userId, taskId, now) != 1) {
@@ -138,7 +138,7 @@ public class ConversationDeletionService {
             log.info("未受理目标随删除就地取消 taskId={} conversationId={}", taskId, conversationId);
             return;
         }
-        taskControls.cancel(userId, taskId, "conversation-delete", task.version());
+        taskControls.cancel(userId, taskId, "conversation-delete", task.getVersion());
     }
 
     private void publishTaskCompleted(String userId, String taskId, String status, LocalDateTime now) {

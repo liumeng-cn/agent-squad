@@ -26,11 +26,11 @@ public class OperationUnknownService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean mark(OperationDO operation, long expectedVersion, String actor) {
-        var scope = scopes.lockOwned(operation.userId(), operation.scopeId(), false);
-        if (operations.markUnknown(operation.userId(), operation.operationId(), expectedVersion, actor) != 1) {
+        var scope = scopes.lockOwned(operation.getUserId(), operation.getScopeId(), false);
+        if (operations.markUnknown(operation.getUserId(), operation.getOperationId(), expectedVersion, actor) != 1) {
             return false;
         }
-        failures.record(scope, operation.bindingId(), "operation:" + operation.operationId(), new FailureClassification(
+        failures.record(scope, operation.getBindingId(), "operation:" + operation.getOperationId(), new FailureClassification(
                 "EXTERNAL_UNKNOWN", "OPERATION_RESULT_UNCONFIRMED", "OPERATOR", "有一项外部操作的结果尚未确认，系统会先核对，期间不会重复执行。"));
         return true;
     }

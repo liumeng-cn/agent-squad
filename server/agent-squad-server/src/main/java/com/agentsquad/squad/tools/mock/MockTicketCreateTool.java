@@ -83,13 +83,13 @@ public class MockTicketCreateTool implements AgentTool {
                     param.getToolUseBlock().getId(), getName(), "v1", "WRITE",
                     Map.of("title", titleText, "detail", detailText),
                     intent, true, null, 0L, RESERVED_UNITS, "model"));
-            if (!OperationStatus.WAITING_APPROVAL.name().equals(operation.status())) {
+            if (!OperationStatus.WAITING_APPROVAL.name().equals(operation.getStatus())) {
                 // 命中原意图或原调用：结果已在账本中，直接回执，不再挂起。
-                return ToolResultBlock.text("该写入已在账本中（状态 " + operation.status()
+                return ToolResultBlock.text("该写入已在账本中（状态 " + operation.getStatus()
                         + "），等待平台续回结果，无需重复提交。");
             }
             log.info("写入操作等待审批 operationId={} toolCallId={} intentKey={}",
-                    operation.operationId(), param.getToolUseBlock().getId(), intent);
+                    operation.getOperationId(), param.getToolUseBlock().getId(), intent);
             throw new ToolSuspendException("工单创建需要用户在页面上审批后才会执行");
         } catch (RuntimeBusinessException exception) {
             return ToolResultBlock.error(exception.getMessage());

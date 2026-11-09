@@ -84,14 +84,14 @@ public class ReadAttachmentTool implements AgentTool {
                 return ToolResultBlock.error("附件不属于当前执行");
             }
             ArtifactDO artifact = artifacts.content(context.getUserId(), artifactId);
-            String raw = new String(artifact.content(), StandardCharsets.UTF_8);
-            String formatted = MaterialFormatter.format(raw, artifact.mediaType(), MAX_READ_CHARACTERS);
+            String raw = new String(artifact.getContent(), StandardCharsets.UTF_8);
+            String formatted = MaterialFormatter.format(raw, artifact.getMediaType(), MAX_READ_CHARACTERS);
             boolean truncated = formatted.length() < raw.length();
             return ToolResultBlock.text(RuntimePayloads.toJson(json, Map.of(
-                    "artifactId", artifact.artifactId(),
-                    "fileName", artifact.fileName(),
-                    "mediaType", artifact.mediaType(),
-                    "sizeBytes", artifact.sizeBytes(),
+                    "artifactId", artifact.getArtifactId(),
+                    "fileName", artifact.getFileName(),
+                    "mediaType", artifact.getMediaType(),
+                    "sizeBytes", artifact.getSizeBytes(),
                     "content", formatted,
                     "truncated", truncated)));
         } catch (RuntimeBusinessException exception) {

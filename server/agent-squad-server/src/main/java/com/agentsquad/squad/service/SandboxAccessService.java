@@ -34,8 +34,8 @@ public class SandboxAccessService {
         if (binding == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "运行绑定不存在");
         }
-        SandboxExecutionContext context = new SandboxExecutionContext(userId, binding.scopeId(),
-                binding.bindingId(), sessionId, guardToken, turnId, toolCallId);
+        SandboxExecutionContext context = new SandboxExecutionContext(userId, binding.getScopeId(),
+                binding.getBindingId(), sessionId, guardToken, turnId, toolCallId);
         requireCurrent(context);
         return context;
     }
@@ -47,9 +47,9 @@ public class SandboxAccessService {
         scopes.lockOwned(context.userId(), context.scopeId(), true);
         authorization.requireBindingCurrent(context.userId(), context.bindingId());
         SandboxBindingDO binding = mapper.binding(context.userId(), context.sessionId());
-        if (binding == null || !context.scopeId().equals(binding.scopeId())
-                || !context.bindingId().equals(binding.bindingId())
-                || "WORKER".equals(binding.role()) && (context.guardToken() == null
+        if (binding == null || !context.scopeId().equals(binding.getScopeId())
+                || !context.bindingId().equals(binding.getBindingId())
+                || "WORKER".equals(binding.getRole()) && (context.guardToken() == null
                 || mapper.activeWorker(context.userId(), context.bindingId(), context.guardToken()) != 1)) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "运行身份或 Worker 租约已失效");
         }

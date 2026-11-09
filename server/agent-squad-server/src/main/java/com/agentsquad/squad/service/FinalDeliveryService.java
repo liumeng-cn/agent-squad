@@ -33,8 +33,8 @@ public class FinalDeliveryService {
      */
     public void transfer(String userId, String sourceMessageId, String executionId, String taskId) {
         FinalDeliveryDO row = requireCurrent(userId, sourceMessageId);
-        if (!row.ownedBy("RESPONSE", executionId) || !"OWNED".equals(row.state())
-                || deliveries.transfer(userId, sourceMessageId, row.generation(), executionId, taskId) != 1) {
+        if (!row.ownedBy("RESPONSE", executionId) || !"OWNED".equals(row.getState())
+                || deliveries.transfer(userId, sourceMessageId, row.getGeneration(), executionId, taskId) != 1) {
             throw conflict("当前请求的最终交付权已转交或发布，不能创建目标");
         }
     }
@@ -44,16 +44,16 @@ public class FinalDeliveryService {
      */
     public String claimPublication(String userId, String sourceMessageId, String ownerType, String ownerId) {
         FinalDeliveryDO row = requireCurrent(userId, sourceMessageId);
-        if (!row.ownedBy(ownerType, ownerId) || "CLOSED".equals(row.state())) {
+        if (!row.ownedBy(ownerType, ownerId) || "CLOSED".equals(row.getState())) {
             log.info("最终交付候选未获发布权 sourceMessageId={} ownerType={} ownerId={} generation={}",
-                    sourceMessageId, ownerType, ownerId, row.generation());
+                    sourceMessageId, ownerType, ownerId, row.getGeneration());
             return null;
         }
-        if ("PUBLISHED".equals(row.state())) {
-            return row.publishedMessageId();
+        if ("PUBLISHED".equals(row.getState())) {
+            return row.getPublishedMessageId();
         }
         String messageId = UUID.randomUUID().toString();
-        if (deliveries.publish(userId, sourceMessageId, row.generation(), messageId) != 1) {
+        if (deliveries.publish(userId, sourceMessageId, row.getGeneration(), messageId) != 1) {
             throw conflict("最终交付状态已变化");
         }
         return messageId;
@@ -65,7 +65,7 @@ public class FinalDeliveryService {
     public void close(String userId, String sourceMessageId, String ownerType, String ownerId) {
         FinalDeliveryDO row = requireCurrent(userId, sourceMessageId);
         if (row.ownedBy(ownerType, ownerId)) {
-            deliveries.close(userId, sourceMessageId, row.generation());
+            deliveries.close(userId, sourceMessageId, row.getGeneration());
         }
     }
 
@@ -77,8 +77,8 @@ public class FinalDeliveryService {
         if (!row.ownedBy("RESPONSE", previousExecutionId)) {
             throw conflict("该请求已委派或已有后继回复，不能重试原回复");
         }
-        deliveries.close(userId, sourceMessageId, row.generation());
-        deliveries.insert(UUID.randomUUID().toString(), userId, sourceMessageId, row.generation() + 1, executionId);
+        deliveries.close(userId, sourceMessageId, row.getGeneration());
+        deliveries.insert(UUID.randomUUID().toString(), userId, sourceMessageId, row.getGeneration() + 1, executionId);
     }
 
     private FinalDeliveryDO requireCurrent(String userId, String sourceMessageId) {

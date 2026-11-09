@@ -52,14 +52,14 @@ public class OperationExecutorService {
      */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public String execute(OperationDO operation, ExternalCall externalCall) {
-        userStatus.requireActive(operation.userId());
-        String externalKey = "mock:" + operation.operationId();
+        userStatus.requireActive(operation.getUserId());
+        String externalKey = "mock:" + operation.getOperationId();
         markInFlight(operation, externalKey);
         String resultJson;
         try {
             resultJson = externalCall.call(externalKey);
         } catch (Exception exception) {
-            if ("WRITE".equals(operation.effect())) {
+            if ("WRITE".equals(operation.getEffect())) {
                 // 发送后的异常不能证明外部没有执行，必须保留未知事实，禁止重放写入。
                 markUnknown(operation);
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "外部写入结果待核对，不会自动重复执行");
@@ -73,7 +73,7 @@ public class OperationExecutorService {
             markUnknown(operation);
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "操作结果出账失败，转 UNKNOWN 待核对");
         }
-        log.info("操作派发完成 operationId={} status={}", operation.operationId(), OperationStatus.SUCCEEDED);
+        log.info("操作派发完成 operationId={} status={}", operation.getOperationId(), OperationStatus.SUCCEEDED);
         return resultJson;
     }
 
@@ -81,10 +81,10 @@ public class OperationExecutorService {
      * 从已成功账本回收结果（审批重放路径），不再调用连接器。
      */
     public String resultOf(OperationDO operation) {
-        if (!OperationStatus.SUCCEEDED.name().equals(operation.status()) || operation.resultJson() == null) {
+        if (!OperationStatus.SUCCEEDED.name().equals(operation.getStatus()) || operation.getResultJson() == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "操作没有可复用的成功结果");
         }
-        return operation.resultJson();
+        return operation.getResultJson();
     }
 
     /**
@@ -95,9 +95,9 @@ public class OperationExecutorService {
         LocalDateTime leaseUntil = LocalDateTime.now(ZoneOffset.UTC).plusSeconds(LEASE_SECONDS);
         int inflight = dispatchService.begin(operation, instanceId, 1L, leaseUntil, externalKey);
         if (inflight != 1) {
-            OperationDO current = operationMapper.findOwned(operation.userId(), operation.operationId());
+            OperationDO current = operationMapper.findOwned(operation.getUserId(), operation.getOperationId());
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
-                    "操作状态已变化，不能重复派发（当前 " + current.status() + "）");
+                    "操作状态已变化，不能重复派发（当前 " + current.getStatus() + "）");
         }
     }
 
@@ -105,8 +105,8 @@ public class OperationExecutorService {
      * 成功出账；返回 false 表示执行器 CAS 竞争，调用方转 UNKNOWN。
      */
     public boolean completeAsSucceeded(OperationDO operation, String resultJson) {
-        return operationMapper.completeInFlight(operation.userId(), operation.operationId(),
-                operation.version() + 1, instanceId, 1L, OperationStatus.SUCCEEDED.name(),
+        return operationMapper.completeInFlight(operation.getUserId(), operation.getOperationId(),
+                operation.getVersion() + 1, instanceId, 1L, OperationStatus.SUCCEEDED.name(),
                 resultJson, instanceId) == 1;
     }
 
@@ -115,8 +115,8 @@ public class OperationExecutorService {
      */
     public boolean completeAsFailed(OperationDO operation, Exception cause) {
         String message = cause.getClass().getSimpleName();
-        return operationMapper.completeInFlight(operation.userId(), operation.operationId(),
-                operation.version() + 1, instanceId, 1L, OperationStatus.FAILED.name(),
+        return operationMapper.completeInFlight(operation.getUserId(), operation.getOperationId(),
+                operation.getVersion() + 1, instanceId, 1L, OperationStatus.FAILED.name(),
                 RuntimePayloads.toJson(objectMapper, Map.of("error", message)), instanceId) == 1;
     }
 
@@ -124,8 +124,8 @@ public class OperationExecutorService {
      * 结果不明出账；只能由核对流程再推进。
      */
     public void markUnknown(OperationDO operation) {
-        if (unknowns.mark(operation, operation.version() + 1, instanceId)) {
-            log.warn("操作转入 UNKNOWN，等待人工或连接器核对 operationId={}", operation.operationId());
+        if (unknowns.mark(operation, operation.getVersion() + 1, instanceId)) {
+            log.warn("操作转入 UNKNOWN，等待人工或连接器核对 operationId={}", operation.getOperationId());
         }
     }
 }

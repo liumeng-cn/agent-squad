@@ -1,10 +1,31 @@
 package com.agentsquad.squad.domain.entity;
 
 import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
 /**
  * 用户可见事件的数据库查询结果，按任务序号回放
  */
-public record EventDO(long eventSeq, String taskId, String eventType, String payloadJson,
-                       LocalDateTime occurredAt) {
+@Getter
+@Setter
+@ToString
+@EqualsAndHashCode
+@NoArgsConstructor
+@AllArgsConstructor
+public class EventDO {
+    /** 目标内事件序号 */
+    private long eventSeq;
+    /** 目标ID */
+    private String taskId;
+    /** 公开事件类型 */
+    private String eventType;
+    /** 公开事件载荷 */
+    private String payloadJson;
+    /** 发生时间 */
+    private LocalDateTime occurredAt;
 }

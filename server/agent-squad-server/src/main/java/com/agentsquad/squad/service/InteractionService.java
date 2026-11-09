@@ -114,7 +114,7 @@ public class InteractionService {
         InteractionDO existing = interactionMapper.findByFrameworkRequest(userId, bindingId,
                 frameworkRequestId);
         if (existing != null) {
-            return new BindingResult(existing.interactionId(), existing.kind());
+            return new BindingResult(existing.getInteractionId(), existing.getKind());
         }
         String toolName = String.valueOf(call.get("name"));
         OperationDO operation = frameworkTurnId == null ? null
@@ -124,12 +124,12 @@ public class InteractionService {
         if (operation != null) {
             String question = buildApprovalQuestion(toolName, operation);
             interactionMapper.insert(interactionId, userId, taskId, jobId, bindingId,
-                    operation.operationId(), "FRAMEWORK", frameworkRequestId, KIND_APPROVAL,
-                    question, fixedApprovalSchema(), 0L, operation.requestHash(),
-                    operation.connectionRevision(), LocalDateTime.now().plusHours(ttlHours),
+                    operation.getOperationId(), "FRAMEWORK", frameworkRequestId, KIND_APPROVAL,
+                    question, fixedApprovalSchema(), 0L, operation.getRequestHash(),
+                    operation.getConnectionRevision(), LocalDateTime.now().plusHours(ttlHours),
                     userId, "model");
             log.info("审批交互已绑定 interactionId={} operationId={} toolKey={}",
-                    interactionId, operation.operationId(), operation.toolKey());
+                    interactionId, operation.getOperationId(), operation.getToolKey());
             return new BindingResult(interactionId, KIND_APPROVAL);
         }
         if ("request_acceptance_review".equals(toolName)) {
@@ -137,7 +137,7 @@ public class InteractionService {
             if (target == null || jobId != null) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "只能由目标协调会话请求用户验收");
             }
-            var review = planAcceptance.prepareUserReview(userId, target.sessionId(), objectMapper.convertValue(
+            var review = planAcceptance.prepareUserReview(userId, target.getSessionId(), objectMapper.convertValue(
                     call.get("input"), AcceptanceReviewRequest.class));
             String schema = RuntimePayloads.toJson(objectMapper, Map.of("type", "object", "properties",
                     Map.of("accepted", Map.of("type", "boolean", "title", "这项结果符合要求")),
@@ -216,22 +216,22 @@ public class InteractionService {
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "交互不存在");
         }
-        scopeService.requireReadable(actor.userId(), row.scopeId());
+        scopeService.requireReadable(actor.userId(), row.getScopeId());
         String scopeKey = "interaction:" + interactionId;
         Map<String, Object> answerJson = new LinkedHashMap<>();
         answerJson.put("kind", answerKind);
         String answerText = null;
-        if (KIND_APPROVAL.equals(row.kind())) {
+        if (KIND_APPROVAL.equals(row.getKind())) {
             if (!KIND_APPROVAL.equals(answerKind) || approve == null) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "审批交互必须提交 APPROVAL 答复");
             }
-            if (!row.requestHash().equals(confirmedRequestHash)) {
+            if (!row.getRequestHash().equals(confirmedRequestHash)) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
                         "确认摘要与审批内容不一致，请刷新页面后重试");
             }
             answerJson.put("approve", approve);
             answerJson.put("confirmedRequestHash", confirmedRequestHash);
-        } else if (KIND_INPUT.equals(row.kind())) {
+        } else if (KIND_INPUT.equals(row.getKind())) {
             if (!KIND_INPUT.equals(answerKind) || inputValue == null || inputValue.isEmpty()) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "追问交互必须提交 INPUT 内容");
             }
@@ -241,102 +241,102 @@ public class InteractionService {
             }
             try {
                 jsonSchemaValidator.requireMatches(objectMapper.valueToTree(inputValue),
-                        RuntimePayloads.readJson(objectMapper, row.answerSchemaJson()), "追问答复");
+                        RuntimePayloads.readJson(objectMapper, row.getAnswerSchemaJson()), "追问答复");
             } catch (JsonProcessingException exception) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "追问表单定义不可用");
             }
             answerJson.put("value", inputValue);
             answerText = valueJson;
-            if (row.planVersion() > 0) {
-                answerText = RuntimePayloads.toJson(objectMapper, Map.of("interactionId", row.interactionId(),
-                        "planVersion", row.planVersion(), "value", inputValue));
+            if (row.getPlanVersion() > 0) {
+                answerText = RuntimePayloads.toJson(objectMapper, Map.of("interactionId", row.getInteractionId(),
+                        "planVersion", row.getPlanVersion(), "value", inputValue));
             }
         } else {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "未知交互类型");
         }
         String answerJsonText = RuntimePayloads.toJson(objectMapper, answerJson);
 
-        if (!"OPEN".equals(row.status())) {
-            if (sameJson(answerJsonText, row.responseJson())) {
+        if (!"OPEN".equals(row.getStatus())) {
+            if (sameJson(answerJsonText, row.getResponseJson())) {
                 CommandDO prior = commandMapper.findByKey(actor.userId(), scopeKey, idempotencyKey);
                 if (prior != null) {
                     log.info("交互答复幂等复用原回执 interactionId={} commandId={}",
-                            interactionId, prior.commandId());
-                    return new CommandReceiptResponse(prior.commandId(), prior.taskId(),
-                            prior.status(), null, null);
+                            interactionId, prior.getCommandId());
+                    return new CommandReceiptResponse(prior.getCommandId(), prior.getTaskId(),
+                            prior.getStatus(), null, null);
                 }
             }
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "交互已答复，不能重复处理");
         }
-        if (row.version() != expectedVersion) {
+        if (row.getVersion() != expectedVersion) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "交互版本已变化，请刷新后重试");
         }
-        if (row.expiresAt() != null && row.expiresAt().isBefore(LocalDateTime.now())) {
+        if (row.getExpiresAt() != null && row.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "交互答复已过期");
         }
 
         // 审批可能触发外部写入，必须先确认交互仍开放且版本有效。
-        if (KIND_APPROVAL.equals(row.kind())) {
+        if (KIND_APPROVAL.equals(row.getKind())) {
             answerText = resolveApproval(actor, row, approve);
         }
 
         // 外部审批派发已独立出账；从此处起才锁会话和所有者，避免跨外部I/O持有操作行锁。
-        scopeService.lockOwned(actor.userId(), row.scopeId(), false);
+        scopeService.lockOwned(actor.userId(), row.getScopeId(), false);
         String commandId = UUID.randomUUID().toString();
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("interactionId", interactionId);
-        payload.put("requestId", row.frameworkRequestId());
-        payload.put("kind", row.kind());
+        payload.put("requestId", row.getFrameworkRequestId());
+        payload.put("kind", row.getKind());
         payload.put("answerText", answerText);
         String payloadHash = ContentDigests.sha256(RuntimePayloads.toJson(objectMapper, payload));
         commandMapper.insertControl(commandId, actor.userId(), scopeKey, idempotencyKey, payloadHash,
-                row.taskId(), row.bindingId(), "RESPOND",
+                row.getTaskId(), row.getBindingId(), "RESPOND",
                 RuntimePayloads.toJson(objectMapper, payload),
                 LocalDateTime.now(ZoneOffset.UTC).plusSeconds(5));
-        if (interactionMapper.markResponded(actor.userId(), interactionId, row.version(),
+        if (interactionMapper.markResponded(actor.userId(), interactionId, row.getVersion(),
                 answerJsonText, actor.username()) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "交互答复并发冲突，请刷新后重试");
         }
-        scopeMapper.queueTaskAfterInteraction(actor.userId(), row.scopeId());
-        scopeMapper.queueResponseAfterInteraction(actor.userId(), row.scopeId());
+        scopeMapper.queueTaskAfterInteraction(actor.userId(), row.getScopeId());
+        scopeMapper.queueResponseAfterInteraction(actor.userId(), row.getScopeId());
         log.info("交互答复已受理 interactionId={} kind={} commandId={} approve={}",
-                interactionId, row.kind(), commandId, approve);
-        return new CommandReceiptResponse(commandId, row.taskId(), "PENDING", null, null);
+                interactionId, row.getKind(), commandId, approve);
+        return new CommandReceiptResponse(commandId, row.getTaskId(), "PENDING", null, null);
     }
 
     /**
      * 审批决定的平台处置：批准派发连接器，拒绝取消操作；已成功操作复用结果实现重放幂等。
      */
     private String resolveApproval(AuthView actor, InteractionDO row, boolean approve) {
-        OperationDO operation = operationMapper.findOwned(actor.userId(), row.operationId());
+        OperationDO operation = operationMapper.findOwned(actor.userId(), row.getOperationId());
         if (operation == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "审批对应的操作不存在");
         }
         if (!approve) {
-            if (OperationStatus.WAITING_APPROVAL.name().equals(operation.status())) {
-                operationMapper.cancelWaitingApproval(operation.userId(), operation.operationId(),
-                        operation.version(), RuntimePayloads.toJson(objectMapper,
+            if (OperationStatus.WAITING_APPROVAL.name().equals(operation.getStatus())) {
+                operationMapper.cancelWaitingApproval(operation.getUserId(), operation.getOperationId(),
+                        operation.getVersion(), RuntimePayloads.toJson(objectMapper,
                                 Map.of("denied", true)), actor.userId());
-                log.info("写入操作被拒绝取消 operationId={}", operation.operationId());
-            } else if (!OperationStatus.CANCELLED.name().equals(operation.status())) {
+                log.info("写入操作被拒绝取消 operationId={}", operation.getOperationId());
+            } else if (!OperationStatus.CANCELLED.name().equals(operation.getStatus())) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "操作已不可拒绝");
             }
             return "用户拒绝执行该写入操作，未产生外部变更。请向用户确认后续安排。";
         }
-        if (OperationStatus.SUCCEEDED.name().equals(operation.status())) {
+        if (OperationStatus.SUCCEEDED.name().equals(operation.getStatus())) {
             // 外部调用成功后若答复事务回滚，重放时仍需补结预算；结算按预留状态幂等。
             operationService.settle(operation, TICKET_RESERVED_UNITS);
             return "用户已批准，写入执行成功: " + operationExecutor.resultOf(operation);
         }
-        if (!OperationStatus.WAITING_APPROVAL.name().equals(operation.status())) {
+        if (!OperationStatus.WAITING_APPROVAL.name().equals(operation.getStatus())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
-                    "操作当前状态不可批准（" + operation.status() + "）");
+                    "操作当前状态不可批准（" + operation.getStatus() + "）");
         }
         String resultJson;
-        if (TOOL_MOCK_TICKET.equals(operation.toolKey())) {
-            Map<String, Object> args = readArguments(operation.argumentsJson());
+        if (TOOL_MOCK_TICKET.equals(operation.getToolKey())) {
+            Map<String, Object> args = readArguments(operation.getArgumentsJson());
             resultJson = operationExecutor.execute(operation,
-                    externalKey -> mockTicketConnector.createTicket(operation.userId(), externalKey,
+                    externalKey -> mockTicketConnector.createTicket(operation.getUserId(), externalKey,
                             String.valueOf(args.get("title")), String.valueOf(args.get("detail"))));
         } else {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "工具没有注册的审批执行器");
@@ -361,7 +361,7 @@ public class InteractionService {
     }
 
     private String buildApprovalQuestion(String toolName, OperationDO operation) {
-        return "请求审批：" + toolName + "（" + operation.effect() + "），请核对脱敏参数及操作摘要";
+        return "请求审批：" + toolName + "（" + operation.getEffect() + "），请核对脱敏参数及操作摘要";
     }
 
     private String fixedApprovalSchema() {

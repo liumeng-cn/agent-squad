@@ -44,11 +44,11 @@ public final class SkillPackageValidator {
             if (file == null) {
                 throw invalid("技能包不能包含空文件记录");
             }
-            String path = validatePath(file.path());
+            String path = validatePath(file.getPath());
             if (!paths.add(path.toLowerCase(java.util.Locale.ROOT))) {
                 throw invalid(path + "：存在重复或大小写冲突路径");
             }
-            String content = file.content();
+            String content = file.getContent();
             if (content == null || content.chars().anyMatch(c -> c == 0 || c < 32 && c != '\n' && c != '\r' && c != '\t')
                     || !StandardCharsets.UTF_8.newEncoder().canEncode(content)) {
                 throw invalid(path + "：仅接受有效 UTF-8 文本");
@@ -63,10 +63,10 @@ public final class SkillPackageValidator {
             }
             files.add(new SkillTextFileDO(path, content));
         }
-        files.sort(Comparator.comparing(SkillTextFileDO::path));
-        SkillTextFileDO entry = files.stream().filter(file -> "SKILL.md".equals(file.path())).findFirst()
+        files.sort(Comparator.comparing(SkillTextFileDO::getPath));
+        SkillTextFileDO entry = files.stream().filter(file -> "SKILL.md".equals(file.getPath())).findFirst()
                 .orElseThrow(() -> invalid("SKILL.md：缺少技能入口文件"));
-        Map<?, ?> metadata = metadata(entry.content());
+        Map<?, ?> metadata = metadata(entry.getContent());
         String name = scalar(metadata, "name", 100);
         if (!name.matches("[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}")) {
             throw invalid("SKILL.md：name 只能包含字母、数字、点、下划线或短横线");
@@ -160,8 +160,8 @@ public final class SkillPackageValidator {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             for (SkillTextFileDO file : files) {
-                byte[] path = file.path().getBytes(StandardCharsets.UTF_8);
-                byte[] content = file.content().getBytes(StandardCharsets.UTF_8);
+                byte[] path = file.getPath().getBytes(StandardCharsets.UTF_8);
+                byte[] content = file.getContent().getBytes(StandardCharsets.UTF_8);
                 digest.update(java.nio.ByteBuffer.allocate(8).putInt(path.length).putInt(content.length).array());
                 digest.update(path);
                 digest.update(content);

@@ -47,11 +47,11 @@ public class BudgetService {
         BudgetAccountDO account = lockBudget(userId, scopeId, true);
         BudgetReservationDO existing = budgetMapper.findReservation(userId, scopeId, usageKey);
         if (existing != null) {
-            if (!kind.equals(existing.kind()) || units != existing.reservedUnits()) {
+            if (!kind.equals(existing.getKind()) || units != existing.getReservedUnits()) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
                         "同键预算预留内容不一致");
             }
-            if ("UNKNOWN".equals(existing.status())) {
+            if ("UNKNOWN".equals(existing.getStatus())) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
                         "同键预算仍在核对中，不能重复预留");
             }
@@ -79,10 +79,10 @@ public class BudgetService {
         long units = Math.max(1, cost(profile.getMaxInputTokens(), profile.getMaxOutputTokens(), profile));
         BudgetReservationDO prior = budgetMapper.findReservation(userId, scopeId, usageKey);
         if (prior != null) {
-            if (!"MODEL".equals(prior.kind()) || prior.reservedUnits() != units
-                    || !modelProfileKey.equals(prior.modelProfileKey())
-                    || !profile.getPricingVersion().equals(prior.pricingVersion())
-                    || !requestHash.equals(prior.requestHash())) {
+            if (!"MODEL".equals(prior.getKind()) || prior.getReservedUnits() != units
+                    || !modelProfileKey.equals(prior.getModelProfileKey())
+                    || !profile.getPricingVersion().equals(prior.getPricingVersion())
+                    || !requestHash.equals(prior.getRequestHash())) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
                         "同键模型预算内容不一致");
             }
@@ -111,19 +111,19 @@ public class BudgetService {
         }
         lockBudget(userId, scopeId, false);
         BudgetReservationDO row = budgetMapper.findReservation(userId, scopeId, usageKey);
-        if (row == null || !"MODEL".equals(row.kind())
-                || !profile.getPricingVersion().equals(row.pricingVersion())) {
+        if (row == null || !"MODEL".equals(row.getKind())
+                || !profile.getPricingVersion().equals(row.getPricingVersion())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "模型预算预留或定价版本不匹配");
         }
         long settled = cost(inputTokens, outputTokens, profile);
-        if ("SETTLED".equals(row.status())) {
-            if (row.settledUnits() == settled && row.inputTokens() == inputTokens
-                    && row.outputTokens() == outputTokens) {
+        if ("SETTLED".equals(row.getStatus())) {
+            if (row.getSettledUnits() == settled && row.getInputTokens() == inputTokens
+                    && row.getOutputTokens() == outputTokens) {
                 return;
             }
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "模型用量重复结算不一致");
         }
-        if (!"RESERVED".equals(row.status()) || settled > row.reservedUnits()
+        if (!"RESERVED".equals(row.getStatus()) || settled > row.getReservedUnits()
                 || budgetMapper.settleModel(userId, scopeId, usageKey, settled,
                 inputTokens, outputTokens) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "模型预算不可结算");
@@ -157,9 +157,9 @@ public class BudgetService {
             throw new BudgetExceededException("用户总预算不足，已拒绝新请求");
         }
         long consumed = budgetMapper.sumConsumedUnits(userId, scopeId);
-        if (consumed > account.limitMicrounits() || units > account.limitMicrounits() - consumed) {
+        if (consumed > account.getLimitMicrounits() || units > account.getLimitMicrounits() - consumed) {
             log.info("预算预留被拒 userId={} scopeId={} consumed={} requested={} limit={}",
-                    userId, scopeId, consumed, units, account.limitMicrounits());
+                    userId, scopeId, consumed, units, account.getLimitMicrounits());
             throw new BudgetExceededException("执行预算不足，已拒绝新请求");
         }
     }
@@ -199,8 +199,8 @@ public class BudgetService {
             return;
         }
         BudgetReservationDO prior = budgetMapper.findReservation(userId, scopeId, usageKey);
-        if (prior == null || "MODEL".equals(prior.kind()) || !"SETTLED".equals(prior.status())
-                || prior.settledUnits() != settledUnits) {
+        if (prior == null || "MODEL".equals(prior.getKind()) || !"SETTLED".equals(prior.getStatus())
+                || prior.getSettledUnits() != settledUnits) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
                     "工具预算结算超过预留或状态不匹配");
         }
@@ -214,10 +214,10 @@ public class BudgetService {
         if (row == null) {
             return;
         }
-        if ("MODEL".equals(row.kind())) {
+        if ("MODEL".equals(row.getKind())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "工具取消不能修改模型预算");
         }
-        if ("RESERVED".equals(row.status()) && budgetMapper.settle(userId, scopeId, usageKey, 0) != 1) {
+        if ("RESERVED".equals(row.getStatus()) && budgetMapper.settle(userId, scopeId, usageKey, 0) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "未派发工具预算状态已变化");
         }
     }

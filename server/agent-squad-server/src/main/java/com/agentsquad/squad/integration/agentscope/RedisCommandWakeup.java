@@ -84,7 +84,7 @@ public class RedisCommandWakeup {
             RedisWakeupChannel channel = channel(owner);
             redis.execute(enqueue, List.of(state(channel, commandId), stream(channel)),
                     String.valueOf(properties.getCapacity()), "1", channel.name(),
-                    owner.userId(), owner.bindingId(), commandId, "");
+                    owner.getUserId(), owner.getBindingId(), commandId, "");
             recovered();
             return true;
         } catch (RuntimeException failure) {
@@ -134,8 +134,8 @@ public class RedisCommandWakeup {
         }
         CommandClaimContextDO owner = commands.claimContext(commandId);
         if (owner == null || !"1".equals(record.getValue().get("schemaVersion"))
-                || !owner.userId().equals(record.getValue().get("userId"))
-                || !owner.bindingId().equals(record.getValue().get("bindingId")) || channel(owner) != channel) {
+                || !owner.getUserId().equals(record.getValue().get("userId"))
+                || !owner.getBindingId().equals(record.getValue().get("bindingId")) || channel(owner) != channel) {
             log.warn("Redis命令引用归属校验未通过 commandId={} streamId={}", commandId, record.getId());
             acknowledge(channel, commandId, record, null);
             return;
@@ -187,7 +187,7 @@ public class RedisCommandWakeup {
     }
 
     private RedisWakeupChannel channel(CommandClaimContextDO owner) {
-        return RuntimeCommandAction.STOP.name().equals(owner.action()) || RuntimeCommandAction.RESPOND.name().equals(owner.action())
+        return RuntimeCommandAction.STOP.name().equals(owner.getAction()) || RuntimeCommandAction.RESPOND.name().equals(owner.getAction())
                 ? RedisWakeupChannel.CONTROL : RedisWakeupChannel.COMMAND;
     }
 

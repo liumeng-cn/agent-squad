@@ -61,11 +61,11 @@ public class ArtifactController {
     public ResponseEntity<byte[]> download(HttpServletRequest servletRequest,
                                            @PathVariable String artifactId) {
         ArtifactDO row = artifactService.content(UserContext.current(servletRequest).userId(), artifactId);
-        return ResponseEntity.ok().contentType(MediaType.parseMediaType(row.mediaType()))
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(row.getMediaType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
-                        .filename(row.fileName(), StandardCharsets.UTF_8).build().toString())
+                        .filename(row.getFileName(), StandardCharsets.UTF_8).build().toString())
                 .header("X-Content-Type-Options", "nosniff")
                 .header(HttpHeaders.CACHE_CONTROL, "private, no-store")
-                .body(row.content());
+                .body(row.getContent());
     }
 }

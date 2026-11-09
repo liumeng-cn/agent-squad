@@ -38,10 +38,10 @@ public class CommandClaimService {
         if (context == null) {
             return false;
         }
-        userStatus.requireActive(context.userId());
-        scopes.lockOwned(context.userId(), context.scopeId(), false);
-        if ("MESSAGE_SUBMIT".equals(context.action())
-                && !deliveries.earlierBlockingReplies(context.userId(), context.bindingId()).isEmpty()) {
+        userStatus.requireActive(context.getUserId());
+        scopes.lockOwned(context.getUserId(), context.getScopeId(), false);
+        if ("MESSAGE_SUBMIT".equals(context.getAction())
+                && !deliveries.earlierBlockingReplies(context.getUserId(), context.getBindingId()).isEmpty()) {
             return false;
         }
         if (deliveries.claim(commandId, token, now, leaseUntil) != 1) {
@@ -50,10 +50,10 @@ public class CommandClaimService {
 
         // 将命令标记为已接手和预留执行容量时，在同一 MySQL 事务中完成。
         // 配额不足时抛出异常，回滚命令领取，不丢失已受理的用户命令。
-        admission.acquire(context.userId(), context.bindingId(), commandId, context.action());
+        admission.acquire(context.getUserId(), context.getBindingId(), commandId, context.getAction());
         log.info("命令已接手 {}", observations.logFields(Map.of(
-                "commandId", commandId, "scopeId", context.scopeId(), "bindingId", context.bindingId(),
-                "action", context.action())));
+                "commandId", commandId, "scopeId", context.getScopeId(), "bindingId", context.getBindingId(),
+                "action", context.getAction())));
         return true;
     }
 }

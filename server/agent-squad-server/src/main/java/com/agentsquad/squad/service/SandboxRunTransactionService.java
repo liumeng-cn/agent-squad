@@ -52,7 +52,7 @@ public class SandboxRunTransactionService {
         SandboxRunDO prior = mapper.prior(context.userId(), context.bindingId(), request.logicalKey(),
                 context.turnId(), context.toolCallId());
         if (prior != null) {
-            if (!hash.equals(prior.requestHash())) {
+            if (!hash.equals(prior.getRequestHash())) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同沙箱调用键的输入不一致");
             }
             return new SandboxDispatchClaim(prior, false);
@@ -100,21 +100,21 @@ public class SandboxRunTransactionService {
      */
     @Transactional
     public int expire(SandboxRunDO candidate) {
-        budget.markUnknown(candidate.userId(), candidate.scopeId(), usageKey(candidate.executionId()));
-        SandboxRunDO current = mapper.find(candidate.userId(), candidate.executionId());
-        if (current == null || !"IN_FLIGHT".equals(current.status())) {
+        budget.markUnknown(candidate.getUserId(), candidate.getScopeId(), usageKey(candidate.getExecutionId()));
+        SandboxRunDO current = mapper.find(candidate.getUserId(), candidate.getExecutionId());
+        if (current == null || !"IN_FLIGHT".equals(current.getStatus())) {
             return 0;
         }
-        return mapper.expireOne(candidate.userId(), candidate.executionId());
+        return mapper.expireOne(candidate.getUserId(), candidate.getExecutionId());
     }
 
     public SandboxExecutionResult replay(SandboxRunDO prior) {
-        if (!("SUCCEEDED".equals(prior.status()) || "FAILED".equals(prior.status())) || prior.resultJson() == null) {
+        if (!("SUCCEEDED".equals(prior.getStatus()) || "FAILED".equals(prior.getStatus())) || prior.getResultJson() == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
                     "沙箱执行已受理但结果待核对，不能自动重放");
         }
         try {
-            return json.treeToValue(com.agentsquad.squad.common.util.RuntimePayloads.readJson(json, prior.resultJson()), SandboxExecutionResult.class);
+            return json.treeToValue(com.agentsquad.squad.common.util.RuntimePayloads.readJson(json, prior.getResultJson()), SandboxExecutionResult.class);
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("沙箱持久结果损坏", exception);
         }

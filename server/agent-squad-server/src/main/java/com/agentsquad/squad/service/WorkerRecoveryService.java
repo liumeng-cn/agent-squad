@@ -78,12 +78,12 @@ public class WorkerRecoveryService {
      * 投影器仅对当前运行中 Worker 检查原始 SUBMIT 的 SDK 收据。
      */
     public String originalSubmitCommandId(ProjectionTargetDO target) {
-        WorkerLaunchDO job = dispatchMapper.findByBinding(target.userId(), target.bindingId());
-        if (job == null || !"RUNNING".equals(job.jobStatus())
-                || !"ACTIVE".equals(job.planStatus()) || job.cancelRequestedAt() != null) {
+        WorkerLaunchDO job = dispatchMapper.findByBinding(target.getUserId(), target.getBindingId());
+        if (job == null || !"RUNNING".equals(job.getJobStatus())
+                || !"ACTIVE".equals(job.getPlanStatus()) || job.getCancelRequestedAt() != null) {
             return null;
         }
-        return commandMapper.findWorkerSubmitCommandId(target.userId(), target.bindingId());
+        return commandMapper.findWorkerSubmitCommandId(target.getUserId(), target.getBindingId());
     }
 
     /**
@@ -95,62 +95,62 @@ public class WorkerRecoveryService {
                 || receipt.turnId() == null || receipt.turnId().isBlank()) {
             return;
         }
-        taskMapper.lockOwned(target.userId(), target.taskId());
-        Long currentVersion = planMapper.lockTaskPlanVersion(target.userId(), target.taskId());
-        WorkerLaunchDO job = dispatchMapper.findByBinding(target.userId(), target.bindingId());
-        if (job == null || currentVersion == null || currentVersion != job.planVersion()
-                || planMapper.countSignalEligibleTask(target.userId(), target.taskId()) == 0
-                || !"RUNNING".equals(job.jobStatus()) || job.cancelRequestedAt() != null
-                || job.guardToken() == null || job.guardLeaseUntil() == null
-                || !job.guardLeaseUntil().isAfter(LocalDateTime.now(ZoneOffset.UTC))) {
+        taskMapper.lockOwned(target.getUserId(), target.getTaskId());
+        Long currentVersion = planMapper.lockTaskPlanVersion(target.getUserId(), target.getTaskId());
+        WorkerLaunchDO job = dispatchMapper.findByBinding(target.getUserId(), target.getBindingId());
+        if (job == null || currentVersion == null || currentVersion != job.getPlanVersion()
+                || planMapper.countSignalEligibleTask(target.getUserId(), target.getTaskId()) == 0
+                || !"RUNNING".equals(job.getJobStatus()) || job.getCancelRequestedAt() != null
+                || job.getGuardToken() == null || job.getGuardLeaseUntil() == null
+                || !job.getGuardLeaseUntil().isAfter(LocalDateTime.now(ZoneOffset.UTC))) {
             return;
         }
-        PlanDO plan = planMapper.lockPlan(target.userId(), target.taskId(), job.planVersion());
-        if (plan == null || !"ACTIVE".equals(plan.status())) {
+        PlanDO plan = planMapper.lockPlan(target.getUserId(), target.getTaskId(), job.getPlanVersion());
+        if (plan == null || !"ACTIVE".equals(plan.getStatus())) {
             return;
         }
-        String scopeKey = "worker-resume:" + job.jobId();
-        String recoveryKey = receipt.turnId() + ":" + job.guardToken();
-        if (commandMapper.findByKey(target.userId(), scopeKey, recoveryKey) != null
-                || commandMapper.countPendingWorkerResumes(target.userId(), target.bindingId()) > 0) {
+        String scopeKey = "worker-resume:" + job.getJobId();
+        String recoveryKey = receipt.turnId() + ":" + job.getGuardToken();
+        if (commandMapper.findByKey(target.getUserId(), scopeKey, recoveryKey) != null
+                || commandMapper.countPendingWorkerResumes(target.getUserId(), target.getBindingId()) > 0) {
             return;
         }
         PlanPublish definition;
         try {
-            definition = objectMapper.treeToValue(RuntimePayloads.readJson(objectMapper, plan.definitionJson()),
+            definition = objectMapper.treeToValue(RuntimePayloads.readJson(objectMapper, plan.getDefinitionJson()),
                     PlanPublish.class);
         } catch (Exception exception) {
             throw new IllegalStateException("Worker 恢复计划解析失败，无法读取节点恢复上限");
         }
-        PlanNode node = definition.nodes().stream().filter(item -> item.nodeKey().equals(job.nodeKey()))
+        PlanNode node = definition.nodes().stream().filter(item -> item.nodeKey().equals(job.getNodeKey()))
                 .findFirst().orElseThrow(() -> new IllegalStateException("Worker 恢复节点不存在"));
-        String profileKey = workerDefinitionService.requirePublished(job.workerKey(), job.workerVersion())
+        String profileKey = workerDefinitionService.requirePublished(job.getWorkerKey(), job.getWorkerVersion())
                 .runtimeProfileKey();
         int limit = Math.min(node.maxRecoveryAttempts(), profileRegistry.requireRuntime(profileKey)
                 .getMaxRecoveryAttempts());
-        if (commandMapper.countWorkerResumes(target.userId(), target.bindingId()) >= limit) {
-            if (dispatchMapper.markRecoveryBlocked(target.userId(), target.bindingId()) == 1) {
+        if (commandMapper.countWorkerResumes(target.getUserId(), target.getBindingId()) >= limit) {
+            if (dispatchMapper.markRecoveryBlocked(target.getUserId(), target.getBindingId()) == 1) {
                 masterSignalService.onJobStateChanged(plan);
-                if (projectionMapper.reserveEventSequence(target.userId(), target.taskId()) != 1) {
+                if (projectionMapper.reserveEventSequence(target.getUserId(), target.getTaskId()) != 1) {
                     throw new IllegalStateException("Worker 恢复阻塞事件序号保留失败");
                 }
-                conversationProjection.insertProjected(target.userId(), target.taskId(),
-                        projectionMapper.eventSequence(target.userId(), target.taskId()),
-                        "worker-resume:" + job.jobId() + ":limit", "job.recovery_blocked",
+                conversationProjection.insertProjected(target.getUserId(), target.getTaskId(),
+                        projectionMapper.eventSequence(target.getUserId(), target.getTaskId()),
+                        "worker-resume:" + job.getJobId() + ":limit", "job.recovery_blocked",
                         RuntimePayloads.toJson(objectMapper, Map.of(
-                                "jobId", job.jobId(), "errorCode", "RECOVERY_LIMIT_REACHED")),
+                                "jobId", job.getJobId(), "errorCode", "RECOVERY_LIMIT_REACHED")),
                         LocalDateTime.now(ZoneOffset.UTC));
             }
-            log.warn("Worker 恢复次数已耗尽 taskId={} jobId={} limit={}", target.taskId(), job.jobId(), limit);
+            log.warn("Worker 恢复次数已耗尽 taskId={} jobId={} limit={}", target.getTaskId(), job.getJobId(), limit);
             return;
         }
         String payload = RuntimePayloads.toJson(objectMapper, Map.of("turnId", receipt.turnId()));
         String commandId = UUID.randomUUID().toString();
-        commandMapper.insertControl(commandId, target.userId(), scopeKey, recoveryKey,
-                ContentDigests.sha256(payload), target.taskId(), target.bindingId(),
+        commandMapper.insertControl(commandId, target.getUserId(), scopeKey, recoveryKey,
+                ContentDigests.sha256(payload), target.getTaskId(), target.getBindingId(),
                 RuntimeCommandAction.RESUME.name(), payload, LocalDateTime.now(ZoneOffset.UTC));
         log.info("Worker 原生恢复命令已排入 taskId={} jobId={} commandId={} turnId={}",
-                target.taskId(), job.jobId(), commandId, receipt.turnId());
+                target.getTaskId(), job.getJobId(), commandId, receipt.turnId());
     }
 
     /**
@@ -166,7 +166,7 @@ public class WorkerRecoveryService {
         }
         WorkerLaunchDO job = dispatchMapper.findByBinding(userId, bindingId);
         PlanDO plan = currentVersion == null ? null : planMapper.lockPlan(userId, taskId, currentVersion);
-        if (job != null && plan != null && job.planVersion() == currentVersion && "ACTIVE".equals(plan.status())
+        if (job != null && plan != null && job.getPlanVersion() == currentVersion && "ACTIVE".equals(plan.getStatus())
                 && dispatchMapper.markRecoveryBlocked(userId, bindingId) == 1) {
             masterSignalService.onJobStateChanged(plan);
             if (projectionMapper.reserveEventSequence(userId, taskId) != 1) {
@@ -176,11 +176,11 @@ public class WorkerRecoveryService {
                     projectionMapper.eventSequence(userId, taskId),
                     "worker-resume:" + commandId + ":blocked", "job.recovery_blocked",
                     RuntimePayloads.toJson(objectMapper, Map.of(
-                            "jobId", job.jobId(), "errorCode", errorCode)),
+                            "jobId", job.getJobId(), "errorCode", errorCode)),
                     LocalDateTime.now(ZoneOffset.UTC));
         }
         log.warn("Worker 原生恢复命令被阻塞 taskId={} jobId={} commandId={} errorCode={}",
-                taskId, job == null ? null : job.jobId(), commandId, errorCode);
+                taskId, job == null ? null : job.getJobId(), commandId, errorCode);
     }
 
     /**

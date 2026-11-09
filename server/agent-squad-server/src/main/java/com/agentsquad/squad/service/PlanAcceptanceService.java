@@ -73,18 +73,18 @@ public class PlanAcceptanceService {
             if (criterion.verificationType() == AcceptanceVerificationType.DETERMINISTIC
                     && criterion.deterministicCheck() == com.agentsquad.squad.common.enums.worker.DeterministicAcceptanceCheck.REQUIRED_RESULTS_READY) {
                 var requiredNodes = definition.nodes().stream().filter(node -> node.required()).map(node -> node.nodeKey()).toList();
-                var requiredJobs = jobs.stream().filter(job -> requiredNodes.contains(job.nodeKey())).toList();
+                var requiredJobs = jobs.stream().filter(job -> requiredNodes.contains(job.getNodeKey())).toList();
                 boolean passed = !requiredNodes.isEmpty() && requiredJobs.size() == requiredNodes.size()
-                        && requiredJobs.stream().allMatch(job -> job.planVersion() == plan.planVersion()
-                        && WorkerJobStatus.SUCCEEDED.name().equals(job.status()) && job.resultJson() != null);
+                        && requiredJobs.stream().allMatch(job -> job.getPlanVersion() == plan.getPlanVersion()
+                        && WorkerJobStatus.SUCCEEDED.name().equals(job.getStatus()) && job.getResultJson() != null);
                 verdict = passed ? PlanAcceptanceVerdict.PASS : PlanAcceptanceVerdict.FAIL;
                 verifier = "PLATFORM:REQUIRED_RESULTS_READY";
-                refs = requiredJobs.stream().map(WorkerJobDO::jobId).toList();
+                refs = requiredJobs.stream().map(WorkerJobDO::getJobId).toList();
             } else if (review != null && !review.evidenceRefs().isEmpty()) {
                 if (criterion.verificationType() == AcceptanceVerificationType.MODEL_REVIEW) {
                     for (String ref : review.evidenceRefs()) {
-                        if (jobs.stream().noneMatch(job -> job.jobId().equals(ref) && job.planVersion() == plan.planVersion()
-                                && WorkerJobStatus.SUCCEEDED.name().equals(job.status()) && job.resultJson() != null)) {
+                        if (jobs.stream().noneMatch(job -> job.getJobId().equals(ref) && job.getPlanVersion() == plan.getPlanVersion()
+                                && WorkerJobStatus.SUCCEEDED.name().equals(job.getStatus()) && job.getResultJson() != null)) {
                             throw invalid("模型检查引用的结果不属于当前计划的成功工作");
                         }
                     }
@@ -95,19 +95,19 @@ public class PlanAcceptanceService {
                     if (review.evidenceRefs().size() != 1) {
                         throw invalid("用户确认必须引用唯一的实际答复");
                     }
-                    var interaction = interactions.findOwned(plan.userId(), review.evidenceRefs().get(0));
-                    if (interaction == null || !plan.taskId().equals(interaction.taskId())
-                            || interaction.planVersion() != plan.planVersion()
-                            || !reviewHash(plan, criterion).equals(interaction.requestHash())
-                            || !"RESPONDED".equals(interaction.status()) || interaction.responseJson() == null) {
+                    var interaction = interactions.findOwned(plan.getUserId(), review.evidenceRefs().get(0));
+                    if (interaction == null || !plan.getTaskId().equals(interaction.getTaskId())
+                            || interaction.getPlanVersion() != plan.getPlanVersion()
+                            || !reviewHash(plan, criterion).equals(interaction.getRequestHash())
+                            || !"RESPONDED".equals(interaction.getStatus()) || interaction.getResponseJson() == null) {
                         throw invalid("用户确认尚未答复或不属于当前条件和计划");
                     }
                     try {
-                        var accepted = json.readTree(interaction.responseJson()).path("value").path("accepted");
+                        var accepted = json.readTree(interaction.getResponseJson()).path("value").path("accepted");
                         if (accepted.isBoolean()) {
                             verdict = accepted.asBoolean() ? PlanAcceptanceVerdict.PASS : PlanAcceptanceVerdict.FAIL;
-                            verifier = "USER:" + plan.userId();
-                            refs = List.of(interaction.interactionId());
+                            verifier = "USER:" + plan.getUserId();
+                            refs = List.of(interaction.getInteractionId());
                         }
                     } catch (java.io.IOException exception) {
                         throw new IllegalStateException("用户验收答复无法解析", exception);
@@ -115,7 +115,7 @@ public class PlanAcceptanceService {
                 }
             }
             results.add(new PlanAcceptanceResult(criterion.criterionId(), criterion.text(), criterion.required(), criterion.verificationType(),
-                    verdict, verifier, refs, plan.planVersion(), plan.goalRevision()));
+                    verdict, verifier, refs, plan.getPlanVersion(), plan.getGoalRevision()));
         }
         return List.copyOf(results);
     }
@@ -127,14 +127,14 @@ public class PlanAcceptanceService {
     public UserAcceptanceReview prepareUserReview(String userId, String sessionId, AcceptanceReviewRequest request) {
         scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), true);
         var context = plans.lockMasterContext(userId, sessionId);
-        if (context == null || context.cancellationRequested() || request == null
-                || context.planVersion() != request.expectedPlanVersion()
-                || !("RUNNING".equals(context.taskStatus()) || "QUEUED".equals(context.taskStatus()))) {
+        if (context == null || context.isCancellationRequested() || request == null
+                || context.getPlanVersion() != request.expectedPlanVersion()
+                || !("RUNNING".equals(context.getTaskStatus()) || "QUEUED".equals(context.getTaskStatus()))) {
             throw invalid("只能确认当前执行中的计划");
         }
-        var plan = plans.lockPlan(userId, context.taskId(), context.planVersion());
-        if (plan == null || !"ACTIVE".equals(plan.status())
-                || plans.countActiveJobs(userId, context.taskId(), context.planVersion()) > 0) {
+        var plan = plans.lockPlan(userId, context.getTaskId(), context.getPlanVersion());
+        if (plan == null || !"ACTIVE".equals(plan.getStatus())
+                || plans.countActiveJobs(userId, context.getTaskId(), context.getPlanVersion()) > 0) {
             throw invalid("工作尚未收尾，暂时不能请求最终确认");
         }
         var criterion = definition(plan).acceptanceCriteria().stream()
@@ -142,21 +142,21 @@ public class PlanAcceptanceService {
                         && item.verificationType() == AcceptanceVerificationType.USER_REVIEW).findFirst()
                 .orElseThrow(() -> invalid("当前计划没有这项用户确认条件"));
         log.debug("用户验收条件已核对 taskId={} planVersion={} criterionId={}",
-                plan.taskId(), plan.planVersion(), criterion.criterionId());
-        return new UserAcceptanceReview(criterion.criterionId(), plan.planVersion(),
+                plan.getTaskId(), plan.getPlanVersion(), criterion.criterionId());
+        return new UserAcceptanceReview(criterion.criterionId(), plan.getPlanVersion(),
                 "请确认这项结果是否符合要求：" + criterion.text(), reviewHash(plan, criterion));
     }
 
     public PlanPublish definition(PlanDO plan) {
         try {
-            return json.readValue(plan.definitionJson(), PlanPublish.class);
+            return json.readValue(plan.getDefinitionJson(), PlanPublish.class);
         } catch (java.io.IOException exception) {
             throw new IllegalStateException("当前计划完成条件无法解析", exception);
         }
     }
 
     private String reviewHash(PlanDO plan, PlanAcceptanceCriterion criterion) {
-        return ContentDigests.sha256(plan.taskId() + ":" + plan.planVersion() + ":" + plan.goalRevision()
+        return ContentDigests.sha256(plan.getTaskId() + ":" + plan.getPlanVersion() + ":" + plan.getGoalRevision()
                 + ":" + criterion.criterionId() + ":" + criterion.text());
     }
 

@@ -91,36 +91,36 @@ public class ResponseContextService {
     public ResponseContextSnapshot freeze(String userId, String bindingId) {
         ExecutionScopeDO scope = scopeService.lockOwned(userId,
                 scopeMapper.findScopeByBinding(userId, bindingId), true);
-        if (!"RESPONSE".equals(scope.kind())) {
+        if (!"RESPONSE".equals(scope.getKind())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "只有回复执行可读取会话前缀");
         }
         ResponseContextDO source = mapper.findSource(userId, bindingId);
-        if (source == null || !scope.ownerId().equals(source.executionId())) {
+        if (source == null || !scope.getOwnerId().equals(source.getExecutionId())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "回复来源消息不存在");
         }
-        if (source.contextJson() != null) {
-            if (!ContentDigests.sha256(source.contextJson()).equals(source.contextHash())) {
+        if (source.getContextJson() != null) {
+            if (!ContentDigests.sha256(source.getContextJson()).equals(source.getContextHash())) {
                 throw new IllegalStateException("回复上下文摘要不一致");
             }
-            ResponseContextSnapshot snapshot = read(source.contextJson());
+            ResponseContextSnapshot snapshot = read(source.getContextJson());
             validateArtifacts(userId, snapshot.messages());
             return snapshot;
         }
 
-        if (mapper.characterCount(userId, scope.conversationId(), source.sourceSequence()) > MAX_CONTEXT_CHARACTERS) {
+        if (mapper.characterCount(userId, scope.getConversationId(), source.getSourceSequence()) > MAX_CONTEXT_CHARACTERS) {
             throw contextTooLarge();
         }
         var excluded = memories.excludedHistoryMessageIds(userId);
         List<ResponseContextMessage> messages = new ArrayList<>();
         long characters = 0;
-        for (ResponseHistoryDO row : mapper.prefix(userId, scope.conversationId(), source.sourceSequence())) {
-            String text = excluded.contains(row.messageId()) && !source.sourceMessageId().equals(row.messageId())
-                    ? "[已删除或纠正的记忆关联内容不再用于上下文]" : row.text();
+        for (ResponseHistoryDO row : mapper.prefix(userId, scope.getConversationId(), source.getSourceSequence())) {
+            String text = excluded.contains(row.getMessageId()) && !source.getSourceMessageId().equals(row.getMessageId())
+                    ? "[已删除或纠正的记忆关联内容不再用于上下文]" : row.getText();
             characters += text.length();
             if (characters > MAX_CONTEXT_CHARACTERS) {
                 throw contextTooLarge();
             }
-            List<String> artifactIds = mapper.artifactIds(userId, row.messageId());
+            List<String> artifactIds = mapper.artifactIds(userId, row.getMessageId());
             List<ResponseContextMaterial> materials = buildMaterials(userId, artifactIds);
             for (ResponseContextMaterial material : materials) {
                 characters += material.content().length();
@@ -128,25 +128,25 @@ public class ResponseContextService {
                     throw contextTooLarge();
                 }
             }
-            messages.add(new ResponseContextMessage(row.messageId(), row.sequence(), row.role(), text,
-                    row.revision(), List.copyOf(artifactIds), List.copyOf(materials)));
+            messages.add(new ResponseContextMessage(row.getMessageId(), row.getSequence(), row.getRole(), text,
+                    row.getRevision(), List.copyOf(artifactIds), List.copyOf(materials)));
         }
-        if (messages.isEmpty() || !source.sourceMessageId().equals(messages.getLast().messageId())) {
+        if (messages.isEmpty() || !source.getSourceMessageId().equals(messages.getLast().messageId())) {
             throw new IllegalStateException("回复上下文缺少来源消息");
         }
         validateArtifacts(userId, messages);
-        ResponseContextSnapshot snapshot = new ResponseContextSnapshot(scope.conversationId(),
-                scope.conversationGeneration(), source.sourceMessageId(), source.sourceSequence(), List.copyOf(messages), activeTask(scope),
-                List.copyOf(taskFacts.recentTasks(userId, scope.conversationId(), scope.conversationGeneration(), source.sourceSequence())),
-                List.copyOf(taskFacts.recentFailures(userId, scope.conversationId(), scope.conversationGeneration(), source.sourceSequence())));
+        ResponseContextSnapshot snapshot = new ResponseContextSnapshot(scope.getConversationId(),
+                scope.getConversationGeneration(), source.getSourceMessageId(), source.getSourceSequence(), List.copyOf(messages), activeTask(scope),
+                List.copyOf(taskFacts.recentTasks(userId, scope.getConversationId(), scope.getConversationGeneration(), source.getSourceSequence())),
+                List.copyOf(taskFacts.recentFailures(userId, scope.getConversationId(), scope.getConversationGeneration(), source.getSourceSequence())));
         String json = RuntimePayloads.toJson(objectMapper, snapshot);
-        if (mapper.freeze(userId, source.executionId(), json, ContentDigests.sha256(json)) != 1) {
+        if (mapper.freeze(userId, source.getExecutionId(), json, ContentDigests.sha256(json)) != 1) {
             throw new IllegalStateException("回复上下文冻结发生竞争");
         }
         activities.completed(scope, new com.agentsquad.squad.domain.model.ActivityBusinessFact(
-                com.agentsquad.squad.common.enums.execution.ActivityType.CONTEXT_PREPARE, source.executionId()));
+                com.agentsquad.squad.common.enums.execution.ActivityType.CONTEXT_PREPARE, source.getExecutionId()));
         log.info("回复上下文已冻结 conversationId={} messageCount={} materialCount={} contextChars={}",
-                scope.conversationId(), messages.size(),
+                scope.getConversationId(), messages.size(),
                 messages.stream().mapToInt(m -> m.materials().size()).sum(), characters);
         return snapshot;
     }
@@ -158,11 +158,11 @@ public class ResponseContextService {
         List<ResponseContextMaterial> materials = new ArrayList<>();
         for (String artifactId : artifactIds) {
             ArtifactDO artifact = artifactService.content(userId, artifactId);
-            String raw = new String(artifact.content(), StandardCharsets.UTF_8);
-            String formatted = MaterialFormatter.format(raw, artifact.mediaType(), MAX_MATERIAL_CHARACTERS);
+            String raw = new String(artifact.getContent(), StandardCharsets.UTF_8);
+            String formatted = MaterialFormatter.format(raw, artifact.getMediaType(), MAX_MATERIAL_CHARACTERS);
             boolean truncated = formatted.length() < raw.length();
-            materials.add(new ResponseContextMaterial(artifact.artifactId(), artifact.fileName(),
-                    artifact.mediaType(), artifact.sizeBytes(), artifact.sha256(), formatted, truncated));
+            materials.add(new ResponseContextMaterial(artifact.getArtifactId(), artifact.getFileName(),
+                    artifact.getMediaType(), artifact.getSizeBytes(), artifact.getSha256(), formatted, truncated));
         }
         return materials;
     }
@@ -171,22 +171,22 @@ public class ResponseContextService {
      * 当前目标与节点按会话→目标→Job顺序读取，与消息材料同事务冻结，不跨模型请求持锁。
      */
     private ResponseTaskFacts activeTask(ExecutionScopeDO scope) {
-        ConversationDO conversation = conversations.lockOwned(scope.userId(), scope.conversationId());
-        if (conversation.activeTaskId() == null) {
+        ConversationDO conversation = conversations.lockOwned(scope.getUserId(), scope.getConversationId());
+        if (conversation.getActiveTaskId() == null) {
             return null;
         }
-        TaskDO task = tasks.lockOwnedRow(scope.userId(), conversation.activeTaskId());
-        if (task == null || !scope.conversationId().equals(task.conversationId())) {
+        TaskDO task = tasks.lockOwnedRow(scope.getUserId(), conversation.getActiveTaskId());
+        if (task == null || !scope.getConversationId().equals(task.getConversationId())) {
             throw new IllegalStateException("会话当前目标归属不一致");
         }
-        Long taskGeneration = taskFacts.scopeGeneration(scope.userId(), task.taskId());
-        if (taskGeneration == null || taskGeneration != scope.conversationGeneration()) {
+        Long taskGeneration = taskFacts.scopeGeneration(scope.getUserId(), task.getTaskId());
+        if (taskGeneration == null || taskGeneration != scope.getConversationGeneration()) {
             return null;
         }
-        return new ResponseTaskFacts(task.taskId(), task.status(), task.version(), task.planVersion(),
-                task.cancelRequestedAt() != null, List.copyOf(taskFacts.jobs(scope.userId(), task.taskId(), task.planVersion())),
-                directives.goalState(scope.userId(), task.taskId()).goalRevision(),
-                List.copyOf(directives.latestFacts(scope.userId(), task.taskId())));
+        return new ResponseTaskFacts(task.getTaskId(), task.getStatus(), task.getVersion(), task.getPlanVersion(),
+                task.getCancelRequestedAt() != null, List.copyOf(taskFacts.jobs(scope.getUserId(), task.getTaskId(), task.getPlanVersion())),
+                directives.goalState(scope.getUserId(), task.getTaskId()).getGoalRevision(),
+                List.copyOf(directives.latestFacts(scope.getUserId(), task.getTaskId())));
     }
 
     private RuntimeBusinessException contextTooLarge() {

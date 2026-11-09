@@ -36,11 +36,11 @@ public class ExecutionRestrictionService {
     public void restrict(String userId, String scopeId, String bindingId) {
         var scope = scopes.lockOwned(userId, scopeId, false);
         int changed;
-        if ("RESPONSE".equals(scope.kind())) {
+        if ("RESPONSE".equals(scope.getKind())) {
             changed = mapper.failResponse(userId, scopeId);
         } else {
             changed = mapper.blockTask(userId, scopeId);
-            mapper.blockJobs(userId, scope.ownerId());
+            mapper.blockJobs(userId, scope.getOwnerId());
         }
         mapper.blockCommands(userId, scopeId);
         if (changed == 0) {
@@ -50,7 +50,7 @@ public class ExecutionRestrictionService {
                 new FailureClassification("AUTH_REQUIRED", "EXECUTION_CONTEXT_INVALIDATED", "SYSTEM",
                         "技能授权或记忆已变化，已停止使用旧上下文。已完成内容仍保留，请重新发起。"));
         events.publish(scope, "context-restricted:" + scopeId, "execution.status_changed",
-                Map.of("scopeId", scopeId, "status", "RESPONSE".equals(scope.kind()) ? "FAILED" : "RECOVERY_BLOCKED"));
-        log.info("执行上下文已失效并限制继续运行 scopeId={} bindingId={} kind={}", scopeId, bindingId, scope.kind());
+                Map.of("scopeId", scopeId, "status", "RESPONSE".equals(scope.getKind()) ? "FAILED" : "RECOVERY_BLOCKED"));
+        log.info("执行上下文已失效并限制继续运行 scopeId={} bindingId={} kind={}", scopeId, bindingId, scope.getKind());
     }
 }

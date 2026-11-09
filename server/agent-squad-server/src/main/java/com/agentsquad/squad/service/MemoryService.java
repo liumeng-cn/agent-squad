@@ -39,7 +39,7 @@ public class MemoryService {
         List<MemoryDO> rows = mapper.list(userId, before, size + 1);
         boolean more = rows.size() > size;
         List<MemoryDO> page = more ? rows.subList(0, size) : rows;
-        String next = more ? Long.toString(page.getLast().storageId()) : null;
+        String next = more ? Long.toString(page.getLast().getStorageId()) : null;
         return new MemoryPageResponse(page.stream().map(this::view).toList(), next,
                 mapper.revision(userId), mapper.blockedScopes(userId));
     }
@@ -62,10 +62,10 @@ public class MemoryService {
         lockRevision(userId);
         MemoryDO prior = mapper.findActiveKey(userId, request.key());
         if (prior != null) {
-            if ("ACTIVE".equals(prior.status()) && prior.content().equals(request.content())
-                    && java.util.Objects.equals(prior.expiresAt(), utc(request.expiresAt()))) {
+            if ("ACTIVE".equals(prior.getStatus()) && prior.getContent().equals(request.content())
+                    && java.util.Objects.equals(prior.getExpiresAt(), utc(request.expiresAt()))) {
                 if (sourceMessageId != null) {
-                    mapper.recordSource(userId, prior.memoryId(), prior.version(), sourceMessageId);
+                    mapper.recordSource(userId, prior.getMemoryId(), prior.getVersion(), sourceMessageId);
                 }
                 return result(userId, prior);
             }
@@ -93,7 +93,7 @@ public class MemoryService {
                                                  String sourceMessageId, String sourceQuote) {
         lockRevision(userId);
         MemoryDO current = requireOwned(userId, memoryId);
-        MemoryRules.requireContent(current.key(), request.content(), utc(request.expiresAt()), now());
+        MemoryRules.requireContent(current.getKey(), request.content(), utc(request.expiresAt()), now());
         MemoryRules.requireVersion(current, request.expectedVersion());
         if (mapper.update(userId, memoryId, request.expectedVersion(), request.content(), utc(request.expiresAt()), sourceMessageId, sourceQuote) != 1) {
             throw conflict("记忆版本已变化，请刷新后纠正");
@@ -114,7 +114,7 @@ public class MemoryService {
     public MemoryMutationResponse delete(String userId, String memoryId, long expectedVersion) {
         lockRevision(userId);
         MemoryDO current = requireOwned(userId, memoryId);
-        if ("DELETED".equals(current.status()) && current.version() == expectedVersion + 1) {
+        if ("DELETED".equals(current.getStatus()) && current.getVersion() == expectedVersion + 1) {
             return result(userId, current);
         }
         MemoryRules.requireVersion(current, expectedVersion);
@@ -168,9 +168,9 @@ public class MemoryService {
     }
 
     private MemoryView view(MemoryDO row) {
-        String status = "ACTIVE".equals(row.status()) && !MemoryRules.active(row, now()) ? "EXPIRED" : row.status();
-        return new MemoryView(row.memoryId(), row.key(), "DELETED".equals(status) ? "" : row.content(),
-                "EXPLICIT", status, row.version(), row.expiresAt() == null ? null : row.expiresAt().atOffset(ZoneOffset.UTC), row.sourceMessageId());
+        String status = "ACTIVE".equals(row.getStatus()) && !MemoryRules.active(row, now()) ? "EXPIRED" : row.getStatus();
+        return new MemoryView(row.getMemoryId(), row.getKey(), "DELETED".equals(status) ? "" : row.getContent(),
+                "EXPLICIT", status, row.getVersion(), row.getExpiresAt() == null ? null : row.getExpiresAt().atOffset(ZoneOffset.UTC), row.getSourceMessageId());
     }
 
     private Long parseCursor(String cursor) {

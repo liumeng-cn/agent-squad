@@ -62,22 +62,22 @@ public class WorkerResultService {
         }
         authorization.requireBindingCurrent(userId, bindingId);
         WorkerLaunchDO job = dispatchMapper.findByBinding(userId, bindingId);
-        if (job == null || !"RUNNING".equals(job.jobStatus())
-                || !"ACTIVE".equals(job.planStatus()) || job.cancelRequestedAt() != null
-                || !guardToken.equals(job.guardToken()) || job.guardLeaseUntil() == null
-                || !job.guardLeaseUntil().isAfter(LocalDateTime.now(ZoneOffset.UTC))) {
+        if (job == null || !"RUNNING".equals(job.getJobStatus())
+                || !"ACTIVE".equals(job.getPlanStatus()) || job.getCancelRequestedAt() != null
+                || !guardToken.equals(job.getGuardToken()) || job.getGuardLeaseUntil() == null
+                || !job.getGuardLeaseUntil().isAfter(LocalDateTime.now(ZoneOffset.UTC))) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
                     "Worker guard 或计划已失效");
         }
         WorkerDefinitionResponse definition = definitionService.requirePublished(
-                job.workerKey(), job.workerVersion());
+                job.getWorkerKey(), job.getWorkerVersion());
         schemaValidator.requireMatches(result, definition.outputSchema(), "Worker 输出");
         String resultJson = RuntimePayloads.toJson(objectMapper, result);
-        if (job.resultCandidateJson() != null) {
-            if (guardToken.equals(job.candidateGuardToken()) && turnId.equals(job.candidateTurnId())
+        if (job.getResultCandidateJson() != null) {
+            if (guardToken.equals(job.getCandidateGuardToken()) && turnId.equals(job.getCandidateTurnId())
                     && CanonicalJson.sha256(objectMapper, resultJson)
-                    .equals(CanonicalJson.sha256(objectMapper, job.resultCandidateJson()))) {
-                return job.jobId();
+                    .equals(CanonicalJson.sha256(objectMapper, job.getResultCandidateJson()))) {
+                return job.getJobId();
             }
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
                     "Worker 结果候选已由其他内容占用");
@@ -87,7 +87,7 @@ public class WorkerResultService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
                     "Worker 结果候选写入时 guard 已失效");
         }
-        return job.jobId();
+        return job.getJobId();
     }
 
     /**
@@ -100,19 +100,19 @@ public class WorkerResultService {
         if (job == null) {
             return false;
         }
-        Long currentVersion = planMapper.lockTaskPlanVersion(userId, job.taskId());
-        if (currentVersion == null || currentVersion != job.planVersion()) {
+        Long currentVersion = planMapper.lockTaskPlanVersion(userId, job.getTaskId());
+        if (currentVersion == null || currentVersion != job.getPlanVersion()) {
             return false;
         }
-        PlanDO plan = planMapper.lockPlan(userId, job.taskId(), job.planVersion());
-        if (plan == null || !"ACTIVE".equals(plan.status())) {
+        PlanDO plan = planMapper.lockPlan(userId, job.getTaskId(), job.getPlanVersion());
+        if (plan == null || !"ACTIVE".equals(plan.getStatus())) {
             return false;
         }
         if (dispatchMapper.finalizeSuccess(userId, bindingId, turnId,
                 LocalDateTime.now(ZoneOffset.UTC)) != 1) {
             return false;
         }
-        dependencyService.activateReadyDependents(userId, job.taskId(), job.planVersion());
+        dependencyService.activateReadyDependents(userId, job.getTaskId(), job.getPlanVersion());
         masterSignalService.onJobStateChanged(plan);
         return true;
     }
@@ -135,15 +135,15 @@ public class WorkerResultService {
         if (job == null) {
             return;
         }
-        Long version = planMapper.lockTaskPlanVersion(userId, job.taskId());
-        if (version == null || version != job.planVersion()) {
+        Long version = planMapper.lockTaskPlanVersion(userId, job.getTaskId());
+        if (version == null || version != job.getPlanVersion()) {
             return;
         }
-        PlanDO plan = planMapper.lockPlan(userId, job.taskId(), version);
-        if (plan == null || !"ACTIVE".equals(plan.status()) || dispatchMapper.markFailed(userId, bindingId) != 1) {
+        PlanDO plan = planMapper.lockPlan(userId, job.getTaskId(), version);
+        if (plan == null || !"ACTIVE".equals(plan.getStatus()) || dispatchMapper.markFailed(userId, bindingId) != 1) {
             return;
         }
-        dependencyService.activateReadyDependents(userId, job.taskId(), version);
+        dependencyService.activateReadyDependents(userId, job.getTaskId(), version);
         masterSignalService.onJobStateChanged(plan);
     }
 
@@ -157,12 +157,12 @@ public class WorkerResultService {
         if (job == null) {
             return;
         }
-        Long currentVersion = planMapper.lockTaskPlanVersion(userId, job.taskId());
-        if (currentVersion == null || currentVersion != job.planVersion()) {
+        Long currentVersion = planMapper.lockTaskPlanVersion(userId, job.getTaskId());
+        if (currentVersion == null || currentVersion != job.getPlanVersion()) {
             return;
         }
-        PlanDO plan = planMapper.lockPlan(userId, job.taskId(), job.planVersion());
-        if (plan != null && "ACTIVE".equals(plan.status())
+        PlanDO plan = planMapper.lockPlan(userId, job.getTaskId(), job.getPlanVersion());
+        if (plan != null && "ACTIVE".equals(plan.getStatus())
                 && dispatchMapper.markRecoveryBlocked(userId, bindingId) == 1) {
             masterSignalService.onJobStateChanged(plan);
         }

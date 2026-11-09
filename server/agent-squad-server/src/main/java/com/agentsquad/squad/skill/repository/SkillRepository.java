@@ -55,15 +55,15 @@ public class SkillRepository {
         List<SkillVersionDO> versions = mapper.lockVersions(userId);
         Map<String, SkillVersionDO> selected = new LinkedHashMap<>();
         for (SkillVersionDO version : versions) {
-            if (!"ENABLED".equals(version.status())) {
+            if (!"ENABLED".equals(version.getStatus())) {
                 continue;
             }
-            SkillGrantDO grant = lockGrant(userId, version.skillVersionId());
-            if (grant != null && grant.enabled()) {
-                selected.put(version.name(), version);
+            SkillGrantDO grant = lockGrant(userId, version.getSkillVersionId());
+            if (grant != null && grant.isEnabled()) {
+                selected.put(version.getName(), version);
             }
         }
-        return selected.values().stream().sorted(java.util.Comparator.comparing(SkillVersionDO::name)).toList();
+        return selected.values().stream().sorted(java.util.Comparator.comparing(SkillVersionDO::getName)).toList();
     }
 
     public void insertVersion(String userId, String versionId, String name, String version, String description,

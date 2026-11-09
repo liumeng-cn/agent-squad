@@ -11,8 +11,8 @@ public record ConversationViewResponse(String conversationId, String title, Stri
                                long generation, String status, long version, String activeTaskId,
                                String lastActivityAt) {
     public static ConversationViewResponse from(ConversationHeaderDO header) {
-        return new ConversationViewResponse(header.conversationId(), header.title(), header.titleSource(), header.titleVersion(),
-                header.generation(), header.status(), header.version(), header.activeTaskId(),
-                header.lastActivityAt().atOffset(java.time.ZoneOffset.UTC).toString());
+        return new ConversationViewResponse(header.getConversationId(), header.getTitle(), header.getTitleSource(), header.getTitleVersion(),
+                header.getGeneration(), header.getStatus(), header.getVersion(), header.getActiveTaskId(),
+                header.getLastActivityAt().atOffset(java.time.ZoneOffset.UTC).toString());
     }
 }

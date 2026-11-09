@@ -31,19 +31,19 @@ public class PlanCompletionEvaluationService {
 
     public PlanCompletionEvaluation evaluate(String userId, String taskId, long planVersion, List<AcceptanceReview> reviews) {
         var plan = plans.lockPlan(userId, taskId, planVersion);
-        if (plan == null || !"ACTIVE".equals(plan.status())) {
+        if (plan == null || !"ACTIVE".equals(plan.getStatus())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "当前计划已经变化");
         }
         var jobs = plans.lockJobs(taskId, planVersion);
         var definition = acceptance.definition(plan);
         var required = definition.nodes().stream().filter(node -> node.required()).map(node -> node.nodeKey()).toList();
-        var facts = jobs.stream().map(job -> new PlanJoinJob(job.jobId(), job.planVersion(), required.contains(job.nodeKey()),
-                com.agentsquad.squad.common.enums.worker.WorkerJobStatus.valueOf(job.status()))).toList();
+        var facts = jobs.stream().map(job -> new PlanJoinJob(job.getJobId(), job.getPlanVersion(), required.contains(job.getNodeKey()),
+                com.agentsquad.squad.common.enums.worker.WorkerJobStatus.valueOf(job.getStatus()))).toList();
         var results = acceptance.assess(plan, jobs, reviews);
         var decision = new PlanJoinPolicyService().evaluate(new PlanJoinFacts(planVersion,
                 definition.joinPolicy(), facts, completions.countPendingEffects(userId, taskId) > 0,
                 results.stream().filter(result -> result.required()).map(result -> result.verdict()).toList(),
-                jobs.stream().anyMatch(job -> "SUCCEEDED".equals(job.status()) && job.resultJson() != null)));
+                jobs.stream().anyMatch(job -> "SUCCEEDED".equals(job.getStatus()) && job.getResultJson() != null)));
         return new PlanCompletionEvaluation(decision, results);
     }
 }

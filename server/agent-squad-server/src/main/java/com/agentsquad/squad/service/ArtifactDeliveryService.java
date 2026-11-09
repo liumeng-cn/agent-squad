@@ -55,8 +55,8 @@ public class ArtifactDeliveryService {
         access.requireCurrent(context);
         SandboxPolicy.requirePath(path);
         var run = runs.find(context.userId(), executionId);
-        if (run == null || !run.bindingId().equals(context.bindingId()) || !run.scopeId().equals(context.scopeId())
-                || !"IN_FLIGHT".equals(run.status())) {
+        if (run == null || !run.getBindingId().equals(context.bindingId()) || !run.getScopeId().equals(context.scopeId())
+                || !"IN_FLIGHT".equals(run.getStatus())) {
             throw conflict("沙箱运行与产物归属不一致");
         }
         String name = path.substring(path.lastIndexOf('/') + 1);
@@ -64,7 +64,7 @@ public class ArtifactDeliveryService {
         String hash = ArtifactContentPolicy.digest(content);
         ArtifactStageDO prior = stages.findPath(context.userId(), executionId, path);
         if (prior != null) {
-            if (!hash.equals(prior.sha256())) {
+            if (!hash.equals(prior.getSha256())) {
                 throw conflict("相同工作区路径的内容已变化");
             }
             return view(prior);
@@ -85,30 +85,30 @@ public class ArtifactDeliveryService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "暂存产物不存在或已过期");
         }
         SandboxExecutionContext context = access.resolve(userId, sessionId, guardToken, "artifact-commit", stageId);
-        if (!stage.scopeId().equals(context.scopeId()) || !stage.bindingId().equals(context.bindingId())
-                || expectedHash == null || !expectedHash.equals(stage.sha256())) {
+        if (!stage.getScopeId().equals(context.scopeId()) || !stage.getBindingId().equals(context.bindingId())
+                || expectedHash == null || !expectedHash.equals(stage.getSha256())) {
             throw conflict("产物归属或摘要不匹配");
         }
         stage = stages.lock(userId, stageId);
         if (stage == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "暂存产物已过期或被清理");
         }
-        if ("COMMITTED".equals(stage.status())) {
-            return artifactService.get(userId, stage.artifactId());
+        if ("COMMITTED".equals(stage.getStatus())) {
+            return artifactService.get(userId, stage.getArtifactId());
         }
-        var run = runs.find(userId, stage.executionId());
-        if (run == null || !"SUCCEEDED".equals(run.status()) || !"STAGED".equals(stage.status())
-                || !expectedHash.equals(ArtifactContentPolicy.digest(stage.content()))) {
+        var run = runs.find(userId, stage.getExecutionId());
+        if (run == null || !"SUCCEEDED".equals(run.getStatus()) || !"STAGED".equals(stage.getStatus())
+                || !expectedHash.equals(ArtifactContentPolicy.digest(stage.getContent()))) {
             throw conflict("产物运行未成功或内容完整性校验失败");
         }
-        String type = ArtifactContentPolicy.mediaType(stage.fileName(), stage.content());
+        String type = ArtifactContentPolicy.mediaType(stage.getFileName(), stage.getContent());
         String artifactId = UUID.randomUUID().toString();
-        artifacts.insert(artifactId, userId, stage.fileName(), type, stage.content().length, expectedHash,
-                "stage:" + stageId, stage.content(), LocalDateTime.now(ZoneOffset.UTC).plusDays(30));
+        artifacts.insert(artifactId, userId, stage.getFileName(), type, stage.getContent().length, expectedHash,
+                "stage:" + stageId, stage.getContent(), LocalDateTime.now(ZoneOffset.UTC).plusDays(30));
         artifacts.attachScope(userId, context.scopeId(), artifactId);
         var scope = scopes.requireReadable(userId, context.scopeId());
-        if ("TASK".equals(scope.kind())) {
-            artifacts.attach(userId, scope.ownerId(), artifactId);
+        if ("TASK".equals(scope.getKind())) {
+            artifacts.attach(userId, scope.getOwnerId(), artifactId);
         }
         if (stages.commit(userId, stageId, artifactId) != 1) {
             throw conflict("产物提交状态已变化");
@@ -119,8 +119,8 @@ public class ArtifactDeliveryService {
     }
 
     private ArtifactStageView view(ArtifactStageDO row) {
-        return new ArtifactStageView(row.stageId(), row.executionId(), row.fileName(), row.sha256(),
-                row.content().length, row.status(), row.artifactId());
+        return new ArtifactStageView(row.getStageId(), row.getExecutionId(), row.getFileName(), row.getSha256(),
+                row.getContent().length, row.getStatus(), row.getArtifactId());
     }
 
     private RuntimeBusinessException conflict(String message) {

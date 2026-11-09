@@ -117,7 +117,7 @@ public class MessageAcceptanceWriterService {
             throw new IllegalStateException("回复预算上限必须大于0");
         }
         scopes.insertAccount(userId, accountId, "STANDARD", responseBudgetLimit);
-        scopes.insertScope(scopeId, userId, conversationId, conversation.generation(), "RESPONSE", executionId, accountId);
+        scopes.insertScope(scopeId, userId, conversationId, conversation.getGeneration(), "RESPONSE", executionId, accountId);
         executionTrace.capture(userId, scopeId);
         if (messages.reserveMessage(userId, conversationId, now) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "会话已停止接收消息");
@@ -173,7 +173,7 @@ public class MessageAcceptanceWriterService {
 
     private ConversationDO lockConversation(String userId, String conversationId) {
         ConversationDO row = conversations.lockOwned(userId, conversationId);
-        if (row == null || !"ACTIVE".equals(row.status())) {
+        if (row == null || !"ACTIVE".equals(row.getStatus())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "对话不存在或已删除");
         }
         return row;
@@ -181,13 +181,13 @@ public class MessageAcceptanceWriterService {
 
     private void appendEvent(String userId, ConversationDO conversation, String commandId, String type,
                              Object payload, LocalDateTime now) {
-        if (messages.reserveEvent(userId, conversation.conversationId()) != 1) {
+        if (messages.reserveEvent(userId, conversation.getConversationId()) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "会话公开水位已失效");
         }
-        messages.insertEvent(userId, conversation.conversationId(), conversation.generation(),
-                messages.eventSequence(userId, conversation.conversationId()), "command:" + commandId + ":" + type,
+        messages.insertEvent(userId, conversation.getConversationId(), conversation.getGeneration(),
+                messages.eventSequence(userId, conversation.getConversationId()), "command:" + commandId + ":" + type,
                 type, RuntimePayloads.toJson(objectMapper, payload), now);
-        committedEvents.publishEvent(new ConversationCommittedSignal(userId, conversation.conversationId()));
+        committedEvents.publishEvent(new ConversationCommittedSignal(userId, conversation.getConversationId()));
     }
 
     private String fallbackTitle(String text) {

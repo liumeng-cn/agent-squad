@@ -16,19 +16,19 @@ public record TaskDirectiveView(String directiveId, String taskId, String source
      * 已有历史受理记录没有等待原因时，保守显示等待安全处理点，不推测已经开始协调。
      */
     public static TaskDirectiveView from(TaskDirectiveDO row) {
-        TaskDirectiveStatus status = TaskDirectiveStatus.valueOf(row.status());
+        TaskDirectiveStatus status = TaskDirectiveStatus.valueOf(row.getStatus());
         TaskDirectiveWaitReason wait = TaskDirectiveWaitReason.NONE;
         if (status == TaskDirectiveStatus.ACCEPTED) {
             wait = TaskDirectiveWaitReason.WAITING_SAFE_POINT;
-            if (row.reasonCode() != null) {
+            if (row.getReasonCode() != null) {
                 try {
-                    wait = TaskDirectiveWaitReason.valueOf(row.reasonCode());
+                    wait = TaskDirectiveWaitReason.valueOf(row.getReasonCode());
                 } catch (IllegalArgumentException unknown) {
                     // 旧错误码不能伪造成已开始协调。
                 }
             }
         }
-        return new TaskDirectiveView(row.directiveId(), row.taskId(), row.sourceMessageId(), status, wait,
-                row.appliedVersion(), row.appliedGoalRevision(), row.reasonCode(), row.reasonMessage());
+        return new TaskDirectiveView(row.getDirectiveId(), row.getTaskId(), row.getSourceMessageId(), status, wait,
+                row.getAppliedVersion(), row.getAppliedGoalRevision(), row.getReasonCode(), row.getReasonMessage());
     }
 }

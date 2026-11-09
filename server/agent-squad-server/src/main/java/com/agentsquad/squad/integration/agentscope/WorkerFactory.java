@@ -130,7 +130,7 @@ public class WorkerFactory {
         for (WorkerAgentHandle handle : active.values()) {
             WorkerLaunchDO job = dispatchMapper.findByBinding(handle.userId(), handle.bindingId());
             if (job != null && java.util.Set.of("READY", "RUNNING", "WAITING_INPUT",
-                    "WAITING_APPROVAL", "RECONCILING", "CANCELLING").contains(job.jobStatus())) {
+                    "WAITING_APPROVAL", "RECONCILING", "CANCELLING").contains(job.getJobStatus())) {
                 continue;
             }
             if (active.remove(handle.bindingId(), handle)) {
@@ -164,17 +164,17 @@ public class WorkerFactory {
         context.put(WorkerExecutionIdentity.class,
                 new WorkerExecutionIdentity(bindingId, handle.guardToken()));
         WorkerLaunchDO job = dispatchMapper.findByBinding(userId, bindingId);
-        JsonNode selectedInput = readInput(job.inputJson());
-        ContextSnapshotDO selected = snapshotMapper.findOwned(userId, job.taskId(), selectedInput.path("contextSnapshotId").asText());
+        JsonNode selectedInput = readInput(job.getInputJson());
+        ContextSnapshotDO selected = snapshotMapper.findOwned(userId, job.getTaskId(), selectedInput.path("contextSnapshotId").asText());
         java.util.List<String> ids = new java.util.ArrayList<>();
-        for (JsonNode item : readInput(selected.itemsJson())) {
+        for (JsonNode item : readInput(selected.getItemsJson())) {
             if ("SKILL_REFERENCE".equals(item.path("kind").asText())) {
                 ids.add(item.path("sourceId").asText());
             }
         }
         context.put(com.agentsquad.squad.skill.integration.SkillSelection.class,
                 new com.agentsquad.squad.skill.integration.SkillSelection(ids));
-        var allowedTools = new java.util.HashSet<>(definitionService.requirePublished(job.workerKey(), job.workerVersion()).toolAllowlist());
+        var allowedTools = new java.util.HashSet<>(definitionService.requirePublished(job.getWorkerKey(), job.getWorkerVersion()).toolAllowlist());
         allowedTools.add("load_skill_through_path");
         allowedTools.add("report_job_result");
         context.put(com.agentsquad.squad.skill.integration.ScopeSkillCapabilities.class,
@@ -193,13 +193,13 @@ public class WorkerFactory {
     private WorkerAgentHandle create(String userId, String bindingId,
                                      String sessionId, String agentId) {
         WorkerLaunchDO job = dispatchMapper.findByBinding(userId, bindingId);
-        if (job == null || !"ACTIVE".equals(job.planStatus())
-                || job.cancelRequestedAt() != null) {
+        if (job == null || !"ACTIVE".equals(job.getPlanStatus())
+                || job.getCancelRequestedAt() != null) {
             throw new IllegalStateException("Worker Binding 不可执行");
         }
-        WorkerDefinitionResponse definition = "READY".equals(job.jobStatus())
-                ? definitionService.requireEnabled(job.workerKey(), job.workerVersion())
-                : definitionService.requirePublished(job.workerKey(), job.workerVersion());
+        WorkerDefinitionResponse definition = "READY".equals(job.getJobStatus())
+                ? definitionService.requireEnabled(job.getWorkerKey(), job.getWorkerVersion())
+                : definitionService.requirePublished(job.getWorkerKey(), job.getWorkerVersion());
         String expectedAgentId = ContentDigests.sha256(definition.definitionId()).substring(0, 32);
         if (!expectedAgentId.equals(agentId)) {
             throw new IllegalStateException("Worker 固定能力版本与 Binding 不一致");
@@ -212,14 +212,14 @@ public class WorkerFactory {
         WorkerRuntimeProfile runtime = profileRegistry.requireRuntime(definition.runtimeProfileKey());
         JsonNode input;
         try {
-            input = RuntimePayloads.readJson(objectMapper, job.inputJson());
+            input = RuntimePayloads.readJson(objectMapper, job.getInputJson());
         } catch (Exception exception) {
             throw new IllegalStateException("Worker 固定输入无法读取", exception);
         }
         String snapshotId = input.path("contextSnapshotId").asText(null);
-        ContextSnapshotDO snapshot = snapshotMapper.findOwned(userId, job.taskId(), snapshotId);
-        if (snapshot == null || !job.nodeKey().equals(snapshot.targetNodeKey())
-                || !CanonicalJson.sha256(objectMapper, snapshot.itemsJson()).equals(snapshot.contentHash())) {
+        ContextSnapshotDO snapshot = snapshotMapper.findOwned(userId, job.getTaskId(), snapshotId);
+        if (snapshot == null || !job.getNodeKey().equals(snapshot.getTargetNodeKey())
+                || !CanonicalJson.sha256(objectMapper, snapshot.getItemsJson()).equals(snapshot.getContentHash())) {
             throw new IllegalStateException("Worker 局部上下文已失效");
         }
         WorkerLaunchDO claimed = dispatchService.claim(userId, bindingId);
@@ -231,15 +231,15 @@ public class WorkerFactory {
             toolkit.registerAgentTool(commitArtifact);
         }
         toolkit.registerAgentTool(new ReportJobResultTool(resultService, objectMapper,
-                userId, sessionId, bindingId, claimed.guardToken()).outputSchema(definition.outputSchema()));
-        boolean hasSelectedSkills = readInput(snapshot.itemsJson()).valueStream()
+                userId, sessionId, bindingId, claimed.getGuardToken()).outputSchema(definition.outputSchema()));
+        boolean hasSelectedSkills = readInput(snapshot.getItemsJson()).valueStream()
                 .anyMatch(item -> "SKILL_REFERENCE".equals(item.path("kind").asText()));
         String prompt = "你是独立 Worker。能力：" + definition.description()
                 + "。只处理当前节点，不发布计划、不结束父目标、不委派其他 Agent。"
                 + "结果是供统一助手核验的材料，不是直接发给用户的消息。提供实质内容、依据与具体缺口，"
                 + "区分事实和推断，不写领取任务、工具调用、向 Master 汇报等执行叙述，不直接对用户提问。"
                 + "任务说明需按已发布输入 Schema 理解：" + definition.inputSchema()
-                + "。局部上下文（JSON）：" + snapshot.itemsJson()
+                + "。局部上下文（JSON）：" + snapshot.getItemsJson()
                 + "。完成工作后必须调用 report_job_result，result 须符合已发布输出 Schema："
                 + definition.outputSchema()
                 + (hasSelectedSkills ? "。只使用当前available_skills列出的技能，不猜测技能ID。"
@@ -287,7 +287,7 @@ public class WorkerFactory {
                 .disableDefaultWorkspaceSkills();
         agentBuilder.workspace(runtimeWorkspace.path());
         HarnessAgent agent = agentBuilder.build();
-        return new WorkerAgentHandle(agent, userId, bindingId, sessionId, agentId, claimed.guardToken());
+        return new WorkerAgentHandle(agent, userId, bindingId, sessionId, agentId, claimed.getGuardToken());
     }
 
     /**

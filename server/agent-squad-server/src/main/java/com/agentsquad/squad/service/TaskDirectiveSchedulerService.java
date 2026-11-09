@@ -31,7 +31,7 @@ public class TaskDirectiveSchedulerService {
             try {
                 service.dispatch(candidate);
             } catch (Exception exception) {
-                log.warn("目标修改协调检查失败 directiveId={} taskId={} errorType={}", candidate.directiveId(), candidate.taskId(), exception.getClass().getSimpleName(), exception);
+                log.warn("目标修改协调检查失败 directiveId={} taskId={} errorType={}", candidate.getDirectiveId(), candidate.getTaskId(), exception.getClass().getSimpleName(), exception);
             }
         }
     }

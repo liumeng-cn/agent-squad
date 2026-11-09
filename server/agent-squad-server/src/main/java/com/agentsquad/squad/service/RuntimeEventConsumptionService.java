@@ -48,7 +48,7 @@ public class RuntimeEventConsumptionService {
         if (events == null || events.size() > MAX_BATCH_SIZE) {
             throw new IllegalArgumentException("原生事件消费批次无效");
         }
-        var source = new RuntimeEventSource(target.userId(), target.bindingId(), target.sessionId(),
+        var source = new RuntimeEventSource(target.getUserId(), target.getBindingId(), target.getSessionId(),
                 RuntimeEventSource.CURRENT_MAPPING_VERSION);
         long previous = -1;
         for (SessionEvent event : events) {

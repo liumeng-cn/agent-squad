@@ -136,52 +136,52 @@ public class PlanService {
         if (context == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "Master 会话未绑定目标");
         }
-        if (context.cancellationRequested() || !"ACTIVE".equals(context.conversationStatus())
-                || !(GoalTaskStatus.QUEUED.name().equals(context.taskStatus())
-                || GoalTaskStatus.RUNNING.name().equals(context.taskStatus()))) {
+        if (context.isCancellationRequested() || !"ACTIVE".equals(context.getConversationStatus())
+                || !(GoalTaskStatus.QUEUED.name().equals(context.getTaskStatus())
+                || GoalTaskStatus.RUNNING.name().equals(context.getTaskStatus()))) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已不能发布计划");
         }
-        long goalRevision = directives.goalState(userId, context.taskId()).goalRevision();
-        List<String> pendingDirectives = directives.pending(userId, context.taskId());
+        long goalRevision = directives.goalState(userId, context.getTaskId()).getGoalRevision();
+        List<String> pendingDirectives = directives.pending(userId, context.getTaskId());
         if (!pendingDirectives.isEmpty()) {
             // 在已锁定的目标范围内返回全部真实标识，避免模型猜测来源消息 ID。
-            long expectedVersion = tasks.lockOwnedRow(userId, context.taskId()).version();
+            long expectedVersion = tasks.lockOwnedRow(userId, context.getTaskId()).getVersion();
             List<PendingDirectiveFeedback> pending = new ArrayList<>();
             for (String directiveId : pendingDirectives) {
                 var directive = directives.lock(userId, directiveId);
-                if (directive != null && context.taskId().equals(directive.taskId())
-                        && "ACCEPTED".equals(directive.status())) {
+                if (directive != null && context.getTaskId().equals(directive.getTaskId())
+                        && "ACCEPTED".equals(directive.getStatus())) {
                     pending.add(new PendingDirectiveFeedback(
-                            directive.directiveId(), expectedVersion, directive.kind(), directive.content()));
+                            directive.getDirectiveId(), expectedVersion, directive.getKind(), directive.getContent()));
                 }
             }
-            throw new PendingDirectivesException(context.taskId(), pending);
+            throw new PendingDirectivesException(context.getTaskId(), pending);
         }
-        PlanDO existing = planMapper.findLatestByLogicalKey(context.taskId(), publish.logicalKey());
+        PlanDO existing = planMapper.findLatestByLogicalKey(context.getTaskId(), publish.logicalKey());
         if (existing != null) {
-            if (existing.goalRevision() != goalRevision) {
+            if (existing.getGoalRevision() != goalRevision) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "旧计划对应的目标内容已变化，请使用新的计划键");
             }
             String requestedDefinition = RuntimePayloads.toJson(objectMapper, publish);
             if (!CanonicalJson.sha256(objectMapper, requestedDefinition)
-                    .equals(CanonicalJson.sha256(objectMapper, existing.definitionJson()))) {
+                    .equals(CanonicalJson.sha256(objectMapper, existing.getDefinitionJson()))) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "计划逻辑键对应的内容不同");
             }
-            List<String> jobIds = planMapper.listJobs(context.taskId(), existing.planVersion())
-                    .stream().map(WorkerJobDO::jobId).toList();
+            List<String> jobIds = planMapper.listJobs(context.getTaskId(), existing.getPlanVersion())
+                    .stream().map(WorkerJobDO::getJobId).toList();
             log.info("计划重放返回原回执 taskId={} planId={} planVersion={} jobCount={}",
-                    context.taskId(), existing.planId(), existing.planVersion(), jobIds.size());
-            return new PlanReceipt(existing.planId(), context.taskId(), existing.planVersion(), jobIds);
+                    context.getTaskId(), existing.getPlanId(), existing.getPlanVersion(), jobIds.size());
+            return new PlanReceipt(existing.getPlanId(), context.getTaskId(), existing.getPlanVersion(), jobIds);
         }
 
-        if (publish.expectedPlanVersion() != context.planVersion()) {
+        if (publish.expectedPlanVersion() != context.getPlanVersion()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "计划版本已变化");
         }
 
         validateDag(publish.nodes());
         validateContexts(context, publish.nodes());
-        List<WorkerJobDO> previousJobs = context.planVersion() == 0
-                ? List.of() : planMapper.listJobs(context.taskId(), context.planVersion());
+        List<WorkerJobDO> previousJobs = context.getPlanVersion() == 0
+                ? List.of() : planMapper.listJobs(context.getTaskId(), context.getPlanVersion());
         Map<String, WorkerJobDO> reusable = new LinkedHashMap<>();
         boolean foundReusable;
         do {
@@ -191,7 +191,7 @@ public class PlanService {
                     continue;
                 }
                 WorkerJobDO source = reuseService.reusableNode(
-                        context.userId(), context.taskId(), node, previousJobs, reusable);
+                        context.getUserId(), context.getTaskId(), node, previousJobs, reusable);
                 if (source != null) {
                     reusable.put(node.nodeKey(), source);
                     foundReusable = true;
@@ -200,19 +200,19 @@ public class PlanService {
         } while (foundReusable);
         requirePlanBudget(context, publish.nodes(), reusable.keySet());
 
-        long newVersion = context.planVersion() + 1;
+        long newVersion = context.getPlanVersion() + 1;
         long priorSignalVersion = 0;
-        if (context.planVersion() > 0) {
-            PlanDO previous = planMapper.lockPlan(context.userId(), context.taskId(),
-                    context.planVersion());
+        if (context.getPlanVersion() > 0) {
+            PlanDO previous = planMapper.lockPlan(context.getUserId(), context.getTaskId(),
+                    context.getPlanVersion());
             if (previous == null) {
                 throw new IllegalStateException("当前计划头已消失");
             }
-            priorSignalVersion = previous.signalVersion();
+            priorSignalVersion = previous.getSignalVersion();
         }
         String planId = UUID.randomUUID().toString();
         String definitionJson = RuntimePayloads.toJson(objectMapper, publish);
-        planMapper.insertPlan(planId, context.userId(), context.taskId(), newVersion,
+        planMapper.insertPlan(planId, context.getUserId(), context.getTaskId(), newVersion,
                 publish.logicalKey(), definitionJson, priorSignalVersion, goalRevision);
 
         List<String> jobIds = new ArrayList<>(publish.nodes().size());
@@ -226,35 +226,35 @@ public class PlanService {
             input.put("goal", node.goal());
             input.put("contextSnapshotId", node.contextSnapshotId());
             input.put("required", node.required());
-            planMapper.insertJob(jobId, context.userId(), context.taskId(), newVersion,
+            planMapper.insertJob(jobId, context.getUserId(), context.getTaskId(), newVersion,
                     node.nodeKey(), node.workerKey(), node.workerVersion(), status,
                     dependsJson, RuntimePayloads.toJson(objectMapper, input));
             WorkerJobDO source = reusable.get(node.nodeKey());
             if (source != null) {
-                if (planMapper.reuseResult(context.userId(), jobId,
-                        source.jobId(), source.resultJson()) != 1) {
+                if (planMapper.reuseResult(context.getUserId(), jobId,
+                        source.getJobId(), source.getResultJson()) != 1) {
                     throw new IllegalStateException("复用节点结果写入失败");
                 }
-                reusedJobIds.put(jobId, source.jobId());
+                reusedJobIds.put(jobId, source.getJobId());
             } else if (root) {
                 createRootDelivery(context, node, jobId, newVersion);
             }
             jobIds.add(jobId);
         }
 
-        if (planMapper.advanceTaskPlan(context.userId(), context.taskId(),
+        if (planMapper.advanceTaskPlan(context.getUserId(), context.getTaskId(),
                 publish.expectedPlanVersion(), newVersion) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "计划发布时目标状态已变化");
         }
 
-        planMapper.supersedePlans(context.taskId(), newVersion);
-        planMapper.supersedeUnstartedJobs(context.taskId(), newVersion);
-        planMapper.barrierInFlightJobs(context.taskId(), newVersion);
-        planMapper.cancelSupersededCommands(context.taskId(), newVersion);
-        planMapper.cancelSupersededSignals(context.taskId());
+        planMapper.supersedePlans(context.getTaskId(), newVersion);
+        planMapper.supersedeUnstartedJobs(context.getTaskId(), newVersion);
+        planMapper.barrierInFlightJobs(context.getTaskId(), newVersion);
+        planMapper.cancelSupersededCommands(context.getTaskId(), newVersion);
+        planMapper.cancelSupersededSignals(context.getTaskId());
         if (!reusedJobIds.isEmpty()) {
-            dependencyService.activateReadyDependents(context.userId(), context.taskId(), newVersion);
-            PlanDO activePlan = planMapper.lockPlan(context.userId(), context.taskId(), newVersion);
+            dependencyService.activateReadyDependents(context.getUserId(), context.getTaskId(), newVersion);
+            PlanDO activePlan = planMapper.lockPlan(context.getUserId(), context.getTaskId(), newVersion);
             for (String ignored : reusedJobIds.keySet()) {
                 masterSignalService.onJobStateChanged(activePlan);
             }
@@ -265,19 +265,19 @@ public class PlanService {
         eventPayload.put("jobIds", jobIds);
         eventPayload.put("joinPolicy", publish.joinPolicy());
         eventPayload.put("acceptanceCriteria", publish.acceptanceCriteria());
-        if (projectionMapper.reserveEventSequence(context.userId(), context.taskId()) != 1) {
+        if (projectionMapper.reserveEventSequence(context.getUserId(), context.getTaskId()) != 1) {
             throw new IllegalStateException("计划事件序号预留失败");
         }
-        conversationProjection.insertProjected(context.userId(), context.taskId(),
-                projectionMapper.eventSequence(context.userId(), context.taskId()),
+        conversationProjection.insertProjected(context.getUserId(), context.getTaskId(),
+                projectionMapper.eventSequence(context.getUserId(), context.getTaskId()),
                 "plan:" + planId, "plan.published", RuntimePayloads.toJson(objectMapper, eventPayload),
                 LocalDateTime.now());
         for (Map.Entry<String, String> reuse : reusedJobIds.entrySet()) {
-            if (projectionMapper.reserveEventSequence(context.userId(), context.taskId()) != 1) {
+            if (projectionMapper.reserveEventSequence(context.getUserId(), context.getTaskId()) != 1) {
                 throw new IllegalStateException("结果复用事件序号预留失败");
             }
-            conversationProjection.insertProjected(context.userId(), context.taskId(),
-                    projectionMapper.eventSequence(context.userId(), context.taskId()),
+            conversationProjection.insertProjected(context.getUserId(), context.getTaskId(),
+                    projectionMapper.eventSequence(context.getUserId(), context.getTaskId()),
                     "job:reused:" + reuse.getKey(), "job.reused",
                     RuntimePayloads.toJson(objectMapper, Map.of(
                             "jobId", reuse.getKey(), "reusedFromJobId", reuse.getValue(),
@@ -285,8 +285,8 @@ public class PlanService {
         }
 
         log.info("计划已发布 taskId={} planVersion={} planId={} jobCount={}",
-                context.taskId(), newVersion, planId, jobIds.size());
-        return new PlanReceipt(planId, context.taskId(), newVersion, jobIds);
+                context.getTaskId(), newVersion, planId, jobIds.size());
+        return new PlanReceipt(planId, context.getTaskId(), newVersion, jobIds);
     }
 
     /**
@@ -294,13 +294,13 @@ public class PlanService {
      */
     private void requirePlanBudget(PlanContextDO context, List<PlanNode> nodes,
                                    Set<String> reusedNodeKeys) {
-        String scopeId = scopeMapper.findScopeByTask(context.userId(), context.taskId());
-        BudgetAccountDO taskBudget = budgetMapper.lockAccount(context.userId(), scopeId);
+        String scopeId = scopeMapper.findScopeByTask(context.getUserId(), context.getTaskId());
+        BudgetAccountDO taskBudget = budgetMapper.lockAccount(context.getUserId(), scopeId);
         if (taskBudget == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标预算不存在");
         }
         BigInteger required = BigInteger.valueOf(budgetMapper.sumConsumedUnits(
-                context.userId(), scopeId));
+                context.getUserId(), scopeId));
         for (PlanNode node : nodes) {
             if (reusedNodeKeys.contains(node.nodeKey())) {
                 continue;
@@ -316,7 +316,7 @@ public class PlanService {
                     .divide(BigInteger.valueOf(1000000));
             required = required.add(cost.max(BigInteger.ONE));
         }
-        if (required.compareTo(BigInteger.valueOf(taskBudget.limitMicrounits())) > 0) {
+        if (required.compareTo(BigInteger.valueOf(taskBudget.getLimitMicrounits())) > 0) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
                     "目标预算不足以启动计划节点");
         }
@@ -332,16 +332,16 @@ public class PlanService {
         String bindingId = UUID.randomUUID().toString();
         String agentId = ContentDigests.sha256(definition.definitionId()).substring(0, 32);
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
-        bindingMapper.insertWorker(bindingId, context.userId(), context.taskId(), agentId,
+        bindingMapper.insertWorker(bindingId, context.getUserId(), context.getTaskId(), agentId,
                 UUID.randomUUID().toString(), now);
-        if (planMapper.bindReadyJob(context.userId(), jobId, bindingId) != 1) {
+        if (planMapper.bindReadyJob(context.getUserId(), jobId, bindingId) != 1) {
             throw new IllegalStateException("根节点绑定失败");
         }
         String commandId = UUID.randomUUID().toString();
         String payload = RuntimePayloads.toJson(objectMapper, Map.of("message", node.goal()));
-        commandMapper.insertSubmit(commandId, context.userId(), "worker-job:" + jobId,
+        commandMapper.insertSubmit(commandId, context.getUserId(), "worker-job:" + jobId,
                 "plan:" + planVersion + ":" + node.nodeKey(), ContentDigests.sha256(payload),
-                context.taskId(), bindingId, payload, now);
+                context.getTaskId(), bindingId, payload, now);
     }
 
     private void validateShape(PlanPublish publish) {
@@ -393,15 +393,15 @@ public class PlanService {
     private void validateContexts(PlanContextDO context, List<PlanNode> nodes) {
         for (PlanNode node : nodes) {
             ContextSnapshotDO snapshot = contextSnapshotMapper.findOwned(
-                    context.userId(), context.taskId(), node.contextSnapshotId());
-            if (snapshot == null || !node.nodeKey().equals(snapshot.targetNodeKey())
-                    || snapshot.conversationGeneration() != context.conversationGeneration()
-                    || snapshot.goalRevision() != directives.goalState(context.userId(), context.taskId()).goalRevision()
-                    || !CanonicalJson.sha256(objectMapper, snapshot.itemsJson()).equals(snapshot.contentHash())) {
+                    context.getUserId(), context.getTaskId(), node.contextSnapshotId());
+            if (snapshot == null || !node.nodeKey().equals(snapshot.getTargetNodeKey())
+                    || snapshot.getConversationGeneration() != context.getConversationGeneration()
+                    || snapshot.getGoalRevision() != directives.goalState(context.getUserId(), context.getTaskId()).getGoalRevision()
+                    || !CanonicalJson.sha256(objectMapper, snapshot.getItemsJson()).equals(snapshot.getContentHash())) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION,
                         "计划节点的局部上下文未准备或已失效");
             }
-            authorization.requireScopeCurrent(context.userId(), executionScopes.scopeForTask(context.userId(), context.taskId()));
+            authorization.requireScopeCurrent(context.getUserId(), executionScopes.scopeForTask(context.getUserId(), context.getTaskId()));
         }
     }
 

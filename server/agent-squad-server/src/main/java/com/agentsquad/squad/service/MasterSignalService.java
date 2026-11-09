@@ -60,7 +60,7 @@ public class MasterSignalService {
      * 调用方已锁定父 Task 和 Plan；结果、信号版本与命令在同一平台事务内提交。
      */
     public void onJobStateChanged(PlanDO plan) {
-        if (planMapper.advanceSignalVersion(plan.userId(), plan.taskId(), plan.planVersion()) != 1) {
+        if (planMapper.advanceSignalVersion(plan.getUserId(), plan.getTaskId(), plan.getPlanVersion()) != 1) {
             throw new IllegalStateException("计划汇合版本推进失败");
         }
         createIfReady(plan);
@@ -79,34 +79,34 @@ public class MasterSignalService {
             return;
         }
         PlanDO plan = planMapper.lockPlan(userId, taskId, planVersion);
-        if (plan != null && "ACTIVE".equals(plan.status())) {
+        if (plan != null && "ACTIVE".equals(plan.getStatus())) {
             createIfReady(plan);
         }
     }
 
     private void createIfReady(PlanDO plan) {
-        if (!directives.pending(plan.userId(), plan.taskId()).isEmpty()
-                || directives.pendingControls(plan.userId(), plan.taskId()) > 0) {
+        if (!directives.pending(plan.getUserId(), plan.getTaskId()).isEmpty()
+                || directives.pendingControls(plan.getUserId(), plan.getTaskId()) > 0) {
             return;
         }
-        if (planMapper.countSignalEligibleTask(plan.userId(), plan.taskId()) == 0) {
+        if (planMapper.countSignalEligibleTask(plan.getUserId(), plan.getTaskId()) == 0) {
             return;
         }
-        List<WorkerJobDO> jobs = planMapper.lockJobs(plan.taskId(), plan.planVersion());
-        boolean allSucceeded = !jobs.isEmpty() && jobs.stream().allMatch(job -> WorkerJobStatus.SUCCEEDED.name().equals(job.status()));
-        var stage = planEvaluation.evaluate(plan.userId(), plan.taskId(), plan.planVersion(), List.of()).decision().stage();
+        List<WorkerJobDO> jobs = planMapper.lockJobs(plan.getTaskId(), plan.getPlanVersion());
+        boolean allSucceeded = !jobs.isEmpty() && jobs.stream().allMatch(job -> WorkerJobStatus.SUCCEEDED.name().equals(job.getStatus()));
+        var stage = planEvaluation.evaluate(plan.getUserId(), plan.getTaskId(), plan.getPlanVersion(), List.of()).decision().stage();
         if (jobs.isEmpty() || !(stage == PlanJoinStage.READY
                 || stage == PlanJoinStage.NEEDS_COORDINATION)
-                || commandMapper.countUnprocessedMasterCommands(plan.userId(), plan.taskId()) > 0) {
+                || commandMapper.countUnprocessedMasterCommands(plan.getUserId(), plan.getTaskId()) > 0) {
             return;
         }
-        long signalVersion = planMapper.lockPlan(plan.userId(), plan.taskId(), plan.planVersion())
-                .signalVersion();
-        String scopeKey = "master-signal:" + plan.taskId();
-        if (commandMapper.findByKey(plan.userId(), scopeKey, String.valueOf(signalVersion)) != null) {
+        long signalVersion = planMapper.lockPlan(plan.getUserId(), plan.getTaskId(), plan.getPlanVersion())
+                .getSignalVersion();
+        String scopeKey = "master-signal:" + plan.getTaskId();
+        if (commandMapper.findByKey(plan.getUserId(), scopeKey, String.valueOf(signalVersion)) != null) {
             return;
         }
-        String bindingId = bindingMapper.findMasterBindingId(plan.userId(), plan.taskId());
+        String bindingId = bindingMapper.findMasterBindingId(plan.getUserId(), plan.getTaskId());
         if (bindingId == null) {
             throw new IllegalStateException("汇合时 Master Binding 已消失");
         }
@@ -114,20 +114,20 @@ public class MasterSignalService {
         var definition = acceptance.definition(plan);
         for (WorkerJobDO job : jobs) {
             Map<String, Object> result = new LinkedHashMap<>();
-            result.put("jobId", job.jobId());
-            result.put("nodeKey", job.nodeKey());
-            result.put("workerKey", job.workerKey());
-            result.put("workerVersion", job.workerVersion());
-            result.put("status", job.status());
-            definition.nodes().stream().filter(node -> node.nodeKey().equals(job.nodeKey()))
+            result.put("jobId", job.getJobId());
+            result.put("nodeKey", job.getNodeKey());
+            result.put("workerKey", job.getWorkerKey());
+            result.put("workerVersion", job.getWorkerVersion());
+            result.put("status", job.getStatus());
+            definition.nodes().stream().filter(node -> node.nodeKey().equals(job.getNodeKey()))
                     .findFirst().ifPresent(node -> result.put("planNode", node));
-            if ("SUCCEEDED".equals(job.status())) {
+            if ("SUCCEEDED".equals(job.getStatus())) {
                 result.put("result", readResult(job));
             }
             results.add(result);
         }
         String message = "内部协作结果，属于当前用户目标的同一次任务，不是新的用户请求。"
-                + "当前计划版本为 " + plan.planVersion() + "。请核对以下固定 Worker 状态与成功结果。"
+                + "当前计划版本为 " + plan.getPlanVersion() + "。请核对以下固定 Worker 状态与成功结果。"
                 + (allSucceeded ? "完成原目标并调用 propose_completion："
                 : "有工作未完成。RECOVERY_BLOCKED不是最终失败：优先发布新计划重新安排；确认不能继续时先调用abandon_failed_job明确放弃。"
                 + "publish_plan完整替换当前计划，不是追加节点；新计划必须包含原目标仍需要的成功节点和待补做节点。"
@@ -140,24 +140,24 @@ public class MasterSignalService {
                 + "收到实际答复后引用interactionId；缺少证据不能声明SUCCEEDED。";
         String payload = RuntimePayloads.toJson(objectMapper, Map.of(
                 "message", message,
-                "planVersion", plan.planVersion(),
+                "planVersion", plan.getPlanVersion(),
                 "signalVersion", signalVersion));
         String commandId = UUID.randomUUID().toString();
-        commandMapper.insertControl(commandId, plan.userId(),
+        commandMapper.insertControl(commandId, plan.getUserId(),
                 scopeKey,
                 String.valueOf(signalVersion),
-                ContentDigests.sha256(payload), plan.taskId(), bindingId,
+                ContentDigests.sha256(payload), plan.getTaskId(), bindingId,
                 RuntimeCommandAction.MASTER_SIGNAL.name(), payload,
                 LocalDateTime.now(ZoneOffset.UTC));
         log.info("Master 汇合命令已创建 taskId={} planVersion={} signalVersion={} commandId={} jobCount={}",
-                plan.taskId(), plan.planVersion(), signalVersion, commandId, jobs.size());
+                plan.getTaskId(), plan.getPlanVersion(), signalVersion, commandId, jobs.size());
     }
 
     private JsonNode readResult(WorkerJobDO job) {
         try {
-            return RuntimePayloads.readJson(objectMapper, job.resultJson());
+            return RuntimePayloads.readJson(objectMapper, job.getResultJson());
         } catch (Exception exception) {
-            throw new IllegalStateException("Worker 最终结果无法读取: " + job.jobId(), exception);
+            throw new IllegalStateException("Worker 最终结果无法读取: " + job.getJobId(), exception);
         }
     }
 }

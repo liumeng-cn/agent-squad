@@ -27,11 +27,11 @@ public final class MemoryRules {
     }
 
     public static boolean active(MemoryDO memory, LocalDateTime now) {
-        return "ACTIVE".equals(memory.status()) && (memory.expiresAt() == null || memory.expiresAt().isAfter(now));
+        return "ACTIVE".equals(memory.getStatus()) && (memory.getExpiresAt() == null || memory.getExpiresAt().isAfter(now));
     }
 
     public static void requireVersion(MemoryDO memory, long expected) {
-        if (expected < 0 || memory.version() != expected || !"ACTIVE".equals(memory.status())) {
+        if (expected < 0 || memory.getVersion() != expected || !"ACTIVE".equals(memory.getStatus())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "记忆版本或状态已变化，请刷新后操作");
         }
     }

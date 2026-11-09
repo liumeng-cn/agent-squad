@@ -1,9 +1,38 @@
 package com.agentsquad.squad.domain.entity;
 
+import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+
 /**
  * 待投递命令及幂等收据的数据库查询结果
  */
-public record CommandDO(String commandId, String userId, String taskId, String bindingId,
-                         String payloadHash, String status, String nativeTurnId,
-                         String nativeRunId, String nativeStatus) {
+@Getter
+@Setter
+@ToString
+@EqualsAndHashCode
+@NoArgsConstructor
+@AllArgsConstructor
+public class CommandDO {
+    /** 命令业务ID */
+    private String commandId;
+    /** 资源归属用户ID */
+    private String userId;
+    /** 所属目标ID；删除类命令可为空 */
+    private String taskId;
+    /** 原生会话绑定ID；删除类命令可为空 */
+    private String bindingId;
+    /** 规范化请求SHA256 */
+    private String payloadHash;
+    /** PENDING/DELIVERING/DELIVERED/APPLIED/BLOCKED */
+    private String status;
+    /** AgentScope 原生回合ID */
+    private String nativeTurnId;
+    /** AgentScope 原生运行ID */
+    private String nativeRunId;
+    /** AgentScope 提交时状态 */
+    private String nativeStatus;
 }

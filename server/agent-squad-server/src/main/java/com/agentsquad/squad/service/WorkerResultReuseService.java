@@ -57,14 +57,14 @@ public class WorkerResultReuseService {
             return null;
         }
         for (WorkerJobDO old : previousJobs) {
-            if (!node.nodeKey().equals(old.nodeKey()) || !node.workerKey().equals(old.workerKey())
-                    || !node.workerVersion().equals(old.workerVersion())
-                    || !"SUCCEEDED".equals(old.status()) || old.resultJson() == null
+            if (!node.nodeKey().equals(old.getNodeKey()) || !node.workerKey().equals(old.getWorkerKey())
+                    || !node.workerVersion().equals(old.getWorkerVersion())
+                    || !"SUCCEEDED".equals(old.getStatus()) || old.getResultJson() == null
                     || !sameDependencies(old, dependencies, previousJobs, reusedDependencies)) {
                 continue;
             }
-            JsonNode oldInput = read(old.inputJson());
-            JsonNode oldResult = read(old.resultJson());
+            JsonNode oldInput = read(old.getInputJson());
+            JsonNode oldResult = read(old.getResultJson());
             if (oldInput == null || oldResult == null
                     || !node.goal().equals(oldInput.path("goal").asText())
                     || hasExternalEvidence(oldResult)) {
@@ -73,10 +73,10 @@ public class WorkerResultReuseService {
             ContextSnapshotDO previous = snapshotMapper.findOwned(userId, taskId,
                     oldInput.path("contextSnapshotId").asText());
             if (previous == null || !immutableUserEvidence(previous, taskId)
-                    || previous.conversationGeneration() != current.conversationGeneration()
-                    || previous.goalRevision() != current.goalRevision()
-                    || previous.memoryRevision() != current.memoryRevision()
-                    || !previous.contentHash().equals(current.contentHash())) {
+                    || previous.getConversationGeneration() != current.getConversationGeneration()
+                    || previous.getGoalRevision() != current.getGoalRevision()
+                    || previous.getMemoryRevision() != current.getMemoryRevision()
+                    || !previous.getContentHash().equals(current.getContentHash())) {
                 continue;
             }
             return old;
@@ -87,7 +87,7 @@ public class WorkerResultReuseService {
     private boolean sameDependencies(WorkerJobDO old, List<String> dependencies,
                                      List<WorkerJobDO> previousJobs,
                                      Map<String, WorkerJobDO> reusedDependencies) {
-        JsonNode names = read(old.dependsOnJson());
+        JsonNode names = read(old.getDependsOnJson());
         if (dependencies.isEmpty()) {
             return names == null || names.isEmpty();
         }
@@ -100,11 +100,11 @@ public class WorkerResultReuseService {
         }
         for (String key : dependencies) {
             WorkerJobDO oldDependency = previousJobs.stream()
-                    .filter(job -> key.equals(job.nodeKey()))
+                    .filter(job -> key.equals(job.getNodeKey()))
                     .findFirst().orElse(null);
             WorkerJobDO reused = reusedDependencies.get(key);
             if (oldDependency == null || reused == null
-                    || !oldDependency.jobId().equals(reused.jobId())) {
+                    || !oldDependency.getJobId().equals(reused.getJobId())) {
                 return false;
             }
         }
@@ -112,9 +112,9 @@ public class WorkerResultReuseService {
     }
 
     private boolean immutableUserEvidence(ContextSnapshotDO snapshot, String taskId) {
-        JsonNode items = read(snapshot.itemsJson());
+        JsonNode items = read(snapshot.getItemsJson());
         if (items == null || !items.isArray() || items.isEmpty()
-                || !snapshot.contentHash().equals(CanonicalJson.sha256(objectMapper, snapshot.itemsJson()))) {
+                || !snapshot.getContentHash().equals(CanonicalJson.sha256(objectMapper, snapshot.getItemsJson()))) {
             return false;
         }
         for (JsonNode item : items) {

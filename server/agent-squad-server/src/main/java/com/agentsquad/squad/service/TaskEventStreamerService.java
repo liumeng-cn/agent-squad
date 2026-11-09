@@ -113,9 +113,9 @@ public class TaskEventStreamerService {
                 for (EventDO row : rows) {
                     emitter.send(SseEmitter.event()
                             .name("message")
-                            .id(taskId + ":" + row.eventSeq())
+                            .id(taskId + ":" + row.getEventSeq())
                             .data(toResponse(row), MediaType.APPLICATION_JSON));
-                    lastSeq.set(row.eventSeq());
+                    lastSeq.set(row.getEventSeq());
                 }
                 long currentTime = System.nanoTime();
                 if (currentTime - lastHeartbeatAt.get() >= HEARTBEAT_INTERVAL_NANOS) {
@@ -146,7 +146,7 @@ public class TaskEventStreamerService {
     }
 
     private TaskEventResponse toResponse(EventDO row) {
-        return new TaskEventResponse(row.eventSeq(), row.taskId(), row.eventType(),
-                row.payloadJson(), row.occurredAt());
+        return new TaskEventResponse(row.getEventSeq(), row.getTaskId(), row.getEventType(),
+                row.getPayloadJson(), row.getOccurredAt());
     }
 }

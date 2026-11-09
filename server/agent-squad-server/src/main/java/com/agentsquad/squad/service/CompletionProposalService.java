@@ -96,24 +96,24 @@ public class CompletionProposalService {
         }
 
         ExecutionScopeDO scope = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), true);
-        if ("RESPONSE".equals(scope.kind())) {
+        if ("RESPONSE".equals(scope.getKind())) {
             return responses.propose(userId, scopeMapper.findBindingBySession(userId, sessionId), turnId, toolCallId, outcome, finalAnswer);
         }
-        if (!directives.pending(userId, scope.ownerId()).isEmpty()) {
+        if (!directives.pending(userId, scope.getOwnerId()).isEmpty()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "尚有用户要求待协调处理，请结束当前回合等待修改通知");
         }
         CompletionContextDO context = completionMapper.lockByMasterSession(userId, sessionId);
         if (context == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "Master 会话未绑定目标");
         }
-        if (context.cancellationRequested()
-                || !(GoalTaskStatus.QUEUED.name().equals(context.taskStatus())
-                || GoalTaskStatus.RUNNING.name().equals(context.taskStatus()))) {
+        if (context.isCancellationRequested()
+                || !(GoalTaskStatus.QUEUED.name().equals(context.getTaskStatus())
+                || GoalTaskStatus.RUNNING.name().equals(context.getTaskStatus()))) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已不能提交完成候选");
         }
         var acceptanceResults = List.<PlanAcceptanceResult>of();
-        if (context.planVersion() > 0) {
-            var evaluation = planEvaluation.evaluate(userId, context.taskId(), context.planVersion(), submission.reviews());
+        if (context.getPlanVersion() > 0) {
+            var evaluation = planEvaluation.evaluate(userId, context.getTaskId(), context.getPlanVersion(), submission.reviews());
             if (evaluation.decision().stage() != PlanJoinStage.READY
                     || (GoalTaskStatus.SUCCEEDED.name().equals(outcome)
                     && evaluation.decision().outcome() != GoalTaskStatus.SUCCEEDED)) {
@@ -126,35 +126,35 @@ public class CompletionProposalService {
             acceptanceResults = evaluation.acceptanceResults();
         }
 
-        if (completionMapper.countPendingEffects(userId, context.taskId()) > 0) {
+        if (completionMapper.countPendingEffects(userId, context.getTaskId()) > 0) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "仍有待处理交互或未知操作，不能结束目标");
         }
         Map<String, Object> proposal = new LinkedHashMap<>();
         proposal.put("outcome", outcome);
         proposal.put("finalAnswer", finalAnswer);
         proposal.put("evidenceRefs", List.of());
-        proposal.put("planVersion", context.planVersion());
-        proposal.put("answerRevision", context.answerRevision());
-        proposal.put("sourceBindingId", context.bindingId());
+        proposal.put("planVersion", context.getPlanVersion());
+        proposal.put("answerRevision", context.getAnswerRevision());
+        proposal.put("sourceBindingId", context.getBindingId());
         proposal.put("sourceTurnId", turnId);
         proposal.put("acceptanceReviews", submission.reviews() == null ? List.of() : submission.reviews());
         proposal.put("acceptanceResults", acceptanceResults);
         String proposalJson = RuntimePayloads.toJson(objectMapper, proposal);
         String proposalHash = ContentDigests.sha256(proposalJson);
-        if (context.proposalJson() != null) {
-            if (turnId.equals(context.proposalTurnId()) && proposalHash.equals(context.proposalHash())) {
-                return new CompletionProposalReceipt(context.taskId(), context.bindingId(), turnId,
-                        context.proposalToolCallId(), "RECORDED");
+        if (context.getProposalJson() != null) {
+            if (turnId.equals(context.getProposalTurnId()) && proposalHash.equals(context.getProposalHash())) {
+                return new CompletionProposalReceipt(context.getTaskId(), context.getBindingId(), turnId,
+                        context.getProposalToolCallId(), "RECORDED");
             }
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已有不同的完成候选");
         }
-        if (completionMapper.saveProposal(userId, context.taskId(), context.bindingId(), turnId,
+        if (completionMapper.saveProposal(userId, context.getTaskId(), context.getBindingId(), turnId,
                 toolCallId, proposalHash, proposalJson) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "完成候选提交时目标状态已变化");
         }
         log.info("最终回答及检查结果已保存 taskId={} bindingId={} turnId={} outcome={} answerLength={} acceptanceChecks={}",
-                context.taskId(), context.bindingId(), turnId, outcome, finalAnswer.length(), acceptanceResults.size());
-        return new CompletionProposalReceipt(context.taskId(), context.bindingId(), turnId,
+                context.getTaskId(), context.getBindingId(), turnId, outcome, finalAnswer.length(), acceptanceResults.size());
+        return new CompletionProposalReceipt(context.getTaskId(), context.getBindingId(), turnId,
                 toolCallId, "RECORDED");
     }
 

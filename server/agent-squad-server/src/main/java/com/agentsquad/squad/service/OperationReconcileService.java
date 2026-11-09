@@ -72,12 +72,12 @@ public class OperationReconcileService {
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "操作不存在");
         }
-        scopeService.lockOwned(userId, row.scopeId(), false);
-        scopeService.requireReadable(userId, row.scopeId());
-        if (!operationAccessService.canReconcile(actor, row.scopeId(), "UNKNOWN")) {
+        scopeService.lockOwned(userId, row.getScopeId(), false);
+        scopeService.requireReadable(userId, row.getScopeId());
+        if (!operationAccessService.canReconcile(actor, row.getScopeId(), "UNKNOWN")) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "没有当前目标的操作核对权限");
         }
-        if (request.expectedVersion() == null || row.version() != request.expectedVersion()) {
+        if (request.expectedVersion() == null || row.getVersion() != request.expectedVersion()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "操作版本已变化，请刷新后重试");
         }
         if (request.evidenceRefs() == null || request.evidenceRefs().isEmpty()
@@ -86,9 +86,9 @@ public class OperationReconcileService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "核对必须提供证据和说明");
         }
         request.evidenceRefs().forEach(id -> artifactService.get(userId, id));
-        if (!OperationStatus.UNKNOWN.name().equals(row.status())) {
+        if (!OperationStatus.UNKNOWN.name().equals(row.getStatus())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
-                    "只有 UNKNOWN 操作可以核对（当前 " + row.status() + "）");
+                    "只有 UNKNOWN 操作可以核对（当前 " + row.getStatus() + "）");
         }
         Map<String, Object> evidence = new LinkedHashMap<>();
         evidence.put("reconciledBy", userId);
@@ -102,7 +102,7 @@ public class OperationReconcileService {
                     "核对结论只能是 CONFIRMED_SUCCEEDED / CONFIRMED_NOT_EXECUTED / UNRESOLVED");
         }
         if (!OUTCOME_UNRESOLVED.equals(request.disposition())) {
-            failures.resolveOperation(userId, row.scopeId(), operationId);
+            failures.resolveOperation(userId, row.getScopeId(), operationId);
         }
         return operationService.getOwned(userId, operationId);
     }
@@ -118,14 +118,14 @@ public class OperationReconcileService {
         } else {
             evidence.put("source", "HUMAN_ATTESTED");
         }
-        if (operationMapper.reconcileOutcome(userId, row.operationId(), row.version(),
+        if (operationMapper.reconcileOutcome(userId, row.getOperationId(), row.getVersion(),
                 OperationStatus.SUCCEEDED.name(), RuntimePayloads.toJson(objectMapper, evidence),
                 userId) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "核对并发冲突，请刷新后重试");
         }
-        budgetService.settleReserved(row.userId(), row.scopeId(),
+        budgetService.settleReserved(row.getUserId(), row.getScopeId(),
                 operationService.usageKeyOf(row));
-        log.info("操作核对为已成功 operationId={} source={}", row.operationId(), evidence.get("source"));
+        log.info("操作核对为已成功 operationId={} source={}", row.getOperationId(), evidence.get("source"));
     }
 
     /**
@@ -133,13 +133,13 @@ public class OperationReconcileService {
      */
     private void reconcileNotExecuted(String userId, OperationDO row, Map<String, Object> evidence) {
         evidence.put("source", "HUMAN_ATTESTED");
-        if (operationMapper.reconcileOutcome(userId, row.operationId(), row.version(),
+        if (operationMapper.reconcileOutcome(userId, row.getOperationId(), row.getVersion(),
                 OperationStatus.FAILED.name(), RuntimePayloads.toJson(objectMapper, evidence),
                 userId) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "核对并发冲突，请刷新后重试");
         }
-        budgetService.settle(row.userId(), row.scopeId(), operationService.usageKeyOf(row), 0L);
-        log.info("操作核对为未执行 operationId={}", row.operationId());
+        budgetService.settle(row.getUserId(), row.getScopeId(), operationService.usageKeyOf(row), 0L);
+        log.info("操作核对为未执行 operationId={}", row.getOperationId());
     }
 
     /**
@@ -148,25 +148,25 @@ public class OperationReconcileService {
     private void recordUnresolved(String userId, OperationDO row, Map<String, Object> evidence) {
         evidence.put("source", "HUMAN_UNRESOLVED");
         evidence.put("stillUnknown", true);
-        if (operationMapper.recordUnresolved(userId, row.operationId(), row.version(),
+        if (operationMapper.recordUnresolved(userId, row.getOperationId(), row.getVersion(),
                 RuntimePayloads.toJson(objectMapper, evidence), userId) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "核对并发冲突，请刷新后重试");
         }
-        log.info("操作核对暂无结论，保持 UNKNOWN operationId={}", row.operationId());
+        log.info("操作核对暂无结论，保持 UNKNOWN operationId={}", row.getOperationId());
     }
 
     /**
      * 按连接器 KEY 幂等键查证模拟工单是否已存在；非工单写入或键不存在返回 null。
      */
     private String lookupExternalTicket(String userId, OperationDO row) {
-        if (!"mock_ticket_create".equals(row.toolKey()) || row.externalKey() == null) {
+        if (!"mock_ticket_create".equals(row.getToolKey()) || row.getExternalKey() == null) {
             return null;
         }
-        if (mockTicketMapper.countByKey(userId, row.externalKey()) == 0) {
+        if (mockTicketMapper.countByKey(userId, row.getExternalKey()) == 0) {
             return null;
         }
         return RuntimePayloads.toJson(objectMapper, Map.of(
-                "ticketRef", row.externalKey(), "duplicated", true));
+                "ticketRef", row.getExternalKey(), "duplicated", true));
     }
 
     private Object parseJsonQuietly(String json) {

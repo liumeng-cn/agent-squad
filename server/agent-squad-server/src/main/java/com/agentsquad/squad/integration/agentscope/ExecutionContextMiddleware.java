@@ -105,9 +105,9 @@ public class ExecutionContextMiddleware implements MiddlewareBase {
                     if (worker != null) {
                         var identity = context.get(WorkerExecutionIdentity.class);
                         if (identity == null || !bindingId.equals(identity.bindingId())
-                                || !java.util.Objects.equals(worker.guardToken(), identity.guardToken())
-                                || worker.guardLeaseUntil() == null || !worker.guardLeaseUntil().isAfter(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC))
-                                || !"RUNNING".equals(worker.jobStatus()) || !"ACTIVE".equals(worker.planStatus()) || worker.cancelRequestedAt() != null) {
+                                || !java.util.Objects.equals(worker.getGuardToken(), identity.guardToken())
+                                || worker.getGuardLeaseUntil() == null || !worker.getGuardLeaseUntil().isAfter(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC))
+                                || !"RUNNING".equals(worker.getJobStatus()) || !"ACTIVE".equals(worker.getPlanStatus()) || worker.getCancelRequestedAt() != null) {
                             throw new CancellationException("Worker固定执行身份已结束");
                         }
                         authorization.prepare(userId, scopeId);

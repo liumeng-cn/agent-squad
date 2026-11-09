@@ -58,21 +58,21 @@ public class SandboxExecutionService {
         if (!claim.newlyAccepted()) {
             return transactions.replay(prior);
         }
-        if (!"IN_FLIGHT".equals(prior.status())) {
+        if (!"IN_FLIGHT".equals(prior.getStatus())) {
             return transactions.replay(prior);
         }
         try {
             var result = driver.execute(request, inputs);
-            var outcome = transactions.finish(context, prior.executionId(), request, result);
-            log.info("沙箱执行结束 executionId={} scopeId={} result={} outputCount={}", prior.executionId(),
+            var outcome = transactions.finish(context, prior.getExecutionId(), request, result);
+            log.info("沙箱执行结束 executionId={} scopeId={} result={} outputCount={}", prior.getExecutionId(),
                     context.scopeId(), outcome.status(), outcome.stagedArtifacts().size());
             return outcome;
         } catch (Exception exception) {
-            transactions.unknown(context, prior.executionId());
-            log.warn("沙箱结果待核对 executionId={} scopeId={} reason={}", prior.executionId(), context.scopeId(),
+            transactions.unknown(context, prior.getExecutionId());
+            log.warn("沙箱结果待核对 executionId={} scopeId={} reason={}", prior.getExecutionId(), context.scopeId(),
                     exception.getClass().getSimpleName());
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
-                    "沙箱结果未能完整提交，预算已保留，禁止自动重放。执行号：" + prior.executionId());
+                    "沙箱结果未能完整提交，预算已保留，禁止自动重放。执行号：" + prior.getExecutionId());
         }
     }
 
@@ -93,13 +93,13 @@ public class SandboxExecutionService {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "沙箱输入附件不属于当前执行材料");
             }
             var artifact = artifacts.content(context.userId(), id);
-            String path = "inputs/" + id + "/" + artifact.fileName();
+            String path = "inputs/" + id + "/" + artifact.getFileName();
             SandboxPolicy.requirePath(path);
-            if (!paths.add(path) || artifact.content().length > SandboxPolicy.MAX_FILE_BYTES) {
+            if (!paths.add(path) || artifact.getContent().length > SandboxPolicy.MAX_FILE_BYTES) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "沙箱附件重复或超过单文件限制");
             }
-            inputs.add(new SandboxInputFile(path, artifact.content()));
-            bytes += artifact.content().length;
+            inputs.add(new SandboxInputFile(path, artifact.getContent()));
+            bytes += artifact.getContent().length;
         }
         if (bytes > SandboxPolicy.MAX_TOTAL_BYTES) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "沙箱输入材料总量超限");

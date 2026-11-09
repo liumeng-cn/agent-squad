@@ -76,7 +76,7 @@ public class CommitArtifactTool implements AgentTool {
                 var worker = workers.findByBinding(context.getUserId(), bindingId);
                 String guard = null;
                 if (worker != null) {
-                    if (!definitions.requirePublished(worker.workerKey(), worker.workerVersion()).toolAllowlist().contains(getName())) {
+                    if (!definitions.requirePublished(worker.getWorkerKey(), worker.getWorkerVersion()).toolAllowlist().contains(getName())) {
                         throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "该Worker没有产物提交权限");
                     }
                     var identity = context.get(WorkerExecutionIdentity.class);

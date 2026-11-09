@@ -48,7 +48,7 @@ public class MemoryContextService {
         List<MemoryDO> memories = mapper.active(userId, now(), MAX_REFERENCES);
         mapper.pinScope(userId, scopeId, revision);
         for (MemoryDO memory : memories) {
-            mapper.pinItem(userId, scopeId, memory.memoryId(), memory.version());
+            mapper.pinItem(userId, scopeId, memory.getMemoryId(), memory.getVersion());
         }
         return new MemoryContextSnapshot(revision, memories.stream().map(this::reference).toList());
     }
@@ -130,20 +130,20 @@ public class MemoryContextService {
     }
 
     private MemoryContextSnapshot currentSnapshot(String userId, String scopeId, MemoryScopePinDO pin, long revision) {
-        if (!"CURRENT".equals(pin.barrierStatus()) || pin.memoryRevision() != revision) {
+        if (!"CURRENT".equals(pin.getBarrierStatus()) || pin.getMemoryRevision() != revision) {
             throw new MemoryContextInvalidatedException();
         }
         LocalDateTime timestamp = now();
         List<MemoryReference> memories = mapper.pinnedIds(userId, scopeId).stream().map(id -> {
             MemoryDO current = mapper.find(userId, id);
             Long expected = mapper.pinnedVersion(userId, scopeId, id);
-            if (current == null || expected == null || current.version() != expected
+            if (current == null || expected == null || current.getVersion() != expected
                     || !MemoryRules.active(current, timestamp)) {
                 throw new MemoryContextInvalidatedException();
             }
             return reference(current);
         }).toList();
-        return new MemoryContextSnapshot(pin.memoryRevision(), memories);
+        return new MemoryContextSnapshot(pin.getMemoryRevision(), memories);
     }
 
     private long lockRevision(String userId) {
@@ -152,7 +152,7 @@ public class MemoryContextService {
     }
 
     private MemoryReference reference(MemoryDO row) {
-        return new MemoryReference(row.memoryId(), row.key(), row.content(), row.version(), row.expiresAt());
+        return new MemoryReference(row.getMemoryId(), row.getKey(), row.getContent(), row.getVersion(), row.getExpiresAt());
     }
 
     private LocalDateTime now() {

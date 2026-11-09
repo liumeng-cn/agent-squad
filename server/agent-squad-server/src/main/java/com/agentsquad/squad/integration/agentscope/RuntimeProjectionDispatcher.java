@@ -117,14 +117,14 @@ public class RuntimeProjectionDispatcher {
             dirty.remove(source);
             for (int page = 0; page < 4; page++) {
                 var target = projections.findTarget(source.userId(), source.bindingId());
-                if (target == null || !source.sessionId().equals(target.sessionId())) {
+                if (target == null || !source.sessionId().equals(target.getSessionId())) {
                     return;
                 }
-                var first = inbox.findBySequence(source, target.cursor() + 1);
+                var first = inbox.findBySequence(source, target.getCursor() + 1);
                 if (first != null && first.status() == com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventInboxStatus.BLOCKED) {
                     return;
                 }
-                var events = gateway.readCommittedEvents(target, target.cursor(), BATCH_SIZE);
+                var events = gateway.readCommittedEvents(target, target.getCursor(), BATCH_SIZE);
                 if (events.isEmpty()) {
                     return;
                 }
@@ -133,7 +133,7 @@ public class RuntimeProjectionDispatcher {
                         receipts.receive(source, event);
                     }
                 }
-                executionTrace.project(target.userId(), target.bindingId(), () -> consumption.consume(target, events));
+                executionTrace.project(target.getUserId(), target.getBindingId(), () -> consumption.consume(target, events));
                 if (events.size() < BATCH_SIZE) {
                     return;
                 }
@@ -181,8 +181,8 @@ public class RuntimeProjectionDispatcher {
             if (dirty.size() >= MAX_DIRTY_BINDINGS) {
                 break;
             }
-            projections.defer(target.userId(), target.bindingId(), now.plusSeconds(15));
-            dirty.add(new RuntimeEventSource(target.userId(), target.bindingId(), target.sessionId(),
+            projections.defer(target.getUserId(), target.getBindingId(), now.plusSeconds(15));
+            dirty.add(new RuntimeEventSource(target.getUserId(), target.getBindingId(), target.getSessionId(),
                     RuntimeEventSource.CURRENT_MAPPING_VERSION));
         }
         dirty.forEach(this::schedule);

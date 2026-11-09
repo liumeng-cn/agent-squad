@@ -61,8 +61,8 @@ public class TaskEventPublishingService {
                                String eventType, String payloadJson, LocalDateTime occurredAt) {
         int inserted = taskEvents.insertProjected(userId, taskId, sequence, producerKey, eventType, payloadJson, occurredAt);
         var scope = scopes.lockOwned(userId, scopes.scopeForTask(userId, taskId), false);
-        var header = reads.header(userId, scope.conversationId());
-        if (header == null || header.generation() != scope.conversationGeneration()) {
+        var header = reads.header(userId, scope.getConversationId());
+        if (header == null || header.getGeneration() != scope.getConversationGeneration()) {
             return inserted;
         }
         String key = "task-event:" + taskId + ":" + sequence;
@@ -71,7 +71,7 @@ public class TaskEventPublishingService {
             try {
                 var payload = RuntimePayloads.readJson(json, payloadJson);
                 String text = payload.path("text").asText();
-                long revision = payload.path("revision").asLong(task.answerRevision());
+                long revision = payload.path("revision").asLong(task.getAnswerRevision());
                 String sourceMessageId = reads.taskSource(userId, taskId);
                 String claimedId = sourceMessageId == null ? null
                         : finalDeliveries.claimPublication(userId, sourceMessageId, "TASK", taskId);
@@ -82,8 +82,8 @@ public class TaskEventPublishingService {
                 if (messageId == null) {
                     messageId = claimedId == null ? UUID.randomUUID().toString() : claimedId;
                     LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
-                    sequences.reserveMessage(userId, scope.conversationId(), now);
-                    reads.insertTaskAnswer(messageId, userId, scope.conversationId(), sequences.messageSequence(userId, scope.conversationId()), text, revision, reads.taskSource(userId, taskId), taskId, now);
+                    sequences.reserveMessage(userId, scope.getConversationId(), now);
+                    reads.insertTaskAnswer(messageId, userId, scope.getConversationId(), sequences.messageSequence(userId, scope.getConversationId()), text, revision, reads.taskSource(userId, taskId), taskId, now);
                 } else {
                     // 完成事件重放不能把已修订正文恢复成旧答案；修订也只能推进消息版本。
                     if ("answer.completed".equals(eventType)
@@ -101,7 +101,7 @@ public class TaskEventPublishingService {
             try {
                 var payload = json.readTree(payloadJson);
                 long planVersion = payload.path("planVersion").asLong();
-                if (planVersion != task.planVersion()) {
+                if (planVersion != task.getPlanVersion()) {
                     return inserted;
                 }
                 if ("plan.published".equals(eventType)) {
@@ -124,13 +124,13 @@ public class TaskEventPublishingService {
             events.publish(scope, key, eventType, Map.of("taskId", taskId));
         } else {
             if ("task.completed".equals(eventType)
-                    && ("CANCELLED".equals(task.status()) || "FAILED".equals(task.status()))) {
+                    && ("CANCELLED".equals(task.getStatus()) || "FAILED".equals(task.getStatus()))) {
                 String sourceMessageId = reads.taskSource(userId, taskId);
                 if (sourceMessageId != null) {
                     finalDeliveries.close(userId, sourceMessageId, "TASK", taskId);
                 }
             }
-            events.publish(scope, key, "task.status_changed", Map.of("taskId", taskId, "status", task.status(), "version", task.version()));
+            events.publish(scope, key, "task.status_changed", Map.of("taskId", taskId, "status", task.getStatus(), "version", task.getVersion()));
         }
         return inserted;
     }

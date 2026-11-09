@@ -15,6 +15,6 @@ public record NativeProjectionCommitLog(ProjectionTargetDO target,
     @Override
     public void afterCommit() {
         log.info("Agent执行事件已更新到业务状态 taskId={} bindingId={} sourceSeq={} nativeEventId={} type={} turnId={} outcome={}",
-                target.taskId(), target.bindingId(), event.sequence(), event.eventId(), event.type(), event.turnId(), event.outcome());
+                target.getTaskId(), target.getBindingId(), event.sequence(), event.eventId(), event.type(), event.turnId(), event.outcome());
     }
 }

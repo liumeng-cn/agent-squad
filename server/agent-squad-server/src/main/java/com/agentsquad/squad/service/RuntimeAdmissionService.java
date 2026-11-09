@@ -78,7 +78,7 @@ public class RuntimeAdmissionService {
             throw new IllegalStateException("运行容量计数记录不存在");
         }
         if (existing != null && existing.active()) {
-            if (userId.equals(existing.userId()) && commandId.equals(existing.commandId())) {
+            if (userId.equals(existing.getUserId()) && commandId.equals(existing.getCommandId())) {
                 // 同一命令在提交收据不确定时按原命令 ID 重投，不再重复计数。
                 return;
             }
@@ -113,8 +113,8 @@ public class RuntimeAdmissionService {
         String userPool = poolKey(userId);
         lockPools(userPool);
         RuntimeAdmissionSlotDO slot = mapper.lockSlot(bindingId);
-        if (slot == null || !slot.active() || !userId.equals(slot.userId())
-                || !commandId.equals(slot.commandId())) {
+        if (slot == null || !slot.active() || !userId.equals(slot.getUserId())
+                || !commandId.equals(slot.getCommandId())) {
             log.debug("命令回执未命中活动容量占位 commandId={} bindingId={}", commandId, bindingId);
             return;
         }
@@ -128,7 +128,7 @@ public class RuntimeAdmissionService {
                     commandId, bindingId);
             return;
         }
-        if (slot.turnId() != null && !slot.turnId().equals(resolvedTurn)) {
+        if (slot.getTurnId() != null && !slot.getTurnId().equals(resolvedTurn)) {
             throw new IllegalStateException("相同命令的原生 Turn 与已冻结占位不一致");
         }
         if (mapper.bindTurn(userId, bindingId, commandId, resolvedTurn) != 1) {
@@ -171,21 +171,21 @@ public class RuntimeAdmissionService {
         lockPools(userPool);
 
         RuntimeAdmissionSlotDO slot = mapper.lockSlot(bindingId);
-        if (slot == null || !slot.active() || !userId.equals(slot.userId())) {
+        if (slot == null || !slot.active() || !userId.equals(slot.getUserId())) {
             return;
         }
-        if (RECOVERY_ACTIONS.contains(slot.action())) {
-            if (runId != null && !runId.isBlank() && runId.equals(slot.runId())) {
+        if (RECOVERY_ACTIONS.contains(slot.getAction())) {
+            if (runId != null && !runId.isBlank() && runId.equals(slot.getRunId())) {
                 releaseSlot(slot, userPool);
             }
             return;
         }
-        if (!SUBMISSION_ACTIONS.contains(slot.action()) || turnId == null || turnId.isBlank()) {
+        if (!SUBMISSION_ACTIONS.contains(slot.getAction()) || turnId == null || turnId.isBlank()) {
             return;
         }
-        String expectedTurn = slot.turnId();
+        String expectedTurn = slot.getTurnId();
         if (expectedTurn == null) {
-            expectedTurn = mapper.findCommandTurn(userId, slot.commandId());
+            expectedTurn = mapper.findCommandTurn(userId, slot.getCommandId());
         }
         if (!turnId.equals(expectedTurn)) {
             return;
@@ -205,8 +205,8 @@ public class RuntimeAdmissionService {
         lockPools(userPool);
 
         RuntimeAdmissionSlotDO slot = mapper.lockSlot(bindingId);
-        if (slot == null || !slot.active() || !userId.equals(slot.userId())
-                || !commandId.equals(slot.commandId()) || slot.turnId() != null) {
+        if (slot == null || !slot.active() || !userId.equals(slot.getUserId())
+                || !commandId.equals(slot.getCommandId()) || slot.getTurnId() != null) {
             return;
         }
         releaseSlot(slot, userPool);
@@ -229,12 +229,12 @@ public class RuntimeAdmissionService {
     }
 
     private void releaseSlot(RuntimeAdmissionSlotDO slot, String userPool) {
-        if (mapper.releaseSlot(slot.userId(), slot.bindingId(), slot.commandId()) != 1
+        if (mapper.releaseSlot(slot.getUserId(), slot.getBindingId(), slot.getCommandId()) != 1
                 || mapper.decrement(userPool) != 1
                 || mapper.decrement(GLOBAL_POOL) != 1) {
             throw new IllegalStateException("原生运行占位回收和计数写入不一致");
         }
-        log.info("原生运行占位已释放 commandId={} bindingId={}", slot.commandId(), slot.bindingId());
+        log.info("原生运行占位已释放 commandId={} bindingId={}", slot.getCommandId(), slot.getBindingId());
     }
 
     private void lockPools(String userPool) {

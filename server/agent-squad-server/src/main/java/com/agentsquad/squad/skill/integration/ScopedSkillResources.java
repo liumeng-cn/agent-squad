@@ -40,7 +40,7 @@ public final class ScopedSkillResources implements SkillResources {
     public Optional<String> read(String relativePath) {
         try {
             skills.requireCapabilities(userId, scopeId, versionId, allowedTools);
-            return Optional.of(skills.read(userId, scopeId, versionId, relativePath).content());
+            return Optional.of(skills.read(userId, scopeId, versionId, relativePath).getContent());
         } catch (RuntimeBusinessException exception) {
             if (exception.code() == RuntimeExceptionCode.NOT_FOUND) {
                 return Optional.empty();
@@ -56,6 +56,6 @@ public final class ScopedSkillResources implements SkillResources {
 
     @Override
     public List<String> list() {
-        return skills.files(userId, scopeId, versionId).stream().map(SkillTextFileDO::path).toList();
+        return skills.files(userId, scopeId, versionId).stream().map(SkillTextFileDO::getPath).toList();
     }
 }

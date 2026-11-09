@@ -91,15 +91,15 @@ public class TaskControlService {
         String payloadHash = ContentDigests.sha256(payloadJson);
         CommandDO prior = commandMapper.findByKey(userId, scopeKey, idempotencyKey);
         if (prior != null) {
-            if (!prior.payloadHash().equals(payloadHash)) {
+            if (!prior.getPayloadHash().equals(payloadHash)) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同幂等键的输入不一致");
             }
             return toReceipt(prior);
         }
-        if (GoalTaskStatus.valueOf(task.status()).isTerminal() || task.cancelRequestedAt() != null) {
+        if (GoalTaskStatus.valueOf(task.getStatus()).isTerminal() || task.getCancelRequestedAt() != null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标正在停止或已结束，不可重复取消");
         }
-        if (task.version() != expectedVersion) {
+        if (task.getVersion() != expectedVersion) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标版本已变化");
         }
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
@@ -127,7 +127,7 @@ public class TaskControlService {
         conversationProjection.insertProjected(userId, taskId, projectionMapper.eventSequence(userId, taskId),
                 "cancel:" + commandId + ":accepted", "task.cancelling",
                 RuntimePayloads.toJson(objectMapper, Map.of("status", GoalTaskStatus.CANCELLING.name(),
-                        "version", task.version() + 1)), now);
+                        "version", task.getVersion() + 1)), now);
         log.info("取消命令受理成功 taskId={} commandId={} userId={}", taskId, commandId, userId);
         return new CommandReceiptResponse(commandId, taskId, RuntimeCommandStatus.PENDING.name(), null, null);
     }
@@ -148,19 +148,19 @@ public class TaskControlService {
         String payloadHash = ContentDigests.sha256(payloadJson);
         CommandDO prior = commandMapper.findByKey(userId, scopeKey, idempotencyKey);
         if (prior != null) {
-            if (!prior.payloadHash().equals(payloadHash)) {
+            if (!prior.getPayloadHash().equals(payloadHash)) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同幂等键的输入不一致");
             }
             return toReceipt(prior);
         }
-        GoalTaskStatus status = GoalTaskStatus.valueOf(task.status());
+        GoalTaskStatus status = GoalTaskStatus.valueOf(task.getStatus());
         if (status.isTerminal()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已结束，不可恢复");
         }
         if (!status.isResumable()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "当前状态不可恢复");
         }
-        if (task.version() != expectedVersion) {
+        if (task.getVersion() != expectedVersion) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标版本已变化");
         }
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
@@ -201,8 +201,8 @@ public class TaskControlService {
     }
 
     private CommandReceiptResponse toReceipt(CommandDO command) {
-        return new CommandReceiptResponse(command.commandId(), command.taskId(), command.status(),
-                command.nativeTurnId(), null);
+        return new CommandReceiptResponse(command.getCommandId(), command.getTaskId(), command.getStatus(),
+                command.getNativeTurnId(), null);
     }
 
     private String requireMasterBinding(String userId, String taskId) {

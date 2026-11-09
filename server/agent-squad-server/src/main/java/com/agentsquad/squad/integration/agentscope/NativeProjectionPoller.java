@@ -80,32 +80,32 @@ public class NativeProjectionPoller {
         for (ProjectionTargetDO target : projectionMapper.findDueTargets(now())) {
             List<SessionEvent> events = List.of();
             try {
-                authorization.requireBindingCurrent(target.userId(), target.bindingId());
+                authorization.requireBindingCurrent(target.getUserId(), target.getBindingId());
                 // 恢复属于后台执行步骤，不能藏在读取日志或检查收据的方法里。
                 nativeSessionGateway.startPending(target);
-                events = nativeSessionGateway.readCommittedEvents(target, target.cursor(), 100);
-                var source = new RuntimeEventSource(target.userId(), target.bindingId(), target.sessionId(),
+                events = nativeSessionGateway.readCommittedEvents(target, target.getCursor(), 100);
+                var source = new RuntimeEventSource(target.getUserId(), target.getBindingId(), target.getSessionId(),
                         RuntimeEventSource.CURRENT_MAPPING_VERSION);
                 for (SessionEvent event : events) {
                     receipts.receive(source, event);
                 }
                 if (!events.isEmpty()) {
                     var batch = events;
-                    executionTrace.project(target.userId(), target.bindingId(), () -> consumption.consume(target, batch));
+                    executionTrace.project(target.getUserId(), target.getBindingId(), () -> consumption.consume(target, batch));
                 }
-                if (target.taskId() == null) {
+                if (target.getTaskId() == null) {
                     String commandId = responses.originalCommand(target);
                     if (commandId != null) {
                         NativeSubmissionReceipt receipt = nativeSessionGateway.inspectTask(target, commandId);
                         if (commandId.equals(receipt.commandId())) {
                             var evidence = "completed".equals(receipt.status())
-                                    && replies.completionProtocol(target.userId(), target.bindingId())
+                                    && replies.completionProtocol(target.getUserId(), target.getBindingId())
                                     == ResponseCompletionProtocol.NATURAL
                                     ? naturalOutputs.readCompleted(target, receipt) : null;
                             responses.recover(target, receipt, evidence);
                         }
                     }
-                } else if (!MasterAgentIdentity.AGENT_ID.equals(target.agentId())) {
+                } else if (!MasterAgentIdentity.AGENT_ID.equals(target.getAgentId())) {
                     String commandId = workerRecoveryService.originalSubmitCommandId(target);
                     if (commandId != null) {
                         NativeSubmissionReceipt receipt = nativeSessionGateway.inspectTask(target, commandId);
@@ -120,15 +120,15 @@ public class NativeProjectionPoller {
                         if (commandId.equals(receipt.commandId())) { failures.recoverInterrupted(target, receipt); }
                     }
                 }
-                projectionMapper.defer(target.userId(), target.bindingId(),
+                projectionMapper.defer(target.getUserId(), target.getBindingId(),
                         now().plusSeconds(events.isEmpty() ? 5 : 1));
             } catch (ExecutionContextInvalidatedException exception) {
-                restrictions.restrict(target.userId(), scopeMapper.findScopeByBinding(target.userId(), target.bindingId()), target.bindingId());
+                restrictions.restrict(target.getUserId(), scopeMapper.findScopeByBinding(target.getUserId(), target.getBindingId()), target.getBindingId());
             } catch (Exception exception) {
                 recordConsumptionFailure(target, events, exception);
-                projectionMapper.defer(target.userId(), target.bindingId(), now().plusSeconds(10));
+                projectionMapper.defer(target.getUserId(), target.getBindingId(), now().plusSeconds(10));
                 log.warn("Agent执行事件同步失败，稍后重试 bindingId={} taskId={} errorType={}",
-                        target.bindingId(), target.taskId(), exception.getClass().getSimpleName(), exception);
+                        target.getBindingId(), target.getTaskId(), exception.getClass().getSimpleName(), exception);
             }
         }
     }
@@ -144,10 +144,10 @@ public class NativeProjectionPoller {
             code = consumptionFailure.code();
         }
         try {
-            consumptionFailures.record(new RuntimeEventSource(target.userId(), target.bindingId(), target.sessionId(),
+            consumptionFailures.record(new RuntimeEventSource(target.getUserId(), target.getBindingId(), target.getSessionId(),
                     RuntimeEventSource.CURRENT_MAPPING_VERSION), sequence, code);
         } catch (Exception persistenceFailure) {
-            log.warn("原生事件失败记录暂未保存 bindingId={} sourceSeq={} errorType={}", target.bindingId(), sequence,
+            log.warn("原生事件失败记录暂未保存 bindingId={} sourceSeq={} errorType={}", target.getBindingId(), sequence,
                     persistenceFailure.getClass().getSimpleName(), persistenceFailure);
         }
     }

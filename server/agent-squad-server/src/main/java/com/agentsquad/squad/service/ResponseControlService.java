@@ -67,8 +67,8 @@ public class ResponseControlService {
         String scopeId = scopeMapper.findScopeByBinding(userId, binding);
         scopes.requireReadable(userId, scopeId);
         ExecutionScopeDO scope = scopes.lockOwned(userId, scopeId, false);
-        ConversationDO conversation = conversations.lockOwned(userId, scope.conversationId());
-        if (!"ACTIVE".equals(conversation.status()) || conversation.generation() != scope.conversationGeneration()) {
+        ConversationDO conversation = conversations.lockOwned(userId, scope.getConversationId());
+        if (!"ACTIVE".equals(conversation.getStatus()) || conversation.getGeneration() != scope.getConversationGeneration()) {
             throw error(RuntimeExceptionCode.NOT_FOUND, "回复所属会话已失效");
         }
         ResponseRuntimeDO row = replies.lockByBinding(userId, binding);
@@ -77,13 +77,13 @@ public class ResponseControlService {
         String scopeKey = "response.cancel:" + executionId;
         CommandDO prior = commands.findByKeyCurrent(userId, scopeKey, key);
         if (prior != null) {
-            if (!hash.equals(prior.payloadHash())) {
+            if (!hash.equals(prior.getPayloadHash())) {
                 throw error(RuntimeExceptionCode.CONFLICT, "相同幂等键的输入不一致");
             }
-            return new CommandReceiptResponse(prior.commandId(), null, prior.status(), prior.nativeTurnId(), null);
+            return new CommandReceiptResponse(prior.getCommandId(), null, prior.getStatus(), prior.getNativeTurnId(), null);
         }
-        if (row.version() != expectedVersion || row.cancellationRequested()
-                || Set.of("SUCCEEDED", "PARTIAL", "FAILED", "CANCELLED").contains(row.status())) {
+        if (row.getVersion() != expectedVersion || row.isCancellationRequested()
+                || Set.of("SUCCEEDED", "PARTIAL", "FAILED", "CANCELLED").contains(row.getStatus())) {
             throw error(RuntimeExceptionCode.CONFLICT, "回答状态已变化");
         }
         return queueStop(scope, row, scopeKey, key, payload, hash);
@@ -97,22 +97,22 @@ public class ResponseControlService {
         for (String binding : replies.activeBindings(userId, conversationId)) {
             ExecutionScopeDO scope = scopes.lockOwned(userId, scopeMapper.findScopeByBinding(userId, binding), false);
             ResponseRuntimeDO row = replies.lockByBinding(userId, binding);
-            if (!row.cancellationRequested()) {
+            if (!row.isCancellationRequested()) {
                 String payload = RuntimePayloads.toJson(json, Map.of("reason", "conversation-delete"));
-                queueStop(scope, row, "response.cancel:" + row.executionId(), "conversation-delete", payload, ContentDigests.sha256(payload));
+                queueStop(scope, row, "response.cancel:" + row.getExecutionId(), "conversation-delete", payload, ContentDigests.sha256(payload));
             }
         }
     }
 
     private CommandReceiptResponse queueStop(ExecutionScopeDO scope, ResponseRuntimeDO row, String scopeKey, String key, String payload, String hash) {
-        replies.cancelling(scope.userId(), row.bindingId(), LocalDateTime.now(ZoneOffset.UTC));
-        replies.cancelPending(scope.userId(), row.bindingId());
-        operations.cancelUnstarted(scope.userId(), scope.scopeId());
-        interactions.cancelOpenByScope(scope.userId(), scope.scopeId());
+        replies.cancelling(scope.getUserId(), row.getBindingId(), LocalDateTime.now(ZoneOffset.UTC));
+        replies.cancelPending(scope.getUserId(), row.getBindingId());
+        operations.cancelUnstarted(scope.getUserId(), scope.getScopeId());
+        interactions.cancelOpenByScope(scope.getUserId(), scope.getScopeId());
         String id = UUID.randomUUID().toString();
-        commands.insertControl(id, scope.userId(), scopeKey, key, hash, null, row.bindingId(), "STOP", payload, LocalDateTime.now(ZoneOffset.UTC));
-        events.publish(scope, "response:" + row.executionId() + ":cancel", "execution.status_changed",
-                Map.of("executionId", row.executionId(), "status", "CANCELLING", "version", row.version() + 1));
+        commands.insertControl(id, scope.getUserId(), scopeKey, key, hash, null, row.getBindingId(), "STOP", payload, LocalDateTime.now(ZoneOffset.UTC));
+        events.publish(scope, "response:" + row.getExecutionId() + ":cancel", "execution.status_changed",
+                Map.of("executionId", row.getExecutionId(), "status", "CANCELLING", "version", row.getVersion() + 1));
         return new CommandReceiptResponse(id, null, "PENDING", null, null);
     }
 

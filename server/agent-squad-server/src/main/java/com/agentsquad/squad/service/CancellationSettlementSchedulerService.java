@@ -42,11 +42,11 @@ public class CancellationSettlementSchedulerService {
             tasks = mapper.cancellingTasks(afterId);
         }
         for (var task : tasks) {
-            afterId = task.id();
+            afterId = task.getId();
             try {
-                finalizer.finalizeCancelledTask(task.userId(), task.taskId());
+                finalizer.finalizeCancelledTask(task.getUserId(), task.getTaskId());
             } catch (RuntimeException failure) {
-                log.warn("取消核对暂未完成 taskId={} errorType={}", task.taskId(), failure.getClass().getSimpleName(), failure);
+                log.warn("取消核对暂未完成 taskId={} errorType={}", task.getTaskId(), failure.getClass().getSimpleName(), failure);
             }
         }
         settleReplies();
@@ -62,13 +62,13 @@ public class CancellationSettlementSchedulerService {
             targets = replies.cancellationTargets(afterBinding);
         }
         for (var target : targets) {
-            afterBinding = target.bindingId();
+            afterBinding = target.getBindingId();
             try {
                 if (gateway.quiescent(target)) {
-                    responses.stopped(target.userId(), target.bindingId());
+                    responses.stopped(target.getUserId(), target.getBindingId());
                 }
             } catch (RuntimeException failure) {
-                log.warn("回复取消核对暂未完成 bindingId={} errorType={}", target.bindingId(), failure.getClass().getSimpleName(), failure);
+                log.warn("回复取消核对暂未完成 bindingId={} errorType={}", target.getBindingId(), failure.getClass().getSimpleName(), failure);
             }
         }
     }

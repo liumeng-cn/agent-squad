@@ -99,8 +99,8 @@ public final class ReplyPreviewBuffer {
         if (length > 0 && Character.isHighSurrogate(text.charAt(length - 1))) {
             length--;
         }
-        publish.accept(new ReplyPreviewSignal(target.userId(), target.conversationId(),
-                new ReplyPreview(2, target.executionId(), target.sourceMessageId(), runId, streamId,
+        publish.accept(new ReplyPreviewSignal(target.getUserId(), target.getConversationId(),
+                new ReplyPreview(2, target.getExecutionId(), target.getSourceMessageId(), runId, streamId,
                         ++revision, 0, text.substring(0, length), phase, true, true)));
     }
 }

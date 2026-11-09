@@ -85,27 +85,27 @@ public class ConversationQueryService {
         boolean more = rows.size() > limit;
         var page = new ArrayList<>(rows.subList(0, Math.min(rows.size(), limit)));
         Collections.reverse(page);
-        List<MessageView> messages = page.stream().map(row -> new MessageView(row.messageId(), row.sequence(), row.role(), row.text(), row.revision(), row.completed(), row.sourceMessageId(), row.executionId(), row.taskId(), row.occurredAt().atOffset(java.time.ZoneOffset.UTC).toString(),
-                material.artifactIds(userId, row.messageId()).stream().filter(id -> artifactMapper.findOwned(userId, id) != null).map(id -> artifacts.get(userId, id)).toList())).toList();
+        List<MessageView> messages = page.stream().map(row -> new MessageView(row.getMessageId(), row.getSequence(), row.getRole(), row.getText(), row.getRevision(), row.isCompleted(), row.getSourceMessageId(), row.getExecutionId(), row.getTaskId(), row.getOccurredAt().atOffset(java.time.ZoneOffset.UTC).toString(),
+                material.artifactIds(userId, row.getMessageId()).stream().filter(id -> artifactMapper.findOwned(userId, id) != null).map(id -> artifacts.get(userId, id)).toList())).toList();
         TaskResponse active = null;
-        if (header.activeTaskId() != null) {
-            var task = tasks.findOwned(userId, header.activeTaskId());
+        if (header.getActiveTaskId() != null) {
+            var task = tasks.findOwned(userId, header.getActiveTaskId());
             if (task != null) {
-                active = new TaskResponse(task.taskId(), task.conversationId(), task.status(), task.version(), task.planVersion(), task.answerRevision(), task.cancelRequestedAt() == null ? null : task.cancelRequestedAt().atOffset(java.time.ZoneOffset.UTC).toString(), null, task.createTime().atOffset(java.time.ZoneOffset.UTC).toString(), task.lastUpdateTime().atOffset(java.time.ZoneOffset.UTC).toString());
+                active = new TaskResponse(task.getTaskId(), task.getConversationId(), task.getStatus(), task.getVersion(), task.getPlanVersion(), task.getAnswerRevision(), task.getCancelRequestedAt() == null ? null : task.getCancelRequestedAt().atOffset(java.time.ZoneOffset.UTC).toString(), null, task.getCreateTime().atOffset(java.time.ZoneOffset.UTC).toString(), task.getLastUpdateTime().atOffset(java.time.ZoneOffset.UTC).toString());
             }
         }
-        return new ConversationSnapshotResponse(ConversationViewResponse.from(header), messages, more ? page.getFirst().sequence() : null,
+        return new ConversationSnapshotResponse(ConversationViewResponse.from(header), messages, more ? page.getFirst().getSequence() : null,
                 reads.activeExecutions(userId, conversationId).stream().map(row -> executionView(userId, row)).toList(), active,
                 reads.interactionIds(userId, conversationId).stream().map(id -> interactions.getOwned(userId, id)).toList(),
                 reads.deliverableIds(userId, conversationId).stream().filter(id -> artifactMapper.findOwned(userId, id) != null).map(id -> artifacts.get(userId, id)).toList(), failures.list(userId, conversationId), reads.uncertainOperationIds(userId, conversationId),
-                page.isEmpty() ? List.of() : reads.pageExecutions(userId, conversationId, page.getFirst().sequence(), page.getLast().sequence()).stream().map(row -> executionView(userId, row)).toList(),
-                page.isEmpty() ? List.of() : reads.pageTasks(userId, conversationId, page.getFirst().sequence(), page.getLast().sequence()),
-                page.isEmpty() ? List.of() : directives.pageInConversation(userId, conversationId, header.generation(),
-                        page.getFirst().sequence(), page.getLast().sequence()).stream()
+                page.isEmpty() ? List.of() : reads.pageExecutions(userId, conversationId, page.getFirst().getSequence(), page.getLast().getSequence()).stream().map(row -> executionView(userId, row)).toList(),
+                page.isEmpty() ? List.of() : reads.pageTasks(userId, conversationId, page.getFirst().getSequence(), page.getLast().getSequence()),
+                page.isEmpty() ? List.of() : directives.pageInConversation(userId, conversationId, header.getGeneration(),
+                        page.getFirst().getSequence(), page.getLast().getSequence()).stream()
                         .map(TaskDirectiveView::from).toList(),
-                activities.recent(userId, conversationId, header.generation(), 100).stream()
+                activities.recent(userId, conversationId, header.getGeneration(), 100).stream()
                         .map(ExecutionActivityView::from).toList(),
-                cursor(header, header.eventSequence()));
+                cursor(header, header.getEventSequence()));
     }
 
     /** 仅查询当前会话代际的来源消息，按固定活动身份向前翻页。 */
@@ -116,7 +116,7 @@ public class ConversationQueryService {
                 || query.beforeActivityId() != null && (query.beforeActivityId().isBlank() || query.beforeActivityId().length() > 36)) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "活动历史查询参数无效");
         }
-        var rows = activities.history(userId, conversationId, header.generation(), query, ACTIVITY_HISTORY_PAGE_SIZE + 1);
+        var rows = activities.history(userId, conversationId, header.getGeneration(), query, ACTIVITY_HISTORY_PAGE_SIZE + 1);
         var items = rows.stream().limit(ACTIVITY_HISTORY_PAGE_SIZE).map(ExecutionActivityView::from).toList();
         String nextCursor = rows.size() > ACTIVITY_HISTORY_PAGE_SIZE ? items.getLast().activityId() : null;
         return new ActivityHistoryPageResponse(items, nextCursor);
@@ -128,9 +128,9 @@ public class ConversationQueryService {
     public List<ConversationEvent> events(String userId, String conversationId, String after) {
         var header = requireHeader(userId, conversationId);
         long sequence = validateCursor(userId, header, after);
-        return reads.events(userId, conversationId, header.generation(), sequence).stream().map(row -> {
+        return reads.events(userId, conversationId, header.getGeneration(), sequence).stream().map(row -> {
             try {
-                return new ConversationEvent(conversationId, row.generation(), row.sequence(), row.type(), row.occurredAt().atOffset(java.time.ZoneOffset.UTC).toString(), RuntimePayloads.readJson(json, row.payloadJson()));
+                return new ConversationEvent(conversationId, row.getGeneration(), row.getSequence(), row.getType(), row.getOccurredAt().atOffset(java.time.ZoneOffset.UTC).toString(), RuntimePayloads.readJson(json, row.getPayloadJson()));
             } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
                 throw new IllegalStateException("公开会话事件无法读取", exception);
             }
@@ -156,26 +156,26 @@ public class ConversationQueryService {
                 throw invalid("会话游标过长");
             }
             String[] parts = after.split(":", -1);
-            if (parts.length != 3 || !header.conversationId().equals(parts[0])) {
+            if (parts.length != 3 || !header.getConversationId().equals(parts[0])) {
                 throw invalid("会话游标不匹配");
             }
             try {
                 long generation = Long.parseLong(parts[1]);
                 sequence = Long.parseLong(parts[2]);
-                if (generation < 0 || generation > header.generation()) {
+                if (generation < 0 || generation > header.getGeneration()) {
                     throw invalid("会话游标代际无效");
                 }
-                if (generation < header.generation()) {
+                if (generation < header.getGeneration()) {
                     throw new RuntimeBusinessException(RuntimeExceptionCode.EXPIRED, "会话游标已过期，请重新读取对话");
                 }
             } catch (NumberFormatException exception) {
                 throw invalid("会话游标无效");
             }
         }
-        if (sequence < 0 || sequence > header.eventSequence()) {
+        if (sequence < 0 || sequence > header.getEventSequence()) {
             throw invalid("会话游标超出当前水位");
         }
-        Long first = reads.firstEvent(userId, header.conversationId(), header.generation());
+        Long first = reads.firstEvent(userId, header.getConversationId(), header.getGeneration());
         if (first != null && sequence < first - 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.EXPIRED, "会话事件已超出保留范围，请重新读取对话");
         }
@@ -183,14 +183,14 @@ public class ConversationQueryService {
     }
 
     private ResponseExecutionView executionView(String userId, ConversationExecutionDO row) {
-        boolean terminal = java.util.Set.of("SUCCEEDED", "PARTIAL", "FAILED", "CANCELLED").contains(row.status());
-        return new ResponseExecutionView(row.executionId(), row.sourceMessageId(), ResponseExecutionStatus.valueOf(row.status()), row.version(),
-                row.answerMessageId(), row.failureId(), "FAILED".equals(row.status()) && failures.canRetry(userId, row.executionId()) ? List.of("RETRY")
-                : row.cancellationRequested() || terminal || "CANCELLING".equals(row.status()) ? List.of() : List.of("STOP"));
+        boolean terminal = java.util.Set.of("SUCCEEDED", "PARTIAL", "FAILED", "CANCELLED").contains(row.getStatus());
+        return new ResponseExecutionView(row.getExecutionId(), row.getSourceMessageId(), ResponseExecutionStatus.valueOf(row.getStatus()), row.getVersion(),
+                row.getAnswerMessageId(), row.getFailureId(), "FAILED".equals(row.getStatus()) && failures.canRetry(userId, row.getExecutionId()) ? List.of("RETRY")
+                : row.isCancellationRequested() || terminal || "CANCELLING".equals(row.getStatus()) ? List.of() : List.of("STOP"));
     }
 
     private String cursor(ConversationHeaderDO header, long sequence) {
-        return header.conversationId() + ":" + header.generation() + ":" + sequence;
+        return header.getConversationId() + ":" + header.getGeneration() + ":" + sequence;
     }
 
     private RuntimeBusinessException invalid(String message) {

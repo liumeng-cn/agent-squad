@@ -20,9 +20,9 @@ public record ExecutionActivityView(String activityId, String sourceMessageId, S
                                     String startedAt,
                                     String endedAt, long version) {
     public static ExecutionActivityView from(ExecutionActivityDO row) {
-        return new ExecutionActivityView(row.activityId(), row.sourceMessageId(), row.executionId(), row.taskId(),
-                row.jobId(), row.planVersion(), row.type(), row.group(), row.status(), row.waitReason(), row.summary(),
-                row.startedAt() == null ? null : row.startedAt().atOffset(ZoneOffset.UTC).toString(),
-                row.endedAt() == null ? null : row.endedAt().atOffset(ZoneOffset.UTC).toString(), row.version());
+        return new ExecutionActivityView(row.getActivityId(), row.getSourceMessageId(), row.getExecutionId(), row.getTaskId(),
+                row.getJobId(), row.getPlanVersion(), row.getType(), row.getGroup(), row.getStatus(), row.getWaitReason(), row.getSummary(),
+                row.getStartedAt() == null ? null : row.getStartedAt().atOffset(ZoneOffset.UTC).toString(),
+                row.getEndedAt() == null ? null : row.getEndedAt().atOffset(ZoneOffset.UTC).toString(), row.getVersion());
     }
 }

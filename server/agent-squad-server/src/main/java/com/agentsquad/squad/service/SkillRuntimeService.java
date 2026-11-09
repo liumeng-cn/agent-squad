@@ -104,7 +104,7 @@ public class SkillRuntimeService {
         SkillVersionDO row = repository.find(userId, versionId);
         List<String> required;
         try {
-            required = RuntimePayloads.readJson(objectMapper, row.requiredToolsJson()).valueStream()
+            required = RuntimePayloads.readJson(objectMapper, row.getRequiredToolsJson()).valueStream()
                     .map(com.fasterxml.jackson.databind.JsonNode::asText).toList();
         } catch (java.io.IOException exception) {
             throw new IllegalStateException("技能工具依赖记录损坏", exception);
@@ -116,17 +116,17 @@ public class SkillRuntimeService {
 
     private SkillReferenceDO requireReference(String userId, String scopeId, String versionId) {
         return repository.references(userId, scopeId).stream()
-                .filter(reference -> reference.skillVersionId().equals(versionId)).findFirst()
+                .filter(reference -> reference.getSkillVersionId().equals(versionId)).findFirst()
                 .orElseThrow(() -> new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN,
                         "当前执行未获授权使用此技能版本"));
     }
 
     private void validateReferences(String userId, List<SkillReferenceDO> references) {
         for (SkillReferenceDO reference : references) {
-            SkillVersionDO current = repository.lockVersion(userId, reference.skillVersionId());
-            if (current == null || "REVOKED".equals(current.status())
-                    || current.authorizationRevision() != reference.authorizationRevision()
-                    || !current.contentHash().equals(reference.contentHash())) {
+            SkillVersionDO current = repository.lockVersion(userId, reference.getSkillVersionId());
+            if (current == null || "REVOKED".equals(current.getStatus())
+                    || current.getAuthorizationRevision() != reference.getAuthorizationRevision()
+                    || !current.getContentHash().equals(reference.getContentHash())) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
                         "SKILL_REVOKED：执行引用的技能已撤销或内容失效，请重新发起执行");
             }

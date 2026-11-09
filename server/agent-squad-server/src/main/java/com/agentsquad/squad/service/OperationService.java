@@ -77,16 +77,16 @@ public class OperationService {
         if (context == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "会话未绑定目标");
         }
-        if (context.cancellationRequested() || !("QUEUED".equals(context.taskStatus())
-                || "RUNNING".equals(context.taskStatus()))) {
+        if (context.isCancellationRequested() || !("QUEUED".equals(context.getTaskStatus())
+                || "RUNNING".equals(context.getTaskStatus()))) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已取消或结束，不再受理工具操作");
         }
 
-        OperationDO existing = operationMapper.findByNativeCall(request.userId(), context.bindingId(),
+        OperationDO existing = operationMapper.findByNativeCall(request.userId(), context.getBindingId(),
                 request.frameworkTurnId(), request.toolCallId());
         if (existing != null) {
             log.info("工具调用幂等复用原操作 operationId={} toolCallId={}",
-                    existing.operationId(), request.toolCallId());
+                    existing.getOperationId(), request.toolCallId());
             return existing;
         }
 
@@ -97,39 +97,39 @@ public class OperationService {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "写入操作缺少业务幂等键");
             }
             OperationDO intent = operationMapper.findByBusinessIntent(request.userId(),
-                    context.scopeId(), request.toolKey(), request.businessIntentKey());
+                    context.getScopeId(), request.toolKey(), request.businessIntentKey());
             if (intent != null) {
-                if (!intent.requestHash().equals(requestHash)) {
+                if (!intent.getRequestHash().equals(requestHash)) {
                     throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
                             "同业务意图已用不同参数提交，拒绝重复写入");
                 }
                 log.info("业务意图幂等复用原操作 operationId={} intentHash={}",
-                        intent.operationId(), sha256(request.businessIntentKey()).substring(0, 8));
+                        intent.getOperationId(), sha256(request.businessIntentKey()).substring(0, 8));
                 return intent;
             }
         }
 
-        if (EFFECT_WRITE.equals(request.effect()) && context.taskId() != null
-                && !directives.pending(request.userId(), context.taskId()).isEmpty()) {
+        if (EFFECT_WRITE.equals(request.effect()) && context.getTaskId() != null
+                && !directives.pending(request.userId(), context.getTaskId()).isEmpty()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "用户修改尚待处理，暂停新的外部写入");
         }
-        if (!operationMapper.findUncertainInConversation(request.userId(), context.scopeId()).isEmpty()) {
+        if (!operationMapper.findUncertainInConversation(request.userId(), context.getScopeId()).isEmpty()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "已有外部操作结果待核对，暂停新的外部执行");
         }
-        budgetService.reserve(request.userId(), context.scopeId(),
+        budgetService.reserve(request.userId(), context.getScopeId(),
                 usageKey(request), "TOOL", request.reservedUnits(), request.creatorName());
 
         String operationId = UUID.randomUUID().toString();
         String status = request.requiresApproval() ? OperationStatus.WAITING_APPROVAL.name()
                 : OperationStatus.PREPARED.name();
-        operationMapper.insert(operationId, request.userId(), context.taskId(), null,
-                context.bindingId(), request.frameworkTurnId(), request.toolCallId(),
+        operationMapper.insert(operationId, request.userId(), context.getTaskId(), null,
+                context.getBindingId(), request.frameworkTurnId(), request.toolCallId(),
                 request.toolKey(), request.toolVersion(), request.businessIntentKey(),
                 request.effect(), request.connectionId(), request.connectionRevision(),
                 0L, requestHash, toJson(objectMapper, canonicalArguments(request.arguments())),
                 status, request.creatorName(), usageKey(request));
         log.info("操作预检完成 operationId={} taskId={} scopeId={} toolKey={} effect={} status={} hash={}",
-                operationId, context.taskId(), context.scopeId(), request.toolKey(), request.effect(), status,
+                operationId, context.getTaskId(), context.getScopeId(), request.toolKey(), request.effect(), status,
                 requestHash.substring(0, 8));
         return operationMapper.findOwned(request.userId(), operationId);
     }
@@ -141,8 +141,8 @@ public class OperationService {
         var unstarted = operationMapper.lockUnstartedInScope(userId, scopeId);
         operationMapper.cancelUnstartedByScope(userId, scopeId);
         for (OperationDO operation : unstarted) {
-            if (operation.budgetUsageKey() != null) {
-                budgetService.releaseUnsentTool(userId, scopeId, operation.budgetUsageKey());
+            if (operation.getBudgetUsageKey() != null) {
+                budgetService.releaseUnsentTool(userId, scopeId, operation.getBudgetUsageKey());
             }
         }
     }
@@ -163,7 +163,7 @@ public class OperationService {
         String nextCursor = null;
         if (hasMore) {
             Long lastCursorId = operationMapper.cursorIdOf(userId,
-                    rows.get(items.size() - 1).operationId());
+                    rows.get(items.size() - 1).getOperationId());
             nextCursor = lastCursorId == null ? null : String.valueOf(lastCursorId);
         }
         return new OperationPage(items, nextCursor);
@@ -177,7 +177,7 @@ public class OperationService {
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "操作不存在");
         }
-        scopeService.requireReadable(userId, row.scopeId());
+        scopeService.requireReadable(userId, row.getScopeId());
         return viewOf(row);
     }
 
@@ -189,11 +189,11 @@ public class OperationService {
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "操作不存在");
         }
-        scopeService.requireReadable(actor.userId(), row.scopeId());
-        List<String> evidenceRefs = evidenceRefs(row.resultJson());
-        return new OperationDetail(viewOf(row), operationPreview.arguments(row.argumentsJson()),
-                "操作状态：" + row.status() + "；已记录核对证据 " + evidenceRefs.size() + " 项", evidenceRefs,
-                operationAccessService.canReconcile(actor, row.scopeId(), row.status()));
+        scopeService.requireReadable(actor.userId(), row.getScopeId());
+        List<String> evidenceRefs = evidenceRefs(row.getResultJson());
+        return new OperationDetail(viewOf(row), operationPreview.arguments(row.getArgumentsJson()),
+                "操作状态：" + row.getStatus() + "；已记录核对证据 " + evidenceRefs.size() + " 项", evidenceRefs,
+                operationAccessService.canReconcile(actor, row.getScopeId(), row.getStatus()));
     }
 
     private List<String> evidenceRefs(String resultJson) {
@@ -218,9 +218,9 @@ public class OperationService {
      * 账本行映射为公开摘要；参数与结果正文不进入列表。
      */
     public OperationView viewOf(OperationDO row) {
-        return new OperationView(row.operationId(), row.taskId(), row.jobId(), row.toolKey(),
-                row.effect(), row.status(), row.requestHash(), row.version(),
-                row.toolKey() + " · " + row.effect() + " · " + row.status());
+        return new OperationView(row.getOperationId(), row.getTaskId(), row.getJobId(), row.getToolKey(),
+                row.getEffect(), row.getStatus(), row.getRequestHash(), row.getVersion(),
+                row.getToolKey() + " · " + row.getEffect() + " · " + row.getStatus());
     }
 
     private Long parseCursor(String cursor) {
@@ -238,7 +238,7 @@ public class OperationService {
      * 结算该操作的预算预留；金额由调用方按工具声明传入。
      */
     public void settle(OperationDO operation, long settledUnits) {
-        budgetService.settle(operation.userId(), operation.scopeId(), usageKeyOf(operation),
+        budgetService.settle(operation.getUserId(), operation.getScopeId(), usageKeyOf(operation),
                 settledUnits);
     }
 
@@ -246,7 +246,7 @@ public class OperationService {
      * 操作的预算稳定键；核对流程复用同一派生规则，避免两处口径漂移。
      */
     public String usageKeyOf(OperationDO operation) {
-        return operation.budgetUsageKey();
+        return operation.getBudgetUsageKey();
     }
 
     private String usageKey(PrepareRequest request) {

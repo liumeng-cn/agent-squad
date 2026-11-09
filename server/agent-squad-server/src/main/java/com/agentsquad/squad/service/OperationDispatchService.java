@@ -33,16 +33,16 @@ public class OperationDispatchService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public int begin(OperationDO operation, String owner, long fence, LocalDateTime leaseUntil, String externalKey) {
-        OperationDO current = mapper.findOwned(operation.userId(), operation.operationId());
-        if (current == null || !java.util.Objects.equals(current.scopeId(), operation.scopeId())) {
+        OperationDO current = mapper.findOwned(operation.getUserId(), operation.getOperationId());
+        if (current == null || !java.util.Objects.equals(current.getScopeId(), operation.getScopeId())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "操作执行归属已变化");
         }
-        userStatusGuard.requireActive(current.userId());
-        scopeService.lockOwned(current.userId(), current.scopeId(), true);
-        if (!mapper.findUncertainInConversation(current.userId(), current.scopeId()).isEmpty()) {
+        userStatusGuard.requireActive(current.getUserId());
+        scopeService.lockOwned(current.getUserId(), current.getScopeId(), true);
+        if (!mapper.findUncertainInConversation(current.getUserId(), current.getScopeId()).isEmpty()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "已有外部操作结果待核对，暂停新的外部执行");
         }
-        return mapper.markInFlight(operation.userId(), operation.operationId(), operation.version(),
+        return mapper.markInFlight(operation.getUserId(), operation.getOperationId(), operation.getVersion(),
                 owner, fence, leaseUntil, externalKey);
     }
 }

@@ -59,43 +59,43 @@ public class WorkerFailureResolutionService {
         }
         scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), true);
         var context = completionMapper.lockByMasterSession(userId, sessionId);
-        if (context == null || context.cancellationRequested()
-                || !(GoalTaskStatus.RUNNING.name().equals(context.taskStatus()) || GoalTaskStatus.QUEUED.name().equals(context.taskStatus()))
-                || context.planVersion() != request.expectedPlanVersion()) {
+        if (context == null || context.isCancellationRequested()
+                || !(GoalTaskStatus.RUNNING.name().equals(context.getTaskStatus()) || GoalTaskStatus.QUEUED.name().equals(context.getTaskStatus()))
+                || context.getPlanVersion() != request.expectedPlanVersion()) {
             throw conflict("只能处理当前任务和当前计划中的未完成工作");
         }
-        var plan = plans.lockPlan(userId, context.taskId(), context.planVersion());
-        if (plan == null || !"ACTIVE".equals(plan.status())) {
+        var plan = plans.lockPlan(userId, context.getTaskId(), context.getPlanVersion());
+        if (plan == null || !"ACTIVE".equals(plan.getStatus())) {
             throw conflict("工作安排已变化，请重新读取当前计划");
         }
-        var job = plans.lockJobs(context.taskId(), context.planVersion()).stream()
-                .filter(item -> item.jobId().equals(request.jobId())).findFirst()
+        var job = plans.lockJobs(context.getTaskId(), context.getPlanVersion()).stream()
+                .filter(item -> item.getJobId().equals(request.jobId())).findFirst()
                 .orElseThrow(() -> conflict("这项工作不属于当前计划"));
-        if (WorkerJobStatus.FAILED.name().equals(job.status())) {
-            return new JobDispositionReceipt(job.jobId(), job.planVersion(), WorkerJobStatus.FAILED);
+        if (WorkerJobStatus.FAILED.name().equals(job.getStatus())) {
+            return new JobDispositionReceipt(job.getJobId(), job.getPlanVersion(), WorkerJobStatus.FAILED);
         }
-        if (!WorkerJobStatus.RECOVERY_BLOCKED.name().equals(job.status())
-                || commands.countPendingWorkerResumes(userId, job.bindingId()) > 0
-                || completionMapper.countPendingEffects(userId, context.taskId()) > 0
-                || !directives.pending(userId, context.taskId()).isEmpty()
-                || directives.pendingControls(userId, context.taskId()) > 0) {
+        if (!WorkerJobStatus.RECOVERY_BLOCKED.name().equals(job.getStatus())
+                || commands.countPendingWorkerResumes(userId, job.getBindingId()) > 0
+                || completionMapper.countPendingEffects(userId, context.getTaskId()) > 0
+                || !directives.pending(userId, context.getTaskId()).isEmpty()
+                || directives.pendingControls(userId, context.getTaskId()) > 0) {
             throw conflict("这项工作仍在执行、等待处理或有结果待核对，不能直接放弃");
         }
-        if (plans.abandonBlockedJob(userId, context.taskId(), job.planVersion(), job.jobId()) != 1) {
+        if (plans.abandonBlockedJob(userId, context.getTaskId(), job.getPlanVersion(), job.getJobId()) != 1) {
             throw conflict("工作状态已经变化，请重新读取");
         }
-        dependencies.activateReadyDependents(userId, context.taskId(), job.planVersion());
-        if (projections.reserveEventSequence(userId, context.taskId()) != 1) {
+        dependencies.activateReadyDependents(userId, context.getTaskId(), job.getPlanVersion());
+        if (projections.reserveEventSequence(userId, context.getTaskId()) != 1) {
             throw new IllegalStateException("工作处置事件序号预留失败");
         }
-        events.insertProjected(userId, context.taskId(), projections.eventSequence(userId, context.taskId()),
-                "job-abandoned:" + job.jobId(), "job.failed",
-                RuntimePayloads.toJson(json, Map.of("jobId", job.jobId(), "planVersion", job.planVersion(), "status", WorkerJobStatus.FAILED)),
+        events.insertProjected(userId, context.getTaskId(), projections.eventSequence(userId, context.getTaskId()),
+                "job-abandoned:" + job.getJobId(), "job.failed",
+                RuntimePayloads.toJson(json, Map.of("jobId", job.getJobId(), "planVersion", job.getPlanVersion(), "status", WorkerJobStatus.FAILED)),
                 LocalDateTime.now(ZoneOffset.UTC));
         signals.onJobStateChanged(plan);
         log.info("已明确结束无法继续的工作 taskId={} jobId={} planVersion={} status={}",
-                context.taskId(), job.jobId(), job.planVersion(), WorkerJobStatus.FAILED);
-        return new JobDispositionReceipt(job.jobId(), job.planVersion(), WorkerJobStatus.FAILED);
+                context.getTaskId(), job.getJobId(), job.getPlanVersion(), WorkerJobStatus.FAILED);
+        return new JobDispositionReceipt(job.getJobId(), job.getPlanVersion(), WorkerJobStatus.FAILED);
     }
 
     private RuntimeBusinessException conflict(String message) {

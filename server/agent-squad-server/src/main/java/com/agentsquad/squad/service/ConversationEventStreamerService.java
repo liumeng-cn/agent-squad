@@ -81,7 +81,7 @@ public class ConversationEventStreamerService {
         String after = cursor;
         if (after == null || after.isBlank()) {
             var header = queries.requireHeader(userId, conversationId);
-            after = conversationId + ":" + header.generation() + ":0";
+            after = conversationId + ":" + header.getGeneration() + ":0";
         }
         if (!slots.tryAcquire()) {
             throw busy();

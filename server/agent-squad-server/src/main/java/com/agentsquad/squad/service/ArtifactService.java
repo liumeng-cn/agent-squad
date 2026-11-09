@@ -100,8 +100,8 @@ public class ArtifactService {
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "产物不存在、已过期或无权访问");
         }
-        if (row.content() == null || row.sizeBytes() != row.content().length
-                || !row.sha256().equals(digest(row.content()))) {
+        if (row.getContent() == null || row.getSizeBytes() != row.getContent().length
+                || !row.getSha256().equals(digest(row.getContent()))) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "产物内容不可用，请核对后重新上传");
         }
         return row;
@@ -158,10 +158,10 @@ public class ArtifactService {
     }
 
     private ArtifactResponse sameUpload(String userId, ArtifactDO row, String name, String hash) {
-        if (row == null || !row.fileName().equals(name) || !row.sha256().equals(hash)) {
+        if (row == null || !row.getFileName().equals(name) || !row.getSha256().equals(hash)) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同上传键的文件不一致");
         }
-        return get(userId, row.artifactId());
+        return get(userId, row.getArtifactId());
     }
 
     private ArtifactDO requireOwned(String userId, String id) {
@@ -173,8 +173,8 @@ public class ArtifactService {
     }
 
     private ArtifactResponse view(ArtifactDO row) {
-        return new ArtifactResponse(row.artifactId(), row.fileName(), row.mediaType(), row.sizeBytes(),
-                row.sha256(), "READY", row.expiresAt().atOffset(ZoneOffset.UTC).toString());
+        return new ArtifactResponse(row.getArtifactId(), row.getFileName(), row.getMediaType(), row.getSizeBytes(),
+                row.getSha256(), "READY", row.getExpiresAt().atOffset(ZoneOffset.UTC).toString());
     }
 
     private String digest(byte[] bytes) {

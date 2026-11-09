@@ -51,7 +51,7 @@ public class ScopeSkillRepository implements RuntimeContextSkillRepository, Lazy
         String scopeId = scopes.scopeForSession(userId, context.getSessionId());
         SkillCatalog catalog = skills.freeze(userId, scopeId);
         return catalog.skills().stream()
-                .filter(skill -> selectedVersionIds == null || selectedVersionIds.contains(skill.skillVersionId()))
+                .filter(skill -> selectedVersionIds == null || selectedVersionIds.contains(skill.getSkillVersionId()))
                 .map(skill -> toFrameworkSkill(userId, scopeId, skill)).toList();
     }
 
@@ -66,10 +66,10 @@ public class ScopeSkillRepository implements RuntimeContextSkillRepository, Lazy
         ScopeSkillCapabilities capabilities = context.get(ScopeSkillCapabilities.class);
         Set<String> allowedTools = capabilities == null ? Set.of() : capabilities.toolNames();
         SkillCatalog catalog = skills.freeze(context.getUserId(), scopeId);
-        return catalog.skills().stream().filter(skill -> skill.name().equals(skillName))
-                .filter(skill -> selection == null || selection.skillVersionIds().contains(skill.skillVersionId()))
+        return catalog.skills().stream().filter(skill -> skill.getName().equals(skillName))
+                .filter(skill -> selection == null || selection.skillVersionIds().contains(skill.getSkillVersionId()))
                 .findFirst().<SkillResources>map(skill -> new ScopedSkillResources(skills,
-                        context.getUserId(), scopeId, skill.skillVersionId(), allowedTools)).orElseGet(SkillResources::empty);
+                        context.getUserId(), scopeId, skill.getSkillVersionId(), allowedTools)).orElseGet(SkillResources::empty);
     }
 
     @Override
@@ -125,10 +125,10 @@ public class ScopeSkillRepository implements RuntimeContextSkillRepository, Lazy
     }
 
     private AgentSkill toFrameworkSkill(String userId, String scopeId, SkillReferenceDO skill) {
-        String content = skills.read(userId, scopeId, skill.skillVersionId(), "SKILL.md").content();
+        String content = skills.read(userId, scopeId, skill.getSkillVersionId(), "SKILL.md").getContent();
         var parsed = MarkdownSkillParser.parse(content);
-        return AgentSkill.builder().metadata(parsed.getMetadata()).name(skill.name()).description(skill.description())
-                .skillContent(parsed.getContent()).source(SOURCE_PREFIX + skill.skillVersionId())
-                .putMetadata("version", skill.version()).putMetadata("contentHash", skill.contentHash()).build();
+        return AgentSkill.builder().metadata(parsed.getMetadata()).name(skill.getName()).description(skill.getDescription())
+                .skillContent(parsed.getContent()).source(SOURCE_PREFIX + skill.getSkillVersionId())
+                .putMetadata("version", skill.getVersion()).putMetadata("contentHash", skill.getContentHash()).build();
     }
 }

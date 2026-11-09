@@ -39,7 +39,7 @@ public class ExecutionScopeService {
     public String createTaskScope(String userId, String taskId, String conversationId, long generation,
                                   String profileKey, long limit) {
         ConversationDO conversation = conversations.lockOwned(userId, conversationId);
-        if (conversation == null || !"ACTIVE".equals(conversation.status()) || conversation.generation() != generation) {
+        if (conversation == null || !"ACTIVE".equals(conversation.getStatus()) || conversation.getGeneration() != generation) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标所属会话已失效");
         }
         String accountId = UUID.randomUUID().toString();
@@ -70,20 +70,20 @@ public class ExecutionScopeService {
         if (scope == null) {
             throw missing();
         }
-        ConversationDO conversation = conversations.lockOwned(userId, scope.conversationId());
+        ConversationDO conversation = conversations.lockOwned(userId, scope.getConversationId());
         if (conversation == null) {
             throw missing();
         }
-        ExecutionOwnerDO owner = "TASK".equals(scope.kind())
-                ? mapper.lockTaskOwner(userId, scope.ownerId(), scopeId)
-                : mapper.lockResponseOwner(userId, scope.ownerId(), scopeId);
+        ExecutionOwnerDO owner = "TASK".equals(scope.getKind())
+                ? mapper.lockTaskOwner(userId, scope.getOwnerId(), scopeId)
+                : mapper.lockResponseOwner(userId, scope.getOwnerId(), scopeId);
         if (owner == null) {
             throw missing();
         }
-        if (forDispatch && (!"ACTIVE".equals(conversation.status())
-                || conversation.generation() != scope.conversationGeneration()
-                || !"0".equals(owner.deleted()) || owner.cancellationRequested()
-                || !DISPATCHABLE.contains(owner.status()))) {
+        if (forDispatch && (!"ACTIVE".equals(conversation.getStatus())
+                || conversation.getGeneration() != scope.getConversationGeneration()
+                || !"0".equals(owner.getDeleted()) || owner.isCancellationRequested()
+                || !DISPATCHABLE.contains(owner.getStatus()))) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "执行已停止、受限或上下文失效，不再接受新操作");
         }
         return scope;
