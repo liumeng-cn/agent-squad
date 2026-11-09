@@ -5,9 +5,9 @@ import io.agentscope.core.tool.AgentTool;
 import io.agentscope.core.tool.ToolCallParam;
 import io.agentscope.core.tool.ToolSuspendException;
 import jakarta.annotation.Resource;
-import com.agentsquad.squad.interaction.service.InputFormSchema;
+import com.agentsquad.squad.service.InputFormSchemaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
@@ -25,7 +25,7 @@ import java.util.Map;
 public class RequestInputTool implements AgentTool {
 
     @Resource
-    private InputFormSchema inputFormSchema;
+    private InputFormSchemaService inputFormSchema;
 
     @Resource
     private ObjectMapper objectMapper;

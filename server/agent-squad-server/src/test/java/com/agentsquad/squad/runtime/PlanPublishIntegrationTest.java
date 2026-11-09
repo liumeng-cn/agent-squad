@@ -1,22 +1,25 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.conversation.dto.ConversationResponse;
-import com.agentsquad.squad.conversation.dto.TaskReceipt;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.enums.WorkerJobStatus;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.vo.ConversationVO;
+import com.agentsquad.squad.vo.TaskReceiptVO;
+import com.agentsquad.squad.service.GoalTaskService;
+import com.agentsquad.squad.bo.ProjectionTargetBO;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.runtime.dto.PlanNode;
-import com.agentsquad.squad.runtime.dto.PlanPublish;
-import com.agentsquad.squad.runtime.dto.PlanReceipt;
-import com.agentsquad.squad.runtime.service.ContextSnapshotService;
-import com.agentsquad.squad.runtime.service.MasterSignalService;
-import com.agentsquad.squad.runtime.service.PlanService;
-import com.agentsquad.squad.runtime.service.WorkerDispatchService;
-import com.agentsquad.squad.runtime.service.WorkerResultService;
-import com.agentsquad.squad.presentation.service.TaskSnapshotService;
-import com.agentsquad.squad.worker.dto.WorkerDefinitionCreateRequest;
-import com.agentsquad.squad.worker.service.WorkerDefinitionService;
+import com.agentsquad.squad.agent.middleware.ScopedMasterToolsMiddleware;
+import com.agentsquad.squad.bo.PlanNodeBO;
+import com.agentsquad.squad.bo.PlanPublishBO;
+import com.agentsquad.squad.bo.PlanReceiptBO;
+import com.agentsquad.squad.service.ContextSnapshotService;
+import com.agentsquad.squad.service.MasterSignalService;
+import com.agentsquad.squad.service.PlanService;
+import com.agentsquad.squad.service.WorkerDispatchService;
+import com.agentsquad.squad.service.WorkerResultService;
+import com.agentsquad.squad.service.TaskSnapshotService;
+import com.agentsquad.squad.dto.WorkerDefinitionCreateDTO;
+import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -26,7 +29,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.nio.file.Path;
 import java.util.List;
-import com.agentsquad.squad.common.enums.identity.AccountRole;
+import com.agentsquad.squad.enums.AccountRole;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -56,11 +59,11 @@ class PlanPublishIntegrationTest {
             WorkerResultService results = context.getBean(WorkerResultService.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             ObjectMapper json = context.getBean(ObjectMapper.class);
-            ConversationResponse conversation = tasks.createConversation(userId, "复用测试");
-            TaskReceipt task = tasks.submit(userId, conversation.conversationId(),
+            ConversationVO conversation = tasks.createConversation(userId, "复用测试");
+            TaskReceiptVO task = tasks.submit(userId, conversation.conversationId(),
                     "reuse-goal", "写一段摘要");
             definitions.publish(new AuthView(userId, "admin", List.of(AccountRole.ADMIN), "csrf"),
-                    "reuse-writer", new WorkerDefinitionCreateRequest(
+                    "reuse-writer", new WorkerDefinitionCreateDTO(
                             "reuse-writer", "1.0.0", "写摘要", json.readTree("{}"),
                             json.readTree("{}"), List.of(), "default", "default"));
             String sessionId = jdbc.queryForObject("""
@@ -71,11 +74,11 @@ class PlanPublishIntegrationTest {
                     "draft", "reuse-context").snapshotId();
             String finishSnapshot = snapshots.prepare(userId, sessionId,
                     "finish", "finish-context").snapshotId();
-            PlanReceipt first = plans.publish(userId, sessionId,
-                    new PlanPublish("first-plan", 0, List.of(
-                            new PlanNode("draft", "reuse-writer", "1.0.0", "写摘要",
+            PlanReceiptBO first = plans.publish(userId, sessionId,
+                    new PlanPublishBO("first-plan", 0, List.of(
+                            new PlanNodeBO("draft", "reuse-writer", "1.0.0", "写摘要",
                                     snapshot, List.of(), true, 1),
-                            new PlanNode("finish", "reuse-writer", "1.0.0", "整理摘要",
+                            new PlanNodeBO("finish", "reuse-writer", "1.0.0", "整理摘要",
                                     finishSnapshot, List.of("draft"), true, 1)),
                             "ALL_REQUIRED", List.of("摘要完成")));
             String firstBinding = jdbc.queryForObject(
@@ -83,7 +86,7 @@ class PlanPublishIntegrationTest {
                     String.class, first.jobIds().getFirst());
             jdbc.update("UPDATE sq_command SET status = 'DELIVERED' WHERE binding_id = ?",
                     firstBinding);
-            String guard = dispatch.claim(userId, firstBinding).guardToken();
+            String guard = dispatch.claim(userId, firstBinding).getGuardToken();
             results.propose(userId, firstBinding, guard, "draft-turn",
                     json.readTree("{\"text\":\"已写摘要\"}"));
             assertThat(results.finalizeSuccess(userId, firstBinding, "draft-turn")).isTrue();
@@ -92,16 +95,16 @@ class PlanPublishIntegrationTest {
                     String.class, first.jobIds().get(1));
             jdbc.update("UPDATE sq_command SET status = 'DELIVERED' WHERE binding_id = ?",
                     finishBinding);
-            String finishGuard = dispatch.claim(userId, finishBinding).guardToken();
+            String finishGuard = dispatch.claim(userId, finishBinding).getGuardToken();
             results.propose(userId, finishBinding, finishGuard, "finish-turn",
                     json.readTree("{\"text\":\"已整理摘要\"}"));
             assertThat(results.finalizeSuccess(userId, finishBinding, "finish-turn")).isTrue();
 
-            PlanReceipt reused = plans.publish(userId, sessionId,
-                    new PlanPublish("second-plan", 1, List.of(
-                            new PlanNode("draft", "reuse-writer", "1.0.0", "写摘要",
+            PlanReceiptBO reused = plans.publish(userId, sessionId,
+                    new PlanPublishBO("second-plan", 1, List.of(
+                            new PlanNodeBO("draft", "reuse-writer", "1.0.0", "写摘要",
                                     snapshot, List.of(), true, 1),
-                            new PlanNode("finish", "reuse-writer", "1.0.0", "整理摘要",
+                            new PlanNodeBO("finish", "reuse-writer", "1.0.0", "整理摘要",
                                     finishSnapshot, List.of("draft"), true, 1)),
                             "ALL_REQUIRED", List.of("摘要完成")));
             for (int index = 0; index < 2; index++) {
@@ -120,9 +123,9 @@ class PlanPublishIntegrationTest {
                     SELECT COUNT(*) FROM sq_task_event WHERE task_id = ? AND event_type = 'job.reused'
                     """, Integer.class, task.taskId())).isEqualTo(2);
 
-            PlanReceipt changedGoal = plans.publish(userId, sessionId,
-                    new PlanPublish("third-plan", 2, List.of(
-                            new PlanNode("draft", "reuse-writer", "1.0.0", "换一个摘要目标",
+            PlanReceiptBO changedGoal = plans.publish(userId, sessionId,
+                    new PlanPublishBO("third-plan", 2, List.of(
+                            new PlanNodeBO("draft", "reuse-writer", "1.0.0", "换一个摘要目标",
                                     snapshot, List.of(), true, 1)),
                             "ALL_REQUIRED", List.of("新摘要完成")));
             assertThat(jdbc.queryForObject("""
@@ -133,14 +136,14 @@ class PlanPublishIntegrationTest {
                     String.class, changedGoal.jobIds().getFirst());
             jdbc.update("UPDATE sq_command SET status = 'DELIVERED' WHERE binding_id = ?",
                     changedBinding);
-            String changedGuard = dispatch.claim(userId, changedBinding).guardToken();
+            String changedGuard = dispatch.claim(userId, changedBinding).getGuardToken();
             results.propose(userId, changedBinding, changedGuard, "changed-turn",
                     json.readTree("{\"text\":\"新内容\",\"evidenceRefs\":[\"external\"]}"));
             assertThat(results.finalizeSuccess(userId, changedBinding, "changed-turn")).isTrue();
 
-            PlanReceipt externalEvidence = plans.publish(userId, sessionId,
-                    new PlanPublish("fourth-plan", 3, List.of(
-                            new PlanNode("draft", "reuse-writer", "1.0.0", "换一个摘要目标",
+            PlanReceiptBO externalEvidence = plans.publish(userId, sessionId,
+                    new PlanPublishBO("fourth-plan", 3, List.of(
+                            new PlanNodeBO("draft", "reuse-writer", "1.0.0", "换一个摘要目标",
                                     snapshot, List.of(), true, 1)),
                             "ALL_REQUIRED", List.of("新摘要完成")));
             assertThat(jdbc.queryForObject("""
@@ -176,16 +179,16 @@ class PlanPublishIntegrationTest {
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             ObjectMapper mapper = context.getBean(ObjectMapper.class);
 
-            ConversationResponse conversation = goalTaskService.createConversation(userId, "排障");
-            TaskReceipt task = goalTaskService.submit(userId, conversation.conversationId(),
+            ConversationVO conversation = goalTaskService.createConversation(userId, "排障");
+            TaskReceiptVO task = goalTaskService.submit(userId, conversation.conversationId(),
                     "request-1", "排查错误日志");
 
             AuthView admin = new AuthView(userId, "admin", List.of(AccountRole.ADMIN), "csrf");
-            workerDefinitionService.publish(admin, "wd-1", new WorkerDefinitionCreateRequest(
+            workerDefinitionService.publish(admin, "wd-1", new WorkerDefinitionCreateDTO(
                     "log-analysis", "1.0.0", "日志分析",
                     mapper.readTree("{}"), mapper.readTree("{}"),
                     List.of(), "default", "default"));
-            workerDefinitionService.publish(admin, "wd-schema", new WorkerDefinitionCreateRequest(
+            workerDefinitionService.publish(admin, "wd-schema", new WorkerDefinitionCreateDTO(
                     "structured-input", "1.0.0", "要求结构化主题",
                     mapper.readTree("""
                             {"type":"object","required":["topic"],
@@ -210,18 +213,18 @@ class PlanPublishIntegrationTest {
                     "analyze", "foreign-context"))
                     .isInstanceOf(RuntimeBusinessException.class);
 
-            PlanPublish missingContext = new PlanPublish("missing-context", 0, List.of(
-                    new PlanNode("analyze", "log-analysis", "1.0.0", "分析日志",
+            PlanPublishBO missingContext = new PlanPublishBO("missing-context", 0, List.of(
+                    new PlanNodeBO("analyze", "log-analysis", "1.0.0", "分析日志",
                             "00000000-0000-0000-0000-000000000099", List.of(), true, 1)),
                     "ALL_REQUIRED", List.of("完成"));
             assertThatThrownBy(() -> planService.publish(userId, sessionId, missingContext))
                     .isInstanceOf(RuntimeBusinessException.class)
                     .hasMessageContaining("局部上下文");
 
-            PlanPublish publish = new PlanPublish("plan-1", 0, List.of(
-                    new PlanNode("analyze", "log-analysis", "1.0.0", "分析日志",
+            PlanPublishBO publish = new PlanPublishBO("plan-1", 0, List.of(
+                    new PlanNodeBO("analyze", "log-analysis", "1.0.0", "分析日志",
                             analyzeContext, List.of(), true, 1),
-                    new PlanNode("report", "log-analysis", "1.0.0", "输出报告",
+                    new PlanNodeBO("report", "log-analysis", "1.0.0", "输出报告",
                             reportContext, List.of("analyze"), true, 1)),
                     "ALL_REQUIRED", List.of("报告完成"));
 
@@ -236,7 +239,7 @@ class PlanPublishIntegrationTest {
             jdbc.update("UPDATE sq_budget_account SET limit_microunits = 5000000 WHERE account_id = (SELECT s.account_id FROM sq_execution_scope s JOIN sq_goal_task t ON t.user_id = s.user_id AND t.scope_id = s.scope_id WHERE t.task_id = ?)",
                     task.taskId());
 
-            PlanReceipt receipt = planService.publish(userId, sessionId, publish);
+            PlanReceiptBO receipt = planService.publish(userId, sessionId, publish);
             assertThat(receipt.planVersion()).isEqualTo(1);
             assertThat(receipt.jobIds()).hasSize(2);
             jdbc.update("""
@@ -261,14 +264,14 @@ class PlanPublishIntegrationTest {
                     String.class, receipt.jobIds().getFirst());
             jdbc.update("UPDATE sq_command SET status = 'DELIVERED' WHERE binding_id = ?",
                     rootBinding);
-            String rootGuard = dispatchService.claim(userId, rootBinding).guardToken();
+            String rootGuard = dispatchService.claim(userId, rootBinding).getGuardToken();
             resultService.propose(userId, rootBinding, rootGuard, "root-turn",
                     mapper.readTree("{\"text\":\"分析完成\"}"));
             assertThat(resultService.finalizeSuccess(userId, rootBinding, "root-turn")).isTrue();
             assertThat(snapshotsView.snapshot(userId, task.taskId()).jobs())
                     .hasSize(2)
                     .anySatisfy(job -> {
-                        assertThat(job.status()).isEqualTo(com.agentsquad.squad.common.enums.worker.WorkerJobStatus.SUCCEEDED);
+                        assertThat(job.status()).isEqualTo(WorkerJobStatus.SUCCEEDED);
                         assertThat(job.result().toString()).contains("分析完成");
                     });
             assertThat(jdbc.queryForObject(
@@ -285,7 +288,7 @@ class PlanPublishIntegrationTest {
                     String.class, receipt.jobIds().get(1));
             jdbc.update("UPDATE sq_command SET status = 'DELIVERED' WHERE binding_id = ?",
                     reportBinding);
-            String reportGuard = dispatchService.claim(userId, reportBinding).guardToken();
+            String reportGuard = dispatchService.claim(userId, reportBinding).getGuardToken();
             resultService.propose(userId, reportBinding, reportGuard, "report-turn",
                     mapper.readTree("{\"text\":\"报告完成\"}"));
             assertThat(resultService.finalizeSuccess(userId, reportBinding, "report-turn")).isTrue();
@@ -305,68 +308,68 @@ class PlanPublishIntegrationTest {
                     SELECT payload_json FROM sq_command WHERE task_id = ? AND action = 'MASTER_SIGNAL'
                     """, String.class, task.taskId())).contains("分析完成", "报告完成");
 
-            PlanReceipt replay = planService.publish(userId, sessionId, publish);
+            PlanReceiptBO replay = planService.publish(userId, sessionId, publish);
             assertThat(replay.planId()).isEqualTo(receipt.planId());
             assertThat(replay.jobIds()).isEqualTo(receipt.jobIds());
 
-            PlanPublish reusedKeyWithDifferentGoal = new PlanPublish("plan-1", 0, List.of(
-                    new PlanNode("analyze", "log-analysis", "1.0.0", "另一项分析",
+            PlanPublishBO reusedKeyWithDifferentGoal = new PlanPublishBO("plan-1", 0, List.of(
+                    new PlanNodeBO("analyze", "log-analysis", "1.0.0", "另一项分析",
                             analyzeContext, List.of(), true, 1)),
                     "ALL_REQUIRED", List.of("报告完成"));
             assertThatThrownBy(() -> planService.publish(userId, sessionId, reusedKeyWithDifferentGoal))
                     .isInstanceOf(RuntimeBusinessException.class)
                     .hasMessageContaining("逻辑键对应的内容不同");
 
-            PlanPublish wrongContext = new PlanPublish("wrong-context", 1, List.of(
-                    new PlanNode("analyze", "log-analysis", "1.0.0", "分析日志",
+            PlanPublishBO wrongContext = new PlanPublishBO("wrong-context", 1, List.of(
+                    new PlanNodeBO("analyze", "log-analysis", "1.0.0", "分析日志",
                             reportContext, List.of(), true, 1)),
                     "ALL_REQUIRED", List.of("完成"));
             assertThatThrownBy(() -> planService.publish(userId, sessionId, wrongContext))
                     .isInstanceOf(RuntimeBusinessException.class)
                     .hasMessageContaining("局部上下文");
 
-            PlanPublish cyclic = new PlanPublish("plan-2", 1, List.of(
-                    new PlanNode("a", "log-analysis", "1.0.0", "节点A",
+            PlanPublishBO cyclic = new PlanPublishBO("plan-2", 1, List.of(
+                    new PlanNodeBO("a", "log-analysis", "1.0.0", "节点A",
                             analyzeContext, List.of("b"), true, 1),
-                    new PlanNode("b", "log-analysis", "1.0.0", "节点B",
+                    new PlanNodeBO("b", "log-analysis", "1.0.0", "节点B",
                             reportContext, List.of("a"), true, 1)),
                     "ALL_REQUIRED", List.of("完成"));
             assertThatThrownBy(() -> planService.publish(userId, sessionId, cyclic))
                     .isInstanceOf(RuntimeBusinessException.class)
                     .hasMessageContaining("循环");
 
-            PlanPublish second = new PlanPublish("plan-2", 1, List.of(
-                    new PlanNode("summary", "structured-input", "1.0.0", "topic：日志分析；请汇总结果",
+            PlanPublishBO second = new PlanPublishBO("plan-2", 1, List.of(
+                    new PlanNodeBO("summary", "structured-input", "1.0.0", "topic：日志分析；请汇总结果",
                             summaryContext, List.of(), true, 1)),
                     "ALL_REQUIRED", List.of("汇总完成"));
-            PlanReceipt secondReceipt = planService.publish(userId, sessionId, second);
+            PlanReceiptBO secondReceipt = planService.publish(userId, sessionId, second);
             assertThat(secondReceipt.planVersion()).isEqualTo(2);
 
             // 旧版汇总回合发布了新版计划时，只等待新版工作，不排入完成纠正。
             jdbc.update("UPDATE sq_command SET native_turn_id = 'old-plan-signal' WHERE task_id = ? AND action = 'MASTER_SIGNAL'", task.taskId());
-            var commands = context.getBean(com.agentsquad.squad.conversation.repository.CommandMapper.class);
+            var commands = context.getBean(com.agentsquad.squad.mapper.CommandMapper.class);
             assertThat(commands.countPlanSignalTurn(userId, task.taskId(), "old-plan-signal", 1)).isEqualTo(1);
             assertThat(commands.countPlanSignalTurn(userId, task.taskId(), "old-plan-signal", 2)).isZero();
             jdbc.update("UPDATE sq_goal_task SET status = 'RUNNING' WHERE task_id = ?", task.taskId());
             String masterBinding = jdbc.queryForObject("SELECT binding_id FROM sq_runtime_binding WHERE framework_session_id = ?", String.class, sessionId);
-            var finalizer = new com.agentsquad.squad.runtime.service.TaskFinalizerService();
-            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "directives", context.getBean(com.agentsquad.squad.conversation.repository.TaskDirectiveMapper.class));
-            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "completionMapper", context.getBean(com.agentsquad.squad.runtime.repository.CompletionMapper.class));
-            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "planMapper", context.getBean(com.agentsquad.squad.runtime.repository.PlanMapper.class));
+            var finalizer = new com.agentsquad.squad.service.TaskFinalizerService();
+            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "directives", context.getBean(com.agentsquad.squad.mapper.TaskDirectiveMapper.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "completionMapper", context.getBean(com.agentsquad.squad.mapper.CompletionMapper.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "planMapper", context.getBean(com.agentsquad.squad.mapper.PlanMapper.class));
             org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "commandMapper", commands);
             var transaction = new org.springframework.transaction.support.TransactionTemplate(context.getBean(org.springframework.transaction.PlatformTransactionManager.class));
             assertThat(transaction.<Boolean>execute(status -> finalizer.recoverMissingProposal(
-                    new com.agentsquad.squad.runtime.domain.ProjectionTarget(userId, task.taskId(), masterBinding, "master", sessionId, 0),
-                    new com.agentsquad.squad.integration.agentscope.NativeEventView(100, "old-end", "run/end", "old-run", "old-plan-signal", "completed", 1000, java.util.Map.of()))))
+                    new ProjectionTargetBO(userId, task.taskId(), masterBinding, "master", sessionId, 0),
+                    new com.agentsquad.squad.bo.NativeEventViewBO(100, "old-end", "run/end", "old-run", "old-plan-signal", "completed", 1000, java.util.Map.of()))))
                     .isTrue();
             assertThat(jdbc.queryForObject("SELECT completion_correction_count FROM sq_goal_task WHERE task_id = ?", Integer.class, task.taskId())).isZero();
 
             // 实际执行时等待，恢复受阻时开放协调工具，不能同时要求 Master 空等。
-            var middleware = new com.agentsquad.squad.integration.agentscope.ScopedMasterToolsMiddleware();
-            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "scopes", context.getBean(com.agentsquad.squad.conversation.service.ExecutionScopeService.class));
-            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "scopeMapper", context.getBean(com.agentsquad.squad.conversation.repository.ExecutionScopeMapper.class));
-            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "tasks", context.getBean(com.agentsquad.squad.conversation.repository.TaskMapper.class));
-            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "plans", context.getBean(com.agentsquad.squad.runtime.repository.PlanMapper.class));
+            var middleware = new ScopedMasterToolsMiddleware();
+            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "scopes", context.getBean(com.agentsquad.squad.service.ExecutionScopeService.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "scopeMapper", context.getBean(com.agentsquad.squad.mapper.ExecutionScopeMapper.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "tasks", context.getBean(com.agentsquad.squad.mapper.TaskMapper.class));
+            org.springframework.test.util.ReflectionTestUtils.setField(middleware, "plans", context.getBean(com.agentsquad.squad.mapper.PlanMapper.class));
             for (String state : List.of("READY", "RECOVERY_BLOCKED")) {
                 jdbc.update("UPDATE sq_worker_job SET status = ? WHERE job_id = ?", state, secondReceipt.jobIds().getFirst());
                 middleware.onModelCall(null, io.agentscope.core.agent.RuntimeContext.builder().userId(userId).sessionId(sessionId).build(),
@@ -403,7 +406,7 @@ class PlanPublishIntegrationTest {
                     String.class, secondReceipt.jobIds().getFirst());
             jdbc.update("UPDATE sq_command SET status = 'DELIVERED' WHERE binding_id = ?",
                     secondBinding);
-            String secondGuard = dispatchService.claim(userId, secondBinding).guardToken();
+            String secondGuard = dispatchService.claim(userId, secondBinding).getGuardToken();
             resultService.propose(userId, secondBinding, secondGuard, "summary-turn",
                     mapper.readTree("{\"text\":\"汇总完成\"}"));
             assertThat(resultService.finalizeSuccess(userId, secondBinding, "summary-turn")).isTrue();

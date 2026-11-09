@@ -1,12 +1,14 @@
 package com.agentsquad.squad.identity;
 
+import com.agentsquad.squad.service.UserStatusGuardService;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.agentsquad.squad.common.enums.identity.AccountRole;
+import com.agentsquad.squad.enums.AccountRole;
 import jakarta.servlet.DispatcherType;
 
 import java.util.List;
@@ -31,7 +33,7 @@ class UserContextInterceptorTest {
     @Test
     void signedAssertionTakesPrecedenceAndChecksUserStatus() {
         SignedIdentityVerifier verifier = mock(SignedIdentityVerifier.class);
-        UserStatusGuard status = mock(UserStatusGuard.class);
+        UserStatusGuardService status = mock(UserStatusGuardService.class);
         AuthView view = new AuthView(USER_ID, "alice", List.of(AccountRole.USER), null);
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/conversations");
         when(verifier.verify(request)).thenReturn(view);
@@ -45,7 +47,7 @@ class UserContextInterceptorTest {
     @Test
     void strictModeRejectsUnsignedHeadersEvenWhenLocalCompatibilityEnabled() {
         SignedIdentityVerifier verifier = mock(SignedIdentityVerifier.class);
-        UserStatusGuard status = mock(UserStatusGuard.class);
+        UserStatusGuardService status = mock(UserStatusGuardService.class);
         MockHttpServletRequest request = unsignedRequest(USER_ID, "USER");
         when(verifier.verify(request)).thenReturn(null);
         UserContextInterceptor interceptor = interceptor(verifier, status, true, true);
@@ -58,7 +60,7 @@ class UserContextInterceptorTest {
     @Test
     void localCompatibilityRejectsInvalidHeaders() {
         SignedIdentityVerifier verifier = mock(SignedIdentityVerifier.class);
-        UserStatusGuard status = mock(UserStatusGuard.class);
+        UserStatusGuardService status = mock(UserStatusGuardService.class);
         UserContextInterceptor interceptor = interceptor(verifier, status, false, true);
 
         assertUnauthorized(interceptor, unsignedRequest("not-a-uuid", "USER"));
@@ -69,7 +71,7 @@ class UserContextInterceptorTest {
     @Test
     void localCompatibilityDisabledRejectsUnsignedHeaders() {
         SignedIdentityVerifier verifier = mock(SignedIdentityVerifier.class);
-        UserStatusGuard status = mock(UserStatusGuard.class);
+        UserStatusGuardService status = mock(UserStatusGuardService.class);
         UserContextInterceptor interceptor = interceptor(verifier, status, false, false);
 
         assertUnauthorized(interceptor, unsignedRequest(USER_ID, "USER"));
@@ -78,7 +80,7 @@ class UserContextInterceptorTest {
     @Test
     void localCompatibilityAcceptsOperatorRole() {
         SignedIdentityVerifier verifier = mock(SignedIdentityVerifier.class);
-        UserStatusGuard status = mock(UserStatusGuard.class);
+        UserStatusGuardService status = mock(UserStatusGuardService.class);
         MockHttpServletRequest request = unsignedRequest(USER_ID, "OPERATOR");
         UserContextInterceptor interceptor = interceptor(verifier, status, false, true);
 
@@ -90,7 +92,7 @@ class UserContextInterceptorTest {
     @Test
     void localCompatibilityAcceptsValidUnsignedIdentity() {
         SignedIdentityVerifier verifier = mock(SignedIdentityVerifier.class);
-        UserStatusGuard status = mock(UserStatusGuard.class);
+        UserStatusGuardService status = mock(UserStatusGuardService.class);
         MockHttpServletRequest request = unsignedRequest(USER_ID, "USER");
         request.addHeader("X-User-Name", "local-user");
         UserContextInterceptor interceptor = interceptor(verifier, status, false, true);
@@ -104,7 +106,7 @@ class UserContextInterceptorTest {
     @Test
     void asyncDispatchReusesVerifiedIdentityWithoutNewAssertion() {
         SignedIdentityVerifier verifier = mock(SignedIdentityVerifier.class);
-        UserStatusGuard status = mock(UserStatusGuard.class);
+        UserStatusGuardService status = mock(UserStatusGuardService.class);
         AuthView view = new AuthView(USER_ID, "alice", List.of(AccountRole.USER), null);
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/conversations/c/events");
         request.setDispatcherType(DispatcherType.ASYNC);
@@ -129,7 +131,7 @@ class UserContextInterceptorTest {
         return request;
     }
 
-    private UserContextInterceptor interceptor(SignedIdentityVerifier verifier, UserStatusGuard status,
+    private UserContextInterceptor interceptor(SignedIdentityVerifier verifier, UserStatusGuardService status,
                                                boolean strict, boolean allowUnsignedLocal) {
         UserContextInterceptor interceptor = new UserContextInterceptor();
         ReflectionTestUtils.setField(interceptor, "verifier", verifier);

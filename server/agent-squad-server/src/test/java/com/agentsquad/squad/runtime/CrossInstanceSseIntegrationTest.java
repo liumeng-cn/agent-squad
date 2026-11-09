@@ -1,10 +1,10 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
-import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
-import com.agentsquad.squad.presentation.service.ConversationEventStreamer;
-import com.agentsquad.squad.presentation.service.RedisConversationNotifications;
+import com.agentsquad.squad.dto.MessageCreateDTO;
+import com.agentsquad.squad.service.MessageAcceptanceService;
+import com.agentsquad.squad.service.ConversationEventStreamerService;
+import com.agentsquad.squad.service.RedisConversationNotificationsService;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Timeout;
@@ -53,7 +53,7 @@ class CrossInstanceSseIntegrationTest {
              var page = start(database, namespace, model.baseUrl(), true);
              var client = HttpClient.newHttpClient()) {
             var accepted = execution.getBean(MessageAcceptanceService.class).accept(user, null, "cross-instance",
-                    new MessageCreateRequest("验证其他实例收到最终答案", List.of()));
+                    new MessageCreateDTO("验证其他实例收到最终答案", List.of()));
             assertThat(model.entered.await(10, TimeUnit.SECONDS)).isTrue();
             var jdbc = execution.getBean(JdbcTemplate.class);
             long sequence = jdbc.queryForObject("SELECT MAX(event_seq) FROM sq_conversation_event WHERE conversation_id=?",
@@ -106,7 +106,7 @@ class CrossInstanceSseIntegrationTest {
                     }
                 });
                 if (missNotice) {
-                    var notifications = page.getBean(RedisConversationNotifications.class);
+                    var notifications = page.getBean(RedisConversationNotificationsService.class);
                     var listener = (RedisMessageListenerContainer) ReflectionTestUtils.getField(notifications, "listener");
                     listener.stop();
                 }
@@ -123,7 +123,7 @@ class CrossInstanceSseIntegrationTest {
                 ResponseNativeExecutionIntegrationTest.await(execution, accepted, "SUCCEEDED");
                 if (missNotice) {
                     assertThat(received.isDone()).isFalse();
-                    page.getBean(ConversationEventStreamer.class).reconcile();
+                    page.getBean(ConversationEventStreamerService.class).reconcile();
                 }
                 assertThat(received.get(10, TimeUnit.SECONDS)).isEqualTo("页面断开后，回答仍然完成。");
                 assertThat(model.calls.get()).isEqualTo(1);

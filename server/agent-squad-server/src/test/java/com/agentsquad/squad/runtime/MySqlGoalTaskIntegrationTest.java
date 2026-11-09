@@ -1,10 +1,10 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.conversation.dto.ConversationResponse;
-import com.agentsquad.squad.conversation.dto.TaskReceipt;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
-import com.agentsquad.squad.artifact.service.ArtifactService;
+import com.agentsquad.squad.vo.ConversationVO;
+import com.agentsquad.squad.vo.TaskReceiptVO;
+import com.agentsquad.squad.service.GoalTaskService;
+import com.agentsquad.squad.service.ArtifactService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.boot.SpringApplication;
@@ -32,13 +32,13 @@ class MySqlGoalTaskIntegrationTest {
             byte[] content = "MySQL 产物完整性验证".getBytes(StandardCharsets.UTF_8);
             String artifactId = artifacts.upload(userId, UUID.randomUUID().toString(), "evidence.txt", content)
                     .artifactId();
-            ConversationResponse conversation = service.createConversation(userId, "MySQL 受理测试");
-            TaskReceipt receipt = service.submit(userId, conversation.conversationId(),
+            ConversationVO conversation = service.createConversation(userId, "MySQL 受理测试");
+            TaskReceiptVO receipt = service.submit(userId, conversation.conversationId(),
                     UUID.randomUUID().toString(), "检查事务链路", List.of(artifactId));
             assertThat(service.findTask(userId, receipt.taskId()).status()).isEqualTo("QUEUED");
             assertThat(service.findCommand(userId, receipt.commandId()).status()).isEqualTo("PENDING");
             assertThat(service.listEvents(userId, receipt.taskId(), 0)).hasSize(1);
-            assertThat(artifacts.content(userId, artifactId).content()).isEqualTo(content);
+            assertThat(artifacts.content(userId, artifactId).getContent()).isEqualTo(content);
             assertThat(artifacts.listTask(userId, receipt.taskId())).extracting("artifactId").containsExactly(artifactId);
         }
     }

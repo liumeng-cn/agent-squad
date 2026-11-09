@@ -1,8 +1,8 @@
 package com.agentsquad.squad.memory;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.memory.domain.MemoryRow;
-import com.agentsquad.squad.memory.domain.MemoryRules;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.po.MemoryPO;
+import com.agentsquad.squad.policy.MemoryRules;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
@@ -31,7 +31,7 @@ class MemoryRulesTest {
     @Test
     void deletedExpiredAndChangedVersionCannotBeUsed() {
         LocalDateTime now = LocalDateTime.of(2026, 10, 29, 0, 0);
-        MemoryRow active = row("ACTIVE", 1, now.plusDays(1));
+        MemoryPO active = row("ACTIVE", 1, now.plusDays(1));
         assertThat(MemoryRules.active(active, now)).isTrue();
         assertThat(MemoryRules.active(row("DELETED", 1, null), now)).isFalse();
         assertThat(MemoryRules.active(row("ACTIVE", 1, now), now)).isFalse();
@@ -39,7 +39,7 @@ class MemoryRulesTest {
         assertThatThrownBy(() -> MemoryRules.requireVersion(row("DELETED", 1, null), 1)).isInstanceOf(RuntimeBusinessException.class);
     }
 
-    private MemoryRow row(String status, long version, LocalDateTime expires) {
-        return new MemoryRow("memory", "owner", "key", "value", status, version, expires, null, null, 1);
+    private MemoryPO row(String status, long version, LocalDateTime expires) {
+        return new MemoryPO("memory", "owner", "key", "value", status, version, expires, null, null, 1);
     }
 }

@@ -1,9 +1,8 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
-import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
-import com.agentsquad.squad.presentation.dto.ConversationEvent;
-import com.agentsquad.squad.presentation.service.ConversationQueryService;
+import com.agentsquad.squad.dto.MessageCreateDTO;
+import com.agentsquad.squad.service.MessageAcceptanceService;
+import com.agentsquad.squad.service.ConversationQueryService;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -34,8 +33,8 @@ class ConversationSseCrossInstanceIntegrationTest {
         try (ConfigurableApplicationContext instanceA = MessageAcceptanceHttpTest.start(url, username, password, user);
              ConfigurableApplicationContext instanceB = MessageAcceptanceHttpTest.start(url, username, password, user)) {
             var writes = instanceA.getBean(MessageAcceptanceService.class);
-            var first = writes.accept(user, null, "first", new MessageCreateRequest("第一条", List.of()));
-            writes.accept(user, first.conversationId(), "second", new MessageCreateRequest("第二条", List.of()));
+            var first = writes.accept(user, null, "first", new MessageCreateDTO("第一条", List.of()));
+            writes.accept(user, first.conversationId(), "second", new MessageCreateDTO("第二条", List.of()));
 
             var readsB = instanceB.getBean(ConversationQueryService.class);
             var readsA = instanceA.getBean(ConversationQueryService.class);
@@ -48,7 +47,7 @@ class ConversationSseCrossInstanceIntegrationTest {
             long watermarkSequence = eventsFromB.getLast().sequence();
             String watermark = readsB.eventCursor(eventsFromB.getLast());
 
-            writes.accept(user, first.conversationId(), "third", new MessageCreateRequest("第三条", List.of()));
+            writes.accept(user, first.conversationId(), "third", new MessageCreateDTO("第三条", List.of()));
 
             var afterWatermark = readsB.events(user, first.conversationId(), watermark);
             assertThat(afterWatermark).isNotEmpty();

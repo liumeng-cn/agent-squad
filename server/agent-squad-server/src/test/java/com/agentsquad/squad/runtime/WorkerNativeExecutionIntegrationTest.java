@@ -1,17 +1,17 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.conversation.dto.ConversationResponse;
-import com.agentsquad.squad.conversation.dto.TaskReceipt;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.vo.ConversationVO;
+import com.agentsquad.squad.vo.TaskReceiptVO;
+import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.runtime.dto.PlanNode;
-import com.agentsquad.squad.runtime.dto.PlanPublish;
-import com.agentsquad.squad.runtime.dto.PlanReceipt;
-import com.agentsquad.squad.runtime.service.ContextSnapshotService;
-import com.agentsquad.squad.runtime.service.PlanService;
-import com.agentsquad.squad.worker.service.WorkerDefinitionService;
-import com.agentsquad.squad.worker.dto.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.bo.PlanNodeBO;
+import com.agentsquad.squad.bo.PlanPublishBO;
+import com.agentsquad.squad.bo.PlanReceiptBO;
+import com.agentsquad.squad.service.ContextSnapshotService;
+import com.agentsquad.squad.service.PlanService;
+import com.agentsquad.squad.service.WorkerDefinitionService;
+import com.agentsquad.squad.dto.WorkerDefinitionCreateDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
@@ -24,7 +24,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
-import com.agentsquad.squad.common.enums.identity.AccountRole;
+import com.agentsquad.squad.enums.AccountRole;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -63,11 +63,11 @@ class WorkerNativeExecutionIntegrationTest {
                 "--spring.datasource.username=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.username(),
                 "--spring.datasource.password=" + com.agentsquad.squad.testsupport.MySqlTestDatabase.password(),
                 "--agentsquad.delivery.enabled=false")) {
-            var importer = spring.getBean(com.agentsquad.squad.integration.agentscope.journal.RuntimeJournalImportService.class);
+            var importer = spring.getBean(com.agentsquad.squad.service.RuntimeJournalImportService.class);
             var imported = importer.importWorkspace(legacy);
             assertThat(imported.sessions()).isEqualTo(1);
             assertThat(imported.bytes()).isGreaterThan(70000);
-            var store = spring.getBean(com.agentsquad.squad.integration.agentscope.journal.RuntimeSessionProvider.class).logStore();
+            var store = spring.getBean(com.agentsquad.squad.agent.session.RuntimeSessionProvider.class).logStore();
             var target = store.open(key, context);
             assertThat(target.readAfter(0, 10)).containsExactly(event);
             assertThat(target.inbox().readAfter(0, 10)).containsExactly(input);
@@ -146,12 +146,12 @@ class WorkerNativeExecutionIntegrationTest {
                 WorkerDefinitionService definitions = spring.getBean(WorkerDefinitionService.class);
                 ObjectMapper json = spring.getBean(ObjectMapper.class);
                 JdbcTemplate jdbc = spring.getBean(JdbcTemplate.class);
-                ConversationResponse conversation = tasks.createConversation(userId, "写作任务");
-                TaskReceipt task = tasks.submit(userId, conversation.conversationId(),
+                ConversationVO conversation = tasks.createConversation(userId, "写作任务");
+                TaskReceiptVO task = tasks.submit(userId, conversation.conversationId(),
                         "native-worker", "写一段摘要");
                 taskId = task.taskId();
                 definitions.publish(new AuthView(userId, "admin", List.of(AccountRole.ADMIN), "csrf"),
-                        "new-writer", new WorkerDefinitionCreateRequest(
+                        "new-writer", new WorkerDefinitionCreateDTO(
                                 "new-writer", "1.0.0", "写简短摘要",
                                 json.readTree("{}"),
                                 json.readTree("{\"type\":\"object\",\"required\":[\"text\"],"
@@ -163,9 +163,9 @@ class WorkerNativeExecutionIntegrationTest {
                         """, String.class, task.taskId());
                 String snapshot = snapshots.prepare(userId, masterSession,
                         "write", "native-snapshot").snapshotId();
-                PlanReceipt plan = plans.publish(userId, masterSession,
-                        new PlanPublish("native-plan", 0, List.of(
-                                new PlanNode("write", "new-writer", "1.0.0", "写一段摘要",
+                PlanReceiptBO plan = plans.publish(userId, masterSession,
+                        new PlanPublishBO("native-plan", 0, List.of(
+                                new PlanNodeBO("write", "new-writer", "1.0.0", "写一段摘要",
                                         snapshot, List.of(), true, 1)),
                                 "ALL_REQUIRED", List.of("摘要完成")));
                 jobId = plan.jobIds().getFirst();

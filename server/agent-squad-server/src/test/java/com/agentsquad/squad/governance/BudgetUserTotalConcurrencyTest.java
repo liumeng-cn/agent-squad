@@ -1,13 +1,13 @@
 package com.agentsquad.squad.governance;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.conversation.dto.ConversationResponse;
-import com.agentsquad.squad.conversation.dto.TaskReceipt;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
-import com.agentsquad.squad.governance.service.BudgetService;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.vo.ConversationVO;
+import com.agentsquad.squad.vo.TaskReceiptVO;
+import com.agentsquad.squad.service.GoalTaskService;
+import com.agentsquad.squad.service.BudgetService;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
-import com.agentsquad.squad.worker.profile.WorkerModelProfile;
+import com.agentsquad.squad.properties.WorkerModelProfile;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
@@ -45,10 +45,10 @@ class BudgetUserTotalConcurrencyTest {
             BudgetService budget = context.getBean(BudgetService.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
 
-            ConversationResponse first = tasks.createConversation(userId, "跨scope预算一");
-            TaskReceipt taskOne = tasks.submit(userId, first.conversationId(), "task-one", "任务一");
-            ConversationResponse second = tasks.createConversation(userId, "跨scope预算二");
-            TaskReceipt taskTwo = tasks.submit(userId, second.conversationId(), "task-two", "任务二");
+            ConversationVO first = tasks.createConversation(userId, "跨scope预算一");
+            TaskReceiptVO taskOne = tasks.submit(userId, first.conversationId(), "task-one", "任务一");
+            ConversationVO second = tasks.createConversation(userId, "跨scope预算二");
+            TaskReceiptVO taskTwo = tasks.submit(userId, second.conversationId(), "task-two", "任务二");
 
             WorkerModelProfile profile = new WorkerModelProfile();
             profile.setPricingVersion("user-total-v1");

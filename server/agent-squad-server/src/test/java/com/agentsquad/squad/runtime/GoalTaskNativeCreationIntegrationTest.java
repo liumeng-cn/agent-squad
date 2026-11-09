@@ -1,11 +1,11 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
-import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
+import com.agentsquad.squad.dto.MessageCreateDTO;
+import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.worker.service.WorkerDefinitionService;
-import com.agentsquad.squad.worker.dto.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.service.WorkerDefinitionService;
+import com.agentsquad.squad.dto.WorkerDefinitionCreateDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
@@ -20,7 +20,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
-import com.agentsquad.squad.common.enums.identity.AccountRole;
+import com.agentsquad.squad.enums.AccountRole;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.CountDownLatch;
@@ -203,14 +203,14 @@ class GoalTaskNativeCreationIntegrationTest {
                 jdbcRef.set(jdbc);
                 WorkerDefinitionService definitions = spring.getBean(WorkerDefinitionService.class);
                 definitions.publish(new AuthView(userId, "admin", List.of(AccountRole.ADMIN), "csrf"),
-                        "draft-writer", new WorkerDefinitionCreateRequest(
+                        "draft-writer", new WorkerDefinitionCreateDTO(
                                 "draft-writer", "1.0.0", "写作短文",
                                 json.readTree("{}"), json.readTree("""
                                 {"type":"object","required":["text"],
                                  "properties":{"text":{"type":"string"}}}
                                 """), List.of(), "default", "default"));
                 var message = spring.getBean(MessageAcceptanceService.class).accept(userId, null,
-                        "autonomous-writing", new MessageCreateRequest("请先拟提纲，再写一段短文", List.of()));
+                        "autonomous-writing", new MessageCreateDTO("请先拟提纲，再写一段短文", List.of()));
                 for (int attempt = 0; attempt < 100; attempt++) {
                     List<String> tasks = jdbc.queryForList("SELECT task_id FROM sq_goal_task WHERE origin_execution_id=?", String.class, message.executionId());
                     if (!tasks.isEmpty()) {
@@ -224,7 +224,7 @@ class GoalTaskNativeCreationIntegrationTest {
                     assertThat(workerBlocked.await(10, TimeUnit.SECONDS)).isTrue();
                     ResponseNativeExecutionIntegrationTest.await(spring, message, "SUCCEEDED");
                     var progress = spring.getBean(MessageAcceptanceService.class).accept(userId, message.conversationId(),
-                            "progress-query", new MessageCreateRequest(directive ? "请改成活泼风格" : "目前做到哪一步了？", List.of()));
+                            "progress-query", new MessageCreateDTO(directive ? "请改成活泼风格" : "目前做到哪一步了？", List.of()));
                     ResponseNativeExecutionIntegrationTest.await(spring, progress, "SUCCEEDED");
                     if (directive) {
                         for (int attempt = 0; attempt < 200; attempt++) {

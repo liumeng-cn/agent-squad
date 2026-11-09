@@ -1,7 +1,11 @@
 package com.agentsquad.squad.tools.operation;
 
-import com.agentsquad.squad.tools.operation.domain.OperationRow;
-import com.agentsquad.squad.tools.operation.repository.OperationMapper;
+import com.agentsquad.squad.service.OperationExecutorService;
+
+import com.agentsquad.squad.service.OperationDispatchService;
+
+import com.agentsquad.squad.po.OperationPO;
+import com.agentsquad.squad.mapper.OperationMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.aop.framework.ProxyFactory;
@@ -35,8 +39,8 @@ class OperationExecutorTransactionTest {
         when(operationMapper.completeInFlight(anyString(), anyString(), anyLong(), anyString(),
                 anyLong(), anyString(), anyString(), anyString())).thenReturn(1);
 
-        OperationExecutor target = new OperationExecutor();
-        ReflectionTestUtils.setField(target, "userStatus", mock(com.agentsquad.squad.identity.UserStatusGuard.class));
+        OperationExecutorService target = new OperationExecutorService();
+        ReflectionTestUtils.setField(target, "userStatus", mock(com.agentsquad.squad.service.UserStatusGuardService.class));
         ReflectionTestUtils.setField(target, "operationMapper", operationMapper);
         OperationDispatchService dispatch = mock(OperationDispatchService.class);
         when(dispatch.begin(any(), anyString(), anyLong(), any(), anyString())).thenReturn(1);
@@ -48,12 +52,12 @@ class OperationExecutorTransactionTest {
         proxyFactory.setProxyTargetClass(true);
         proxyFactory.addAdvice(new TransactionInterceptor(transactionManager,
                 new AnnotationTransactionAttributeSource()));
-        OperationExecutor executor = (OperationExecutor) proxyFactory.getProxy();
+        OperationExecutorService executor = (OperationExecutorService) proxyFactory.getProxy();
 
-        OperationRow operation = mock(OperationRow.class);
-        when(operation.userId()).thenReturn("user-1");
-        when(operation.operationId()).thenReturn("operation-1");
-        when(operation.version()).thenReturn(0L);
+        OperationPO operation = mock(OperationPO.class);
+        when(operation.getUserId()).thenReturn("user-1");
+        when(operation.getOperationId()).thenReturn("operation-1");
+        when(operation.getVersion()).thenReturn(0L);
 
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
             assertTrue(TransactionSynchronizationManager.isActualTransactionActive());

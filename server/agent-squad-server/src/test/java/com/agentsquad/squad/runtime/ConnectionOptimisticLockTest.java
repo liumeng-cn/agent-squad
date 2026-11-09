@@ -1,20 +1,20 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.tools.connection.ConnectionService;
-import com.agentsquad.squad.tools.dto.ConnectionCreateRequest;
-import com.agentsquad.squad.tools.dto.ConnectionUpdateRequest;
-import com.agentsquad.squad.tools.repository.ConnectionMapper;
+import com.agentsquad.squad.service.ConnectionService;
+import com.agentsquad.squad.dto.ConnectionCreateDTO;
+import com.agentsquad.squad.dto.ConnectionUpdateDTO;
+import com.agentsquad.squad.mapper.ConnectionMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.test.util.ReflectionTestUtils;
-import com.agentsquad.squad.tools.connection.LocalSecretVault;
+import com.agentsquad.squad.service.LocalSecretVaultService;
 
 import java.nio.file.Path;
 import java.util.Base64;
 import java.util.List;
-import com.agentsquad.squad.common.enums.identity.AccountRole;
+import com.agentsquad.squad.enums.AccountRole;
 import java.util.Map;
 import java.util.UUID;
 
@@ -35,24 +35,24 @@ class ConnectionOptimisticLockTest {
                 com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), owner)) {
             byte[] key = new byte[32];
             new java.security.SecureRandom().nextBytes(key);
-            ReflectionTestUtils.setField(context.getBean(LocalSecretVault.class), "masterKeyBase64",
+            ReflectionTestUtils.setField(context.getBean(LocalSecretVaultService.class), "masterKeyBase64",
                     Base64.getEncoder().encodeToString(key));
             ConnectionService service = context.getBean(ConnectionService.class);
             ConnectionMapper mapper = context.getBean(ConnectionMapper.class);
             AuthView actor = new AuthView(owner, "tester", List.of(AccountRole.USER), null);
-            var created = service.create(actor, "create", new ConnectionCreateRequest(
+            var created = service.create(actor, "create", new ConnectionCreateDTO(
                     "隔离连接", "mock", "test", Map.of("scope", "test"), "test-only-secret"));
             String id = created.connectionId();
-            assertThat(mapper.findOwned(owner, id).revision()).isZero();
+            assertThat(mapper.findOwned(owner, id).getRevision()).isZero();
 
-            service.update(actor, id, "first", new ConnectionUpdateRequest(0L, false, null, null));
-            assertThat(mapper.findOwned(owner, id).revision()).isEqualTo(1L);
+            service.update(actor, id, "first", new ConnectionUpdateDTO(0L, false, null, null));
+            assertThat(mapper.findOwned(owner, id).getRevision()).isEqualTo(1L);
             assertThatThrownBy(() -> service.update(actor, id, "stale",
-                    new ConnectionUpdateRequest(0L, true, null, null)))
+                    new ConnectionUpdateDTO(0L, true, null, null)))
                     .isInstanceOf(RuntimeBusinessException.class);
             assertThat(mapper.updateOwned(owner, id, 0L, null, true, "stale-writer")).isZero();
-            assertThat(mapper.findOwned(owner, id).revision()).isEqualTo(1L);
-            assertThat(mapper.findOwned(owner, id).enabled()).isFalse();
+            assertThat(mapper.findOwned(owner, id).getRevision()).isEqualTo(1L);
+            assertThat(mapper.findOwned(owner, id).isEnabled()).isFalse();
         }
     }
 }

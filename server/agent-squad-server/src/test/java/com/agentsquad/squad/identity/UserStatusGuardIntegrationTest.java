@@ -1,12 +1,12 @@
 package com.agentsquad.squad.identity;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
-import com.agentsquad.squad.conversation.dto.MessageReceipt;
-import com.agentsquad.squad.conversation.service.CommandClaimService;
-import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.dto.MessageCreateDTO;
+import com.agentsquad.squad.vo.MessageReceiptVO;
+import com.agentsquad.squad.service.CommandClaimService;
+import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.agentsquad.squad.testsupport.TestUserDirectory;
 import org.junit.jupiter.api.Test;
@@ -40,13 +40,13 @@ class UserStatusGuardIntegrationTest {
             CommandClaimService claims = context.getBean(CommandClaimService.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
 
-            MessageReceipt first = messages.accept(owner, null, "first",
-                    new MessageCreateRequest("第一条消息", List.of()));
+            MessageReceiptVO first = messages.accept(owner, null, "first",
+                    new MessageCreateDTO("第一条消息", List.of()));
             assertThat(count(jdbc, "sq_conversation", owner)).isEqualTo(1);
 
             TestUserDirectory.disable(context, owner);
             assertForbidden(() -> messages.accept(owner, null, "after-disable",
-                    new MessageCreateRequest("停用后不能受理", List.of())));
+                    new MessageCreateDTO("停用后不能受理", List.of())));
             assertThat(count(jdbc, "sq_conversation", owner)).isEqualTo(1);
 
             LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);

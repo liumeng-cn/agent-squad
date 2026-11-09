@@ -1,12 +1,13 @@
 package com.agentsquad.squad.agent.tool;
 
-import com.agentsquad.squad.runtime.service.ExecutionFailureService;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.runtime.dto.PlanPublish;
-import com.agentsquad.squad.runtime.dto.PlanReceipt;
-import com.agentsquad.squad.runtime.service.PlanService;
-import com.agentsquad.squad.runtime.service.PendingDirectivesException;
-import com.agentsquad.squad.common.util.RuntimePayloads;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.service.ExecutionFailureService;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.bo.PlanPublishBO;
+import com.agentsquad.squad.bo.PlanReceiptBO;
+import com.agentsquad.squad.service.PlanService;
+import com.agentsquad.squad.exceptions.PendingDirectivesException;
+import com.agentsquad.squad.utils.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.ToolResultBlock;
@@ -110,15 +111,15 @@ public class PublishPlanTool implements AgentTool {
         if (context == null) {
             return ToolResultBlock.error("缺少原生运行上下文");
         }
-        PlanPublish publish;
+        PlanPublishBO publish;
         try {
-            publish = objectMapper.convertValue(param.getInput(), PlanPublish.class);
+            publish = objectMapper.convertValue(param.getInput(), PlanPublishBO.class);
         } catch (IllegalArgumentException exception) {
             failures.invalidPlan(context.getUserId(), context.getSessionId());
             return ToolResultBlock.error("计划参数结构无效");
         }
         try {
-            PlanReceipt receipt = planService.publish(context.getUserId(),
+            PlanReceiptBO receipt = planService.publish(context.getUserId(),
                     context.getSessionId(), publish);
             return ToolResultBlock.text("计划已发布。planId=" + receipt.planId()
                     + " planVersion=" + receipt.planVersion() + " jobIds=" + receipt.jobIds()
@@ -130,7 +131,7 @@ public class PublishPlanTool implements AgentTool {
                             "directives", exception.directives(), "nextAction", "apply_task_directive",
                             "instruction", "逐条协调；每次 APPLY/REJECT 后重新 publish_plan 获取当前版本和剩余指令，禁止复用旧 expectedVersion")));
         } catch (RuntimeBusinessException exception) {
-            if (exception.code() == com.agentsquad.squad.common.exception.RuntimeExceptionCode.VALIDATION) {
+            if (exception.code() == RuntimeExceptionCode.VALIDATION) {
                 failures.invalidPlan(context.getUserId(), context.getSessionId());
             }
             return ToolResultBlock.error(exception.getMessage());

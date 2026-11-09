@@ -3,16 +3,16 @@ package com.agentsquad.squad.skill;
 import com.agentsquad.squad.testsupport.ApiResultJson;
 import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
-import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
-import com.agentsquad.squad.skill.domain.SkillCatalog;
-import com.agentsquad.squad.skill.dto.SkillFile;
-import com.agentsquad.squad.skill.dto.SkillGrantRequest;
-import com.agentsquad.squad.skill.dto.SkillImportRequest;
-import com.agentsquad.squad.skill.integration.ScopeSkillRepository;
-import com.agentsquad.squad.skill.service.SkillRuntimeService;
-import com.agentsquad.squad.skill.service.SkillService;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.dto.MessageCreateDTO;
+import com.agentsquad.squad.service.MessageAcceptanceService;
+import com.agentsquad.squad.bo.SkillCatalogBO;
+import com.agentsquad.squad.dto.SkillFileDTO;
+import com.agentsquad.squad.dto.SkillGrantDTO;
+import com.agentsquad.squad.dto.SkillImportDTO;
+import com.agentsquad.squad.agent.skill.ScopeSkillRepository;
+import com.agentsquad.squad.service.SkillRuntimeService;
+import com.agentsquad.squad.service.SkillService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;
@@ -24,7 +24,6 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -84,7 +83,7 @@ class SkillHttpIntegrationTest {
             assertThat(skills.list(USER, null, 10).items()).hasSize(1);
             assertThatThrownBy(() -> skills.detail(OTHER, versionId)).isInstanceOf(RuntimeBusinessException.class);
 
-            var emptyReceipt = messages.accept(USER, null, "empty-catalog", new MessageCreateRequest("普通回复", List.of()));
+            var emptyReceipt = messages.accept(USER, null, "empty-catalog", new MessageCreateDTO("普通回复", List.of()));
             String emptyScope = scope(jdbc, emptyReceipt.executionId());
             assertThat(runtime.freeze(USER, emptyScope).skills()).isEmpty();
             mvc.perform(put("/api/v1/skills/{id}/grant", versionId).with(TestAssertion.as(USER, "ADMIN"))
@@ -101,9 +100,9 @@ class SkillHttpIntegrationTest {
                     .andExpect(status().isOk());
             assertThat(runtime.freeze(USER, emptyScope).skills()).isEmpty();
 
-            var receipt = messages.accept(USER, null, "fixed-v1", new MessageCreateRequest("使用写作技能", List.of()));
+            var receipt = messages.accept(USER, null, "fixed-v1", new MessageCreateDTO("使用写作技能", List.of()));
             String scopeId = scope(jdbc, receipt.executionId());
-            SkillCatalog fixed = runtime.freeze(USER, scopeId);
+            SkillCatalogBO fixed = runtime.freeze(USER, scopeId);
             assertThat(fixed.skills()).extracting("skillVersionId").containsExactly(versionId);
             String sessionId = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE scope_id = ?",
                     String.class, scopeId);
@@ -121,12 +120,12 @@ class SkillHttpIntegrationTest {
             assertThat(lazy.read("references/guide.md")).contains("旧资源");
             assertThat(repository.getSkills(runtimeContext, Set.of())).isEmpty();
 
-            skills.changeGrant(USER, versionId, new SkillGrantRequest(false, 1L));
-            assertThat(runtime.read(USER, scopeId, versionId, "references/guide.md").content()).isEqualTo("旧资源");
+            skills.changeGrant(USER, versionId, new SkillGrantDTO(false, 1L));
+            assertThat(runtime.read(USER, scopeId, versionId, "references/guide.md").getContent()).isEqualTo("旧资源");
             String newVersion = skills.importPackage(USER, request("2.0.0", "新资源")).skillVersionId();
-            skills.changeGrant(USER, newVersion, new SkillGrantRequest(true, 0L));
+            skills.changeGrant(USER, newVersion, new SkillGrantDTO(true, 0L));
             assertThat(runtime.freeze(USER, scopeId).skills()).extracting("skillVersionId").containsExactly(versionId);
-            var newer = messages.accept(USER, null, "fixed-v2", new MessageCreateRequest("新执行", List.of()));
+            var newer = messages.accept(USER, null, "fixed-v2", new MessageCreateDTO("新执行", List.of()));
             assertThat(runtime.freeze(USER, scope(jdbc, newer.executionId())).skills())
                     .extracting("skillVersionId").containsExactly(newVersion);
             assertThatThrownBy(() -> runtime.read(OTHER, scopeId, versionId, "SKILL.md"))
@@ -137,7 +136,7 @@ class SkillHttpIntegrationTest {
                     .andExpect(status().isOk());
             assertThatThrownBy(() -> lazy.read("references/guide.md")).hasMessageContaining("SKILL_REVOKED");
             assertThatThrownBy(() -> runtime.validate(USER, scopeId)).hasMessageContaining("SKILL_REVOKED");
-            assertThatThrownBy(() -> skills.changeGrant(USER, versionId, new SkillGrantRequest(true, 3L)))
+            assertThatThrownBy(() -> skills.changeGrant(USER, versionId, new SkillGrantDTO(true, 3L)))
                     .hasMessageContaining("已安全撤销");
         }
     }
@@ -146,12 +145,12 @@ class SkillHttpIntegrationTest {
     void missingToolsDoNotBecomeImplicitAuthorization(@TempDir Path directory) {
         try (ConfigurableApplicationContext context = start(directory)) {
             SkillService skills = context.getBean(SkillService.class);
-            var request = new SkillImportRequest(List.of(new SkillFile("SKILL.md",
+            var request = new SkillImportDTO(List.of(new SkillFileDTO("SKILL.md",
                     "---\nname: needs-write\nversion: 1.0.0\ndescription: 需要外部工具\nrequires-tools: [restricted_write]\n---\n执行写入。")));
             String version = skills.importPackage(USER, request).skillVersionId();
-            skills.changeGrant(USER, version, new SkillGrantRequest(true, 0L));
+            skills.changeGrant(USER, version, new SkillGrantDTO(true, 0L));
             var receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "restricted",
-                    new MessageCreateRequest("测试受限工具", List.of()));
+                    new MessageCreateDTO("测试受限工具", List.of()));
             String scope = scope(context.getBean(JdbcTemplate.class), receipt.executionId());
             SkillRuntimeService runtime = context.getBean(SkillRuntimeService.class);
             runtime.freeze(USER, scope);
@@ -168,17 +167,17 @@ class SkillHttpIntegrationTest {
             SkillRuntimeService runtime = context.getBean(SkillRuntimeService.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             String version = skills.importPackage(USER, request("1.0.0", "需停用的资源")).skillVersionId();
-            skills.changeGrant(USER, version, new SkillGrantRequest(true, 0L));
+            skills.changeGrant(USER, version, new SkillGrantDTO(true, 0L));
             var message = context.getBean(MessageAcceptanceService.class).accept(USER, null, "rr-disable",
-                    new MessageCreateRequest("冻结前有授权变化", List.of()));
+                    new MessageCreateDTO("冻结前有授权变化", List.of()));
             String scopeId = scope(jdbc, message.executionId());
             TransactionTemplate outer = repeatableRead(context);
             TransactionTemplate independent = independent(context);
 
-            SkillCatalog result = outer.execute(status -> {
+            SkillCatalogBO result = outer.execute(status -> {
                 jdbc.queryForObject("SELECT COUNT(*) FROM sq_skill_version WHERE user_id = ?", Integer.class, USER);
                 independent.execute(inner -> {
-                    skills.changeGrant(USER, version, new SkillGrantRequest(false, 1L));
+                    skills.changeGrant(USER, version, new SkillGrantDTO(false, 1L));
                     return null;
                 });
                 return runtime.freeze(USER, scopeId);
@@ -194,14 +193,14 @@ class SkillHttpIntegrationTest {
             SkillRuntimeService runtime = context.getBean(SkillRuntimeService.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             String version = skills.importPackage(USER, request("1.0.0", "已固定资源")).skillVersionId();
-            skills.changeGrant(USER, version, new SkillGrantRequest(true, 0L));
+            skills.changeGrant(USER, version, new SkillGrantDTO(true, 0L));
             var message = context.getBean(MessageAcceptanceService.class).accept(USER, null, "rr-catalog",
-                    new MessageCreateRequest("并发固定目录", List.of()));
+                    new MessageCreateDTO("并发固定目录", List.of()));
             String scopeId = scope(jdbc, message.executionId());
             TransactionTemplate outer = repeatableRead(context);
             TransactionTemplate independent = independent(context);
 
-            SkillCatalog result = outer.execute(status -> {
+            SkillCatalogBO result = outer.execute(status -> {
                 jdbc.queryForObject("SELECT COUNT(*) FROM sq_scope_skill_catalog WHERE user_id = ?", Integer.class, USER);
                 independent.execute(inner -> runtime.freeze(USER, scopeId));
                 return runtime.freeze(USER, scopeId);
@@ -219,9 +218,9 @@ class SkillHttpIntegrationTest {
             SkillRuntimeService runtime = context.getBean(SkillRuntimeService.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             String version = skills.importPackage(USER, request("1.0.0", "禁止回流资源")).skillVersionId();
-            skills.changeGrant(USER, version, new SkillGrantRequest(true, 0L));
+            skills.changeGrant(USER, version, new SkillGrantDTO(true, 0L));
             var message = context.getBean(MessageAcceptanceService.class).accept(USER, null, "rr-revocation",
-                    new MessageCreateRequest("并发安全撤销", List.of()));
+                    new MessageCreateDTO("并发安全撤销", List.of()));
             String scopeId = scope(jdbc, message.executionId());
             TransactionTemplate outer = repeatableRead(context);
             TransactionTemplate independent = independent(context);
@@ -248,10 +247,10 @@ class SkillHttpIntegrationTest {
         return template;
     }
 
-    private SkillImportRequest request(String version, String resource) {
-        return new SkillImportRequest(List.of(new SkillFile("SKILL.md", "---\nname: writer\nversion: " + version
+    private SkillImportDTO request(String version, String resource) {
+        return new SkillImportDTO(List.of(new SkillFileDTO("SKILL.md", "---\nname: writer\nversion: " + version
                         + "\ndescription: 写作流程\n---\n使用流程：先读取 references/guide.md。"),
-                new SkillFile("references/guide.md", resource)));
+                new SkillFileDTO("references/guide.md", resource)));
     }
 
     private String scope(JdbcTemplate jdbc, String executionId) {

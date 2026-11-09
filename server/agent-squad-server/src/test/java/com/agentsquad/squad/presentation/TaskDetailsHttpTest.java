@@ -3,13 +3,13 @@ package com.agentsquad.squad.presentation;
 import com.agentsquad.squad.testsupport.ApiResultJson;
 import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.artifact.service.ArtifactService;
-import com.agentsquad.squad.artifact.dto.ArtifactView;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.service.ArtifactService;
+import com.agentsquad.squad.vo.ArtifactVO;
+import com.agentsquad.squad.service.GoalTaskService;
 
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.interaction.repository.InteractionMapper;
-import com.agentsquad.squad.interaction.service.InputFormSchema;
+import com.agentsquad.squad.mapper.InteractionMapper;
+import com.agentsquad.squad.service.InputFormSchemaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -26,7 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
-import com.agentsquad.squad.common.enums.identity.AccountRole;
+import com.agentsquad.squad.enums.AccountRole;
 import java.util.Map;
 import java.util.UUID;
 
@@ -78,7 +78,7 @@ class TaskDetailsHttpTest {
                     .andExpect(status().isUnauthorized());
             assertThat(mvc.perform(get("/api/v1/artifacts/{id}/content", artifactId).with(TestAssertion.as(userId, "USER")))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray()).isEqualTo(bytes);
-            ArtifactView corrupted = context.getBean(ArtifactService.class).upload(actor.userId(), "corrupt-check",
+            ArtifactVO corrupted = context.getBean(ArtifactService.class).upload(actor.userId(), "corrupt-check",
                     "corrupt.txt", "before".getBytes(StandardCharsets.UTF_8));
             jdbc.update("UPDATE sq_artifact SET content_bytes = ? WHERE artifact_id = ?",
                     "after".getBytes(StandardCharsets.UTF_8), corrupted.artifactId());
@@ -137,7 +137,7 @@ class TaskDetailsHttpTest {
                     .andExpect(status().isConflict());
 
             String interactionId = UUID.randomUUID().toString();
-            String schema = context.getBean(InputFormSchema.class).normalize(json.readTree("""
+            String schema = context.getBean(InputFormSchemaService.class).normalize(json.readTree("""
                     {"type":"object","properties":{"style":{"type":"string","enum":["正式","轻松"]}},"required":["style"]}
                     """)).toString();
             context.getBean(InteractionMapper.class).insert(interactionId, actor.userId(), taskId, null,
@@ -155,7 +155,7 @@ class TaskDetailsHttpTest {
                         .contentType(MediaType.APPLICATION_JSON).content(response)).andExpect(status().isAccepted());
             }
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_command WHERE action = 'RESPOND'", Integer.class)).isEqualTo(1);
-            var events = context.getBean(com.agentsquad.squad.conversation.repository.TaskEventMapper.class);
+            var events = context.getBean(com.agentsquad.squad.mapper.TaskEventMapper.class);
             events.insertProjected(actor.userId(), taskId, 2, "answer-old", "answer.completed",
                     "{\"text\":\"旧回答\",\"revision\":0}", LocalDateTime.now());
             events.insertProjected(actor.userId(), taskId, 3, "answer-new", "answer.replaced",

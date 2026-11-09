@@ -1,5 +1,7 @@
 package com.agentsquad.squad.gateway;
 
+import org.apache.ibatis.annotations.Mapper;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -8,7 +10,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  *
  * <p>负责用户认证与会话管理，并将业务请求反向代理到业务服务；不持有业务数据。</p>
  */
-@SpringBootApplication
+@MapperScan(basePackages = "com.agentsquad.squad.mapper", annotationClass = Mapper.class)
+@SpringBootApplication(scanBasePackages = "com.agentsquad.squad")
 public class GatewayApplication {
 
     public static void main(String[] args) {

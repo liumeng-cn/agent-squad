@@ -1,16 +1,16 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.conversation.service.ExecutionScopeService;
-import com.agentsquad.squad.integration.agentscope.CommandDeliveryService;
-import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
-import com.agentsquad.squad.conversation.repository.BindingMapper;
-import com.agentsquad.squad.conversation.repository.CommandMapper;
-import com.agentsquad.squad.conversation.repository.ConversationMapper;
-import com.agentsquad.squad.conversation.repository.TaskEventMapper;
-import com.agentsquad.squad.conversation.repository.TaskMapper;
-import com.agentsquad.squad.conversation.service.ConversationCleanupScheduler;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.service.ExecutionScopeService;
+import com.agentsquad.squad.service.CommandDeliveryService;
+import com.agentsquad.squad.agent.MasterAgentIdentity;
+import com.agentsquad.squad.mapper.BindingMapper;
+import com.agentsquad.squad.mapper.CommandMapper;
+import com.agentsquad.squad.mapper.ConversationMapper;
+import com.agentsquad.squad.mapper.TaskEventMapper;
+import com.agentsquad.squad.mapper.TaskMapper;
+import com.agentsquad.squad.service.ConversationCleanupSchedulerService;
+import com.agentsquad.squad.service.GoalTaskService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
@@ -56,7 +56,7 @@ class StopDeliveryIntegrationTest {
             TaskEventMapper taskEventMapper = context.getBean(TaskEventMapper.class);
             CommandDeliveryService deliveryService = context.getBean(CommandDeliveryService.class);
             GoalTaskService goalTaskService = context.getBean(GoalTaskService.class);
-            ConversationCleanupScheduler cleanupScheduler = context.getBean(ConversationCleanupScheduler.class);
+            ConversationCleanupSchedulerService cleanupScheduler = context.getBean(ConversationCleanupSchedulerService.class);
 
             String conversationId = UUID.randomUUID().toString();
             String taskId = UUID.randomUUID().toString();
@@ -80,8 +80,8 @@ class StopDeliveryIntegrationTest {
 
             deliveryService.deliver(commandId);
 
-            assertThat(commandMapper.findOwned(userId, commandId).status()).isEqualTo("DELIVERED");
-            assertThat(commandMapper.findOwned(userId, commandId).nativeStatus()).isEqualTo("no-active-run");
+            assertThat(commandMapper.findOwned(userId, commandId).getStatus()).isEqualTo("DELIVERED");
+            assertThat(commandMapper.findOwned(userId, commandId).getNativeStatus()).isEqualTo("no-active-run");
             assertThat(goalTaskService.findTask(userId, taskId).status()).isEqualTo("CANCELLED");
             assertThat(goalTaskService.listEvents(userId, taskId, 0))
                     .extracting(event -> event.type())

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.mapper.FinalDeliveryMapper">
+    <resultMap id="delivery" type="com.agentsquad.squad.po.FinalDeliveryPO">
+        <constructor>
+            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="delivery_generation" javaType="_long"/>
+            <arg column="owner_type" javaType="java.lang.String"/>
+            <arg column="owner_id" javaType="java.lang.String"/>
+            <arg column="state" javaType="java.lang.String"/>
+            <arg column="published_message_id" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <select id="lockCurrent" resultMap="delivery">
+        SELECT source_message_id,
+               delivery_generation,
+               owner_type,
+               owner_id,
+               state,
+               published_message_id
+        FROM sq_final_delivery
+        WHERE user_id = #{userId}
+          AND source_message_id = #{messageId}
+        ORDER BY delivery_generation DESC
+        LIMIT 1
+        FOR UPDATE
+    </select>
+
+    <insert id="insert">
+        INSERT INTO sq_final_delivery (
+            delivery_id,
+            user_id,
+            source_message_id,
+            delivery_generation,
+            owner_type,
+            owner_id,
+            state,
+            creator_id,
+            last_updater_id
+        ) VALUES (
+            #{deliveryId},
+            #{userId},
+            #{messageId},
+            #{generation},
+            'RESPONSE',
+            #{executionId},
+            'OWNED',
+            #{userId},
+            #{userId}
+        )
+    </insert>
+
+    <update id="transfer">
+        UPDATE sq_final_delivery
+        SET owner_type = 'TASK',
+            owner_id = #{taskId}
+        WHERE user_id = #{userId}
+          AND source_message_id = #{messageId}
+          AND delivery_generation = #{generation}
+          AND owner_type = 'RESPONSE'
+          AND owner_id = #{executionId}
+          AND state = 'OWNED'
+    </update>
+
+    <update id="publish">
+        UPDATE sq_final_delivery
+        SET state = 'PUBLISHED',
+            published_message_id = #{answerId}
+        WHERE user_id = #{userId}
+          AND source_message_id = #{messageId}
+          AND delivery_generation = #{generation}
+          AND state = 'OWNED'
+    </update>
+
+    <update id="close">
+        UPDATE sq_final_delivery
+        SET state = 'CLOSED'
+        WHERE user_id = #{userId}
+          AND source_message_id = #{messageId}
+          AND delivery_generation = #{generation}
+          AND state = 'OWNED'
+    </update>
+</mapper>

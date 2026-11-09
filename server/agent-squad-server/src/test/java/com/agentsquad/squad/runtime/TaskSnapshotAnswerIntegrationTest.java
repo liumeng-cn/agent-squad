@@ -1,10 +1,10 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.presentation.dto.TaskSnapshot;
-import com.agentsquad.squad.conversation.repository.TaskEventMapper;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
-import com.agentsquad.squad.presentation.service.TaskSnapshotService;
+import com.agentsquad.squad.vo.TaskSnapshotVO;
+import com.agentsquad.squad.mapper.TaskEventMapper;
+import com.agentsquad.squad.service.GoalTaskService;
+import com.agentsquad.squad.service.TaskSnapshotService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
@@ -40,7 +40,7 @@ class TaskSnapshotAnswerIntegrationTest {
             var receipt = goalTaskService.submit(userId, conversation.conversationId(),
                     "answer-test-1", "请给出最终回答");
 
-            TaskSnapshot before = snapshotService.snapshot(userId, receipt.taskId());
+            TaskSnapshotVO before = snapshotService.snapshot(userId, receipt.taskId());
             assertThat(before.answer().text()).isEmpty();
             assertThat(before.answer().completed()).isFalse();
 
@@ -49,7 +49,7 @@ class TaskSnapshotAnswerIntegrationTest {
                     "answer.completed", "{\"text\":\"" + answerText + "\",\"evidenceRefs\":[]}",
                     LocalDateTime.now(ZoneOffset.UTC));
 
-            TaskSnapshot after = snapshotService.snapshot(userId, receipt.taskId());
+            TaskSnapshotVO after = snapshotService.snapshot(userId, receipt.taskId());
             assertThat(after.answer().text()).isEqualTo(answerText);
             assertThat(after.answer().completed()).isTrue();
             assertThat(after.cursor()).isEqualTo(receipt.taskId() + ":2");

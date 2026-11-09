@@ -1,14 +1,14 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.conversation.repository.TaskMapper;
-import com.agentsquad.squad.conversation.repository.TaskEventMapper;
-import com.agentsquad.squad.conversation.dto.ConversationResponse;
-import com.agentsquad.squad.conversation.dto.TaskReceipt;
-import com.agentsquad.squad.conversation.service.ConversationCleanupScheduler;
-import com.agentsquad.squad.conversation.service.ConversationDeletionService;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.mapper.TaskMapper;
+import com.agentsquad.squad.mapper.TaskEventMapper;
+import com.agentsquad.squad.vo.ConversationVO;
+import com.agentsquad.squad.vo.TaskReceiptVO;
+import com.agentsquad.squad.service.ConversationCleanupSchedulerService;
+import com.agentsquad.squad.service.ConversationDeletionService;
+import com.agentsquad.squad.service.GoalTaskService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
@@ -38,17 +38,17 @@ class ConversationDeletionTaskSettleTest {
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class, properties)) {
             GoalTaskService goalTaskService = context.getBean(GoalTaskService.class);
             ConversationDeletionService deletionService = context.getBean(ConversationDeletionService.class);
-            ConversationCleanupScheduler cleanupScheduler = context.getBean(ConversationCleanupScheduler.class);
+            ConversationCleanupSchedulerService cleanupScheduler = context.getBean(ConversationCleanupSchedulerService.class);
 
-            ConversationResponse conversation = goalTaskService.createConversation(userId, "删除收尾");
-            TaskReceipt receipt = goalTaskService.submit(userId, conversation.conversationId(),
+            ConversationVO conversation = goalTaskService.createConversation(userId, "删除收尾");
+            TaskReceiptVO receipt = goalTaskService.submit(userId, conversation.conversationId(),
                     "delete-settle-1", "未受理的目标");
             long currentVersion = goalTaskService
                     .getConversation(userId, conversation.conversationId()).version();
 
             deletionService.delete(userId, conversation.conversationId(), "delete-key-1", currentVersion);
 
-            assertThat(context.getBean(TaskMapper.class).findOwned(userId, receipt.taskId()).status()).isEqualTo("CANCELLED");
+            assertThat(context.getBean(TaskMapper.class).findOwned(userId, receipt.taskId()).getStatus()).isEqualTo("CANCELLED");
             assertThatThrownBy(() -> goalTaskService.findTask(userId, receipt.taskId()))
                     .isInstanceOf(RuntimeBusinessException.class);
             assertThatThrownBy(() -> goalTaskService.listConversationTasks(userId, conversation.conversationId(), null, 20))
@@ -56,7 +56,7 @@ class ConversationDeletionTaskSettleTest {
             assertThatThrownBy(() -> goalTaskService.listEvents(userId, receipt.taskId(), 0))
                     .isInstanceOf(RuntimeBusinessException.class);
             assertThat(context.getBean(TaskEventMapper.class).listAfter(userId, receipt.taskId(), 0))
-                    .extracting(event -> event.eventType()).containsExactly("task.accepted", "task.completed");
+                    .extracting(event -> event.getEventType()).containsExactly("task.accepted", "task.completed");
 
             cleanupScheduler.cleanupDeletingConversations();
 

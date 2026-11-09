@@ -1,17 +1,17 @@
 package com.agentsquad.squad.presentation;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.artifact.service.ArtifactService;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.service.ArtifactService;
+import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.interaction.repository.InteractionMapper;
-import com.agentsquad.squad.interaction.service.InputFormSchema;
-import com.agentsquad.squad.runtime.dto.PlanNode;
-import com.agentsquad.squad.runtime.dto.PlanPublish;
-import com.agentsquad.squad.runtime.service.ContextSnapshotService;
-import com.agentsquad.squad.runtime.service.PlanService;
-import com.agentsquad.squad.worker.service.WorkerDefinitionService;
-import com.agentsquad.squad.worker.dto.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.mapper.InteractionMapper;
+import com.agentsquad.squad.service.InputFormSchemaService;
+import com.agentsquad.squad.bo.PlanNodeBO;
+import com.agentsquad.squad.bo.PlanPublishBO;
+import com.agentsquad.squad.service.ContextSnapshotService;
+import com.agentsquad.squad.service.PlanService;
+import com.agentsquad.squad.service.WorkerDefinitionService;
+import com.agentsquad.squad.dto.WorkerDefinitionCreateDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.SpringApplication;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -21,7 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
-import com.agentsquad.squad.common.enums.identity.AccountRole;
+import com.agentsquad.squad.enums.AccountRole;
 import java.util.UUID;
 
 /**
@@ -51,20 +51,20 @@ public final class TaskPageReviewServer {
         String master = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE task_id = ?", String.class, task.taskId());
         String binding = jdbc.queryForObject("SELECT binding_id FROM sq_runtime_binding WHERE task_id = ?", String.class, task.taskId());
         context.getBean(WorkerDefinitionService.class).publish(new AuthView(userId, "review", List.of(AccountRole.ADMIN), "fixture"),
-                "review-writer", new WorkerDefinitionCreateRequest("writer", "1.0.0", "局部内容写作", json.readTree("{}"), json.readTree("{}"), List.of(), "default", "default"));
+                "review-writer", new WorkerDefinitionCreateDTO("writer", "1.0.0", "局部内容写作", json.readTree("{}"), json.readTree("{}"), List.of(), "default", "default"));
         var snapshots = context.getBean(ContextSnapshotService.class);
         String first = snapshots.prepare(userId, master, "draft", "review-draft").snapshotId();
         String second = snapshots.prepare(userId, master, "review", "review-check").snapshotId();
-        var plan = context.getBean(PlanService.class).publish(userId, master, new PlanPublish("review-plan", 0,
-                List.of(new PlanNode("draft", "writer", "1.0.0", "起草文章", first, List.of(), true, 1),
-                        new PlanNode("review", "writer", "1.0.0", "审阅文章", second, List.of(), true, 1)),
+        var plan = context.getBean(PlanService.class).publish(userId, master, new PlanPublishBO("review-plan", 0,
+                List.of(new PlanNodeBO("draft", "writer", "1.0.0", "起草文章", first, List.of(), true, 1),
+                        new PlanNodeBO("review", "writer", "1.0.0", "审阅文章", second, List.of(), true, 1)),
                 "ALL_REQUIRED", List.of("文章与审阅均完成")));
         jdbc.update("UPDATE sq_command SET status = 'CANCELLED' WHERE task_id = ?", task.taskId());
         jdbc.update("UPDATE sq_worker_job SET status = 'SUCCEEDED', result_json = ? WHERE job_id = ?",
                 "{\"text\":\"草稿已就绪，等待审阅\"}", plan.jobIds().getFirst());
         jdbc.update("UPDATE sq_worker_job SET status = 'WAITING_INPUT' WHERE job_id = ?", plan.jobIds().get(1));
         jdbc.update("UPDATE sq_goal_task SET status = 'WAITING_INPUT' WHERE task_id = ?", task.taskId());
-        String schema = context.getBean(InputFormSchema.class).normalize(json.readTree("""
+        String schema = context.getBean(InputFormSchemaService.class).normalize(json.readTree("""
                 {"type":"object","properties":{"tone":{"type":"string","title":"文章文风","enum":["正式","轻松"]}},"required":["tone"]}
                 """)).toString();
         context.getBean(InteractionMapper.class).insert(UUID.randomUUID().toString(), userId, task.taskId(), plan.jobIds().get(1),

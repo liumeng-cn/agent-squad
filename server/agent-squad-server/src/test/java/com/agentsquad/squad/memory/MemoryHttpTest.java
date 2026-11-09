@@ -3,8 +3,8 @@ package com.agentsquad.squad.memory;
 import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
 
-import com.agentsquad.squad.memory.dto.MemoryCreate;
-import com.agentsquad.squad.memory.service.MemoryService;
+import com.agentsquad.squad.dto.MemoryCreateDTO;
+import com.agentsquad.squad.service.MemoryService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
@@ -56,7 +56,7 @@ class MemoryHttpTest {
             mvc.perform(patch("/api/v1/memories/{id}", id).with(TestAssertion.as(userId, "USER"))
                             .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0,\"content\":\"不能覆盖\"}"))
                     .andExpect(status().isConflict());
-            String foreign = context.getBean(MemoryService.class).create(UUID.randomUUID().toString(), new MemoryCreate("foreign", "secret", null)).memory().memoryId();
+            String foreign = context.getBean(MemoryService.class).create(UUID.randomUUID().toString(), new MemoryCreateDTO("foreign", "secret", null)).memory().memoryId();
             mvc.perform(delete("/api/v1/memories/{id}", foreign).param("expectedVersion", "0").with(TestAssertion.as(userId, "USER")))
                     .andExpect(status().isNotFound());
             mvc.perform(delete("/api/v1/memories/{id}", id).param("expectedVersion", "1").with(TestAssertion.as(userId, "USER")))

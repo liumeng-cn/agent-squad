@@ -37,7 +37,7 @@ agentsquad:
     cleanup-interval-ms: 600000
     cleanup-initial-delay-ms: 60000
 
-mybatis:
+mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   configuration:
     map-underscore-to-camel-case: false

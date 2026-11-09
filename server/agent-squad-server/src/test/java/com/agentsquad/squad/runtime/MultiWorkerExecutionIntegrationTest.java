@@ -1,14 +1,14 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.runtime.dto.PlanNode;
-import com.agentsquad.squad.runtime.dto.PlanPublish;
-import com.agentsquad.squad.runtime.service.ContextSnapshotService;
-import com.agentsquad.squad.runtime.service.PlanService;
-import com.agentsquad.squad.worker.service.WorkerDefinitionService;
-import com.agentsquad.squad.worker.dto.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.bo.PlanNodeBO;
+import com.agentsquad.squad.bo.PlanPublishBO;
+import com.agentsquad.squad.service.ContextSnapshotService;
+import com.agentsquad.squad.service.PlanService;
+import com.agentsquad.squad.service.WorkerDefinitionService;
+import com.agentsquad.squad.dto.WorkerDefinitionCreateDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -23,7 +23,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
-import com.agentsquad.squad.common.enums.identity.AccountRole;
+import com.agentsquad.squad.enums.AccountRole;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -134,7 +134,7 @@ class MultiWorkerExecutionIntegrationTest {
                 JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
                 jdbc.update("UPDATE sq_command SET status = 'CANCELLED' WHERE command_id = ?", task.commandId());
                 context.getBean(WorkerDefinitionService.class).publish(new AuthView(userId, "tester", List.of(AccountRole.ADMIN), "csrf"),
-                        "writer", new WorkerDefinitionCreateRequest("writer", "1.0.0", "撰写局部内容",
+                        "writer", new WorkerDefinitionCreateDTO("writer", "1.0.0", "撰写局部内容",
                                 json.readTree("{\"type\":\"object\",\"required\":[\"topic\"]}"),
                                 json.readTree("{\"type\":\"object\",\"required\":[\"text\"]}"),
                                 List.of(), "default", "default"));
@@ -143,9 +143,9 @@ class MultiWorkerExecutionIntegrationTest {
                 String one = snapshots.prepare(userId, session, "one", "snapshot-one").snapshotId();
                 String two = snapshots.prepare(userId, session, "two", "snapshot-two").snapshotId();
                 context.getBean(PlanService.class).publish(userId, session,
-                        new PlanPublish("two-nodes", 0, List.of(
-                                new PlanNode("one", "writer", "1.0.0", "write-node-1", one, List.of(), true, 1),
-                                new PlanNode("two", "writer", "1.0.0", "write-node-2", two, parallel ? List.of() : List.of("one"), true, 1)),
+                        new PlanPublishBO("two-nodes", 0, List.of(
+                                new PlanNodeBO("one", "writer", "1.0.0", "write-node-1", one, List.of(), true, 1),
+                                new PlanNodeBO("two", "writer", "1.0.0", "write-node-2", two, parallel ? List.of() : List.of("one"), true, 1)),
                                 "ALL_REQUIRED", List.of("两项完成")));
             }
             String[] running = java.util.Arrays.copyOf(base, base.length + 1);
@@ -156,7 +156,7 @@ class MultiWorkerExecutionIntegrationTest {
                 if (cancel) {
                     assertThat(firstCalls.await(10, TimeUnit.SECONDS)).isTrue();
                     long version = jdbc.queryForObject("SELECT version FROM sq_goal_task WHERE task_id=?", Long.class, taskId);
-                    context.getBean(com.agentsquad.squad.conversation.service.TaskControlService.class).cancel(userId, taskId, "stop-both", version);
+                    context.getBean(com.agentsquad.squad.service.TaskControlService.class).cancel(userId, taskId, "stop-both", version);
                     String cancelled = null;
                     for (int attempt = 0; attempt < 150; attempt++) {
                         cancelled = jdbc.queryForObject("SELECT status FROM sq_goal_task WHERE task_id=?", String.class, taskId);

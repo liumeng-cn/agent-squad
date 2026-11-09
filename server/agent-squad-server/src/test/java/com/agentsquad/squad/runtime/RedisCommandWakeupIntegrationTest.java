@@ -1,9 +1,9 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
-import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
-import com.agentsquad.squad.integration.agentscope.RedisCommandWakeup;
+import com.agentsquad.squad.dto.MessageCreateDTO;
+import com.agentsquad.squad.service.MessageAcceptanceService;
+import com.agentsquad.squad.service.RedisCommandWakeup;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -56,7 +56,7 @@ class RedisCommandWakeupIntegrationTest {
             var wakeup = context.getBean(RedisCommandWakeup.class);
             String user = "00000000-0000-0000-0000-000000000001";
             var accepted = context.getBean(MessageAcceptanceService.class).accept(user, null, "redis-first",
-                    new MessageCreateRequest("测试Redis命令唤醒", List.of()));
+                    new MessageCreateDTO("测试Redis命令唤醒", List.of()));
             if (abandonedPending) {
                 String queuedStream = namespace + ":{p0}:COMMAND:ready";
                 var pending = redis.opsForStream().read(org.springframework.data.redis.connection.stream.Consumer.from("command-delivery-v1", "crashed-consumer"),
@@ -93,7 +93,7 @@ class RedisCommandWakeupIntegrationTest {
             var factory = (org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory) redis.getConnectionFactory();
             factory.stop();
             var fallback = context.getBean(MessageAcceptanceService.class).accept(user, accepted.conversationId(), "redis-down",
-                    new MessageCreateRequest("测试通知失败降级", List.of()));
+                    new MessageCreateDTO("测试通知失败降级", List.of()));
             ResponseNativeExecutionIntegrationTest.await(context, fallback, "SUCCEEDED");
             assertThat(model.calls.get()).isEqualTo(2);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_message WHERE role='ASSISTANT'", Integer.class)).isEqualTo(2);

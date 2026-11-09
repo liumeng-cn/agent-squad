@@ -1,8 +1,9 @@
 package com.agentsquad.squad.agent.tool;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.runtime.dto.ContextSnapshotReceipt;
-import com.agentsquad.squad.runtime.service.ContextSnapshotService;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.bo.ContextPreparationRequestBO;
+import com.agentsquad.squad.bo.ContextSnapshotReceiptBO;
+import com.agentsquad.squad.service.ContextSnapshotService;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.tool.AgentTool;
@@ -74,9 +75,9 @@ public class PrepareContextTool implements AgentTool {
             return ToolResultBlock.error("局部上下文参数结构无效");
         }
         try {
-            ContextSnapshotReceipt receipt = contextSnapshotService.prepare(
+            ContextSnapshotReceiptBO receipt = contextSnapshotService.prepare(
                     context.getUserId(), context.getSessionId(), json.convertValue(param.getInput(),
-                            com.agentsquad.squad.runtime.dto.ContextPreparationRequest.class));
+                            ContextPreparationRequestBO.class));
             return ToolResultBlock.text("局部上下文已准备。contextSnapshotId=" + receipt.snapshotId()
                     + " contentHash=" + receipt.contentHash());
         } catch (IllegalArgumentException exception) {

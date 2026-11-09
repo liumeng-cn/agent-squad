@@ -1,0 +1,266 @@
+package com.agentsquad.squad.service;
+
+import com.agentsquad.squad.bo.PrepareRequestBO;
+
+import com.agentsquad.squad.bo.OperationPreviewBO;
+
+import com.agentsquad.squad.mapper.TaskDirectiveMapper;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.po.OperationPO;
+import com.agentsquad.squad.enums.OperationStatus;
+import com.agentsquad.squad.bo.ToolExecutionContextBO;
+import com.agentsquad.squad.vo.OperationPageVO;
+import com.agentsquad.squad.vo.OperationVO;
+import com.agentsquad.squad.vo.OperationDetailVO;
+import com.agentsquad.squad.identity.AuthView;
+import com.agentsquad.squad.mapper.OperationMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import static com.agentsquad.squad.utils.ContentDigests.sha256;
+import static com.agentsquad.squad.utils.RuntimePayloads.toJson;
+
+/**
+ * 外部操作账本预检服务（M07 事务 A）。
+ *
+ * <p>锁定执行归属、规范化参数并计算摘要、预留预算、落 PREPARED/WAITING_APPROVAL；
+ * 本事务提交前绝不发送外部请求，实际派发由 OperationExecutorService 分步独立持久。
+ * 原生调用键与业务意图键双路幂等；同意图不同参数直接拒绝。</p>
+ */
+@Service
+@Slf4j
+public class OperationService {
+
+    @Resource
+    private TaskDirectiveMapper directives;
+
+    @Resource
+    private OperationAccessService operationAccessService;
+
+    @Resource
+    private OperationPreviewBO operationPreview;
+
+    private static final String EFFECT_WRITE = "WRITE";
+
+    @Resource
+    private ExecutionScopeService scopeService;
+
+    @Resource
+    private OperationMapper operationMapper;
+
+    @Resource
+    private BudgetService budgetService;
+
+    @Resource
+    private ObjectMapper objectMapper;
+
+    /**
+     * 预检并创建操作账本记录；原生调用键或业务意图键命中即返回原记录，不产生第二行。
+     */
+    @Transactional
+    public OperationPO prepare(PrepareRequestBO request) {
+        String scopeId = scopeService.scopeForSession(request.userId(), request.sessionId());
+        scopeService.lockOwned(request.userId(), scopeId, true);
+        ToolExecutionContextBO context = operationMapper.lockToolContext(request.userId(),
+                request.sessionId());
+        if (context == null) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "会话未绑定目标");
+        }
+        if (context.isCancellationRequested() || !("QUEUED".equals(context.getTaskStatus())
+                || "RUNNING".equals(context.getTaskStatus()))) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已取消或结束，不再受理工具操作");
+        }
+
+        OperationPO existing = operationMapper.findByNativeCall(request.userId(), context.getBindingId(),
+                request.frameworkTurnId(), request.toolCallId());
+        if (existing != null) {
+            log.info("工具调用幂等复用原操作 operationId={} toolCallId={}",
+                    existing.getOperationId(), request.toolCallId());
+            return existing;
+        }
+
+        String requestHash = sha256(toJson(objectMapper, canonicalArguments(request.arguments())));
+        if (EFFECT_WRITE.equals(request.effect())) {
+            if (request.businessIntentKey() == null || request.businessIntentKey().isBlank()
+                    || request.businessIntentKey().length() > 160) {
+                throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "写入操作缺少业务幂等键");
+            }
+            OperationPO intent = operationMapper.findByBusinessIntent(request.userId(),
+                    context.getScopeId(), request.toolKey(), request.businessIntentKey());
+            if (intent != null) {
+                if (!intent.getRequestHash().equals(requestHash)) {
+                    throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
+                            "同业务意图已用不同参数提交，拒绝重复写入");
+                }
+                log.info("业务意图幂等复用原操作 operationId={} intentHash={}",
+                        intent.getOperationId(), sha256(request.businessIntentKey()).substring(0, 8));
+                return intent;
+            }
+        }
+
+        if (EFFECT_WRITE.equals(request.effect()) && context.getTaskId() != null
+                && !directives.pending(request.userId(), context.getTaskId()).isEmpty()) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "用户修改尚待处理，暂停新的外部写入");
+        }
+        if (!operationMapper.findUncertainInConversation(request.userId(), context.getScopeId()).isEmpty()) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "已有外部操作结果待核对，暂停新的外部执行");
+        }
+        budgetService.reserve(request.userId(), context.getScopeId(),
+                usageKey(request), "TOOL", request.reservedUnits(), request.creatorName());
+
+        String operationId = UUID.randomUUID().toString();
+        String status = request.requiresApproval() ? OperationStatus.WAITING_APPROVAL.name()
+                : OperationStatus.PREPARED.name();
+        operationMapper.insert(operationId, request.userId(), context.getTaskId(), null,
+                context.getBindingId(), request.frameworkTurnId(), request.toolCallId(),
+                request.toolKey(), request.toolVersion(), request.businessIntentKey(),
+                request.effect(), request.connectionId(), request.connectionRevision(),
+                0L, requestHash, toJson(objectMapper, canonicalArguments(request.arguments())),
+                status, request.creatorName(), usageKey(request));
+        log.info("操作预检完成 operationId={} taskId={} scopeId={} toolKey={} effect={} status={} hash={}",
+                operationId, context.getTaskId(), context.getScopeId(), request.toolKey(), request.effect(), status,
+                requestHash.substring(0, 8));
+        return operationMapper.findOwned(request.userId(), operationId);
+    }
+
+    /** 在取消事务内关闭尚未派发的工具并释放已知预留；不触碰在途或未知结果的写入。 */
+    @Transactional
+    public void cancelUnstarted(String userId, String scopeId) {
+        scopeService.lockOwned(userId, scopeId, false);
+        var unstarted = operationMapper.lockUnstartedInScope(userId, scopeId);
+        operationMapper.cancelUnstartedByScope(userId, scopeId);
+        for (OperationPO operation : unstarted) {
+            if (operation.getBudgetUsageKey() != null) {
+                budgetService.releaseUnsentTool(userId, scopeId, operation.getBudgetUsageKey());
+            }
+        }
+    }
+
+    /**
+     * 分页读取目标的操作视图；游标取最后一条操作的存储主键。
+     */
+    public OperationPageVO listPage(String userId, String taskId, String cursor, int limit) {
+        scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
+        Long cursorId = parseCursor(cursor);
+        List<OperationPO> rows = operationMapper.listByTask(userId, taskId, cursorId,
+                Math.min(Math.max(limit, 1), 100) + 1);
+        boolean hasMore = rows.size() > Math.min(Math.max(limit, 1), 100);
+        List<OperationVO> items = rows.stream()
+                .limit(Math.min(Math.max(limit, 1), 100))
+                .map(this::viewOf)
+                .toList();
+        String nextCursor = null;
+        if (hasMore) {
+            Long lastCursorId = operationMapper.cursorIdOf(userId,
+                    rows.get(items.size() - 1).getOperationId());
+            nextCursor = lastCursorId == null ? null : String.valueOf(lastCursorId);
+        }
+        return new OperationPageVO(items, nextCursor);
+    }
+
+    /**
+     * 读取当前用户单个操作视图；不存在统一按 NOT_FOUND 处理。
+     */
+    public OperationVO getOwned(String userId, String operationId) {
+        OperationPO row = operationMapper.findOwned(userId, operationId);
+        if (row == null) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "操作不存在");
+        }
+        scopeService.requireReadable(userId, row.getScopeId());
+        return viewOf(row);
+    }
+
+    /**
+     * 按资源归属读取脱敏详情，核对动作仅由服务端显式授权计算。
+     */
+    public OperationDetailVO detail(AuthView actor, String operationId) {
+        OperationPO row = operationMapper.findOwned(actor.userId(), operationId);
+        if (row == null) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "操作不存在");
+        }
+        scopeService.requireReadable(actor.userId(), row.getScopeId());
+        List<String> evidenceRefs = evidenceRefs(row.getResultJson());
+        return new OperationDetailVO(viewOf(row), operationPreview.arguments(row.getArgumentsJson()),
+                "操作状态：" + row.getStatus() + "；已记录核对证据 " + evidenceRefs.size() + " 项", evidenceRefs,
+                operationAccessService.canReconcile(actor, row.getScopeId(), row.getStatus()));
+    }
+
+    private List<String> evidenceRefs(String resultJson) {
+        if (resultJson == null) {
+            return List.of();
+        }
+        try {
+            var refs = RuntimePayloads.readJson(objectMapper, resultJson).path("evidenceRefs");
+            List<String> result = new ArrayList<>();
+            for (var ref : refs) {
+                if (ref.isTextual() && ref.asText().matches("[0-9a-fA-F-]{36}")) {
+                    result.add(ref.asText());
+                }
+            }
+            return List.copyOf(result);
+        } catch (Exception exception) {
+            return List.of();
+        }
+    }
+
+    /**
+     * 账本行映射为公开摘要；参数与结果正文不进入列表。
+     */
+    public OperationVO viewOf(OperationPO row) {
+        return new OperationVO(row.getOperationId(), row.getTaskId(), row.getJobId(), row.getToolKey(),
+                row.getEffect(), row.getStatus(), row.getRequestHash(), row.getVersion(),
+                row.getToolKey() + " · " + row.getEffect() + " · " + row.getStatus());
+    }
+
+    private Long parseCursor(String cursor) {
+        if (cursor == null || cursor.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(cursor);
+        } catch (NumberFormatException exception) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "cursor 游标无效");
+        }
+    }
+
+    /**
+     * 结算该操作的预算预留；金额由调用方按工具声明传入。
+     */
+    public void settle(OperationPO operation, long settledUnits) {
+        budgetService.settle(operation.getUserId(), operation.getScopeId(), usageKeyOf(operation),
+                settledUnits);
+    }
+
+    /**
+     * 操作的预算稳定键；核对流程复用同一派生规则，避免两处口径漂移。
+     */
+    public String usageKeyOf(OperationPO operation) {
+        return operation.getBudgetUsageKey();
+    }
+
+    private String usageKey(PrepareRequestBO request) {
+        String identity = EFFECT_WRITE.equals(request.effect())
+                ? "intent:" + sha256(request.businessIntentKey())
+                : "call:" + sha256(request.sessionId() + "\n" + request.frameworkTurnId() + "\n" + request.toolCallId());
+        return request.toolKey() + ":" + identity;
+    }
+
+    private Map<String, Object> canonicalArguments(Map<String, Object> arguments) {
+        Map<String, Object> ordered = new LinkedHashMap<>();
+        arguments.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .forEach(entry -> ordered.put(entry.getKey(), entry.getValue()));
+        return ordered;
+    }
+}

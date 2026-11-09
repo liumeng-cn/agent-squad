@@ -1,5 +1,6 @@
 package com.agentsquad.squad.common.model;
 
+import com.agentsquad.squad.enums.ApiCode;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -1,7 +1,9 @@
 package com.agentsquad.squad.integration.agentscope;
 
-import com.agentsquad.squad.conversation.domain.CommandClaimContext;
-import com.agentsquad.squad.conversation.repository.DeliveryMapper;
+import com.agentsquad.squad.service.CommandDeliveryService;
+
+import com.agentsquad.squad.bo.CommandClaimContextBO;
+import com.agentsquad.squad.mapper.DeliveryMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -30,7 +32,7 @@ class CommandDeliveryConcurrencyTest {
         ReflectionTestUtils.setField(service, "workers", 2);
         ReflectionTestUtils.setField(service, "controlWorkers", 1);
         when(mapper.findDueIds(any())).thenReturn(List.of("A", "B", "STOP"), List.of("RESPOND"));
-        when(mapper.claimContext(any())).thenAnswer(call -> new CommandClaimContext(
+        when(mapper.claimContext(any())).thenAnswer(call -> new CommandClaimContextBO(
                 "user-" + call.getArgument(0), "scope", call.getArgument(0), "binding"));
         CountDownLatch blocked = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);

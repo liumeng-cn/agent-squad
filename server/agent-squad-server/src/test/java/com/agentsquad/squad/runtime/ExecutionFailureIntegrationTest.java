@@ -1,17 +1,18 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
-import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
-import com.agentsquad.squad.conversation.service.ResponseRetryService;
-import com.agentsquad.squad.conversation.service.ExecutionScopeService;
-import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
-import com.agentsquad.squad.runtime.repository.ExecutionFailureMapper;
-import com.agentsquad.squad.runtime.service.ExecutionFailureService;
-import com.agentsquad.squad.runtime.domain.ModelFailureClassifier;
-import com.agentsquad.squad.presentation.service.ConversationQueryService;
-import com.agentsquad.squad.tools.operation.OperationService;
-import com.agentsquad.squad.tools.operation.PrepareRequest;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.dto.MessageCreateDTO;
+import com.agentsquad.squad.service.MessageAcceptanceService;
+import com.agentsquad.squad.service.ResponseRetryService;
+import com.agentsquad.squad.service.ExecutionScopeService;
+import com.agentsquad.squad.mapper.ExecutionScopeMapper;
+import com.agentsquad.squad.exceptions.PlanCorrectionExhaustedException;
+import com.agentsquad.squad.mapper.ExecutionFailureMapper;
+import com.agentsquad.squad.service.ExecutionFailureService;
+import com.agentsquad.squad.converter.ModelFailureClassifier;
+import com.agentsquad.squad.service.ConversationQueryService;
+import com.agentsquad.squad.service.OperationService;
+import com.agentsquad.squad.bo.PrepareRequestBO;
 import io.agentscope.extensions.model.openai.exception.OpenAIException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -53,13 +54,25 @@ class ExecutionFailureIntegrationTest {
                 new io.agentscope.core.model.transport.HttpTransportException("transport", new java.io.EOFException("private"))));
         assertThat(interrupted.code()).isEqualTo("MODEL_CONNECTION_INTERRUPTED");
         assertThat(interrupted.safeMessage()).doesNotContain("private");
+        // 百炼把欠费与未开通放在 HTTP 400 的错误码里，要归类为环境故障而不是请求校验失败。
+        var arrearage = ModelFailureClassifier.classify(new OpenAIException("private-secret", 400, "Arrearage", "hidden"));
+        assertThat(arrearage.category()).isEqualTo("ENVIRONMENT");
+        assertThat(arrearage.code()).isEqualTo("MODEL_BILLING_UNAVAILABLE");
+        var unpurchased = ModelFailureClassifier.classify(new OpenAIException("private-secret", 400, "AccessDenied.Unpurchased", "hidden"));
+        assertThat(unpurchased.category()).isEqualTo("ENVIRONMENT");
+        assertThat(unpurchased.code()).isEqualTo("MODEL_ACCESS_DENIED");
+        var transportBilling = ModelFailureClassifier.classify(new io.agentscope.core.model.transport.HttpTransportException("transport", 400,
+                "{\"error\":{\"code\":\"Arrearage\",\"message\":\"hidden\"}}"));
+        assertThat(transportBilling.code()).isEqualTo("MODEL_BILLING_UNAVAILABLE");
+        assertThat(ModelFailureClassifier.classify(new OpenAIException("x", 400, "unknown-code", "x")).code())
+                .isEqualTo("MODEL_REQUEST_REJECTED");
     }
 
     @Test
     void billingFailureOffersManualRetryButDoesNotAutomaticallyRetry(@TempDir Path directory) {
         try (var context = start(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory))) {
             String user = UUID.randomUUID().toString();
-            var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "billing", new MessageCreateRequest("你好", List.of()));
+            var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "billing", new MessageCreateDTO("你好", List.of()));
             var jdbc = context.getBean(JdbcTemplate.class);
             String session = session(jdbc, receipt.executionId());
             String scopeId = context.getBean(ExecutionScopeService.class).scopeForSession(user, session);
@@ -91,7 +104,7 @@ class ExecutionFailureIntegrationTest {
         String scopeId;
         String message;
         try (var context = start(database)) {
-            var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateRequest("请回答", List.of()));
+            var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateDTO("请回答", List.of()));
             execution = receipt.executionId();
             message = receipt.messageId();
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
@@ -136,13 +149,13 @@ class ExecutionFailureIntegrationTest {
     void unknownWriteBlocksAutomaticAndManualRetry(@TempDir Path directory) {
         try (var context = start(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("unknown")))) {
             String user = UUID.randomUUID().toString();
-            var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateRequest("处理这项工作", List.of()));
+            var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateDTO("处理这项工作", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             String session = session(jdbc, receipt.executionId());
             var scopeService = context.getBean(ExecutionScopeService.class);
             String scopeId = scopeService.scopeForSession(user, session);
-            var operation = context.getBean(OperationService.class).prepare(new PrepareRequest(user, session, "turn", "write", "mock_ticket_create", "v1", "WRITE", Map.of("title", "test"), "stable", false, null, 0, 1, "tester"));
-            jdbc.update("UPDATE sq_operation SET status='UNKNOWN' WHERE operation_id=?", operation.operationId());
+            var operation = context.getBean(OperationService.class).prepare(new PrepareRequestBO(user, session, "turn", "write", "mock_ticket_create", "v1", "WRITE", Map.of("title", "test"), "stable", false, null, 0, 1, "tester"));
+            jdbc.update("UPDATE sq_operation SET status='UNKNOWN' WHERE operation_id=?", operation.getOperationId());
             var failures = context.getBean(ExecutionFailureService.class);
             failures.reportModel(user, session, "error", new OpenAIException("private-secret", 503, "x", "x"));
             var scope = context.getBean(ExecutionScopeMapper.class).findOwned(user, scopeId);
@@ -150,11 +163,11 @@ class ExecutionFailureIntegrationTest {
             assertThat(failures.queueTransientRetry(scope, binding, "failed", "fixed-turn")).isFalse();
             jdbc.update("UPDATE sq_response_execution SET status='FAILED' WHERE execution_id=?", receipt.executionId());
             var snapshot = context.getBean(ConversationQueryService.class).snapshot(user, receipt.conversationId(), null, 40);
-            assertThat(snapshot.operationIds()).containsExactly(operation.operationId());
+            assertThat(snapshot.operationIds()).containsExactly(operation.getOperationId());
             assertThat(snapshot.failures().getFirst().allowedActions()).isEmpty();
             assertThat(snapshot.failures().toString()).doesNotContain("private-secret");
             assertThatThrownBy(() -> context.getBean(ResponseRetryService.class).retry(user, receipt.executionId(), "retry", 0)).isInstanceOf(RuntimeBusinessException.class);
-            assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id=?", String.class, operation.operationId())).isEqualTo("UNKNOWN");
+            assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id=?", String.class, operation.getOperationId())).isEqualTo("UNKNOWN");
             assertThat(context.getBean(ExecutionFailureMapper.class).serviceAttempts(user, scopeId)).isZero();
         }
     }
@@ -166,7 +179,7 @@ class ExecutionFailureIntegrationTest {
         String session;
         String scopeId;
         try (var context = start(database)) {
-            var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "plan-check", new MessageCreateRequest("验证纠正边界", List.of()));
+            var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "plan-check", new MessageCreateDTO("验证纠正边界", List.of()));
             session = session(context.getBean(JdbcTemplate.class), receipt.executionId());
             scopeId = context.getBean(ExecutionScopeService.class).scopeForSession(user, session);
             var service = context.getBean(ExecutionFailureService.class);
@@ -178,10 +191,10 @@ class ExecutionFailureIntegrationTest {
             assertThat(context.getBean(ExecutionFailureMapper.class).planAttempts(user, scopeId)).isEqualTo(3);
             var service = context.getBean(ExecutionFailureService.class);
             assertThatThrownBy(() -> service.requireModelAllowed(user, session))
-                    .isInstanceOf(com.agentsquad.squad.runtime.domain.PlanCorrectionExhaustedException.class);
+                    .isInstanceOf(PlanCorrectionExhaustedException.class);
             // 同一原因已由计划纠正记录，模型分类再次上报不能生成第二条用户可见故障。
             service.reportModel(user, session, "plan-exhausted-call",
-                    new com.agentsquad.squad.runtime.domain.PlanCorrectionExhaustedException());
+                    new PlanCorrectionExhaustedException());
             assertThat(context.getBean(JdbcTemplate.class).queryForObject(
                     "SELECT COUNT(1) FROM sq_execution_failure WHERE user_id=? AND scope_id=? AND code='PLAN_CORRECTION_EXHAUSTED'",
                     Integer.class, user, scopeId)).isEqualTo(1);

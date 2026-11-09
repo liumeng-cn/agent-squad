@@ -1,8 +1,8 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.common.enums.worker.WorkerJobStatus;
-import com.agentsquad.squad.runtime.domain.WorkerDependencyNode;
-import com.agentsquad.squad.runtime.domain.WorkerDependencyPolicy;
+import com.agentsquad.squad.enums.WorkerJobStatus;
+import com.agentsquad.squad.bo.WorkerDependencyNodeBO;
+import com.agentsquad.squad.policy.WorkerDependencyPolicy;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -46,7 +46,7 @@ class WorkerDependencyPolicyTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
-    private WorkerDependencyNode node(String key, WorkerJobStatus status, String... dependencies) {
-        return new WorkerDependencyNode(key, status, List.of(dependencies));
+    private WorkerDependencyNodeBO node(String key, WorkerJobStatus status, String... dependencies) {
+        return new WorkerDependencyNodeBO(key, status, List.of(dependencies));
     }
 }

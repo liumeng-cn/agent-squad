@@ -1,22 +1,31 @@
 package com.agentsquad.squad.runtime;
 
+import com.agentsquad.squad.enums.AccountRole;
+import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.enums.GoalTaskStatus;
+import com.agentsquad.squad.enums.NativeRunOutcome;
+import com.agentsquad.squad.enums.RuntimeCommandStatus;
+import com.agentsquad.squad.agent.MasterAgentIdentity;
+
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.conversation.service.ExecutionScopeService;
-import com.agentsquad.squad.integration.agentscope.NativeEventView;
-import com.agentsquad.squad.integration.agentscope.NativeProjectionService;
-import com.agentsquad.squad.conversation.domain.*;
-import com.agentsquad.squad.runtime.domain.*;
-import com.agentsquad.squad.conversation.repository.BindingMapper;
-import com.agentsquad.squad.conversation.repository.CommandMapper;
-import com.agentsquad.squad.conversation.repository.DeliveryMapper;
-import com.agentsquad.squad.conversation.repository.ConversationMapper;
-import com.agentsquad.squad.conversation.repository.TaskEventMapper;
-import com.agentsquad.squad.conversation.repository.TaskMapper;
-import com.agentsquad.squad.runtime.repository.*;
-import com.agentsquad.squad.runtime.service.CompletionProposalService;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
-import com.agentsquad.squad.conversation.service.TaskControlService;
-import com.agentsquad.squad.presentation.service.TaskSnapshotService;
+import com.agentsquad.squad.service.ExecutionScopeService;
+import com.agentsquad.squad.bo.PlanNodeBO;
+import com.agentsquad.squad.bo.PlanPublishBO;
+import com.agentsquad.squad.dto.WorkerDefinitionCreateDTO;
+import com.agentsquad.squad.bo.NativeEventViewBO;
+import com.agentsquad.squad.service.NativeProjectionService;
+import com.agentsquad.squad.mapper.BindingMapper;
+import com.agentsquad.squad.mapper.CommandMapper;
+import com.agentsquad.squad.mapper.DeliveryMapper;
+import com.agentsquad.squad.mapper.ConversationMapper;
+import com.agentsquad.squad.mapper.TaskEventMapper;
+import com.agentsquad.squad.mapper.TaskMapper;
+import com.agentsquad.squad.mapper.CompletionMapper;
+import com.agentsquad.squad.mapper.ProjectionMapper;
+import com.agentsquad.squad.service.CompletionProposalService;
+import com.agentsquad.squad.service.GoalTaskService;
+import com.agentsquad.squad.service.TaskControlService;
+import com.agentsquad.squad.service.TaskSnapshotService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
@@ -45,27 +54,27 @@ class CompletionCorrectionIntegrationTest {
     @Test
     void shouldCompleteMatchedProposal(@TempDir Path tempDirectory) {
         try (ConfigurableApplicationContext context = start(tempDirectory)) {
-            ProjectionTarget target = createTask(context);
+            ProjectionTargetBO target = createTask(context);
             NativeProjectionService projection = context.getBean(NativeProjectionService.class);
             CompletionProposalService proposals = context.getBean(CompletionProposalService.class);
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             TaskSnapshotService snapshots = context.getBean(TaskSnapshotService.class);
             ConversationMapper conversations = context.getBean(ConversationMapper.class);
-            String conversationId = tasks.findTask(USER_ID, target.taskId()).conversationId();
+            String conversationId = tasks.findTask(USER_ID, target.getTaskId()).conversationId();
             String turnId = UUID.randomUUID().toString();
 
             projection.accept(target, event(1, "run/start", turnId, null));
-            var first = proposals.propose(USER_ID, target.sessionId(), turnId,
+            var first = proposals.propose(USER_ID, target.getSessionId(), turnId,
                     "tool-call-1", GoalTaskStatus.SUCCEEDED.name(), "目标已完成");
-            var repeated = proposals.propose(USER_ID, target.sessionId(), turnId,
+            var repeated = proposals.propose(USER_ID, target.getSessionId(), turnId,
                     "tool-call-1", GoalTaskStatus.SUCCEEDED.name(), "目标已完成");
             projection.accept(target, event(2, "run/end", turnId, NativeRunOutcome.COMPLETED.code()));
 
             assertThat(repeated).isEqualTo(first);
-            assertThat(tasks.findTask(USER_ID, target.taskId()).status()).isEqualTo(GoalTaskStatus.SUCCEEDED.name());
-            assertThat(snapshots.snapshot(USER_ID, target.taskId()).answer().text()).isEqualTo("目标已完成");
-            assertThat(conversations.findOwned(USER_ID, conversationId).activeTaskId()).isNull();
-            assertThat(tasks.listEvents(USER_ID, target.taskId(), 0))
+            assertThat(tasks.findTask(USER_ID, target.getTaskId()).status()).isEqualTo(GoalTaskStatus.SUCCEEDED.name());
+            assertThat(snapshots.snapshot(USER_ID, target.getTaskId()).answer().text()).isEqualTo("目标已完成");
+            assertThat(conversations.findOwned(USER_ID, conversationId).getActiveTaskId()).isNull();
+            assertThat(tasks.listEvents(USER_ID, target.getTaskId(), 0))
                     .extracting(item -> item.type())
                     .containsExactly("task.accepted", "task.run_started", "task.run_ended",
                             "answer.completed", "task.completed");
@@ -78,7 +87,7 @@ class CompletionCorrectionIntegrationTest {
     @Test
     void shouldBlockStaleCompletionCandidate(@TempDir Path tempDirectory) {
         try (ConfigurableApplicationContext context = start(tempDirectory)) {
-            ProjectionTarget target = createTask(context);
+            ProjectionTargetBO target = createTask(context);
             NativeProjectionService projection = context.getBean(NativeProjectionService.class);
             CompletionProposalService proposals = context.getBean(CompletionProposalService.class);
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
@@ -87,18 +96,18 @@ class CompletionCorrectionIntegrationTest {
             String turnId = UUID.randomUUID().toString();
 
             projection.accept(target, event(1, "run/start", turnId, null));
-            proposals.propose(USER_ID, target.sessionId(), turnId,
+            proposals.propose(USER_ID, target.getSessionId(), turnId,
                     "tool-call-stale", GoalTaskStatus.SUCCEEDED.name(), "旧计划答案");
-            jdbc.update("UPDATE sq_goal_task SET plan_version = plan_version + 1 WHERE task_id = ?", target.taskId());
+            jdbc.update("UPDATE sq_goal_task SET plan_version = plan_version + 1 WHERE task_id = ?", target.getTaskId());
 
-            NativeEventView completed = event(2, "run/end", turnId, NativeRunOutcome.COMPLETED.code());
+            NativeEventViewBO completed = event(2, "run/end", turnId, NativeRunOutcome.COMPLETED.code());
             projection.accept(target, completed);
             projection.accept(target, completed);
 
-            assertThat(tasks.findTask(USER_ID, target.taskId()).status())
+            assertThat(tasks.findTask(USER_ID, target.getTaskId()).status())
                     .isEqualTo(GoalTaskStatus.RECOVERY_BLOCKED.name());
-            assertThat(cursors.lockCursor(USER_ID, target.bindingId())).isEqualTo(2L);
-            assertThat(tasks.listEvents(USER_ID, target.taskId(), 0))
+            assertThat(cursors.lockCursor(USER_ID, target.getBindingId())).isEqualTo(2L);
+            assertThat(tasks.listEvents(USER_ID, target.getTaskId(), 0))
                     .extracting(item -> item.type())
                     .containsExactly("task.accepted", "task.run_started", "task.run_ended",
                             "task.recovery_blocked");
@@ -111,38 +120,38 @@ class CompletionCorrectionIntegrationTest {
     @Test
     void shouldCorrectOnceThenFailWithoutProposal(@TempDir Path tempDirectory) {
         try (ConfigurableApplicationContext context = start(tempDirectory)) {
-            ProjectionTarget target = createTask(context);
+            ProjectionTargetBO target = createTask(context);
             NativeProjectionService projection = context.getBean(NativeProjectionService.class);
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             CommandMapper commands = context.getBean(CommandMapper.class);
             ConversationMapper conversations = context.getBean(ConversationMapper.class);
             ProjectionMapper cursors = context.getBean(ProjectionMapper.class);
-            String conversationId = tasks.findTask(USER_ID, target.taskId()).conversationId();
+            String conversationId = tasks.findTask(USER_ID, target.getTaskId()).conversationId();
             String firstTurn = UUID.randomUUID().toString();
 
             projection.accept(target, event(1, "run/start", firstTurn, null));
             projection.accept(target, event(2, "run/end", firstTurn, NativeRunOutcome.COMPLETED.code()));
 
-            assertThat(tasks.findTask(USER_ID, target.taskId()).status()).isEqualTo(GoalTaskStatus.RUNNING.name());
+            assertThat(tasks.findTask(USER_ID, target.getTaskId()).status()).isEqualTo(GoalTaskStatus.RUNNING.name());
             assertThat(commands.findByKey(USER_ID,
-                    "task.completion-correction:" + target.taskId(), firstTurn).status())
+                    "task.completion-correction:" + target.getTaskId(), firstTurn).getStatus())
                     .isEqualTo(RuntimeCommandStatus.PENDING.name());
-            assertThat(conversations.findOwned(USER_ID, conversationId).activeTaskId()).isEqualTo(target.taskId());
-            assertThat(cursors.lockCursor(USER_ID, target.bindingId())).isEqualTo(2L);
+            assertThat(conversations.findOwned(USER_ID, conversationId).getActiveTaskId()).isEqualTo(target.getTaskId());
+            assertThat(cursors.lockCursor(USER_ID, target.getBindingId())).isEqualTo(2L);
 
             String secondTurn = UUID.randomUUID().toString();
             projection.accept(target, event(3, "run/start", secondTurn, null));
             projection.accept(target, event(4, "run/end", secondTurn, NativeRunOutcome.COMPLETED.code()));
 
-            assertThat(tasks.findTask(USER_ID, target.taskId()).status()).isEqualTo(GoalTaskStatus.FAILED.name());
+            assertThat(tasks.findTask(USER_ID, target.getTaskId()).status()).isEqualTo(GoalTaskStatus.FAILED.name());
             assertThat(context.getBean(org.springframework.jdbc.core.JdbcTemplate.class).queryForObject(
-                    "SELECT category FROM sq_execution_failure WHERE binding_id=?", String.class, target.bindingId())).isEqualTo("LOGIC_INVALID");
-            assertThat(conversations.findOwned(USER_ID, conversationId).activeTaskId()).isNull();
-            assertThat(tasks.listEvents(USER_ID, target.taskId(), 0))
+                    "SELECT category FROM sq_execution_failure WHERE binding_id=?", String.class, target.getBindingId())).isEqualTo("LOGIC_INVALID");
+            assertThat(conversations.findOwned(USER_ID, conversationId).getActiveTaskId()).isNull();
+            assertThat(tasks.listEvents(USER_ID, target.getTaskId(), 0))
                     .extracting(item -> item.type())
                     .containsExactly("task.accepted", "task.run_started", "task.run_ended",
                             "task.run_started", "task.run_ended", "answer.completed", "task.completed");
-            assertThat(cursors.lockCursor(USER_ID, target.bindingId())).isEqualTo(4L);
+            assertThat(cursors.lockCursor(USER_ID, target.getBindingId())).isEqualTo(4L);
         }
     }
 
@@ -152,22 +161,22 @@ class CompletionCorrectionIntegrationTest {
     @Test
     void shouldHonorCancellationWhenNativeRunCompletes(@TempDir Path tempDirectory) {
         try (ConfigurableApplicationContext context = start(tempDirectory)) {
-            ProjectionTarget target = createTask(context);
+            ProjectionTargetBO target = createTask(context);
             NativeProjectionService projection = context.getBean(NativeProjectionService.class);
             TaskMapper taskMapper = context.getBean(TaskMapper.class);
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             ConversationMapper conversations = context.getBean(ConversationMapper.class);
-            String conversationId = tasks.findTask(USER_ID, target.taskId()).conversationId();
+            String conversationId = tasks.findTask(USER_ID, target.getTaskId()).conversationId();
             String turnId = UUID.randomUUID().toString();
 
             projection.accept(target, event(1, "run/start", turnId, null));
-            assertThat(taskMapper.updateCancelling(USER_ID, target.taskId(), 1,
+            assertThat(taskMapper.updateCancelling(USER_ID, target.getTaskId(), 1,
                     LocalDateTime.now(ZoneOffset.UTC))).isEqualTo(1);
             projection.accept(target, event(2, "run/end", turnId, NativeRunOutcome.COMPLETED.code()));
 
-            assertThat(tasks.findTask(USER_ID, target.taskId()).status()).isEqualTo(GoalTaskStatus.CANCELLED.name());
-            assertThat(conversations.findOwned(USER_ID, conversationId).activeTaskId()).isNull();
-            assertThat(tasks.listEvents(USER_ID, target.taskId(), 0))
+            assertThat(tasks.findTask(USER_ID, target.getTaskId()).status()).isEqualTo(GoalTaskStatus.CANCELLED.name());
+            assertThat(conversations.findOwned(USER_ID, conversationId).getActiveTaskId()).isNull();
+            assertThat(tasks.listEvents(USER_ID, target.getTaskId(), 0))
                     .extracting(item -> item.type())
                     .containsExactly("task.accepted", "task.run_started", "task.run_ended", "task.completed");
         }
@@ -179,53 +188,53 @@ class CompletionCorrectionIntegrationTest {
     @Test
     void shouldBlockFailedRunAndKeepTaskRecoverable(@TempDir Path tempDirectory) {
         try (ConfigurableApplicationContext context = start(tempDirectory)) {
-            ProjectionTarget target = createTask(context);
+            ProjectionTargetBO target = createTask(context);
             NativeProjectionService projection = context.getBean(NativeProjectionService.class);
             CompletionProposalService proposals = context.getBean(CompletionProposalService.class);
             CompletionMapper completions = context.getBean(CompletionMapper.class);
             TaskControlService controls = context.getBean(TaskControlService.class);
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             ConversationMapper conversations = context.getBean(ConversationMapper.class);
-            String conversationId = tasks.findTask(USER_ID, target.taskId()).conversationId();
+            String conversationId = tasks.findTask(USER_ID, target.getTaskId()).conversationId();
             String turnId = UUID.randomUUID().toString();
 
             projection.accept(target, event(1, "run/start", turnId, null));
-            proposals.propose(USER_ID, target.sessionId(), turnId,
+            proposals.propose(USER_ID, target.getSessionId(), turnId,
                     "tool-call-before-failure", GoalTaskStatus.SUCCEEDED.name(), "旧候选");
-            NativeEventView failed = event(2, "run/end", turnId, NativeRunOutcome.FAILED.code());
+            NativeEventViewBO failed = event(2, "run/end", turnId, NativeRunOutcome.FAILED.code());
             projection.accept(target, failed);
             projection.accept(target, failed);
 
-            var blocked = tasks.findTask(USER_ID, target.taskId());
+            var blocked = tasks.findTask(USER_ID, target.getTaskId());
             assertThat(blocked.status()).isEqualTo(GoalTaskStatus.RECOVERY_BLOCKED.name());
             assertThat(blocked.blockedReason()).contains("原生回合执行失败");
-            assertThat(completions.lockTask(USER_ID, target.taskId()).proposalJson()).isNull();
-            assertThat(conversations.findOwned(USER_ID, conversationId).activeTaskId()).isEqualTo(target.taskId());
-            assertThat(tasks.listEvents(USER_ID, target.taskId(), 0))
+            assertThat(completions.lockTask(USER_ID, target.getTaskId()).getProposalJson()).isNull();
+            assertThat(conversations.findOwned(USER_ID, conversationId).getActiveTaskId()).isEqualTo(target.getTaskId());
+            assertThat(tasks.listEvents(USER_ID, target.getTaskId(), 0))
                     .extracting(item -> item.type())
                     .containsExactly("task.accepted", "task.run_started", "task.run_ended",
                             "task.recovery_blocked");
 
-            var resume = controls.resume(USER_ID, target.taskId(), UUID.randomUUID().toString(), blocked.version());
+            var resume = controls.resume(USER_ID, target.getTaskId(), UUID.randomUUID().toString(), blocked.version());
             assertThat(resume.status()).isEqualTo(RuntimeCommandStatus.PENDING.name());
-            assertThat(tasks.findTask(USER_ID, target.taskId()).status()).isEqualTo(GoalTaskStatus.QUEUED.name());
-            assertThat(tasks.findTask(USER_ID, target.taskId()).blockedReason()).isNull();
+            assertThat(tasks.findTask(USER_ID, target.getTaskId()).status()).isEqualTo(GoalTaskStatus.QUEUED.name());
+            assertThat(tasks.findTask(USER_ID, target.getTaskId()).blockedReason()).isNull();
 
             DeliveryMapper delivery = context.getBean(DeliveryMapper.class);
             String token = UUID.randomUUID().toString();
             LocalDateTime claimedAt = LocalDateTime.now(ZoneOffset.UTC).plusSeconds(1);
             assertThat(delivery.claim(resume.commandId(), token, claimedAt,
                     claimedAt.plusSeconds(60))).isEqualTo(1);
-            controls.blockRejectedResume(USER_ID, target.taskId(), resume.commandId(),
+            controls.blockRejectedResume(USER_ID, target.getTaskId(), resume.commandId(),
                     token, "NATIVE_TURN_SETTLED");
-            controls.blockRejectedResume(USER_ID, target.taskId(), resume.commandId(),
+            controls.blockRejectedResume(USER_ID, target.getTaskId(), resume.commandId(),
                     token, "NATIVE_TURN_SETTLED");
 
             assertThat(tasks.findCommand(USER_ID, resume.commandId()).status())
                     .isEqualTo(RuntimeCommandStatus.BLOCKED.name());
-            assertThat(tasks.findTask(USER_ID, target.taskId()).status())
+            assertThat(tasks.findTask(USER_ID, target.getTaskId()).status())
                     .isEqualTo(GoalTaskStatus.RECOVERY_BLOCKED.name());
-            assertThat(tasks.listEvents(USER_ID, target.taskId(), 0))
+            assertThat(tasks.listEvents(USER_ID, target.getTaskId(), 0))
                     .extracting(item -> item.type())
                     .containsExactly("task.accepted", "task.run_started", "task.run_ended",
                             "task.recovery_blocked", "task.recovery_blocked");
@@ -238,19 +247,19 @@ class CompletionCorrectionIntegrationTest {
     @Test
     void shouldCancelInsteadOfBlockingFailedRun(@TempDir Path tempDirectory) {
         try (ConfigurableApplicationContext context = start(tempDirectory)) {
-            ProjectionTarget target = createTask(context);
+            ProjectionTargetBO target = createTask(context);
             NativeProjectionService projection = context.getBean(NativeProjectionService.class);
             TaskMapper taskMapper = context.getBean(TaskMapper.class);
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             String turnId = UUID.randomUUID().toString();
 
             projection.accept(target, event(1, "run/start", turnId, null));
-            assertThat(taskMapper.updateCancelling(USER_ID, target.taskId(), 1,
+            assertThat(taskMapper.updateCancelling(USER_ID, target.getTaskId(), 1,
                     LocalDateTime.now(ZoneOffset.UTC))).isEqualTo(1);
             projection.accept(target, event(2, "run/end", turnId, NativeRunOutcome.FAILED.code()));
 
-            assertThat(tasks.findTask(USER_ID, target.taskId()).status()).isEqualTo(GoalTaskStatus.CANCELLED.name());
-            assertThat(tasks.listEvents(USER_ID, target.taskId(), 0))
+            assertThat(tasks.findTask(USER_ID, target.getTaskId()).status()).isEqualTo(GoalTaskStatus.CANCELLED.name());
+            assertThat(tasks.listEvents(USER_ID, target.getTaskId(), 0))
                     .extracting(item -> item.type())
                     .doesNotContain("task.recovery_blocked");
         }
@@ -265,67 +274,67 @@ class CompletionCorrectionIntegrationTest {
             String workerBinding = UUID.randomUUID().toString();
             String workerAgent = UUID.randomUUID().toString().replace("-", "");
             String workerSession = UUID.randomUUID().toString();
-            bindings.insertWorker(workerBinding, USER_ID, target.taskId(), workerAgent, workerSession, LocalDateTime.now(ZoneOffset.UTC));
-            var store = context.getBean(com.agentsquad.squad.integration.agentscope.journal.RuntimeSessionProvider.class).logStore();
+            bindings.insertWorker(workerBinding, USER_ID, target.getTaskId(), workerAgent, workerSession, LocalDateTime.now(ZoneOffset.UTC));
+            var store = context.getBean(com.agentsquad.squad.agent.session.RuntimeSessionProvider.class).logStore();
             var runtime = io.agentscope.core.agent.RuntimeContext.builder().userId(USER_ID).sessionId(workerSession).build();
             var log = store.open(new io.agentscope.core.session.SessionKey(USER_ID, workerAgent, workerSession), runtime);
             var writer = log.acquire("other-node", java.time.Duration.ofSeconds(30));
-            var operation = context.getBean(com.agentsquad.squad.tools.operation.OperationService.class).prepare(
-                    new com.agentsquad.squad.tools.operation.PrepareRequest(USER_ID, target.sessionId(), "turn", "write",
+            var operation = context.getBean(com.agentsquad.squad.service.OperationService.class).prepare(
+                    new com.agentsquad.squad.bo.PrepareRequestBO(USER_ID, target.getSessionId(), "turn", "write",
                             "mock_ticket_create", "v1", "WRITE", java.util.Map.of("title", "test"), "stable", false, null, 0, 1, "tester"));
-            var unstarted = context.getBean(com.agentsquad.squad.tools.operation.OperationService.class).prepare(
-                    new com.agentsquad.squad.tools.operation.PrepareRequest(USER_ID, target.sessionId(), "turn", "write-not-started",
+            var unstarted = context.getBean(com.agentsquad.squad.service.OperationService.class).prepare(
+                    new com.agentsquad.squad.bo.PrepareRequestBO(USER_ID, target.getSessionId(), "turn", "write-not-started",
                             "mock_ticket_create", "v1", "WRITE", java.util.Map.of("title", "next"), "another", false, null, 0, 1, "tester"));
-            var interaction = context.getBean(com.agentsquad.squad.interaction.service.InteractionService.class).bindFrameworkRequest(
-                    USER_ID, target.taskId(), target.bindingId(), null, "turn", "input-request",
+            var interaction = context.getBean(com.agentsquad.squad.service.InteractionService.class).bindFrameworkRequest(
+                    USER_ID, target.getTaskId(), target.getBindingId(), null, "turn", "input-request",
                     java.util.Map.of("name", "request_input", "input", java.util.Map.of("question", "请确认要求")));
-            jdbc.update("UPDATE sq_operation SET status='UNKNOWN' WHERE operation_id=?", operation.operationId());
+            jdbc.update("UPDATE sq_operation SET status='UNKNOWN' WHERE operation_id=?", operation.getOperationId());
             var control = context.getBean(TaskControlService.class);
-            var receipt = control.cancel(USER_ID, target.taskId(), "stop-all", 0);
-            assertThat(control.cancel(USER_ID, target.taskId(), "stop-all", 0)).isEqualTo(receipt);
-            org.assertj.core.api.Assertions.assertThatThrownBy(() -> control.cancel(USER_ID, target.taskId(), "another-stop", 1))
-                    .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
-            assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id=?", String.class, unstarted.operationId())).isEqualTo("CANCELLED");
+            var receipt = control.cancel(USER_ID, target.getTaskId(), "stop-all", 0);
+            assertThat(control.cancel(USER_ID, target.getTaskId(), "stop-all", 0)).isEqualTo(receipt);
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> control.cancel(USER_ID, target.getTaskId(), "another-stop", 1))
+                    .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
+            assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id=?", String.class, unstarted.getOperationId())).isEqualTo("CANCELLED");
             assertThat(jdbc.queryForObject("SELECT status FROM sq_budget_reservation WHERE user_id=? AND usage_key=?", String.class,
-                    USER_ID, unstarted.budgetUsageKey())).isEqualTo("SETTLED");
+                    USER_ID, unstarted.getBudgetUsageKey())).isEqualTo("SETTLED");
             assertThat(jdbc.queryForObject("SELECT settled_units FROM sq_budget_reservation WHERE user_id=? AND usage_key=?", Long.class,
-                    USER_ID, unstarted.budgetUsageKey())).isZero();
+                    USER_ID, unstarted.getBudgetUsageKey())).isZero();
             assertThat(jdbc.queryForObject("SELECT status FROM sq_interaction WHERE interaction_id=?", String.class, interaction.interactionId())).isEqualTo("CANCELLED");
             var conversation = context.getBean(ConversationMapper.class).findOwned(USER_ID,
-                    context.getBean(GoalTaskService.class).findTask(USER_ID, target.taskId()).conversationId());
-            context.getBean(com.agentsquad.squad.conversation.service.ConversationDeletionService.class)
-                    .delete(USER_ID, conversation.conversationId(), "delete-while-stopping", conversation.version());
-            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_command WHERE task_id=? AND action='STOP' AND status='CANCELLED'", Long.class, target.taskId())).isZero();
-            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_command WHERE task_id=? AND action='STOP'", Long.class, target.taskId())).isEqualTo(2);
-            var finalizer = context.getBean(com.agentsquad.squad.runtime.service.TaskFinalizerService.class);
-            finalizer.finalizeCancelledTask(USER_ID, target.taskId());
-            assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.taskId()).status()).isEqualTo("CANCELLING");
-            assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id=?", String.class, operation.operationId())).isEqualTo("UNKNOWN");
-            jdbc.update("UPDATE sq_operation SET status='SUCCEEDED' WHERE operation_id=?", operation.operationId());
-            finalizer.finalizeCancelledTask(USER_ID, target.taskId());
-            assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.taskId()).status()).isEqualTo("CANCELLING");
-            jdbc.update("UPDATE sq_operation SET status='UNKNOWN' WHERE operation_id=?", operation.operationId());
+                    context.getBean(GoalTaskService.class).findTask(USER_ID, target.getTaskId()).conversationId());
+            context.getBean(com.agentsquad.squad.service.ConversationDeletionService.class)
+                    .delete(USER_ID, conversation.getConversationId(), "delete-while-stopping", conversation.getVersion());
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_command WHERE task_id=? AND action='STOP' AND status='CANCELLED'", Long.class, target.getTaskId())).isZero();
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_command WHERE task_id=? AND action='STOP'", Long.class, target.getTaskId())).isEqualTo(2);
+            var finalizer = context.getBean(com.agentsquad.squad.service.TaskFinalizerService.class);
+            finalizer.finalizeCancelledTask(USER_ID, target.getTaskId());
+            assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.getTaskId()).getStatus()).isEqualTo("CANCELLING");
+            assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id=?", String.class, operation.getOperationId())).isEqualTo("UNKNOWN");
+            jdbc.update("UPDATE sq_operation SET status='SUCCEEDED' WHERE operation_id=?", operation.getOperationId());
+            finalizer.finalizeCancelledTask(USER_ID, target.getTaskId());
+            assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.getTaskId()).getStatus()).isEqualTo("CANCELLING");
+            jdbc.update("UPDATE sq_operation SET status='UNKNOWN' WHERE operation_id=?", operation.getOperationId());
             String workerStop = jdbc.queryForObject("SELECT command_id FROM sq_command WHERE binding_id=? AND action='STOP'", String.class, workerBinding);
-            context.getBean(com.agentsquad.squad.integration.agentscope.CommandDeliveryService.class).deliver(workerStop);
-            assertThat(context.getBean(CommandMapper.class).findOwned(USER_ID, workerStop).nativeStatus()).isEqualTo("no-active-run");
-            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_worker_job WHERE task_id=?", Long.class, target.taskId())).isZero();
+            context.getBean(com.agentsquad.squad.service.CommandDeliveryService.class).deliver(workerStop);
+            assertThat(context.getBean(CommandMapper.class).findOwned(USER_ID, workerStop).getNativeStatus()).isEqualTo("no-active-run");
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_worker_job WHERE task_id=?", Long.class, target.getTaskId())).isZero();
             log.release(writer);
-            finalizer.finalizeCancelledTask(USER_ID, target.taskId());
-            assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.taskId()).status()).isEqualTo("CANCELLING");
+            finalizer.finalizeCancelledTask(USER_ID, target.getTaskId());
+            assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.getTaskId()).getStatus()).isEqualTo("CANCELLING");
             // 夹具模拟核对完成；生产环境必须由操作账本的核对服务提供该事实。
-            jdbc.update("UPDATE sq_operation SET status='SUCCEEDED' WHERE operation_id=?", operation.operationId());
+            jdbc.update("UPDATE sq_operation SET status='SUCCEEDED' WHERE operation_id=?", operation.getOperationId());
             String sandbox = UUID.randomUUID().toString();
-            String scopeId = jdbc.queryForObject("SELECT scope_id FROM sq_goal_task WHERE task_id=?", String.class, target.taskId());
+            String scopeId = jdbc.queryForObject("SELECT scope_id FROM sq_goal_task WHERE task_id=?", String.class, target.getTaskId());
             jdbc.update("INSERT INTO sq_sandbox_execution (execution_id,user_id,scope_id,binding_id,logical_key,turn_id,tool_call_id,request_hash,status,deadline_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                    sandbox, USER_ID, scopeId, target.bindingId(), "sandbox", "turn", "sandbox-call", "a".repeat(64), "UNKNOWN", LocalDateTime.now(ZoneOffset.UTC).plusMinutes(1));
-            finalizer.finalizeCancelledTask(USER_ID, target.taskId());
-            assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.taskId()).status()).isEqualTo("CANCELLING");
+                    sandbox, USER_ID, scopeId, target.getBindingId(), "sandbox", "turn", "sandbox-call", "a".repeat(64), "UNKNOWN", LocalDateTime.now(ZoneOffset.UTC).plusMinutes(1));
+            finalizer.finalizeCancelledTask(USER_ID, target.getTaskId());
+            assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.getTaskId()).getStatus()).isEqualTo("CANCELLING");
             assertThat(jdbc.queryForObject("SELECT status FROM sq_sandbox_execution WHERE execution_id=?", String.class, sandbox)).isEqualTo("UNKNOWN");
             jdbc.update("UPDATE sq_sandbox_execution SET status='SUCCEEDED' WHERE execution_id=?", sandbox);
-            context.getBean(com.agentsquad.squad.runtime.service.CancellationSettlementScheduler.class).settle();
-            assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.taskId()).status()).isEqualTo("CANCELLED");
-            assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id=?", String.class, operation.operationId())).isEqualTo("SUCCEEDED");
-            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_worker_job WHERE task_id=?", Long.class, target.taskId())).isZero();
+            context.getBean(com.agentsquad.squad.service.CancellationSettlementSchedulerService.class).settle();
+            assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.getTaskId()).getStatus()).isEqualTo("CANCELLED");
+            assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id=?", String.class, operation.getOperationId())).isEqualTo("SUCCEEDED");
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_worker_job WHERE task_id=?", Long.class, target.getTaskId())).isZero();
         }
     }
 
@@ -336,38 +345,38 @@ class CompletionCorrectionIntegrationTest {
             var jdbc = context.getBean(JdbcTemplate.class);
             var json = context.getBean(com.fasterxml.jackson.databind.ObjectMapper.class);
             String key = "writer-" + UUID.randomUUID();
-            context.getBean(com.agentsquad.squad.worker.service.WorkerDefinitionService.class).publish(
-                    new com.agentsquad.squad.identity.AuthView(USER_ID, "admin", java.util.List.of(com.agentsquad.squad.common.enums.identity.AccountRole.ADMIN), null), key,
-                    new com.agentsquad.squad.worker.dto.WorkerDefinitionCreateRequest(key, "1.0.0", "写作", json.readTree("{}"), json.readTree("{}"), java.util.List.of(), "default", "default"));
-            var snapshots = context.getBean(com.agentsquad.squad.runtime.service.ContextSnapshotService.class);
-            String one = snapshots.prepare(USER_ID, target.sessionId(), "one", "one").snapshotId();
-            String two = snapshots.prepare(USER_ID, target.sessionId(), "two", "two").snapshotId();
-            var plan = context.getBean(com.agentsquad.squad.runtime.service.PlanService.class).publish(USER_ID, target.sessionId(),
-                    new com.agentsquad.squad.runtime.dto.PlanPublish("plan", 0, java.util.List.of(
-                            new com.agentsquad.squad.runtime.dto.PlanNode("one", key, "1.0.0", "分析一", one, java.util.List.of(), true, 1),
-                            new com.agentsquad.squad.runtime.dto.PlanNode("two", key, "1.0.0", "分析二", two, java.util.List.of(), true, 1)), "ALL_REQUIRED", java.util.List.of("完成")));
+            context.getBean(com.agentsquad.squad.service.WorkerDefinitionService.class).publish(
+                    new com.agentsquad.squad.identity.AuthView(USER_ID, "admin", java.util.List.of(AccountRole.ADMIN), null), key,
+                    new WorkerDefinitionCreateDTO(key, "1.0.0", "写作", json.readTree("{}"), json.readTree("{}"), java.util.List.of(), "default", "default"));
+            var snapshots = context.getBean(com.agentsquad.squad.service.ContextSnapshotService.class);
+            String one = snapshots.prepare(USER_ID, target.getSessionId(), "one", "one").snapshotId();
+            String two = snapshots.prepare(USER_ID, target.getSessionId(), "two", "two").snapshotId();
+            var plan = context.getBean(com.agentsquad.squad.service.PlanService.class).publish(USER_ID, target.getSessionId(),
+                    new PlanPublishBO("plan", 0, java.util.List.of(
+                            new PlanNodeBO("one", key, "1.0.0", "分析一", one, java.util.List.of(), true, 1),
+                            new PlanNodeBO("two", key, "1.0.0", "分析二", two, java.util.List.of(), true, 1)), "ALL_REQUIRED", java.util.List.of("完成")));
             String firstBinding = jdbc.queryForObject("SELECT binding_id FROM sq_worker_job WHERE job_id=?", String.class, plan.jobIds().getFirst());
             String secondBinding = jdbc.queryForObject("SELECT binding_id FROM sq_worker_job WHERE job_id=?", String.class, plan.jobIds().getLast());
-            var dispatch = context.getBean(com.agentsquad.squad.runtime.service.WorkerDispatchService.class);
+            var dispatch = context.getBean(com.agentsquad.squad.service.WorkerDispatchService.class);
             var claimed = dispatch.claim(USER_ID, firstBinding);
-            long version = context.getBean(TaskMapper.class).findOwned(USER_ID, target.taskId()).version();
-            context.getBean(TaskControlService.class).cancel(USER_ID, target.taskId(), "stop-jobs", version);
-            org.assertj.core.api.Assertions.assertThatThrownBy(() -> dispatch.renew(USER_ID, firstBinding, claimed.guardToken()))
-                    .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
+            long version = context.getBean(TaskMapper.class).findOwned(USER_ID, target.getTaskId()).getVersion();
+            context.getBean(TaskControlService.class).cancel(USER_ID, target.getTaskId(), "stop-jobs", version);
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> dispatch.renew(USER_ID, firstBinding, claimed.getGuardToken()))
+                    .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
             org.assertj.core.api.Assertions.assertThatThrownBy(() -> dispatch.claim(USER_ID, secondBinding))
-                    .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
-            var stops = jdbc.queryForList("SELECT command_id FROM sq_command WHERE task_id=? AND action='STOP' ORDER BY id", String.class, target.taskId());
+                    .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
+            var stops = jdbc.queryForList("SELECT command_id FROM sq_command WHERE task_id=? AND action='STOP' ORDER BY id", String.class, target.getTaskId());
             assertThat(stops).hasSize(3);
-            var delivery = context.getBean(com.agentsquad.squad.integration.agentscope.CommandDeliveryService.class);
+            var delivery = context.getBean(com.agentsquad.squad.service.CommandDeliveryService.class);
             for (String command : stops) {
                 delivery.deliver(command);
-                assertThat(context.getBean(CommandMapper.class).findOwned(USER_ID, command).nativeStatus()).isEqualTo("no-active-run");
+                assertThat(context.getBean(CommandMapper.class).findOwned(USER_ID, command).getNativeStatus()).isEqualTo("no-active-run");
             }
-            assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.taskId()).status()).isEqualTo("CANCELLED");
-            assertThat(jdbc.queryForList("SELECT status FROM sq_worker_job WHERE task_id=? ORDER BY id", String.class, target.taskId()))
+            assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.getTaskId()).getStatus()).isEqualTo("CANCELLED");
+            assertThat(jdbc.queryForList("SELECT status FROM sq_worker_job WHERE task_id=? ORDER BY id", String.class, target.getTaskId()))
                     .containsExactly("CANCELLED", "CANCELLED");
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_reservation WHERE user_id=?", Long.class, USER_ID)).isZero();
-            assertThat(context.getBean(GoalTaskService.class).listEvents(USER_ID, target.taskId(), 0).stream()
+            assertThat(context.getBean(GoalTaskService.class).listEvents(USER_ID, target.getTaskId(), 0).stream()
                     .filter(event -> event.type().equals("task.completed"))).hasSize(1);
         }
     }
@@ -387,7 +396,7 @@ class CompletionCorrectionIntegrationTest {
                 "--agentsquad.model.name=test-model");
     }
 
-    private ProjectionTarget createTask(ConfigurableApplicationContext context) {
+    private ProjectionTargetBO createTask(ConfigurableApplicationContext context) {
         ConversationMapper conversations = context.getBean(ConversationMapper.class);
         TaskMapper tasks = context.getBean(TaskMapper.class);
         BindingMapper bindings = context.getBean(BindingMapper.class);
@@ -404,11 +413,11 @@ class CompletionCorrectionIntegrationTest {
         conversations.activateTask(USER_ID, conversationId, taskId);
         events.insertAccepted(USER_ID, taskId, "command:" + UUID.randomUUID(),
                 "{\"taskId\":\"" + taskId + "\"}", now);
-        return new ProjectionTarget(USER_ID, taskId, bindingId, MasterAgentIdentity.AGENT_ID, sessionId, 0);
+        return new ProjectionTargetBO(USER_ID, taskId, bindingId, MasterAgentIdentity.AGENT_ID, sessionId, 0);
     }
 
-    private NativeEventView event(long sequence, String type, String turnId, String outcome) {
-        return new NativeEventView(sequence, UUID.randomUUID().toString(), type,
+    private NativeEventViewBO event(long sequence, String type, String turnId, String outcome) {
+        return new NativeEventViewBO(sequence, UUID.randomUUID().toString(), type,
                 UUID.randomUUID().toString(), turnId, outcome, System.currentTimeMillis(),
                 java.util.Map.of());
     }

@@ -1,5 +1,7 @@
 package com.agentsquad.squad.tools.operation;
 
+import com.agentsquad.squad.bo.OperationPreviewBO;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,16 +15,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * 操作参数日志脱敏回归验证（D6 3.2）。
  * <p>
- * 验证 OperationPreview 只公开固定白名单字段的类型和长度，隐藏实际内容，
+ * 验证 OperationPreviewBO 只公开固定白名单字段的类型和长度，隐藏实际内容，
  * 不回显任意用户文本、工具结果或嵌入凭据（apiKey/password/secret/token 等）。
  */
 class OperationPreviewMaskingTest {
 
-    private OperationPreview preview;
+    private OperationPreviewBO preview;
 
     @BeforeEach
     void setUp() {
-        preview = new OperationPreview();
+        preview = new OperationPreviewBO();
         ReflectionTestUtils.setField(preview, "objectMapper", new ObjectMapper());
     }
 

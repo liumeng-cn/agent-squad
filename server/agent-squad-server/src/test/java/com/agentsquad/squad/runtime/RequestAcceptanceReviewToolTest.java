@@ -1,9 +1,9 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.agent.tool.RequestAcceptanceReviewTool;
-import com.agentsquad.squad.runtime.domain.UserAcceptanceReview;
-import com.agentsquad.squad.runtime.dto.AcceptanceReviewRequest;
-import com.agentsquad.squad.runtime.service.PlanAcceptanceService;
+import com.agentsquad.squad.bo.UserAcceptanceReviewBO;
+import com.agentsquad.squad.bo.AcceptanceReviewRequestBO;
+import com.agentsquad.squad.service.PlanAcceptanceService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.ToolUseBlock;
@@ -36,8 +36,8 @@ class RequestAcceptanceReviewToolTest {
         when(param.getRuntimeContext()).thenReturn(RuntimeContext.builder().userId("user").sessionId("session").build());
         when(param.getToolUseBlock()).thenReturn(mock(ToolUseBlock.class));
         when(param.getInput()).thenReturn(Map.of("criterionId", "confirm", "expectedPlanVersion", 2));
-        var request = new AcceptanceReviewRequest("confirm", 2);
-        when(service.prepareUserReview("user", "session", request)).thenReturn(new UserAcceptanceReview("confirm", 2, "请确认结果", "hash"));
+        var request = new AcceptanceReviewRequestBO("confirm", 2);
+        when(service.prepareUserReview("user", "session", request)).thenReturn(new UserAcceptanceReviewBO("confirm", 2, "请确认结果", "hash"));
         assertThatThrownBy(() -> tool.callAsync(param).block(Duration.ofSeconds(3))).isInstanceOf(ToolSuspendException.class);
         verify(service).prepareUserReview("user", "session", request);
     }

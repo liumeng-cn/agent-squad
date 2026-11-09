@@ -1,0 +1,134 @@
+package com.agentsquad.squad.service;
+
+import com.agentsquad.squad.bo.ArtifactStageViewBO;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.bo.SandboxExecutionContextBO;
+import com.agentsquad.squad.po.SandboxRunPO;
+import com.agentsquad.squad.bo.SandboxDispatchClaimBO;
+import com.agentsquad.squad.bo.SandboxDriverResultBO;
+import com.agentsquad.squad.bo.SandboxExecuteRequestBO;
+import com.agentsquad.squad.bo.SandboxExecutionResultBO;
+import com.agentsquad.squad.mapper.SandboxMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.Resource;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * 分别在独立事务中准备沙箱派发、提交执行结果
+ * <p>
+ * IN_FLIGHT和预算先提交才执行容器；进程失联后保留占额，不自动重发原执行。
+ */
+@Service
+public class SandboxRunTransactionService {
+    private static final long UNITS_PER_SECOND = 1000;
+
+    @Resource
+    private SandboxAccessService access;
+
+    @Resource
+    private SandboxMapper mapper;
+
+    @Resource
+    private BudgetService budget;
+
+    @Resource
+    private ArtifactDeliveryService delivery;
+
+    @Resource
+    private ObjectMapper json;
+
+    @Transactional
+    public SandboxDispatchClaimBO begin(SandboxExecutionContextBO context, SandboxExecuteRequestBO request, String hash) {
+        access.requireCurrent(context);
+        SandboxRunPO prior = mapper.prior(context.userId(), context.bindingId(), request.logicalKey(),
+                context.turnId(), context.toolCallId());
+        if (prior != null) {
+            if (!hash.equals(prior.getRequestHash())) {
+                throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同沙箱调用键的输入不一致");
+            }
+            return new SandboxDispatchClaimBO(prior, false);
+        }
+        String id = UUID.randomUUID().toString();
+        budget.reserve(context.userId(), context.scopeId(), usageKey(id), "SANDBOX",
+                request.timeoutSeconds() * UNITS_PER_SECOND, "sandbox");
+        mapper.insert(id, context.userId(), context.scopeId(), context.bindingId(), request.logicalKey(),
+                context.turnId(), context.toolCallId(), hash,
+                LocalDateTime.now(ZoneOffset.UTC).plusSeconds(request.timeoutSeconds() + 120));
+        return new SandboxDispatchClaimBO(new SandboxRunPO(id, context.userId(), context.scopeId(), context.bindingId(), hash, "IN_FLIGHT", null), true);
+    }
+
+    @Transactional
+    public SandboxExecutionResultBO finish(SandboxExecutionContextBO context, String executionId,
+                                         SandboxExecuteRequestBO request, SandboxDriverResultBO result) {
+        access.requireCurrent(context);
+        List<ArtifactStageViewBO> stages = new ArrayList<>();
+        if (result.exitCode() == 0) {
+            for (var output : result.outputs()) {
+                stages.add(delivery.stage(context, executionId, output.path(), output.content()));
+            }
+        }
+        String status = result.exitCode() == 0 ? "SUCCEEDED" : "FAILED";
+        SandboxExecutionResultBO outcome = new SandboxExecutionResultBO(executionId, status, result.exitCode(),
+                result.stdout(), result.stderr(), result.truncated(), List.copyOf(stages));
+        if (mapper.finish(context.userId(), executionId, status, write(outcome)) != 1) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "沙箱结果已经失效，不能重复发布");
+        }
+        // 按固定时限价格保守出账，不能用不可信脚本自报的时间减少用量。
+        budget.settle(context.userId(), context.scopeId(), usageKey(executionId),
+                request.timeoutSeconds() * UNITS_PER_SECOND);
+        return outcome;
+    }
+
+    @Transactional
+    public void unknown(SandboxExecutionContextBO context, String executionId) {
+        budget.markUnknown(context.userId(), context.scopeId(), usageKey(executionId));
+        mapper.finish(context.userId(), executionId, "UNKNOWN", null);
+    }
+
+    /**
+     * 重启后把失联执行和预算一起转为待核对，锁顺序保持Scope、预算、执行账本。
+     * 已结束执行的预算结算不会被覆盖，也不会通过创建新容器重发。
+     */
+    @Transactional
+    public int expire(SandboxRunPO candidate) {
+        budget.markUnknown(candidate.getUserId(), candidate.getScopeId(), usageKey(candidate.getExecutionId()));
+        SandboxRunPO current = mapper.find(candidate.getUserId(), candidate.getExecutionId());
+        if (current == null || !"IN_FLIGHT".equals(current.getStatus())) {
+            return 0;
+        }
+        return mapper.expireOne(candidate.getUserId(), candidate.getExecutionId());
+    }
+
+    public SandboxExecutionResultBO replay(SandboxRunPO prior) {
+        if (!("SUCCEEDED".equals(prior.getStatus()) || "FAILED".equals(prior.getStatus())) || prior.getResultJson() == null) {
+            throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
+                    "沙箱执行已受理但结果待核对，不能自动重放");
+        }
+        try {
+            return json.treeToValue(com.agentsquad.squad.utils.RuntimePayloads.readJson(json, prior.getResultJson()), SandboxExecutionResultBO.class);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("沙箱持久结果损坏", exception);
+        }
+    }
+
+    private String write(SandboxExecutionResultBO result) {
+        try {
+            return json.writeValueAsString(result);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("沙箱结果序列化失败", exception);
+        }
+    }
+
+    private String usageKey(String executionId) {
+        return "sandbox:" + executionId;
+    }
+}

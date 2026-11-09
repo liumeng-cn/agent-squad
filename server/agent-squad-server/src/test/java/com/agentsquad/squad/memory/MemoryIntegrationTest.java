@@ -1,18 +1,18 @@
 package com.agentsquad.squad.memory;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
-import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
-import com.agentsquad.squad.conversation.service.ExecutionScopeService;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
-import com.agentsquad.squad.memory.domain.MemoryContextInvalidatedException;
-import com.agentsquad.squad.memory.dto.MemoryCreate;
-import com.agentsquad.squad.memory.dto.MemoryUpdate;
-import com.agentsquad.squad.memory.dto.MemoryWriteRequest;
-import com.agentsquad.squad.memory.service.ExplicitMemoryWriteService;
-import com.agentsquad.squad.memory.service.MemoryContextService;
-import com.agentsquad.squad.memory.service.MemoryService;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.dto.MessageCreateDTO;
+import com.agentsquad.squad.service.MessageAcceptanceService;
+import com.agentsquad.squad.service.ExecutionScopeService;
+import com.agentsquad.squad.service.GoalTaskService;
+import com.agentsquad.squad.exceptions.MemoryContextInvalidatedException;
+import com.agentsquad.squad.dto.MemoryCreateDTO;
+import com.agentsquad.squad.dto.MemoryUpdateDTO;
+import com.agentsquad.squad.bo.MemoryWriteRequestBO;
+import com.agentsquad.squad.service.ExplicitMemoryWriteService;
+import com.agentsquad.squad.service.MemoryContextService;
+import com.agentsquad.squad.service.MemoryService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
@@ -20,7 +20,6 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.nio.file.Path;
-import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
@@ -39,15 +38,15 @@ class MemoryIntegrationTest {
         try (var context = start(database(directory))) {
             MemoryService service = context.getBean(MemoryService.class);
             String user = UUID.randomUUID().toString();
-            var created = service.create(user, new MemoryCreate("language", "中文", null));
+            var created = service.create(user, new MemoryCreateDTO("language", "中文", null));
             String id = created.memory().memoryId();
-            assertThat(service.create(user, new MemoryCreate("language", "中文", null)).memory().memoryId()).isEqualTo(id);
-            assertThatThrownBy(() -> service.create(user, new MemoryCreate("language", "English", null))).isInstanceOf(RuntimeBusinessException.class);
-            assertThatThrownBy(() -> service.update("foreign", id, new MemoryUpdate(0, "English", null))).isInstanceOf(RuntimeBusinessException.class);
+            assertThat(service.create(user, new MemoryCreateDTO("language", "中文", null)).memory().memoryId()).isEqualTo(id);
+            assertThatThrownBy(() -> service.create(user, new MemoryCreateDTO("language", "English", null))).isInstanceOf(RuntimeBusinessException.class);
+            assertThatThrownBy(() -> service.update("foreign", id, new MemoryUpdateDTO(0, "English", null))).isInstanceOf(RuntimeBusinessException.class);
             assertThat(service.list("foreign", null, 20).items()).isEmpty();
-            var corrected = service.update(user, id, new MemoryUpdate(0, "简体中文", null));
+            var corrected = service.update(user, id, new MemoryUpdateDTO(0, "简体中文", null));
             assertThat(corrected.memory().version()).isEqualTo(1);
-            assertThatThrownBy(() -> service.update(user, id, new MemoryUpdate(0, "旧值", null))).isInstanceOf(RuntimeBusinessException.class);
+            assertThatThrownBy(() -> service.update(user, id, new MemoryUpdateDTO(0, "旧值", null))).isInstanceOf(RuntimeBusinessException.class);
             assertThat(service.search(user, "简体", 20).getFirst().content()).isEqualTo("简体中文");
             assertThat(service.list(user, null, 20).items().getFirst().content()).isEqualTo("简体中文");
         }
@@ -61,12 +60,12 @@ class MemoryIntegrationTest {
         String id;
         try (var context = start(database)) {
             var service = context.getBean(MemoryService.class);
-            id = service.create(user, new MemoryCreate("preference", "旧值", null)).memory().memoryId();
+            id = service.create(user, new MemoryCreateDTO("preference", "旧值", null)).memory().memoryId();
             scope = newScope(context, user, "请回复");
             var contexts = context.getBean(MemoryContextService.class);
             assertThat(contexts.freeze(user, scope).memories().getFirst().content()).isEqualTo("旧值");
             assertThatThrownBy(() -> contexts.select(user, scope, List.of(UUID.randomUUID().toString()))).isInstanceOf(RuntimeBusinessException.class);
-            var changed = service.update(user, id, new MemoryUpdate(0, "新值", null));
+            var changed = service.update(user, id, new MemoryUpdateDTO(0, "新值", null));
             assertThat(changed.affectedScopes()).isEqualTo(1);
             assertThatThrownBy(() -> contexts.requireCurrent(user, scope)).isInstanceOf(MemoryContextInvalidatedException.class);
             String next = newScope(context, user, "再回复");
@@ -91,7 +90,7 @@ class MemoryIntegrationTest {
         try (var context = start(database(directory))) {
             String user = UUID.randomUUID().toString();
             String id = context.getBean(MemoryService.class).create(user,
-                    new MemoryCreate("expiry", "有时效的内容", java.time.OffsetDateTime.now(ZoneOffset.UTC).plusHours(1))).memory().memoryId();
+                    new MemoryCreateDTO("expiry", "有时效的内容", java.time.OffsetDateTime.now(ZoneOffset.UTC).plusHours(1))).memory().memoryId();
             String scope = newScope(context, user, "读取有效内容");
             var contexts = context.getBean(MemoryContextService.class);
             assertThat(contexts.freeze(user, scope).memoryRevision()).isZero();
@@ -108,17 +107,17 @@ class MemoryIntegrationTest {
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE scope_id=?", String.class, scope);
             var service = context.getBean(ExplicitMemoryWriteService.class);
-            var request = new MemoryWriteRequest("remember", "CREATE", "language", "中文", null, null, "请记住：我喜欢中文回复");
+            var request = new MemoryWriteRequestBO("remember", "CREATE", "language", "中文", null, null, "请记住：我喜欢中文回复");
             var receipt = service.write(user, session, request);
             assertThat(service.write(user, session, request)).isEqualTo(receipt);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_memory WHERE user_id=?", Long.class, user)).isEqualTo(1);
             assertThat(jdbc.queryForObject("SELECT source_message_id FROM sq_memory WHERE memory_id=?", String.class, receipt.memoryId())).isNotBlank();
             assertThat(jdbc.queryForObject("SELECT result_json FROM sq_memory_write_receipt WHERE user_id=?", String.class, user)).doesNotContain("中文");
             assertThatThrownBy(() -> service.write(user, session,
-                    new MemoryWriteRequest("forged", "CREATE", "bad", "bad", null, null, "另一条用户消息")))
+                    new MemoryWriteRequestBO("forged", "CREATE", "bad", "bad", null, null, "另一条用户消息")))
                     .isInstanceOf(RuntimeBusinessException.class);
             assertThatThrownBy(() -> service.write(user, session,
-                    new MemoryWriteRequest("remember", "CREATE", "other", "bad", null, null, "请记住")))
+                    new MemoryWriteRequestBO("remember", "CREATE", "other", "bad", null, null, "请记住")))
                     .isInstanceOf(RuntimeBusinessException.class);
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             String conversation = tasks.createConversation(user, "禁止Worker写记忆").conversationId();
@@ -141,7 +140,7 @@ class MemoryIntegrationTest {
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE scope_id=?", String.class, scope);
             var service = context.getBean(ExplicitMemoryWriteService.class);
-            var request = new MemoryWriteRequest("rr-replay", "CREATE", "language", "中文", null, null, "请记住：优先中文回复");
+            var request = new MemoryWriteRequestBO("rr-replay", "CREATE", "language", "中文", null, null, "请记住：优先中文回复");
             var snapshotReady = new java.util.concurrent.CountDownLatch(1);
             var writerCommitted = new java.util.concurrent.CountDownLatch(1);
             var transactions = new org.springframework.transaction.support.TransactionTemplate(
@@ -180,21 +179,21 @@ class MemoryIntegrationTest {
             var service = context.getBean(MemoryService.class);
             var contexts = context.getBean(MemoryContextService.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            String oldId = service.create(user, new MemoryCreate("回复语言", "旧偏好", null)).memory().memoryId();
+            String oldId = service.create(user, new MemoryCreateDTO("回复语言", "旧偏好", null)).memory().memoryId();
             String oldScope = newScope(context, user, "使用原偏好回复");
             contexts.freeze(user, oldScope);
             service.delete(user, oldId, 0);
 
-            var recreated = service.create(user, new MemoryCreate("回复语言", "新偏好", null));
+            var recreated = service.create(user, new MemoryCreateDTO("回复语言", "新偏好", null));
             String newId = recreated.memory().memoryId();
             assertThat(newId).isNotEqualTo(oldId);
             assertThat(recreated.memory().version()).isZero();
-            assertThat(service.requireOwned(user, oldId).status()).isEqualTo("DELETED");
-            assertThat(service.requireOwned(user, oldId).content()).isEmpty();
-            assertThat(service.create(user, new MemoryCreate("回复语言", "新偏好", null)).memory().memoryId()).isEqualTo(newId);
-            assertThatThrownBy(() -> service.create(user, new MemoryCreate("回复语言", "覆盖新偏好", null)))
+            assertThat(service.requireOwned(user, oldId).getStatus()).isEqualTo("DELETED");
+            assertThat(service.requireOwned(user, oldId).getContent()).isEmpty();
+            assertThat(service.create(user, new MemoryCreateDTO("回复语言", "新偏好", null)).memory().memoryId()).isEqualTo(newId);
+            assertThatThrownBy(() -> service.create(user, new MemoryCreateDTO("回复语言", "覆盖新偏好", null)))
                     .isInstanceOf(RuntimeBusinessException.class);
-            assertThatThrownBy(() -> service.update(user, oldId, new MemoryUpdate(1, "不能复活", null)))
+            assertThatThrownBy(() -> service.update(user, oldId, new MemoryUpdateDTO(1, "不能复活", null)))
                     .isInstanceOf(RuntimeBusinessException.class);
             assertThatThrownBy(() -> contexts.requireCurrent(user, oldScope)).isInstanceOf(MemoryContextInvalidatedException.class);
             String fresh = newScope(context, user, "使用新偏好回复");
@@ -208,12 +207,12 @@ class MemoryIntegrationTest {
             String writeScope = newScope(context, user, "把回复语言改成英文");
             String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE scope_id=?", String.class, writeScope);
             var receipt = context.getBean(ExplicitMemoryWriteService.class).write(user, session,
-                    new MemoryWriteRequest("correct-current", "UPDATE", "回复语言", "英文", 0L, null, "把回复语言改成英文"));
+                    new MemoryWriteRequestBO("correct-current", "UPDATE", "回复语言", "英文", 0L, null, "把回复语言改成英文"));
             assertThat(receipt.memoryId()).isEqualTo(newId);
-            assertThat(service.requireOwned(user, oldId).status()).isEqualTo("DELETED");
-            assertThat(service.requireOwned(user, newId).content()).isEqualTo("英文");
+            assertThat(service.requireOwned(user, oldId).getStatus()).isEqualTo("DELETED");
+            assertThat(service.requireOwned(user, newId).getContent()).isEqualTo("英文");
             service.delete(user, newId, 1);
-            String thirdId = service.create(user, new MemoryCreate("回复语言", "第三次偏好", null)).memory().memoryId();
+            String thirdId = service.create(user, new MemoryCreateDTO("回复语言", "第三次偏好", null)).memory().memoryId();
             assertThat(thirdId).isNotIn(oldId, newId);
         }
     }
@@ -234,17 +233,17 @@ class MemoryIntegrationTest {
                 oldId, user, "可重新使用的键");
         try (var context = start(url, "classpath:db/schema.sql")) {
             MemoryService service = context.getBean(MemoryService.class);
-            String newId = service.create(user, new MemoryCreate("可重新使用的键", "升级后明确重新创建", null)).memory().memoryId();
+            String newId = service.create(user, new MemoryCreateDTO("可重新使用的键", "升级后明确重新创建", null)).memory().memoryId();
             assertThat(newId).isNotEqualTo(oldId);
-            assertThat(service.requireOwned(user, oldId).status()).isEqualTo("DELETED");
-            assertThat(service.requireOwned(user, oldId).version()).isEqualTo(1);
-            assertThat(service.requireOwned(user, oldId).content()).isEmpty();
+            assertThat(service.requireOwned(user, oldId).getStatus()).isEqualTo("DELETED");
+            assertThat(service.requireOwned(user, oldId).getVersion()).isEqualTo(1);
+            assertThat(service.requireOwned(user, oldId).getContent()).isEmpty();
             assertThat(service.search(user, "可重新使用的键", 20)).extracting(memory -> memory.memoryId()).containsExactly(newId);
         }
     }
 
     private String newScope(ConfigurableApplicationContext context, String user, String text) {
-        var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, UUID.randomUUID().toString(), new MessageCreateRequest(text, List.of()));
+        var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, UUID.randomUUID().toString(), new MessageCreateDTO(text, List.of()));
         return context.getBean(ExecutionScopeService.class).scopeForSession(user,
                 context.getBean(JdbcTemplate.class).queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=(SELECT binding_id FROM sq_response_execution WHERE execution_id=?)", String.class, receipt.executionId()));
     }

@@ -1,9 +1,9 @@
 package com.agentsquad.squad.agent.tool;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.runtime.dto.AbandonFailedJobRequest;
-import com.agentsquad.squad.runtime.service.WorkerFailureResolutionService;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.bo.AbandonFailedJobRequestBO;
+import com.agentsquad.squad.service.WorkerFailureResolutionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.tool.AgentTool;
@@ -57,7 +57,7 @@ public class AbandonFailedJobTool implements AgentTool {
                 return ToolResultBlock.error("工作处置参数或运行上下文无效");
             }
             try {
-                var request = json.convertValue(param.getInput(), AbandonFailedJobRequest.class);
+                var request = json.convertValue(param.getInput(), AbandonFailedJobRequestBO.class);
                 return ToolResultBlock.text(RuntimePayloads.toJson(json, resolutions.abandon(context.getUserId(), context.getSessionId(), request)));
             } catch (RuntimeBusinessException | IllegalArgumentException rejected) {
                 return ToolResultBlock.error(rejected.getMessage());

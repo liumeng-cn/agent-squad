@@ -159,7 +159,7 @@ class ConversationSsePushIntegrationTest {
                 long committedCursor = jdbc.queryForObject("SELECT native_event_cursor FROM sq_runtime_binding WHERE binding_id=?", Long.class, binding);
                 jdbc.update("DELETE FROM sq_runtime_event_inbox WHERE binding_id=? AND native_seq=?", binding, committedCursor);
                 jdbc.update("UPDATE sq_runtime_binding SET native_event_cursor=?,next_projection_at='2000-01-01' WHERE binding_id=?", committedCursor - 1, binding);
-                context.getBean(com.agentsquad.squad.integration.agentscope.RuntimeProjectionDispatcher.class).retryPending();
+                context.getBean(com.agentsquad.squad.service.RuntimeProjectionDispatcher.class).retryPending();
                 long restored = 0;
                 for (int i = 0; i < 100; i++) {
                     restored = jdbc.queryForObject("SELECT native_event_cursor FROM sq_runtime_binding WHERE binding_id=?", Long.class, binding);

@@ -128,7 +128,7 @@ agentsquad:
         model-request-timeout-seconds: 90
         tool-timeout-seconds: 30
 
-mybatis:
+mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   configuration:
     map-underscore-to-camel-case: false

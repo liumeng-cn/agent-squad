@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.Resource;
-import com.agentsquad.squad.config.repository.SchemaInspectionMapper;
+import com.agentsquad.squad.mapper.SchemaInspectionMapper;
 import org.springframework.dao.DataAccessException;
 import java.util.List;
 

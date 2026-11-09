@@ -1,5 +1,7 @@
 package com.agentsquad.squad.common.observability;
 
+import com.agentsquad.squad.observer.ObservationSupport;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -66,6 +68,19 @@ class ObservationSupportTest {
         assertEquals(true, result.get("truncated"));
         assertEquals("execution-1", result.get("executionId"));
         assertFalse(result.containsKey("path"));
+    }
+
+    @Test
+    void emitsFieldsInCanonicalOrderRegardlessOfInputMap() {
+        Map<String, Object> fields = Map.of(
+                "scopeId", "scope-1", "executionId", "execution-1", "modelId", "default",
+                "reasoningMode", "OFF", "outcome", "FAILED", "commandId", "command-1",
+                "preview", "你好", "reason", "模型未开通");
+
+        Map<String, Object> result = support().logFields(fields);
+
+        assertEquals(java.util.List.of("outcome", "reason", "preview", "modelId", "reasoningMode",
+                "executionId", "commandId", "scopeId"), java.util.List.copyOf(result.keySet()));
     }
 
     @Test

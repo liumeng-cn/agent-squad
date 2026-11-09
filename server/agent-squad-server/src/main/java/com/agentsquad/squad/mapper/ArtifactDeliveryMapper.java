@@ -1,0 +1,41 @@
+package com.agentsquad.squad.mapper;
+
+import com.agentsquad.squad.po.ArtifactStagePO;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+/**
+ * 隔离产物暂存与发布关联的
+ * <p>
+ * 暂存内容不通过下载入口公开，提交后记录唯一已发布产物ID。
+ */
+@Mapper
+public interface ArtifactDeliveryMapper {
+    int insert(@Param("stageId") String stageId, @Param("userId") String userId,
+               @Param("scopeId") String scopeId, @Param("bindingId") String bindingId,
+               @Param("executionId") String executionId, @Param("workspaceKey") String workspaceKey,
+               @Param("fileName") String fileName, @Param("hash") String hash, @Param("content") byte[] content,
+               @Param("expiresAt") java.time.LocalDateTime expiresAt);
+
+    ArtifactStagePO find(@Param("userId") String userId, @Param("stageId") String stageId);
+
+    ArtifactStagePO lock(@Param("userId") String userId, @Param("stageId") String stageId);
+
+    ArtifactStagePO findPath(@Param("userId") String userId, @Param("executionId") String executionId,
+                              @Param("workspaceKey") String workspaceKey);
+
+    int commit(@Param("userId") String userId, @Param("stageId") String stageId,
+               @Param("artifactId") String artifactId);
+
+    int expireArtifacts();
+
+    int clearScopeReferences();
+
+    int clearTaskReferences();
+
+    int clearMessageReferences();
+
+    int purgeContents();
+
+    int purgeStages();
+}

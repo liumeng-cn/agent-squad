@@ -1,20 +1,20 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.artifact.service.ArtifactService;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.conversation.repository.BindingMapper;
-import com.agentsquad.squad.conversation.repository.ExecutionScopeMapper;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
-import com.agentsquad.squad.governance.service.BudgetService;
+import com.agentsquad.squad.service.ArtifactService;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.mapper.BindingMapper;
+import com.agentsquad.squad.mapper.ExecutionScopeMapper;
+import com.agentsquad.squad.service.GoalTaskService;
+import com.agentsquad.squad.service.BudgetService;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.integration.agentscope.ModelBudgetMiddleware;
-import com.agentsquad.squad.interaction.service.InteractionService;
-import com.agentsquad.squad.interaction.service.InteractionQueryService;
-import com.agentsquad.squad.tools.operation.OperationExecutor;
-import com.agentsquad.squad.tools.operation.OperationService;
-import com.agentsquad.squad.tools.operation.PrepareRequest;
-import com.agentsquad.squad.tools.operation.domain.OperationRow;
+import com.agentsquad.squad.agent.middleware.ModelBudgetMiddleware;
+import com.agentsquad.squad.service.InteractionService;
+import com.agentsquad.squad.service.InteractionQueryService;
+import com.agentsquad.squad.service.OperationExecutorService;
+import com.agentsquad.squad.service.OperationService;
+import com.agentsquad.squad.bo.PrepareRequestBO;
+import com.agentsquad.squad.po.OperationPO;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.event.ModelCallEndEvent;
 import io.agentscope.core.middleware.ModelCallInput;
@@ -34,7 +34,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
-import com.agentsquad.squad.common.enums.identity.AccountRole;
+import com.agentsquad.squad.enums.AccountRole;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -100,7 +100,7 @@ class ScopeRuntimeOwnershipIntegrationTest {
         String artifact = artifacts.upload(userId, UUID.randomUUID().toString(), "source.txt", content).artifactId();
         artifacts.attachScope(userId, execution.scopeId(), List.of(artifact));
         assertThat(artifacts.listScope(userId, execution.scopeId())).extracting("artifactId").containsExactly(artifact);
-        assertThat(artifacts.content(userId, artifact).content()).isEqualTo(content);
+        assertThat(artifacts.content(userId, artifact).getContent()).isEqualTo(content);
         assertThatThrownBy(() -> artifacts.content(UUID.randomUUID().toString(), artifact))
                 .isInstanceOf(RuntimeBusinessException.class);
 
@@ -113,32 +113,32 @@ class ScopeRuntimeOwnershipIntegrationTest {
                 Long.class, userId)).isEqualTo(5);
 
         OperationService operations = context.getBean(OperationService.class);
-        OperationExecutor executor = context.getBean(OperationExecutor.class);
-        OperationRow read = operations.prepare(request(execution, "read-1", "mock_lookup", "READ", null, false, 2));
-        assertThat(read.taskId()).isNull();
-        assertThat(read.scopeId()).isEqualTo(execution.scopeId());
+        OperationExecutorService executor = context.getBean(OperationExecutorService.class);
+        OperationPO read = operations.prepare(request(execution, "read-1", "mock_lookup", "READ", null, false, 2));
+        assertThat(read.getTaskId()).isNull();
+        assertThat(read.getScopeId()).isEqualTo(execution.scopeId());
         assertThat(executor.execute(read, key -> "{\"found\":true}")).contains("found");
         operations.settle(read, 2);
-        PrepareRequest anotherTurn = new PrepareRequest(userId, execution.sessionId(), "another-turn", "read-1",
+        PrepareRequestBO anotherTurn = new PrepareRequestBO(userId, execution.sessionId(), "another-turn", "read-1",
                 "mock_lookup", "v1", "READ", Map.of("title", "受控测试", "detail", "仅本地模拟系统"),
                 null, false, null, 0, 2, "tester");
-        OperationRow secondRead = operations.prepare(anotherTurn);
-        assertThat(secondRead.budgetUsageKey()).isNotEqualTo(read.budgetUsageKey());
-        assertThat(secondRead.operationId()).isNotEqualTo(read.operationId());
+        OperationPO secondRead = operations.prepare(anotherTurn);
+        assertThat(secondRead.getBudgetUsageKey()).isNotEqualTo(read.getBudgetUsageKey());
+        assertThat(secondRead.getOperationId()).isNotEqualTo(read.getOperationId());
         executor.execute(secondRead, key -> "{}");
         operations.settle(secondRead, 2);
 
 
-        OperationRow write = operations.prepare(request(execution, "approve-1", "mock_ticket_create", "WRITE", "intent-1", true, 1000000));
-        assertThat(operations.prepare(request(execution, "other-call", "mock_ticket_create", "WRITE", "intent-1", true, 1000000)).operationId())
-                .isEqualTo(write.operationId());
+        OperationPO write = operations.prepare(request(execution, "approve-1", "mock_ticket_create", "WRITE", "intent-1", true, 1000000));
+        assertThat(operations.prepare(request(execution, "other-call", "mock_ticket_create", "WRITE", "intent-1", true, 1000000)).getOperationId())
+                .isEqualTo(write.getOperationId());
         InteractionService interactions = context.getBean(InteractionService.class);
         var approval = interactions.bindFrameworkRequest(userId, null, execution.bindingId(), null,
                 "fixed-scope-turn", "approve-1", Map.of("name", "mock_ticket_create"));
         jdbc.update("UPDATE sq_response_execution SET status = 'WAITING_APPROVAL' WHERE execution_id = ?", execution.executionId());
         AuthView actor = new AuthView(userId, "tester", List.of(AccountRole.USER), "csrf");
         var approved = interactions.respond(actor, approval.interactionId(), "approval-key", 0,
-                "APPROVAL", true, write.requestHash(), null);
+                "APPROVAL", true, write.getRequestHash(), null);
         assertThat(approved.taskId()).isNull();
         assertThat(jdbc.queryForObject("SELECT status FROM sq_response_execution WHERE execution_id = ?", String.class, execution.executionId())).isEqualTo("QUEUED");
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_mock_ticket WHERE user_id = ?", Integer.class, userId)).isEqualTo(1);
@@ -158,15 +158,15 @@ class ScopeRuntimeOwnershipIntegrationTest {
                 Integer.class, userId, execution.scopeId())).isEqualTo(2);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_goal_task WHERE user_id = ?", Integer.class, userId)).isZero();
 
-        OperationRow stopped = operations.prepare(request(execution, "stop-1", "mock_lookup", "READ", null, false, 2));
+        OperationPO stopped = operations.prepare(request(execution, "stop-1", "mock_lookup", "READ", null, false, 2));
         // 仅验证受控执行器的未知结果边界，不把连接器异常误记成“确定未执行”。
-        OperationRow uncertain = operations.prepare(request(execution, "uncertain-1", "mock_ticket_create", "WRITE", "intent-uncertain", true, 1000000));
+        OperationPO uncertain = operations.prepare(request(execution, "uncertain-1", "mock_ticket_create", "WRITE", "intent-uncertain", true, 1000000));
         AtomicInteger uncertainCalls = new AtomicInteger();
         assertThatThrownBy(() -> executor.execute(uncertain, key -> {
             uncertainCalls.incrementAndGet();
             throw new IllegalStateException("sensitive-connector-error");
         })).isInstanceOf(RuntimeBusinessException.class);
-        assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id = ?", String.class, uncertain.operationId()))
+        assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id = ?", String.class, uncertain.getOperationId()))
                 .isEqualTo("UNKNOWN");
         assertThatThrownBy(() -> executor.execute(uncertain, key -> {
             uncertainCalls.incrementAndGet();
@@ -174,7 +174,7 @@ class ScopeRuntimeOwnershipIntegrationTest {
         })).isInstanceOf(RuntimeBusinessException.class);
         assertThat(uncertainCalls).hasValue(1);
         assertThat(jdbc.queryForObject("SELECT status FROM sq_budget_reservation WHERE scope_id = ? AND usage_key = ?",
-                String.class, execution.scopeId(), uncertain.budgetUsageKey())).isEqualTo("RESERVED");
+                String.class, execution.scopeId(), uncertain.getBudgetUsageKey())).isEqualTo("RESERVED");
 
         assertThatThrownBy(() -> operations.prepare(request(execution, "blocked-by-unknown", "mock_lookup", "READ", null, false, 1)))
                 .isInstanceOf(RuntimeBusinessException.class);
@@ -230,7 +230,7 @@ class ScopeRuntimeOwnershipIntegrationTest {
         assertThatThrownBy(() -> budget.reserve(userId, second.scopeId(), "two", "TOOL", 40, "tester"))
                 .isInstanceOf(RuntimeBusinessException.class);
         budget.reserveModel(userId, second.scopeId(), "unknown-model", "a".repeat(64), "default",
-                context.getBean(com.agentsquad.squad.worker.profile.WorkerProfileRegistry.class).requireExecutableModel("default"));
+                context.getBean(com.agentsquad.squad.properties.WorkerProfileRegistry.class).requireExecutableModel("default"));
         budget.markModelUnknown(userId, second.scopeId(), "unknown-model");
         assertThatThrownBy(() -> budget.reserve(userId, first.scopeId(), "three", "TOOL", 11, "tester"))
                 .isInstanceOf(RuntimeBusinessException.class);
@@ -299,9 +299,9 @@ class ScopeRuntimeOwnershipIntegrationTest {
         return new ScopeTestExecution(userId, conversationId, executionId, scopeId, bindingId, sessionId, accountId);
     }
 
-    private static PrepareRequest request(ScopeTestExecution execution, String callId, String tool, String effect,
+    private static PrepareRequestBO request(ScopeTestExecution execution, String callId, String tool, String effect,
                                           String intent, boolean approval, long units) {
-        return new PrepareRequest(execution.userId(), execution.sessionId(), "fixed-scope-turn", callId, tool, "v1",
+        return new PrepareRequestBO(execution.userId(), execution.sessionId(), "fixed-scope-turn", callId, tool, "v1",
                 effect, Map.of("title", "受控测试", "detail", "仅本地模拟系统"), intent, approval, null, 0, units, "tester");
     }
 

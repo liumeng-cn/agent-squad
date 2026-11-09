@@ -1,5 +1,7 @@
 package com.agentsquad.squad.gateway.auth;
 
+import com.agentsquad.squad.vo.AuthVO;
+
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -26,7 +28,7 @@ public class InternalIdentitySigner {
             throw new IllegalStateException("生产内部断言密钥长度至少 32 字节");
     }
 
-    public String sign(AuthView actor,String method,String path) {
+    public String sign(AuthVO actor,String method,String path) {
         if(secret.getBytes(StandardCharsets.UTF_8).length<32) {
             if(strict) throw new IllegalStateException("内部签名密钥缺失");
             return null;

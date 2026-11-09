@@ -1,21 +1,21 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.conversation.domain.DeliveryRow;
-import com.agentsquad.squad.conversation.dto.MessageCreateRequest;
-import com.agentsquad.squad.conversation.dto.MessageReceipt;
-import com.agentsquad.squad.conversation.repository.DeliveryMapper;
-import com.agentsquad.squad.conversation.service.MessageAcceptanceService;
-import com.agentsquad.squad.conversation.service.ResponseControlService;
-import com.agentsquad.squad.integration.agentscope.CommandDeliveryService;
-import com.agentsquad.squad.integration.agentscope.NativeProjectionService;
-import com.agentsquad.squad.integration.agentscope.NativeEventView;
-import com.agentsquad.squad.runtime.service.CompletionProposalService;
-import com.agentsquad.squad.conversation.service.ResponseExecutionService;
-import com.agentsquad.squad.tools.operation.repository.OperationMapper;
-import com.agentsquad.squad.integration.agentscope.NativeSessionGateway;
-import com.agentsquad.squad.runtime.domain.MasterAgentIdentity;
-import com.agentsquad.squad.runtime.domain.ProjectionTarget;
+import com.agentsquad.squad.bo.DeliveryBO;
+import com.agentsquad.squad.dto.MessageCreateDTO;
+import com.agentsquad.squad.vo.MessageReceiptVO;
+import com.agentsquad.squad.mapper.DeliveryMapper;
+import com.agentsquad.squad.service.MessageAcceptanceService;
+import com.agentsquad.squad.service.ResponseControlService;
+import com.agentsquad.squad.service.CommandDeliveryService;
+import com.agentsquad.squad.service.NativeProjectionService;
+import com.agentsquad.squad.bo.NativeEventViewBO;
+import com.agentsquad.squad.service.CompletionProposalService;
+import com.agentsquad.squad.service.ResponseExecutionService;
+import com.agentsquad.squad.mapper.OperationMapper;
+import com.agentsquad.squad.agent.session.NativeSessionGateway;
+import com.agentsquad.squad.agent.MasterAgentIdentity;
+import com.agentsquad.squad.bo.ProjectionTargetBO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -51,8 +51,8 @@ class ResponseNativeExecutionIntegrationTest {
     void invalidSubmitPayloadIsBlockedThroughRealDelivery(String payload, @TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub();
              ConfigurableApplicationContext context = start(directory, model, false)) {
-            MessageReceipt receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "invalid",
-                    new MessageCreateRequest("不会发给模型", List.of()));
+            MessageReceiptVO receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "invalid",
+                    new MessageCreateDTO("不会发给模型", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             jdbc.update("UPDATE sq_command SET payload_json=?, due_at='2000-01-01' WHERE command_id=?",
                     payload, receipt.commandId());
@@ -69,8 +69,8 @@ class ResponseNativeExecutionIntegrationTest {
     void platformDeletionIntentIsNotBlockedOrExecutedByNativePoller(@TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub();
              ConfigurableApplicationContext context = start(directory, model, false)) {
-            MessageReceipt receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "platform-delete",
-                    new MessageCreateRequest("平台删除意图", List.of()));
+            MessageReceiptVO receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "platform-delete",
+                    new MessageCreateDTO("平台删除意图", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             jdbc.update("UPDATE sq_command SET action='DELETE_CONVERSATION', due_at='2000-01-01' WHERE command_id=?",
                     receipt.commandId());
@@ -89,8 +89,8 @@ class ResponseNativeExecutionIntegrationTest {
     void invalidRespondPayloadIsBlockedBeforeCallingSdk(@TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub();
              ConfigurableApplicationContext context = start(directory, model, false)) {
-            MessageReceipt receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "invalid-respond",
-                    new MessageCreateRequest("不会发给模型", List.of()));
+            MessageReceiptVO receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "invalid-respond",
+                    new MessageCreateDTO("不会发给模型", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             jdbc.update("UPDATE sq_command SET action='RESPOND', payload_json='{}', due_at='2000-01-01' WHERE command_id=?",
                     receipt.commandId());
@@ -105,8 +105,8 @@ class ResponseNativeExecutionIntegrationTest {
     void unknownPendingActionIsBlockedWithoutExpandingExecutableWhitelist(@TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub();
              ConfigurableApplicationContext context = start(directory, model, false)) {
-            MessageReceipt receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "unknown-action",
-                    new MessageCreateRequest("不会发给模型", List.of()));
+            MessageReceiptVO receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "unknown-action",
+                    new MessageCreateDTO("不会发给模型", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             jdbc.update("UPDATE sq_command SET action='UNSUPPORTED', due_at='2000-01-01' WHERE command_id=?",
                     receipt.commandId());
@@ -125,10 +125,10 @@ class ResponseNativeExecutionIntegrationTest {
         try (ResponseModelStub model = new ResponseModelStub(false, true);
              ConfigurableApplicationContext context = start(directory, model, true)) {
             MessageAcceptanceService messages = context.getBean(MessageAcceptanceService.class);
-            MessageReceipt first = messages.accept(USER, null, "same-idempotency",
-                    new MessageCreateRequest("隔离标记甲：只处理我的请求", List.of()));
-            MessageReceipt second = messages.accept(otherUser, null, "same-idempotency",
-                    new MessageCreateRequest("隔离标记乙：只处理我的请求", List.of()));
+            MessageReceiptVO first = messages.accept(USER, null, "same-idempotency",
+                    new MessageCreateDTO("隔离标记甲：只处理我的请求", List.of()));
+            MessageReceiptVO second = messages.accept(otherUser, null, "same-idempotency",
+                    new MessageCreateDTO("隔离标记乙：只处理我的请求", List.of()));
             assertThat(model.concurrentUsers.await(8, TimeUnit.SECONDS)).isTrue();
             assertThat(model.concurrencyTimedOut.get()).isFalse();
             await(context, first, "SUCCEEDED");
@@ -157,16 +157,16 @@ class ResponseNativeExecutionIntegrationTest {
     @Test
     void answersFollowUpWithoutCreatingTasks(@TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub()) {
-            MessageReceipt first;
+            MessageReceiptVO first;
             try (ConfigurableApplicationContext beforeSubmit = start(directory, model, false)) {
                 first = beforeSubmit.getBean(MessageAcceptanceService.class).accept(USER, null, "first",
-                        new MessageCreateRequest("主角叫小明", List.of()));
+                        new MessageCreateDTO("主角叫小明", List.of()));
                 assertThat(model.calls.get()).isZero();
             }
             try (ConfigurableApplicationContext context = start(directory, model, true)) {
                 MessageAcceptanceService messages = context.getBean(MessageAcceptanceService.class);
                 await(context, first, "SUCCEEDED");
-                MessageReceipt next = messages.accept(USER, first.conversationId(), "follow", new MessageCreateRequest("他叫什么？", List.of()));
+                MessageReceiptVO next = messages.accept(USER, first.conversationId(), "follow", new MessageCreateDTO("他叫什么？", List.of()));
                 await(context, next, "SUCCEEDED");
                 JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
                 assertThat(jdbc.queryForList("SELECT content FROM sq_message WHERE role='ASSISTANT' ORDER BY message_seq", String.class))
@@ -178,7 +178,7 @@ class ResponseNativeExecutionIntegrationTest {
             }
             try (ConfigurableApplicationContext context = start(directory, model, true)) {
                 Thread.sleep(300);
-                assertThat(context.getBean(MessageAcceptanceService.class).accept(USER, null, "first", new MessageCreateRequest("主角叫小明", List.of())).executionId())
+                assertThat(context.getBean(MessageAcceptanceService.class).accept(USER, null, "first", new MessageCreateDTO("主角叫小明", List.of())).executionId())
                         .isEqualTo(first.executionId());
                 assertThat(model.calls.get()).isEqualTo(4);
             }
@@ -189,26 +189,26 @@ class ResponseNativeExecutionIntegrationTest {
     @ValueSource(booleans = {false, true})
     void lostReceiptReusesSdkTurnAndCompletedJournal(boolean saveReceipt, @TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub()) {
-            MessageReceipt receipt;
+            MessageReceiptVO receipt;
             String turn;
             try (ConfigurableApplicationContext context = start(directory, model, false)) {
-                receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "lost", new MessageCreateRequest("主角叫小明", List.of()));
+                receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "lost", new MessageCreateDTO("主角叫小明", List.of()));
                 context.getBean(JdbcTemplate.class).update("UPDATE sq_command SET due_at='2000-01-01' WHERE command_id=?", receipt.commandId());
                 DeliveryMapper deliveries = context.getBean(DeliveryMapper.class);
                 String token = UUID.randomUUID().toString();
                 LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
                 assertThat(deliveries.claim(receipt.commandId(), token, now, now.plusSeconds(60))).isEqualTo(1);
-                DeliveryRow delivery = deliveries.findClaimed(receipt.commandId(), token);
+                DeliveryBO delivery = deliveries.findClaimed(receipt.commandId(), token);
                 NativeSessionGateway gateway = context.getBean(NativeSessionGateway.class);
                 if (saveReceipt) {
                     turn = gateway.submit(delivery, "主角叫小明").turnId();
                 } else {
                     // 模拟SDK已接受旧格式输入；接管时不能按新版上下文重编码同一提交键。
                     HarnessAgent previous = (HarnessAgent) ReflectionTestUtils.getField(gateway, "master");
-                    turn = previous.session(RuntimeContext.builder().userId(USER).sessionId(delivery.sessionId()).build())
-                            .submit(delivery.commandId(), "主角叫小明").turnId();
+                    turn = previous.session(RuntimeContext.builder().userId(USER).sessionId(delivery.getSessionId()).build())
+                            .submit(delivery.getCommandId(), "主角叫小明").turnId();
                 }
-                ProjectionTarget target = target(delivery);
+                ProjectionTargetBO target = target(delivery);
                 for (int i = 0; i < 150; i++) {
                     if ("completed".equals(gateway.inspectTask(target, receipt.commandId()).status())) {
                         break;
@@ -234,7 +234,7 @@ class ResponseNativeExecutionIntegrationTest {
                 assertThat(model.calls.get()).isEqualTo(2);
                 String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
                 String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
-                ProjectionTarget target = new ProjectionTarget(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
+                ProjectionTargetBO target = new ProjectionTargetBO(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
                 for (var event : context.getBean(NativeSessionGateway.class).readEvents(target, 0, 100)) {
                     context.getBean(NativeProjectionService.class).accept(target, event);
                 }
@@ -247,7 +247,7 @@ class ResponseNativeExecutionIntegrationTest {
     @Test
     void stopBeforeDeliveryCancelsOnlyReply(@TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub(); ConfigurableApplicationContext context = start(directory, model, false)) {
-            MessageReceipt receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "stop", new MessageCreateRequest("请回答", List.of()));
+            MessageReceiptVO receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "stop", new MessageCreateDTO("请回答", List.of()));
             var command = context.getBean(ResponseControlService.class).cancel(USER, receipt.executionId(), "stop-key", 0);
             context.getBean(JdbcTemplate.class).update("UPDATE sq_command SET due_at='2000-01-01' WHERE command_id=?", command.commandId());
             context.getBean(CommandDeliveryService.class).deliver(command.commandId());
@@ -261,8 +261,8 @@ class ResponseNativeExecutionIntegrationTest {
     void sealedWriterResumesSameTurnWithPersistedCandidate(@TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub(true);
              ConfigurableApplicationContext first = start(directory, model, false)) {
-            MessageReceipt receipt = first.getBean(MessageAcceptanceService.class).accept(USER, null, "crash",
-                    new MessageCreateRequest("主角叫小明", List.of()));
+            MessageReceiptVO receipt = first.getBean(MessageAcceptanceService.class).accept(USER, null, "crash",
+                    new MessageCreateDTO("主角叫小明", List.of()));
             first.getBean(JdbcTemplate.class).update("UPDATE sq_command SET due_at='2000-01-01' WHERE command_id=?", receipt.commandId());
             first.getBean(CommandDeliveryService.class).deliver(receipt.commandId());
             assertThat(model.blocked.await(10, TimeUnit.SECONDS)).isTrue();
@@ -294,17 +294,17 @@ class ResponseNativeExecutionIntegrationTest {
     @Test
     void revokedGenerationCannotPublishRecordedCandidate(@TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub(); ConfigurableApplicationContext context = start(directory, model, false)) {
-            MessageReceipt receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "revoked", new MessageCreateRequest("请回答", List.of()));
+            MessageReceiptVO receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "revoked", new MessageCreateDTO("请回答", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
             String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
             String turn = UUID.randomUUID().toString();
-            ProjectionTarget target = new ProjectionTarget(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
+            ProjectionTargetBO target = new ProjectionTargetBO(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
             NativeProjectionService projector = context.getBean(NativeProjectionService.class);
-            projector.accept(target, new NativeEventView(1, "start", "run/start", "run", turn, null, 0, java.util.Map.of()));
+            projector.accept(target, new NativeEventViewBO(1, "start", "run/start", "run", turn, null, 0, java.util.Map.of()));
             context.getBean(CompletionProposalService.class).propose(USER, session, turn, "proposal", "SUCCEEDED", "不应公开的旧候选");
             jdbc.update("UPDATE sq_conversation SET generation=generation+1 WHERE conversation_id=?", receipt.conversationId());
-            projector.accept(target, new NativeEventView(2, "end", "run/end", "run", turn, "completed", 0, java.util.Map.of()));
+            projector.accept(target, new NativeEventViewBO(2, "end", "run/end", "run", turn, "completed", 0, java.util.Map.of()));
             assertThat(jdbc.queryForObject("SELECT status FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId())).isEqualTo("CANCELLED");
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_message WHERE role='ASSISTANT'", Long.class)).isZero();
             assertThat(model.calls.get()).isZero();
@@ -314,18 +314,18 @@ class ResponseNativeExecutionIntegrationTest {
     @Test
     void unknownWritePreventsCompletionCorrectionAndPrematureCancellation(@TempDir Path directory) throws Exception {
         try (ResponseModelStub model = new ResponseModelStub(); ConfigurableApplicationContext context = start(directory, model, false)) {
-            MessageReceipt receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "unknown", new MessageCreateRequest("请处理", List.of()));
+            MessageReceiptVO receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "unknown", new MessageCreateDTO("请处理", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
             String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
             String turn = UUID.randomUUID().toString();
-            ProjectionTarget target = new ProjectionTarget(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
+            ProjectionTargetBO target = new ProjectionTargetBO(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
             NativeProjectionService projector = context.getBean(NativeProjectionService.class);
-            projector.accept(target, new NativeEventView(1, "start", "run/start", "run", turn, null, 0, java.util.Map.of()));
+            projector.accept(target, new NativeEventViewBO(1, "start", "run/start", "run", turn, null, 0, java.util.Map.of()));
             String operation = UUID.randomUUID().toString();
             context.getBean(OperationMapper.class).insert(operation, USER, null, null, binding, turn, "write", "mock_ticket_create", "1.0.0",
                     "intent", "WRITE", UUID.randomUUID().toString(), 0, 0, "0".repeat(64), "{}", "UNKNOWN", "tester", "tool:intent");
-            projector.accept(target, new NativeEventView(2, "end", "run/end", "run", turn, "completed", 0, java.util.Map.of()));
+            projector.accept(target, new NativeEventViewBO(2, "end", "run/end", "run", turn, "completed", 0, java.util.Map.of()));
             assertThat(jdbc.queryForObject("SELECT status FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId())).isEqualTo("RECONCILING");
             assertThat(jdbc.queryForObject("SELECT correction_count FROM sq_response_execution WHERE execution_id=?", Integer.class, receipt.executionId())).isZero();
             long version = jdbc.queryForObject("SELECT version FROM sq_response_execution WHERE execution_id=?", Long.class, receipt.executionId());
@@ -345,7 +345,7 @@ class ResponseNativeExecutionIntegrationTest {
     @Test
     void replyStopWaitsForWriterReleaseWithoutStartingQueuedWork(@TempDir Path directory) throws Exception {
         try (var model = new ResponseModelStub(); var context = start(directory, model, false)) {
-            var receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "stop-writer", new MessageCreateRequest("请回答", List.of()));
+            var receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "stop-writer", new MessageCreateDTO("请回答", List.of()));
             var jdbc = context.getBean(JdbcTemplate.class);
             String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
             String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
@@ -358,7 +358,7 @@ class ResponseNativeExecutionIntegrationTest {
             var stop = context.getBean(ResponseControlService.class).cancel(USER, receipt.executionId(), "stop", 0);
             context.getBean(CommandDeliveryService.class).deliver(stop.commandId());
             assertThat(jdbc.queryForObject("SELECT status FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId())).isEqualTo("CANCELLING");
-            var scheduler = context.getBean(com.agentsquad.squad.runtime.service.CancellationSettlementScheduler.class);
+            var scheduler = context.getBean(com.agentsquad.squad.service.CancellationSettlementSchedulerService.class);
             scheduler.settle();
             assertThat(jdbc.queryForObject("SELECT status FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId())).isEqualTo("CANCELLING");
             log.release(writer);
@@ -371,7 +371,7 @@ class ResponseNativeExecutionIntegrationTest {
     @Test
     void stopsReplyWhileModelConnectionIsBlocked(@TempDir Path directory) throws Exception {
         try (var model = new ResponseModelStub(true); var context = start(directory, model, true)) {
-            var receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "stop-active", new MessageCreateRequest("请回答", List.of()));
+            var receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "stop-active", new MessageCreateDTO("请回答", List.of()));
             assertThat(model.blocked.await(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
             var jdbc = context.getBean(JdbcTemplate.class);
             long version = jdbc.queryForObject("SELECT version FROM sq_response_execution WHERE execution_id=?", Long.class, receipt.executionId());
@@ -405,7 +405,7 @@ class ResponseNativeExecutionIntegrationTest {
                 "--agentsquad.worker.model-profiles.default.model-name=test-model");
     }
 
-    static void await(ConfigurableApplicationContext context, MessageReceipt receipt, String expected) throws Exception {
+    static void await(ConfigurableApplicationContext context, MessageReceiptVO receipt, String expected) throws Exception {
         String status = null;
         for (int i = 0; i < 200; i++) {
             status = context.getBean(JdbcTemplate.class).queryForObject("SELECT status FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
@@ -417,7 +417,7 @@ class ResponseNativeExecutionIntegrationTest {
         assertThat(status).isEqualTo(expected);
     }
 
-    private ProjectionTarget target(DeliveryRow delivery) {
-        return new ProjectionTarget(USER, null, delivery.bindingId(), delivery.agentId(), delivery.sessionId(), 0);
+    private ProjectionTargetBO target(DeliveryBO delivery) {
+        return new ProjectionTargetBO(USER, null, delivery.getBindingId(), delivery.getAgentId(), delivery.getSessionId(), 0);
     }
 }

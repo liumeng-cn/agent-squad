@@ -1,12 +1,12 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.common.enums.identity.AccountRole;
+import com.agentsquad.squad.enums.AccountRole;
 
 import com.agentsquad.squad.testsupport.TestAssertion;
-import com.agentsquad.squad.conversation.service.ConversationCleanupScheduler;
-import com.agentsquad.squad.conversation.service.ConversationDeletionService;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
-import com.agentsquad.squad.conversation.service.ResponseExecutionService;
+import com.agentsquad.squad.service.ConversationCleanupSchedulerService;
+import com.agentsquad.squad.service.ConversationDeletionService;
+import com.agentsquad.squad.service.GoalTaskService;
+import com.agentsquad.squad.service.ResponseExecutionService;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -72,7 +72,7 @@ class ResponseControlHttpTest {
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             context.getBean(ConversationDeletionService.class).delete(user, receipt.conversationId(), "delete",
                     tasks.getConversation(user, receipt.conversationId()).version());
-            ConversationCleanupScheduler cleanup = context.getBean(ConversationCleanupScheduler.class);
+            ConversationCleanupSchedulerService cleanup = context.getBean(ConversationCleanupSchedulerService.class);
             cleanup.cleanupDeletingConversations();
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             assertThat(jdbc.queryForObject("SELECT status FROM sq_conversation WHERE conversation_id=?", String.class, receipt.conversationId())).isEqualTo("DELETING");

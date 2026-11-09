@@ -1,20 +1,20 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.conversation.dto.ConversationResponse;
-import com.agentsquad.squad.conversation.dto.TaskReceipt;
-import com.agentsquad.squad.conversation.service.GoalTaskService;
+import com.agentsquad.squad.vo.ConversationVO;
+import com.agentsquad.squad.vo.TaskReceiptVO;
+import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.integration.agentscope.CommandDeliveryService;
-import com.agentsquad.squad.integration.agentscope.NativeProjectionPoller;
-import com.agentsquad.squad.integration.agentscope.WorkerFactory;
-import com.agentsquad.squad.runtime.dto.PlanNode;
-import com.agentsquad.squad.runtime.dto.PlanPublish;
-import com.agentsquad.squad.runtime.dto.PlanReceipt;
-import com.agentsquad.squad.runtime.service.ContextSnapshotService;
-import com.agentsquad.squad.runtime.service.PlanService;
-import com.agentsquad.squad.worker.service.WorkerDefinitionService;
-import com.agentsquad.squad.worker.dto.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.service.CommandDeliveryService;
+import com.agentsquad.squad.service.NativeProjectionPoller;
+import com.agentsquad.squad.agent.WorkerFactory;
+import com.agentsquad.squad.bo.PlanNodeBO;
+import com.agentsquad.squad.bo.PlanPublishBO;
+import com.agentsquad.squad.bo.PlanReceiptBO;
+import com.agentsquad.squad.service.ContextSnapshotService;
+import com.agentsquad.squad.service.PlanService;
+import com.agentsquad.squad.service.WorkerDefinitionService;
+import com.agentsquad.squad.dto.WorkerDefinitionCreateDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import io.agentscope.harness.agent.session.AgentSession;
@@ -30,7 +30,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import com.agentsquad.squad.common.enums.identity.AccountRole;
+import com.agentsquad.squad.enums.AccountRole;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -111,13 +111,13 @@ class WorkerCrashRecoveryIntegrationTest {
                 JdbcTemplate jdbc = first.getBean(JdbcTemplate.class);
                 WorkerDefinitionService definitions = first.getBean(WorkerDefinitionService.class);
                 definitions.publish(new AuthView(userId, "admin", List.of(AccountRole.ADMIN), "csrf"),
-                        "crash-writer", new WorkerDefinitionCreateRequest(
+                        "crash-writer", new WorkerDefinitionCreateDTO(
                                 "crash-writer", "1.0.0", "写摘要",
                                 json.readTree("{}"), json.readTree("{}"),
                                 List.of(), "default", "default"));
                 GoalTaskService tasks = first.getBean(GoalTaskService.class);
-                ConversationResponse conversation = tasks.createConversation(userId, "崩溃恢复");
-                TaskReceipt task = tasks.submit(userId, conversation.conversationId(),
+                ConversationVO conversation = tasks.createConversation(userId, "崩溃恢复");
+                TaskReceiptVO task = tasks.submit(userId, conversation.conversationId(),
                         "crash-goal", "写一段摘要");
                 jdbc.update("UPDATE sq_command SET status = 'CANCELLED' WHERE command_id = ?",
                         task.commandId());
@@ -129,11 +129,11 @@ class WorkerCrashRecoveryIntegrationTest {
                         userId, masterSession, "draft", "draft-context").snapshotId();
                 String otherSnapshot = first.getBean(ContextSnapshotService.class).prepare(
                         userId, masterSession, "outline", "outline-context").snapshotId();
-                PlanReceipt plan = first.getBean(PlanService.class).publish(userId, masterSession,
-                        new PlanPublish("crash-plan", 0, List.of(
-                                new PlanNode("outline", "crash-writer", "1.0.0", "写提纲",
+                PlanReceiptBO plan = first.getBean(PlanService.class).publish(userId, masterSession,
+                        new PlanPublishBO("crash-plan", 0, List.of(
+                                new PlanNodeBO("outline", "crash-writer", "1.0.0", "写提纲",
                                         otherSnapshot, List.of(), true, 1),
-                                new PlanNode("draft", "crash-writer", "1.0.0", "写摘要",
+                                new PlanNodeBO("draft", "crash-writer", "1.0.0", "写摘要",
                                         snapshot, List.of(), true, 1)),
                                 "ALL_REQUIRED", List.of("摘要完成")));
                 String successfulJobId = plan.jobIds().getFirst();
@@ -174,7 +174,7 @@ class WorkerCrashRecoveryIntegrationTest {
                 // 通过真实业务服务建立已提交候选夹具；旧模型调用仍阻塞，保留尚未结束的writer。
                 String guard = jdbc.queryForObject("SELECT guard_token FROM sq_worker_job WHERE job_id = ?", String.class, jobId);
                 String turn = jdbc.queryForObject("SELECT native_turn_id FROM sq_command WHERE command_id = ?", String.class, commandId);
-                first.getBean(com.agentsquad.squad.runtime.service.WorkerResultService.class).propose(
+                first.getBean(com.agentsquad.squad.service.WorkerResultService.class).propose(
                         userId, bindingId, guard, turn, json.readTree("{\"text\":\"候选摘要\"}"));
                 for (int attempt = 0; attempt < 100; attempt++) {
                     String candidate = jdbc.queryForObject(

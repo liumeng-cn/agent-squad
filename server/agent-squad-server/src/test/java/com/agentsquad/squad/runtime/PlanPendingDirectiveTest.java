@@ -1,17 +1,17 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.conversation.domain.TaskDirectiveRow;
-import com.agentsquad.squad.conversation.domain.TaskGoalState;
-import com.agentsquad.squad.conversation.domain.TaskRow;
-import com.agentsquad.squad.conversation.repository.TaskDirectiveMapper;
-import com.agentsquad.squad.conversation.repository.TaskMapper;
-import com.agentsquad.squad.conversation.service.ExecutionScopeService;
-import com.agentsquad.squad.runtime.domain.PlanContextRow;
-import com.agentsquad.squad.runtime.dto.PlanNode;
-import com.agentsquad.squad.runtime.dto.PlanPublish;
-import com.agentsquad.squad.runtime.repository.PlanMapper;
-import com.agentsquad.squad.runtime.service.PlanService;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.po.TaskDirectivePO;
+import com.agentsquad.squad.bo.TaskGoalStateBO;
+import com.agentsquad.squad.po.TaskPO;
+import com.agentsquad.squad.mapper.TaskDirectiveMapper;
+import com.agentsquad.squad.mapper.TaskMapper;
+import com.agentsquad.squad.service.ExecutionScopeService;
+import com.agentsquad.squad.bo.PlanContextBO;
+import com.agentsquad.squad.bo.PlanNodeBO;
+import com.agentsquad.squad.bo.PlanPublishBO;
+import com.agentsquad.squad.mapper.PlanMapper;
+import com.agentsquad.squad.service.PlanService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -43,28 +43,28 @@ class PlanPendingDirectiveTest {
         ReflectionTestUtils.setField(service, "executionScopes", scopes);
         ReflectionTestUtils.setField(service, "objectMapper", json);
         when(plans.lockMasterContext("user", "session")).thenReturn(
-                new PlanContextRow("user", "task", "binding", 0, "RUNNING", false, 1, "ACTIVE"));
-        when(directives.goalState("user", "task")).thenReturn(new TaskGoalState(1, "{}"));
+                new PlanContextBO("user", "task", "binding", 0, "RUNNING", false, 1, "ACTIVE"));
+        when(directives.goalState("user", "task")).thenReturn(new TaskGoalStateBO(1, "{}"));
         when(directives.pending("user", "task")).thenReturn(List.of("first", "second"));
-        TaskRow task = mock(TaskRow.class);
-        when(task.version()).thenReturn(9L);
+        TaskPO task = mock(TaskPO.class);
+        when(task.getVersion()).thenReturn(9L);
         when(tasks.lockOwnedRow("user", "task")).thenReturn(task);
         for (String id : List.of("first", "second")) {
-            TaskDirectiveRow row = mock(TaskDirectiveRow.class);
-            when(row.directiveId()).thenReturn(id);
-            when(row.taskId()).thenReturn("task");
-            when(row.status()).thenReturn("ACCEPTED");
-            when(row.kind()).thenReturn("SUPPLEMENT");
-            when(row.content()).thenReturn("private-directive-text");
-            when(row.expectedVersion()).thenReturn(2L);
+            TaskDirectivePO row = mock(TaskDirectivePO.class);
+            when(row.getDirectiveId()).thenReturn(id);
+            when(row.getTaskId()).thenReturn("task");
+            when(row.getStatus()).thenReturn("ACCEPTED");
+            when(row.getKind()).thenReturn("SUPPLEMENT");
+            when(row.getContent()).thenReturn("private-directive-text");
+            when(row.getExpectedVersion()).thenReturn(2L);
             when(directives.lock("user", id)).thenReturn(row);
         }
-        PlanPublish request = new PlanPublish("plan", 0,
-                List.of(new PlanNode("node", "worker", "v1", "goal", "snapshot", List.of(), true, 0)),
+        PlanPublishBO request = new PlanPublishBO("plan", 0,
+                List.of(new PlanNodeBO("node", "worker", "v1", "goal", "snapshot", List.of(), true, 0)),
                 "ALL_REQUIRED", List.of("done"));
         RuntimeBusinessException failure = assertThrows(RuntimeBusinessException.class,
                 () -> service.publish("user", "session", request));
-        var pending = (com.agentsquad.squad.runtime.service.PendingDirectivesException) failure;
+        var pending = (com.agentsquad.squad.exceptions.PendingDirectivesException) failure;
         assertThat(pending.directives()).hasSize(2);
         assertThat(pending.directives().get(0).directiveId()).isEqualTo("first");
         assertThat(pending.directives().get(1).directiveId()).isEqualTo("second");

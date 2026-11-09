@@ -1,10 +1,10 @@
 package com.agentsquad.squad.agent.tool;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.worker.service.WorkerDefinitionService;
-import com.agentsquad.squad.worker.dto.WorkerDefinitionPage;
-import com.agentsquad.squad.worker.dto.WorkerDefinitionResponse;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.service.WorkerDefinitionService;
+import com.agentsquad.squad.vo.WorkerDefinitionPageVO;
+import com.agentsquad.squad.vo.WorkerDefinitionVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.tool.AgentTool;
@@ -80,7 +80,7 @@ public class ListWorkerCapabilitiesTool implements AgentTool {
                 return ToolResultBlock.error("须同时指定 workerKey 和 workerVersion");
             }
             try {
-                WorkerDefinitionResponse definition = definitionService.requireEnabled(key, version);
+                WorkerDefinitionVO definition = definitionService.requireEnabled(key, version);
                 return ToolResultBlock.text(RuntimePayloads.toJson(objectMapper, definition));
             } catch (RuntimeBusinessException exception) {
                 return ToolResultBlock.error(exception.getMessage());
@@ -99,7 +99,7 @@ public class ListWorkerCapabilitiesTool implements AgentTool {
             return ToolResultBlock.error("能力目录每页最多 20 条");
         }
         try {
-            WorkerDefinitionPage page = definitionService.listEnabled(cursor, limit);
+            WorkerDefinitionPageVO page = definitionService.listEnabled(cursor, limit);
             List<Map<String, String>> summaries = page.items().stream()
                     .map(definition -> Map.of(
                             "workerKey", definition.workerKey(),

@@ -1,19 +1,18 @@
 package com.agentsquad.squad.presentation.stream;
 
-import com.agentsquad.squad.identity.UserStatusGuard;
-import com.agentsquad.squad.presentation.dto.ConversationEvent;
-import com.agentsquad.squad.presentation.dto.ReplyPreview;
-import com.agentsquad.squad.presentation.domain.ReplyPreviewPhase;
-import com.agentsquad.squad.presentation.service.ConversationQueryService;
-import com.agentsquad.squad.presentation.service.ConversationStreamHub;
-import com.agentsquad.squad.presentation.service.ConversationStreamKey;
-import com.agentsquad.squad.presentation.service.ConversationSubscriber;
+import com.agentsquad.squad.service.UserStatusGuardService;
+import com.agentsquad.squad.bo.ConversationEventBO;
+import com.agentsquad.squad.bo.ReplyPreviewBO;
+import com.agentsquad.squad.enums.ReplyPreviewPhase;
+import com.agentsquad.squad.service.ConversationQueryService;
+import com.agentsquad.squad.service.ConversationStreamHubService;
+import com.agentsquad.squad.bo.ConversationStreamKeyBO;
+import com.agentsquad.squad.service.ConversationSubscriberService;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -34,10 +33,10 @@ class ConversationStreamHubTest {
         var emitter = new RecordingSseEmitter();
         var executor = new QueuedExecutor();
         var subscription = subscriber(emitter, executor, () -> { });
-        var answer = new ReplyPreview(2, "execution", "message", "run", "stream", 2, 0,
+        var answer = new ReplyPreviewBO(2, "execution", "message", "run", "stream", 2, 0,
                 "正文首段", ReplyPreviewPhase.ANSWERING, true, true);
         subscription.preview(answer);
-        subscription.preview(new ReplyPreview(2, "execution", "message", "run", "stream", 1, 0,
+        subscription.preview(new ReplyPreviewBO(2, "execution", "message", "run", "stream", 1, 0,
                 "", ReplyPreviewPhase.THINKING, true, true));
         executor.runNext();
         assertThat(emitter.previews).containsExactly(answer);
@@ -46,9 +45,9 @@ class ConversationStreamHubTest {
     @Test
     void twoSubscribersShareOneCommittedEventRead() {
         var queries = mock(ConversationQueryService.class);
-        var users = mock(UserStatusGuard.class);
+        var users = mock(UserStatusGuardService.class);
         when(queries.events(eq("user"), eq("conversation"), anyString())).thenReturn(List.of(event(1)));
-        var hub = new ConversationStreamHub(new ConversationStreamKey("user", "conversation"), queries, users, Runnable::run);
+        var hub = new ConversationStreamHubService(new ConversationStreamKeyBO("user", "conversation"), queries, users, Runnable::run);
         var first = new RecordingSseEmitter();
         var second = new RecordingSseEmitter();
         hub.add("first", subscriber(first, Runnable::run, () -> {
@@ -64,9 +63,9 @@ class ConversationStreamHubTest {
     @Test
     void coalescedNotificationDuringReadIsNotLost() {
         var queries = mock(ConversationQueryService.class);
-        var users = mock(UserStatusGuard.class);
+        var users = mock(UserStatusGuardService.class);
         var executor = new QueuedExecutor();
-        var hub = new ConversationStreamHub(new ConversationStreamKey("user", "conversation"), queries, users, executor);
+        var hub = new ConversationStreamHubService(new ConversationStreamKeyBO("user", "conversation"), queries, users, executor);
         var calls = new AtomicInteger();
         when(queries.events(eq("user"), eq("conversation"), anyString())).thenAnswer(call -> {
             int count = calls.incrementAndGet();
@@ -85,7 +84,7 @@ class ConversationStreamHubTest {
         assertThat(executor.tasks).hasSize(1);
         executor.runNext();
         assertThat(calls).hasValue(2);
-        assertThat(emitter.events.stream().map(ConversationEvent::sequence)).containsExactly(1L, 2L);
+        assertThat(emitter.events.stream().map(ConversationEventBO::sequence)).containsExactly(1L, 2L);
         assertThat(executor.tasks).isEmpty();
     }
 
@@ -132,13 +131,13 @@ class ConversationStreamHubTest {
         assertThat(emitter.events).isEmpty();
     }
 
-    private ConversationSubscriber subscriber(RecordingSseEmitter emitter, java.util.concurrent.Executor sender, Runnable release) {
-        return new ConversationSubscriber(emitter, "conversation:1:0", sender, release, () -> {
+    private ConversationSubscriberService subscriber(RecordingSseEmitter emitter, java.util.concurrent.Executor sender, Runnable release) {
+        return new ConversationSubscriberService(emitter, "conversation:1:0", sender, release, () -> {
         });
     }
 
-    private ConversationEvent event(long sequence) {
-        return new ConversationEvent("conversation", 1, sequence, "message.completed", "2026-11-04T00:00:00Z",
+    private ConversationEventBO event(long sequence) {
+        return new ConversationEventBO("conversation", 1, sequence, "message.completed", "2026-11-04T00:00:00Z",
                 JsonNodeFactory.instance.objectNode());
     }
 }
