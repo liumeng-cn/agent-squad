@@ -68,7 +68,7 @@ public class ConnectionService {
 
         String connectionId = UUID.randomUUID().toString();
         String secretRef = secretVault.store(request.secret());
-        connectionMapper.insert(connectionId, actor.userId(), actor.username(), request.name(),
+        connectionMapper.insertConnection(connectionId, actor.userId(), actor.username(), request.name(),
                 request.provider(), request.environment(), policyJson, secretRef, idempotencyKey);
         log.info("连接创建成功 userId={} connectionId={} provider={} environment={}",
                 actor.userId(), connectionId, request.provider(), request.environment());

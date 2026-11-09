@@ -78,7 +78,7 @@ public class WorkerDefinitionService {
 
         String definitionId = UUID.randomUUID().toString();
         try {
-            definitionMapper.insert(definitionId, request.workerKey(), request.workerVersion(),
+            definitionMapper.insertDefinition(definitionId, request.workerKey(), request.workerVersion(),
                     json, idempotencyKey, hash, actor.userId(), actor.username());
         } catch (DuplicateKeyException exception) {
             WorkerDefinitionPO concurrent = definitionMapper.findByPublishKey(actor.userId(), idempotencyKey);

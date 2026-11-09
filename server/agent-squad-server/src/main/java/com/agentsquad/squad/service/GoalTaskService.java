@@ -79,7 +79,7 @@ public class GoalTaskService {
     @Transactional
     public ConversationVO createConversation(String userId, String title) {
         String conversationId = UUID.randomUUID().toString();
-        conversationMapper.insert(conversationId, userId, title);
+        conversationMapper.insertConversation(conversationId, userId, title);
         log.info("对话创建成功 conversationId={} userId={}", conversationId, userId);
         return new ConversationVO(conversationId, title, 0, ConversationStatus.ACTIVE.name(), 0, null);
     }

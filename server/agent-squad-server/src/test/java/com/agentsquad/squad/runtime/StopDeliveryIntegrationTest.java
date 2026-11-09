@@ -64,7 +64,7 @@ class StopDeliveryIntegrationTest {
             String commandId = UUID.randomUUID().toString();
             LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
 
-            conversationMapper.insert(conversationId, userId, "停止投递");
+            conversationMapper.insertConversation(conversationId, userId, "停止投递");
             taskMapper.insert(taskId, userId, conversationId, "{\"message\":\"停止我\"}", 5000000L);
             context.getBean(ExecutionScopeService.class).createTaskScope(userId, taskId, conversationId, 0, "STANDARD", 5000000L);
             bindingMapper.insertMaster(bindingId, userId, taskId, MasterAgentIdentity.AGENT_ID,

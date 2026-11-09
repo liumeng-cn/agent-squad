@@ -2,6 +2,8 @@ package com.agentsquad.squad.mapper;
 
 import com.agentsquad.squad.enums.WorkerDefinitionStatus;
 import com.agentsquad.squad.po.WorkerDefinitionPO;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -13,19 +15,22 @@ import java.util.List;
  * 发布只插入不可变正文；状态通过乐观版本单独更新。
  */
 @Mapper
-public interface WorkerDefinitionMapper {
+public interface WorkerDefinitionMapper extends BaseMapper<WorkerDefinitionPO> {
 
     String COLUMNS = "id, definition_id, worker_key, worker_version, status, version, "
             + "definition_json, publish_key, payload_hash, last_status_key, last_status_actor, last_status_hash";
 
-    int insert(@Param("definitionId") String definitionId, @Param("workerKey") String workerKey,
+    int insertDefinition(@Param("definitionId") String definitionId, @Param("workerKey") String workerKey,
                @Param("workerVersion") String workerVersion, @Param("definitionJson") String definitionJson,
                @Param("publishKey") String publishKey, @Param("payloadHash") String payloadHash,
                @Param("actorId") String actorId, @Param("actorName") String actorName);
 
     WorkerDefinitionPO findByPublishKey(@Param("actorId") String actorId, @Param("publishKey") String publishKey);
 
-    WorkerDefinitionPO findByDefinitionId(@Param("definitionId") String definitionId);
+    default WorkerDefinitionPO findByDefinitionId(String definitionId) {
+        return selectOne(new QueryWrapper<WorkerDefinitionPO>()
+                .eq("definition_id", definitionId));
+    }
 
     List<WorkerDefinitionPO> listAfter(@Param("afterId") long afterId, @Param("limit") int limit);
 

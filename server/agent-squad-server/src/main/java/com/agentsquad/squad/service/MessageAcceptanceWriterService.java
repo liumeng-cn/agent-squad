@@ -103,7 +103,7 @@ public class MessageAcceptanceWriterService {
         }
         if (conversation == null) {
             conversationId = UUID.randomUUID().toString();
-            conversations.insert(conversationId, userId, fallbackTitle(request.text()));
+            conversations.insertConversation(conversationId, userId, fallbackTitle(request.text()));
             messages.markFallbackTitle(userId, conversationId);
             conversation = lockConversation(userId, conversationId);
         }

@@ -19,23 +19,6 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="findByDefinitionIdResult" type="com.agentsquad.squad.po.WorkerDefinitionPO">
-        <constructor>
-            <arg column="id" javaType="_long"/>
-            <arg column="definition_id" javaType="java.lang.String"/>
-            <arg column="worker_key" javaType="java.lang.String"/>
-            <arg column="worker_version" javaType="java.lang.String"/>
-            <arg column="status" javaType="com.agentsquad.squad.enums.WorkerDefinitionStatus"/>
-            <arg column="version" javaType="_long"/>
-            <arg column="definition_json" javaType="java.lang.String"/>
-            <arg column="publish_key" javaType="java.lang.String"/>
-            <arg column="payload_hash" javaType="java.lang.String"/>
-            <arg column="last_status_key" javaType="java.lang.String"/>
-            <arg column="last_status_actor" javaType="java.lang.String"/>
-            <arg column="last_status_hash" javaType="java.lang.String"/>
-        </constructor>
-    </resultMap>
-
     <resultMap id="listAfterResult" type="com.agentsquad.squad.po.WorkerDefinitionPO">
         <constructor>
             <arg column="id" javaType="_long"/>
@@ -104,7 +87,7 @@
         </constructor>
     </resultMap>
 
-    <insert id="insert">
+    <insert id="insertDefinition">
         INSERT INTO sq_worker_definition
             (definition_id,
             worker_key,
@@ -144,21 +127,6 @@
             last_status_key,
             last_status_actor,
             last_status_hash FROM sq_worker_definition WHERE creator_id = #{actorId} AND publish_key = #{publishKey}
-    </select>
-
-    <select id="findByDefinitionId" resultMap="findByDefinitionIdResult">
-        SELECT id,
-            definition_id,
-            worker_key,
-            worker_version,
-            status,
-            version,
-            definition_json,
-            publish_key,
-            payload_hash,
-            last_status_key,
-            last_status_actor,
-            last_status_hash FROM sq_worker_definition WHERE definition_id = #{definitionId}
     </select>
 
     <select id="listAfter" resultMap="listAfterResult">
