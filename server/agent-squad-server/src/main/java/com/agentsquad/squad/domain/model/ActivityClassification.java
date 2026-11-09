@@ -1,7 +1,7 @@
 package com.agentsquad.squad.domain.model;
 
-import com.agentsquad.squad.common.enums.execution.ActivityGroup;
-import com.agentsquad.squad.common.enums.execution.ActivityType;
+import com.agentsquad.squad.domain.enums.ActivityGroup;
+import com.agentsquad.squad.domain.enums.ActivityType;
 
 /**
  * 工具活动展示分类

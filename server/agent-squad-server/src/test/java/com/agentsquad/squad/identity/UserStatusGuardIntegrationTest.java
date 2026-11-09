@@ -2,7 +2,7 @@ package com.agentsquad.squad.identity;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.domain.request.MessageCreateRequest;
 import com.agentsquad.squad.domain.response.MessageReceiptResponse;
 import com.agentsquad.squad.service.CommandClaimService;

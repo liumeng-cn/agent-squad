@@ -61,7 +61,7 @@ public class SelectedReplyModelMiddleware implements MiddlewareBase {
                     var profile = catalog.resolve(choice);
                     context.put(AcceptedModelChoice.class, choice);
                     var options = GenerateOptions.builder().modelName(profile.getModelName());
-                    if (profile.getReasoningAdapter() == com.agentsquad.squad.model.domain.ReasoningAdapter.SPARK_THINKING) {
+                    if (profile.getReasoningAdapter() == com.agentsquad.squad.domain.enums.ReasoningAdapter.SPARK_THINKING) {
                         options.maxCompletionTokens(profile.getMaxOutputTokens());
                     } else {
                         options.maxTokens(profile.getMaxOutputTokens());

@@ -10,6 +10,7 @@ import io.agentscope.harness.agent.session.AgentSession;
 
 import java.util.List;
 import java.util.Objects;
+import com.agentsquad.squad.domain.enums.NativeTaskState;
 
 /**
  * 原生会话已提交事实读取器

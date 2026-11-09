@@ -1,9 +1,9 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.common.enums.worker.PlanJoinPolicy;
-import com.agentsquad.squad.common.enums.worker.WorkerJobStatus;
+import com.agentsquad.squad.domain.enums.PlanJoinPolicy;
+import com.agentsquad.squad.domain.enums.WorkerJobStatus;
 import com.agentsquad.squad.domain.enums.GoalTaskStatus;
-import com.agentsquad.squad.common.enums.worker.PlanAcceptanceVerdict;
+import com.agentsquad.squad.domain.enums.PlanAcceptanceVerdict;
 import com.agentsquad.squad.domain.model.PlanJoinFacts;
 import com.agentsquad.squad.domain.model.PlanJoinJob;
 import com.agentsquad.squad.service.PlanJoinPolicyService;

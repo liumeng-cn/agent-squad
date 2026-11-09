@@ -1,14 +1,14 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.common.enums.identity.AccountRole;
-import com.agentsquad.squad.common.enums.worker.AcceptanceVerificationType;
-import com.agentsquad.squad.common.enums.worker.DeterministicAcceptanceCheck;
+import com.agentsquad.squad.domain.enums.AccountRole;
+import com.agentsquad.squad.domain.enums.AcceptanceVerificationType;
+import com.agentsquad.squad.domain.enums.DeterministicAcceptanceCheck;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.service.InteractionService;
-import com.agentsquad.squad.common.enums.worker.PlanAcceptanceVerdict;
+import com.agentsquad.squad.domain.enums.PlanAcceptanceVerdict;
 import com.agentsquad.squad.domain.enums.PlanJoinStage;
 import com.agentsquad.squad.domain.dto.AcceptanceReview;
 import com.agentsquad.squad.domain.dto.AcceptanceReviewRequest;
@@ -136,7 +136,7 @@ class PlanAcceptanceIntegrationTest {
                 assertThat(views.acceptanceChecks()).hasSize(3);
                 assertThat(context.getBean(com.agentsquad.squad.service.ConversationQueryService.class)
                         .snapshot(user, conversation.conversationId(), null, 30).taskStates())
-                        .extracting(state -> state.taskId()).contains(task.taskId());
+                        .extracting(state -> state.getTaskId()).contains(task.taskId());
                 var ready = Path.of("/tmp/squad-browser-probe.json");
                 var done = Path.of("/tmp/squad-acceptance-browser-done");
                 java.nio.file.Files.deleteIfExists(done);

@@ -7,7 +7,7 @@ import com.agentsquad.squad.domain.entity.ArtifactStageDO;
 import com.agentsquad.squad.domain.dto.ArtifactStageView;
 import com.agentsquad.squad.mapper.ArtifactDeliveryMapper;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.domain.model.SandboxExecutionContext;
 import com.agentsquad.squad.domain.model.SandboxPolicy;
 import com.agentsquad.squad.mapper.SandboxMapper;

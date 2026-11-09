@@ -1,7 +1,7 @@
 package com.agentsquad.squad.domain.dto;
 
-import com.agentsquad.squad.common.enums.conversation.TaskDirectiveStatus;
-import com.agentsquad.squad.common.enums.conversation.TaskDirectiveWaitReason;
+import com.agentsquad.squad.domain.enums.TaskDirectiveStatus;
+import com.agentsquad.squad.domain.enums.TaskDirectiveWaitReason;
 import com.agentsquad.squad.domain.entity.TaskDirectiveDO;
 
 /**

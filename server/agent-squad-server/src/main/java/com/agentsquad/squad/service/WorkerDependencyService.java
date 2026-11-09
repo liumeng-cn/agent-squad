@@ -1,8 +1,8 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.common.util.ContentDigests;
-import com.agentsquad.squad.common.enums.worker.WorkerJobStatus;
-import com.agentsquad.squad.common.enums.worker.WorkerSkipReason;
+import com.agentsquad.squad.domain.enums.WorkerJobStatus;
+import com.agentsquad.squad.domain.enums.WorkerSkipReason;
 import com.agentsquad.squad.domain.model.WorkerDependencyNode;
 import com.agentsquad.squad.domain.model.WorkerDependencyPolicy;
 import com.agentsquad.squad.common.util.RuntimePayloads;

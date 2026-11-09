@@ -1,8 +1,8 @@
 package com.agentsquad.squad.domain.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.agentsquad.squad.common.enums.worker.WorkerJobStatus;
-import com.agentsquad.squad.common.enums.worker.WorkerSkipReason;
+import com.agentsquad.squad.domain.enums.WorkerJobStatus;
+import com.agentsquad.squad.domain.enums.WorkerSkipReason;
 import java.util.List;
 
 /**

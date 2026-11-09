@@ -1,7 +1,7 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.domain.entity.FinalDeliveryDO;
 import com.agentsquad.squad.mapper.FinalDeliveryMapper;
 import jakarta.annotation.Resource;

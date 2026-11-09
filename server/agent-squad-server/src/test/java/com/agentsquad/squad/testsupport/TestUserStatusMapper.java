@@ -1,6 +1,6 @@
 package com.agentsquad.squad.testsupport;
 
-import com.agentsquad.squad.common.enums.identity.AccountStatus;
+import com.agentsquad.squad.domain.enums.AccountStatus;
 import com.agentsquad.squad.mapper.UserStatusMapper;
 import jakarta.annotation.Resource;
 import org.springframework.context.annotation.Primary;

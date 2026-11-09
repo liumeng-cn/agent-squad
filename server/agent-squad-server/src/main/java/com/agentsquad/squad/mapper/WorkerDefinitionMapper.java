@@ -1,6 +1,6 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.common.enums.worker.WorkerDefinitionStatus;
+import com.agentsquad.squad.domain.enums.WorkerDefinitionStatus;
 import com.agentsquad.squad.domain.entity.WorkerDefinitionDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;

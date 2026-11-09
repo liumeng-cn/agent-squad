@@ -6,7 +6,7 @@ import com.agentsquad.squad.domain.request.MessageCreateRequest;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.ExecutionScopeService;
 import com.agentsquad.squad.service.GoalTaskService;
-import com.agentsquad.squad.common.MemoryContextInvalidatedException;
+import com.agentsquad.squad.common.exception.MemoryContextInvalidatedException;
 import com.agentsquad.squad.domain.request.MemoryCreateRequest;
 import com.agentsquad.squad.domain.request.MemoryUpdateRequest;
 import com.agentsquad.squad.domain.dto.MemoryWriteRequest;
@@ -188,8 +188,8 @@ class MemoryIntegrationTest {
             String newId = recreated.memory().memoryId();
             assertThat(newId).isNotEqualTo(oldId);
             assertThat(recreated.memory().version()).isZero();
-            assertThat(service.requireOwned(user, oldId).status()).isEqualTo("DELETED");
-            assertThat(service.requireOwned(user, oldId).content()).isEmpty();
+            assertThat(service.requireOwned(user, oldId).getStatus()).isEqualTo("DELETED");
+            assertThat(service.requireOwned(user, oldId).getContent()).isEmpty();
             assertThat(service.create(user, new MemoryCreateRequest("回复语言", "新偏好", null)).memory().memoryId()).isEqualTo(newId);
             assertThatThrownBy(() -> service.create(user, new MemoryCreateRequest("回复语言", "覆盖新偏好", null)))
                     .isInstanceOf(RuntimeBusinessException.class);
@@ -209,8 +209,8 @@ class MemoryIntegrationTest {
             var receipt = context.getBean(ExplicitMemoryWriteService.class).write(user, session,
                     new MemoryWriteRequest("correct-current", "UPDATE", "回复语言", "英文", 0L, null, "把回复语言改成英文"));
             assertThat(receipt.memoryId()).isEqualTo(newId);
-            assertThat(service.requireOwned(user, oldId).status()).isEqualTo("DELETED");
-            assertThat(service.requireOwned(user, newId).content()).isEqualTo("英文");
+            assertThat(service.requireOwned(user, oldId).getStatus()).isEqualTo("DELETED");
+            assertThat(service.requireOwned(user, newId).getContent()).isEqualTo("英文");
             service.delete(user, newId, 1);
             String thirdId = service.create(user, new MemoryCreateRequest("回复语言", "第三次偏好", null)).memory().memoryId();
             assertThat(thirdId).isNotIn(oldId, newId);
@@ -235,9 +235,9 @@ class MemoryIntegrationTest {
             MemoryService service = context.getBean(MemoryService.class);
             String newId = service.create(user, new MemoryCreateRequest("可重新使用的键", "升级后明确重新创建", null)).memory().memoryId();
             assertThat(newId).isNotEqualTo(oldId);
-            assertThat(service.requireOwned(user, oldId).status()).isEqualTo("DELETED");
-            assertThat(service.requireOwned(user, oldId).version()).isEqualTo(1);
-            assertThat(service.requireOwned(user, oldId).content()).isEmpty();
+            assertThat(service.requireOwned(user, oldId).getStatus()).isEqualTo("DELETED");
+            assertThat(service.requireOwned(user, oldId).getVersion()).isEqualTo(1);
+            assertThat(service.requireOwned(user, oldId).getContent()).isEmpty();
             assertThat(service.search(user, "可重新使用的键", 20)).extracting(memory -> memory.memoryId()).containsExactly(newId);
         }
     }

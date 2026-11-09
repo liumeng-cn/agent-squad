@@ -2,7 +2,7 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeJournalReadySignal;
 
-import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventInboxStatus;
+import com.agentsquad.squad.domain.enums.RuntimeEventInboxStatus;
 
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventFingerprint;
 

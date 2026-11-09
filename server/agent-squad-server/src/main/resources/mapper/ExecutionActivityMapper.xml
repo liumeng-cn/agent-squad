@@ -16,10 +16,10 @@
             <arg column="turn_id" javaType="java.lang.String"/>
             <arg column="source_key" javaType="java.lang.String"/>
             <arg column="plan_version" javaType="_long"/>
-            <arg column="activity_type" javaType="com.agentsquad.squad.common.enums.execution.ActivityType"/>
-            <arg column="activity_group" javaType="com.agentsquad.squad.common.enums.execution.ActivityGroup"/>
-            <arg column="status" javaType="com.agentsquad.squad.common.enums.execution.ActivityStatus"/>
-            <arg column="wait_reason" javaType="com.agentsquad.squad.common.enums.execution.ActivityWaitReason"/>
+            <arg column="activity_type" javaType="com.agentsquad.squad.domain.enums.ActivityType"/>
+            <arg column="activity_group" javaType="com.agentsquad.squad.domain.enums.ActivityGroup"/>
+            <arg column="status" javaType="com.agentsquad.squad.domain.enums.ActivityStatus"/>
+            <arg column="wait_reason" javaType="com.agentsquad.squad.domain.enums.ActivityWaitReason"/>
             <arg column="safe_summary" javaType="java.lang.String"/>
             <arg column="started_at" javaType="java.time.LocalDateTime"/>
             <arg column="ended_at" javaType="java.time.LocalDateTime"/>

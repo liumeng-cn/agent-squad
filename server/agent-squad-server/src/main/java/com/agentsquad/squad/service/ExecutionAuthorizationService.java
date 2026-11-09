@@ -1,7 +1,7 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
-import com.agentsquad.squad.domain.exception.ExecutionContextInvalidatedException;
+import com.agentsquad.squad.common.exception.ExecutionContextInvalidatedException;
 import com.agentsquad.squad.domain.dto.ExecutionContextSnapshot;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;

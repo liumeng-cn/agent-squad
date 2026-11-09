@@ -14,7 +14,7 @@ import com.agentsquad.squad.service.LocalSecretVaultService;
 import java.nio.file.Path;
 import java.util.Base64;
 import java.util.List;
-import com.agentsquad.squad.common.enums.identity.AccountRole;
+import com.agentsquad.squad.domain.enums.AccountRole;
 import java.util.Map;
 import java.util.UUID;
 
@@ -43,16 +43,16 @@ class ConnectionOptimisticLockTest {
             var created = service.create(actor, "create", new ConnectionCreateRequest(
                     "隔离连接", "mock", "test", Map.of("scope", "test"), "test-only-secret"));
             String id = created.connectionId();
-            assertThat(mapper.findOwned(owner, id).revision()).isZero();
+            assertThat(mapper.findOwned(owner, id).getRevision()).isZero();
 
             service.update(actor, id, "first", new ConnectionUpdateRequest(0L, false, null, null));
-            assertThat(mapper.findOwned(owner, id).revision()).isEqualTo(1L);
+            assertThat(mapper.findOwned(owner, id).getRevision()).isEqualTo(1L);
             assertThatThrownBy(() -> service.update(actor, id, "stale",
                     new ConnectionUpdateRequest(0L, true, null, null)))
                     .isInstanceOf(RuntimeBusinessException.class);
             assertThat(mapper.updateOwned(owner, id, 0L, null, true, "stale-writer")).isZero();
-            assertThat(mapper.findOwned(owner, id).revision()).isEqualTo(1L);
-            assertThat(mapper.findOwned(owner, id).enabled()).isFalse();
+            assertThat(mapper.findOwned(owner, id).getRevision()).isEqualTo(1L);
+            assertThat(mapper.findOwned(owner, id).isEnabled()).isFalse();
         }
     }
 }

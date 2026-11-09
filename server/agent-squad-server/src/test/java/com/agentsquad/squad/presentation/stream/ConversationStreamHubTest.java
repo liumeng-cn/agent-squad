@@ -3,7 +3,7 @@ package com.agentsquad.squad.presentation.stream;
 import com.agentsquad.squad.service.UserStatusGuardService;
 import com.agentsquad.squad.domain.dto.ConversationEvent;
 import com.agentsquad.squad.domain.dto.ReplyPreview;
-import com.agentsquad.squad.presentation.domain.ReplyPreviewPhase;
+import com.agentsquad.squad.domain.enums.ReplyPreviewPhase;
 import com.agentsquad.squad.service.ConversationQueryService;
 import com.agentsquad.squad.service.ConversationStreamHubService;
 import com.agentsquad.squad.domain.model.ConversationStreamKey;

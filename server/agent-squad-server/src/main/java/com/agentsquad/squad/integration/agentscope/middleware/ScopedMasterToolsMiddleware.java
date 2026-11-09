@@ -2,7 +2,7 @@ package com.agentsquad.squad.integration.agentscope.middleware;
 
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.service.ExecutionScopeService;
-import com.agentsquad.squad.common.enums.worker.WorkerJobStatus;
+import com.agentsquad.squad.domain.enums.WorkerJobStatus;
 import com.agentsquad.squad.domain.enums.ResponseCompletionProtocol;
 import com.agentsquad.squad.domain.entity.WorkerJobDO;
 import io.agentscope.core.agent.Agent;

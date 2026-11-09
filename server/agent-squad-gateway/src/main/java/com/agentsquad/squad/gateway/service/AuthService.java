@@ -10,7 +10,7 @@ import com.agentsquad.squad.gateway.auth.AuthView;
 
 import com.agentsquad.squad.gateway.auth.AuthRepository;
 
-import com.agentsquad.squad.common.enums.identity.AccountStatus;
+import com.agentsquad.squad.domain.enums.AccountStatus;
 import com.agentsquad.squad.common.exception.AuthenticationRequiredException;
 import jakarta.annotation.Resource;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;

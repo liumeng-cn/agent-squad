@@ -1,6 +1,6 @@
 package com.agentsquad.squad.gateway.auth;
 
-import com.agentsquad.squad.common.enums.identity.AccountRole;
+import com.agentsquad.squad.domain.enums.AccountRole;
 
 import java.util.List;
 

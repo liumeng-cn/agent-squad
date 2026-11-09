@@ -102,7 +102,7 @@ class ExecutionKnowledgeIntegrationTest {
             var ledger = context.getBean(SandboxRunTransactionService.class);
             var runRequest = new SandboxExecuteRequest("file", "print('file')", List.of(), List.of("result.txt"), 5);
             var claim = ledger.begin(identity, runRequest, "a".repeat(64));
-            var result = ledger.finish(identity, claim.run().executionId(), runRequest,
+            var result = ledger.finish(identity, claim.run().getExecutionId(), runRequest,
                     new SandboxDriverResult(0, "", "", false, List.of(new SandboxOutput("result.txt", "SECRET_LINEAGE_TOKEN".getBytes(StandardCharsets.UTF_8)))));
             var target = new ProjectionTargetDO(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
             var projector = context.getBean(NativeProjectionService.class);

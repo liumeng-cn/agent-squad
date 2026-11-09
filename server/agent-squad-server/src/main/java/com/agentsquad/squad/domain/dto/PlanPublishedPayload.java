@@ -1,6 +1,6 @@
 package com.agentsquad.squad.domain.dto;
 
-import com.agentsquad.squad.common.enums.worker.PlanJoinPolicy;
+import com.agentsquad.squad.domain.enums.PlanJoinPolicy;
 
 import java.util.List;
 

@@ -1,6 +1,6 @@
 package com.agentsquad.squad.domain.model;
 
-import com.agentsquad.squad.common.enums.execution.ActivityType;
+import com.agentsquad.squad.domain.enums.ActivityType;
 
 /**
  * 已提交业务边界的活动来源

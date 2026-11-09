@@ -1,13 +1,13 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.enums.worker.AcceptanceVerificationType;
-import com.agentsquad.squad.common.enums.worker.WorkerJobStatus;
+import com.agentsquad.squad.domain.enums.AcceptanceVerificationType;
+import com.agentsquad.squad.domain.enums.WorkerJobStatus;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.mapper.InteractionMapper;
 import com.agentsquad.squad.domain.model.PlanAcceptanceResult;
-import com.agentsquad.squad.common.enums.worker.PlanAcceptanceVerdict;
+import com.agentsquad.squad.domain.enums.PlanAcceptanceVerdict;
 import com.agentsquad.squad.domain.entity.PlanDO;
 import com.agentsquad.squad.domain.model.UserAcceptanceReview;
 import com.agentsquad.squad.domain.entity.WorkerJobDO;
@@ -71,7 +71,7 @@ public class PlanAcceptanceService {
             String verifier = "UNVERIFIED";
             List<String> refs = List.of();
             if (criterion.verificationType() == AcceptanceVerificationType.DETERMINISTIC
-                    && criterion.deterministicCheck() == com.agentsquad.squad.common.enums.worker.DeterministicAcceptanceCheck.REQUIRED_RESULTS_READY) {
+                    && criterion.deterministicCheck() == com.agentsquad.squad.domain.enums.DeterministicAcceptanceCheck.REQUIRED_RESULTS_READY) {
                 var requiredNodes = definition.nodes().stream().filter(node -> node.required()).map(node -> node.nodeKey()).toList();
                 var requiredJobs = jobs.stream().filter(job -> requiredNodes.contains(job.getNodeKey())).toList();
                 boolean passed = !requiredNodes.isEmpty() && requiredJobs.size() == requiredNodes.size()

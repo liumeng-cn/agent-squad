@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import com.agentsquad.squad.domain.enums.RedisWakeupChannel;
 
 /**
  * 已提交原生收件的Redis投影唤醒

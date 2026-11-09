@@ -3,7 +3,7 @@ package com.agentsquad.squad.runtime;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.domain.request.MessageCreateRequest;
 import com.agentsquad.squad.service.MessageAcceptanceService;
-import com.agentsquad.squad.model.domain.ReasoningMode;
+import com.agentsquad.squad.domain.enums.ReasoningMode;
 import com.agentsquad.squad.service.ModelCatalogService;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,7 +38,7 @@ class DynamicReplyModelIntegrationTest {
     void translatesQwenThinkingWithoutSparkParameters() {
         var catalog = new ModelCatalogService();
         var profile = new com.agentsquad.squad.worker.profile.WorkerModelProfile();
-        profile.setReasoningAdapter(com.agentsquad.squad.model.domain.ReasoningAdapter.QWEN_THINKING);
+        profile.setReasoningAdapter(com.agentsquad.squad.domain.enums.ReasoningAdapter.QWEN_THINKING);
         var off = catalog.applyReasoning(io.agentscope.core.model.GenerateOptions.builder(), profile, ReasoningMode.OFF).build();
         var on = catalog.applyReasoning(io.agentscope.core.model.GenerateOptions.builder(), profile, ReasoningMode.ON).build();
         assertThat(off.getAdditionalBodyParams()).containsEntry("enable_thinking", false).doesNotContainKey("thinking");

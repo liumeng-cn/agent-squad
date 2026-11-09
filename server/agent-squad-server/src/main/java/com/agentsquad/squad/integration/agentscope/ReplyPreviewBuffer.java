@@ -1,7 +1,7 @@
 package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.domain.entity.ReplyPreviewTargetDO;
-import com.agentsquad.squad.presentation.domain.ReplyPreviewPhase;
+import com.agentsquad.squad.domain.enums.ReplyPreviewPhase;
 import com.agentsquad.squad.domain.dto.ReplyPreview;
 import com.agentsquad.squad.domain.model.ReplyPreviewSignal;
 

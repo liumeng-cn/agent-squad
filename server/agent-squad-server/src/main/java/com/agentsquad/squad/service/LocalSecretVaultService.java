@@ -1,7 +1,7 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.mapper.SecretVaultMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

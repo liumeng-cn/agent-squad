@@ -8,8 +8,8 @@
             <arg column="username" javaType="java.lang.String"/>
             <arg column="display_name" javaType="java.lang.String"/>
             <arg column="password_hash" javaType="java.lang.String"/>
-            <arg column="role" javaType="com.agentsquad.squad.common.enums.identity.AccountRole"/>
-            <arg column="status" javaType="com.agentsquad.squad.common.enums.identity.AccountStatus"/>
+            <arg column="role" javaType="com.agentsquad.squad.domain.enums.AccountRole"/>
+            <arg column="status" javaType="com.agentsquad.squad.domain.enums.AccountStatus"/>
             <arg column="auth_version" javaType="_long"/>
             <arg column="must_change_password" javaType="_boolean"/>
             <arg column="version" javaType="_long"/>
@@ -21,13 +21,13 @@
             <arg column="session_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
             <arg column="username" javaType="java.lang.String"/>
-            <arg column="role" javaType="com.agentsquad.squad.common.enums.identity.AccountRole"/>
+            <arg column="role" javaType="com.agentsquad.squad.domain.enums.AccountRole"/>
             <arg column="must_change_password" javaType="_boolean"/>
             <arg column="token_hash" javaType="java.lang.String"/>
             <arg column="csrf_hash" javaType="java.lang.String"/>
             <arg column="issued_auth_version" javaType="_long"/>
             <arg column="auth_version" javaType="_long"/>
-            <arg column="status" javaType="com.agentsquad.squad.common.enums.identity.AccountStatus"/>
+            <arg column="status" javaType="com.agentsquad.squad.domain.enums.AccountStatus"/>
             <arg column="last_seen_at" javaType="java.time.LocalDateTime"/>
             <arg column="idle_expires_at" javaType="java.time.LocalDateTime"/>
             <arg column="absolute_expires_at" javaType="java.time.LocalDateTime"/>

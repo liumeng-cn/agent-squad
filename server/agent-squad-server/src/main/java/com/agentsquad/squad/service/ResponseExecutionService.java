@@ -11,7 +11,7 @@ import com.agentsquad.squad.domain.model.FailureClassification;
 import com.agentsquad.squad.domain.model.NaturalReplyEvidence;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.mapper.CommandMapper;
@@ -24,7 +24,7 @@ import com.agentsquad.squad.integration.agentscope.NativeSubmissionReceipt;
 import com.agentsquad.squad.domain.dto.CompletionProposalReceipt;
 import com.agentsquad.squad.domain.dto.MessageCompletedPayload;
 import com.agentsquad.squad.domain.dto.ExecutionChangedPayload;
-import com.agentsquad.squad.presentation.domain.ConversationDeltaType;
+import com.agentsquad.squad.domain.enums.ConversationDeltaType;
 import com.agentsquad.squad.mapper.ConversationReadMapper;
 import com.agentsquad.squad.domain.dto.MessageView;
 import com.agentsquad.squad.domain.dto.ResponseExecutionView;
@@ -387,7 +387,7 @@ public class ResponseExecutionService {
             events.publish(scope, "response:" + row.getExecutionId() + ":answer", ConversationDeltaType.MESSAGE_COMPLETED.code(),
                     new MessageCompletedPayload(ConversationDeltaType.SCHEMA_VERSION, message));
             activities.completed(scope, new com.agentsquad.squad.domain.model.ActivityBusinessFact(
-                    com.agentsquad.squad.common.enums.execution.ActivityType.ANSWER_PUBLISH, answerId));
+                    com.agentsquad.squad.domain.enums.ActivityType.ANSWER_PUBLISH, answerId));
         }
         if ("CANCELLED".equals(status)) {
             finalDeliveries.close(scope.getUserId(), row.getSourceMessageId(), "RESPONSE", row.getExecutionId());

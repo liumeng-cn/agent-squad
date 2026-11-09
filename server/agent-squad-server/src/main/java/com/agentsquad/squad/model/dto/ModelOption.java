@@ -1,7 +1,7 @@
 package com.agentsquad.squad.model.dto;
 
-import com.agentsquad.squad.model.domain.ModelCapability;
-import com.agentsquad.squad.model.domain.ReasoningMode;
+import com.agentsquad.squad.domain.enums.ModelCapability;
+import com.agentsquad.squad.domain.enums.ReasoningMode;
 
 import java.util.List;
 

@@ -14,7 +14,7 @@ import java.util.List;
 public record MessageCreateRequest(@NotBlank @Size(max = 20000) String text,
                                    @Size(max = 20) List<@NotBlank String> artifactIds,
                                    @Size(max = 100) String modelId,
-                                   com.agentsquad.squad.model.domain.ReasoningMode reasoningMode) {
+                                   com.agentsquad.squad.domain.enums.ReasoningMode reasoningMode) {
     public MessageCreateRequest(String text, List<String> artifactIds) {
         this(text, artifactIds, null, null);
     }

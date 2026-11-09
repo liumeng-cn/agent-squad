@@ -1,9 +1,9 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.common.enums.identity.AccountRole;
-import com.agentsquad.squad.common.enums.worker.WorkerJobStatus;
-import com.agentsquad.squad.common.enums.worker.WorkerSkipReason;
+import com.agentsquad.squad.domain.enums.AccountRole;
+import com.agentsquad.squad.domain.enums.WorkerJobStatus;
+import com.agentsquad.squad.domain.enums.WorkerSkipReason;
 import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.domain.dto.AbandonFailedJobRequest;
 import com.agentsquad.squad.identity.AuthView;

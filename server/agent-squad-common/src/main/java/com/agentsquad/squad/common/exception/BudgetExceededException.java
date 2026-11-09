@@ -1,5 +1,6 @@
 package com.agentsquad.squad.common.exception;
 
+import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
 
 /**
  * 处理额度不足的明确业务异常。

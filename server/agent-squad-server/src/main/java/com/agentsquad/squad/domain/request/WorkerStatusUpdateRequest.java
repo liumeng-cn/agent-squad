@@ -1,6 +1,6 @@
 package com.agentsquad.squad.domain.request;
 
-import com.agentsquad.squad.common.enums.worker.WorkerDefinitionStatus;
+import com.agentsquad.squad.domain.enums.WorkerDefinitionStatus;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 

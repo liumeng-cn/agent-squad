@@ -2,7 +2,7 @@ package com.agentsquad.squad.domain.dto;
 
 import java.util.List;
 import java.util.Collection;
-import com.agentsquad.squad.common.enums.worker.PlanJoinPolicy;
+import com.agentsquad.squad.domain.enums.PlanJoinPolicy;
 
 /**
  * Master 工具 publish_plan 的输入。

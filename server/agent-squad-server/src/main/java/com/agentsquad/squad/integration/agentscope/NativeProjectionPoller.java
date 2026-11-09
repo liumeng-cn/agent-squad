@@ -1,6 +1,6 @@
 package com.agentsquad.squad.integration.agentscope;
 
-import com.agentsquad.squad.domain.exception.ExecutionContextInvalidatedException;
+import com.agentsquad.squad.common.exception.ExecutionContextInvalidatedException;
 import com.agentsquad.squad.domain.enums.ResponseCompletionProtocol;
 import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
 import com.agentsquad.squad.mapper.ProjectionMapper;
@@ -10,7 +10,7 @@ import com.agentsquad.squad.service.RuntimeEventConsumptionService;
 import com.agentsquad.squad.service.RuntimeEventReceiptService;
 import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource;
 import com.agentsquad.squad.service.RuntimeEventFailureService;
-import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventFailureCode;
+import com.agentsquad.squad.domain.enums.RuntimeEventFailureCode;
 import io.agentscope.core.session.SessionEvent;
 import jakarta.annotation.Resource;
 import com.agentsquad.squad.service.ResponseExecutionService;
@@ -22,6 +22,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import com.agentsquad.squad.common.exception.RuntimeEventConsumptionException;
 
 /**
  * 从上次处理到的事件序号继续读取 AgentScope 执行事件，并依次更新业务状态。

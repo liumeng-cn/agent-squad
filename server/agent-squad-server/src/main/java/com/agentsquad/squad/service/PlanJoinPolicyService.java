@@ -9,9 +9,9 @@ import com.agentsquad.squad.domain.model.PlanJoinDecision;
 import com.agentsquad.squad.domain.enums.GoalTaskStatus;
 import com.agentsquad.squad.domain.enums.PlanJoinStage;
 
-import com.agentsquad.squad.common.enums.worker.PlanAcceptanceVerdict;
+import com.agentsquad.squad.domain.enums.PlanAcceptanceVerdict;
 
-import com.agentsquad.squad.common.enums.worker.WorkerJobStatus;
+import com.agentsquad.squad.domain.enums.WorkerJobStatus;
 
 import java.util.HashSet;
 import java.util.Objects;

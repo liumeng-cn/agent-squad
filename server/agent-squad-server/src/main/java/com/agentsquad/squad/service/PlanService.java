@@ -2,14 +2,14 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.mapper.TaskDirectiveMapper;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.common.util.CanonicalJson;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.mapper.BindingMapper;
 import com.agentsquad.squad.mapper.CommandMapper;
 import com.agentsquad.squad.domain.entity.BudgetAccountDO;
-import com.agentsquad.squad.domain.exception.PendingDirectivesException;
+import com.agentsquad.squad.common.exception.PendingDirectivesException;
 import com.agentsquad.squad.mapper.BudgetMapper;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.domain.enums.GoalTaskStatus;
@@ -21,7 +21,7 @@ import com.agentsquad.squad.domain.entity.WorkerJobDO;
 import com.agentsquad.squad.domain.dto.PlanNode;
 import com.agentsquad.squad.domain.dto.PlanPublish;
 import com.agentsquad.squad.domain.dto.PlanReceipt;
-import com.agentsquad.squad.domain.dto.PendingDirectiveFeedback;
+import com.agentsquad.squad.common.model.PendingDirectiveFeedback;
 import com.agentsquad.squad.mapper.PlanMapper;
 import com.agentsquad.squad.mapper.ProjectionMapper;
 import com.agentsquad.squad.mapper.ContextSnapshotMapper;
@@ -373,7 +373,7 @@ public class PlanService {
                     || isBlank(criterion.text()) || criterion.text().length() > 2000
                     || criterion.verificationType() == null || !criterionIds.add(criterion.criterionId())
                     || (criterion.deterministicCheck() != null
-                    && criterion.verificationType() != com.agentsquad.squad.common.enums.worker.AcceptanceVerificationType.DETERMINISTIC)) {
+                    && criterion.verificationType() != com.agentsquad.squad.domain.enums.AcceptanceVerificationType.DETERMINISTIC)) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "完成条件内容或标识无效");
             }
         }

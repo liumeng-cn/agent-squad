@@ -11,7 +11,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import com.agentsquad.squad.common.enums.identity.AccountRole;
+import com.agentsquad.squad.domain.enums.AccountRole;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
@@ -38,11 +38,11 @@ class InteractionServiceTest {
                 "job-1", "binding-1", "operation-1", "FRAMEWORK", "request-1",
                 "APPROVAL", "确认执行", "{}", 0L, "hash-1", 0L,
                 LocalDateTime.now().plusHours(1), "OPEN", 2L, null, "scope-1");
-        when(interactionMapper.findOwned(actor.userId(), row.interactionId())).thenReturn(row);
+        when(interactionMapper.findOwned(actor.userId(), row.getInteractionId())).thenReturn(row);
 
         assertThrows(RuntimeBusinessException.class,
-                () -> service.respond(actor, row.interactionId(), "key-1", 1L,
-                        "APPROVAL", true, row.requestHash(), null));
+                () -> service.respond(actor, row.getInteractionId(), "key-1", 1L,
+                        "APPROVAL", true, row.getRequestHash(), null));
         verifyNoInteractions(operationMapper);
     }
 }

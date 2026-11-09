@@ -1,7 +1,7 @@
 package com.agentsquad.squad.gateway.mapper;
 
-import com.agentsquad.squad.common.enums.identity.AccountRole;
-import com.agentsquad.squad.common.enums.identity.AccountStatus;
+import com.agentsquad.squad.domain.enums.AccountRole;
+import com.agentsquad.squad.domain.enums.AccountStatus;
 import com.agentsquad.squad.gateway.admin.UserAccountRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;

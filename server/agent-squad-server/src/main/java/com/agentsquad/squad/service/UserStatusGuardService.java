@@ -3,8 +3,8 @@ package com.agentsquad.squad.service;
 import com.agentsquad.squad.mapper.UserStatusMapper;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
-import com.agentsquad.squad.common.enums.identity.AccountStatus;
+import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.domain.enums.AccountStatus;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

@@ -1,7 +1,7 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.domain.model.PlanCompletionEvaluation;
 import com.agentsquad.squad.domain.model.PlanJoinFacts;
 import com.agentsquad.squad.domain.model.PlanJoinJob;
@@ -38,7 +38,7 @@ public class PlanCompletionEvaluationService {
         var definition = acceptance.definition(plan);
         var required = definition.nodes().stream().filter(node -> node.required()).map(node -> node.nodeKey()).toList();
         var facts = jobs.stream().map(job -> new PlanJoinJob(job.getJobId(), job.getPlanVersion(), required.contains(job.getNodeKey()),
-                com.agentsquad.squad.common.enums.worker.WorkerJobStatus.valueOf(job.getStatus()))).toList();
+                com.agentsquad.squad.domain.enums.WorkerJobStatus.valueOf(job.getStatus()))).toList();
         var results = acceptance.assess(plan, jobs, reviews);
         var decision = new PlanJoinPolicyService().evaluate(new PlanJoinFacts(planVersion,
                 definition.joinPolicy(), facts, completions.countPendingEffects(userId, taskId) > 0,

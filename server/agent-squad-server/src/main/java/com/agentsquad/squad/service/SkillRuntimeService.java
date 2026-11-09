@@ -1,9 +1,9 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.exception.SkillCapabilityUnavailableException;
+import com.agentsquad.squad.common.exception.SkillCapabilityUnavailableException;
 import com.agentsquad.squad.domain.model.SkillCatalog;
 import com.agentsquad.squad.domain.model.SkillPackageValidator;
 import com.agentsquad.squad.domain.entity.SkillReferenceDO;

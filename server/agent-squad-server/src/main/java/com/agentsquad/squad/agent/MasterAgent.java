@@ -407,7 +407,7 @@ public class MasterAgent implements NativeSessionGateway {
     @Override
     public void startPending(ProjectionTargetDO target) {
         if (controlBindings.localSessionState(target.getUserId(), target.getBindingId())
-                != com.agentsquad.squad.common.enums.runtime.LocalSessionState.ACTIVE) {
+                != com.agentsquad.squad.domain.enums.LocalSessionState.ACTIVE) {
             return;
         }
         sessionFor(target.getUserId(), target.getBindingId(), target.getSessionId(), target.getAgentId()).start();

@@ -16,13 +16,13 @@ public class WorkerModelProfile {
 
     private String displayName;
 
-    private java.util.List<com.agentsquad.squad.model.domain.ModelCapability> capabilities = java.util.List.of();
+    private java.util.List<com.agentsquad.squad.domain.enums.ModelCapability> capabilities = java.util.List.of();
 
-    private com.agentsquad.squad.model.domain.ReasoningAdapter reasoningAdapter = com.agentsquad.squad.model.domain.ReasoningAdapter.NONE;
+    private com.agentsquad.squad.domain.enums.ReasoningAdapter reasoningAdapter = com.agentsquad.squad.domain.enums.ReasoningAdapter.NONE;
 
-    private java.util.List<com.agentsquad.squad.model.domain.ReasoningMode> reasoningModes = java.util.List.of(com.agentsquad.squad.model.domain.ReasoningMode.DEFAULT);
+    private java.util.List<com.agentsquad.squad.domain.enums.ReasoningMode> reasoningModes = java.util.List.of(com.agentsquad.squad.domain.enums.ReasoningMode.DEFAULT);
 
-    private com.agentsquad.squad.model.domain.ReasoningMode defaultReasoningMode = com.agentsquad.squad.model.domain.ReasoningMode.DEFAULT;
+    private com.agentsquad.squad.domain.enums.ReasoningMode defaultReasoningMode = com.agentsquad.squad.domain.enums.ReasoningMode.DEFAULT;
 
     private String provider;
 

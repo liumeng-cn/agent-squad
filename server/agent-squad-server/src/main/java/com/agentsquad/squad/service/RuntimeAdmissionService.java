@@ -2,7 +2,7 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.domain.entity.RuntimeAdmissionSlotDO;
 import com.agentsquad.squad.mapper.RuntimeAdmissionMapper;
-import com.agentsquad.squad.domain.exception.RuntimeAdmissionBusyException;
+import com.agentsquad.squad.common.exception.RuntimeAdmissionBusyException;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

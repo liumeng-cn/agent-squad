@@ -30,7 +30,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import com.agentsquad.squad.common.enums.identity.AccountRole;
+import com.agentsquad.squad.domain.enums.AccountRole;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -87,17 +87,17 @@ class WorkerGuardIntegrationTest {
                     String.class, plan.jobIds().getFirst());
 
             WorkerLaunchDO claimed = dispatch.claim(userId, bindingId);
-            assertThat(claimed.jobStatus()).isEqualTo("RUNNING");
+            assertThat(claimed.getJobStatus()).isEqualTo("RUNNING");
             assertThatThrownBy(() -> dispatch.claim(userId, bindingId))
                     .isInstanceOf(RuntimeBusinessException.class);
             assertThatThrownBy(() -> results.propose(userId, bindingId, "old-guard",
                     "turn-1", json.readTree("{\"text\":\"结果\"}")))
                     .isInstanceOf(RuntimeBusinessException.class);
-            assertThatThrownBy(() -> results.propose(userId, bindingId, claimed.guardToken(),
+            assertThatThrownBy(() -> results.propose(userId, bindingId, claimed.getGuardToken(),
                     "turn-1", json.readTree("{}")))
                     .isInstanceOf(RuntimeBusinessException.class);
 
-            String jobId = results.propose(userId, bindingId, claimed.guardToken(),
+            String jobId = results.propose(userId, bindingId, claimed.getGuardToken(),
                     "turn-1", json.readTree("{\"text\":\"结果\"}"));
             assertThat(jobId).isEqualTo(plan.jobIds().getFirst());
             assertThat(results.finalizeSuccess(userId, bindingId, "turn-old")).isFalse();
@@ -118,7 +118,7 @@ class WorkerGuardIntegrationTest {
                     "SELECT binding_id FROM sq_worker_job WHERE job_id = ?",
                     String.class, oldJobId);
             WorkerLaunchDO oldWriter = dispatch.claim(userId, oldBindingId);
-            results.propose(userId, oldBindingId, oldWriter.guardToken(), "old-turn",
+            results.propose(userId, oldBindingId, oldWriter.getGuardToken(), "old-turn",
                     json.readTree("{\"text\":\"旧结果与已发生的副作用证据\"}"));
             try (ConfigurableApplicationContext peer = SpringApplication.run(AgentSquadApplication.class,
                     "--spring.main.web-application-type=none",
@@ -132,12 +132,12 @@ class WorkerGuardIntegrationTest {
                 jdbc.update("UPDATE sq_worker_job SET guard_lease_until = ? WHERE job_id = ?",
                         LocalDateTime.now(ZoneOffset.UTC).minusSeconds(1), oldJobId);
                 WorkerLaunchDO newWriter = peerDispatch.claim(userId, oldBindingId);
-                assertThat(newWriter.guardToken()).isNotEqualTo(oldWriter.guardToken());
+                assertThat(newWriter.getGuardToken()).isNotEqualTo(oldWriter.getGuardToken());
                 assertThatThrownBy(() -> results.propose(userId, oldBindingId,
-                        oldWriter.guardToken(), "stale-turn",
+                        oldWriter.getGuardToken(), "stale-turn",
                         json.readTree("{\"text\":\"旧实例迟到\"}")))
                         .isInstanceOf(RuntimeBusinessException.class);
-                peerResults.propose(userId, oldBindingId, newWriter.guardToken(), "old-turn",
+                peerResults.propose(userId, oldBindingId, newWriter.getGuardToken(), "old-turn",
                         json.readTree("{\"text\":\"旧结果与已发生的副作用证据\"}"));
                 jdbc.update("""
                         UPDATE sq_command SET status = 'DELIVERED', native_turn_id = 'old-turn'
@@ -152,7 +152,7 @@ class WorkerGuardIntegrationTest {
                         SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id = ?
                         """, String.class, oldBindingId);
                 ProjectionTargetDO target = new ProjectionTargetDO(userId, task.taskId(), oldBindingId,
-                        newWriter.agentId(), workerSession, 0);
+                        newWriter.getAgentId(), workerSession, 0);
                 assertThat(recovery.originalSubmitCommandId(target)).isEqualTo(oldCommandId);
                 NativeSubmissionReceipt interrupted = new NativeSubmissionReceipt(
                         oldCommandId, "old-turn", "old-run", "interrupted");
@@ -195,7 +195,7 @@ class WorkerGuardIntegrationTest {
                     Boolean.class, oldJobId)).isTrue();
             assertThat(results.finalizeSuccess(userId, oldBindingId, "old-turn")).isFalse();
             assertThatThrownBy(() -> results.propose(userId, oldBindingId,
-                    oldWriter.guardToken(), "late-turn", json.readTree("{\"text\":\"迟到结果\"}")))
+                    oldWriter.getGuardToken(), "late-turn", json.readTree("{\"text\":\"迟到结果\"}")))
                     .isInstanceOf(RuntimeBusinessException.class);
             assertThat(jdbc.queryForObject(
                     "SELECT status FROM sq_worker_job WHERE job_id = ?",
@@ -217,7 +217,7 @@ class WorkerGuardIntegrationTest {
                     "SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id = ?",
                     String.class, limitedBinding);
             ProjectionTargetDO limitedTarget = new ProjectionTargetDO(userId, task.taskId(), limitedBinding,
-                    firstGuard.agentId(), limitedSession, 0);
+                    firstGuard.getAgentId(), limitedSession, 0);
             NativeSubmissionReceipt limitedReceipt = new NativeSubmissionReceipt(
                     limitedCommand, "limited-turn", "limited-run", "interrupted");
             WorkerRecoveryService recovery = spring.getBean(WorkerRecoveryService.class);

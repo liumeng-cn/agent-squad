@@ -1,5 +1,7 @@
 package com.agentsquad.squad.integration.agentscope.inbox;
 
+import com.agentsquad.squad.domain.enums.RuntimeEventInboxStatus;
+
 /**
  * 原生事件安全定位记录
  * <p>

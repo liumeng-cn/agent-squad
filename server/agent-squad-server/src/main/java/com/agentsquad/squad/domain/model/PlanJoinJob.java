@@ -1,6 +1,6 @@
 package com.agentsquad.squad.domain.model;
 
-import com.agentsquad.squad.common.enums.worker.WorkerJobStatus;
+import com.agentsquad.squad.domain.enums.WorkerJobStatus;
 
 /**
  * 当前计划参与汇总的工作

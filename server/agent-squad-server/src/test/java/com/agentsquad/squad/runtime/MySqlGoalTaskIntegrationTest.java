@@ -38,7 +38,7 @@ class MySqlGoalTaskIntegrationTest {
             assertThat(service.findTask(userId, receipt.taskId()).status()).isEqualTo("QUEUED");
             assertThat(service.findCommand(userId, receipt.commandId()).status()).isEqualTo("PENDING");
             assertThat(service.listEvents(userId, receipt.taskId(), 0)).hasSize(1);
-            assertThat(artifacts.content(userId, artifactId).content()).isEqualTo(content);
+            assertThat(artifacts.content(userId, artifactId).getContent()).isEqualTo(content);
             assertThat(artifacts.listTask(userId, receipt.taskId())).extracting("artifactId").containsExactly(artifactId);
         }
     }

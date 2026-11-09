@@ -16,8 +16,8 @@ import com.agentsquad.squad.gateway.admin.AdminUserCreateResult;
 
 import com.agentsquad.squad.gateway.admin.AdminUserCreateRequest;
 
-import com.agentsquad.squad.common.enums.identity.AccountRole;
-import com.agentsquad.squad.common.enums.identity.AccountStatus;
+import com.agentsquad.squad.domain.enums.AccountRole;
+import com.agentsquad.squad.domain.enums.AccountStatus;
 import com.agentsquad.squad.gateway.auth.AuthRepository;
 import com.agentsquad.squad.gateway.auth.AuthView;
 import com.agentsquad.squad.gateway.auth.PasswordChangeRequest;

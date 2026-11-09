@@ -1,6 +1,6 @@
 package com.agentsquad.squad.domain.dto;
 
-import com.agentsquad.squad.common.enums.worker.AcceptanceVerificationType;
+import com.agentsquad.squad.domain.enums.AcceptanceVerificationType;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.JsonNode;
  */
 public record PlanAcceptanceCriterion(String criterionId, String text, boolean required,
                                       AcceptanceVerificationType verificationType, boolean legacy,
-                                      com.agentsquad.squad.common.enums.worker.DeterministicAcceptanceCheck deterministicCheck) {
+                                      com.agentsquad.squad.domain.enums.DeterministicAcceptanceCheck deterministicCheck) {
     public static PlanAcceptanceCriterion legacy(String text) {
         return new PlanAcceptanceCriterion("legacy-" + ContentDigests.sha256(text).substring(0, 24), text,
                 true, AcceptanceVerificationType.MODEL_REVIEW, true, null);
@@ -31,6 +31,6 @@ public record PlanAcceptanceCriterion(String criterionId, String text, boolean r
         return new PlanAcceptanceCriterion(value.get("criterionId").asText(), value.get("text").asText(),
                 value.get("required").asBoolean(), AcceptanceVerificationType.valueOf(value.get("verificationType").asText()),
                 value.path("legacy").asBoolean(false), value.path("deterministicCheck").isTextual()
-                ? com.agentsquad.squad.common.enums.worker.DeterministicAcceptanceCheck.valueOf(value.get("deterministicCheck").asText()) : null);
+                ? com.agentsquad.squad.domain.enums.DeterministicAcceptanceCheck.valueOf(value.get("deterministicCheck").asText()) : null);
     }
 }

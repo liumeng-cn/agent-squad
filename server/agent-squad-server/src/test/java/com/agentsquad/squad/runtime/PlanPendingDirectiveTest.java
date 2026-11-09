@@ -47,16 +47,16 @@ class PlanPendingDirectiveTest {
         when(directives.goalState("user", "task")).thenReturn(new TaskGoalStateDO(1, "{}"));
         when(directives.pending("user", "task")).thenReturn(List.of("first", "second"));
         TaskDO task = mock(TaskDO.class);
-        when(task.version()).thenReturn(9L);
+        when(task.getVersion()).thenReturn(9L);
         when(tasks.lockOwnedRow("user", "task")).thenReturn(task);
         for (String id : List.of("first", "second")) {
             TaskDirectiveDO row = mock(TaskDirectiveDO.class);
-            when(row.directiveId()).thenReturn(id);
-            when(row.taskId()).thenReturn("task");
-            when(row.status()).thenReturn("ACCEPTED");
-            when(row.kind()).thenReturn("SUPPLEMENT");
-            when(row.content()).thenReturn("private-directive-text");
-            when(row.expectedVersion()).thenReturn(2L);
+            when(row.getDirectiveId()).thenReturn(id);
+            when(row.getTaskId()).thenReturn("task");
+            when(row.getStatus()).thenReturn("ACCEPTED");
+            when(row.getKind()).thenReturn("SUPPLEMENT");
+            when(row.getContent()).thenReturn("private-directive-text");
+            when(row.getExpectedVersion()).thenReturn(2L);
             when(directives.lock("user", id)).thenReturn(row);
         }
         PlanPublish request = new PlanPublish("plan", 0,
@@ -64,7 +64,7 @@ class PlanPendingDirectiveTest {
                 "ALL_REQUIRED", List.of("done"));
         RuntimeBusinessException failure = assertThrows(RuntimeBusinessException.class,
                 () -> service.publish("user", "session", request));
-        var pending = (com.agentsquad.squad.domain.exception.PendingDirectivesException) failure;
+        var pending = (com.agentsquad.squad.common.exception.PendingDirectivesException) failure;
         assertThat(pending.directives()).hasSize(2);
         assertThat(pending.directives().get(0).directiveId()).isEqualTo("first");
         assertThat(pending.directives().get(1).directiveId()).isEqualTo("second");

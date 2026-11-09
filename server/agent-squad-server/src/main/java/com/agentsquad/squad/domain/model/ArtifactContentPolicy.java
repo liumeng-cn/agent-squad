@@ -1,7 +1,7 @@
 package com.agentsquad.squad.domain.model;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;

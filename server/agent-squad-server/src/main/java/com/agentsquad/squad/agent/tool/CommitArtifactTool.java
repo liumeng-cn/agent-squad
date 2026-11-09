@@ -3,7 +3,7 @@ package com.agentsquad.squad.agent.tool;
 import com.agentsquad.squad.domain.dto.ArtifactCommitRequest;
 import com.agentsquad.squad.service.ArtifactDeliveryService;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.domain.model.WorkerExecutionIdentity;

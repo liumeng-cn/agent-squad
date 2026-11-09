@@ -55,9 +55,9 @@ class OperationExecutorTransactionTest {
         OperationExecutorService executor = (OperationExecutorService) proxyFactory.getProxy();
 
         OperationDO operation = mock(OperationDO.class);
-        when(operation.userId()).thenReturn("user-1");
-        when(operation.operationId()).thenReturn("operation-1");
-        when(operation.version()).thenReturn(0L);
+        when(operation.getUserId()).thenReturn("user-1");
+        when(operation.getOperationId()).thenReturn("operation-1");
+        when(operation.getVersion()).thenReturn(0L);
 
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
             assertTrue(TransactionSynchronizationManager.isActualTransactionActive());

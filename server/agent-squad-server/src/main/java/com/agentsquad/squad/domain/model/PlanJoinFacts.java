@@ -1,8 +1,8 @@
 package com.agentsquad.squad.domain.model;
 
-import com.agentsquad.squad.common.enums.worker.PlanAcceptanceVerdict;
+import com.agentsquad.squad.domain.enums.PlanAcceptanceVerdict;
 
-import com.agentsquad.squad.common.enums.worker.PlanJoinPolicy;
+import com.agentsquad.squad.domain.enums.PlanJoinPolicy;
 
 import java.util.List;
 

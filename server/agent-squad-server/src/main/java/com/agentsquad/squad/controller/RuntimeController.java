@@ -14,7 +14,7 @@ import com.agentsquad.squad.domain.response.TaskSnapshotResponse;
 import com.agentsquad.squad.domain.response.WorkerJobPageResponse;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.common.model.ApiResult;
 
 import com.agentsquad.squad.identity.UserContext;

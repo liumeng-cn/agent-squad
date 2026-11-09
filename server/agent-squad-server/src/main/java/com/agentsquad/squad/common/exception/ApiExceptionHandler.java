@@ -1,6 +1,6 @@
 package com.agentsquad.squad.common.exception;
 
-import com.agentsquad.squad.common.model.ApiCode;
+import com.agentsquad.squad.domain.enums.ApiCode;
 import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.common.observability.ObservationSupport;
 import jakarta.annotation.Resource;

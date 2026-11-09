@@ -205,8 +205,8 @@ class ResponseNativeExecutionIntegrationTest {
                 } else {
                     // 模拟SDK已接受旧格式输入；接管时不能按新版上下文重编码同一提交键。
                     HarnessAgent previous = (HarnessAgent) ReflectionTestUtils.getField(gateway, "master");
-                    turn = previous.session(RuntimeContext.builder().userId(USER).sessionId(delivery.sessionId()).build())
-                            .submit(delivery.commandId(), "主角叫小明").turnId();
+                    turn = previous.session(RuntimeContext.builder().userId(USER).sessionId(delivery.getSessionId()).build())
+                            .submit(delivery.getCommandId(), "主角叫小明").turnId();
                 }
                 ProjectionTargetDO target = target(delivery);
                 for (int i = 0; i < 150; i++) {
@@ -418,6 +418,6 @@ class ResponseNativeExecutionIntegrationTest {
     }
 
     private ProjectionTargetDO target(DeliveryDO delivery) {
-        return new ProjectionTargetDO(USER, null, delivery.bindingId(), delivery.agentId(), delivery.sessionId(), 0);
+        return new ProjectionTargetDO(USER, null, delivery.getBindingId(), delivery.getAgentId(), delivery.getSessionId(), 0);
     }
 }

@@ -7,7 +7,7 @@ import com.agentsquad.squad.domain.enums.RuntimeCommandAction;
 import com.agentsquad.squad.domain.enums.RuntimeCommandStatus;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
 
 import com.agentsquad.squad.domain.response.CommandReceiptResponse;
 import com.agentsquad.squad.mapper.BindingMapper;

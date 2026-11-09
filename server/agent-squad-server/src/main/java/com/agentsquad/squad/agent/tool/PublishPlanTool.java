@@ -5,7 +5,7 @@ import com.agentsquad.squad.common.exception.RuntimeBusinessException;
 import com.agentsquad.squad.domain.dto.PlanPublish;
 import com.agentsquad.squad.domain.dto.PlanReceipt;
 import com.agentsquad.squad.service.PlanService;
-import com.agentsquad.squad.domain.exception.PendingDirectivesException;
+import com.agentsquad.squad.common.exception.PendingDirectivesException;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;
@@ -130,7 +130,7 @@ public class PublishPlanTool implements AgentTool {
                             "directives", exception.directives(), "nextAction", "apply_task_directive",
                             "instruction", "逐条协调；每次 APPLY/REJECT 后重新 publish_plan 获取当前版本和剩余指令，禁止复用旧 expectedVersion")));
         } catch (RuntimeBusinessException exception) {
-            if (exception.code() == com.agentsquad.squad.common.exception.RuntimeExceptionCode.VALIDATION) {
+            if (exception.code() == com.agentsquad.squad.domain.enums.RuntimeExceptionCode.VALIDATION) {
                 failures.invalidPlan(context.getUserId(), context.getSessionId());
             }
             return ToolResultBlock.error(exception.getMessage());

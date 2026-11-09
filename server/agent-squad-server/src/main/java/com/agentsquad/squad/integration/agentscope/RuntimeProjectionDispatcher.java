@@ -20,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import com.agentsquad.squad.common.exception.RuntimeEventConsumptionException;
 
 /**
  * 已提交原生收件的合并投影调度
@@ -121,7 +122,7 @@ public class RuntimeProjectionDispatcher {
                     return;
                 }
                 var first = inbox.findBySequence(source, target.getCursor() + 1);
-                if (first != null && first.status() == com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventInboxStatus.BLOCKED) {
+                if (first != null && first.status() == com.agentsquad.squad.domain.enums.RuntimeEventInboxStatus.BLOCKED) {
                     return;
                 }
                 var events = gateway.readCommittedEvents(target, target.getCursor(), BATCH_SIZE);

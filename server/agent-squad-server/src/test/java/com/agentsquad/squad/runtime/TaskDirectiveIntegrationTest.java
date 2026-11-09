@@ -30,7 +30,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.file.Path;
 import java.util.List;
-import com.agentsquad.squad.common.enums.identity.AccountRole;
+import com.agentsquad.squad.domain.enums.AccountRole;
 import java.util.Map;
 import java.util.UUID;
 
@@ -94,7 +94,7 @@ class TaskDirectiveIntegrationTest {
             }
             var changes = query.snapshot(user, source.conversationId(), null, 40).directives();
             assertThat(changes).hasSize(2);
-            assertThat(changes).filteredOn(item -> item.status() == com.agentsquad.squad.common.enums.conversation.TaskDirectiveStatus.REJECTED)
+            assertThat(changes).filteredOn(item -> item.status() == com.agentsquad.squad.domain.enums.TaskDirectiveStatus.REJECTED)
                     .singleElement().satisfies(item -> assertThat(item.reasonCode()).isEqualTo("GOAL_CHANGED"));
             assertThat(jdbc.queryForObject("SELECT goal_revision FROM sq_goal_task WHERE task_id=?", Long.class, task.taskId())).isEqualTo(1);
         }
@@ -118,7 +118,7 @@ class TaskDirectiveIntegrationTest {
             var snapshot = context.getBean(com.agentsquad.squad.service.ConversationQueryService.class)
                     .snapshot(user, source.conversationId(), null, 40);
             assertThat(snapshot.directives()).singleElement().satisfies(item -> {
-                assertThat(item.status()).isEqualTo(com.agentsquad.squad.common.enums.conversation.TaskDirectiveStatus.REJECTED);
+                assertThat(item.status()).isEqualTo(com.agentsquad.squad.domain.enums.TaskDirectiveStatus.REJECTED);
                 assertThat(item.reasonCode()).isEqualTo("TASK_ENDED");
             });
             assertThat(jdbc.queryForObject("SELECT goal_revision FROM sq_goal_task WHERE task_id=?", Long.class, task.taskId())).isZero();
@@ -144,7 +144,7 @@ class TaskDirectiveIntegrationTest {
         var original = plans.publish(user, targetSession, planRequest);
         String oldBinding = jdbc.queryForObject("SELECT binding_id FROM sq_worker_job WHERE job_id=?", String.class, original.jobIds().getFirst());
         jdbc.update("UPDATE sq_command SET status='DELIVERED' WHERE binding_id=?", oldBinding);
-        String guard = context.getBean(WorkerDispatchService.class).claim(user, oldBinding).guardToken();
+        String guard = context.getBean(WorkerDispatchService.class).claim(user, oldBinding).getGuardToken();
         var supplement = messages.accept(user, source.conversationId(), "supplement", new MessageCreateRequest("改成活泼风格，突出合作", List.of()));
         String session = replySession(jdbc, supplement.executionId());
         long version = version(jdbc, task.taskId());
@@ -156,8 +156,8 @@ class TaskDirectiveIntegrationTest {
         var query = context.getBean(com.agentsquad.squad.service.ConversationQueryService.class);
         var acceptedSnapshot = query.snapshot(user, source.conversationId(), null, 40);
         assertThat(acceptedSnapshot.directives()).singleElement().satisfies(item -> {
-            assertThat(item.status()).isEqualTo(com.agentsquad.squad.common.enums.conversation.TaskDirectiveStatus.ACCEPTED);
-            assertThat(item.waitReason()).isEqualTo(com.agentsquad.squad.common.enums.conversation.TaskDirectiveWaitReason.WAITING_SAFE_POINT);
+            assertThat(item.status()).isEqualTo(com.agentsquad.squad.domain.enums.TaskDirectiveStatus.ACCEPTED);
+            assertThat(item.waitReason()).isEqualTo(com.agentsquad.squad.domain.enums.TaskDirectiveWaitReason.WAITING_SAFE_POINT);
             assertThat(item.sourceMessageId()).isEqualTo(supplement.messageId());
         });
         assertThatThrownBy(() -> query.snapshot(UUID.randomUUID().toString(), source.conversationId(), null, 40))
@@ -178,7 +178,7 @@ class TaskDirectiveIntegrationTest {
         assertThat(applied.status()).isEqualTo("APPLIED");
         assertThat(applied.goalRevision()).isEqualTo(1);
         assertThat(query.snapshot(user, source.conversationId(), null, 40).directives()).singleElement()
-                .satisfies(item -> assertThat(item.status()).isEqualTo(com.agentsquad.squad.common.enums.conversation.TaskDirectiveStatus.APPLIED));
+                .satisfies(item -> assertThat(item.status()).isEqualTo(com.agentsquad.squad.domain.enums.TaskDirectiveStatus.APPLIED));
         assertThat(query.snapshot(user, source.conversationId(), jdbc.queryForObject("SELECT message_seq FROM sq_message WHERE message_id=?", Long.class, supplement.messageId()), 40).directives()).isEmpty();
         assertThat(directives.decide(user, targetSession, new TaskDirectiveDecision(receipt.directiveId(), version, "APPLY", null))).isEqualTo(applied);
         assertThat(jdbc.queryForObject("SELECT status FROM sq_worker_job WHERE job_id=?", String.class, original.jobIds().getFirst())).isEqualTo("SUPERSEDED");
@@ -205,7 +205,7 @@ class TaskDirectiveIntegrationTest {
         var operations = context.getBean(OperationService.class);
         var write = new PrepareRequest(user, target, "turn", "write", "mock_ticket_create", "v1", "WRITE", Map.of("title", "test"), "stable", false, null, 0, 1, "tester");
         var operation = operations.prepare(write);
-        jdbc.update("UPDATE sq_operation SET status='UNKNOWN' WHERE operation_id=?", operation.operationId());
+        jdbc.update("UPDATE sq_operation SET status='UNKNOWN' WHERE operation_id=?", operation.getOperationId());
         var message = messages.accept(user, source.conversationId(), "change", new MessageCreateRequest("改成另一项工作", List.of()));
         var service = context.getBean(TaskDirectiveService.class);
         var receipt = service.submit(user, replySession(jdbc, message.executionId()), new TaskDirectiveSubmit("change", task.taskId(), version(jdbc, task.taskId()), "REPLACE", "另一工作"));
@@ -215,8 +215,8 @@ class TaskDirectiveIntegrationTest {
         var query = context.getBean(com.agentsquad.squad.service.ConversationQueryService.class);
         var waiting = query.snapshot(user, source.conversationId(), null, 40);
         assertThat(waiting.directives()).singleElement().satisfies(item -> {
-            assertThat(item.status()).isEqualTo(com.agentsquad.squad.common.enums.conversation.TaskDirectiveStatus.ACCEPTED);
-            assertThat(item.waitReason()).isEqualTo(com.agentsquad.squad.common.enums.conversation.TaskDirectiveWaitReason.WAITING_OPERATION);
+            assertThat(item.status()).isEqualTo(com.agentsquad.squad.domain.enums.TaskDirectiveStatus.ACCEPTED);
+            assertThat(item.waitReason()).isEqualTo(com.agentsquad.squad.domain.enums.TaskDirectiveWaitReason.WAITING_OPERATION);
         });
         service.dispatch(new TaskDirectiveTargetDO(receipt.directiveId(), user, task.taskId()));
         assertThat(query.snapshot(user, source.conversationId(), null, 40).cursor()).isEqualTo(waiting.cursor());
@@ -227,8 +227,8 @@ class TaskDirectiveIntegrationTest {
                     assertThat(event.payload().path("directive").has("commandId")).isFalse();
                 });
         assertThatThrownBy(() -> service.decide(user, target, new TaskDirectiveDecision(receipt.directiveId(), version(jdbc, task.taskId()), "APPLY", null))).isInstanceOf(RuntimeBusinessException.class);
-        assertThat(operations.prepare(write).operationId()).isEqualTo(operation.operationId());
-        assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id=?", String.class, operation.operationId())).isEqualTo("UNKNOWN");
+        assertThat(operations.prepare(write).getOperationId()).isEqualTo(operation.getOperationId());
+        assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id=?", String.class, operation.getOperationId())).isEqualTo("UNKNOWN");
         assertThatThrownBy(() -> operations.prepare(new PrepareRequest(user, target, "turn", "write-new", "mock_ticket_create", "v1", "WRITE", Map.of("title", "new"), "new", false, null, 0, 1, "tester"))).isInstanceOf(RuntimeBusinessException.class);
         assertThat(service.decide(user, target, new TaskDirectiveDecision(receipt.directiveId(), version(jdbc, task.taskId()), "REJECT", "原操作结果尚未确认，请先处理原工作")).status()).isEqualTo("REJECTED");
         assertThat(jdbc.queryForObject("SELECT goal_revision FROM sq_goal_task WHERE task_id=?", Long.class, task.taskId())).isZero();

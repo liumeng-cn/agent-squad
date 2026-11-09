@@ -3,7 +3,7 @@ package com.agentsquad.squad.service;
 import com.agentsquad.squad.domain.model.ConversationCommittedSignal;
 import com.agentsquad.squad.domain.response.ConversationViewResponse;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.domain.model.ConversationTitles;
 import com.agentsquad.squad.mapper.ConversationMapper;
 import com.agentsquad.squad.mapper.MessageAcceptanceMapper;

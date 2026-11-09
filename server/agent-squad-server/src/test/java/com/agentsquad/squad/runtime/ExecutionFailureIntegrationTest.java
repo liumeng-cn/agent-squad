@@ -6,7 +6,7 @@ import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.ResponseRetryService;
 import com.agentsquad.squad.service.ExecutionScopeService;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
-import com.agentsquad.squad.domain.exception.PlanCorrectionExhaustedException;
+import com.agentsquad.squad.common.exception.PlanCorrectionExhaustedException;
 import com.agentsquad.squad.mapper.ExecutionFailureMapper;
 import com.agentsquad.squad.service.ExecutionFailureService;
 import com.agentsquad.squad.domain.model.ModelFailureClassifier;
@@ -155,7 +155,7 @@ class ExecutionFailureIntegrationTest {
             var scopeService = context.getBean(ExecutionScopeService.class);
             String scopeId = scopeService.scopeForSession(user, session);
             var operation = context.getBean(OperationService.class).prepare(new PrepareRequest(user, session, "turn", "write", "mock_ticket_create", "v1", "WRITE", Map.of("title", "test"), "stable", false, null, 0, 1, "tester"));
-            jdbc.update("UPDATE sq_operation SET status='UNKNOWN' WHERE operation_id=?", operation.operationId());
+            jdbc.update("UPDATE sq_operation SET status='UNKNOWN' WHERE operation_id=?", operation.getOperationId());
             var failures = context.getBean(ExecutionFailureService.class);
             failures.reportModel(user, session, "error", new OpenAIException("private-secret", 503, "x", "x"));
             var scope = context.getBean(ExecutionScopeMapper.class).findOwned(user, scopeId);
@@ -163,11 +163,11 @@ class ExecutionFailureIntegrationTest {
             assertThat(failures.queueTransientRetry(scope, binding, "failed", "fixed-turn")).isFalse();
             jdbc.update("UPDATE sq_response_execution SET status='FAILED' WHERE execution_id=?", receipt.executionId());
             var snapshot = context.getBean(ConversationQueryService.class).snapshot(user, receipt.conversationId(), null, 40);
-            assertThat(snapshot.operationIds()).containsExactly(operation.operationId());
+            assertThat(snapshot.operationIds()).containsExactly(operation.getOperationId());
             assertThat(snapshot.failures().getFirst().allowedActions()).isEmpty();
             assertThat(snapshot.failures().toString()).doesNotContain("private-secret");
             assertThatThrownBy(() -> context.getBean(ResponseRetryService.class).retry(user, receipt.executionId(), "retry", 0)).isInstanceOf(RuntimeBusinessException.class);
-            assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id=?", String.class, operation.operationId())).isEqualTo("UNKNOWN");
+            assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id=?", String.class, operation.getOperationId())).isEqualTo("UNKNOWN");
             assertThat(context.getBean(ExecutionFailureMapper.class).serviceAttempts(user, scopeId)).isZero();
         }
     }

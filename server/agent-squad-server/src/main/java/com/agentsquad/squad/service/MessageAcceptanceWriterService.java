@@ -2,7 +2,7 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.mapper.ArtifactMapper;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.common.observability.ObservationSupport;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.domain.entity.ConversationDO;
@@ -20,7 +20,7 @@ import com.agentsquad.squad.domain.dto.MessageView;
 import com.agentsquad.squad.domain.dto.ResponseExecutionView;
 import com.agentsquad.squad.domain.dto.MessageAcceptedPayload;
 import com.agentsquad.squad.domain.dto.ExecutionChangedPayload;
-import com.agentsquad.squad.presentation.domain.ConversationDeltaType;
+import com.agentsquad.squad.domain.enums.ConversationDeltaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import org.springframework.context.ApplicationEventPublisher;

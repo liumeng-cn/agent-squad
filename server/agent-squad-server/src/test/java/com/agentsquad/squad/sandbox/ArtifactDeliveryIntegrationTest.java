@@ -54,7 +54,7 @@ class ArtifactDeliveryIntegrationTest {
             assertThatThrownBy(() -> ledger.replay(repeat.run())).hasMessageContaining("不能自动重放");
             assertThatThrownBy(() -> ledger.begin(identity, request, "b".repeat(64))).hasMessageContaining("输入不一致");
             byte[] content = "已验证的交付".getBytes(StandardCharsets.UTF_8);
-            var result = ledger.finish(identity, claim.run().executionId(), request,
+            var result = ledger.finish(identity, claim.run().getExecutionId(), request,
                     new SandboxDriverResult(0, "report", "", false, List.of(new SandboxOutput("result.txt", content))));
             var stage = result.stagedArtifacts().getFirst();
             ArtifactService artifacts = context.getBean(ArtifactService.class);
@@ -67,7 +67,7 @@ class ArtifactDeliveryIntegrationTest {
             var published = delivery.commit(userId, sessionId, null, stage.stageId(), stage.sha256());
             assertThat(delivery.commit(userId, sessionId, null, stage.stageId(), stage.sha256()).artifactId())
                     .isEqualTo(published.artifactId());
-            assertThat(artifacts.content(userId, published.artifactId()).content()).isEqualTo(content);
+            assertThat(artifacts.content(userId, published.artifactId()).getContent()).isEqualTo(content);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_scope_artifact WHERE scope_id = ?", Integer.class, scopeId))
                     .isEqualTo(1);
             jdbc.update("UPDATE sq_artifact SET expires_at = DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 DAY) WHERE artifact_id = ?",

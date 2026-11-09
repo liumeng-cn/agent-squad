@@ -1,7 +1,7 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
 
 import com.agentsquad.squad.domain.dto.AcceptanceCheckView;
 import com.agentsquad.squad.domain.entity.EventDO;
@@ -132,8 +132,8 @@ public class TaskSnapshotService {
                 }
                 views.add(new AcceptanceCheckView(check.path("criterionId").asText(),
                         check.path("text").asText(), check.path("required").asBoolean(),
-                        com.agentsquad.squad.common.enums.worker.AcceptanceVerificationType.valueOf(check.path("verificationType").asText()),
-                        com.agentsquad.squad.common.enums.worker.PlanAcceptanceVerdict.valueOf(check.path("verdict").asText())));
+                        com.agentsquad.squad.domain.enums.AcceptanceVerificationType.valueOf(check.path("verificationType").asText()),
+                        com.agentsquad.squad.domain.enums.PlanAcceptanceVerdict.valueOf(check.path("verdict").asText())));
             }
             return List.copyOf(views);
         } catch (java.io.IOException | IllegalArgumentException exception) {
@@ -163,7 +163,7 @@ public class TaskSnapshotService {
                         row.getTaskId(), row.getJobId(), exception);
             }
         }
-        var state = com.agentsquad.squad.common.enums.worker.WorkerJobStatus.valueOf(row.getStatus());
+        var state = com.agentsquad.squad.domain.enums.WorkerJobStatus.valueOf(row.getStatus());
         try {
             var input = RuntimePayloads.readJson(objectMapper, row.getInputJson());
             String goal = input.path("goal").asText(row.getNodeKey());
@@ -175,8 +175,8 @@ public class TaskSnapshotService {
             return new WorkerJob(row.getJobId(), row.getTaskId(), row.getNodeKey(), row.getPlanVersion(),
                     row.getWorkerKey(), row.getWorkerVersion(), state, row.getVersion(),
                     row.getBindingId(), row.getReusedFromJobId(), result, goal.substring(0, end), List.copyOf(dependencies),
-                    state == com.agentsquad.squad.common.enums.worker.WorkerJobStatus.SKIPPED
-                            ? com.agentsquad.squad.common.enums.worker.WorkerSkipReason.DEPENDENCY_FAILED : null,
+                    state == com.agentsquad.squad.domain.enums.WorkerJobStatus.SKIPPED
+                            ? com.agentsquad.squad.domain.enums.WorkerSkipReason.DEPENDENCY_FAILED : null,
                     input.path("required").isBoolean() ? input.get("required").asBoolean() : null);
         } catch (JsonProcessingException invalid) {
             throw new IllegalStateException("工作步骤说明无法读取", invalid);

@@ -80,8 +80,8 @@ class StopDeliveryIntegrationTest {
 
             deliveryService.deliver(commandId);
 
-            assertThat(commandMapper.findOwned(userId, commandId).status()).isEqualTo("DELIVERED");
-            assertThat(commandMapper.findOwned(userId, commandId).nativeStatus()).isEqualTo("no-active-run");
+            assertThat(commandMapper.findOwned(userId, commandId).getStatus()).isEqualTo("DELIVERED");
+            assertThat(commandMapper.findOwned(userId, commandId).getNativeStatus()).isEqualTo("no-active-run");
             assertThat(goalTaskService.findTask(userId, taskId).status()).isEqualTo("CANCELLED");
             assertThat(goalTaskService.listEvents(userId, taskId, 0))
                     .extracting(event -> event.type())

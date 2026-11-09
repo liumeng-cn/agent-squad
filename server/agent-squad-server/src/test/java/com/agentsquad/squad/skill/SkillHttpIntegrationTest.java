@@ -121,7 +121,7 @@ class SkillHttpIntegrationTest {
             assertThat(repository.getSkills(runtimeContext, Set.of())).isEmpty();
 
             skills.changeGrant(USER, versionId, new SkillGrantRequest(false, 1L));
-            assertThat(runtime.read(USER, scopeId, versionId, "references/guide.md").content()).isEqualTo("旧资源");
+            assertThat(runtime.read(USER, scopeId, versionId, "references/guide.md").getContent()).isEqualTo("旧资源");
             String newVersion = skills.importPackage(USER, request("2.0.0", "新资源")).skillVersionId();
             skills.changeGrant(USER, newVersion, new SkillGrantRequest(true, 0L));
             assertThat(runtime.freeze(USER, scopeId).skills()).extracting("skillVersionId").containsExactly(versionId);

@@ -1,6 +1,6 @@
 package com.agentsquad.squad.domain.dto;
 
-import com.agentsquad.squad.common.enums.worker.WorkerJobStatus;
+import com.agentsquad.squad.domain.enums.WorkerJobStatus;
 
 /**
  * 工作处置回执

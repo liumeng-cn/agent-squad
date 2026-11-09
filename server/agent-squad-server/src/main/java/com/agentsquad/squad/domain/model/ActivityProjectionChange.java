@@ -1,7 +1,7 @@
 package com.agentsquad.squad.domain.model;
 
-import com.agentsquad.squad.common.enums.execution.ActivityStatus;
-import com.agentsquad.squad.common.enums.execution.ActivityWaitReason;
+import com.agentsquad.squad.domain.enums.ActivityStatus;
+import com.agentsquad.squad.domain.enums.ActivityWaitReason;
 
 /**
  * 单次原生边界对应的活动变化

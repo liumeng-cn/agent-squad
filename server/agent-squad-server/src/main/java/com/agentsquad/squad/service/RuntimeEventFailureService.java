@@ -4,7 +4,7 @@ import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource;
 
 import com.agentsquad.squad.mapper.RuntimeEventInboxMapper;
 
-import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventFailureCode;
+import com.agentsquad.squad.domain.enums.RuntimeEventFailureCode;
 
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;

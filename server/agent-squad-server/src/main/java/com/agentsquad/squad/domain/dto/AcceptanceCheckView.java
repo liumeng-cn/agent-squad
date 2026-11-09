@@ -1,7 +1,7 @@
 package com.agentsquad.squad.domain.dto;
 
-import com.agentsquad.squad.common.enums.worker.AcceptanceVerificationType;
-import com.agentsquad.squad.common.enums.worker.PlanAcceptanceVerdict;
+import com.agentsquad.squad.domain.enums.AcceptanceVerificationType;
+import com.agentsquad.squad.domain.enums.PlanAcceptanceVerdict;
 
 /**
  * 已发布结果的逐项检查说明

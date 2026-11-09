@@ -69,7 +69,7 @@ class DeliveryFairScanIntegrationTest {
             transaction.executeWithoutResult(status -> admission.acquire(userA, bindingA, commandA, "SUBMIT"));
             org.assertj.core.api.Assertions.assertThatThrownBy(() -> transaction.executeWithoutResult(
                     status -> admission.acquire(userB, bindingB, commandB, "SUBMIT")))
-                    .isInstanceOf(com.agentsquad.squad.domain.exception.RuntimeAdmissionBusyException.class);
+                    .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeAdmissionBusyException.class);
             admission.releaseUnsubmitted(userA, bindingA, "stale-command");
             assertThat(jdbc.queryForObject("SELECT active_count FROM sq_runtime_admission_counter WHERE pool_key = 'GLOBAL'",
                     Integer.class)).isEqualTo(1);

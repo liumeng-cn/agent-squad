@@ -1,9 +1,9 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.enums.identity.AccountRole;
-import com.agentsquad.squad.common.enums.worker.WorkerDefinitionStatus;
+import com.agentsquad.squad.domain.enums.AccountRole;
+import com.agentsquad.squad.domain.enums.WorkerDefinitionStatus;
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.common.util.JsonSchemaValidator;
 import com.agentsquad.squad.common.util.RuntimePayloads;

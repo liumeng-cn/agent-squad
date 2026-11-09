@@ -1,5 +1,9 @@
 package com.agentsquad.squad.integration.agentscope.completion;
 
+import com.agentsquad.squad.domain.enums.ModelCompletionStatus;
+import com.agentsquad.squad.domain.enums.ModelEvidenceIssue;
+import com.agentsquad.squad.domain.enums.ModelFinishReason;
+
 /**
  * 模型结束事实
  * <p>

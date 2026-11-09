@@ -1,5 +1,7 @@
 package com.agentsquad.squad.model.domain;
 
+import com.agentsquad.squad.domain.enums.ReasoningMode;
+
 /**
  * 一次回复受理时固定的模型选择
  * <p>

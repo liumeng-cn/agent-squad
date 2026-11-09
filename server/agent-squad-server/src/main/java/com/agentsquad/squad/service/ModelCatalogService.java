@@ -1,11 +1,11 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.exception.RuntimeExceptionCode;
+import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.common.util.ContentDigests;
 import com.agentsquad.squad.model.domain.AcceptedModelChoice;
-import com.agentsquad.squad.model.domain.ReasoningAdapter;
-import com.agentsquad.squad.model.domain.ReasoningMode;
+import com.agentsquad.squad.domain.enums.ReasoningAdapter;
+import com.agentsquad.squad.domain.enums.ReasoningMode;
 import com.agentsquad.squad.model.dto.ModelOption;
 import com.agentsquad.squad.worker.profile.WorkerModelProfile;
 import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;

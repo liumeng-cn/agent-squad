@@ -92,7 +92,7 @@ public class TaskEventPublishingService {
                     }
                 }
                 events.publish(scope, key, "message.completed", Map.of("messageId", messageId, "revision", revision, "taskId", taskId, "text", text));
-                activities.completed(scope, new ActivityBusinessFact(com.agentsquad.squad.common.enums.execution.ActivityType.ANSWER_PUBLISH,
+                activities.completed(scope, new ActivityBusinessFact(com.agentsquad.squad.domain.enums.ActivityType.ANSWER_PUBLISH,
                         messageId + ":" + revision));
             } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
                 throw new IllegalStateException("目标公开答案无法读取", exception);
@@ -111,7 +111,7 @@ public class TaskEventPublishingService {
                             payload.path("acceptanceCriteria"), json.getTypeFactory().constructCollectionType(java.util.List.class,
                                     PlanAcceptanceCriterion.class));
                     events.publish(scope, key, eventType, new PlanPublishedPayload(2,
-                            taskId, planVersion, jobIds, com.agentsquad.squad.common.enums.worker.PlanJoinPolicy.valueOf(
+                            taskId, planVersion, jobIds, com.agentsquad.squad.domain.enums.PlanJoinPolicy.valueOf(
                             payload.path("joinPolicy").asText()), criteria));
                 } else {
                     events.publish(scope, key, eventType, new JobReusedPayload(2,

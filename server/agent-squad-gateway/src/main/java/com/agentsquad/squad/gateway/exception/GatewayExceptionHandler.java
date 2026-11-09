@@ -1,7 +1,7 @@
 package com.agentsquad.squad.gateway.exception;
 
 import com.agentsquad.squad.common.exception.*;
-import com.agentsquad.squad.common.model.ApiCode;
+import com.agentsquad.squad.domain.enums.ApiCode;
 import com.agentsquad.squad.common.model.ApiResult;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;

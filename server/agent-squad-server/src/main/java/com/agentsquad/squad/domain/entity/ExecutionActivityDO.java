@@ -1,9 +1,9 @@
 package com.agentsquad.squad.domain.entity;
 
-import com.agentsquad.squad.common.enums.execution.ActivityGroup;
-import com.agentsquad.squad.common.enums.execution.ActivityStatus;
-import com.agentsquad.squad.common.enums.execution.ActivityType;
-import com.agentsquad.squad.common.enums.execution.ActivityWaitReason;
+import com.agentsquad.squad.domain.enums.ActivityGroup;
+import com.agentsquad.squad.domain.enums.ActivityStatus;
+import com.agentsquad.squad.domain.enums.ActivityType;
+import com.agentsquad.squad.domain.enums.ActivityWaitReason;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;

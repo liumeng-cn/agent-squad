@@ -2,7 +2,7 @@ package com.agentsquad.squad.presentation.stream;
 
 import com.agentsquad.squad.domain.entity.ReplyPreviewTargetDO;
 import com.agentsquad.squad.integration.agentscope.ReplyPreviewBuffer;
-import com.agentsquad.squad.presentation.domain.ReplyPreviewPhase;
+import com.agentsquad.squad.domain.enums.ReplyPreviewPhase;
 import com.agentsquad.squad.domain.model.ReplyPreviewSignal;
 import org.junit.jupiter.api.Test;
 

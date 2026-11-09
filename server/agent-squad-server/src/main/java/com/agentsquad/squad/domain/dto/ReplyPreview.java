@@ -1,6 +1,6 @@
 package com.agentsquad.squad.domain.dto;
 
-import com.agentsquad.squad.presentation.domain.ReplyPreviewPhase;
+import com.agentsquad.squad.domain.enums.ReplyPreviewPhase;
 
 /**
  * 可丢弃的普通回答正文预览

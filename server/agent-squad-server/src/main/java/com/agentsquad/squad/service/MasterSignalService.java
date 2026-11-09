@@ -2,7 +2,7 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.mapper.TaskDirectiveMapper;
 import com.agentsquad.squad.common.util.ContentDigests;
-import com.agentsquad.squad.common.enums.worker.WorkerJobStatus;
+import com.agentsquad.squad.domain.enums.WorkerJobStatus;
 import com.agentsquad.squad.common.util.RuntimePayloads;
 import com.agentsquad.squad.domain.enums.PlanJoinStage;
 import com.agentsquad.squad.domain.enums.RuntimeCommandAction;

@@ -48,7 +48,7 @@ class ConversationDeletionTaskSettleTest {
 
             deletionService.delete(userId, conversation.conversationId(), "delete-key-1", currentVersion);
 
-            assertThat(context.getBean(TaskMapper.class).findOwned(userId, receipt.taskId()).status()).isEqualTo("CANCELLED");
+            assertThat(context.getBean(TaskMapper.class).findOwned(userId, receipt.taskId()).getStatus()).isEqualTo("CANCELLED");
             assertThatThrownBy(() -> goalTaskService.findTask(userId, receipt.taskId()))
                     .isInstanceOf(RuntimeBusinessException.class);
             assertThatThrownBy(() -> goalTaskService.listConversationTasks(userId, conversation.conversationId(), null, 20))
@@ -56,7 +56,7 @@ class ConversationDeletionTaskSettleTest {
             assertThatThrownBy(() -> goalTaskService.listEvents(userId, receipt.taskId(), 0))
                     .isInstanceOf(RuntimeBusinessException.class);
             assertThat(context.getBean(TaskEventMapper.class).listAfter(userId, receipt.taskId(), 0))
-                    .extracting(event -> event.eventType()).containsExactly("task.accepted", "task.completed");
+                    .extracting(event -> event.getEventType()).containsExactly("task.accepted", "task.completed");
 
             cleanupScheduler.cleanupDeletingConversations();
 

@@ -1,6 +1,6 @@
 package com.agentsquad.squad.domain.entity;
 
-import com.agentsquad.squad.common.enums.worker.WorkerDefinitionStatus;
+import com.agentsquad.squad.domain.enums.WorkerDefinitionStatus;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;

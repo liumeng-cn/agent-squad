@@ -1,10 +1,10 @@
 package com.agentsquad.squad.domain.model;
 
 import com.agentsquad.squad.common.exception.BudgetExceededException;
-import com.agentsquad.squad.domain.exception.ExecutionContextInvalidatedException;
+import com.agentsquad.squad.common.exception.ExecutionContextInvalidatedException;
 import com.agentsquad.squad.domain.model.FailureClassification;
-import com.agentsquad.squad.domain.exception.PlanCorrectionExhaustedException;
-import com.agentsquad.squad.domain.exception.SkillCapabilityUnavailableException;
+import com.agentsquad.squad.common.exception.PlanCorrectionExhaustedException;
+import com.agentsquad.squad.common.exception.SkillCapabilityUnavailableException;
 import io.agentscope.core.model.ModelHttpException;
 import io.agentscope.core.model.transport.HttpTransportException;
 

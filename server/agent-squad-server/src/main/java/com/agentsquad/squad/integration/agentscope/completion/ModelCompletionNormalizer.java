@@ -9,6 +9,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import com.agentsquad.squad.domain.enums.ModelCompletionStatus;
+import com.agentsquad.squad.domain.enums.ModelEvidenceIssue;
+import com.agentsquad.squad.domain.enums.ModelFinishReason;
 
 /**
  * 已提交模型事件规范化

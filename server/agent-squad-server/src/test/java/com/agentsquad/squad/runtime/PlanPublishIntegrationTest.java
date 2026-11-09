@@ -28,7 +28,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.nio.file.Path;
 import java.util.List;
-import com.agentsquad.squad.common.enums.identity.AccountRole;
+import com.agentsquad.squad.domain.enums.AccountRole;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -85,7 +85,7 @@ class PlanPublishIntegrationTest {
                     String.class, first.jobIds().getFirst());
             jdbc.update("UPDATE sq_command SET status = 'DELIVERED' WHERE binding_id = ?",
                     firstBinding);
-            String guard = dispatch.claim(userId, firstBinding).guardToken();
+            String guard = dispatch.claim(userId, firstBinding).getGuardToken();
             results.propose(userId, firstBinding, guard, "draft-turn",
                     json.readTree("{\"text\":\"已写摘要\"}"));
             assertThat(results.finalizeSuccess(userId, firstBinding, "draft-turn")).isTrue();
@@ -94,7 +94,7 @@ class PlanPublishIntegrationTest {
                     String.class, first.jobIds().get(1));
             jdbc.update("UPDATE sq_command SET status = 'DELIVERED' WHERE binding_id = ?",
                     finishBinding);
-            String finishGuard = dispatch.claim(userId, finishBinding).guardToken();
+            String finishGuard = dispatch.claim(userId, finishBinding).getGuardToken();
             results.propose(userId, finishBinding, finishGuard, "finish-turn",
                     json.readTree("{\"text\":\"已整理摘要\"}"));
             assertThat(results.finalizeSuccess(userId, finishBinding, "finish-turn")).isTrue();
@@ -135,7 +135,7 @@ class PlanPublishIntegrationTest {
                     String.class, changedGoal.jobIds().getFirst());
             jdbc.update("UPDATE sq_command SET status = 'DELIVERED' WHERE binding_id = ?",
                     changedBinding);
-            String changedGuard = dispatch.claim(userId, changedBinding).guardToken();
+            String changedGuard = dispatch.claim(userId, changedBinding).getGuardToken();
             results.propose(userId, changedBinding, changedGuard, "changed-turn",
                     json.readTree("{\"text\":\"新内容\",\"evidenceRefs\":[\"external\"]}"));
             assertThat(results.finalizeSuccess(userId, changedBinding, "changed-turn")).isTrue();
@@ -263,14 +263,14 @@ class PlanPublishIntegrationTest {
                     String.class, receipt.jobIds().getFirst());
             jdbc.update("UPDATE sq_command SET status = 'DELIVERED' WHERE binding_id = ?",
                     rootBinding);
-            String rootGuard = dispatchService.claim(userId, rootBinding).guardToken();
+            String rootGuard = dispatchService.claim(userId, rootBinding).getGuardToken();
             resultService.propose(userId, rootBinding, rootGuard, "root-turn",
                     mapper.readTree("{\"text\":\"分析完成\"}"));
             assertThat(resultService.finalizeSuccess(userId, rootBinding, "root-turn")).isTrue();
             assertThat(snapshotsView.snapshot(userId, task.taskId()).jobs())
                     .hasSize(2)
                     .anySatisfy(job -> {
-                        assertThat(job.status()).isEqualTo(com.agentsquad.squad.common.enums.worker.WorkerJobStatus.SUCCEEDED);
+                        assertThat(job.status()).isEqualTo(com.agentsquad.squad.domain.enums.WorkerJobStatus.SUCCEEDED);
                         assertThat(job.result().toString()).contains("分析完成");
                     });
             assertThat(jdbc.queryForObject(
@@ -287,7 +287,7 @@ class PlanPublishIntegrationTest {
                     String.class, receipt.jobIds().get(1));
             jdbc.update("UPDATE sq_command SET status = 'DELIVERED' WHERE binding_id = ?",
                     reportBinding);
-            String reportGuard = dispatchService.claim(userId, reportBinding).guardToken();
+            String reportGuard = dispatchService.claim(userId, reportBinding).getGuardToken();
             resultService.propose(userId, reportBinding, reportGuard, "report-turn",
                     mapper.readTree("{\"text\":\"报告完成\"}"));
             assertThat(resultService.finalizeSuccess(userId, reportBinding, "report-turn")).isTrue();
@@ -405,7 +405,7 @@ class PlanPublishIntegrationTest {
                     String.class, secondReceipt.jobIds().getFirst());
             jdbc.update("UPDATE sq_command SET status = 'DELIVERED' WHERE binding_id = ?",
                     secondBinding);
-            String secondGuard = dispatchService.claim(userId, secondBinding).guardToken();
+            String secondGuard = dispatchService.claim(userId, secondBinding).getGuardToken();
             resultService.propose(userId, secondBinding, secondGuard, "summary-turn",
                     mapper.readTree("{\"text\":\"汇总完成\"}"));
             assertThat(resultService.finalizeSuccess(userId, secondBinding, "summary-turn")).isTrue();

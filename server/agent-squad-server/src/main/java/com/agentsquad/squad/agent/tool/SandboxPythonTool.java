@@ -99,12 +99,12 @@ public class SandboxPythonTool implements AgentTool {
         }
         if (!definitions.requirePublished(worker.getWorkerKey(), worker.getWorkerVersion()).toolAllowlist().contains(getName())) {
             throw new com.agentsquad.squad.common.exception.RuntimeBusinessException(
-                    com.agentsquad.squad.common.exception.RuntimeExceptionCode.FORBIDDEN, "该Worker没有沙箱执行权限");
+                    com.agentsquad.squad.domain.enums.RuntimeExceptionCode.FORBIDDEN, "该Worker没有沙箱执行权限");
         }
         var identity = context.get(WorkerExecutionIdentity.class);
         if (identity == null || !bindingId.equals(identity.bindingId())) {
             throw new com.agentsquad.squad.common.exception.RuntimeBusinessException(
-                    com.agentsquad.squad.common.exception.RuntimeExceptionCode.FORBIDDEN, "缺少本次Worker领取的固定执行身份");
+                    com.agentsquad.squad.domain.enums.RuntimeExceptionCode.FORBIDDEN, "缺少本次Worker领取的固定执行身份");
         }
         return identity.guardToken();
     }

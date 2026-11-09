@@ -3,7 +3,7 @@ package com.agentsquad.squad.service;
 import com.agentsquad.squad.domain.entity.ExecutionFailureDO;
 import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
 import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
-import com.agentsquad.squad.domain.exception.PlanCorrectionExhaustedException;
+import com.agentsquad.squad.common.exception.PlanCorrectionExhaustedException;
 import com.agentsquad.squad.domain.model.ActivityBusinessFact;
 import com.agentsquad.squad.domain.model.ModelFailureClassifier;
 
@@ -154,7 +154,7 @@ public class ExecutionFailureService {
                 "TASK".equals(scope.getKind()) ? scope.getOwnerId() : null, bindingId, "RESUME", payload, next);
         failures.approveRetry(scope.getUserId(), failure.getFailureId(), attempt + 1);
         activities.completed(scope, bindingId, new com.agentsquad.squad.domain.model.ActivityBusinessFact(
-                com.agentsquad.squad.common.enums.execution.ActivityType.AUTO_RETRY_SCHEDULED, eventId));
+                com.agentsquad.squad.domain.enums.ActivityType.AUTO_RETRY_SCHEDULED, eventId));
         events.publish(scope, "retry:" + failure.getFailureId() + ":" + (attempt + 1), "failure.updated", Map.of("failureId", failure.getFailureId(), "status", "RETRYING", "attempt", attempt + 1, "maxAttempts", 2, "nextAttemptAt", next.toString()));
         log.info("暂时服务故障已排队恢复 scopeId={} failureId={} attempt={} nextAttemptAt={}", scope.getScopeId(), failure.getFailureId(), attempt + 1, next);
         return true;

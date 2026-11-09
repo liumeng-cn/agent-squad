@@ -1,6 +1,6 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.domain.exception.RuntimeAdmissionBusyException;
+import com.agentsquad.squad.common.exception.RuntimeAdmissionBusyException;
 import com.agentsquad.squad.integration.agentscope.NativeSubmissionReceipt;
 
 import com.agentsquad.squad.integration.agentscope.RedisCommandWakeup;
@@ -11,7 +11,7 @@ import com.agentsquad.squad.domain.entity.CommandClaimContextDO;
 import com.agentsquad.squad.domain.entity.DeliveryDO;
 import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
 import com.agentsquad.squad.domain.enums.RuntimeCommandAction;
-import com.agentsquad.squad.domain.exception.ExecutionContextInvalidatedException;
+import com.agentsquad.squad.common.exception.ExecutionContextInvalidatedException;
 
 import com.agentsquad.squad.domain.model.CommandReadySignal;
 
