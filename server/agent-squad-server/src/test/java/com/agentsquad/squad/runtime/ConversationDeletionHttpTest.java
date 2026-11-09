@@ -1,6 +1,6 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.testsupport.ApiResultJson;
 import com.agentsquad.squad.testsupport.TestAssertion;
@@ -29,12 +29,12 @@ class ConversationDeletionHttpTest {
 
     @Test
     void shouldAcceptDeleteAndBlockReadsAndSubmits(@TempDir Path tempDirectory) throws Exception {
-        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("squad"));
+        String databaseUrl = PostgresTestDatabase.url(tempDirectory.resolve("squad"));
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class,
                 "--server.port=0",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.auth.username=local-user",
                 "--agentsquad.auth.password=local-password")) {
             MockMvc mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();
@@ -42,7 +42,7 @@ class ConversationDeletionHttpTest {
 
 
             var conversation = mvc.perform(post("/api/v1/conversations")
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
+                            .with(TestAssertion.as(201L, "ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"title\":\"待删除\"}"))
                     .andExpect(status().isCreated()).andReturn();
@@ -50,23 +50,23 @@ class ConversationDeletionHttpTest {
             String conversationId = conversationJson.get("conversationId").asText();
 
             mvc.perform(delete("/api/v1/conversations/{conversationId}", conversationId)
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
+                            .with(TestAssertion.as(201L, "ADMIN"))
                             .header("Idempotency-Key", "delete-1")
                             .header("If-Match", "0"))
                     .andExpect(status().isAccepted());
 
             mvc.perform(get("/api/v1/conversations/{conversationId}", conversationId)
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN")))
+                            .with(TestAssertion.as(201L, "ADMIN")))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(404));
 
             var list = mvc.perform(get("/api/v1/conversations")
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN")))
+                            .with(TestAssertion.as(201L, "ADMIN")))
                     .andExpect(status().isOk()).andReturn();
             JsonNode items = ApiResultJson.data(mapper, list.getResponse().getContentAsString()).get("items");
             assertThat(items).isEmpty();
 
             mvc.perform(post("/api/v1/conversations/{conversationId}/tasks", conversationId)
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
+                            .with(TestAssertion.as(201L, "ADMIN"))
                             .header("Idempotency-Key", "late-task")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"message\":\"迟到的目标\"}"))
@@ -76,12 +76,12 @@ class ConversationDeletionHttpTest {
 
     @Test
     void shouldReplaySameDeleteAndRejectStaleVersion(@TempDir Path tempDirectory) throws Exception {
-        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("squad"));
+        String databaseUrl = PostgresTestDatabase.url(tempDirectory.resolve("squad"));
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class,
                 "--server.port=0",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.auth.username=local-user",
                 "--agentsquad.auth.password=local-password")) {
             MockMvc mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();
@@ -89,7 +89,7 @@ class ConversationDeletionHttpTest {
 
 
             var conversation = mvc.perform(post("/api/v1/conversations")
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
+                            .with(TestAssertion.as(201L, "ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"title\":\"幂等删除\"}"))
                     .andExpect(status().isCreated()).andReturn();
@@ -97,25 +97,25 @@ class ConversationDeletionHttpTest {
                     .get("conversationId").asText();
 
             mvc.perform(delete("/api/v1/conversations/{conversationId}", conversationId)
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
+                            .with(TestAssertion.as(201L, "ADMIN"))
                             .header("Idempotency-Key", "delete-1")
                             .header("If-Match", "0"))
                     .andExpect(status().isAccepted());
             mvc.perform(delete("/api/v1/conversations/{conversationId}", conversationId)
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
+                            .with(TestAssertion.as(201L, "ADMIN"))
                             .header("Idempotency-Key", "delete-1")
                             .header("If-Match", "0"))
                     .andExpect(status().isAccepted());
 
             var other = mvc.perform(post("/api/v1/conversations")
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
+                            .with(TestAssertion.as(201L, "ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"title\":\"版本冲突\"}"))
                     .andExpect(status().isCreated()).andReturn();
             String otherId = ApiResultJson.data(mapper, other.getResponse().getContentAsString())
                     .get("conversationId").asText();
             mvc.perform(delete("/api/v1/conversations/{conversationId}", otherId)
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
+                            .with(TestAssertion.as(201L, "ADMIN"))
                             .header("Idempotency-Key", "delete-2")
                             .header("If-Match", "7"))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(409));

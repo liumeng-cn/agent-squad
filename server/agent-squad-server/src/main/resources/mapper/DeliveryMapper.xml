@@ -4,19 +4,19 @@
 
     <resultMap id="claimContextResult" type="com.agentsquad.squad.model.bo.CommandClaimContextBO">
         <constructor>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="scope_id" javaType="java.lang.Long"/>
             <arg column="action" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
         </constructor>
     </resultMap>
 
     <resultMap id="findClaimedResult" type="com.agentsquad.squad.model.bo.DeliveryBO">
         <constructor>
-            <arg column="command_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="command_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
             <arg column="action" javaType="java.lang.String"/>
             <arg column="payload_json" javaType="java.lang.String"/>
             <arg column="delivery_attempts" javaType="_int"/>
@@ -29,7 +29,7 @@
         公平发现：每名用户按最早到期命令排序，先轮询各用户第1条，再轮询第2条。
         这里仅筛选候选命令，最终权限、会话顺序与租约仍由 claim 事务校验。
     -->
-    <select id="findDueControlIds" resultType="java.lang.String">
+    <select id="findDueControlIds" resultType="java.lang.Long">
         SELECT c.command_id
         FROM sq_command c
         WHERE c.action IN ('STOP', 'RESPOND')
@@ -48,7 +48,7 @@
         LIMIT 20
     </select>
 
-    <select id="findDueIds" resultType="java.lang.String">
+    <select id="findDueIds" resultType="java.lang.Long">
         SELECT due.command_id
         FROM (
         SELECT
@@ -164,7 +164,7 @@
         WHERE command_id = #{commandId}
     </select>
 
-    <select id="earlierBlockingReplies" resultType="java.lang.String">
+    <select id="earlierBlockingReplies" resultType="java.lang.Long">
         SELECT earlier_reply.execution_id
         FROM sq_response_execution current_reply
         JOIN sq_execution_scope current_scope
@@ -261,12 +261,16 @@
         UPDATE sq_command
         SET status = 'BLOCKED',
         last_error_code = 'UNKNOWN_ACTION'
-        WHERE status = 'PENDING'
-        AND due_at &lt;= #{now}
-        AND action NOT IN ('SUBMIT', 'MESSAGE_SUBMIT', 'MASTER_SIGNAL',
-        'TASK_DIRECTIVE', 'STOP', 'RESUME', 'RESPOND', 'DELETE_CONVERSATION')
-        ORDER BY id
-        LIMIT 100
+        WHERE id IN (
+            SELECT id FROM sq_command
+            WHERE status = 'PENDING'
+            AND due_at &lt;= #{now}
+            AND action NOT IN ('SUBMIT', 'MESSAGE_SUBMIT', 'MASTER_SIGNAL',
+            'TASK_DIRECTIVE', 'STOP', 'RESUME', 'RESPOND', 'DELETE_CONVERSATION')
+            ORDER BY id
+            LIMIT 100
+            FOR UPDATE SKIP LOCKED
+        )
     </update>
 
     <update id="blockInvalid">

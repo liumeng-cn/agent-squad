@@ -30,25 +30,25 @@ public class ArtifactController {
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResult<ArtifactVO> upload(HttpServletRequest servletRequest,
                                         @RequestHeader("Idempotency-Key") String key, @RequestParam("file") MultipartFile file) throws IOException {
-        String userId = UserContext.current(servletRequest).userId();
+        Long userId = UserContext.current(servletRequest).userId();
         return ApiResult.success(artifactService.upload(userId, key, file.getOriginalFilename(), file.getBytes()));
     }
 
     @GetMapping("/artifacts/{artifactId}")
     public ApiResult<ArtifactVO> get(HttpServletRequest servletRequest,
-                                     @PathVariable String artifactId) {
+                                     @PathVariable Long artifactId) {
         return ApiResult.success(artifactService.get(UserContext.current(servletRequest).userId(), artifactId));
     }
 
     @GetMapping("/tasks/{taskId}/artifacts")
     public ApiResult<List<ArtifactVO>> list(HttpServletRequest servletRequest,
-                                            @PathVariable String taskId) {
+                                            @PathVariable Long taskId) {
         return ApiResult.success(artifactService.listTask(UserContext.current(servletRequest).userId(), taskId));
     }
 
     @GetMapping("/artifacts/{artifactId}/content")
     public ResponseEntity<byte[]> download(HttpServletRequest servletRequest,
-                                           @PathVariable String artifactId) {
+                                           @PathVariable Long artifactId) {
         ArtifactPO row = artifactService.content(UserContext.current(servletRequest).userId(), artifactId);
         return ResponseEntity.ok().contentType(MediaType.parseMediaType(row.getMediaType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()

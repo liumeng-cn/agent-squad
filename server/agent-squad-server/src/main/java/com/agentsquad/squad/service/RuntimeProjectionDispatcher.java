@@ -12,6 +12,7 @@ import com.agentsquad.squad.mapper.ProjectionMapper;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -38,7 +39,7 @@ import com.agentsquad.squad.exceptions.RuntimeEventConsumptionException;
 public class RuntimeProjectionDispatcher {
     @Resource
     private ExecutionTrace executionTrace;
-    @org.springframework.beans.factory.annotation.Value("${agentsquad.projection.wakeup-enabled:true}")
+    @Value("${agentsquad.projection.wakeup-enabled:true}")
     private boolean wakeupEnabled;
 
     private static final int BATCH_SIZE = 100;

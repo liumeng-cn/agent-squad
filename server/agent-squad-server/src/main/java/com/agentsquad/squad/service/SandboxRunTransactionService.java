@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.utils.RuntimePayloads;
 import com.agentsquad.squad.model.bo.ArtifactStageViewBO;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
@@ -58,7 +59,7 @@ public class SandboxRunTransactionService {
             }
             return new SandboxDispatchClaimBO(prior, false);
         }
-        String id = UUID.randomUUID().toString();
+        Long id = IdWorker.getId();
         budget.reserve(context.userId(), context.scopeId(), usageKey(id), "SANDBOX",
                 request.timeoutSeconds() * UNITS_PER_SECOND, "sandbox");
         mapper.insert(id, context.userId(), context.scopeId(), context.bindingId(), request.logicalKey(),
@@ -68,7 +69,7 @@ public class SandboxRunTransactionService {
     }
 
     @Transactional
-    public SandboxExecutionResultBO finish(SandboxExecutionContextBO context, String executionId,
+    public SandboxExecutionResultBO finish(SandboxExecutionContextBO context, Long executionId,
                                            SandboxExecuteRequestBO request, SandboxDriverResultBO result) {
         access.requireCurrent(context);
         List<ArtifactStageViewBO> stages = new ArrayList<>();
@@ -90,7 +91,7 @@ public class SandboxRunTransactionService {
     }
 
     @Transactional
-    public void unknown(SandboxExecutionContextBO context, String executionId) {
+    public void unknown(SandboxExecutionContextBO context, Long executionId) {
         budget.markUnknown(context.userId(), context.scopeId(), usageKey(executionId));
         mapper.finish(context.userId(), executionId, "UNKNOWN", null);
     }
@@ -129,7 +130,7 @@ public class SandboxRunTransactionService {
         }
     }
 
-    private String usageKey(String executionId) {
+    private String usageKey(Long executionId) {
         return "sandbox:" + executionId;
     }
 }

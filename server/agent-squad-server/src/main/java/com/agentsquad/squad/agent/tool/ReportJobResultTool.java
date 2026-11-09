@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.tool;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.service.WorkerResultService;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -26,18 +28,18 @@ public class ReportJobResultTool implements AgentTool {
 
     private final ObjectMapper objectMapper;
 
-    private final String userId;
+    private final Long userId;
 
     private final String sessionId;
 
-    private final String bindingId;
+    private final Long bindingId;
 
     private final String guardToken;
 
     private Map<String, Object> outputSchema = Map.of();
 
     public ReportJobResultTool(WorkerResultService resultService, ObjectMapper objectMapper,
-                               String userId, String sessionId, String bindingId, String guardToken) {
+                               Long userId, String sessionId, Long bindingId, String guardToken) {
         this.resultService = resultService;
         this.objectMapper = objectMapper;
         this.userId = userId;
@@ -92,14 +94,14 @@ public class ReportJobResultTool implements AgentTool {
 
     private ToolResultBlock submit(ToolCallParam param) {
         RuntimeContext context = param.getRuntimeContext();
-        if (context == null || !userId.equals(context.getUserId())
+        if (context == null || !userId.equals(RuntimeContextIds.userId(context))
                 || !sessionId.equals(context.getSessionId())) {
             return ToolResultBlock.error("Worker 结果会话不匹配");
         }
         String turnId = context.get(SessionRecorder.TURN_ID_KEY, String.class);
         JsonNode result = objectMapper.valueToTree(param.getInput().get("result"));
         try {
-            String jobId = resultService.propose(userId, bindingId, guardToken, turnId, result);
+            Long jobId = resultService.propose(userId, bindingId, guardToken, turnId, result);
             return ToolResultBlock.text("Worker 结果候选已保存，等待原生回合结束。jobId=" + jobId);
         } catch (RuntimeBusinessException exception) {
             return ToolResultBlock.error(exception.getMessage());

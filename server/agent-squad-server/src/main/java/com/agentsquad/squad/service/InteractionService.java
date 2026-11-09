@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.mapper.ProjectionMapper;
 import com.agentsquad.squad.model.bo.AcceptanceReviewRequestBO;
 import com.agentsquad.squad.model.bo.BindingResultBO;
@@ -104,11 +105,11 @@ public class InteractionService {
      * frameworkTurnId 来自原生日志事件，用于在账本内定位对应原生工具调用。
      */
     @Transactional
-    public BindingResultBO bindFrameworkRequest(String userId, String taskId, String bindingId,
-                                                String jobId, String frameworkTurnId,
+    public BindingResultBO bindFrameworkRequest(Long userId, Long taskId, Long bindingId,
+                                                Long jobId, String frameworkTurnId,
                                                 String frameworkRequestId,
                                                 Map<String, Object> call) {
-        String scopeId = scopeMapper.findScopeByBinding(userId, bindingId);
+        Long scopeId = scopeMapper.findScopeByBinding(userId, bindingId);
         if (scopeId == null || scopeMapper.findActiveOwned(userId, scopeId) == null) {
             return null;
         }
@@ -121,7 +122,7 @@ public class InteractionService {
         OperationPO operation = frameworkTurnId == null ? null
                 : operationMapper.findByNativeCall(userId, bindingId, frameworkTurnId,
                 frameworkRequestId);
-        String interactionId = UUID.randomUUID().toString();
+        Long interactionId = IdWorker.getId();
         if (operation != null) {
             String question = buildApprovalQuestion(toolName, operation);
             interactionMapper.insert(interactionId, userId, taskId, jobId, bindingId,
@@ -169,7 +170,7 @@ public class InteractionService {
      * 框架侧解析事件落账：仅把 OPEN 推到 RESPONDED，幂等无害；返回最新交互行供投影发布。
      */
     @Transactional
-    public InteractionPO resolveFromFramework(String userId, String bindingId, String requestId) {
+    public InteractionPO resolveFromFramework(Long userId, Long bindingId, String requestId) {
         InteractionPO row = interactionMapper.findByFrameworkRequest(userId, bindingId, requestId);
         if (row == null) {
             return null;
@@ -182,7 +183,7 @@ public class InteractionService {
     /**
      * 按开放交互判断目标应进入的等待态；审批优先于追问，无开放交互返回 null。
      */
-    public String waitingStatusOf(String userId, String taskId) {
+    public String waitingStatusOf(Long userId, Long taskId) {
         if (interactionMapper.countOpenByKind(userId, taskId, KIND_APPROVAL) > 0) {
             return GoalTaskStatus.WAITING_APPROVAL.name();
         }
@@ -195,7 +196,7 @@ public class InteractionService {
     /**
      * 普通回复等待状态按自身Scope聚合，不读取同会话另一任务的交互。
      */
-    public String waitingStatusOfScope(String userId, String scopeId) {
+    public String waitingStatusOfScope(Long userId, Long scopeId) {
         if (interactionMapper.countOpenByScopeKind(userId, scopeId, KIND_APPROVAL) > 0) {
             return "WAITING_APPROVAL";
         }
@@ -206,7 +207,7 @@ public class InteractionService {
      * 用户答复：批准派发、拒绝取消、追问回填；全部先落账本再排队 RESPOND 命令。
      */
     @Transactional
-    public CommandReceiptVO respond(AuthView actor, String interactionId, String idempotencyKey,
+    public CommandReceiptVO respond(AuthView actor, Long interactionId, String idempotencyKey,
                                     long expectedVersion, String answerKind, Boolean approve,
                                     String confirmedRequestHash, Map<String, Object> inputValue) {
         if (idempotencyKey == null || idempotencyKey.isBlank() || idempotencyKey.length() > 160) {
@@ -283,7 +284,7 @@ public class InteractionService {
 
         // 外部审批派发已独立出账；从此处起才锁会话和所有者，避免跨外部I/O持有操作行锁。
         scopeService.lockOwned(actor.userId(), row.getScopeId(), false);
-        String commandId = UUID.randomUUID().toString();
+        Long commandId = IdWorker.getId();
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("interactionId", interactionId);
         payload.put("requestId", row.getFrameworkRequestId());

@@ -16,14 +16,14 @@ import java.net.http.HttpResponse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * 双网关实例共享 MySQL 会话验证。
+ * 双网关实例共享 PostgreSQL 会话验证。
  *
  * <p>两个真实 Netty 网关进程内实例连接同一隔离库：实例 A 登录的会话可在实例 B 使用，
  * 在实例 B 退出后实例 A 立即失效；证明会话权威在数据库而非单机内存。</p>
  */
 class CrossInstanceSessionTest {
 
-    private static final String ADMIN_ID = "77777777-7777-4777-8777-777777777777";
+    private static final String ADMIN_ID = "3004";
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final String DB_URL;
     private static ConfigurableApplicationContext first;
@@ -31,7 +31,8 @@ class CrossInstanceSessionTest {
 
     static {
         DB_URL = GatewayTestDatabase.create("cross-instance");
-        GatewayTestDatabase.seedUser(DB_URL, ADMIN_ID, "cross-admin", "cross-admin-password", "ADMIN", false);
+        GatewayTestDatabase.seedUser(DB_URL, Long.parseLong(ADMIN_ID), "cross-admin", "cross-admin-password",
+                "ADMIN", false);
     }
 
     @BeforeAll
@@ -73,9 +74,17 @@ class CrossInstanceSessionTest {
                         .POST(HttpRequest.BodyPublishers.noBody()).build(),
                 HttpResponse.BodyHandlers.ofString()).statusCode());
 
-        assertEquals(401, client.send(HttpRequest.newBuilder(URI.create(base(first) + "/api/v1/auth/me"))
+        assertEquals(401, code(client.send(HttpRequest.newBuilder(URI.create(base(first) + "/api/v1/auth/me"))
                         .header("Cookie", cookie).GET().build(),
-                HttpResponse.BodyHandlers.ofString()).statusCode());
+                HttpResponse.BodyHandlers.ofString())));
+    }
+
+    /**
+     * 网关业务拒绝统一返回 HTTP 200，结果以响应体 code 判定。
+     */
+    private static int code(HttpResponse<String> response) throws Exception {
+        assertEquals(200, response.statusCode(), response.body());
+        return JSON.readTree(response.body()).get("code").asInt();
     }
 
     private static ConfigurableApplicationContext startInstance() {
@@ -84,7 +93,7 @@ class CrossInstanceSessionTest {
                 "--spring.datasource.url=" + DB_URL,
                 "--spring.datasource.username=" + GatewayTestDatabase.username(),
                 "--spring.datasource.password=" + GatewayTestDatabase.password(),
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--gateway.business-service-url=http://127.0.0.1:9",
                 "--agentsquad.auth.cleanup-initial-delay-ms=3600000");
     }

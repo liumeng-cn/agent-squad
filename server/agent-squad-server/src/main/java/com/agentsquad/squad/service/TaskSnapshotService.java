@@ -63,7 +63,7 @@ public class TaskSnapshotService {
      * pending 取开放的持久交互，供详情页渲染追问卡与审批卡。</p>
      */
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public TaskSnapshotVO snapshot(String userId, String taskId) {
+    public TaskSnapshotVO snapshot(Long userId, Long taskId) {
         TaskPO task = taskMapper.findOwned(userId, taskId);
         if (task == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
@@ -90,7 +90,7 @@ public class TaskSnapshotService {
      */
     @org.springframework.transaction.annotation.Transactional(readOnly = true,
             isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
-    public WorkerJobPageVO listJobs(String userId, String taskId) {
+    public WorkerJobPageVO listJobs(Long userId, Long taskId) {
         return listJobs(userId, taskId, null);
     }
 
@@ -98,7 +98,7 @@ public class TaskSnapshotService {
      * 按真实计划版本读取历史；权限仍以当前会话和目标归属判断，旧节点不混入当前完成数。
      */
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public WorkerJobPageVO listJobs(String userId, String taskId, Long requestedPlanVersion) {
+    public WorkerJobPageVO listJobs(Long userId, Long taskId, Long requestedPlanVersion) {
         TaskPO task = taskMapper.findOwned(userId, taskId);
         if (task == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
@@ -190,7 +190,7 @@ public class TaskSnapshotService {
     /**
      * 从规范化输入投影用户目标原文；历史数据缺失 message 时返回空串，不抛错。
      */
-    private String goalMessage(String userId, String taskId) {
+    private String goalMessage(Long userId, Long taskId) {
         String inputJson = taskMapper.findInputJson(userId, taskId);
         if (inputJson == null || inputJson.isBlank()) {
             return "";
@@ -203,7 +203,7 @@ public class TaskSnapshotService {
         }
     }
 
-    private AnswerVO buildAnswer(String userId, String taskId, long answerRevision) {
+    private AnswerVO buildAnswer(Long userId, Long taskId, long answerRevision) {
         EventPO event = taskEventMapper.findLatestAnswerEvent(userId, taskId, answerRevision);
         if (event == null) {
             return new AnswerVO(answerRevision, "", false);

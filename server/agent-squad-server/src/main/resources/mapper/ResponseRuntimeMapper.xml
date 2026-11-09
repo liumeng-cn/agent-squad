@@ -4,12 +4,12 @@
 
     <resultMap id="lockByBindingResult" type="com.agentsquad.squad.model.po.ResponseRuntimePO">
         <constructor>
-            <arg column="execution_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="conversation_id" javaType="java.lang.String"/>
-            <arg column="source_message_id" javaType="java.lang.String"/>
-            <arg column="scope_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="execution_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="conversation_id" javaType="java.lang.Long"/>
+            <arg column="source_message_id" javaType="java.lang.Long"/>
+            <arg column="scope_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="version" javaType="_long"/>
             <arg column="cancelled" javaType="_boolean"/>
@@ -18,7 +18,7 @@
             <arg column="proposal_hash" javaType="java.lang.String"/>
             <arg column="correction_count" javaType="_int"/>
             <arg column="recovery_attempts" javaType="_int"/>
-            <arg column="answer_message_id" javaType="java.lang.String"/>
+            <arg column="answer_message_id" javaType="java.lang.Long"/>
             <arg column="completion_protocol" javaType="com.agentsquad.squad.enums.ResponseCompletionProtocol"/>
         </constructor>
     </resultMap>
@@ -43,7 +43,7 @@
         FROM sq_response_execution WHERE user_id=#{userId} AND binding_id=#{bindingId} FOR UPDATE
     </select>
 
-    <select id="bindingForExecution" resultType="java.lang.String">
+    <select id="bindingForExecution" resultType="java.lang.Long">
         SELECT binding_id FROM sq_response_execution WHERE user_id=#{userId} AND execution_id=#{executionId} AND
         del_flag='0'
     </select>
@@ -164,7 +164,7 @@
         #{userId})
     </insert>
 
-    <select id="originalCommand" resultType="java.lang.String">
+    <select id="originalCommand" resultType="java.lang.Long">
         SELECT command_id FROM sq_command WHERE user_id=#{userId} AND binding_id=#{bindingId}
         AND action IN ('MESSAGE_SUBMIT',
         'SUBMIT') AND status IN ('DELIVERED',
@@ -172,7 +172,7 @@
         AND native_turn_id IS NOT NULL ORDER BY id DESC LIMIT 1
     </select>
 
-    <select id="activeBindings" resultType="java.lang.String">
+    <select id="activeBindings" resultType="java.lang.Long">
         SELECT binding_id FROM sq_response_execution WHERE user_id=#{userId} AND conversation_id=#{conversationId}
         AND status NOT IN ('SUCCEEDED',
         'PARTIAL',

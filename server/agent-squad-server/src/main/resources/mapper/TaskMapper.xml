@@ -5,9 +5,9 @@
     <resultMap id="lockOwnedRowResult" type="com.agentsquad.squad.model.po.TaskPO">
         <constructor>
             <arg column="id" javaType="_long"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="conversation_id" javaType="java.lang.Long"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="version" javaType="_long"/>
             <arg column="plan_version" javaType="_long"/>
@@ -22,9 +22,9 @@
     <resultMap id="findOwnedResult" type="com.agentsquad.squad.model.po.TaskPO">
         <constructor>
             <arg column="id" javaType="_long"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="conversation_id" javaType="java.lang.Long"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="version" javaType="_long"/>
             <arg column="plan_version" javaType="_long"/>
@@ -39,9 +39,9 @@
     <resultMap id="listByConversationResult" type="com.agentsquad.squad.model.po.TaskPO">
         <constructor>
             <arg column="id" javaType="_long"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="conversation_id" javaType="java.lang.Long"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="version" javaType="_long"/>
             <arg column="plan_version" javaType="_long"/>
@@ -91,11 +91,11 @@
         FOR UPDATE
     </select>
 
-    <select id="conversationIdOf" resultType="java.lang.String">
+    <select id="conversationIdOf" resultType="java.lang.Long">
         SELECT conversation_id FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}
     </select>
 
-    <select id="lockConversation" resultType="java.lang.String">
+    <select id="lockConversation" resultType="java.lang.Long">
         SELECT conversation_id FROM sq_conversation WHERE user_id = #{userId} AND conversation_id = #{conversationId}
         FOR UPDATE
     </select>
@@ -174,7 +174,7 @@
         last_update_time
         FROM sq_goal_task
         WHERE user_id = #{userId} AND conversation_id = #{conversationId}
-        AND (#{cursorId} IS NULL OR id &lt; #{cursorId})
+        AND (CAST(#{cursorId} AS bigint) IS NULL OR id &lt; #{cursorId})
         ORDER BY id DESC LIMIT #{limit}
     </select>
     <select id="countStartedCommands" resultType="_int">

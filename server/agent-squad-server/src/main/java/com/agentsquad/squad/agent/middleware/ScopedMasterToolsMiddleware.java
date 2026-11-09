@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.middleware;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import com.agentsquad.squad.agent.skill.ScopeSkillCapabilities;
 import com.agentsquad.squad.mapper.GoalCreationMapper;
 import com.agentsquad.squad.mapper.PlanMapper;
@@ -74,13 +76,13 @@ public class ScopedMasterToolsMiddleware implements MiddlewareBase {
     public Flux<AgentEvent> onModelCall(Agent agent, RuntimeContext context, ModelCallInput input,
                                         Function<ModelCallInput, Flux<AgentEvent>> next) {
         return Mono.fromCallable(() -> {
-                    String scopeId = scopes.scopeForSession(context.getUserId(), context.getSessionId());
-                    var scope = scopeMapper.findOwned(context.getUserId(), scopeId);
+                    Long scopeId = scopes.scopeForSession(RuntimeContextIds.userId(context), context.getSessionId());
+                    var scope = scopeMapper.findOwned(RuntimeContextIds.userId(context), scopeId);
                     boolean response = "RESPONSE".equals(scope.getKind());
-                    boolean natural = response && replies.completionProtocolBySession(context.getUserId(), context.getSessionId())
+                    boolean natural = response && replies.completionProtocolBySession(RuntimeContextIds.userId(context), context.getSessionId())
                             == ResponseCompletionProtocol.NATURAL;
                     var hidden = new java.util.HashSet<>(response ? TASK_ONLY : RESPONSE_ONLY);
-                    boolean handedOff = response && origins.taskForSourceExecution(context.getUserId(), scope.getOwnerId()) != null;
+                    boolean handedOff = response && origins.taskForSourceExecution(RuntimeContextIds.userId(context), scope.getOwnerId()) != null;
                     if (handedOff) {
                         hidden.add("create_goal_task");
                         hidden.add("submit_task_directive");
@@ -88,7 +90,7 @@ public class ScopedMasterToolsMiddleware implements MiddlewareBase {
                     if (natural) {
                         hidden.add("propose_completion");
                     }
-                    var task = response ? null : tasks.findOwned(context.getUserId(), scope.getOwnerId());
+                    var task = response ? null : tasks.findOwned(RuntimeContextIds.userId(context), scope.getOwnerId());
                     var jobs = task == null || task.getPlanVersion() == 0 ? List.<WorkerJobPO>of()
                             : plans.listJobs(task.getTaskId(), task.getPlanVersion());
                     boolean awaitingWorkers = jobs.stream().anyMatch(job -> EXECUTING_JOBS.contains(WorkerJobStatus.valueOf(job.getStatus())));

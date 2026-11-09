@@ -76,16 +76,18 @@ public class RedisCommandWakeup {
      * 调用方已提交命令事务。发布失败返回false，由本地派发及低频数据库扫描接替。
      * 同一命令的重复提示合并，不合并同一绑定的不同命令，避免漏掉补充输入。
      */
-    public boolean publish(String commandId) {
+    public boolean publish(Long commandId) {
         try {
             CommandClaimContextBO owner = commands.claimContext(commandId);
             if (owner == null) {
                 return false;
             }
             RedisWakeupChannel channel = channel(owner);
+            // StringRedisTemplate 的键值序列化器只接受字符串，业务 ID 为 Long 时须先转字符串。
             redis.execute(enqueue, List.of(state(channel, commandId), stream(channel)),
                     String.valueOf(properties.getCapacity()), "1", channel.name(),
-                    owner.getUserId(), owner.getBindingId(), commandId, "");
+                    String.valueOf(owner.getUserId()), String.valueOf(owner.getBindingId()),
+                    String.valueOf(commandId), "");
             recovered();
             return true;
         } catch (RuntimeException failure) {
@@ -125,8 +127,8 @@ public class RedisCommandWakeup {
     }
 
     private void dispatch(RedisWakeupChannel channel, MapRecord<String, String, String> record) {
-        String commandId = record.getValue().get("commandId");
-        if (commandId == null || !commandId.matches("[A-Za-z0-9-]{1,100}")) {
+        Long commandId = parseId(record.getValue().get("commandId"));
+        if (commandId == null) {
             log.warn("Redis命令引用无效 streamId={} channel={}", record.getId(), channel);
             streams().acknowledge(stream(channel), GROUP, record.getId());
             streams().delete(stream(channel), record.getId());
@@ -134,8 +136,8 @@ public class RedisCommandWakeup {
         }
         CommandClaimContextBO owner = commands.claimContext(commandId);
         if (owner == null || !"1".equals(record.getValue().get("schemaVersion"))
-                || !owner.getUserId().equals(record.getValue().get("userId"))
-                || !owner.getBindingId().equals(record.getValue().get("bindingId")) || channel(owner) != channel) {
+                || !String.valueOf(owner.getUserId()).equals(record.getValue().get("userId"))
+                || !String.valueOf(owner.getBindingId()).equals(record.getValue().get("bindingId")) || channel(owner) != channel) {
             log.warn("Redis命令引用归属校验未通过 commandId={} streamId={}", commandId, record.getId());
             acknowledge(channel, commandId, record, null);
             return;
@@ -145,13 +147,13 @@ public class RedisCommandWakeup {
                 () -> acknowledge(channel, commandId, record, observed == null ? "0" : observed.toString()));
     }
 
-    private void acknowledge(RedisWakeupChannel channel, String commandId,
+    private void acknowledge(RedisWakeupChannel channel, Long commandId,
                              MapRecord<String, String, String> record, String observed) {
         try {
             var body = record.getValue();
             redis.execute(finish, List.of(state(channel, commandId), stream(channel)), GROUP,
                     record.getId().getValue(), observed == null ? "0" : observed, observed == null ? "DROP" : "0", "1", channel.name(),
-                    body.getOrDefault("userId", ""), body.getOrDefault("bindingId", ""), commandId, "");
+                    body.getOrDefault("userId", ""), body.getOrDefault("bindingId", ""), String.valueOf(commandId), "");
         } catch (RuntimeException failure) {
             // 业务投递已完成，不因ACK失败再次调用SDK；pending由租约及原命令幂等恢复。
             failed(failure);
@@ -195,7 +197,7 @@ public class RedisCommandWakeup {
         return properties.getNamespace() + ":{p0}:" + channel.name() + ":ready";
     }
 
-    private String state(RedisWakeupChannel channel, String commandId) {
+    private String state(RedisWakeupChannel channel, Long commandId) {
         return properties.getNamespace() + ":{p0}:" + channel.name() + ":command:" + commandId;
     }
 
@@ -213,6 +215,18 @@ public class RedisCommandWakeup {
     private void recovered() {
         if (unavailable.compareAndSet(true, false)) {
             log.info("Redis命令唤醒已恢复，持久命令扫描继续补偿");
+        }
+    }
+
+    /**
+     * Redis Stream 字段均为字符串，命令引用统一解析为正数 Long；非法值按重复投递丢弃。
+     */
+    private static Long parseId(String value) {
+        try {
+            long parsed = Long.parseLong(value);
+            return parsed > 0 ? parsed : null;
+        } catch (NumberFormatException | NullPointerException exception) {
+            return null;
         }
     }
 }

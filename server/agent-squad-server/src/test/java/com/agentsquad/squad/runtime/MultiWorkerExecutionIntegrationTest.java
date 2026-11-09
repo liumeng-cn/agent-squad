@@ -2,7 +2,7 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.service.TaskControlService;
 import com.agentsquad.squad.testsupport.ModelAcceptanceFixture;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.identity.AuthView;
@@ -119,15 +119,15 @@ class MultiWorkerExecutionIntegrationTest {
         model.start();
         String url = "http://127.0.0.1:" + model.getAddress().getPort() + "/v1";
         String[] base = {"--spring.main.web-application-type=none",
-                "--spring.datasource.url=" + MySqlTestDatabase.url(directory.resolve("squad")),
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.url=" + PostgresTestDatabase.url(directory.resolve("squad")),
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(), "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.model.api-key=test-only", "--agentsquad.model.base-url=" + url,
                 "--agentsquad.model.name=test-model", "--agentsquad.worker.model-profiles.default.api-key=test-only",
                 "--agentsquad.worker.model-profiles.default.base-url=" + url,
                 "--agentsquad.worker.model-profiles.default.model-name=test-model",
                 "--agentsquad.delivery.poll-delay-ms=100", "--agentsquad.projection.poll-delay-ms=100"};
-        String userId = "00000000-0000-0000-0000-000000000001";
-        String taskId;
+        Long userId = 1L;
+        Long taskId;
         try {
             try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class, base)) {
                 GoalTaskService tasks = context.getBean(GoalTaskService.class);
@@ -143,8 +143,8 @@ class MultiWorkerExecutionIntegrationTest {
                                 List.of(), "default", "default"));
                 String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE task_id = ?", String.class, taskId);
                 ContextSnapshotService snapshots = context.getBean(ContextSnapshotService.class);
-                String one = snapshots.prepare(userId, session, "one", "snapshot-one").snapshotId();
-                String two = snapshots.prepare(userId, session, "two", "snapshot-two").snapshotId();
+                Long one = snapshots.prepare(userId, session, "one", "snapshot-one").snapshotId();
+                Long two = snapshots.prepare(userId, session, "two", "snapshot-two").snapshotId();
                 context.getBean(PlanService.class).publish(userId, session,
                         new PlanPublishBO("two-nodes", 0, List.of(
                                 new PlanNodeBO("one", "writer", "1.0.0", "write-node-1", one, List.of(), true, 1),

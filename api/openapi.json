@@ -725,7 +725,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           }
         ],
@@ -858,7 +858,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -1021,7 +1021,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -1184,7 +1184,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -1340,7 +1340,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           }
         ],
@@ -1475,7 +1475,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -1640,7 +1640,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -1805,7 +1805,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           }
         ],
@@ -1940,7 +1940,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -2089,7 +2089,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -2255,7 +2255,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -2411,7 +2411,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -2567,7 +2567,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -2732,7 +2732,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -3200,7 +3200,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -3657,7 +3657,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -4113,7 +4113,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -4569,7 +4569,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -4722,7 +4722,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -5042,7 +5042,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           }
         ],
@@ -5177,7 +5177,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           }
         ],
@@ -5296,7 +5296,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           }
         ],
@@ -5431,7 +5431,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           }
         ],
@@ -5566,7 +5566,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           }
         ],
@@ -5701,7 +5701,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           }
         ],
@@ -5998,7 +5998,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -6165,7 +6165,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -6330,7 +6330,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -6339,7 +6339,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -6348,7 +6348,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           }
         ],
@@ -6409,7 +6409,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -6545,7 +6545,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -6661,7 +6661,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -6796,7 +6796,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -6941,7 +6941,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           {
@@ -7259,7 +7259,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           }
         ],
@@ -7324,7 +7324,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           }
         ],
@@ -7454,7 +7454,7 @@
         "properties": {
           "userId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "username": {
             "type": "string",
@@ -7511,7 +7511,7 @@
         "properties": {
           "conversationId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "title": {
             "type": "string",
@@ -7540,7 +7540,7 @@
           },
           "activeTaskId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           }
         },
         "required": [
@@ -7587,7 +7587,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             },
             "maxItems": 20,
             "description": "可省略，缺省为空附件列表；服务端只接受当前用户已 READY 且未过期的引用。"
@@ -7610,11 +7610,11 @@
         "properties": {
           "taskId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "commandId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "status": {
             "type": "string",
@@ -7664,7 +7664,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             },
             "maxItems": 100
           },
@@ -7682,7 +7682,7 @@
           },
           "sourceBindingId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "sourceTurnId": {
             "type": "string",
@@ -7706,11 +7706,11 @@
         "properties": {
           "taskId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "conversationId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "status": {
             "type": "string",
@@ -7782,13 +7782,13 @@
         "properties": {
           "commandId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "taskId": {
             "type": "string",
-            "format": "uuid",
             "nullable": true,
-            "description": "可选目标上下文；普通回复不依赖目标任务。"
+            "description": "可选目标上下文；普通回复不依赖目标任务。",
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "status": {
             "type": "string",
@@ -7884,7 +7884,7 @@
         "properties": {
           "definitionId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "workerKey": {
             "type": "string",
@@ -8031,7 +8031,7 @@
           },
           "contextSnapshotId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "dependsOn": {
             "type": "array",
@@ -8126,11 +8126,11 @@
         "properties": {
           "planId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "taskId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "planVersion": {
             "type": "integer",
@@ -8142,7 +8142,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             },
             "maxItems": 16
           }
@@ -8179,7 +8179,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             },
             "maxItems": 100
           },
@@ -8212,11 +8212,11 @@
         "properties": {
           "jobId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "taskId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "nodeKey": {
             "type": "string",
@@ -8267,12 +8267,12 @@
           },
           "bindingId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "reusedFromJobId": {
             "type": "string",
-            "format": "uuid",
-            "description": "当前计划结果复用的来源 Job；仅安全复用时返回"
+            "description": "当前计划结果复用的来源 Job；仅安全复用时返回",
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "result": {
             "description": "已成功节点的最终结果；结构由对应 WorkerDefinition.outputSchema 约束，其他状态不返回"
@@ -8403,7 +8403,7 @@
           },
           "artifactId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "contentHash": {
             "type": "string",
@@ -8428,11 +8428,11 @@
         "properties": {
           "snapshotId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "taskId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "targetNodeKey": {
             "type": "string",
@@ -8491,15 +8491,15 @@
         "properties": {
           "bindingId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "taskId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "jobId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "role": {
             "type": "string",
@@ -8611,7 +8611,7 @@
         "properties": {
           "skillVersionId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "name": {
             "type": "string",
@@ -8698,7 +8698,7 @@
         "properties": {
           "skillVersionId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "enabled": {
             "type": "boolean"
@@ -8792,7 +8792,7 @@
         "properties": {
           "connectionId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "name": {
             "type": "string",
@@ -8917,7 +8917,7 @@
         "properties": {
           "memoryId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "key": {
             "type": "string",
@@ -8956,8 +8956,8 @@
           },
           "sourceMessageId": {
             "type": "string",
-            "format": "uuid",
-            "nullable": true
+            "nullable": true,
+            "pattern": "^[1-9][0-9]{0,18}$"
           }
         },
         "required": [
@@ -9009,7 +9009,7 @@
         "properties": {
           "artifactId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "fileName": {
             "type": "string",
@@ -9059,17 +9059,17 @@
         "properties": {
           "interactionId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "taskId": {
             "type": "string",
-            "format": "uuid",
             "nullable": true,
-            "description": "可选目标上下文；普通回复不依赖目标任务。"
+            "description": "可选目标上下文；普通回复不依赖目标任务。",
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "jobId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "kind": {
             "type": "string",
@@ -9288,17 +9288,17 @@
         "properties": {
           "operationId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "taskId": {
             "type": "string",
-            "format": "uuid",
             "nullable": true,
-            "description": "可选目标上下文；普通回复不依赖目标任务。"
+            "description": "可选目标上下文；普通回复不依赖目标任务。",
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "jobId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "toolKey": {
             "type": "string",
@@ -9396,7 +9396,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             },
             "maxItems": 20,
             "minItems": 1
@@ -9446,7 +9446,7 @@
             "properties": {
               "taskId": {
                 "type": "string",
-                "format": "uuid"
+                "pattern": "^[1-9][0-9]{0,18}$"
               },
               "seq": {
                 "type": "integer",
@@ -9476,7 +9476,7 @@
                 "properties": {
                   "commandId": {
                     "type": "string",
-                    "format": "uuid"
+                    "pattern": "^[1-9][0-9]{0,18}$"
                   }
                 },
                 "required": [
@@ -9499,7 +9499,7 @@
             "properties": {
               "taskId": {
                 "type": "string",
-                "format": "uuid"
+                "pattern": "^[1-9][0-9]{0,18}$"
               },
               "seq": {
                 "type": "integer",
@@ -9575,7 +9575,7 @@
             "properties": {
               "taskId": {
                 "type": "string",
-                "format": "uuid"
+                "pattern": "^[1-9][0-9]{0,18}$"
               },
               "seq": {
                 "type": "integer",
@@ -9613,7 +9613,7 @@
                     "maxItems": 100,
                     "items": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^[1-9][0-9]{0,18}$"
                     }
                   }
                 },
@@ -9638,7 +9638,7 @@
             "properties": {
               "taskId": {
                 "type": "string",
-                "format": "uuid"
+                "pattern": "^[1-9][0-9]{0,18}$"
               },
               "seq": {
                 "type": "integer",
@@ -9668,7 +9668,7 @@
                 "properties": {
                   "jobId": {
                     "type": "string",
-                    "format": "uuid"
+                    "pattern": "^[1-9][0-9]{0,18}$"
                   },
                   "summary": {
                     "type": "string",
@@ -9701,7 +9701,7 @@
             "properties": {
               "taskId": {
                 "type": "string",
-                "format": "uuid"
+                "pattern": "^[1-9][0-9]{0,18}$"
               },
               "seq": {
                 "type": "integer",
@@ -9731,7 +9731,7 @@
                 "properties": {
                   "jobId": {
                     "type": "string",
-                    "format": "uuid"
+                    "pattern": "^[1-9][0-9]{0,18}$"
                   },
                   "status": {
                     "type": "string",
@@ -9761,7 +9761,7 @@
                     "maxItems": 100,
                     "items": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^[1-9][0-9]{0,18}$"
                     }
                   }
                 },
@@ -9787,7 +9787,7 @@
             "properties": {
               "taskId": {
                 "type": "string",
-                "format": "uuid"
+                "pattern": "^[1-9][0-9]{0,18}$"
               },
               "seq": {
                 "type": "integer",
@@ -9817,7 +9817,7 @@
                 "properties": {
                   "interactionId": {
                     "type": "string",
-                    "format": "uuid"
+                    "pattern": "^[1-9][0-9]{0,18}$"
                   },
                   "kind": {
                     "type": "string",
@@ -9848,7 +9848,7 @@
             "properties": {
               "taskId": {
                 "type": "string",
-                "format": "uuid"
+                "pattern": "^[1-9][0-9]{0,18}$"
               },
               "seq": {
                 "type": "integer",
@@ -9878,7 +9878,7 @@
                 "properties": {
                   "interactionId": {
                     "type": "string",
-                    "format": "uuid"
+                    "pattern": "^[1-9][0-9]{0,18}$"
                   },
                   "status": {
                     "type": "string",
@@ -9912,7 +9912,7 @@
             "properties": {
               "taskId": {
                 "type": "string",
-                "format": "uuid"
+                "pattern": "^[1-9][0-9]{0,18}$"
               },
               "seq": {
                 "type": "integer",
@@ -9942,7 +9942,7 @@
                 "properties": {
                   "operationId": {
                     "type": "string",
-                    "format": "uuid"
+                    "pattern": "^[1-9][0-9]{0,18}$"
                   },
                   "reasonCode": {
                     "type": "string",
@@ -9969,7 +9969,7 @@
             "properties": {
               "taskId": {
                 "type": "string",
-                "format": "uuid"
+                "pattern": "^[1-9][0-9]{0,18}$"
               },
               "seq": {
                 "type": "integer",
@@ -9999,7 +9999,7 @@
                 "properties": {
                   "operationId": {
                     "type": "string",
-                    "format": "uuid"
+                    "pattern": "^[1-9][0-9]{0,18}$"
                   },
                   "disposition": {
                     "type": "string",
@@ -10031,7 +10031,7 @@
             "properties": {
               "taskId": {
                 "type": "string",
-                "format": "uuid"
+                "pattern": "^[1-9][0-9]{0,18}$"
               },
               "seq": {
                 "type": "integer",
@@ -10061,7 +10061,7 @@
                 "properties": {
                   "producerBindingId": {
                     "type": "string",
-                    "format": "uuid"
+                    "pattern": "^[1-9][0-9]{0,18}$"
                   }
                 },
                 "required": [
@@ -10084,7 +10084,7 @@
             "properties": {
               "taskId": {
                 "type": "string",
-                "format": "uuid"
+                "pattern": "^[1-9][0-9]{0,18}$"
               },
               "seq": {
                 "type": "integer",
@@ -10143,7 +10143,7 @@
             "properties": {
               "taskId": {
                 "type": "string",
-                "format": "uuid"
+                "pattern": "^[1-9][0-9]{0,18}$"
               },
               "seq": {
                 "type": "integer",
@@ -10201,7 +10201,7 @@
             "properties": {
               "taskId": {
                 "type": "string",
-                "format": "uuid"
+                "pattern": "^[1-9][0-9]{0,18}$"
               },
               "seq": {
                 "type": "integer",
@@ -10238,7 +10238,7 @@
                     "maxItems": 100,
                     "items": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^[1-9][0-9]{0,18}$"
                     }
                   }
                 },
@@ -10263,7 +10263,7 @@
             "properties": {
               "taskId": {
                 "type": "string",
-                "format": "uuid"
+                "pattern": "^[1-9][0-9]{0,18}$"
               },
               "seq": {
                 "type": "integer",
@@ -10487,7 +10487,7 @@
           },
           "connectionId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           }
         },
         "required": [
@@ -10515,7 +10515,7 @@
           },
           "bindingId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "input": {
             "type": "object",
@@ -10560,7 +10560,7 @@
         "properties": {
           "operationId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "toolKey": {
             "type": "string",
@@ -10624,7 +10624,7 @@
             "maxItems": 100,
             "items": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           "canReconcile": {
@@ -10691,8 +10691,8 @@
             "type": "array",
             "items": {
               "type": "string",
-              "format": "uuid",
-              "minLength": 1
+              "minLength": 1,
+              "pattern": "^[1-9][0-9]{0,18}$"
             },
             "maxItems": 20,
             "nullable": true
@@ -10725,19 +10725,19 @@
         "properties": {
           "conversationId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "messageId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "executionId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "commandId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "status": {
             "$ref": "#/components/schemas/ResponseExecutionStatus"
@@ -10764,7 +10764,7 @@
         "properties": {
           "conversationId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "title": {
             "type": "string",
@@ -10806,7 +10806,7 @@
           "activeTaskId": {
             "type": "string",
             "nullable": true,
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "lastActivityAt": {
             "type": "string",
@@ -10834,7 +10834,7 @@
         "properties": {
           "messageId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "sequence": {
             "type": "integer",
@@ -10862,17 +10862,17 @@
           "sourceMessageId": {
             "type": "string",
             "nullable": true,
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "executionId": {
             "type": "string",
             "nullable": true,
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "taskId": {
             "type": "string",
             "nullable": true,
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "occurredAt": {
             "type": "string",
@@ -10907,11 +10907,11 @@
         "properties": {
           "executionId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "sourceMessageId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "status": {
             "$ref": "#/components/schemas/ResponseExecutionStatus"
@@ -10924,12 +10924,12 @@
           "answerMessageId": {
             "type": "string",
             "nullable": true,
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "failureId": {
             "type": "string",
             "nullable": true,
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "allowedActions": {
             "type": "array",
@@ -10964,11 +10964,11 @@
         "properties": {
           "failureId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "scopeId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "category": {
             "type": "string",
@@ -11032,8 +11032,8 @@
           },
           "executionId": {
             "type": "string",
-            "format": "uuid",
-            "nullable": true
+            "nullable": true,
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "expectedVersion": {
             "type": "integer",
@@ -11043,13 +11043,13 @@
           },
           "taskId": {
             "type": "string",
-            "format": "uuid",
-            "nullable": true
+            "nullable": true,
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "sourceMessageId": {
             "type": "string",
-            "format": "uuid",
-            "nullable": true
+            "nullable": true,
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "status": {
             "type": "string",
@@ -11146,7 +11146,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^[1-9][0-9]{0,18}$"
             }
           },
           "executions": {
@@ -11216,7 +11216,7 @@
           },
           "sourceMessageId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           }
         },
         "required": [
@@ -11233,12 +11233,12 @@
         "properties": {
           "taskId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "sourceMessageId": {
             "type": "string",
-            "format": "uuid",
-            "nullable": true
+            "nullable": true,
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "status": {
             "type": "string"
@@ -11263,7 +11263,7 @@
         "properties": {
           "conversationId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "generation": {
             "type": "integer",
@@ -11331,7 +11331,7 @@
           },
           "taskId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "expectedVersion": {
             "type": "integer",
@@ -11367,7 +11367,7 @@
         "properties": {
           "directiveId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "expectedVersion": {
             "type": "integer",
@@ -11400,15 +11400,15 @@
         "properties": {
           "directiveId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "taskId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "sourceMessageId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "status": {
             "type": "string",
@@ -11519,7 +11519,7 @@
         "properties": {
           "userId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "username": {
             "type": "string"
@@ -11613,7 +11613,7 @@
         "properties": {
           "userId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "temporaryPassword": {
             "type": "string",
@@ -11869,18 +11869,18 @@
           },
           "executionId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "sourceMessageId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "runId": {
             "type": "string"
           },
           "streamId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "revision": {
             "type": "integer",
@@ -12298,15 +12298,15 @@
         "properties": {
           "directiveId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "taskId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "sourceMessageId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "status": {
             "type": "string",
@@ -12498,7 +12498,7 @@
               "string",
               "null"
             ],
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           }
         },
         "required": [
@@ -12512,27 +12512,27 @@
         "properties": {
           "activityId": {
             "type": "string",
-            "format": "uuid"
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "sourceMessageId": {
             "type": "string",
-            "format": "uuid",
-            "nullable": true
+            "nullable": true,
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "executionId": {
             "type": "string",
-            "format": "uuid",
-            "nullable": true
+            "nullable": true,
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "taskId": {
             "type": "string",
-            "format": "uuid",
-            "nullable": true
+            "nullable": true,
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "jobId": {
             "type": "string",
-            "format": "uuid",
-            "nullable": true
+            "nullable": true,
+            "pattern": "^[1-9][0-9]{0,18}$"
           },
           "planVersion": {
             "type": "integer",

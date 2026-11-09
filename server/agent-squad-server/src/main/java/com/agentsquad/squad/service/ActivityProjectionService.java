@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.enums.ActivityGroup;
 import com.agentsquad.squad.enums.ActivityStatus;
 import com.agentsquad.squad.enums.ActivityType;
@@ -132,7 +133,7 @@ public class ActivityProjectionService {
      * 指定实际触发业务事件的绑定，重试记录归属到对应的执行节点。
      */
     @Transactional(propagation = Propagation.MANDATORY)
-    public void completed(ExecutionScopePO scope, String bindingId, ActivityBusinessFactBO fact) {
+    public void completed(ExecutionScopePO scope, Long bindingId, ActivityBusinessFactBO fact) {
         if (bindingId == null) {
             throw new IllegalStateException("活动来源缺少执行绑定");
         }
@@ -153,7 +154,7 @@ public class ActivityProjectionService {
         };
         var job = workers.findByBinding(scope.getUserId(), bindingId);
         var task = scope.getKind().equals("TASK") ? tasks.findOwned(scope.getUserId(), scope.getOwnerId()) : null;
-        var row = new ExecutionActivityPO(UUID.randomUUID().toString(), scope.getUserId(), scope.getScopeId(), scope.getConversationId(),
+        var row = new ExecutionActivityPO(IdWorker.getId(), scope.getUserId(), scope.getScopeId(), scope.getConversationId(),
                 activities.sourceMessage(scope.getUserId(), scope.getScopeId()), scope.getKind().equals("RESPONSE") ? scope.getOwnerId() : null,
                 task == null ? null : task.getTaskId(), job == null ? null : job.getJobId(), bindingId, null, null, key,
                 job != null ? job.getPlanVersion() : task == null ? 0 : task.getPlanVersion(), classification.type(), classification.group(),
@@ -172,7 +173,7 @@ public class ActivityProjectionService {
         var job = workers.findByBinding(scope.getUserId(), target.getBindingId());
         var task = scope.getKind().equals("TASK") ? tasks.findOwned(scope.getUserId(), scope.getOwnerId()) : null;
         LocalDateTime now = timestamp(event);
-        var row = new ExecutionActivityPO(UUID.randomUUID().toString(), scope.getUserId(), scope.getScopeId(), scope.getConversationId(),
+        var row = new ExecutionActivityPO(IdWorker.getId(), scope.getUserId(), scope.getScopeId(), scope.getConversationId(),
                 activities.sourceMessage(scope.getUserId(), scope.getScopeId()), scope.getKind().equals("RESPONSE") ? scope.getOwnerId() : null,
                 task == null ? null : task.getTaskId(), job == null ? null : job.getJobId(), target.getBindingId(), event.runId(), event.turnId(), key,
                 job != null ? job.getPlanVersion() : task == null ? 0 : task.getPlanVersion(), change.classification().type(),

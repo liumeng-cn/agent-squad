@@ -90,7 +90,7 @@
         #{event.status},
         #{event.userId},
         #{event.userId})
-        ON DUPLICATE KEY UPDATE id = id
+        ON CONFLICT DO NOTHING
     </insert>
 
     <select id="findCollisions" resultType="com.agentsquad.squad.model.po.RuntimeEventInboxPO">

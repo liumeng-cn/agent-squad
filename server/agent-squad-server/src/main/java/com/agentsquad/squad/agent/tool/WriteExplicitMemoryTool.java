@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.tool;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.bo.MemoryWriteRequestBO;
 import com.agentsquad.squad.service.ExplicitMemoryWriteService;
@@ -73,7 +75,7 @@ public class WriteExplicitMemoryTool implements AgentTool {
         }
         try {
             MemoryWriteRequestBO request = json.convertValue(param.getInput(), MemoryWriteRequestBO.class);
-            return ToolResultBlock.text(RuntimePayloads.toJson(json, writes.write(context.getUserId(), context.getSessionId(), request)));
+            return ToolResultBlock.text(RuntimePayloads.toJson(json, writes.write(RuntimeContextIds.userId(context), context.getSessionId(), request)));
         } catch (RuntimeBusinessException exception) {
             return ToolResultBlock.error(exception.getMessage());
         } catch (IllegalArgumentException exception) {

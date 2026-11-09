@@ -48,7 +48,7 @@ public class InteractionQueryService {
     /**
      * 列出目标的交互存储行；游标为存储主键。
      */
-    public List<InteractionPO> listByTask(String userId, String taskId, String cursor, int limit) {
+    public List<InteractionPO> listByTask(Long userId, Long taskId, String cursor, int limit) {
         scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         Long cursorId = parseCursor(cursor);
         return interactionMapper.listByTask(userId, taskId, cursorId, Math.min(Math.max(limit, 1), 100));
@@ -57,7 +57,7 @@ public class InteractionQueryService {
     /**
      * 分页读取目标的交互视图；游标取最后一条交互的存储主键。
      */
-    public InteractionPageVO listPage(String userId, String taskId, String cursor, int limit) {
+    public InteractionPageVO listPage(Long userId, Long taskId, String cursor, int limit) {
         scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         int pageSize = Math.min(Math.max(limit, 1), 100);
         List<InteractionPO> rows = interactionMapper.listByTask(userId, taskId, parseCursor(cursor), pageSize + 1);
@@ -78,7 +78,7 @@ public class InteractionQueryService {
     /**
      * 读取当前用户单个交互视图；不存在统一按 NOT_FOUND 处理。
      */
-    public InteractionVO getOwned(String userId, String interactionId) {
+    public InteractionVO getOwned(Long userId, Long interactionId) {
         InteractionPO row = interactionMapper.findOwned(userId, interactionId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "交互不存在");
@@ -90,7 +90,7 @@ public class InteractionQueryService {
     /**
      * 列出目标仍开放的交互存储行（快照 pending 来源）。
      */
-    public List<InteractionPO> listOpenByTask(String userId, String taskId) {
+    public List<InteractionPO> listOpenByTask(Long userId, Long taskId) {
         scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         return interactionMapper.findOpenIds(userId, taskId).stream()
                 .map(id -> interactionMapper.findOwned(userId, id))
@@ -98,7 +98,7 @@ public class InteractionQueryService {
                 .toList();
     }
 
-    public List<InteractionPO> listOpenByScope(String userId, String scopeId) {
+    public List<InteractionPO> listOpenByScope(Long userId, Long scopeId) {
         scopeService.requireReadable(userId, scopeId);
         return interactionMapper.findOpenByScope(userId, scopeId).stream()
                 .map(id -> interactionMapper.findOwned(userId, id))
@@ -109,13 +109,13 @@ public class InteractionQueryService {
     /**
      * 把存储行映射为对外视图；审批卡附带账本操作上下文供核对与确认摘要比对。
      */
-    public InteractionVO viewOf(String userId, InteractionPO row) {
+    public InteractionVO viewOf(Long userId, InteractionPO row) {
         Object approvalContext = null;
         if (KIND_APPROVAL.equals(row.getKind()) && row.getOperationId() != null) {
             OperationPO operation = operationMapper.findOwned(userId, row.getOperationId());
             if (operation != null) {
                 Map<String, Object> context = new LinkedHashMap<>();
-                context.put("operationId", operation.getOperationId());
+                context.put("operationId", String.valueOf(operation.getOperationId()));
                 context.put("toolKey", operation.getToolKey());
                 context.put("effect", operation.getEffect());
                 context.put("argumentsPreview", operationPreview.arguments(operation.getArgumentsJson()));

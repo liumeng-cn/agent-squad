@@ -1,5 +1,6 @@
 package com.agentsquad.squad.identity;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.enums.AccountRole;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -27,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class SignedIdentityVerifierTest {
 
-    private static final String USER_ID = "11111111-1111-4111-8111-111111111111";
+    private static final String USER_ID = "111";
     private static final String CURRENT_KID = "k-test";
     private static final String CURRENT_SECRET = "test-only-assertion-secret-0123456789abcdef";
     private static final String PREVIOUS_KID = "k-prev";
@@ -56,7 +57,7 @@ class SignedIdentityVerifierTest {
         AuthView actor = verifier.verify(request);
 
         assertThat(actor).isNotNull();
-        assertThat(actor.userId()).isEqualTo(USER_ID);
+        assertThat(actor.userId()).isEqualTo(Long.valueOf(USER_ID));
         assertThat(actor.roles()).containsExactly(AccountRole.OPERATOR);
     }
 
@@ -75,7 +76,7 @@ class SignedIdentityVerifierTest {
         String original = assertion(CURRENT_KID, CURRENT_SECRET, "USER", "GET", PATH, now, now + 30);
         String encoded = original.substring(0, original.indexOf('.'));
         String body = new String(Base64.getUrlDecoder().decode(encoded), StandardCharsets.UTF_8)
-                .replace(USER_ID, UUID.randomUUID().toString());
+                .replace(USER_ID, IdWorker.getIdStr());
         String tampered = Base64.getUrlEncoder().withoutPadding()
                 .encodeToString(body.getBytes(StandardCharsets.UTF_8))
                 + original.substring(original.indexOf('.'));

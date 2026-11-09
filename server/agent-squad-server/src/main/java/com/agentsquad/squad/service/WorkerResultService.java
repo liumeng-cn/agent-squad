@@ -55,7 +55,7 @@ public class WorkerResultService {
      * 校验当前业务 guard、计划版本和输出 Schema；同一候选重放返回原结果。
      */
     @Transactional
-    public String propose(String userId, String bindingId, String guardToken,
+    public Long propose(Long userId, Long bindingId, String guardToken,
                           String turnId, JsonNode result) {
         if (turnId == null || turnId.isBlank() || result == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "Worker 结果参数无效");
@@ -94,7 +94,7 @@ public class WorkerResultService {
      * 原生回合成功结束后才提交结果；候选缺失时保持 Job 可恢复状态供后续故障分支处理。
      */
     @Transactional
-    public boolean finalizeSuccess(String userId, String bindingId, String turnId) {
+    public boolean finalizeSuccess(Long userId, Long bindingId, String turnId) {
         authorization.requireBindingCurrent(userId, bindingId);
         WorkerLaunchBO job = dispatchMapper.findByBinding(userId, bindingId);
         if (job == null) {
@@ -121,7 +121,7 @@ public class WorkerResultService {
      * 旧计划在途 Job 收到终结事件时保留证据，但不得写成功或推进新依赖。
      */
     @Transactional
-    public boolean supersedeInFlight(String userId, String bindingId) {
+    public boolean supersedeInFlight(Long userId, Long bindingId) {
         return dispatchMapper.supersedeInFlight(userId, bindingId) == 1;
     }
 
@@ -129,7 +129,7 @@ public class WorkerResultService {
      * 原生失败时不将候选当作成功，保留候选和错误证据供恢复审计。
      */
     @Transactional
-    public void markFailed(String userId, String bindingId) {
+    public void markFailed(Long userId, Long bindingId) {
         authorization.requireBindingCurrent(userId, bindingId);
         WorkerLaunchBO job = dispatchMapper.findByBinding(userId, bindingId);
         if (job == null) {
@@ -151,7 +151,7 @@ public class WorkerResultService {
      * 原生回合未成功或缺失候选时进入恢复阻塞，保留候选供下一次恢复判定。
      */
     @Transactional
-    public void markRecoveryBlocked(String userId, String bindingId) {
+    public void markRecoveryBlocked(Long userId, Long bindingId) {
         authorization.requireBindingCurrent(userId, bindingId);
         WorkerLaunchBO job = dispatchMapper.findByBinding(userId, bindingId);
         if (job == null) {

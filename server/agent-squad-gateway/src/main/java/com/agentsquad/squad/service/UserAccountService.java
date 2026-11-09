@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.po.UserAccountPO;
 
 import com.agentsquad.squad.vo.ResetPasswordVO;
@@ -74,14 +75,11 @@ public class UserAccountService {
     public AdminUserPageVO list(AuthVO actor, String cursor, Integer limit) {
         requireAdmin(actor);
         int pageSize = limit == null ? DEFAULT_PAGE_SIZE : Math.min(Math.max(limit, 1), MAX_PAGE_SIZE);
-        String normalizedCursor = cursor == null || cursor.isBlank() ? null : cursor.trim();
-        if (normalizedCursor != null && normalizedCursor.length() > 64) {
-            throw new InvalidRequestException("分页游标不合法");
-        }
+        Long normalizedCursor = parseCursor(cursor);
         List<UserAccountPO> rows = adminUserMapper.listUsers(normalizedCursor, pageSize + 1);
         boolean hasNext = rows.size() > pageSize;
         List<UserAccountPO> page = hasNext ? rows.subList(0, pageSize) : rows;
-        String nextCursor = hasNext ? page.get(page.size() - 1).userId() : null;
+        String nextCursor = hasNext ? Long.toString(page.get(page.size() - 1).userId()) : null;
         return new AdminUserPageVO(page.stream().map(AdminUserVO::from).toList(), nextCursor);
     }
 
@@ -98,7 +96,7 @@ public class UserAccountService {
         String displayName = normalizeDisplayName(request.displayName(), username);
         AccountRole role = normalizeRole(request.role(), AccountRole.USER);
         String temporaryPassword = SessionSecrets.randomToken();
-        String userId = UUID.randomUUID().toString();
+        Long userId = IdWorker.getId();
         try {
             adminUserMapper.insertUser(userId, username, displayName,
                     passwordEncoder.encode(temporaryPassword), role, true,
@@ -116,15 +114,16 @@ public class UserAccountService {
      * 按 expectedVersion 更新账号；角色或状态变化提升授权代际并撤销该用户全部会话。
      */
     @Transactional
-    public AdminUserVO update(AuthVO actor, String userId, AdminUserUpdateDTO request, String requestId) {
+    public AdminUserVO update(AuthVO actor, String rawUserId, AdminUserUpdateDTO request, String requestId) {
         requireAdmin(actor);
+        Long userId = parseUserId(rawUserId);
         if (request == null || request.expectedVersion() == null || request.expectedVersion() < 0) {
             throw new InvalidRequestException("缺少 expectedVersion");
         }
         if (request.displayName() == null && request.role() == null && request.status() == null) {
             throw new ValidationFailedException("请至少修改一个字段");
         }
-        List<String> activeAdmins = adminUserMapper.lockActiveAdmins();
+        List<Long> activeAdmins = adminUserMapper.lockActiveAdmins();
         UserAccountPO target = adminUserMapper.findUserForUpdate(userId);
         if (target == null) {
             throw new ResourceNotFoundException("用户不存在");
@@ -161,8 +160,9 @@ public class UserAccountService {
      * 重置为一次性临时密码；旧密码与全部会话立即失效。
      */
     @Transactional
-    public ResetPasswordVO resetPassword(AuthVO actor, String userId, String requestId) {
+    public ResetPasswordVO resetPassword(AuthVO actor, String rawUserId, String requestId) {
         requireAdmin(actor);
+        Long userId = parseUserId(rawUserId);
         UserAccountPO target = adminUserMapper.findUserForUpdate(userId);
         if (target == null) {
             throw new ResourceNotFoundException("用户不存在");
@@ -204,18 +204,18 @@ public class UserAccountService {
      * 仅在空用户表时创建初始管理员；重复执行返回冲突，应用启动不会调用此方法。
      */
     @Transactional
-    public String bootstrapAdmin(String username, String rawPassword) {
+    public Long bootstrapAdmin(String username, String rawPassword) {
         String normalized = normalizeUsername(username);
         PasswordPolicy.require(rawPassword);
         if (adminUserMapper.acquireBootstrapLock() != 1) {
             throw new StateConflictException("初始化正在进行或锁不可用，请稍后重试");
         }
         try {
-            String existing = adminUserMapper.findAnyUserIdForUpdate();
+            Long existing = adminUserMapper.findAnyUserIdForUpdate();
             if (existing != null) {
                 throw new StateConflictException("已存在账号，拒绝重复初始化");
             }
-            String userId = UUID.randomUUID().toString();
+            Long userId = IdWorker.getId();
             adminUserMapper.insertUser(userId, normalized, normalized, passwordEncoder.encode(rawPassword),
                     AccountRole.ADMIN, true, userId, normalized);
             authRepository.insertAudit(userId, userId, "BOOTSTRAP_ADMIN", "SUCCESS", "bootstrap");
@@ -223,6 +223,42 @@ public class UserAccountService {
             return userId;
         } finally {
             adminUserMapper.releaseBootstrapLock();
+        }
+    }
+
+    /**
+     * 分页游标来自查询串，按业务用户 ID 解析；空值表示第一页。
+     */
+    private static Long parseCursor(String cursor) {
+        if (cursor == null || cursor.isBlank()) {
+            return null;
+        }
+        try {
+            Long value = Long.parseLong(cursor.trim());
+            if (value <= 0) {
+                throw new InvalidRequestException("分页游标不合法");
+            }
+            return value;
+        } catch (NumberFormatException exception) {
+            throw new InvalidRequestException("分页游标不合法");
+        }
+    }
+
+    /**
+     * 路径中的业务用户 ID 按 Long 解析；非法形态与不存在同样返回 404，不暴露内部差异。
+     */
+    private static Long parseUserId(String rawUserId) {
+        if (rawUserId == null || rawUserId.isBlank()) {
+            throw new ResourceNotFoundException("用户不存在");
+        }
+        try {
+            Long value = Long.parseLong(rawUserId.trim());
+            if (value <= 0) {
+                throw new ResourceNotFoundException("用户不存在");
+            }
+            return value;
+        } catch (NumberFormatException exception) {
+            throw new ResourceNotFoundException("用户不存在");
         }
     }
 

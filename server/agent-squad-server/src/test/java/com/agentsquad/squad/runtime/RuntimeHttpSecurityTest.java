@@ -1,8 +1,11 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.enums.ApiCode;
+import com.agentsquad.squad.testsupport.ApiResultJson;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.testsupport.TestAssertion;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
@@ -25,15 +28,16 @@ class RuntimeHttpSecurityTest {
 
     @Test
     void shouldRequireGatewayIdentityForMutation(@TempDir Path tempDirectory) throws Exception {
-        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("squad"));
+        String databaseUrl = PostgresTestDatabase.url(tempDirectory.resolve("squad"));
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class,
                 "--server.port=0",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.auth.username=local-user",
                 "--agentsquad.auth.password=local-password")) {
             MockMvc mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();
+            ObjectMapper mapper = context.getBean(ObjectMapper.class);
             mvc.perform(post("/api/v1/conversations")
                             .header("X-D1-User", "forged-user")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -42,13 +46,15 @@ class RuntimeHttpSecurityTest {
 
 
             mvc.perform(post("/api/v1/conversations")
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
+                            .with(TestAssertion.as(201L, "ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"title\":\"test\"}"))
                     .andExpect(status().isCreated());
-            mvc.perform(get("/api/v1/commands/00000000-0000-0000-0000-000000000000")
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN")))
-                    .andExpect(status().isNotFound());
+            String missingCommand = mvc.perform(get("/api/v1/commands/999999999999999999")
+                            .with(TestAssertion.as(201L, "ADMIN")))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            org.assertj.core.api.Assertions.assertThat(ApiResultJson.code(mapper, missingCommand))
+                    .isEqualTo(ApiCode.NOT_FOUND.getCode());
         }
     }
 }

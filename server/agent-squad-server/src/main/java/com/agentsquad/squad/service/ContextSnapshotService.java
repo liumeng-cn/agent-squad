@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.mapper.TaskDirectiveMapper;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
@@ -57,7 +58,7 @@ public class ContextSnapshotService {
      * 锁定受控 Master 目标并冻结原始用户约束；数据库提交后回执丢失可按逻辑键重放。
      */
     @Transactional
-    public ContextSnapshotReceiptBO prepare(String userId, String sessionId,
+    public ContextSnapshotReceiptBO prepare(Long userId, String sessionId,
                                             String targetNodeKey, String logicalKey) {
         return prepare(userId, sessionId, new ContextPreparationRequestBO(
                 targetNodeKey, logicalKey, List.of(), List.of()));
@@ -67,7 +68,7 @@ public class ContextSnapshotService {
      * 冻结必要的技能与记忆子集；重放需保持相同选择，不从用户材料之外接受模型伪造的来源。
      */
     @Transactional
-    public ContextSnapshotReceiptBO prepare(String userId, String sessionId,
+    public ContextSnapshotReceiptBO prepare(Long userId, String sessionId,
                                             ContextPreparationRequestBO request) {
         String targetNodeKey = request.targetNodeKey();
         String logicalKey = request.logicalKey();
@@ -75,7 +76,7 @@ public class ContextSnapshotService {
                 || request.skillVersionIds().stream().distinct().count() != request.skillVersionIds().size()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "局部技能或记忆选择超出范围");
         }
-        String scopeId = executionScopes.scopeForSession(userId, sessionId);
+        Long scopeId = executionScopes.scopeForSession(userId, sessionId);
         var fixed = authorization.prepare(userId, scopeId);
         var selectedSkills = fixed.skills().skills().stream()
                 .filter(skill -> request.skillVersionIds().contains(skill.getSkillVersionId())).toList();
@@ -106,14 +107,14 @@ public class ContextSnapshotService {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "上下文所属对话代际已变化");
             }
             var priorItems = readItems(prior.getItemsJson());
-            var priorSkills = new java.util.HashSet<String>();
-            var priorMemories = new java.util.HashSet<String>();
+            var priorSkills = new java.util.HashSet<Long>();
+            var priorMemories = new java.util.HashSet<Long>();
             for (var item : priorItems) {
                 if ("SKILL_REFERENCE".equals(item.path("kind").asText())) {
-                    priorSkills.add(item.path("sourceId").asText());
+                    priorSkills.add(Long.parseLong(item.path("sourceId").asText()));
                 }
                 if ("EXPLICIT_MEMORY".equals(item.path("kind").asText())) {
-                    priorMemories.add(item.path("sourceId").asText());
+                    priorMemories.add(Long.parseLong(item.path("sourceId").asText()));
                 }
             }
             if (!priorSkills.equals(java.util.Set.copyOf(request.skillVersionIds()))
@@ -144,7 +145,7 @@ public class ContextSnapshotService {
                     String.valueOf(memory.version()), "USER_DATA", memory.content()));
         }
         String itemsJson = RuntimePayloads.toJson(objectMapper, items);
-        String snapshotId = UUID.randomUUID().toString();
+        Long snapshotId = IdWorker.getId();
         String contentHash = CanonicalJson.sha256(objectMapper, itemsJson);
         long tokenEstimate = Math.max(1, (itemsJson.codePointCount(0, itemsJson.length()) + 3L) / 4L);
         snapshotMapper.insert(snapshotId, userId, context.getTaskId(), targetNodeKey, logicalKey,

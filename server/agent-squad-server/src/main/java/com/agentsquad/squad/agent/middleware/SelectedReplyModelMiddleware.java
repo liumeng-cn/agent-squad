@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.middleware;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import com.agentsquad.squad.utils.ContentDigests;
 import com.agentsquad.squad.enums.ReasoningAdapter;
 import com.agentsquad.squad.mapper.ResponseRuntimeMapper;
@@ -49,7 +51,7 @@ public class SelectedReplyModelMiddleware implements MiddlewareBase {
     @Override
     public Flux<AgentEvent> onModelCall(Agent agent, RuntimeContext context, ModelCallInput input,
                                         Function<ModelCallInput, Flux<AgentEvent>> next) {
-        return Mono.fromCallable(() -> Optional.ofNullable(replies.modelChoiceBySession(context.getUserId(), context.getSessionId())))
+        return Mono.fromCallable(() -> Optional.ofNullable(replies.modelChoiceBySession(RuntimeContextIds.userId(context), context.getSessionId())))
                 .subscribeOn(Schedulers.boundedElastic()).flatMapMany(value -> {
                     if (value.isEmpty()) {
                         context.put(AcceptedModelChoiceBO.class, null);

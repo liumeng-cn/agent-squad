@@ -5,5 +5,5 @@ package com.agentsquad.squad.model.bo;
  * <p>
  * 仅携带服务端实例和会话定位；接收方按持久游标读取公开事件，不信任通知作为答案或授权。
  */
-public record ConversationWakeupNoticeBO(int schemaVersion, String instanceId, String userId, String conversationId) {
+public record ConversationWakeupNoticeBO(int schemaVersion, String instanceId, Long userId, Long conversationId) {
 }

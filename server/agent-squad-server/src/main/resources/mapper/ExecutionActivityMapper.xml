@@ -3,15 +3,15 @@
 <mapper namespace="com.agentsquad.squad.mapper.ExecutionActivityMapper">
     <resultMap id="activity" type="com.agentsquad.squad.model.po.ExecutionActivityPO">
         <constructor>
-            <arg column="activity_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="scope_id" javaType="java.lang.String"/>
-            <arg column="conversation_id" javaType="java.lang.String"/>
-            <arg column="source_message_id" javaType="java.lang.String"/>
-            <arg column="execution_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="job_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="activity_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="scope_id" javaType="java.lang.Long"/>
+            <arg column="conversation_id" javaType="java.lang.Long"/>
+            <arg column="source_message_id" javaType="java.lang.Long"/>
+            <arg column="execution_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="job_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
             <arg column="run_id" javaType="java.lang.String"/>
             <arg column="turn_id" javaType="java.lang.String"/>
             <arg column="source_key" javaType="java.lang.String"/>
@@ -100,12 +100,12 @@
         #{nativeSequence}
         )
     </insert>
-    <select id="masterBinding" resultType="java.lang.String">
+    <select id="masterBinding" resultType="java.lang.Long">
         SELECT binding_id FROM sq_runtime_binding
         WHERE user_id = #{userId} AND scope_id = #{scopeId} AND role = 'MASTER' AND del_flag = '0'
         ORDER BY id LIMIT 1
     </select>
-    <select id="sourceMessage" resultType="java.lang.String">
+    <select id="sourceMessage" resultType="java.lang.Long">
         SELECT COALESCE(r.source_message_id, t.origin_message_id)
         FROM sq_execution_scope s
         LEFT JOIN sq_response_execution r ON r.user_id = s.user_id AND r.scope_id = s.scope_id

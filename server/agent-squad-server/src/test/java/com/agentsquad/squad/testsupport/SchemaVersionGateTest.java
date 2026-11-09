@@ -3,21 +3,21 @@ package com.agentsquad.squad.testsupport;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.config.SchemaVersionGate;
 import com.agentsquad.squad.mapper.SchemaInspectionMapper;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.jdbc.datasource.init.ScriptUtils;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -31,47 +31,65 @@ class SchemaVersionGateTest {
 
     @Test
     void rejectsStartupWhenMigrationVersionMissing() throws Exception {
-        String url = MySqlTestDatabase.url(Path.of("target", "schema-gate", "empty"));
+        String url = PostgresTestDatabase.emptyUrl(Path.of("target", "schema-gate", "empty"));
+        try (Connection connection = DriverManager.getConnection(url, PostgresTestDatabase.username(),
+                PostgresTestDatabase.password()); Statement statement = connection.createStatement()) {
+            // 框架启动前就要求这三张 AgentScope 表存在；平台业务表仍应为空，用于验证门禁失败时不写入平台 DDL。
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS agentscope_store ("
+                    + "namespace_path VARCHAR(2048) NOT NULL, item_key VARCHAR(255) NOT NULL, "
+                    + "value_json TEXT NOT NULL, version BIGINT NOT NULL, updated_at BIGINT NOT NULL, "
+                    + "PRIMARY KEY (namespace_path, item_key))");
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS agentscope_sessions ("
+                    + "session_id VARCHAR(255) NOT NULL, state_key VARCHAR(255) NOT NULL, "
+                    + "item_index INT NOT NULL DEFAULT 0, state_data TEXT NOT NULL, "
+                    + "version BIGINT NOT NULL DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
+                    + "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
+                    + "PRIMARY KEY (session_id, state_key, item_index))");
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS agentscope_snapshots ("
+                    + "snapshot_id VARCHAR(512) NOT NULL PRIMARY KEY, data BYTEA NOT NULL, "
+                    + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+        }
 
         Exception failure = assertThrows(Exception.class, () -> start(url));
 
         assertTrue(messageChain(failure).contains("生产启动要求已执行版本化迁移"), messageChain(failure));
-        assertEquals(0, countTables(url), "生产启动失败时不得写入任何 DDL");
+        assertEquals(0, countBusinessTables(url), "生产启动失败时不得写入任何平台业务表 DDL");
     }
 
     @Test
     void startsWithoutDdlWhenMigrationVersionApplied() throws Exception {
-        String url = MySqlTestDatabase.url(Path.of("target", "schema-gate", "applied"));
-        try (Connection connection = DriverManager.getConnection(url, MySqlTestDatabase.username(),
-                MySqlTestDatabase.password())) {
-            ScriptUtils.executeSqlScript(connection, new ClassPathResource("db/migration/V1__baseline.sql"));
-            try (Statement statement = connection.createStatement()) {
-                statement.executeUpdate("CREATE TABLE flyway_schema_history ("
-                        + "installed_rank int NOT NULL, version varchar(50), description varchar(200) NOT NULL, "
-                        + "type varchar(20) NOT NULL, script varchar(1000) NOT NULL, checksum int, "
-                        + "installed_by varchar(100) NOT NULL, installed_on timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, "
-                        + "execution_time int NOT NULL, success tinyint(1) NOT NULL, PRIMARY KEY (installed_rank))");
-                statement.executeUpdate("INSERT INTO flyway_schema_history (installed_rank, version, description, "
-                        + "type, script, installed_by, execution_time, success) VALUES "
-                        + "(1, '1', 'initial', 'SQL', 'V1__initial_44_tables.sql', 'test', 0, 1), "
-                        + "(2, '2', 'multiuser identity', 'SQL', 'V2__multiuser_identity.sql', 'test', 0, 1), "
-                        + "(3, '3', 'admission', 'SQL', 'V3__runtime_admission.sql', 'test', 0, 1), "
-                        + "(4, '4', 'run identity', 'SQL', 'V4__admission_run_identity.sql', 'test', 0, 1), "
-                        + "(5, '5', 'final delivery', 'SQL', 'V5__final_delivery.sql', 'test', 0, 1), "
-                        + "(6, '6', 'event inbox', 'SQL', 'V6__runtime_event_inbox.sql', 'test', 0, 1), "
-                        + "(7, '7', 'natural reply', 'SQL', 'V7__natural_reply_protocol.sql', 'test', 0, 1), "
-                        + "(8, '8', 'model choice', 'SQL', 'V8__accepted_model_selection.sql', 'test', 0, 1), "
-                        + "(9, '9', 'execution activity', 'SQL', 'V9__execution_activity.sql', 'test', 0, 1), "
-                        + "(10, '10', 'execution trace', 'SQL', 'V10__execution_trace.sql', 'test', 0, 1)");
-            }
+        String url = PostgresTestDatabase.emptyUrl(Path.of("target", "schema-gate", "applied"));
+        try (Connection connection = DriverManager.getConnection(url, PostgresTestDatabase.username(),
+                PostgresTestDatabase.password());
+             Statement statement = connection.createStatement()) {
+            statement.execute(new ClassPathResource("db/schema-postgresql.sql")
+                    .getContentAsString(StandardCharsets.UTF_8));
+            statement.executeUpdate("CREATE TABLE flyway_schema_history ("
+                    + "installed_rank int NOT NULL PRIMARY KEY, version varchar(50), "
+                    + "description varchar(200) NOT NULL, type varchar(20) NOT NULL, "
+                    + "script varchar(1000) NOT NULL, checksum int, installed_by varchar(100) NOT NULL, "
+                    + "installed_on timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                    + "execution_time int NOT NULL, success boolean NOT NULL)");
+            statement.executeUpdate("INSERT INTO flyway_schema_history (installed_rank, version, description, "
+                    + "type, script, installed_by, execution_time, success) VALUES "
+                    + "(1, '1', 'initial', 'SQL', 'V1__initial_44_tables.sql', 'test', 0, true), "
+                    + "(2, '2', 'multiuser identity', 'SQL', 'V2__multiuser_identity.sql', 'test', 0, true), "
+                    + "(3, '3', 'admission', 'SQL', 'V3__runtime_admission.sql', 'test', 0, true), "
+                    + "(4, '4', 'run identity', 'SQL', 'V4__admission_run_identity.sql', 'test', 0, true), "
+                    + "(5, '5', 'final delivery', 'SQL', 'V5__final_delivery.sql', 'test', 0, true), "
+                    + "(6, '6', 'event inbox', 'SQL', 'V6__runtime_event_inbox.sql', 'test', 0, true), "
+                    + "(7, '7', 'natural reply', 'SQL', 'V7__natural_reply_protocol.sql', 'test', 0, true), "
+                    + "(8, '8', 'model choice', 'SQL', 'V8__accepted_model_selection.sql', 'test', 0, true), "
+                    + "(9, '9', 'execution activity', 'SQL', 'V9__execution_activity.sql', 'test', 0, true), "
+                    + "(10, '10', 'execution trace', 'SQL', 'V10__execution_trace.sql', 'test', 0, true)");
         }
 
         try (ConfigurableApplicationContext context = start(url)) {
             assertTrue(context.isActive(), "版本已应用时生产上下文应正常启动");
         }
         assertEquals(54, countTables(url), "生产启动只校验版本，不得创建额外业务表");
-        try (Connection connection = DriverManager.getConnection(url, MySqlTestDatabase.username(),
-                MySqlTestDatabase.password()); Statement statement = connection.createStatement()) {
+        try (Connection connection = DriverManager.getConnection(url, PostgresTestDatabase.username(),
+                PostgresTestDatabase.password()); Statement statement = connection.createStatement()) {
             statement.executeUpdate("DELETE FROM flyway_schema_history WHERE version = '3'");
         }
         Exception missingVersion = assertThrows(Exception.class, () -> start(url));
@@ -105,9 +123,9 @@ class SchemaVersionGateTest {
                 "--spring.profiles.active=prod",
                 "--server.port=0",
                 "--spring.datasource.url=" + url,
-                "--spring.datasource.username=" + MySqlTestDatabase.username(),
-                "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.username=" + PostgresTestDatabase.username(),
+                "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.delivery.enabled=false");
     }
 
@@ -122,16 +140,23 @@ class SchemaVersionGateTest {
     }
 
     private static int countTables(String url) throws Exception {
-        try (Connection connection = DriverManager.getConnection(url, MySqlTestDatabase.username(),
-                MySqlTestDatabase.password())) {
-            String schema = connection.getCatalog();
-            try (var statement = connection.prepareStatement(
-                    "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ?")) {
-                statement.setString(1, schema);
-                try (var result = statement.executeQuery()) {
-                    return result.next() ? result.getInt(1) : 0;
-                }
-            }
+        try (Connection connection = DriverManager.getConnection(url, PostgresTestDatabase.username(),
+                PostgresTestDatabase.password());
+             var statement = connection.prepareStatement(
+                     "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = current_schema()");
+             var result = statement.executeQuery()) {
+            return result.next() ? result.getInt(1) : 0;
+        }
+    }
+
+    private static int countBusinessTables(String url) throws Exception {
+        try (Connection connection = DriverManager.getConnection(url, PostgresTestDatabase.username(),
+                PostgresTestDatabase.password());
+             var statement = connection.prepareStatement(
+                     "SELECT COUNT(*) FROM information_schema.tables "
+                             + "WHERE table_schema = current_schema() AND table_name LIKE 'sq\\_%'");
+             var result = statement.executeQuery()) {
+            return result.next() ? result.getInt(1) : 0;
         }
     }
 }

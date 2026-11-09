@@ -71,7 +71,7 @@ public class CompletionProposalService {
      * 事务提交后即使工具回包丢失，重放也不会生成第二个候选。
      */
     @Transactional
-    public CompletionProposalReceiptBO propose(String userId, String sessionId, String turnId,
+    public CompletionProposalReceiptBO propose(Long userId, String sessionId, String turnId,
                                                String toolCallId, String outcome, String finalAnswer) {
         return submit(new CompletionSubmissionBO(userId, sessionId, turnId,
                 toolCallId, outcome, finalAnswer, List.of()));
@@ -82,13 +82,13 @@ public class CompletionProposalService {
      */
     @Transactional
     public CompletionProposalReceiptBO submit(CompletionSubmissionBO submission) {
-        String userId = submission.userId();
+        Long userId = submission.userId();
         String sessionId = submission.sessionId();
         String turnId = submission.turnId();
         String toolCallId = submission.toolCallId();
         String outcome = submission.outcome();
         String finalAnswer = submission.finalAnswer();
-        if (isBlank(userId) || isBlank(sessionId) || isBlank(turnId) || isBlank(toolCallId)
+        if (userId == null || isBlank(sessionId) || isBlank(turnId) || isBlank(toolCallId)
                 || turnId.length() > 64 || toolCallId.length() > 128) {
             throw new IllegalStateException("完成候选缺少可信运行身份");
         }

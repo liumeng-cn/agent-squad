@@ -36,8 +36,8 @@ class TaskEventStreamerServiceTest {
     void rejectsConnectionsBeyondConfiguredLimit() {
         TaskMapper taskMapper = mock(TaskMapper.class);
         TaskEventMapper eventMapper = mock(TaskEventMapper.class);
-        when(taskMapper.findOwned(anyString(), anyString())).thenReturn(mock(TaskPO.class));
-        when(eventMapper.listAfter(anyString(), anyString(), anyLong())).thenReturn(List.of());
+        when(taskMapper.findOwned(anyLong(), anyLong())).thenReturn(mock(TaskPO.class));
+        when(eventMapper.listAfter(anyLong(), anyLong(), anyLong())).thenReturn(List.of());
 
         streamer = new TaskEventStreamerService();
         ReflectionTestUtils.setField(streamer, "taskMapper", taskMapper);
@@ -46,10 +46,10 @@ class TaskEventStreamerServiceTest {
         ReflectionTestUtils.setField(streamer, "maxConnections", 2);
         streamer.initialize();
 
-        streamer.stream("user-1", "task-1", 0);
-        streamer.stream("user-1", "task-2", 0);
+        streamer.stream(1L, 11L, 0);
+        streamer.stream(1L, 12L, 0);
 
-        assertThatThrownBy(() -> streamer.stream("user-1", "task-3", 0))
+        assertThatThrownBy(() -> streamer.stream(1L, 13L, 0))
                 .isInstanceOf(RuntimeBusinessException.class)
                 .hasMessageContaining("事件连接已满");
     }

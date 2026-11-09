@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.tool;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.bo.TaskDirectiveDecisionBO;
 import com.agentsquad.squad.service.TaskDirectiveService;
@@ -45,7 +47,7 @@ public class ApplyTaskDirectiveTool implements AgentTool {
 
     @Override
     public Map<String, Object> getParameters() {
-        var schema = new java.util.LinkedHashMap<String, Object>(Map.of("type", "object", "properties", Map.of("directiveId", Map.of("type", "string", "format", "uuid"), "expectedVersion", Map.of("type", "integer", "minimum", 0), "decision", Map.of("type", "string", "enum", List.of("APPLY", "REJECT")), "reason", Map.of("type", "string", "maxLength", 500)), "required", List.of("directiveId", "expectedVersion", "decision")));
+        var schema = new java.util.LinkedHashMap<String, Object>(Map.of("type", "object", "properties", Map.of("directiveId", Map.of("type", "string"), "expectedVersion", Map.of("type", "integer", "minimum", 0), "decision", Map.of("type", "string", "enum", List.of("APPLY", "REJECT")), "reason", Map.of("type", "string", "maxLength", 500)), "required", List.of("directiveId", "expectedVersion", "decision")));
         schema.put("additionalProperties", false);
         return schema;
     }
@@ -68,7 +70,7 @@ public class ApplyTaskDirectiveTool implements AgentTool {
         }
         try {
             var request = json.convertValue(input, TaskDirectiveDecisionBO.class);
-            return ToolResultBlock.text(RuntimePayloads.toJson(json, directives.decide(context.getUserId(), context.getSessionId(), request)));
+            return ToolResultBlock.text(RuntimePayloads.toJson(json, directives.decide(RuntimeContextIds.userId(context), context.getSessionId(), request)));
         } catch (RuntimeBusinessException exception) {
             return ToolResultBlock.error(exception.getMessage());
         }

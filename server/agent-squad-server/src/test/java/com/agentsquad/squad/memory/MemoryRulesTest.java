@@ -40,6 +40,6 @@ class MemoryRulesTest {
     }
 
     private MemoryPO row(String status, long version, LocalDateTime expires) {
-        return new MemoryPO("memory", "owner", "key", "value", status, version, expires, null, null, 1);
+        return new MemoryPO(1L, 2L, "key", "value", status, version, expires, null, null, 1);
     }
 }

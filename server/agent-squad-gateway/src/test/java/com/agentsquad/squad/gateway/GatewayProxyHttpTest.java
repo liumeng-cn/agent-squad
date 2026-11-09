@@ -36,7 +36,7 @@ class GatewayProxyHttpTest {
 
     private static String createDatabase() {
         String url = GatewayTestDatabase.create("gateway-proxy");
-        GatewayTestDatabase.seedUser(url, "00000000-0000-0000-0000-000000000001", "test", "test", "ADMIN", false);
+        GatewayTestDatabase.seedUser(url, 1L, "test", "test", "ADMIN", false);
         return url;
     }
 
@@ -54,7 +54,7 @@ class GatewayProxyHttpTest {
         registry.add("spring.datasource.url", () -> DB_URL);
         registry.add("spring.datasource.username", GatewayTestDatabase::username);
         registry.add("spring.datasource.password", GatewayTestDatabase::password);
-        registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
+        registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
         registry.add("gateway.business-service-url", () -> "http://127.0.0.1:" + UPSTREAM.getAddress().getPort());
         // 指向不可达的 Collector：导出失败只能记录日志，请求仍须正常完成。
         registry.add("management.otlp.tracing.export.enabled", () -> "true");
@@ -111,8 +111,8 @@ class GatewayProxyHttpTest {
     void authenticateLoginMeCsrfAndLogoutOverHttp() throws Exception {
         var client = HttpClient.newHttpClient();
         String base = "http://127.0.0.1:" + port;
-        assertEquals(401, client.send(HttpRequest.newBuilder(URI.create(base + "/api/echo")).build(),
-                HttpResponse.BodyHandlers.ofString()).statusCode());
+        assertEquals(401, code(client.send(HttpRequest.newBuilder(URI.create(base + "/api/echo")).build(),
+                HttpResponse.BodyHandlers.ofString())));
         var login = client.send(HttpRequest.newBuilder(URI.create(base + "/api/v1/auth/login"))
                         .header("Content-Type", "application/json")
                         .POST(HttpRequest.BodyPublishers.ofString("{\"username\":\"test\",\"password\":\"test\"}")).build(),
@@ -127,14 +127,14 @@ class GatewayProxyHttpTest {
                 .header("Cookie", cookie).build(), HttpResponse.BodyHandlers.ofString());
         assertEquals(200, me.statusCode());
         assertEquals("no-store", me.headers().firstValue("Cache-Control").orElseThrow());
-        assertEquals(401, client.send(HttpRequest.newBuilder(URI.create(base + "/api/echo"))
+        assertEquals(401, code(client.send(HttpRequest.newBuilder(URI.create(base + "/api/echo"))
                         .header("Cookie", cookie).POST(HttpRequest.BodyPublishers.ofString("blocked")).build(),
-                HttpResponse.BodyHandlers.ofString()).statusCode());
+                HttpResponse.BodyHandlers.ofString())));
         assertEquals(200, client.send(HttpRequest.newBuilder(URI.create(base + "/api/v1/auth/logout"))
                 .header("Cookie", cookie).header("X-CSRF-Token", csrf)
                 .POST(HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.ofString()).statusCode());
-        assertEquals(401, client.send(HttpRequest.newBuilder(URI.create(base + "/api/v1/auth/me"))
-                .header("Cookie", cookie).build(), HttpResponse.BodyHandlers.ofString()).statusCode());
+        assertEquals(401, code(client.send(HttpRequest.newBuilder(URI.create(base + "/api/v1/auth/me"))
+                .header("Cookie", cookie).build(), HttpResponse.BodyHandlers.ofString())));
     }
 
     @Test
@@ -218,5 +218,14 @@ class GatewayProxyHttpTest {
         } finally {
             RELEASE.countDown();
         }
+    }
+
+    /**
+     * 网关业务拒绝统一返回 HTTP 200，结果以响应体 code 判定。
+     */
+    private static int code(HttpResponse<String> response) throws Exception {
+        assertEquals(200, response.statusCode(), response.body());
+        return new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(response.body()).get("code").asInt();
     }
 }

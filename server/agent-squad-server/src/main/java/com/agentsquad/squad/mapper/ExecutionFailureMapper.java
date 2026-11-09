@@ -14,59 +14,59 @@ import java.util.List;
  */
 @Mapper
 public interface ExecutionFailureMapper {
-    ExecutionFailurePO latest(@Param("userId") String userId, @Param("scopeId") String scopeId, @Param("bindingId") String bindingId);
+    ExecutionFailurePO latest(@Param("userId") Long userId, @Param("scopeId") Long scopeId, @Param("bindingId") Long bindingId);
 
-    List<ExecutionFailurePO> activeInConversation(@Param("userId") String userId, @Param("conversationId") String conversationId);
+    List<ExecutionFailurePO> activeInConversation(@Param("userId") Long userId, @Param("conversationId") Long conversationId);
 
-    List<String> activeResponseFailures(@Param("userId") String userId, @Param("conversationId") String conversationId,
-                                        @Param("generation") long generation, @Param("exceptScopeId") String exceptScopeId);
+    List<Long> activeResponseFailures(@Param("userId") Long userId, @Param("conversationId") Long conversationId,
+                                        @Param("generation") long generation, @Param("exceptScopeId") Long exceptScopeId);
 
-    String byKey(@Param("userId") String userId, @Param("scopeId") String scopeId, @Param("key") String key);
+    Long byKey(@Param("userId") Long userId, @Param("scopeId") Long scopeId, @Param("key") String key);
 
-    int countActiveByCode(@Param("userId") String userId, @Param("scopeId") String scopeId, @Param("code") String code);
+    int countActiveByCode(@Param("userId") Long userId, @Param("scopeId") Long scopeId, @Param("code") String code);
 
-    int insert(@Param("userId") String userId, @Param("row") ExecutionFailurePO row, @Param("key") String key);
+    int insert(@Param("userId") Long userId, @Param("row") ExecutionFailurePO row, @Param("key") String key);
 
-    int status(@Param("userId") String userId, @Param("failureId") String failureId, @Param("status") String status);
+    int status(@Param("userId") Long userId, @Param("failureId") Long failureId, @Param("status") String status);
 
-    int resolveBinding(@Param("userId") String userId, @Param("bindingId") String bindingId);
+    int resolveBinding(@Param("userId") Long userId, @Param("bindingId") Long bindingId);
 
-    int serviceAttempts(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    int serviceAttempts(@Param("userId") Long userId, @Param("scopeId") Long scopeId);
 
-    int planAttempts(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    int planAttempts(@Param("userId") Long userId, @Param("scopeId") Long scopeId);
 
-    int reserveServiceRetry(@Param("userId") String userId, @Param("scopeId") String scopeId, @Param("next") LocalDateTime next);
+    int reserveServiceRetry(@Param("userId") Long userId, @Param("scopeId") Long scopeId, @Param("next") LocalDateTime next);
 
-    LocalDateTime nextAttempt(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    LocalDateTime nextAttempt(@Param("userId") Long userId, @Param("scopeId") Long scopeId);
 
-    int invalidPlan(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    int invalidPlan(@Param("userId") Long userId, @Param("scopeId") Long scopeId);
 
-    int responseRetrying(@Param("userId") String userId, @Param("bindingId") String bindingId, @Param("next") LocalDateTime next);
+    int responseRetrying(@Param("userId") Long userId, @Param("bindingId") Long bindingId, @Param("next") LocalDateTime next);
 
-    String predecessor(@Param("userId") String userId, @Param("executionId") String executionId);
+    Long predecessor(@Param("userId") Long userId, @Param("executionId") Long executionId);
 
-    int serviceAttemptsView(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    int serviceAttemptsView(@Param("userId") Long userId, @Param("scopeId") Long scopeId);
 
-    String sourceMessage(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    Long sourceMessage(@Param("userId") Long userId, @Param("scopeId") Long scopeId);
 
-    boolean retryAllowed(@Param("userId") String userId, @Param("executionId") String executionId);
+    boolean retryAllowed(@Param("userId") Long userId, @Param("executionId") Long executionId);
 
-    int clearWorkerCandidate(@Param("userId") String userId, @Param("bindingId") String bindingId);
+    int clearWorkerCandidate(@Param("userId") Long userId, @Param("bindingId") Long bindingId);
 
-    int recoverTask(@Param("userId") String userId, @Param("taskId") String taskId);
+    int recoverTask(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    String latestMasterCommand(@Param("userId") String userId, @Param("bindingId") String bindingId);
+    Long latestMasterCommand(@Param("userId") Long userId, @Param("bindingId") Long bindingId);
 
-    Long executionVersion(@Param("userId") String userId, @Param("executionId") String executionId);
+    Long executionVersion(@Param("userId") Long userId, @Param("executionId") Long executionId);
 
-    int linkRetry(@Param("userId") String userId, @Param("executionId") String executionId, @Param("previous") String previous);
+    int linkRetry(@Param("userId") Long userId, @Param("executionId") Long executionId, @Param("previous") Long previous);
 
-    boolean userActionAvailable(@Param("userId") String userId, @Param("bindingId") String bindingId,
+    boolean userActionAvailable(@Param("userId") Long userId, @Param("bindingId") Long bindingId,
                                 @Param("kind") String kind, @Param("now") LocalDateTime now);
 
-    int approveRetry(@Param("userId") String userId, @Param("failureId") String failureId, @Param("attempt") int attempt);
+    int approveRetry(@Param("userId") Long userId, @Param("failureId") Long failureId, @Param("attempt") int attempt);
 
-    int failTask(@Param("userId") String userId, @Param("taskId") String taskId);
+    int failTask(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    int linkFailure(@Param("userId") String userId, @Param("bindingId") String bindingId, @Param("failureId") String failureId);
+    int linkFailure(@Param("userId") Long userId, @Param("bindingId") Long bindingId, @Param("failureId") Long failureId);
 }

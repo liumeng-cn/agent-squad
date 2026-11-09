@@ -14,23 +14,23 @@ import java.util.List;
  */
 @Mapper
 public interface ArtifactMapper {
-    int insert(@Param("id") String id, @Param("userId") String userId, @Param("name") String name,
+    int insert(@Param("id") Long id, @Param("userId") Long userId, @Param("name") String name,
                @Param("mediaType") String mediaType, @Param("size") long size, @Param("hash") String hash,
                @Param("key") String key, @Param("content") byte[] content, @Param("expiresAt") LocalDateTime expiresAt);
 
-    ArtifactPO findOwned(@Param("userId") String userId, @Param("id") String id);
+    ArtifactPO findOwned(@Param("userId") Long userId, @Param("id") Long id);
 
-    ArtifactPO findContent(@Param("userId") String userId, @Param("id") String id);
+    ArtifactPO findContent(@Param("userId") Long userId, @Param("id") Long id);
 
-    ArtifactPO findUpload(@Param("userId") String userId, @Param("key") String key);
+    ArtifactPO findUpload(@Param("userId") Long userId, @Param("key") String key);
 
-    int attach(@Param("userId") String userId, @Param("taskId") String taskId, @Param("id") String id);
+    int attach(@Param("userId") Long userId, @Param("taskId") Long taskId, @Param("id") Long id);
 
-    List<String> listTaskIds(@Param("userId") String userId, @Param("taskId") String taskId);
+    List<Long> listTaskIds(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    int attachScope(@Param("userId") String userId, @Param("scopeId") String scopeId, @Param("id") String id);
+    int attachScope(@Param("userId") Long userId, @Param("scopeId") Long scopeId, @Param("id") Long id);
 
-    List<String> listScopeIds(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    List<Long> listScopeIds(@Param("userId") Long userId, @Param("scopeId") Long scopeId);
 
-    int attachMessage(@Param("userId") String userId, @Param("messageId") String messageId, @Param("id") String id);
+    int attachMessage(@Param("userId") Long userId, @Param("messageId") Long messageId, @Param("id") Long id);
 }

@@ -18,42 +18,42 @@ import java.util.List;
  */
 @Mapper
 public interface ConversationReadMapper {
-    ConversationHeaderBO header(@Param("userId") String userId, @Param("conversationId") String conversationId);
+    ConversationHeaderBO header(@Param("userId") Long userId, @Param("conversationId") Long conversationId);
 
-    List<ConversationMessagePO> messages(@Param("userId") String userId, @Param("conversationId") String conversationId, @Param("before") Long before, @Param("limit") int limit);
+    List<ConversationMessagePO> messages(@Param("userId") Long userId, @Param("conversationId") Long conversationId, @Param("before") Long before, @Param("limit") int limit);
 
-    ConversationExecutionBO execution(@Param("userId") String userId, @Param("conversationId") String conversationId,
-                                      @Param("executionId") String executionId);
+    ConversationExecutionBO execution(@Param("userId") Long userId, @Param("conversationId") Long conversationId,
+                                      @Param("executionId") Long executionId);
 
-    List<ConversationExecutionBO> activeExecutions(@Param("userId") String userId, @Param("conversationId") String conversationId);
+    List<ConversationExecutionBO> activeExecutions(@Param("userId") Long userId, @Param("conversationId") Long conversationId);
 
-    List<ConversationEventPO> events(@Param("userId") String userId, @Param("conversationId") String conversationId, @Param("generation") long generation, @Param("after") long after);
+    List<ConversationEventPO> events(@Param("userId") Long userId, @Param("conversationId") Long conversationId, @Param("generation") long generation, @Param("after") long after);
 
-    Long firstEvent(@Param("userId") String userId, @Param("conversationId") String conversationId, @Param("generation") long generation);
+    Long firstEvent(@Param("userId") Long userId, @Param("conversationId") Long conversationId, @Param("generation") long generation);
 
-    List<String> interactionIds(@Param("userId") String userId, @Param("conversationId") String conversationId);
+    List<Long> interactionIds(@Param("userId") Long userId, @Param("conversationId") Long conversationId);
 
-    List<String> deliverableIds(@Param("userId") String userId, @Param("conversationId") String conversationId);
+    List<Long> deliverableIds(@Param("userId") Long userId, @Param("conversationId") Long conversationId);
 
-    String taskAnswer(@Param("userId") String userId, @Param("taskId") String taskId);
+    Long taskAnswer(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    String taskSource(@Param("userId") String userId, @Param("taskId") String taskId);
+    Long taskSource(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    int insertTaskAnswer(@Param("messageId") String messageId, @Param("userId") String userId, @Param("conversationId") String conversationId, @Param("sequence") long sequence, @Param("text") String text, @Param("revision") long revision, @Param("sourceMessageId") String sourceMessageId, @Param("taskId") String taskId, @Param("now") LocalDateTime now);
+    int insertTaskAnswer(@Param("messageId") Long messageId, @Param("userId") Long userId, @Param("conversationId") Long conversationId, @Param("sequence") long sequence, @Param("text") String text, @Param("revision") long revision, @Param("sourceMessageId") Long sourceMessageId, @Param("taskId") Long taskId, @Param("now") LocalDateTime now);
 
-    int replaceTaskAnswer(@Param("userId") String userId, @Param("messageId") String messageId, @Param("text") String text, @Param("revision") long revision);
+    int replaceTaskAnswer(@Param("userId") Long userId, @Param("messageId") Long messageId, @Param("text") String text, @Param("revision") long revision);
 
-    List<ConversationHeaderBO> conversations(@Param("userId") String userId, @Param("beforeTime") LocalDateTime beforeTime, @Param("beforeId") Long beforeId, @Param("limit") int limit);
+    List<ConversationHeaderBO> conversations(@Param("userId") Long userId, @Param("beforeTime") LocalDateTime beforeTime, @Param("beforeId") Long beforeId, @Param("limit") int limit);
 
-    long conversationId(@Param("userId") String userId, @Param("conversationId") String conversationId);
+    long conversationId(@Param("userId") Long userId, @Param("conversationId") Long conversationId);
 
-    int rename(@Param("userId") String userId, @Param("conversationId") String conversationId, @Param("title") String title, @Param("version") long version);
+    int rename(@Param("userId") Long userId, @Param("conversationId") Long conversationId, @Param("title") String title, @Param("version") long version);
 
-    List<String> uncertainOperationIds(@Param("userId") String userId, @Param("conversationId") String conversationId);
+    List<Long> uncertainOperationIds(@Param("userId") Long userId, @Param("conversationId") Long conversationId);
 
-    List<ConversationExecutionBO> pageExecutions(@Param("userId") String userId, @Param("conversationId") String conversationId,
+    List<ConversationExecutionBO> pageExecutions(@Param("userId") Long userId, @Param("conversationId") Long conversationId,
                                                  @Param("first") long first, @Param("last") long last);
 
-    List<ConversationTaskStateBO> pageTasks(@Param("userId") String userId, @Param("conversationId") String conversationId,
+    List<ConversationTaskStateBO> pageTasks(@Param("userId") Long userId, @Param("conversationId") Long conversationId,
                                             @Param("first") long first, @Param("last") long last);
 }

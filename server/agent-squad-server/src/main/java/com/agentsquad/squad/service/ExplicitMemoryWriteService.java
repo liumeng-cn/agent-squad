@@ -48,9 +48,9 @@ public class ExplicitMemoryWriteService {
      * 会话/所有者→用户记忆代际的锁序；先恢复稳定回执，再校验当前上下文并执行一次变更。
      */
     @Transactional
-    public MemoryWriteReceiptBO write(String userId, String sessionId, MemoryWriteRequestBO request) {
+    public MemoryWriteReceiptBO write(Long userId, String sessionId, MemoryWriteRequestBO request) {
         validateShape(request);
-        String scopeId = scopes.scopeForSession(userId, sessionId);
+        Long scopeId = scopes.scopeForSession(userId, sessionId);
         ExecutionScopePO scope = scopes.lockOwned(userId, scopeId, true);
         if (!"RESPONSE".equals(scope.getKind())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "只有受权用户消息的回复可以写入显式记忆");
@@ -79,7 +79,7 @@ public class ExplicitMemoryWriteService {
         return receipt;
     }
 
-    private MemoryMutationVO apply(String userId, MemoryWriteRequestBO request, MemorySourceBO source) {
+    private MemoryMutationVO apply(Long userId, MemoryWriteRequestBO request, MemorySourceBO source) {
         if ("CREATE".equals(request.action())) {
             if (request.expectedVersion() != null) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "创建记忆不接受旧版本");

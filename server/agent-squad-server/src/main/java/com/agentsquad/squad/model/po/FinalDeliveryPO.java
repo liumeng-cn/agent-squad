@@ -26,7 +26,7 @@ public class FinalDeliveryPO {
     /**
      * 原始用户消息ID
      */
-    private String sourceMessageId;
+    private Long sourceMessageId;
     /**
      * 交付代际
      */
@@ -38,7 +38,7 @@ public class FinalDeliveryPO {
     /**
      * 负责发布答复的回复执行ID或目标任务ID
      */
-    private String ownerId;
+    private Long ownerId;
     /**
      * 答复状态[OWNED-已指定负责人,PUBLISHED-已发布,CLOSED-已关闭]
      */
@@ -46,12 +46,12 @@ public class FinalDeliveryPO {
     /**
      * 已发布的最终答复消息ID
      */
-    private String publishedMessageId;
+    private Long publishedMessageId;
 
     /**
      * 判断交付是否由指定类型和标识持有
      */
-    public boolean ownedBy(String type, String id) {
+    public boolean ownedBy(String type, Long id) {
         return ownerType.equals(type) && ownerId.equals(id);
     }
 }

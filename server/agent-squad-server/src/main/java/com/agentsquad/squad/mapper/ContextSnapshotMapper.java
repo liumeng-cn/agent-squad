@@ -13,19 +13,19 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface ContextSnapshotMapper {
 
-    ContextPreparationBO lockPreparation(@Param("userId") String userId,
+    ContextPreparationBO lockPreparation(@Param("userId") Long userId,
                                          @Param("sessionId") String sessionId);
 
-    ContextSnapshotPO findByLogicalKey(@Param("userId") String userId,
-                                       @Param("taskId") String taskId,
+    ContextSnapshotPO findByLogicalKey(@Param("userId") Long userId,
+                                       @Param("taskId") Long taskId,
                                        @Param("targetNodeKey") String targetNodeKey,
                                        @Param("logicalKey") String logicalKey);
 
-    ContextSnapshotPO findOwned(@Param("userId") String userId, @Param("taskId") String taskId,
-                                @Param("snapshotId") String snapshotId);
+    ContextSnapshotPO findOwned(@Param("userId") Long userId, @Param("taskId") Long taskId,
+                                @Param("snapshotId") Long snapshotId);
 
-    int insert(@Param("snapshotId") String snapshotId, @Param("userId") String userId,
-               @Param("taskId") String taskId, @Param("targetNodeKey") String targetNodeKey,
+    int insert(@Param("snapshotId") Long snapshotId, @Param("userId") Long userId,
+               @Param("taskId") Long taskId, @Param("targetNodeKey") String targetNodeKey,
                @Param("logicalKey") String logicalKey,
                @Param("conversationGeneration") long conversationGeneration,
                @Param("itemsJson") String itemsJson, @Param("tokenEstimate") long tokenEstimate,

@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.config.properties.SkillPackageProperties;
@@ -52,13 +53,13 @@ public class SkillService {
      * 同用户同名称版本且内容相同返回原版本；任何文件落库失败回滚整个包，不自动启用。
      */
     @Transactional
-    public SkillVersionVO importPackage(String userId, SkillImportDTO request) {
+    public SkillVersionVO importPackage(Long userId, SkillImportDTO request) {
         SkillPackageBO skill = validate(request);
         SkillVersionPO prior = skillMapper.findNamedVersion(userId, skill.name(), skill.version());
         if (prior != null) {
             return sameVersion(prior, skill);
         }
-        String versionId = UUID.randomUUID().toString();
+        Long versionId = IdWorker.getId();
         try {
             skillMapper.insertVersion(userId, versionId, skill.name(), skill.version(), skill.description(),
                     skill.contentHash(), writeTools(skill.requiredTools()));
@@ -66,22 +67,22 @@ public class SkillService {
             return sameVersion(skillMapper.findNamedVersionCurrent(userId, skill.name(), skill.version()), skill);
         }
         for (var file : skill.files()) {
-            skillMapper.insertFile(UUID.randomUUID().toString(), userId, versionId, file);
+            skillMapper.insertFile(IdWorker.getId(), userId, versionId, file);
         }
-        skillMapper.insertGrant(UUID.randomUUID().toString(), userId, versionId);
+        skillMapper.insertGrant(IdWorker.getId(), userId, versionId);
         log.info("技能版本发布完成 userId={} skillVersionId={} fileCount={} enabled=false",
                 userId, versionId, skill.files().size());
         return versionView(requireOwned(userId, versionId));
     }
 
-    public SkillDetailVO detail(String userId, String versionId) {
+    public SkillDetailVO detail(Long userId, Long versionId) {
         SkillVersionPO row = requireOwned(userId, versionId);
         SkillGrantPO grant = skillMapper.grant(userId, versionId);
         return new SkillDetailVO(versionView(row),
                 skillFileConverter.toViews(skillMapper.files(userId, versionId)), grantView(grant));
     }
 
-    public SkillPageVO list(String userId, String cursor, int limit) {
+    public SkillPageVO list(Long userId, String cursor, int limit) {
         int pageSize = Math.min(Math.max(limit, 1), 100);
         List<SkillVersionPO> rows = skillMapper.list(userId, parseCursor(cursor), pageSize + 1);
         boolean hasMore = rows.size() > pageSize;
@@ -94,7 +95,7 @@ public class SkillService {
      * 普通启停只影响新执行目录，不递增安全撤销代际，已固定的版本继续可读。
      */
     @Transactional
-    public SkillGrantVO changeGrant(String userId, String versionId, SkillGrantDTO request) {
+    public SkillGrantVO changeGrant(Long userId, Long versionId, SkillGrantDTO request) {
         SkillVersionPO row = requireLocked(userId, versionId);
         if (request == null || request.enabled() == null || request.expectedVersion() == null || request.expectedVersion() < 0) {
             throw invalid("授权版本无效");
@@ -113,7 +114,7 @@ public class SkillService {
      * 安全撤销与授权版本更新同事务提交；任何后续在途读取必须核对新代际，不允许恢复启用。
      */
     @Transactional
-    public SkillDetailVO revoke(String userId, String versionId, long expectedVersion) {
+    public SkillDetailVO revoke(Long userId, Long versionId, long expectedVersion) {
         SkillVersionPO row = requireLocked(userId, versionId);
         if (expectedVersion < 0) {
             throw invalid("授权版本无效");
@@ -143,7 +144,7 @@ public class SkillService {
         return versionView(prior);
     }
 
-    private SkillVersionPO requireLocked(String userId, String versionId) {
+    private SkillVersionPO requireLocked(Long userId, Long versionId) {
         SkillVersionPO row = skillMapper.lockVersion(userId, versionId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "技能版本不存在或无权访问");
@@ -151,7 +152,7 @@ public class SkillService {
         return row;
     }
 
-    private SkillVersionPO requireOwned(String userId, String versionId) {
+    private SkillVersionPO requireOwned(Long userId, Long versionId) {
         SkillVersionPO row = skillMapper.find(userId, versionId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "技能版本不存在或无权访问");

@@ -108,7 +108,7 @@ public class NativeProjectionPollTask {
                     executionTrace.project(target.getUserId(), target.getBindingId(), () -> consumption.consume(target, batch));
                 }
                 if (target.getTaskId() == null) {
-                    String commandId = responses.originalCommand(target);
+                    Long commandId = responses.originalCommand(target);
                     if (commandId != null) {
                         NativeSubmissionReceiptBO receipt = nativeSessionGateway.inspectTask(target, commandId);
                         if (commandId.equals(receipt.commandId())) {
@@ -120,7 +120,7 @@ public class NativeProjectionPollTask {
                         }
                     }
                 } else if (!MasterAgentIdentity.AGENT_ID.equals(target.getAgentId())) {
-                    String commandId = workerRecoveryService.originalSubmitCommandId(target);
+                    Long commandId = workerRecoveryService.originalSubmitCommandId(target);
                     if (commandId != null) {
                         NativeSubmissionReceiptBO receipt = nativeSessionGateway.inspectTask(target, commandId);
                         if (commandId.equals(receipt.commandId())) {
@@ -128,7 +128,7 @@ public class NativeProjectionPollTask {
                         }
                     }
                 } else {
-                    String commandId = failures.masterCommand(target);
+                    Long commandId = failures.masterCommand(target);
                     if (commandId != null) {
                         NativeSubmissionReceiptBO receipt = nativeSessionGateway.inspectTask(target, commandId);
                         if (commandId.equals(receipt.commandId())) {

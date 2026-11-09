@@ -24,7 +24,7 @@ public class MemoryScopePinPO {
     /**
      * 受权执行作用域业务ID
      */
-    private String scopeId;
+    private Long scopeId;
     /**
      * 上下文固定时的用户记忆版本号
      */

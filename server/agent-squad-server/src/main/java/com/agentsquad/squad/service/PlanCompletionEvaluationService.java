@@ -30,7 +30,7 @@ public class PlanCompletionEvaluationService {
     @Resource
     private PlanAcceptanceService acceptance;
 
-    public PlanCompletionEvaluationBO evaluate(String userId, String taskId, long planVersion, List<AcceptanceReviewBO> reviews) {
+    public PlanCompletionEvaluationBO evaluate(Long userId, Long taskId, long planVersion, List<AcceptanceReviewBO> reviews) {
         var plan = plans.lockPlan(userId, taskId, planVersion);
         if (plan == null || !"ACTIVE".equals(plan.getStatus())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "当前计划已经变化");

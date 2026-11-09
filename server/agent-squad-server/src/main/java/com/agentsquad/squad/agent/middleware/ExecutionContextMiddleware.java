@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.middleware;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import com.agentsquad.squad.agent.skill.ScopeSkillCapabilities;
 import com.agentsquad.squad.agent.skill.ScopeSkillRepository;
 import com.agentsquad.squad.observer.ExecutionTrace;
@@ -106,10 +108,10 @@ public class ExecutionContextMiddleware implements MiddlewareBase {
     public Flux<AgentEvent> onModelCall(Agent agent, RuntimeContext context, ModelCallInput input,
                                         Function<ModelCallInput, Flux<AgentEvent>> next) {
         return Mono.fromCallable(() -> {
-                    String userId = context.getUserId();
+                    Long userId = RuntimeContextIds.userId(context);
                     userStatusGuard.requireActive(userId);
-                    String scopeId = scopes.scopeForSession(userId, context.getSessionId());
-                    String bindingId = bindings.findBindingBySession(userId, context.getSessionId());
+                    Long scopeId = scopes.scopeForSession(userId, context.getSessionId());
+                    Long bindingId = bindings.findBindingBySession(userId, context.getSessionId());
                     var worker = workers.findByBinding(userId, bindingId);
                     if (worker != null) {
                         var identity = context.get(WorkerExecutionIdentityBO.class);
@@ -142,7 +144,7 @@ public class ExecutionContextMiddleware implements MiddlewareBase {
                                     + RuntimePayloads.toJson(json, snapshot)).build());
                     return new ModelCallInput(messages, input.tools(), input.options(), input.model());
                 }).subscribeOn(Schedulers.boundedElastic()).flatMapMany(adjusted ->
-                        executionTrace.session(context.getUserId(), context.getSessionId(), "squad.model.call", () -> next.apply(adjusted)))
+                        executionTrace.session(RuntimeContextIds.userId(context), context.getSessionId(), "squad.model.call", () -> next.apply(adjusted)))
                 .onErrorResume(ExecutionContextInvalidatedException.class, error -> restrict(context, error));
     }
 
@@ -153,8 +155,8 @@ public class ExecutionContextMiddleware implements MiddlewareBase {
     public Flux<AgentEvent> onActing(Agent agent, RuntimeContext context, ActingInput input,
                                      Function<ActingInput, Flux<AgentEvent>> next) {
         return Mono.fromRunnable(() -> {
-                    userStatusGuard.requireActive(context.getUserId());
-                    authorization.requireSessionCurrent(context.getUserId(), context.getSessionId());
+                    userStatusGuard.requireActive(RuntimeContextIds.userId(context));
+                    authorization.requireSessionCurrent(RuntimeContextIds.userId(context), context.getSessionId());
                     for (var call : input.toolCalls()) {
                         if (!"load_skill_through_path".equals(call.getName())) {
                             continue;
@@ -170,22 +172,22 @@ public class ExecutionContextMiddleware implements MiddlewareBase {
                             throw new ExecutionContextInvalidatedException(new IllegalStateException("非平台技能来源"));
                         }
                         var allowed = context.get(ScopeSkillCapabilities.class);
-                        skills.requireCapabilities(context.getUserId(), scopes.scopeForSession(context.getUserId(), context.getSessionId()),
-                                entry.skill().getSource().substring(prefix.length()), allowed == null ? Set.of() : allowed.toolNames());
+                        skills.requireCapabilities(RuntimeContextIds.userId(context), scopes.scopeForSession(RuntimeContextIds.userId(context), context.getSessionId()),
+                                Long.parseLong(entry.skill().getSource().substring(prefix.length())), allowed == null ? Set.of() : allowed.toolNames());
                     }
                 })
                 .subscribeOn(Schedulers.boundedElastic()).thenMany(Flux.defer(() ->
-                        executionTrace.session(context.getUserId(), context.getSessionId(), "squad.tool.batch", () -> next.apply(input))))
+                        executionTrace.session(RuntimeContextIds.userId(context), context.getSessionId(), "squad.tool.batch", () -> next.apply(input))))
                 .onErrorResume(SkillCapabilityUnavailableException.class, error ->
-                        Mono.fromRunnable(() -> failures.reportModel(context.getUserId(), context.getSessionId(), "skill-capability", error))
+                        Mono.fromRunnable(() -> failures.reportModel(RuntimeContextIds.userId(context), context.getSessionId(), "skill-capability", error))
                                 .subscribeOn(Schedulers.boundedElastic()).thenMany(Flux.error(error)))
                 .onErrorResume(ExecutionContextInvalidatedException.class, error -> restrict(context, error));
     }
 
     private Flux<AgentEvent> restrict(RuntimeContext context, ExecutionContextInvalidatedException error) {
-        return Mono.fromRunnable(() -> restrictions.restrict(context.getUserId(),
-                        scopes.scopeForSession(context.getUserId(), context.getSessionId()),
-                        bindings.findBindingBySession(context.getUserId(), context.getSessionId())))
+        return Mono.fromRunnable(() -> restrictions.restrict(RuntimeContextIds.userId(context),
+                        scopes.scopeForSession(RuntimeContextIds.userId(context), context.getSessionId()),
+                        bindings.findBindingBySession(RuntimeContextIds.userId(context), context.getSessionId())))
                 .subscribeOn(Schedulers.boundedElastic()).thenMany(Flux.error(error));
     }
 }

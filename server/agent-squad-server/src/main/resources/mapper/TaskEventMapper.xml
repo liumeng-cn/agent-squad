@@ -5,7 +5,7 @@
     <resultMap id="listAfterResult" type="com.agentsquad.squad.model.po.EventPO">
         <constructor>
             <arg column="event_seq" javaType="_long"/>
-            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
             <arg column="event_type" javaType="java.lang.String"/>
             <arg column="payload_json" javaType="java.lang.String"/>
             <arg column="occurred_at" javaType="java.time.LocalDateTime"/>
@@ -15,7 +15,7 @@
     <resultMap id="findLatestAnswerEventResult" type="com.agentsquad.squad.model.po.EventPO">
         <constructor>
             <arg column="event_seq" javaType="_long"/>
-            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
             <arg column="event_type" javaType="java.lang.String"/>
             <arg column="payload_json" javaType="java.lang.String"/>
             <arg column="occurred_at" javaType="java.time.LocalDateTime"/>
@@ -86,14 +86,14 @@
         WHERE user_id = #{userId} AND task_id = #{taskId} AND event_type IN ('answer.completed',
         'answer.replaced')
         AND COALESCE(
-        JSON_EXTRACT(payload_json, '$.revision'),
+        CAST(payload_json ->> 'revision' AS bigint),
         (SELECT m.revision
         FROM sq_message m
         WHERE m.user_id = #{userId}
         AND m.task_id = #{taskId}
         AND m.role = 'ASSISTANT'
         AND m.del_flag = '0'
-        AND BINARY m.content = BINARY JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.text'))
+        AND m.content = (payload_json ->> 'text')
         ORDER BY m.message_seq DESC
         LIMIT 1),
         0

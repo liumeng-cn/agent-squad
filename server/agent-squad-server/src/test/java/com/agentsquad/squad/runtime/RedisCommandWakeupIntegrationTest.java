@@ -4,7 +4,8 @@ import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.model.dto.MessageCreateDTO;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.RedisCommandWakeup;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
+import com.agentsquad.squad.testsupport.TestRedis;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -32,9 +33,9 @@ class RedisCommandWakeupIntegrationTest {
         try (var model = new NaturalReplyModelStub();
              var context = SpringApplication.run(AgentSquadApplication.class,
                      "--spring.main.web-application-type=none",
-                     "--spring.datasource.url=" + MySqlTestDatabase.url(directory),
-                     "--spring.datasource.username=" + MySqlTestDatabase.username(),
-                     "--spring.datasource.password=" + MySqlTestDatabase.password(),
+                     "--spring.datasource.url=" + PostgresTestDatabase.url(directory),
+                     "--spring.datasource.username=" + PostgresTestDatabase.username(),
+                     "--spring.datasource.password=" + PostgresTestDatabase.password(),
                      "--agentsquad.delivery.enabled=true", "--agentsquad.delivery.poll-delay-ms=600000",
                      "--agentsquad.projection.poll-delay-ms=600000", "--agentsquad.redis-wakeup.enabled=true",
                      "--agentsquad.projection.wakeup-retry-delay-ms=15000",
@@ -43,9 +44,9 @@ class RedisCommandWakeupIntegrationTest {
                      "--agentsquad.redis-wakeup.poll-delay-ms=" + (abandonedPending ? 600000 : 100),
                      "--agentsquad.redis-wakeup.compensation-delay-ms=600000",
                      "--agentsquad.redis-wakeup.reclaim-idle-ms=1000",
-                     "--spring.data.redis.host=127.0.0.1",
-                     "--spring.data.redis.port=" + System.getenv("SQUAD_TEST_REDIS_PORT"),
-                     "--spring.data.redis.password=" + System.getenv("SQUAD_TEST_REDIS_PASSWORD"),
+                     "--spring.data.redis.host=" + TestRedis.host(),
+                     "--spring.data.redis.port=" + TestRedis.port(),
+                     "--spring.data.redis.password=" + TestRedis.password(),
                      "--spring.data.redis.timeout=200ms", "--spring.data.redis.connect-timeout=200ms",
                      "--agentsquad.model.api-key=test-only", "--agentsquad.model.base-url=" + model.baseUrl(),
                      "--agentsquad.model.name=test-model", "--agentsquad.worker.model-profiles.default.api-key=test-only",
@@ -54,7 +55,7 @@ class RedisCommandWakeupIntegrationTest {
             var jdbc = context.getBean(JdbcTemplate.class);
             var redis = context.getBean(StringRedisTemplate.class);
             var wakeup = context.getBean(RedisCommandWakeup.class);
-            String user = "00000000-0000-0000-0000-000000000001";
+            Long user = 1L;
             var accepted = context.getBean(MessageAcceptanceService.class).accept(user, null, "redis-first",
                     new MessageCreateDTO("测试Redis命令唤醒", List.of()));
             if (abandonedPending) {
@@ -69,7 +70,7 @@ class RedisCommandWakeupIntegrationTest {
                 wakeup.receive();
             }
             assertThat(model.entered.await(10, TimeUnit.SECONDS)).isTrue();
-            String command = jdbc.queryForObject("SELECT command_id FROM sq_command WHERE action='MESSAGE_SUBMIT'", String.class);
+            Long command = jdbc.queryForObject("SELECT command_id FROM sq_command WHERE action='MESSAGE_SUBMIT'", Long.class);
             for (int index = 0; index < 8; index++) {
                 assertThat(wakeup.publish(command)).isTrue();
             }

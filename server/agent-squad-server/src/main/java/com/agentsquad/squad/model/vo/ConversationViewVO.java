@@ -13,7 +13,7 @@ import com.agentsquad.squad.model.bo.ConversationHeaderBO;
 public class ConversationViewVO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("conversationId")
-    private final String conversationId;
+    private final Long conversationId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("title")
     private final String title;
@@ -34,21 +34,21 @@ public class ConversationViewVO {
     private final long version;
 
     @com.fasterxml.jackson.annotation.JsonProperty("activeTaskId")
-    private final String activeTaskId;
+    private final Long activeTaskId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("lastActivityAt")
     private final String lastActivityAt;
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public ConversationViewVO(
-            @com.fasterxml.jackson.annotation.JsonProperty("conversationId") String conversationId,
+            @com.fasterxml.jackson.annotation.JsonProperty("conversationId") Long conversationId,
             @com.fasterxml.jackson.annotation.JsonProperty("title") String title,
             @com.fasterxml.jackson.annotation.JsonProperty("titleSource") String titleSource,
             @com.fasterxml.jackson.annotation.JsonProperty("titleVersion") long titleVersion,
             @com.fasterxml.jackson.annotation.JsonProperty("generation") long generation,
             @com.fasterxml.jackson.annotation.JsonProperty("status") String status,
             @com.fasterxml.jackson.annotation.JsonProperty("version") long version,
-            @com.fasterxml.jackson.annotation.JsonProperty("activeTaskId") String activeTaskId,
+            @com.fasterxml.jackson.annotation.JsonProperty("activeTaskId") Long activeTaskId,
             @com.fasterxml.jackson.annotation.JsonProperty("lastActivityAt") String lastActivityAt) {
         this.conversationId = conversationId;
         this.title = title;

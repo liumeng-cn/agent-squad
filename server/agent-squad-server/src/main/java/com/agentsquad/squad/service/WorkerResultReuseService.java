@@ -39,7 +39,7 @@ public class WorkerResultReuseService {
      * 只从紧邻前一版计划查找同节点的终态结果；依赖节点必须已从同一旧版复用。
      * 调用方持有 Task 锁，旧结果不会并发变化。
      */
-    public WorkerJobPO reusableNode(String userId, String taskId, PlanNodeBO node,
+    public WorkerJobPO reusableNode(Long userId, Long taskId, PlanNodeBO node,
                                     List<WorkerJobPO> previousJobs,
                                     Map<String, WorkerJobPO> reusedDependencies) {
         List<String> dependencies = node.dependsOn() == null ? List.of() : node.dependsOn();
@@ -71,7 +71,7 @@ public class WorkerResultReuseService {
                 continue;
             }
             ContextSnapshotPO previous = snapshotMapper.findOwned(userId, taskId,
-                    oldInput.path("contextSnapshotId").asText());
+                    Long.parseLong(oldInput.path("contextSnapshotId").asText()));
             if (previous == null || !immutableUserEvidence(previous, taskId)
                     || previous.getConversationGeneration() != current.getConversationGeneration()
                     || previous.getGoalRevision() != current.getGoalRevision()
@@ -111,7 +111,7 @@ public class WorkerResultReuseService {
         return true;
     }
 
-    private boolean immutableUserEvidence(ContextSnapshotPO snapshot, String taskId) {
+    private boolean immutableUserEvidence(ContextSnapshotPO snapshot, Long taskId) {
         JsonNode items = read(snapshot.getItemsJson());
         if (items == null || !items.isArray() || items.isEmpty()
                 || !snapshot.getContentHash().equals(CanonicalJson.sha256(objectMapper, snapshot.getItemsJson()))) {
@@ -124,7 +124,7 @@ public class WorkerResultReuseService {
                 return false;
             }
         }
-        return taskId.equals(items.get(0).path("sourceId").asText());
+        return String.valueOf(taskId).equals(items.get(0).path("sourceId").asText());
     }
 
     private boolean hasExternalEvidence(JsonNode result) {

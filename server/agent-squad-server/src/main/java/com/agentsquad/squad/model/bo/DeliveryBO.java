@@ -20,19 +20,19 @@ public class DeliveryBO {
     /**
      * 命令业务ID
      */
-    private String commandId;
+    private Long commandId;
     /**
      * 资源归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 所属目标ID；删除类命令可为空
      */
-    private String taskId;
+    private Long taskId;
     /**
      * 原生会话绑定ID；删除类命令可为空
      */
-    private String bindingId;
+    private Long bindingId;
     /**
      * 命令动作
      */

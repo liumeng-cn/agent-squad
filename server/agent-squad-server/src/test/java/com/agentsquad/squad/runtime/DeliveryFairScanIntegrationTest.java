@@ -1,8 +1,9 @@
 package com.agentsquad.squad.runtime;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.exceptions.RuntimeAdmissionBusyException;
 import com.agentsquad.squad.service.RuntimeAdmissionService;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.mapper.DeliveryMapper;
 import org.junit.jupiter.api.Test;
@@ -35,9 +36,9 @@ class DeliveryFairScanIntegrationTest {
         try (ConfigurableApplicationContext context = start(directory)) {
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             for (int index = 0; index < 30; index++) {
-                command(jdbc, UUID.randomUUID().toString(), "PENDING", BASE, null);
+                command(jdbc, IdWorker.getId(), "PENDING", BASE, null);
             }
-            String stop = command(jdbc, UUID.randomUUID().toString(), "PENDING", BASE.plusHours(1), null);
+            Long stop = command(jdbc, IdWorker.getId(), "PENDING", BASE.plusHours(1), null);
             jdbc.update("UPDATE sq_command SET action = 'STOP' WHERE command_id = ?", stop);
             DeliveryMapper mapper = context.getBean(DeliveryMapper.class);
             assertThat(mapper.findDueIds(NOW)).doesNotContain(stop);
@@ -55,25 +56,25 @@ class DeliveryFairScanIntegrationTest {
             org.springframework.test.util.ReflectionTestUtils.setField(admission, "perUserLimit", 1);
             var transaction = new org.springframework.transaction.support.TransactionTemplate(
                     context.getBean(org.springframework.transaction.PlatformTransactionManager.class));
-            String userA = UUID.randomUUID().toString();
-            String userB = UUID.randomUUID().toString();
-            String bindingA = UUID.randomUUID().toString();
-            String bindingB = UUID.randomUUID().toString();
-            for (String[] pair : List.of(new String[]{userA, bindingA}, new String[]{userB, bindingB})) {
+            Long userA = IdWorker.getId();
+            Long userB = IdWorker.getId();
+            Long bindingA = IdWorker.getId();
+            Long bindingB = IdWorker.getId();
+            for (Long[] pair : List.of(new Long[]{userA, bindingA}, new Long[]{userB, bindingB})) {
                 jdbc.update("""
                         INSERT INTO sq_runtime_binding
                             (binding_id, user_id, role, agent_id, framework_session_id, status)
                         VALUES (?, ?, 'MASTER', 'master', ?, 'ACTIVE')
-                        """, pair[1], pair[0], UUID.randomUUID().toString());
+                        """, pair[1], pair[0], IdWorker.getIdStr());
             }
-            String commandA = UUID.randomUUID().toString();
-            String commandB = UUID.randomUUID().toString();
+            Long commandA = IdWorker.getId();
+            Long commandB = IdWorker.getId();
             transaction.executeWithoutResult(status -> admission.acquire(userA, bindingA, commandA, "SUBMIT"));
             transaction.executeWithoutResult(status -> admission.acquire(userA, bindingA, commandA, "SUBMIT"));
             org.assertj.core.api.Assertions.assertThatThrownBy(() -> transaction.executeWithoutResult(
                             status -> admission.acquire(userB, bindingB, commandB, "SUBMIT")))
                     .isInstanceOf(RuntimeAdmissionBusyException.class);
-            admission.releaseUnsubmitted(userA, bindingA, "stale-command");
+            admission.releaseUnsubmitted(userA, bindingA, IdWorker.getId());
             assertThat(jdbc.queryForObject("SELECT active_count FROM sq_runtime_admission_counter WHERE pool_key = 'GLOBAL'",
                     Integer.class)).isEqualTo(1);
             admission.releaseUnsubmitted(userA, bindingA, commandA);
@@ -88,8 +89,8 @@ class DeliveryFairScanIntegrationTest {
     void invalidCommandIsBlockedOnlyByCurrentDeliveryOwner(@TempDir Path directory) {
         try (ConfigurableApplicationContext context = start(directory)) {
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            String user = UUID.randomUUID().toString();
-            String id = command(jdbc, user, "DELIVERING", BASE, NOW.plusHours(1));
+            Long user = IdWorker.getId();
+            Long id = command(jdbc, user, "DELIVERING", BASE, NOW.plusHours(1));
             jdbc.update("UPDATE sq_command SET delivery_token = ? WHERE command_id = ?", "owner", id);
             DeliveryMapper mapper = context.getBean(DeliveryMapper.class);
 
@@ -106,15 +107,15 @@ class DeliveryFairScanIntegrationTest {
     void singleBacklogUserDoesNotStarveSmallUser(@TempDir Path directory) {
         try (ConfigurableApplicationContext context = start(directory)) {
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            String backlogUser = UUID.randomUUID().toString();
-            String smallUser = UUID.randomUUID().toString();
-            List<String> backlog = new ArrayList<>();
+            Long backlogUser = IdWorker.getId();
+            Long smallUser = IdWorker.getId();
+            List<Long> backlog = new ArrayList<>();
             for (int index = 0; index < 100; index++) {
                 backlog.add(command(jdbc, backlogUser, "PENDING", BASE.plusSeconds(index), null));
             }
-            String small = command(jdbc, smallUser, "PENDING", BASE.plusSeconds(50), null);
+            Long small = command(jdbc, smallUser, "PENDING", BASE.plusSeconds(50), null);
 
-            List<String> due = context.getBean(DeliveryMapper.class).findDueIds(NOW);
+            List<Long> due = context.getBean(DeliveryMapper.class).findDueIds(NOW);
 
             assertThat(due).hasSize(20).contains(small);
             assertThat(due).containsAnyElementsOf(backlog);
@@ -125,10 +126,10 @@ class DeliveryFairScanIntegrationTest {
     void firstRoundsCoverEveryUser(@TempDir Path directory) {
         try (ConfigurableApplicationContext context = start(directory)) {
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            String busy = UUID.randomUUID().toString();
-            String medium = UUID.randomUUID().toString();
-            String quiet = UUID.randomUUID().toString();
-            List<String> commandIds = new ArrayList<>();
+            Long busy = IdWorker.getId();
+            Long medium = IdWorker.getId();
+            Long quiet = IdWorker.getId();
+            List<Long> commandIds = new ArrayList<>();
             for (int index = 0; index < 30; index++) {
                 commandIds.add(command(jdbc, busy, "PENDING", BASE.plusSeconds(index), null));
             }
@@ -137,7 +138,7 @@ class DeliveryFairScanIntegrationTest {
             }
             commandIds.add(command(jdbc, quiet, "PENDING", BASE.plusSeconds(200), null));
 
-            List<String> due = context.getBean(DeliveryMapper.class).findDueIds(NOW);
+            List<Long> due = context.getBean(DeliveryMapper.class).findDueIds(NOW);
 
             assertThat(due).hasSize(20)
                     .contains(commandIds.get(0), commandIds.get(30), commandIds.get(32));
@@ -148,12 +149,12 @@ class DeliveryFairScanIntegrationTest {
     void sameUserKeepsDueTimeThenIdOrder(@TempDir Path directory) {
         try (ConfigurableApplicationContext context = start(directory)) {
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            String user = UUID.randomUUID().toString();
-            String first = command(jdbc, user, "PENDING", BASE, null);
-            String second = command(jdbc, user, "PENDING", BASE, null);
-            String third = command(jdbc, user, "PENDING", BASE, null);
+            Long user = IdWorker.getId();
+            Long first = command(jdbc, user, "PENDING", BASE, null);
+            Long second = command(jdbc, user, "PENDING", BASE, null);
+            Long third = command(jdbc, user, "PENDING", BASE, null);
 
-            List<String> due = context.getBean(DeliveryMapper.class).findDueIds(NOW);
+            List<Long> due = context.getBean(DeliveryMapper.class).findDueIds(NOW);
 
             assertThat(due).containsExactly(first, second, third);
         }
@@ -163,12 +164,12 @@ class DeliveryFairScanIntegrationTest {
     void expiredLeaseIsEligibleAndActiveLeaseIsNot(@TempDir Path directory) {
         try (ConfigurableApplicationContext context = start(directory)) {
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            String user = UUID.randomUUID().toString();
-            String expired = command(jdbc, user, "DELIVERING", BASE, BASE.plusMinutes(1));
-            String active = command(jdbc, user, "DELIVERING", BASE, NOW.plusHours(1));
-            String future = command(jdbc, user, "PENDING", NOW.plusHours(1), null);
+            Long user = IdWorker.getId();
+            Long expired = command(jdbc, user, "DELIVERING", BASE, BASE.plusMinutes(1));
+            Long active = command(jdbc, user, "DELIVERING", BASE, NOW.plusHours(1));
+            Long future = command(jdbc, user, "PENDING", NOW.plusHours(1), null);
 
-            List<String> due = context.getBean(DeliveryMapper.class).findDueIds(NOW);
+            List<Long> due = context.getBean(DeliveryMapper.class).findDueIds(NOW);
 
             assertThat(due).contains(expired).doesNotContain(active, future);
         }
@@ -178,24 +179,24 @@ class DeliveryFairScanIntegrationTest {
     void disabledUserIsExcludedWhileUnregisteredLocalUserRemains(@TempDir Path directory) {
         try (ConfigurableApplicationContext context = start(directory)) {
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            String disabled = UUID.randomUUID().toString();
-            String localOnly = UUID.randomUUID().toString();
+            Long disabled = IdWorker.getId();
+            Long localOnly = IdWorker.getId();
             jdbc.update("""
                     INSERT INTO sq_user (user_id, username, password_hash, role, status)
                     VALUES (?, ?, 'hash', 'USER', 'DISABLED')
                     """, disabled, "disabled-" + disabled);
-            String disabledCommand = command(jdbc, disabled, "PENDING", BASE, null);
-            String localCommand = command(jdbc, localOnly, "PENDING", BASE, null);
+            Long disabledCommand = command(jdbc, disabled, "PENDING", BASE, null);
+            Long localCommand = command(jdbc, localOnly, "PENDING", BASE, null);
 
-            List<String> due = context.getBean(DeliveryMapper.class).findDueIds(NOW);
+            List<Long> due = context.getBean(DeliveryMapper.class).findDueIds(NOW);
 
             assertThat(due).contains(localCommand).doesNotContain(disabledCommand);
         }
     }
 
-    private String command(JdbcTemplate jdbc, String userId, String status,
-                           LocalDateTime dueAt, LocalDateTime leaseUntil) {
-        String commandId = UUID.randomUUID().toString();
+    private Long command(JdbcTemplate jdbc, Long userId, String status,
+                         LocalDateTime dueAt, LocalDateTime leaseUntil) {
+        Long commandId = IdWorker.getId();
         jdbc.update("""
                         INSERT INTO sq_command
                             (command_id, user_id, scope_key, idempotency_key, payload_hash,
@@ -216,10 +217,10 @@ class DeliveryFairScanIntegrationTest {
     private ConfigurableApplicationContext start(Path directory) {
         return SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=none",
-                "--spring.datasource.url=" + MySqlTestDatabase.url(directory.resolve("squad")),
-                "--spring.datasource.username=" + MySqlTestDatabase.username(),
-                "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.url=" + PostgresTestDatabase.url(directory.resolve("squad")),
+                "--spring.datasource.username=" + PostgresTestDatabase.username(),
+                "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.delivery.enabled=false");
     }
 }

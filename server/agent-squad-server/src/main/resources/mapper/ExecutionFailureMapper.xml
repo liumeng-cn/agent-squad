@@ -4,14 +4,14 @@
 
     <resultMap id="latestResult" type="com.agentsquad.squad.model.po.ExecutionFailurePO">
         <constructor>
-            <arg column="failure_id" javaType="java.lang.String"/>
-            <arg column="scope_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="failure_id" javaType="java.lang.Long"/>
+            <arg column="scope_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
             <arg column="category" javaType="java.lang.String"/>
             <arg column="code" javaType="java.lang.String"/>
             <arg column="actor" javaType="java.lang.String"/>
             <arg column="safe_message" javaType="java.lang.String"/>
-            <arg column="diagnostic_id" javaType="java.lang.String"/>
+            <arg column="diagnostic_id" javaType="java.lang.Long"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="retry_attempt" javaType="_int"/>
         </constructor>
@@ -19,14 +19,14 @@
 
     <resultMap id="activeInConversationResult" type="com.agentsquad.squad.model.po.ExecutionFailurePO">
         <constructor>
-            <arg column="failure_id" javaType="java.lang.String"/>
-            <arg column="scope_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="failure_id" javaType="java.lang.Long"/>
+            <arg column="scope_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
             <arg column="category" javaType="java.lang.String"/>
             <arg column="code" javaType="java.lang.String"/>
             <arg column="actor" javaType="java.lang.String"/>
             <arg column="safe_message" javaType="java.lang.String"/>
-            <arg column="diagnostic_id" javaType="java.lang.String"/>
+            <arg column="diagnostic_id" javaType="java.lang.Long"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="retry_attempt" javaType="_int"/>
         </constructor>
@@ -79,7 +79,7 @@
         ORDER BY f.id
     </select>
 
-    <select id="activeResponseFailures" resultType="java.lang.String">
+    <select id="activeResponseFailures" resultType="java.lang.Long">
         SELECT f.failure_id
         FROM sq_execution_failure f
         JOIN sq_execution_scope s ON s.user_id = f.user_id
@@ -93,7 +93,7 @@
         AND f.del_flag = '0'
     </select>
 
-    <select id="byKey" resultType="java.lang.String">
+    <select id="byKey" resultType="java.lang.Long">
         SELECT failure_id
         FROM sq_execution_failure
         WHERE user_id = #{userId}
@@ -210,7 +210,7 @@
         'CANCELLED')
     </update>
 
-    <select id="predecessor" resultType="java.lang.String">
+    <select id="predecessor" resultType="java.lang.Long">
         SELECT retry_of_execution_id
         FROM sq_response_execution
         WHERE user_id = #{userId}
@@ -224,7 +224,7 @@
         AND scope_id = #{scopeId}
     </select>
 
-    <select id="sourceMessage" resultType="java.lang.String">
+    <select id="sourceMessage" resultType="java.lang.Long">
         SELECT CASE WHEN s.kind = 'RESPONSE' THEN r.source_message_id ELSE t.origin_message_id END
         FROM sq_execution_scope s
         LEFT JOIN sq_response_execution r ON r.user_id = s.user_id
@@ -288,7 +288,7 @@
         'RECONCILING')
     </update>
 
-    <select id="latestMasterCommand" resultType="java.lang.String">
+    <select id="latestMasterCommand" resultType="java.lang.Long">
         SELECT command_id
         FROM sq_command
         WHERE user_id = #{userId}

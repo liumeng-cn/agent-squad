@@ -46,7 +46,7 @@ public class ConversationTitleService {
     private ObjectMapper json;
 
     @Transactional
-    public ConversationViewVO rename(String userId, String conversationId, ConversationTitleUpdateDTO request) {
+    public ConversationViewVO rename(Long userId, Long conversationId, ConversationTitleUpdateDTO request) {
         String title = ConversationTitles.safe(request.title(), 200);
         if (title.isBlank() || request.expectedTitleVersion() == null || request.expectedTitleVersion() < 0) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "标题不能为空或只含控制字符");
@@ -66,7 +66,7 @@ public class ConversationTitleService {
     }
 
     @Transactional(readOnly = true)
-    public ConversationListPageVO list(String userId, String cursor, int limit) {
+    public ConversationListPageVO list(Long userId, String cursor, int limit) {
         if (limit < 1 || limit > 100) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "分页大小无效");
         }
@@ -75,7 +75,7 @@ public class ConversationTitleService {
         if (cursor != null && !cursor.isBlank()) {
             try {
                 String[] parts = new String(Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8).split("\\|", -1);
-                if (parts.length != 3 || !userId.equals(parts[0])) {
+                if (parts.length != 3 || !String.valueOf(userId).equals(parts[0])) {
                     throw new IllegalArgumentException();
                 }
                 time = LocalDateTime.parse(parts[1]);

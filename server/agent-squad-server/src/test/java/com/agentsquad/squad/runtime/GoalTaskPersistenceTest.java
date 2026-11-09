@@ -1,6 +1,6 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.vo.ConversationVO;
@@ -25,15 +25,15 @@ class GoalTaskPersistenceTest {
 
     @Test
     void shouldKeepTaskCommandAndEventAcrossApplicationRestart(@TempDir Path tempDirectory) {
-        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("squad"));
+        String databaseUrl = PostgresTestDatabase.url(tempDirectory.resolve("squad"));
         String[] properties = {
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                "--spring.datasource.driver-class-name=org.postgresql.Driver",
         };
-        String userId = "00000000-0000-0000-0000-000000000001";
-        String otherUser = "00000000-0000-0000-0000-000000000002";
+        Long userId = 1L;
+        Long otherUser = 2L;
         TaskReceiptVO receipt;
         try (ConfigurableApplicationContext first = SpringApplication.run(AgentSquadApplication.class, properties)) {
             GoalTaskService service = first.getBean(GoalTaskService.class);

@@ -21,7 +21,7 @@ public class TaskCreateDTO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("artifactIds")
     @Size(max = 20)
-    private final List<String> artifactIds;
+    private final List<Long> artifactIds;
 
     @com.fasterxml.jackson.annotation.JsonProperty("profileKey")
     @Pattern(regexp = "STANDARD")
@@ -30,7 +30,7 @@ public class TaskCreateDTO {
     @com.fasterxml.jackson.annotation.JsonCreator
     public TaskCreateDTO(
             @com.fasterxml.jackson.annotation.JsonProperty("message") String message,
-            @com.fasterxml.jackson.annotation.JsonProperty("artifactIds") List<String> artifactIds,
+            @com.fasterxml.jackson.annotation.JsonProperty("artifactIds") List<Long> artifactIds,
             @com.fasterxml.jackson.annotation.JsonProperty("profileKey") String profileKey) {
         this.message = message;
         this.artifactIds = artifactIds;

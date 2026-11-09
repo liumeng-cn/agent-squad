@@ -1,5 +1,6 @@
 package com.agentsquad.squad.identity;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
@@ -7,7 +8,7 @@ import com.agentsquad.squad.model.dto.MessageCreateDTO;
 import com.agentsquad.squad.model.vo.MessageReceiptVO;
 import com.agentsquad.squad.service.CommandClaimService;
 import com.agentsquad.squad.service.MessageAcceptanceService;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.testsupport.TestUserDirectory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -33,8 +34,8 @@ class UserStatusGuardIntegrationTest {
 
     @Test
     void disabledUserStopsNewWorkWithoutRewritingInFlightLedger(@TempDir Path directory) {
-        String owner = UUID.randomUUID().toString();
-        try (ConfigurableApplicationContext context = start(MySqlTestDatabase.url(directory.resolve("status-guard")),
+        Long owner = IdWorker.getId();
+        try (ConfigurableApplicationContext context = start(PostgresTestDatabase.url(directory.resolve("status-guard")),
                 owner)) {
             MessageAcceptanceService messages = context.getBean(MessageAcceptanceService.class);
             CommandClaimService claims = context.getBean(CommandClaimService.class);
@@ -59,18 +60,18 @@ class UserStatusGuardIntegrationTest {
             assertCommand(jdbc, first.commandId(), "DELIVERING", firstToken);
 
             TestUserDirectory.disable(context, owner);
-            assertForbidden(() -> claims.claim(first.commandId(), UUID.randomUUID().toString(),
+            assertForbidden(() -> claims.claim(first.commandId(), IdWorker.getIdStr(),
                     now.plusSeconds(1), now.plusSeconds(31)));
             assertCommand(jdbc, first.commandId(), "DELIVERING", firstToken);
         }
     }
 
-    private static ConfigurableApplicationContext start(String url, String owner) {
+    private static ConfigurableApplicationContext start(String url, Long owner) {
         ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class, "--server.port=0",
                 "--spring.datasource.url=" + url,
-                "--spring.datasource.username=" + MySqlTestDatabase.username(),
-                "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.username=" + PostgresTestDatabase.username(),
+                "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.delivery.enabled=false",
                 "--agentsquad.auth.user-id=" + owner);
         TestUserDirectory.activate(context, owner);
@@ -83,14 +84,14 @@ class UserStatusGuardIntegrationTest {
                         error -> assertThat(error.code()).isEqualTo(RuntimeExceptionCode.FORBIDDEN));
     }
 
-    private static void assertCommand(JdbcTemplate jdbc, String commandId, String status, String token) {
+    private static void assertCommand(JdbcTemplate jdbc, Long commandId, String status, String token) {
         assertThat(jdbc.queryForObject("SELECT status FROM sq_command WHERE command_id = ?",
                 String.class, commandId)).isEqualTo(status);
         assertThat(jdbc.queryForObject("SELECT delivery_token FROM sq_command WHERE command_id = ?",
                 String.class, commandId)).isEqualTo(token);
     }
 
-    private static long count(JdbcTemplate jdbc, String table, String userId) {
+    private static long count(JdbcTemplate jdbc, String table, Long userId) {
         Long value = jdbc.queryForObject("SELECT COUNT(*) FROM " + table + " WHERE user_id = ?",
                 Long.class, userId);
         return value == null ? 0 : value;

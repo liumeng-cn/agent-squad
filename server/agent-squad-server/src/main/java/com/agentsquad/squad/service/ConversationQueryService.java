@@ -73,7 +73,7 @@ public class ConversationQueryService {
     private ExecutionActivityMapper activities;
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public ConversationSnapshotVO snapshot(String userId, String conversationId, Long before, int limit) {
+    public ConversationSnapshotVO snapshot(Long userId, Long conversationId, Long before, int limit) {
         if ((before != null && before < 1) || limit < 1 || limit > 100) {
             throw invalid("历史分页参数无效");
         }
@@ -109,15 +109,15 @@ public class ConversationQueryService {
      * 仅查询当前会话代际的来源消息，按固定活动身份向前翻页。
      */
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public ActivityHistoryPageVO activityHistory(String userId, String conversationId, ActivityHistoryDTO query) {
+    public ActivityHistoryPageVO activityHistory(Long userId, Long conversationId, ActivityHistoryDTO query) {
         var header = requireHeader(userId, conversationId);
-        if (query.sourceMessageId() == null || query.sourceMessageId().isBlank() || query.sourceMessageId().length() > 36
-                || query.beforeActivityId() != null && (query.beforeActivityId().isBlank() || query.beforeActivityId().length() > 36)) {
+        if (query.sourceMessageId() == null || query.sourceMessageId() <= 0
+                || query.beforeActivityId() != null && query.beforeActivityId() <= 0) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "活动历史查询参数无效");
         }
         var rows = activities.history(userId, conversationId, header.getGeneration(), query, ACTIVITY_HISTORY_PAGE_SIZE + 1);
         var items = rows.stream().limit(ACTIVITY_HISTORY_PAGE_SIZE).map(ExecutionActivityVO::from).toList();
-        String nextCursor = rows.size() > ACTIVITY_HISTORY_PAGE_SIZE ? items.getLast().activityId() : null;
+        String nextCursor = rows.size() > ACTIVITY_HISTORY_PAGE_SIZE ? String.valueOf(items.getLast().activityId()) : null;
         return new ActivityHistoryPageVO(items, nextCursor);
     }
 
@@ -125,7 +125,7 @@ public class ConversationQueryService {
      * 每次读取同时重验会话归属、代际和保留水位；删除后的既有订阅也不能继续读取内容。
      */
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public List<ConversationEventBO> events(String userId, String conversationId, String after) {
+    public List<ConversationEventBO> events(Long userId, Long conversationId, String after) {
         var header = requireHeader(userId, conversationId);
         long sequence = validateCursor(userId, header, after);
         return reads.events(userId, conversationId, header.getGeneration(), sequence).stream().map(row -> {
@@ -141,7 +141,7 @@ public class ConversationQueryService {
         return event.conversationId() + ":" + event.generation() + ":" + event.sequence();
     }
 
-    public ConversationHeaderBO requireHeader(String userId, String conversationId) {
+    public ConversationHeaderBO requireHeader(Long userId, Long conversationId) {
         var header = reads.header(userId, conversationId);
         if (header == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "对话不存在或已删除");
@@ -149,14 +149,14 @@ public class ConversationQueryService {
         return header;
     }
 
-    public long validateCursor(String userId, ConversationHeaderBO header, String after) {
+    public long validateCursor(Long userId, ConversationHeaderBO header, String after) {
         long sequence = 0;
         if (after != null && !after.isBlank()) {
             if (after.length() > 200) {
                 throw invalid("会话游标过长");
             }
             String[] parts = after.split(":", -1);
-            if (parts.length != 3 || !header.getConversationId().equals(parts[0])) {
+            if (parts.length != 3 || !String.valueOf(header.getConversationId()).equals(parts[0])) {
                 throw invalid("会话游标不匹配");
             }
             try {
@@ -182,7 +182,7 @@ public class ConversationQueryService {
         return sequence;
     }
 
-    private ResponseExecutionVO executionView(String userId, ConversationExecutionBO row) {
+    private ResponseExecutionVO executionView(Long userId, ConversationExecutionBO row) {
         boolean terminal = java.util.Set.of("SUCCEEDED", "PARTIAL", "FAILED", "CANCELLED").contains(row.getStatus());
         return new ResponseExecutionVO(row.getExecutionId(), row.getSourceMessageId(), ResponseExecutionStatus.valueOf(row.getStatus()), row.getVersion(),
                 row.getAnswerMessageId(), row.getFailureId(), "FAILED".equals(row.getStatus()) && failures.canRetry(userId, row.getExecutionId()) ? List.of("RETRY")

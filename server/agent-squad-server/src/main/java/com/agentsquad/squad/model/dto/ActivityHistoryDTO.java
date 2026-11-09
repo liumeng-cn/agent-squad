@@ -11,15 +11,15 @@ package com.agentsquad.squad.model.dto;
 public class ActivityHistoryDTO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId")
-    private final String sourceMessageId;
+    private final Long sourceMessageId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("beforeActivityId")
-    private final String beforeActivityId;
+    private final Long beforeActivityId;
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public ActivityHistoryDTO(
-            @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId") String sourceMessageId,
-            @com.fasterxml.jackson.annotation.JsonProperty("beforeActivityId") String beforeActivityId) {
+            @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId") Long sourceMessageId,
+            @com.fasterxml.jackson.annotation.JsonProperty("beforeActivityId") Long beforeActivityId) {
         this.sourceMessageId = sourceMessageId;
         this.beforeActivityId = beforeActivityId;
     }

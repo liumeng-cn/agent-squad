@@ -14,13 +14,13 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 public class OperationVO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("operationId")
-    private final String operationId;
+    private final Long operationId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("taskId")
-    private final String taskId;
+    private final Long taskId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("jobId")
-    private final String jobId;
+    private final Long jobId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("toolKey")
     private final String toolKey;
@@ -42,9 +42,9 @@ public class OperationVO {
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public OperationVO(
-            @com.fasterxml.jackson.annotation.JsonProperty("operationId") String operationId,
-            @com.fasterxml.jackson.annotation.JsonProperty("taskId") String taskId,
-            @com.fasterxml.jackson.annotation.JsonProperty("jobId") String jobId,
+            @com.fasterxml.jackson.annotation.JsonProperty("operationId") Long operationId,
+            @com.fasterxml.jackson.annotation.JsonProperty("taskId") Long taskId,
+            @com.fasterxml.jackson.annotation.JsonProperty("jobId") Long jobId,
             @com.fasterxml.jackson.annotation.JsonProperty("toolKey") String toolKey,
             @com.fasterxml.jackson.annotation.JsonProperty("effect") String effect,
             @com.fasterxml.jackson.annotation.JsonProperty("status") String status,

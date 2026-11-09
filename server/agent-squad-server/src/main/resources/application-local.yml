@@ -6,9 +6,9 @@ spring:
       port: 16379
       password: abedcad54f9956c8ebfc446add9bf67e5eb010fe8e8647be
   datasource:
-    url: jdbc:mysql://127.0.0.1:13306/agent_squad
-    username: root
-    password: test
+    url: jdbc:postgresql://127.0.0.1:15432/agent_squad?stringtype=unspecified
+    username: squad
+    password: 4e59485ceda19845fac6833a19bdd53953f8756f1dd5a934
 
 server:
   address: 127.0.0.1

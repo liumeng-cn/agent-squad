@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.tool;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.exceptions.PendingDirectivesException;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
@@ -117,11 +119,11 @@ public class PublishPlanTool implements AgentTool {
         try {
             publish = objectMapper.convertValue(param.getInput(), PlanPublishBO.class);
         } catch (IllegalArgumentException exception) {
-            failures.invalidPlan(context.getUserId(), context.getSessionId());
+            failures.invalidPlan(RuntimeContextIds.userId(context), context.getSessionId());
             return ToolResultBlock.error("计划参数结构无效");
         }
         try {
-            PlanReceiptBO receipt = planService.publish(context.getUserId(),
+            PlanReceiptBO receipt = planService.publish(RuntimeContextIds.userId(context),
                     context.getSessionId(), publish);
             return ToolResultBlock.text("计划已发布。planId=" + receipt.planId()
                     + " planVersion=" + receipt.planVersion() + " jobIds=" + receipt.jobIds()
@@ -134,7 +136,7 @@ public class PublishPlanTool implements AgentTool {
                             "instruction", "逐条协调；每次 APPLY/REJECT 后重新 publish_plan 获取当前版本和剩余指令，禁止复用旧 expectedVersion")));
         } catch (RuntimeBusinessException exception) {
             if (exception.code() == RuntimeExceptionCode.VALIDATION) {
-                failures.invalidPlan(context.getUserId(), context.getSessionId());
+                failures.invalidPlan(RuntimeContextIds.userId(context), context.getSessionId());
             }
             return ToolResultBlock.error(exception.getMessage());
         }

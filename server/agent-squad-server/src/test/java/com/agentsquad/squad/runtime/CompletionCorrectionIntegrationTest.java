@@ -1,5 +1,6 @@
 package com.agentsquad.squad.runtime;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.agent.session.RuntimeSessionProvider;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.identity.AuthView;
@@ -13,7 +14,7 @@ import com.agentsquad.squad.service.PlanService;
 import com.agentsquad.squad.service.TaskFinalizerService;
 import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.agentsquad.squad.service.WorkerDispatchService;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.agent.MasterAgentIdentity;
 import com.agentsquad.squad.enums.AccountRole;
@@ -44,7 +45,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class CompletionCorrectionIntegrationTest {
 
-    private static final String USER_ID = "00000000-0000-0000-0000-000000000001";
+    private static final Long USER_ID = 1L;
 
     /**
      * 同一原生回合的候选重放只保留一份，成功结束后公开答案与目标终态。
@@ -58,8 +59,8 @@ class CompletionCorrectionIntegrationTest {
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             TaskSnapshotService snapshots = context.getBean(TaskSnapshotService.class);
             ConversationMapper conversations = context.getBean(ConversationMapper.class);
-            String conversationId = tasks.findTask(USER_ID, target.getTaskId()).conversationId();
-            String turnId = UUID.randomUUID().toString();
+            Long conversationId = tasks.findTask(USER_ID, target.getTaskId()).conversationId();
+            String turnId = IdWorker.getIdStr();
 
             projection.accept(target, event(1, "run/start", turnId, null));
             var first = proposals.propose(USER_ID, target.getSessionId(), turnId,
@@ -91,7 +92,7 @@ class CompletionCorrectionIntegrationTest {
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             ProjectionMapper cursors = context.getBean(ProjectionMapper.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            String turnId = UUID.randomUUID().toString();
+            String turnId = IdWorker.getIdStr();
 
             projection.accept(target, event(1, "run/start", turnId, null));
             proposals.propose(USER_ID, target.getSessionId(), turnId,
@@ -124,8 +125,8 @@ class CompletionCorrectionIntegrationTest {
             CommandMapper commands = context.getBean(CommandMapper.class);
             ConversationMapper conversations = context.getBean(ConversationMapper.class);
             ProjectionMapper cursors = context.getBean(ProjectionMapper.class);
-            String conversationId = tasks.findTask(USER_ID, target.getTaskId()).conversationId();
-            String firstTurn = UUID.randomUUID().toString();
+            Long conversationId = tasks.findTask(USER_ID, target.getTaskId()).conversationId();
+            String firstTurn = IdWorker.getIdStr();
 
             projection.accept(target, event(1, "run/start", firstTurn, null));
             projection.accept(target, event(2, "run/end", firstTurn, NativeRunOutcome.COMPLETED.code()));
@@ -137,7 +138,7 @@ class CompletionCorrectionIntegrationTest {
             assertThat(conversations.findOwned(USER_ID, conversationId).getActiveTaskId()).isEqualTo(target.getTaskId());
             assertThat(cursors.lockCursor(USER_ID, target.getBindingId())).isEqualTo(2L);
 
-            String secondTurn = UUID.randomUUID().toString();
+            String secondTurn = IdWorker.getIdStr();
             projection.accept(target, event(3, "run/start", secondTurn, null));
             projection.accept(target, event(4, "run/end", secondTurn, NativeRunOutcome.COMPLETED.code()));
 
@@ -164,8 +165,8 @@ class CompletionCorrectionIntegrationTest {
             TaskMapper taskMapper = context.getBean(TaskMapper.class);
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             ConversationMapper conversations = context.getBean(ConversationMapper.class);
-            String conversationId = tasks.findTask(USER_ID, target.getTaskId()).conversationId();
-            String turnId = UUID.randomUUID().toString();
+            Long conversationId = tasks.findTask(USER_ID, target.getTaskId()).conversationId();
+            String turnId = IdWorker.getIdStr();
 
             projection.accept(target, event(1, "run/start", turnId, null));
             assertThat(taskMapper.updateCancelling(USER_ID, target.getTaskId(), 1,
@@ -193,8 +194,8 @@ class CompletionCorrectionIntegrationTest {
             TaskControlService controls = context.getBean(TaskControlService.class);
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             ConversationMapper conversations = context.getBean(ConversationMapper.class);
-            String conversationId = tasks.findTask(USER_ID, target.getTaskId()).conversationId();
-            String turnId = UUID.randomUUID().toString();
+            Long conversationId = tasks.findTask(USER_ID, target.getTaskId()).conversationId();
+            String turnId = IdWorker.getIdStr();
 
             projection.accept(target, event(1, "run/start", turnId, null));
             proposals.propose(USER_ID, target.getSessionId(), turnId,
@@ -213,7 +214,7 @@ class CompletionCorrectionIntegrationTest {
                     .containsExactly("task.accepted", "task.run_started", "task.run_ended",
                             "task.recovery_blocked");
 
-            var resume = controls.resume(USER_ID, target.getTaskId(), UUID.randomUUID().toString(), blocked.version());
+            var resume = controls.resume(USER_ID, target.getTaskId(), IdWorker.getIdStr(), blocked.version());
             assertThat(resume.status()).isEqualTo(RuntimeCommandStatus.PENDING.name());
             assertThat(tasks.findTask(USER_ID, target.getTaskId()).status()).isEqualTo(GoalTaskStatus.QUEUED.name());
             assertThat(tasks.findTask(USER_ID, target.getTaskId()).blockedReason()).isNull();
@@ -249,7 +250,7 @@ class CompletionCorrectionIntegrationTest {
             NativeProjectionService projection = context.getBean(NativeProjectionService.class);
             TaskMapper taskMapper = context.getBean(TaskMapper.class);
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
-            String turnId = UUID.randomUUID().toString();
+            String turnId = IdWorker.getIdStr();
 
             projection.accept(target, event(1, "run/start", turnId, null));
             assertThat(taskMapper.updateCancelling(USER_ID, target.getTaskId(), 1,
@@ -269,13 +270,13 @@ class CompletionCorrectionIntegrationTest {
             var target = createTask(context);
             var jdbc = context.getBean(JdbcTemplate.class);
             var bindings = context.getBean(BindingMapper.class);
-            String workerBinding = UUID.randomUUID().toString();
+            Long workerBinding = IdWorker.getId();
             String workerAgent = UUID.randomUUID().toString().replace("-", "");
             String workerSession = UUID.randomUUID().toString();
             bindings.insertWorker(workerBinding, USER_ID, target.getTaskId(), workerAgent, workerSession, LocalDateTime.now(ZoneOffset.UTC));
             var store = context.getBean(RuntimeSessionProvider.class).logStore();
-            var runtime = io.agentscope.core.agent.RuntimeContext.builder().userId(USER_ID).sessionId(workerSession).build();
-            var log = store.open(new io.agentscope.core.session.SessionKey(USER_ID, workerAgent, workerSession), runtime);
+            var runtime = io.agentscope.core.agent.RuntimeContext.builder().userId(String.valueOf(USER_ID)).sessionId(workerSession).build();
+            var log = store.open(new io.agentscope.core.session.SessionKey(String.valueOf(USER_ID), workerAgent, workerSession), runtime);
             var writer = log.acquire("other-node", java.time.Duration.ofSeconds(30));
             var operation = context.getBean(OperationService.class).prepare(
                     new PrepareRequestBO(USER_ID, target.getSessionId(), "turn", "write",
@@ -312,7 +313,7 @@ class CompletionCorrectionIntegrationTest {
             finalizer.finalizeCancelledTask(USER_ID, target.getTaskId());
             assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.getTaskId()).getStatus()).isEqualTo("CANCELLING");
             jdbc.update("UPDATE sq_operation SET status='UNKNOWN' WHERE operation_id=?", operation.getOperationId());
-            String workerStop = jdbc.queryForObject("SELECT command_id FROM sq_command WHERE binding_id=? AND action='STOP'", String.class, workerBinding);
+            Long workerStop = jdbc.queryForObject("SELECT command_id FROM sq_command WHERE binding_id=? AND action='STOP'", Long.class, workerBinding);
             context.getBean(CommandDeliveryService.class).deliver(workerStop);
             assertThat(context.getBean(CommandMapper.class).findOwned(USER_ID, workerStop).getNativeStatus()).isEqualTo("no-active-run");
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_worker_job WHERE task_id=?", Long.class, target.getTaskId())).isZero();
@@ -321,8 +322,8 @@ class CompletionCorrectionIntegrationTest {
             assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.getTaskId()).getStatus()).isEqualTo("CANCELLING");
             // 夹具模拟核对完成；生产环境必须由操作账本的核对服务提供该事实。
             jdbc.update("UPDATE sq_operation SET status='SUCCEEDED' WHERE operation_id=?", operation.getOperationId());
-            String sandbox = UUID.randomUUID().toString();
-            String scopeId = jdbc.queryForObject("SELECT scope_id FROM sq_goal_task WHERE task_id=?", String.class, target.getTaskId());
+            Long sandbox = IdWorker.getId();
+            Long scopeId = jdbc.queryForObject("SELECT scope_id FROM sq_goal_task WHERE task_id=?", Long.class, target.getTaskId());
             jdbc.update("INSERT INTO sq_sandbox_execution (execution_id,user_id,scope_id,binding_id,logical_key,turn_id,tool_call_id,request_hash,status,deadline_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
                     sandbox, USER_ID, scopeId, target.getBindingId(), "sandbox", "turn", "sandbox-call", "a".repeat(64), "UNKNOWN", LocalDateTime.now(ZoneOffset.UTC).plusMinutes(1));
             finalizer.finalizeCancelledTask(USER_ID, target.getTaskId());
@@ -347,14 +348,14 @@ class CompletionCorrectionIntegrationTest {
                     new AuthView(USER_ID, "admin", java.util.List.of(AccountRole.ADMIN), null), key,
                     new WorkerDefinitionCreateDTO(key, "1.0.0", "写作", json.readTree("{}"), json.readTree("{}"), java.util.List.of(), "default", "default"));
             var snapshots = context.getBean(ContextSnapshotService.class);
-            String one = snapshots.prepare(USER_ID, target.getSessionId(), "one", "one").snapshotId();
-            String two = snapshots.prepare(USER_ID, target.getSessionId(), "two", "two").snapshotId();
+            Long one = snapshots.prepare(USER_ID, target.getSessionId(), "one", "one").snapshotId();
+            Long two = snapshots.prepare(USER_ID, target.getSessionId(), "two", "two").snapshotId();
             var plan = context.getBean(PlanService.class).publish(USER_ID, target.getSessionId(),
                     new PlanPublishBO("plan", 0, java.util.List.of(
                             new PlanNodeBO("one", key, "1.0.0", "分析一", one, java.util.List.of(), true, 1),
                             new PlanNodeBO("two", key, "1.0.0", "分析二", two, java.util.List.of(), true, 1)), "ALL_REQUIRED", java.util.List.of("完成")));
-            String firstBinding = jdbc.queryForObject("SELECT binding_id FROM sq_worker_job WHERE job_id=?", String.class, plan.jobIds().getFirst());
-            String secondBinding = jdbc.queryForObject("SELECT binding_id FROM sq_worker_job WHERE job_id=?", String.class, plan.jobIds().getLast());
+            Long firstBinding = jdbc.queryForObject("SELECT binding_id FROM sq_worker_job WHERE job_id=?", Long.class, plan.jobIds().getFirst());
+            Long secondBinding = jdbc.queryForObject("SELECT binding_id FROM sq_worker_job WHERE job_id=?", Long.class, plan.jobIds().getLast());
             var dispatch = context.getBean(WorkerDispatchService.class);
             var claimed = dispatch.claim(USER_ID, firstBinding);
             long version = context.getBean(TaskMapper.class).findOwned(USER_ID, target.getTaskId()).getVersion();
@@ -363,10 +364,10 @@ class CompletionCorrectionIntegrationTest {
                     .isInstanceOf(RuntimeBusinessException.class);
             org.assertj.core.api.Assertions.assertThatThrownBy(() -> dispatch.claim(USER_ID, secondBinding))
                     .isInstanceOf(RuntimeBusinessException.class);
-            var stops = jdbc.queryForList("SELECT command_id FROM sq_command WHERE task_id=? AND action='STOP' ORDER BY id", String.class, target.getTaskId());
+            var stops = jdbc.queryForList("SELECT command_id FROM sq_command WHERE task_id=? AND action='STOP' ORDER BY id", Long.class, target.getTaskId());
             assertThat(stops).hasSize(3);
             var delivery = context.getBean(CommandDeliveryService.class);
-            for (String command : stops) {
+            for (Long command : stops) {
                 delivery.deliver(command);
                 assertThat(context.getBean(CommandMapper.class).findOwned(USER_ID, command).getNativeStatus()).isEqualTo("no-active-run");
             }
@@ -380,12 +381,12 @@ class CompletionCorrectionIntegrationTest {
     }
 
     private ConfigurableApplicationContext start(Path tempDirectory) {
-        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("squad"));
+        String databaseUrl = PostgresTestDatabase.url(tempDirectory.resolve("squad"));
         return SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.delivery.enabled=true",
                 "--agentsquad.delivery.poll-delay-ms=3600000",
                 "--agentsquad.projection.poll-delay-ms=3600000",
@@ -399,9 +400,9 @@ class CompletionCorrectionIntegrationTest {
         TaskMapper tasks = context.getBean(TaskMapper.class);
         BindingMapper bindings = context.getBean(BindingMapper.class);
         TaskEventMapper events = context.getBean(TaskEventMapper.class);
-        String conversationId = UUID.randomUUID().toString();
-        String taskId = UUID.randomUUID().toString();
-        String bindingId = UUID.randomUUID().toString();
+        Long conversationId = IdWorker.getId();
+        Long taskId = IdWorker.getId();
+        Long bindingId = IdWorker.getId();
         String sessionId = UUID.randomUUID().toString();
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         conversations.insertConversation(conversationId, USER_ID, "候选纠正");
@@ -415,8 +416,8 @@ class CompletionCorrectionIntegrationTest {
     }
 
     private NativeEventViewBO event(long sequence, String type, String turnId, String outcome) {
-        return new NativeEventViewBO(sequence, UUID.randomUUID().toString(), type,
-                UUID.randomUUID().toString(), turnId, outcome, System.currentTimeMillis(),
+        return new NativeEventViewBO(sequence, IdWorker.getIdStr(), type,
+                IdWorker.getIdStr(), turnId, outcome, System.currentTimeMillis(),
                 java.util.Map.of());
     }
 }

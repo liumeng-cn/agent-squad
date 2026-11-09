@@ -11,7 +11,7 @@ package com.agentsquad.squad.model.vo;
 public class ArtifactVO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("artifactId")
-    private final String artifactId;
+    private final Long artifactId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("fileName")
     private final String fileName;
@@ -33,7 +33,7 @@ public class ArtifactVO {
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public ArtifactVO(
-            @com.fasterxml.jackson.annotation.JsonProperty("artifactId") String artifactId,
+            @com.fasterxml.jackson.annotation.JsonProperty("artifactId") Long artifactId,
             @com.fasterxml.jackson.annotation.JsonProperty("fileName") String fileName,
             @com.fasterxml.jackson.annotation.JsonProperty("mediaType") String mediaType,
             @com.fasterxml.jackson.annotation.JsonProperty("sizeBytes") long sizeBytes,

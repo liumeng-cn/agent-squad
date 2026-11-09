@@ -50,27 +50,27 @@ public interface DeliveryMapper {
     /**
      * 控制命令独立扫描，避免普通候选窗口被积压占满。
      */
-    List<String> findDueControlIds(@Param("now") LocalDateTime now);
+    List<Long> findDueControlIds(@Param("now") LocalDateTime now);
 
-    List<String> findDueIds(@Param("now") LocalDateTime now);
+    List<Long> findDueIds(@Param("now") LocalDateTime now);
 
-    int claim(@Param("commandId") String commandId, @Param("token") String token,
+    int claim(@Param("commandId") Long commandId, @Param("token") String token,
               @Param("now") LocalDateTime now, @Param("leaseUntil") LocalDateTime leaseUntil);
 
-    CommandClaimContextBO claimContext(@Param("commandId") String commandId);
+    CommandClaimContextBO claimContext(@Param("commandId") Long commandId);
 
-    List<String> earlierBlockingReplies(@Param("userId") String userId, @Param("bindingId") String bindingId);
+    List<Long> earlierBlockingReplies(@Param("userId") Long userId, @Param("bindingId") Long bindingId);
 
-    DeliveryBO findClaimed(@Param("commandId") String commandId, @Param("token") String token);
+    DeliveryBO findClaimed(@Param("commandId") Long commandId, @Param("token") String token);
 
-    String findSubmitTurnId(@Param("userId") String userId, @Param("taskId") String taskId,
-                            @Param("bindingId") String bindingId);
+    String findSubmitTurnId(@Param("userId") Long userId, @Param("taskId") Long taskId,
+                            @Param("bindingId") Long bindingId);
 
-    int saveReceipt(@Param("commandId") String commandId, @Param("token") String token,
+    int saveReceipt(@Param("commandId") Long commandId, @Param("token") String token,
                     @Param("turnId") String turnId, @Param("runId") String runId,
                     @Param("nativeStatus") String nativeStatus, @Param("now") LocalDateTime now);
 
-    int retry(@Param("commandId") String commandId, @Param("token") String token,
+    int retry(@Param("commandId") Long commandId, @Param("token") String token,
               @Param("dueAt") LocalDateTime dueAt, @Param("errorCode") String errorCode);
 
     /** 将永不合法的命令收敛为阻断态，保留错误码供人工核对。 */
@@ -79,9 +79,9 @@ public interface DeliveryMapper {
      */
     int blockUnknownPending(@Param("now") LocalDateTime now);
 
-    int blockInvalid(@Param("commandId") String commandId, @Param("token") String token,
+    int blockInvalid(@Param("commandId") Long commandId, @Param("token") String token,
                      @Param("errorCode") String errorCode);
 
-    int blockRejectedResume(@Param("commandId") String commandId, @Param("token") String token,
+    int blockRejectedResume(@Param("commandId") Long commandId, @Param("token") String token,
                             @Param("errorCode") String errorCode);
 }

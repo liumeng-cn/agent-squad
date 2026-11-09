@@ -1,7 +1,9 @@
 package com.agentsquad.squad.runtime;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.enums.ApiCode;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.testsupport.TestUserDirectory;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.enums.AccountRole;
@@ -43,35 +45,35 @@ class MessageAcceptanceHttpTest {
 
     @Test
     void concurrentFirstSendCreatesOneConversationAndReceipt(@TempDir Path directory) throws Exception {
-        try (ConfigurableApplicationContext context = start(databaseUrl(directory), MySqlTestDatabase.username(), MySqlTestDatabase.password(), UUID.randomUUID().toString())) {
+        try (ConfigurableApplicationContext context = start(databaseUrl(directory), PostgresTestDatabase.username(), PostgresTestDatabase.password(), IdWorker.getId())) {
             verifyFirstSend(context);
         }
     }
 
     @Test
     void invalidAttachmentRollsBackWholeFirstSend(@TempDir Path directory) throws Exception {
-        try (ConfigurableApplicationContext context = start(databaseUrl(directory), MySqlTestDatabase.username(), MySqlTestDatabase.password(), UUID.randomUUID().toString())) {
+        try (ConfigurableApplicationContext context = start(databaseUrl(directory), PostgresTestDatabase.username(), PostgresTestDatabase.password(), IdWorker.getId())) {
             verifyAttachments(context);
         }
     }
 
     @Test
     void activeTaskDoesNotRejectNewMessages(@TempDir Path directory) throws Exception {
-        try (ConfigurableApplicationContext context = start(databaseUrl(directory), MySqlTestDatabase.username(), MySqlTestDatabase.password(), UUID.randomUUID().toString())) {
+        try (ConfigurableApplicationContext context = start(databaseUrl(directory), PostgresTestDatabase.username(), PostgresTestDatabase.password(), IdWorker.getId())) {
             verifyDuringTask(context);
         }
     }
 
     @Test
     void retryAfterRestartReturnsOriginalFirstReceipt(@TempDir Path directory) throws Exception {
-        String ownerId = UUID.randomUUID().toString();
+        Long ownerId = IdWorker.getId();
         String url = databaseUrl(directory);
         MessageReceiptVO original;
-        try (ConfigurableApplicationContext context = start(url, MySqlTestDatabase.username(), MySqlTestDatabase.password(), ownerId)) {
+        try (ConfigurableApplicationContext context = start(url, PostgresTestDatabase.username(), PostgresTestDatabase.password(), ownerId)) {
             original = send(context, actor(context), "/api/v1/conversations/messages", "restart-first",
                     Map.of("text", "重启后继续交流"));
         }
-        try (ConfigurableApplicationContext context = start(url, MySqlTestDatabase.username(), MySqlTestDatabase.password(), ownerId)) {
+        try (ConfigurableApplicationContext context = start(url, PostgresTestDatabase.username(), PostgresTestDatabase.password(), ownerId)) {
             assertThat(send(context, actor(context), "/api/v1/conversations/messages", "restart-first",
                     Map.of("text", "重启后继续交流"))).isEqualTo(original);
             assertThat(count(context, "sq_conversation", ownerId)).isEqualTo(1);
@@ -79,11 +81,11 @@ class MessageAcceptanceHttpTest {
         }
     }
 
-    static ConfigurableApplicationContext start(String url, String username, String password, String ownerId) {
+    static ConfigurableApplicationContext start(String url, String username, String password, Long ownerId) {
         ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class, "--server.port=0",
                 "--spring.datasource.url=" + url, "--spring.datasource.username=" + username,
                 "--spring.datasource.password=" + password,
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.delivery.enabled=false", "--agentsquad.auth.username=tester",
                 "--agentsquad.auth.password=test-only", "--agentsquad.auth.role=USER",
                 "--agentsquad.auth.user-id=" + ownerId);
@@ -131,50 +133,58 @@ class MessageAcceptanceHttpTest {
         assertThat(jdbc.queryForObject("SELECT action FROM sq_command WHERE command_id = ?", String.class, first.commandId()))
                 .isEqualTo("MESSAGE_SUBMIT");
         assertThat(jdbc.queryForObject("SELECT native_turn_id FROM sq_command WHERE command_id = ?", String.class, first.commandId())).isNull();
-        mvc.perform(post(path).with(TestAssertion.as(actor.view().userId(), "USER"))
+        String conflict = mvc.perform(post(path).with(TestAssertion.as(actor.view().userId(), "USER"))
                 .header("Idempotency-Key", "concurrent-first").contentType(MediaType.APPLICATION_JSON)
-                .content(json.writeValueAsString(Map.of("text", "变更内容")))).andExpect(status().isConflict());
-        MessageTestActor other = new MessageTestActor(new AuthView(UUID.randomUUID().toString(), "other", java.util.List.of(AccountRole.USER), null));
+                .content(json.writeValueAsString(Map.of("text", "变更内容"))))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(ApiResultJson.code(json, conflict)).isEqualTo(ApiCode.CONFLICT.getCode());
+        MessageTestActor other = new MessageTestActor(new AuthView(IdWorker.getId(), "other", java.util.List.of(AccountRole.USER), null));
         TestUserDirectory.activate(context, other.view().userId());
-        mvc.perform(post("/api/v1/conversations/{id}/messages", first.conversationId()).with(TestAssertion.as(other.view().userId(), "USER"))
+        String foreignPost = mvc.perform(post("/api/v1/conversations/{id}/messages", first.conversationId()).with(TestAssertion.as(other.view().userId(), "USER"))
                         .header("Idempotency-Key", "foreign")
                         .contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"不能读写别人的对话\"}"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(ApiResultJson.code(json, foreignPost)).isEqualTo(ApiCode.NOT_FOUND.getCode());
         jdbc.update("UPDATE sq_conversation SET status = 'DELETING', generation = generation + 1 WHERE user_id = ?", actor.view().userId());
-        mvc.perform(post(path).with(TestAssertion.as(actor.view().userId(), "USER"))
+        String deleting = mvc.perform(post(path).with(TestAssertion.as(actor.view().userId(), "USER"))
                 .header("Idempotency-Key", "concurrent-first").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"text\":\"你好，介绍一下能力\"}")).andExpect(status().isNotFound());
+                .content("{\"text\":\"你好，介绍一下能力\"}"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(ApiResultJson.code(json, deleting)).isEqualTo(ApiCode.NOT_FOUND.getCode());
     }
 
     static void verifyAttachments(ConfigurableApplicationContext context) throws Exception {
         MessageTestActor actor = actor(context);
         MockMvc mvc = mvc(context);
         ObjectMapper json = context.getBean(ObjectMapper.class);
-        String owner = actor.view().userId();
-        mvc.perform(post("/api/v1/conversations/messages").with(TestAssertion.as(actor.view().userId(), "USER"))
+        Long owner = actor.view().userId();
+        String missingArtifact = mvc.perform(post("/api/v1/conversations/messages").with(TestAssertion.as(actor.view().userId(), "USER"))
                         .header("Idempotency-Key", "attachment-first")
                         .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(
-                                Map.of("text", "分析材料", "artifactIds", List.of(UUID.randomUUID().toString())))))
-                .andExpect(status().isNotFound());
+                                Map.of("text", "分析材料", "artifactIds", List.of(IdWorker.getIdStr())))))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(ApiResultJson.code(json, missingArtifact)).isEqualTo(ApiCode.NOT_FOUND.getCode());
         for (String table : List.of("sq_conversation", "sq_message", "sq_response_execution", "sq_runtime_binding", "sq_command", "sq_execution_scope", "sq_budget_account", "sq_conversation_event")) {
             assertThat(count(context, table, owner)).as(table).isZero();
         }
         ArtifactService artifacts = context.getBean(ArtifactService.class);
-        String file = artifacts.upload(owner, "message-file", "material.txt", "事实材料".getBytes(StandardCharsets.UTF_8)).artifactId();
-        String expired = artifacts.upload(owner, "expired-file", "expired.txt", "过期材料".getBytes(StandardCharsets.UTF_8)).artifactId();
+        Long file = artifacts.upload(owner, "message-file", "material.txt", "事实材料".getBytes(StandardCharsets.UTF_8)).artifactId();
+        Long expired = artifacts.upload(owner, "expired-file", "expired.txt", "过期材料".getBytes(StandardCharsets.UTF_8)).artifactId();
         context.getBean(JdbcTemplate.class).update("UPDATE sq_artifact SET expires_at = '2000-01-01' WHERE artifact_id = ?", expired);
-        mvc.perform(post("/api/v1/conversations/messages").with(TestAssertion.as(actor.view().userId(), "USER"))
+        String expiredBody = mvc.perform(post("/api/v1/conversations/messages").with(TestAssertion.as(actor.view().userId(), "USER"))
                         .header("Idempotency-Key", "expired-file").contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(Map.of("text", "分析", "artifactIds", List.of(expired)))))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(ApiResultJson.code(json, expiredBody)).isEqualTo(ApiCode.NOT_FOUND.getCode());
         assertThat(count(context, "sq_conversation", owner)).isZero();
-        String foreign = artifacts.upload(UUID.randomUUID().toString(), "foreign-file", "other.txt", "不能引用".getBytes(StandardCharsets.UTF_8)).artifactId();
-        mvc.perform(post("/api/v1/conversations/messages").with(TestAssertion.as(actor.view().userId(), "USER"))
+        Long foreign = artifacts.upload(IdWorker.getId(), "foreign-file", "other.txt", "不能引用".getBytes(StandardCharsets.UTF_8)).artifactId();
+        String foreignBody = mvc.perform(post("/api/v1/conversations/messages").with(TestAssertion.as(actor.view().userId(), "USER"))
                         .header("Idempotency-Key", "foreign-file").contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(Map.of("text", "分析", "artifactIds", List.of(foreign)))))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(ApiResultJson.code(json, foreignBody)).isEqualTo(ApiCode.NOT_FOUND.getCode());
         MessageReceiptVO receipt = send(context, actor, "/api/v1/conversations/messages", "attachment-first",
-                Map.of("text", "分析材料", "artifactIds", List.of(file.toUpperCase(java.util.Locale.ROOT))));
+                Map.of("text", "分析材料", "artifactIds", List.of(String.valueOf(file).toUpperCase(java.util.Locale.ROOT))));
         assertThat(send(context, actor, "/api/v1/conversations/messages", "attachment-first",
                 Map.of("text", "分析材料", "artifactIds", List.of(file)))).isEqualTo(receipt);
         assertThat(count(context, "sq_message_artifact", owner)).isEqualTo(1);
@@ -185,10 +195,10 @@ class MessageAcceptanceHttpTest {
 
     static void verifyDuringTask(ConfigurableApplicationContext context) throws Exception {
         MessageTestActor actor = actor(context);
-        String owner = actor.view().userId();
+        Long owner = actor.view().userId();
         GoalTaskService goals = context.getBean(GoalTaskService.class);
-        String conversation = goals.createConversation(owner, "在途对话").conversationId();
-        String task = goals.submit(owner, conversation, "background", "正在处理的目标").taskId();
+        Long conversation = goals.createConversation(owner, "在途对话").conversationId();
+        Long task = goals.submit(owner, conversation, "background", "正在处理的目标").taskId();
         String path = "/api/v1/conversations/" + conversation + "/messages";
         MessageReceiptVO first = send(context, actor, path, "follow-up", Map.of("text", "补充一句约束"));
         assertThat(send(context, actor, path, "follow-up", Map.of("text", "补充一句约束"))).isEqualTo(first);
@@ -202,7 +212,7 @@ class MessageAcceptanceHttpTest {
     }
 
     static MessageTestActor actor(ConfigurableApplicationContext context) {
-        String userId = context.getEnvironment().getProperty("agentsquad.auth.user-id");
+        Long userId = Long.valueOf(context.getEnvironment().getProperty("agentsquad.auth.user-id"));
         return new MessageTestActor(new AuthView(userId, "tester", java.util.List.of(AccountRole.USER), null));
     }
 
@@ -229,11 +239,11 @@ class MessageAcceptanceHttpTest {
         return MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();
     }
 
-    private static long count(ConfigurableApplicationContext context, String table, String owner) {
+    private static long count(ConfigurableApplicationContext context, String table, Long owner) {
         return context.getBean(JdbcTemplate.class).queryForObject("SELECT COUNT(*) FROM " + table + " WHERE user_id = ?", Long.class, owner);
     }
 
     private String databaseUrl(Path directory) {
-        return MySqlTestDatabase.url(directory.resolve("messages"));
+        return PostgresTestDatabase.url(directory.resolve("messages"));
     }
 }

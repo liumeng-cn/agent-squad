@@ -2,7 +2,7 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.service.RuntimeProjectionDispatcher;
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.io.TempDir;
@@ -30,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 使用隔离MySQL、真实SDK及本地模型，断开推送连接后检查后台完成与持久事件续读，不以模拟Emitter代替HTTP证据。
  */
 class ConversationSsePushIntegrationTest {
-    private static final String USER = "00000000-0000-0000-0000-000000000001";
+    private static final String USER = "1";
     private final ObjectMapper json = new ObjectMapper();
 
     @ParameterizedTest
@@ -39,9 +39,9 @@ class ConversationSsePushIntegrationTest {
         try (var model = new NaturalReplyModelStub();
              var context = SpringApplication.run(AgentSquadApplication.class,
                      "--server.port=0", "--server.shutdown=immediate", "--agentsquad.identity.allow-unsigned-local=true",
-                     "--spring.datasource.url=" + MySqlTestDatabase.url(directory),
-                     "--spring.datasource.username=" + MySqlTestDatabase.username(),
-                     "--spring.datasource.password=" + MySqlTestDatabase.password(),
+                     "--spring.datasource.url=" + PostgresTestDatabase.url(directory),
+                     "--spring.datasource.username=" + PostgresTestDatabase.username(),
+                     "--spring.datasource.password=" + PostgresTestDatabase.password(),
                      "--agentsquad.delivery.enabled=true", "--agentsquad.delivery.poll-delay-ms=3600000",
                      "--agentsquad.projection.poll-delay-ms=3600000", "--agentsquad.events.reconcile-delay-ms=3600000",
                      "--agentsquad.model.api-key=test-only", "--agentsquad.model.base-url=" + model.baseUrl(),

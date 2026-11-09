@@ -14,30 +14,30 @@ import java.util.List;
 @Mapper
 public interface ConversationMapper extends BaseMapper<ConversationPO> {
 
-    int insertConversation(@Param("conversationId") String conversationId, @Param("userId") String userId,
+    int insertConversation(@Param("conversationId") Long conversationId, @Param("userId") Long userId,
                            @Param("title") String title);
 
-    ConversationPO lockOwned(@Param("userId") String userId, @Param("conversationId") String conversationId);
+    ConversationPO lockOwned(@Param("userId") Long userId, @Param("conversationId") Long conversationId);
 
-    default ConversationPO findOwned(String userId, String conversationId) {
+    default ConversationPO findOwned(Long userId, Long conversationId) {
         return selectOne(new QueryWrapper<ConversationPO>()
                 .eq("user_id", userId)
                 .eq("conversation_id", conversationId));
     }
 
-    List<ConversationPO> listByOwner(@Param("userId") String userId, @Param("cursorId") Long cursorId,
+    List<ConversationPO> listByOwner(@Param("userId") Long userId, @Param("cursorId") Long cursorId,
                                      @Param("limit") int limit);
 
-    int activateTask(@Param("userId") String userId, @Param("conversationId") String conversationId,
-                     @Param("taskId") String taskId);
+    int activateTask(@Param("userId") Long userId, @Param("conversationId") Long conversationId,
+                     @Param("taskId") Long taskId);
 
-    int clearActiveTask(@Param("userId") String userId, @Param("conversationId") String conversationId,
-                        @Param("taskId") String taskId);
+    int clearActiveTask(@Param("userId") Long userId, @Param("conversationId") Long conversationId,
+                        @Param("taskId") Long taskId);
 
-    int markDeleting(@Param("userId") String userId, @Param("conversationId") String conversationId,
+    int markDeleting(@Param("userId") Long userId, @Param("conversationId") Long conversationId,
                      @Param("expectedVersion") long expectedVersion);
 
-    int markDeleted(@Param("userId") String userId, @Param("conversationId") String conversationId);
+    int markDeleted(@Param("userId") Long userId, @Param("conversationId") Long conversationId);
 
     List<ConversationPO> findDeletable(@Param("limit") int limit);
 }

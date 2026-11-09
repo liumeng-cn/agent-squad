@@ -4,8 +4,8 @@
 
     <resultMap id="lockPreparationResult" type="com.agentsquad.squad.model.bo.ContextPreparationBO">
         <constructor>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
             <arg column="input_json" javaType="java.lang.String"/>
             <arg column="task_status" javaType="java.lang.String"/>
             <arg column="cancellation_requested" javaType="_boolean"/>
@@ -16,9 +16,9 @@
 
     <resultMap id="findByLogicalKeyResult" type="com.agentsquad.squad.model.po.ContextSnapshotPO">
         <constructor>
-            <arg column="snapshot_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="snapshot_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
             <arg column="target_node_key" javaType="java.lang.String"/>
             <arg column="logical_key" javaType="java.lang.String"/>
             <arg column="conversation_generation" javaType="_long"/>
@@ -32,9 +32,9 @@
 
     <resultMap id="findOwnedResult" type="com.agentsquad.squad.model.po.ContextSnapshotPO">
         <constructor>
-            <arg column="snapshot_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="snapshot_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
             <arg column="target_node_key" javaType="java.lang.String"/>
             <arg column="logical_key" javaType="java.lang.String"/>
             <arg column="conversation_generation" javaType="_long"/>

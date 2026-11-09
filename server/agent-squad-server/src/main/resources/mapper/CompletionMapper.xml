@@ -4,9 +4,9 @@
 
     <resultMap id="lockByMasterSessionResult" type="com.agentsquad.squad.model.bo.CompletionContextBO">
         <constructor>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
             <arg column="task_status" javaType="java.lang.String"/>
             <arg column="plan_version" javaType="_long"/>
             <arg column="answer_revision" javaType="_long"/>
@@ -20,14 +20,14 @@
 
     <resultMap id="lockTaskResult" type="com.agentsquad.squad.model.bo.FinalizationBO">
         <constructor>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="conversation_id" javaType="java.lang.Long"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="version" javaType="_long"/>
             <arg column="plan_version" javaType="_long"/>
             <arg column="answer_revision" javaType="_long"/>
-            <arg column="proposal_binding_id" javaType="java.lang.String"/>
+            <arg column="proposal_binding_id" javaType="java.lang.Long"/>
             <arg column="proposal_turn_id" javaType="java.lang.String"/>
             <arg column="completion_proposal_json" javaType="java.lang.String"/>
             <arg column="cancellation_requested" javaType="_boolean"/>
@@ -158,7 +158,7 @@
     </select>
 
     <!-- 当前锁定读避免事务早先快照漏掉刚提交的外部操作。 -->
-    <select id="lockCancellationOperations" resultType="java.lang.String">
+    <select id="lockCancellationOperations" resultType="java.lang.Long">
         SELECT operation_id
         FROM sq_operation
         WHERE user_id = #{userId}
@@ -167,7 +167,7 @@
         FOR UPDATE
     </select>
 
-    <select id="lockCancellationSandboxes" resultType="java.lang.String">
+    <select id="lockCancellationSandboxes" resultType="java.lang.Long">
         SELECT x.execution_id
         FROM sq_sandbox_execution x
         JOIN sq_execution_scope s ON s.user_id = x.user_id AND s.scope_id = x.scope_id
@@ -178,7 +178,7 @@
         FOR UPDATE
     </select>
 
-    <select id="lockCancellationInteractions" resultType="java.lang.String">
+    <select id="lockCancellationInteractions" resultType="java.lang.Long">
         SELECT interaction_id
         FROM sq_interaction
         WHERE user_id = #{userId}
@@ -190,7 +190,7 @@
     <update id="cancelJobs">
         UPDATE sq_worker_job
         SET status = 'CANCELLED',
-        cancel_requested_at = COALESCE(cancel_requested_at, UTC_TIMESTAMP(3)),
+        cancel_requested_at = COALESCE(cancel_requested_at, (CURRENT_TIMESTAMP(3) AT TIME ZONE 'UTC')),
         guard_token = NULL,
         guard_lease_until = NULL,
         version = version + 1

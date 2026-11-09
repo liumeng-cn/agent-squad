@@ -46,7 +46,7 @@ public class SandboxExecutionService {
     @Resource
     private ObjectMapper json;
 
-    public SandboxExecutionResultBO execute(String userId, String sessionId, String guardToken,
+    public SandboxExecutionResultBO execute(Long userId, String sessionId, String guardToken,
                                             String turnId, String toolCallId, SandboxExecuteRequestBO request) {
         userStatus.requireActive(userId);
         driver.requireAvailable();
@@ -90,7 +90,7 @@ public class SandboxExecutionService {
             bytes += content.length;
         }
         var attached = artifactMapper.listScopeIds(context.userId(), context.scopeId());
-        for (String id : request.artifactIds()) {
+        for (Long id : request.artifactIds()) {
             if (!attached.contains(id)) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "沙箱输入附件不属于当前执行材料");
             }

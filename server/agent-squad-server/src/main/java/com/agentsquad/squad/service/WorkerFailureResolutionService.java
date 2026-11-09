@@ -53,7 +53,7 @@ public class WorkerFailureResolutionService {
     private ObjectMapper json;
 
     @Transactional
-    public JobDispositionReceiptBO abandon(String userId, String sessionId, AbandonFailedJobRequestBO request) {
+    public JobDispositionReceiptBO abandon(Long userId, String sessionId, AbandonFailedJobRequestBO request) {
         if (request == null || request.jobId() == null || request.expectedPlanVersion() < 1) {
             throw conflict("工作标识或计划版本无效");
         }

@@ -22,15 +22,15 @@ public class WorkerLaunchBO {
     /**
      * 资源归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 所属目标ID
      */
-    private String taskId;
+    private Long taskId;
     /**
      * 委派节点业务ID
      */
-    private String jobId;
+    private Long jobId;
     /**
      * 所属计划版本
      */
@@ -58,7 +58,7 @@ public class WorkerLaunchBO {
     /**
      * 运行时绑定ID
      */
-    private String bindingId;
+    private Long bindingId;
     /**
      * 固定能力版本标识
      */

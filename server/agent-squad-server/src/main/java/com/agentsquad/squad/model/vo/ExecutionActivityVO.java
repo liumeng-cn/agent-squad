@@ -19,19 +19,19 @@ import java.time.ZoneOffset;
 public class ExecutionActivityVO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("activityId")
-    private final String activityId;
+    private final Long activityId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId")
-    private final String sourceMessageId;
+    private final Long sourceMessageId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("executionId")
-    private final String executionId;
+    private final Long executionId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("taskId")
-    private final String taskId;
+    private final Long taskId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("jobId")
-    private final String jobId;
+    private final Long jobId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("planVersion")
     private final long planVersion;
@@ -62,11 +62,11 @@ public class ExecutionActivityVO {
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public ExecutionActivityVO(
-            @com.fasterxml.jackson.annotation.JsonProperty("activityId") String activityId,
-            @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId") String sourceMessageId,
-            @com.fasterxml.jackson.annotation.JsonProperty("executionId") String executionId,
-            @com.fasterxml.jackson.annotation.JsonProperty("taskId") String taskId,
-            @com.fasterxml.jackson.annotation.JsonProperty("jobId") String jobId,
+            @com.fasterxml.jackson.annotation.JsonProperty("activityId") Long activityId,
+            @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId") Long sourceMessageId,
+            @com.fasterxml.jackson.annotation.JsonProperty("executionId") Long executionId,
+            @com.fasterxml.jackson.annotation.JsonProperty("taskId") Long taskId,
+            @com.fasterxml.jackson.annotation.JsonProperty("jobId") Long jobId,
             @com.fasterxml.jackson.annotation.JsonProperty("planVersion") long planVersion,
             @com.fasterxml.jackson.annotation.JsonProperty("type") ActivityType type,
             @com.fasterxml.jackson.annotation.JsonProperty("group") ActivityGroup group,

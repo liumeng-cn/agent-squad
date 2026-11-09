@@ -4,7 +4,7 @@
 
     <resultMap id="userRow" type="com.agentsquad.squad.po.UserAccountPO">
         <constructor>
-            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
             <arg column="username" javaType="java.lang.String"/>
             <arg column="display_name" javaType="java.lang.String"/>
             <arg column="password_hash" javaType="java.lang.String"/>
@@ -47,19 +47,19 @@
         LIMIT #{limit}
     </select>
 
-    <select id="findAnyUserIdForUpdate" resultType="java.lang.String">
+    <select id="findAnyUserIdForUpdate" resultType="java.lang.Long">
         SELECT user_id FROM sq_user WHERE del_flag = '0' LIMIT 1 FOR UPDATE
     </select>
 
     <select id="acquireBootstrapLock" resultType="_int">
-        SELECT GET_LOCK('squad-bootstrap-admin', 5)
+        SELECT CASE WHEN pg_try_advisory_lock(hashtext('squad-bootstrap-admin')) THEN 1 ELSE 0 END
     </select>
 
     <select id="releaseBootstrapLock" resultType="_int">
-        SELECT RELEASE_LOCK('squad-bootstrap-admin')
+        SELECT CASE WHEN pg_advisory_unlock(hashtext('squad-bootstrap-admin')) THEN 1 ELSE 0 END
     </select>
 
-    <select id="lockActiveAdmins" resultType="java.lang.String">
+    <select id="lockActiveAdmins" resultType="java.lang.Long">
         SELECT user_id
         FROM sq_user
         WHERE role = 'ADMIN' AND status = 'ACTIVE' AND del_flag = '0'

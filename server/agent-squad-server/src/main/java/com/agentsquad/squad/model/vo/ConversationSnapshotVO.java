@@ -40,7 +40,7 @@ public class ConversationSnapshotVO {
     private final List<ExecutionFailureVO> failures;
 
     @com.fasterxml.jackson.annotation.JsonProperty("operationIds")
-    private final List<String> operationIds;
+    private final List<Long> operationIds;
 
     @com.fasterxml.jackson.annotation.JsonProperty("executions")
     private final List<ResponseExecutionVO> executions;
@@ -67,7 +67,7 @@ public class ConversationSnapshotVO {
             @com.fasterxml.jackson.annotation.JsonProperty("interactions") List<InteractionVO> interactions,
             @com.fasterxml.jackson.annotation.JsonProperty("deliverables") List<ArtifactVO> deliverables,
             @com.fasterxml.jackson.annotation.JsonProperty("failures") List<ExecutionFailureVO> failures,
-            @com.fasterxml.jackson.annotation.JsonProperty("operationIds") List<String> operationIds,
+            @com.fasterxml.jackson.annotation.JsonProperty("operationIds") List<Long> operationIds,
             @com.fasterxml.jackson.annotation.JsonProperty("executions") List<ResponseExecutionVO> executions,
             @com.fasterxml.jackson.annotation.JsonProperty("taskStates") List<ConversationTaskStateBO> taskStates,
             @com.fasterxml.jackson.annotation.JsonProperty("directives") List<TaskDirectiveVO> directives,

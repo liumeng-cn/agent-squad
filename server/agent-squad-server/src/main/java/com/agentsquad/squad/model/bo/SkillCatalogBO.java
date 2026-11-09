@@ -8,5 +8,5 @@ import java.util.List;
  * <p>
  * 只包含可发现描述，正文必须通过受控读取按需取得。
  */
-public record SkillCatalogBO(String scopeId, List<SkillReferenceBO> skills) {
+public record SkillCatalogBO(Long scopeId, List<SkillReferenceBO> skills) {
 }

@@ -1,7 +1,7 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.agent.session.NativeSessionGateway;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.agent.MasterAgentIdentity;
 import com.agentsquad.squad.model.bo.*;
@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * 覆盖正式SDK按需加载、记忆删除后的迟到正文/产物拒绝，以及后续会话材料不重新引入已失效来源。
  */
 class ExecutionKnowledgeIntegrationTest {
-    private static final String USER = "10000000-0000-0000-0000-000000000001";
+    private static final Long USER = 101L;
 
     @Test
     void ordinaryReplyDiscoversAndLoadsSkillThroughSdk(@TempDir Path directory) throws Exception {
@@ -49,15 +49,15 @@ class ExecutionKnowledgeIntegrationTest {
                 Thread.sleep(100);
             }
             if (!"SUCCEEDED".equals(status)) {
-                String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
+                Long binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", Long.class, receipt.executionId());
                 String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
                 var target = new ProjectionTargetBO(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
                 var diagnostic = context.getBean(NativeSessionGateway.class)
                         .readEvents(target, 0, 100).stream().filter(event -> event.type().contains("error") || "run/end".equals(event.type())).toList();
                 var master = (io.agentscope.harness.agent.HarnessAgent) org.springframework.test.util.ReflectionTestUtils.getField(
                         context.getBean(NativeSessionGateway.class), "master");
-                String error = master.session(io.agentscope.core.agent.RuntimeContext.builder().userId(USER).sessionId(session).build())
-                        .task(receipt.commandId()).error();
+                String error = master.session(io.agentscope.core.agent.RuntimeContext.builder().userId(String.valueOf(USER)).sessionId(session).build())
+                        .task(String.valueOf(receipt.commandId())).error();
                 assertThat(status).as("SDK error=%s; events=%s; modelCalls=%s", error, diagnostic, model.calls.get()).isEqualTo("SUCCEEDED");
             }
             assertThat(model.calls.get()).isEqualTo(3);
@@ -74,8 +74,8 @@ class ExecutionKnowledgeIntegrationTest {
             var messages = context.getBean(MessageAcceptanceService.class);
             var receipt = messages.accept(USER, null, "source", new MessageCreateDTO("请记住代号SECRET_LINEAGE_TOKEN", List.of()));
             var jdbc = context.getBean(JdbcTemplate.class);
-            String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
-            String scope = jdbc.queryForObject("SELECT scope_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
+            Long binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", Long.class, receipt.executionId());
+            Long scope = jdbc.queryForObject("SELECT scope_id FROM sq_response_execution WHERE execution_id=?", Long.class, receipt.executionId());
             String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
             var writes = context.getBean(ExplicitMemoryWriteService.class);
             var request = new MemoryWriteRequestBO("remember", "CREATE", "code", "SECRET_LINEAGE_TOKEN", null, null, "请记住代号SECRET_LINEAGE_TOKEN");
@@ -99,7 +99,7 @@ class ExecutionKnowledgeIntegrationTest {
                     .hasMessageContaining("旧上下文");
             context.getBean(ExecutionRestrictionService.class).restrict(USER, scope, binding);
             var next = messages.accept(USER, receipt.conversationId(), "next", new MessageCreateDTO("继续说说其他事", List.of()));
-            String nextBinding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, next.executionId());
+            Long nextBinding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", Long.class, next.executionId());
             var history = context.getBean(ResponseContextService.class).freeze(USER, nextBinding);
             assertThat(history.messages().toString()).doesNotContain("SECRET_LINEAGE_TOKEN");
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_artifact", Long.class)).isZero();
@@ -110,8 +110,8 @@ class ExecutionKnowledgeIntegrationTest {
 
     private ConfigurableApplicationContext start(Path directory, D4SkillModelStub model, boolean fast) {
         return SpringApplication.run(AgentSquadApplication.class, "--spring.main.web-application-type=none",
-                "--spring.datasource.url=" + MySqlTestDatabase.url(directory.resolve("knowledge")),
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.url=" + PostgresTestDatabase.url(directory.resolve("knowledge")),
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(), "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.delivery.enabled=true", "--agentsquad.delivery.poll-delay-ms=" + (fast ? 100 : 3600000),
                 "--agentsquad.projection.poll-delay-ms=" + (fast ? 100 : 3600000), "--agentsquad.model.api-key=test-only",
                 "--agentsquad.model.base-url=" + model.baseUrl(), "--agentsquad.model.name=test-model",

@@ -16,7 +16,7 @@ public class OperationAccessService {
     @Resource
     private OperationAccessMapper mapper;
 
-    public boolean canReconcile(AuthView actor, String scopeId, String status) {
+    public boolean canReconcile(AuthView actor, Long scopeId, String status) {
         return "UNKNOWN".equals(status) && actor.roles().contains(AccountRole.OPERATOR)
                 && mapper.countGrant(actor.userId(), scopeId) > 0;
     }

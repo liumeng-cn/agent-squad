@@ -21,11 +21,11 @@ public class ToolExecutionContextBO {
     /**
      * 所属目标ID；删除类命令可为空
      */
-    private String taskId;
+    private Long taskId;
     /**
      * 原生会话绑定ID；删除类命令可为空
      */
-    private String bindingId;
+    private Long bindingId;
     /**
      * 目标任务状态
      */
@@ -37,5 +37,5 @@ public class ToolExecutionContextBO {
     /**
      * 统一执行作用域ID
      */
-    private String scopeId;
+    private Long scopeId;
 }

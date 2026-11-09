@@ -31,12 +31,12 @@ public class ConnectionPO {
      * 连接业务ID
      */
     @TableField("connection_id")
-    private String connectionId;
+    private Long connectionId;
     /**
      * 资源归属用户ID
      */
     @TableField("user_id")
-    private String userId;
+    private Long userId;
     /**
      * 显示名称
      */
@@ -76,7 +76,7 @@ public class ConnectionPO {
      * 创建人ID
      */
     @TableField("creator_id")
-    private String creatorId;
+    private Long creatorId;
     /**
      * 创建人姓名
      */
@@ -86,7 +86,7 @@ public class ConnectionPO {
      * 最后更新人ID
      */
     @TableField("last_updater_id")
-    private String lastUpdaterId;
+    private Long lastUpdaterId;
     /**
      * 最后更新人姓名
      */

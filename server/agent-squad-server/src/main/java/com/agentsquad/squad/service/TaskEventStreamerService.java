@@ -73,7 +73,7 @@ public class TaskEventStreamerService {
     /**
      * 建立 SSE 连接，从指定序号之后开始推送；校验任务归属与水位。
      */
-    public SseEmitter stream(String userId, String taskId, long afterSeq) {
+    public SseEmitter stream(Long userId, Long taskId, long afterSeq) {
         if (taskMapper.findOwned(userId, taskId) == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
         }

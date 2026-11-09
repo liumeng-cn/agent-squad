@@ -17,7 +17,7 @@ import com.agentsquad.squad.service.PlanService;
 import com.agentsquad.squad.service.WorkerDispatchService;
 import com.agentsquad.squad.service.WorkerResultService;
 import com.agentsquad.squad.mapper.PlanMapper;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.model.dto.WorkerDefinitionCreateDTO;
 import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,12 +43,12 @@ class WorkerDependencyFailureIntegrationTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void closesOnlyPermanentlyFailedDescendants(boolean permanentFailure, @TempDir Path directory) throws Exception {
-        String user = "00000000-0000-0000-0000-000000000001";
+        Long user = 1L;
         try (var context = SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=" + ("true".equals(System.getenv("SQUAD_STEPS_BROWSER_PROBE")) ? "servlet" : "none"),
                 "--server.port=0", "--server.shutdown=immediate", "--agentsquad.identity.allow-unsigned-local=true",
-                "--spring.datasource.url=" + MySqlTestDatabase.url(directory),
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password())) {
+                "--spring.datasource.url=" + PostgresTestDatabase.url(directory),
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password())) {
             var tasks = context.getBean(GoalTaskService.class);
             var conversation = tasks.createConversation(user, "失败步骤验证");
             var task = tasks.submit(user, conversation.conversationId(), "dependency-failure", "完成文章整理");
@@ -61,7 +61,7 @@ class WorkerDependencyFailureIntegrationTest {
             var snapshots = context.getBean(ContextSnapshotService.class);
             var nodes = new ArrayList<PlanNodeBO>();
             for (String key : List.of("root", "middle", "leaf", "parallel")) {
-                String snapshot = snapshots.prepare(user, session, key, "context-" + key).snapshotId();
+                Long snapshot = snapshots.prepare(user, session, key, "context-" + key).snapshotId();
                 String title = switch (key) {
                     case "root" -> "读取资料";
                     case "middle" -> "整理资料";
@@ -73,12 +73,12 @@ class WorkerDependencyFailureIntegrationTest {
             }
             context.getBean(PlanService.class).publish(user, session,
                     new PlanPublishBO("plan", 0, nodes, "ALL_REQUIRED", List.of("文章整理完成")));
-            String binding = jdbc.queryForObject("SELECT binding_id FROM sq_worker_job WHERE node_key='root'", String.class);
+            Long binding = jdbc.queryForObject("SELECT binding_id FROM sq_worker_job WHERE node_key='root'", Long.class);
             jdbc.update("UPDATE sq_command SET status='DELIVERED' WHERE binding_id=?", binding);
             context.getBean(WorkerDispatchService.class).claim(user, binding);
             var results = context.getBean(WorkerResultService.class);
             var resolutions = context.getBean(WorkerFailureResolutionService.class);
-            String rootJob = jdbc.queryForObject("SELECT job_id FROM sq_worker_job WHERE node_key='root'", String.class);
+            Long rootJob = jdbc.queryForObject("SELECT job_id FROM sq_worker_job WHERE node_key='root'", Long.class);
             var decision = new AbandonFailedJobRequestBO(rootJob, 1);
             assertThatThrownBy(() -> resolutions.abandon(user, session, decision))
                     .isInstanceOf(RuntimeBusinessException.class);
@@ -95,11 +95,11 @@ class WorkerDependencyFailureIntegrationTest {
                 jdbc.update("""
                         INSERT INTO sq_interaction (interaction_id,user_id,task_id,origin,kind,question,
                             answer_schema_json,request_hash,expires_at,status)
-                        VALUES ('pending-test',?,?,'BUSINESS','INPUT','test','{}','test',DATE_ADD(NOW(),INTERVAL 1 HOUR),'OPEN')
+                        VALUES (900001,?,?,'BUSINESS','INPUT','test','{}','test',NOW() + INTERVAL '1 hour','OPEN')
                         """, user, task.taskId());
                 assertThatThrownBy(() -> resolutions.abandon(user, session, decision))
                         .isInstanceOf(RuntimeBusinessException.class);
-                jdbc.update("UPDATE sq_interaction SET status='CANCELLED' WHERE interaction_id='pending-test'");
+                jdbc.update("UPDATE sq_interaction SET status='CANCELLED' WHERE interaction_id=900001");
                 assertThat(resolutions.abandon(user, session, decision).status()).isEqualTo(WorkerJobStatus.FAILED);
                 assertThat(resolutions.abandon(user, session, decision).status()).isEqualTo(WorkerJobStatus.FAILED);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_task_event WHERE task_id=? AND event_type='job.failed'", Integer.class, task.taskId())).isEqualTo(1);

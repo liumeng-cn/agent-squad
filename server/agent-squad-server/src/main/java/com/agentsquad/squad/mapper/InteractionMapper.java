@@ -13,51 +13,51 @@ import java.util.List;
 @Mapper
 public interface InteractionMapper {
 
-    int insert(@Param("interactionId") String interactionId, @Param("userId") String userId,
-               @Param("taskId") String taskId, @Param("jobId") String jobId,
-               @Param("bindingId") String bindingId, @Param("operationId") String operationId,
+    int insert(@Param("interactionId") Long interactionId, @Param("userId") Long userId,
+               @Param("taskId") Long taskId, @Param("jobId") Long jobId,
+               @Param("bindingId") Long bindingId, @Param("operationId") Long operationId,
                @Param("origin") String origin, @Param("frameworkRequestId") String frameworkRequestId,
                @Param("kind") String kind, @Param("question") String question,
                @Param("answerSchemaJson") String answerSchemaJson,
                @Param("planVersion") long planVersion, @Param("requestHash") String requestHash,
                @Param("connectionRevision") long connectionRevision,
                @Param("expiresAt") LocalDateTime expiresAt,
-               @Param("creatorId") String creatorId, @Param("creatorName") String creatorName);
+               @Param("creatorId") Long creatorId, @Param("creatorName") String creatorName);
 
-    InteractionPO findByFrameworkRequest(@Param("userId") String userId,
-                                         @Param("bindingId") String bindingId,
+    InteractionPO findByFrameworkRequest(@Param("userId") Long userId,
+                                         @Param("bindingId") Long bindingId,
                                          @Param("frameworkRequestId") String frameworkRequestId);
 
-    InteractionPO findOwned(@Param("userId") String userId,
-                            @Param("interactionId") String interactionId);
+    InteractionPO findOwned(@Param("userId") Long userId,
+                            @Param("interactionId") Long interactionId);
 
-    List<InteractionPO> listByTask(@Param("userId") String userId, @Param("taskId") String taskId,
+    List<InteractionPO> listByTask(@Param("userId") Long userId, @Param("taskId") Long taskId,
                                    @Param("cursorId") Long cursorId, @Param("limit") int limit);
 
-    List<String> findOpenIds(@Param("userId") String userId, @Param("taskId") String taskId);
+    List<Long> findOpenIds(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    int countOpenByKind(@Param("userId") String userId, @Param("taskId") String taskId,
+    int countOpenByKind(@Param("userId") Long userId, @Param("taskId") Long taskId,
                         @Param("kind") String kind);
 
-    Long cursorIdOf(@Param("userId") String userId, @Param("interactionId") String interactionId);
+    Long cursorIdOf(@Param("userId") Long userId, @Param("interactionId") Long interactionId);
 
-    int markResponded(@Param("userId") String userId,
-                      @Param("interactionId") String interactionId,
+    int markResponded(@Param("userId") Long userId,
+                      @Param("interactionId") Long interactionId,
                       @Param("expectedVersion") long expectedVersion,
                       @Param("responseJson") String responseJson,
                       @Param("updaterName") String updaterName);
 
-    int markResolvedByFramework(@Param("userId") String userId,
-                                @Param("bindingId") String bindingId,
+    int markResolvedByFramework(@Param("userId") Long userId,
+                                @Param("bindingId") Long bindingId,
                                 @Param("frameworkRequestId") String frameworkRequestId,
                                 @Param("responseJson") String responseJson);
 
-    List<String> findOpenByScope(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    List<Long> findOpenByScope(@Param("userId") Long userId, @Param("scopeId") Long scopeId);
 
-    int countOpenByScopeKind(@Param("userId") String userId, @Param("scopeId") String scopeId,
+    int countOpenByScopeKind(@Param("userId") Long userId, @Param("scopeId") Long scopeId,
                              @Param("kind") String kind);
 
-    int cancelOpenByTask(@Param("userId") String userId, @Param("taskId") String taskId);
+    int cancelOpenByTask(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    int cancelOpenByScope(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    int cancelOpenByScope(@Param("userId") Long userId, @Param("scopeId") Long scopeId);
 }

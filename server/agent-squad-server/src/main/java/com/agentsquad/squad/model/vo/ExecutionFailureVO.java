@@ -13,10 +13,10 @@ import java.util.List;
 public class ExecutionFailureVO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("failureId")
-    private final String failureId;
+    private final Long failureId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("scopeId")
-    private final String scopeId;
+    private final Long scopeId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("category")
     private final String category;
@@ -40,22 +40,22 @@ public class ExecutionFailureVO {
     private final int maxAttempts;
 
     @com.fasterxml.jackson.annotation.JsonProperty("diagnosticId")
-    private final String diagnosticId;
+    private final Long diagnosticId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("allowedActions")
     private final List<String> allowedActions;
 
     @com.fasterxml.jackson.annotation.JsonProperty("executionId")
-    private final String executionId;
+    private final Long executionId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("expectedVersion")
     private final Long expectedVersion;
 
     @com.fasterxml.jackson.annotation.JsonProperty("taskId")
-    private final String taskId;
+    private final Long taskId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId")
-    private final String sourceMessageId;
+    private final Long sourceMessageId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("status")
     private final String status;
@@ -65,8 +65,8 @@ public class ExecutionFailureVO {
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public ExecutionFailureVO(
-            @com.fasterxml.jackson.annotation.JsonProperty("failureId") String failureId,
-            @com.fasterxml.jackson.annotation.JsonProperty("scopeId") String scopeId,
+            @com.fasterxml.jackson.annotation.JsonProperty("failureId") Long failureId,
+            @com.fasterxml.jackson.annotation.JsonProperty("scopeId") Long scopeId,
             @com.fasterxml.jackson.annotation.JsonProperty("category") String category,
             @com.fasterxml.jackson.annotation.JsonProperty("code") String code,
             @com.fasterxml.jackson.annotation.JsonProperty("actor") String actor,
@@ -74,12 +74,12 @@ public class ExecutionFailureVO {
             @com.fasterxml.jackson.annotation.JsonProperty("retryable") boolean retryable,
             @com.fasterxml.jackson.annotation.JsonProperty("attempt") int attempt,
             @com.fasterxml.jackson.annotation.JsonProperty("maxAttempts") int maxAttempts,
-            @com.fasterxml.jackson.annotation.JsonProperty("diagnosticId") String diagnosticId,
+            @com.fasterxml.jackson.annotation.JsonProperty("diagnosticId") Long diagnosticId,
             @com.fasterxml.jackson.annotation.JsonProperty("allowedActions") List<String> allowedActions,
-            @com.fasterxml.jackson.annotation.JsonProperty("executionId") String executionId,
+            @com.fasterxml.jackson.annotation.JsonProperty("executionId") Long executionId,
             @com.fasterxml.jackson.annotation.JsonProperty("expectedVersion") Long expectedVersion,
-            @com.fasterxml.jackson.annotation.JsonProperty("taskId") String taskId,
-            @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId") String sourceMessageId,
+            @com.fasterxml.jackson.annotation.JsonProperty("taskId") Long taskId,
+            @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId") Long sourceMessageId,
             @com.fasterxml.jackson.annotation.JsonProperty("status") String status,
             @com.fasterxml.jackson.annotation.JsonProperty("nextAttemptAt") String nextAttemptAt) {
         this.failureId = failureId;

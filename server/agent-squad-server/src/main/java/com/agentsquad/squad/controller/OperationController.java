@@ -42,7 +42,7 @@ public class OperationController {
     @GetMapping("/tasks/{taskId}/operations")
     public ApiResult<OperationPageVO> listByTask(
             HttpServletRequest servletRequest,
-            @PathVariable String taskId,
+            @PathVariable Long taskId,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit) {
         return ApiResult.success(operationService.listPage(UserContext.current(servletRequest).userId(),
@@ -55,7 +55,7 @@ public class OperationController {
     @GetMapping("/operations/{operationId}")
     public ApiResult<OperationDetailVO> getOwned(
             HttpServletRequest servletRequest,
-            @PathVariable String operationId) {
+            @PathVariable Long operationId) {
         return ApiResult.success(operationService.detail(UserContext.current(servletRequest), operationId));
     }
 
@@ -66,7 +66,7 @@ public class OperationController {
     @ResponseStatus(HttpStatus.OK)
     public ApiResult<OperationVO> reconcile(
             HttpServletRequest servletRequest,
-            @PathVariable String operationId,
+            @PathVariable Long operationId,
             @Valid @RequestBody OperationReconcileDTO request) {
         return ApiResult.success(operationReconcileService.reconcile(
                 UserContext.current(servletRequest), operationId, request));

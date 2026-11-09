@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.tool;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import com.agentsquad.squad.enums.GoalTaskStatus;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.bo.AcceptanceReviewBO;
@@ -86,7 +88,7 @@ public class ProposeCompletionTool implements AgentTool {
                     : mapper.convertValue(param.getInput().get("acceptanceReviews"),
                     mapper.getTypeFactory().constructCollectionType(List.class, AcceptanceReviewBO.class));
             CompletionProposalReceiptBO receipt = completionProposalService.submit(new CompletionSubmissionBO(
-                    context.getUserId(), context.getSessionId(), context.get(TURN_ID_KEY, String.class),
+                    RuntimeContextIds.userId(context), context.getSessionId(), context.get(TURN_ID_KEY, String.class),
                     param.getToolUseBlock().getId(), outcome, answer, reviews));
             return ToolResultBlock.text("完成候选已保存，等待当前回合结束。");
         } catch (RuntimeBusinessException exception) {

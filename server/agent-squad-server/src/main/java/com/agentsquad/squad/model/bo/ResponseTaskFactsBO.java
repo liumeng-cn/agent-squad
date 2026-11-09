@@ -8,7 +8,7 @@ import java.util.List;
  * <p>
  * 目标版本与计划节点状态一起保存，供Master说明真实进展；不授予聊天回复修改计划的权限。
  */
-public record ResponseTaskFactsBO(String taskId, String status, long version, long planVersion,
+public record ResponseTaskFactsBO(Long taskId, String status, long version, long planVersion,
                                   boolean cancellationRequested, List<ResponseJobFactBO> jobs, long goalRevision,
                                   List<TaskDirectiveFactBO> directives) {
 }

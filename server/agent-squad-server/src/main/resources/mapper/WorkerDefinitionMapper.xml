@@ -5,7 +5,7 @@
     <resultMap id="findByPublishKeyResult" type="com.agentsquad.squad.model.po.WorkerDefinitionPO">
         <constructor>
             <arg column="id" javaType="_long"/>
-            <arg column="definition_id" javaType="java.lang.String"/>
+            <arg column="definition_id" javaType="java.lang.Long"/>
             <arg column="worker_key" javaType="java.lang.String"/>
             <arg column="worker_version" javaType="java.lang.String"/>
             <arg column="status" javaType="com.agentsquad.squad.enums.WorkerDefinitionStatus"/>
@@ -14,7 +14,7 @@
             <arg column="publish_key" javaType="java.lang.String"/>
             <arg column="payload_hash" javaType="java.lang.String"/>
             <arg column="last_status_key" javaType="java.lang.String"/>
-            <arg column="last_status_actor" javaType="java.lang.String"/>
+            <arg column="last_status_actor" javaType="java.lang.Long"/>
             <arg column="last_status_hash" javaType="java.lang.String"/>
         </constructor>
     </resultMap>
@@ -22,7 +22,7 @@
     <resultMap id="listAfterResult" type="com.agentsquad.squad.model.po.WorkerDefinitionPO">
         <constructor>
             <arg column="id" javaType="_long"/>
-            <arg column="definition_id" javaType="java.lang.String"/>
+            <arg column="definition_id" javaType="java.lang.Long"/>
             <arg column="worker_key" javaType="java.lang.String"/>
             <arg column="worker_version" javaType="java.lang.String"/>
             <arg column="status" javaType="com.agentsquad.squad.enums.WorkerDefinitionStatus"/>
@@ -31,7 +31,7 @@
             <arg column="publish_key" javaType="java.lang.String"/>
             <arg column="payload_hash" javaType="java.lang.String"/>
             <arg column="last_status_key" javaType="java.lang.String"/>
-            <arg column="last_status_actor" javaType="java.lang.String"/>
+            <arg column="last_status_actor" javaType="java.lang.Long"/>
             <arg column="last_status_hash" javaType="java.lang.String"/>
         </constructor>
     </resultMap>
@@ -39,7 +39,7 @@
     <resultMap id="listEnabledAfterResult" type="com.agentsquad.squad.model.po.WorkerDefinitionPO">
         <constructor>
             <arg column="id" javaType="_long"/>
-            <arg column="definition_id" javaType="java.lang.String"/>
+            <arg column="definition_id" javaType="java.lang.Long"/>
             <arg column="worker_key" javaType="java.lang.String"/>
             <arg column="worker_version" javaType="java.lang.String"/>
             <arg column="status" javaType="com.agentsquad.squad.enums.WorkerDefinitionStatus"/>
@@ -48,7 +48,7 @@
             <arg column="publish_key" javaType="java.lang.String"/>
             <arg column="payload_hash" javaType="java.lang.String"/>
             <arg column="last_status_key" javaType="java.lang.String"/>
-            <arg column="last_status_actor" javaType="java.lang.String"/>
+            <arg column="last_status_actor" javaType="java.lang.Long"/>
             <arg column="last_status_hash" javaType="java.lang.String"/>
         </constructor>
     </resultMap>
@@ -56,7 +56,7 @@
     <resultMap id="findEnabledResult" type="com.agentsquad.squad.model.po.WorkerDefinitionPO">
         <constructor>
             <arg column="id" javaType="_long"/>
-            <arg column="definition_id" javaType="java.lang.String"/>
+            <arg column="definition_id" javaType="java.lang.Long"/>
             <arg column="worker_key" javaType="java.lang.String"/>
             <arg column="worker_version" javaType="java.lang.String"/>
             <arg column="status" javaType="com.agentsquad.squad.enums.WorkerDefinitionStatus"/>
@@ -65,7 +65,7 @@
             <arg column="publish_key" javaType="java.lang.String"/>
             <arg column="payload_hash" javaType="java.lang.String"/>
             <arg column="last_status_key" javaType="java.lang.String"/>
-            <arg column="last_status_actor" javaType="java.lang.String"/>
+            <arg column="last_status_actor" javaType="java.lang.Long"/>
             <arg column="last_status_hash" javaType="java.lang.String"/>
         </constructor>
     </resultMap>
@@ -73,7 +73,7 @@
     <resultMap id="findPublishedResult" type="com.agentsquad.squad.model.po.WorkerDefinitionPO">
         <constructor>
             <arg column="id" javaType="_long"/>
-            <arg column="definition_id" javaType="java.lang.String"/>
+            <arg column="definition_id" javaType="java.lang.Long"/>
             <arg column="worker_key" javaType="java.lang.String"/>
             <arg column="worker_version" javaType="java.lang.String"/>
             <arg column="status" javaType="com.agentsquad.squad.enums.WorkerDefinitionStatus"/>
@@ -82,7 +82,7 @@
             <arg column="publish_key" javaType="java.lang.String"/>
             <arg column="payload_hash" javaType="java.lang.String"/>
             <arg column="last_status_key" javaType="java.lang.String"/>
-            <arg column="last_status_actor" javaType="java.lang.String"/>
+            <arg column="last_status_actor" javaType="java.lang.Long"/>
             <arg column="last_status_hash" javaType="java.lang.String"/>
         </constructor>
     </resultMap>

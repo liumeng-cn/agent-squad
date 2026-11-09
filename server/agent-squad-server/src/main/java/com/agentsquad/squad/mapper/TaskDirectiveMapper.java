@@ -18,57 +18,57 @@ import java.util.List;
  */
 @Mapper
 public interface TaskDirectiveMapper {
-    TaskDirectivePO lock(@Param("userId") String userId, @Param("directiveId") String directiveId);
+    TaskDirectivePO lock(@Param("userId") Long userId, @Param("directiveId") Long directiveId);
 
-    TaskDirectivePO findByKey(@Param("userId") String userId, @Param("scopeId") String scopeId, @Param("key") String key);
+    TaskDirectivePO findByKey(@Param("userId") Long userId, @Param("scopeId") Long scopeId, @Param("key") String key);
 
-    List<TaskDirectivePO> applied(@Param("userId") String userId, @Param("taskId") String taskId, @Param("revision") long revision);
+    List<TaskDirectivePO> applied(@Param("userId") Long userId, @Param("taskId") Long taskId, @Param("revision") long revision);
 
     int insert(@Param("row") TaskDirectivePO row, @Param("now") LocalDateTime now);
 
-    TaskGoalStateBO goalState(@Param("userId") String userId, @Param("taskId") String taskId);
+    TaskGoalStateBO goalState(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    List<String> pending(@Param("userId") String userId, @Param("taskId") String taskId);
+    List<Long> pending(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
     List<TaskDirectiveTargetBO> due(@Param("now") LocalDateTime now);
 
-    int defer(@Param("userId") String userId, @Param("directiveId") String directiveId, @Param("next") LocalDateTime next);
+    int defer(@Param("userId") Long userId, @Param("directiveId") Long directiveId, @Param("next") LocalDateTime next);
 
-    int waiting(@Param("userId") String userId, @Param("directiveId") String directiveId,
+    int waiting(@Param("userId") Long userId, @Param("directiveId") Long directiveId,
                 @Param("reason") TaskDirectiveWaitReason reason);
 
-    List<TaskDirectivePO> pageInConversation(@Param("userId") String userId,
-                                             @Param("conversationId") String conversationId,
+    List<TaskDirectivePO> pageInConversation(@Param("userId") Long userId,
+                                             @Param("conversationId") Long conversationId,
                                              @Param("generation") long generation,
                                              @Param("first") long first, @Param("last") long last);
 
-    int bindCommand(@Param("userId") String userId, @Param("directiveId") String directiveId, @Param("commandId") String commandId);
+    int bindCommand(@Param("userId") Long userId, @Param("directiveId") Long directiveId, @Param("commandId") Long commandId);
 
-    int finish(@Param("userId") String userId, @Param("directiveId") String directiveId,
+    int finish(@Param("userId") Long userId, @Param("directiveId") Long directiveId,
                @Param("status") String status, @Param("version") Long version, @Param("revision") Long revision,
                @Param("code") String code, @Param("message") String message);
 
-    int applyGoal(@Param("userId") String userId, @Param("taskId") String taskId,
+    int applyGoal(@Param("userId") Long userId, @Param("taskId") Long taskId,
                   @Param("version") long version, @Param("revision") long revision, @Param("input") String input);
 
-    int clearCandidate(@Param("userId") String userId, @Param("taskId") String taskId);
+    int clearCandidate(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    List<String> openOperations(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    List<Long> openOperations(@Param("userId") Long userId, @Param("scopeId") Long scopeId);
 
-    List<String> openInteractions(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    List<Long> openInteractions(@Param("userId") Long userId, @Param("scopeId") Long scopeId);
 
-    List<TaskDirectiveFactBO> latestFacts(@Param("userId") String userId, @Param("taskId") String taskId);
+    List<TaskDirectiveFactBO> latestFacts(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    Long lastReplacement(@Param("userId") String userId, @Param("taskId") String taskId);
+    Long lastReplacement(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    default List<TaskDirectivePO> effectiveApplied(String userId, String taskId) {
+    default List<TaskDirectivePO> effectiveApplied(Long userId, Long taskId) {
         Long revision = lastReplacement(userId, taskId);
         return applied(userId, taskId, revision == null ? 0 : revision);
     }
 
-    List<String> pendingControlIds(@Param("userId") String userId, @Param("taskId") String taskId);
+    List<Long> pendingControlIds(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    default int pendingControls(String userId, String taskId) {
+    default int pendingControls(Long userId, Long taskId) {
         return pendingControlIds(userId, taskId).size();
     }
 }

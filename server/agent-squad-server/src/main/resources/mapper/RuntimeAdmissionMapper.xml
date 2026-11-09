@@ -4,9 +4,9 @@
 
     <resultMap id="slotResult" type="com.agentsquad.squad.model.po.RuntimeAdmissionSlotPO">
         <constructor>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
-            <arg column="command_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
+            <arg column="command_id" javaType="java.lang.Long"/>
             <arg column="action" javaType="java.lang.String"/>
             <arg column="turn_id" javaType="java.lang.String"/>
             <arg column="run_id" javaType="java.lang.String"/>
@@ -16,7 +16,7 @@
     </resultMap>
 
     <insert id="ensureCounter">
-        INSERT IGNORE INTO sq_runtime_admission_counter (
+        INSERT INTO sq_runtime_admission_counter (
         pool_key,
         active_count
         )
@@ -24,6 +24,7 @@
         #{poolKey},
         0
         )
+        ON CONFLICT DO NOTHING
     </insert>
 
     <select id="lockCounter" resultType="java.lang.Integer">
@@ -78,7 +79,7 @@
         NULL,
         #{claimCursor},
         'ACTIVE',
-        UTC_TIMESTAMP(3),
+        (CURRENT_TIMESTAMP(3) AT TIME ZONE 'UTC'),
         NULL
         )
     </insert>
@@ -92,7 +93,7 @@
         run_id = NULL,
         claim_cursor = #{claimCursor},
         status = 'ACTIVE',
-        acquired_at = UTC_TIMESTAMP(3),
+        acquired_at = (CURRENT_TIMESTAMP(3) AT TIME ZONE 'UTC'),
         released_at = NULL
         WHERE binding_id = #{bindingId}
         AND status = 'RELEASED'
@@ -191,7 +192,7 @@
     <update id="releaseSlot">
         UPDATE sq_runtime_admission_slot
         SET status = 'RELEASED',
-        released_at = UTC_TIMESTAMP(3)
+        released_at = (CURRENT_TIMESTAMP(3) AT TIME ZONE 'UTC')
         WHERE user_id = #{userId}
         AND binding_id = #{bindingId}
         AND command_id = #{commandId}

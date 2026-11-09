@@ -22,7 +22,7 @@ public class ConversationHeaderBO {
     /**
      * 对话业务ID
      */
-    private String conversationId;
+    private Long conversationId;
     /**
      * 用户对话标题
      */
@@ -50,7 +50,7 @@ public class ConversationHeaderBO {
     /**
      * 未终结目标ID
      */
-    private String activeTaskId;
+    private Long activeTaskId;
     /**
      * 最近事件序号
      */

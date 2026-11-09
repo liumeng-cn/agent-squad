@@ -5,5 +5,5 @@ package com.agentsquad.squad.model.bo;
  * <p>
  * 记录持久交互的身份和类型；未受控的挂起请求由调用方以 null 表示。
  */
-public record BindingResultBO(String interactionId, String kind) {
+public record BindingResultBO(Long interactionId, String kind) {
 }

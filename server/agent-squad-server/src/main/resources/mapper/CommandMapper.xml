@@ -4,10 +4,10 @@
 
     <resultMap id="findByKeyResult" type="com.agentsquad.squad.model.po.CommandPO">
         <constructor>
-            <arg column="command_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="command_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
             <arg column="payload_hash" javaType="java.lang.String"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="native_turn_id" javaType="java.lang.String"/>
@@ -18,10 +18,10 @@
 
     <resultMap id="findByKeyCurrentResult" type="com.agentsquad.squad.model.po.CommandPO">
         <constructor>
-            <arg column="command_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="command_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
             <arg column="payload_hash" javaType="java.lang.String"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="native_turn_id" javaType="java.lang.String"/>
@@ -32,10 +32,10 @@
 
     <resultMap id="findOwnedResult" type="com.agentsquad.squad.model.po.CommandPO">
         <constructor>
-            <arg column="command_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="command_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
             <arg column="payload_hash" javaType="java.lang.String"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="native_turn_id" javaType="java.lang.String"/>
@@ -165,7 +165,7 @@
         AND task_id = #{taskId}
         AND action = 'MASTER_SIGNAL'
         AND native_turn_id = #{turnId}
-        AND JSON_EXTRACT(payload_json, '$.planVersion') = #{planVersion}
+        AND CAST(payload_json ->> 'planVersion' AS bigint) = #{planVersion}
     </select>
 
     <update id="markMasterTurnApplied">
@@ -190,7 +190,7 @@
         'DELIVERED')
     </select>
 
-    <select id="findWorkerSubmitCommandId" resultType="java.lang.String">
+    <select id="findWorkerSubmitCommandId" resultType="java.lang.Long">
         SELECT command_id FROM sq_command
         WHERE user_id = #{userId} AND binding_id = #{bindingId}
         AND action = 'SUBMIT' AND status IN ('DELIVERED',
@@ -211,7 +211,7 @@
         'DELIVERING')
     </select>
 
-    <select id="findScopeId" resultType="java.lang.String">
+    <select id="findScopeId" resultType="java.lang.Long">
         SELECT scope_id FROM sq_command WHERE user_id = #{userId} AND command_id = #{commandId}
     </select>
 </mapper>

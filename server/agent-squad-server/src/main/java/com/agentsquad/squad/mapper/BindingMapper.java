@@ -12,24 +12,24 @@ import java.time.LocalDateTime;
 @Mapper
 public interface BindingMapper {
 
-    int insertMaster(@Param("bindingId") String bindingId, @Param("userId") String userId,
-                     @Param("taskId") String taskId, @Param("agentId") String agentId,
+    int insertMaster(@Param("bindingId") Long bindingId, @Param("userId") Long userId,
+                     @Param("taskId") Long taskId, @Param("agentId") String agentId,
                      @Param("sessionId") String sessionId,
                      @Param("nextProjectionAt") LocalDateTime nextProjectionAt);
 
-    int insertWorker(@Param("bindingId") String bindingId, @Param("userId") String userId,
-                     @Param("taskId") String taskId, @Param("agentId") String agentId,
+    int insertWorker(@Param("bindingId") Long bindingId, @Param("userId") Long userId,
+                     @Param("taskId") Long taskId, @Param("agentId") String agentId,
                      @Param("sessionId") String sessionId,
                      @Param("nextProjectionAt") LocalDateTime nextProjectionAt);
 
     LocalSessionState localSessionState(
-            @Param("userId") String userId, @Param("bindingId") String bindingId);
+            @Param("userId") Long userId, @Param("bindingId") Long bindingId);
 
-    java.util.List<String> taskBindingIds(@Param("userId") String userId, @Param("taskId") String taskId);
+    java.util.List<Long> taskBindingIds(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    String findMasterBindingId(@Param("userId") String userId, @Param("taskId") String taskId);
+    Long findMasterBindingId(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    int insertResponse(@Param("bindingId") String bindingId, @Param("userId") String userId,
-                       @Param("scopeId") String scopeId, @Param("agentId") String agentId,
+    int insertResponse(@Param("bindingId") Long bindingId, @Param("userId") Long userId,
+                       @Param("scopeId") Long scopeId, @Param("agentId") String agentId,
                        @Param("sessionId") String sessionId, @Param("nextProjectionAt") LocalDateTime nextProjectionAt);
 }

@@ -24,11 +24,11 @@ public class MemoryPO {
     /**
      * 记忆业务ID
      */
-    private String memoryId;
+    private Long memoryId;
     /**
      * 归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 记忆唯一键
      */
@@ -52,7 +52,7 @@ public class MemoryPO {
     /**
      * 授权用户消息ID
      */
-    private String sourceMessageId;
+    private Long sourceMessageId;
     /**
      * 用户显式授权原话片段
      */

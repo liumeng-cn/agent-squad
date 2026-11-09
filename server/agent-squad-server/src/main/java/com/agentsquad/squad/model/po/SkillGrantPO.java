@@ -24,11 +24,11 @@ public class SkillGrantPO {
     /**
      * 授权用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 被授权技能版本ID
      */
-    private String skillVersionId;
+    private Long skillVersionId;
     /**
      * 是否允许新执行选择
      */

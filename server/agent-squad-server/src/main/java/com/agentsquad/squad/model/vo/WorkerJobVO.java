@@ -16,10 +16,10 @@ import java.util.List;
 public class WorkerJobVO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("jobId")
-    private final String jobId;
+    private final Long jobId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("taskId")
-    private final String taskId;
+    private final Long taskId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("nodeKey")
     private final String nodeKey;
@@ -40,10 +40,10 @@ public class WorkerJobVO {
     private final long version;
 
     @com.fasterxml.jackson.annotation.JsonProperty("bindingId")
-    private final String bindingId;
+    private final Long bindingId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("reusedFromJobId")
-    private final String reusedFromJobId;
+    private final Long reusedFromJobId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("result")
     private final Object result;
@@ -62,16 +62,16 @@ public class WorkerJobVO {
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public WorkerJobVO(
-            @com.fasterxml.jackson.annotation.JsonProperty("jobId") String jobId,
-            @com.fasterxml.jackson.annotation.JsonProperty("taskId") String taskId,
+            @com.fasterxml.jackson.annotation.JsonProperty("jobId") Long jobId,
+            @com.fasterxml.jackson.annotation.JsonProperty("taskId") Long taskId,
             @com.fasterxml.jackson.annotation.JsonProperty("nodeKey") String nodeKey,
             @com.fasterxml.jackson.annotation.JsonProperty("planVersion") long planVersion,
             @com.fasterxml.jackson.annotation.JsonProperty("workerKey") String workerKey,
             @com.fasterxml.jackson.annotation.JsonProperty("workerVersion") String workerVersion,
             @com.fasterxml.jackson.annotation.JsonProperty("status") WorkerJobStatus status,
             @com.fasterxml.jackson.annotation.JsonProperty("version") long version,
-            @com.fasterxml.jackson.annotation.JsonProperty("bindingId") String bindingId,
-            @com.fasterxml.jackson.annotation.JsonProperty("reusedFromJobId") String reusedFromJobId,
+            @com.fasterxml.jackson.annotation.JsonProperty("bindingId") Long bindingId,
+            @com.fasterxml.jackson.annotation.JsonProperty("reusedFromJobId") Long reusedFromJobId,
             @com.fasterxml.jackson.annotation.JsonProperty("result") Object result,
             @com.fasterxml.jackson.annotation.JsonProperty("title") String title,
             @com.fasterxml.jackson.annotation.JsonProperty("dependsOn") List<String> dependsOn,

@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.skill;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import com.agentsquad.squad.model.bo.SkillSelectionBO;
 
 import com.agentsquad.squad.service.ExecutionScopeService;
@@ -44,13 +46,12 @@ public class ScopeSkillRepository implements RuntimeContextSkillRepository, Lazy
     /**
      * Worker 可显式传入局部版本集合；选择只做已固定目录的缩小，不允许借此获取其他用户或版本。
      */
-    public List<AgentSkill> getSkills(RuntimeContext context, Set<String> selectedVersionIds) {
-        if (context == null || context.getUserId() == null || context.getUserId().isBlank()
-                || context.getSessionId() == null || context.getSessionId().isBlank()) {
+    public List<AgentSkill> getSkills(RuntimeContext context, Set<Long> selectedVersionIds) {
+        if (context == null || context.getSessionId() == null || context.getSessionId().isBlank()) {
             return List.of();
         }
-        String userId = context.getUserId();
-        String scopeId = scopes.scopeForSession(userId, context.getSessionId());
+        Long userId = RuntimeContextIds.userId(context);
+        Long scopeId = scopes.scopeForSession(userId, context.getSessionId());
         SkillCatalogBO catalog = skills.freeze(userId, scopeId);
         return catalog.skills().stream()
                 .filter(skill -> selectedVersionIds == null || selectedVersionIds.contains(skill.getSkillVersionId()))
@@ -59,19 +60,18 @@ public class ScopeSkillRepository implements RuntimeContextSkillRepository, Lazy
 
     @Override
     public SkillResources resourcesFor(String skillName, RuntimeContext context) {
-        if (context == null || context.getUserId() == null || context.getUserId().isBlank()
-                || context.getSessionId() == null || context.getSessionId().isBlank()) {
+        if (context == null || context.getSessionId() == null || context.getSessionId().isBlank()) {
             return SkillResources.empty();
         }
-        String scopeId = scopes.scopeForSession(context.getUserId(), context.getSessionId());
+        Long scopeId = scopes.scopeForSession(RuntimeContextIds.userId(context), context.getSessionId());
         SkillSelectionBO selection = context.get(SkillSelectionBO.class);
         ScopeSkillCapabilities capabilities = context.get(ScopeSkillCapabilities.class);
         Set<String> allowedTools = capabilities == null ? Set.of() : capabilities.toolNames();
-        SkillCatalogBO catalog = skills.freeze(context.getUserId(), scopeId);
+        SkillCatalogBO catalog = skills.freeze(RuntimeContextIds.userId(context), scopeId);
         return catalog.skills().stream().filter(skill -> skill.getName().equals(skillName))
                 .filter(skill -> selection == null || selection.skillVersionIds().contains(skill.getSkillVersionId()))
                 .findFirst().<SkillResources>map(skill -> new ScopedSkillResources(skills,
-                        context.getUserId(), scopeId, skill.getSkillVersionId(), allowedTools)).orElseGet(SkillResources::empty);
+                        RuntimeContextIds.userId(context), scopeId, skill.getSkillVersionId(), allowedTools)).orElseGet(SkillResources::empty);
     }
 
     @Override
@@ -126,7 +126,7 @@ public class ScopeSkillRepository implements RuntimeContextSkillRepository, Lazy
         return false;
     }
 
-    private AgentSkill toFrameworkSkill(String userId, String scopeId, SkillReferenceBO skill) {
+    private AgentSkill toFrameworkSkill(Long userId, Long scopeId, SkillReferenceBO skill) {
         String content = skills.read(userId, scopeId, skill.getSkillVersionId(), "SKILL.md").getContent();
         var parsed = MarkdownSkillParser.parse(content);
         return AgentSkill.builder().metadata(parsed.getMetadata()).name(skill.getName()).description(skill.getDescription())

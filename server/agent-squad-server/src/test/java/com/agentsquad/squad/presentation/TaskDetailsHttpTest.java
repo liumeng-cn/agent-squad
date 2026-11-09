@@ -1,9 +1,11 @@
 package com.agentsquad.squad.presentation;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.mapper.TaskEventMapper;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.enums.AccountRole;
+import com.agentsquad.squad.enums.ApiCode;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.mapper.InteractionMapper;
 import com.agentsquad.squad.model.vo.ArtifactVO;
@@ -29,7 +31,6 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -44,15 +45,15 @@ class TaskDetailsHttpTest {
     @Test
     void protectsArtifactsReconciliationAndInteraction(@TempDir Path directory) throws Exception {
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class,
-                "--server.port=0", "--spring.datasource.url=" + MySqlTestDatabase.url(directory.resolve("squad")),
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--server.port=0", "--spring.datasource.url=" + PostgresTestDatabase.url(directory.resolve("squad")),
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(), "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.auth.username=tester", "--agentsquad.auth.password=test-only",
                 "--agentsquad.model.api-key=test-only", "--agentsquad.model.base-url=http://127.0.0.1:1/v1",
                 "--agentsquad.model.name=test-model",
                 "--agentsquad.delivery.enabled=true", "--agentsquad.delivery.poll-delay-ms=600000",
                 "--agentsquad.projection.poll-delay-ms=600000")) {
             MockMvc mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();
-            String userId = "00000000-0000-0000-0000-000000000001";
+            Long userId = 1L;
             AuthView actor = new AuthView(userId, "tester", java.util.List.of(AccountRole.USER), null);
             ObjectMapper json = context.getBean(ObjectMapper.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
@@ -61,18 +62,20 @@ class TaskDetailsHttpTest {
             String body = mvc.perform(multipart("/api/v1/artifacts").file(file).with(TestAssertion.as(userId, "USER"))
                             .header("Idempotency-Key", "upload-1"))
                     .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-            String artifactId = ApiResultJson.data(json, body).path("artifactId").asText();
+            Long artifactId = ApiResultJson.data(json, body).path("artifactId").asLong();
             assertThat(body).doesNotContain("content_bytes", "userId", "uploadKey");
             mvc.perform(multipart("/api/v1/artifacts").file(file).with(TestAssertion.as(userId, "USER"))
                             .header("Idempotency-Key", "upload-1"))
                     .andExpect(status().isCreated());
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_artifact", Integer.class)).isEqualTo(1);
-            mvc.perform(multipart("/api/v1/artifacts").file(new MockMultipartFile("file", "other.txt", "text/plain", bytes))
+            String conflictUpload = mvc.perform(multipart("/api/v1/artifacts").file(new MockMultipartFile("file", "other.txt", "text/plain", bytes))
                             .with(TestAssertion.as(userId, "USER")).header("Idempotency-Key", "upload-1"))
-                    .andExpect(status().isConflict());
-            mvc.perform(multipart("/api/v1/artifacts").file(new MockMultipartFile("file", "bad.html", "text/html", bytes))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(ApiResultJson.code(json, conflictUpload)).isEqualTo(ApiCode.CONFLICT.getCode());
+            String badType = mvc.perform(multipart("/api/v1/artifacts").file(new MockMultipartFile("file", "bad.html", "text/html", bytes))
                             .with(TestAssertion.as(userId, "USER")).header("Idempotency-Key", "bad-type"))
-                    .andExpect(status().isBadRequest());
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(ApiResultJson.code(json, badType)).isEqualTo(ApiCode.BAD_REQUEST.getCode());
             mvc.perform(multipart("/api/v1/artifacts").file(file).header("Idempotency-Key", "identity-missing"))
                     .andExpect(status().isUnauthorized());
             assertThat(mvc.perform(get("/api/v1/artifacts/{id}/content", artifactId).with(TestAssertion.as(userId, "USER")))
@@ -81,33 +84,41 @@ class TaskDetailsHttpTest {
                     "corrupt.txt", "before".getBytes(StandardCharsets.UTF_8));
             jdbc.update("UPDATE sq_artifact SET content_bytes = ? WHERE artifact_id = ?",
                     "after".getBytes(StandardCharsets.UTF_8), corrupted.artifactId());
-            mvc.perform(get("/api/v1/artifacts/{id}/content", corrupted.artifactId()).with(TestAssertion.as(userId, "USER")))
-                    .andExpect(status().isConflict());
-            String otherUserId = UUID.randomUUID().toString();
-            mvc.perform(get("/api/v1/artifacts/{id}/content", artifactId).with(TestAssertion.as(otherUserId, "USER"))).andExpect(status().isNotFound());
-            mvc.perform(get("/api/v1/artifacts/{id}/content", UUID.randomUUID()).with(TestAssertion.as(userId, "USER"))).andExpect(status().isNotFound());
+            String corruptedBody = mvc.perform(get("/api/v1/artifacts/{id}/content", corrupted.artifactId()).with(TestAssertion.as(userId, "USER")))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(ApiResultJson.code(json, corruptedBody)).isEqualTo(ApiCode.CONFLICT.getCode());
+            Long otherUserId = IdWorker.getId();
+            String foreignArtifact = mvc.perform(get("/api/v1/artifacts/{id}/content", artifactId).with(TestAssertion.as(otherUserId, "USER")))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(ApiResultJson.code(json, foreignArtifact)).isEqualTo(ApiCode.NOT_FOUND.getCode());
+            String missingArtifact = mvc.perform(get("/api/v1/artifacts/{id}/content", IdWorker.getId()).with(TestAssertion.as(userId, "USER")))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(ApiResultJson.code(json, missingArtifact)).isEqualTo(ApiCode.NOT_FOUND.getCode());
 
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
-            String conversation = tasks.createConversation(actor.userId(), "页面验收").conversationId();
-            mvc.perform(post("/api/v1/conversations/{id}/tasks", conversation).with(TestAssertion.as(userId, "USER"))
+            Long conversation = tasks.createConversation(actor.userId(), "页面验收").conversationId();
+            String invalidAttachment = mvc.perform(post("/api/v1/conversations/{id}/tasks", conversation).with(TestAssertion.as(userId, "USER"))
                             .header("Idempotency-Key", "invalid-attachment")
                             .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of(
-                                    "message", "引用不存在的文件", "artifactIds", List.of(UUID.randomUUID().toString())))))
-                    .andExpect(status().isNotFound());
+                                    "message", "引用不存在的文件", "artifactIds", List.of(IdWorker.getId())))))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(ApiResultJson.code(json, invalidAttachment)).isEqualTo(ApiCode.NOT_FOUND.getCode());
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_goal_task", Integer.class)).isZero();
             String taskBody = mvc.perform(post("/api/v1/conversations/{id}/tasks", conversation).with(TestAssertion.as(userId, "USER"))
                             .header("Idempotency-Key", "task-1")
                             .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of(
                                     "message", "写一篇文章", "artifactIds", List.of(artifactId)))))
                     .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString();
-            String taskId = ApiResultJson.data(json, taskBody).path("taskId").asText();
+            Long taskId = ApiResultJson.data(json, taskBody).path("taskId").asLong();
             jdbc.update("UPDATE sq_command SET status = 'CANCELLED' WHERE task_id = ?", taskId);
             assertThat(mvc.perform(get("/api/v1/tasks/{id}/artifacts", taskId).with(TestAssertion.as(userId, "USER")))
-                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).contains(artifactId);
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).contains(String.valueOf(artifactId));
             mvc.perform(get("/api/v1/tasks/{id}/jobs", taskId).with(TestAssertion.as(userId, "USER"))).andExpect(status().isOk());
-            mvc.perform(get("/api/v1/tasks/{id}/jobs", taskId).with(TestAssertion.as(otherUserId, "USER"))).andExpect(status().isNotFound());
-            String binding = jdbc.queryForObject("SELECT binding_id FROM sq_runtime_binding WHERE task_id = ?", String.class, taskId);
-            String operationId = UUID.randomUUID().toString();
+            String foreignJobs = mvc.perform(get("/api/v1/tasks/{id}/jobs", taskId).with(TestAssertion.as(otherUserId, "USER")))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(ApiResultJson.code(json, foreignJobs)).isEqualTo(ApiCode.NOT_FOUND.getCode());
+            Long binding = jdbc.queryForObject("SELECT binding_id FROM sq_runtime_binding WHERE task_id = ?", Long.class, taskId);
+            Long operationId = IdWorker.getId();
             jdbc.update("""
                             INSERT INTO sq_operation (operation_id, user_id, task_id, binding_id, framework_turn_id,
                               tool_call_id, tool_key, tool_version, effect, request_hash, arguments_json, status, scope_id)
@@ -120,22 +131,25 @@ class TaskDetailsHttpTest {
             assertThat(ApiResultJson.data(json, detail).path("canReconcile").asBoolean()).isFalse();
             String reconcile = json.writeValueAsString(Map.of("expectedVersion", 0, "disposition", "UNRESOLVED",
                     "evidenceRefs", List.of(artifactId), "note", "仍需进一步确认"));
-            mvc.perform(post("/api/v1/operations/{id}/reconcile", operationId).with(TestAssertion.as(userId, "USER"))
+            String userReconcile = mvc.perform(post("/api/v1/operations/{id}/reconcile", operationId).with(TestAssertion.as(userId, "USER"))
                             .contentType(MediaType.APPLICATION_JSON).content(reconcile))
-                    .andExpect(status().isForbidden());
-            mvc.perform(post("/api/v1/operations/{id}/reconcile", operationId).with(TestAssertion.as(actor.userId(), "OPERATOR"))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(ApiResultJson.code(json, userReconcile)).isEqualTo(ApiCode.FORBIDDEN.getCode());
+            String operatorReconcile = mvc.perform(post("/api/v1/operations/{id}/reconcile", operationId).with(TestAssertion.as(actor.userId(), "OPERATOR"))
                             .contentType(MediaType.APPLICATION_JSON).content(reconcile))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(ApiResultJson.code(json, operatorReconcile)).isEqualTo(ApiCode.FORBIDDEN.getCode());
             jdbc.update("INSERT INTO sq_operation_reconciler (user_id, task_id, scope_id) SELECT user_id, task_id, scope_id FROM sq_goal_task WHERE user_id = ? AND task_id = ?", actor.userId(), taskId);
             mvc.perform(post("/api/v1/operations/{id}/reconcile", operationId).with(TestAssertion.as(actor.userId(), "OPERATOR"))
                             .contentType(MediaType.APPLICATION_JSON).content(reconcile))
                     .andExpect(status().isOk());
             assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id = ?", String.class, operationId)).isEqualTo("UNKNOWN");
-            mvc.perform(post("/api/v1/operations/{id}/reconcile", operationId).with(TestAssertion.as(actor.userId(), "OPERATOR"))
+            String repeatedReconcile = mvc.perform(post("/api/v1/operations/{id}/reconcile", operationId).with(TestAssertion.as(actor.userId(), "OPERATOR"))
                             .contentType(MediaType.APPLICATION_JSON).content(reconcile))
-                    .andExpect(status().isConflict());
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(ApiResultJson.code(json, repeatedReconcile)).isEqualTo(ApiCode.CONFLICT.getCode());
 
-            String interactionId = UUID.randomUUID().toString();
+            Long interactionId = IdWorker.getId();
             String schema = context.getBean(InputFormSchemaService.class).normalize(json.readTree("""
                     {"type":"object","properties":{"style":{"type":"string","enum":["正式","轻松"]}},"required":["style"]}
                     """)).toString();
@@ -144,10 +158,11 @@ class TaskDetailsHttpTest {
                     "input-hash", 0, LocalDateTime.now().plusHours(1), actor.userId(), "tester");
             String response = json.writeValueAsString(Map.of("expectedVersion", 0,
                     "answer", Map.of("kind", "INPUT", "value", Map.of("style", "正式"))));
-            mvc.perform(post("/api/v1/interactions/{id}/responses", interactionId).with(TestAssertion.as(userId, "USER"))
+            String invalidAnswer = mvc.perform(post("/api/v1/interactions/{id}/responses", interactionId).with(TestAssertion.as(userId, "USER"))
                             .header("Idempotency-Key", "answer-1")
                             .contentType(MediaType.APPLICATION_JSON).content(response.replace("正式", "不允许")))
-                    .andExpect(status().isBadRequest());
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(ApiResultJson.code(json, invalidAnswer)).isEqualTo(ApiCode.BAD_REQUEST.getCode());
             for (int i = 0; i < 2; i++) {
                 mvc.perform(post("/api/v1/interactions/{id}/responses", interactionId).with(TestAssertion.as(userId, "USER"))
                         .header("Idempotency-Key", "answer-1")
@@ -166,7 +181,9 @@ class TaskDetailsHttpTest {
             assertThat(ApiResultJson.data(json, snapshot).path("answer").path("completed").asBoolean()).isFalse();
             assertThat(ApiResultJson.data(json, snapshot).path("task").path("status").asText()).isEqualTo("PARTIAL");
             jdbc.update("UPDATE sq_conversation SET status = 'DELETING' WHERE conversation_id = ?", conversation);
-            mvc.perform(get("/api/v1/artifacts/{id}/content", artifactId).with(TestAssertion.as(userId, "USER"))).andExpect(status().isNotFound());
+            String deletedContent = mvc.perform(get("/api/v1/artifacts/{id}/content", artifactId).with(TestAssertion.as(userId, "USER")))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(ApiResultJson.code(json, deletedContent)).isEqualTo(ApiCode.NOT_FOUND.getCode());
         }
     }
 }

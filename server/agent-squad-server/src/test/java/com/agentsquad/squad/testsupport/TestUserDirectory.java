@@ -14,21 +14,21 @@ public final class TestUserDirectory {
     private TestUserDirectory() {
     }
 
-    public static void activate(ConfigurableApplicationContext context, String... userIds) {
+    public static void activate(ConfigurableApplicationContext context, Long... userIds) {
         JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-        for (String userId : userIds) {
-            if (userId == null || userId.isBlank()) {
+        for (Long userId : userIds) {
+            if (userId == null || userId <= 0) {
                 continue;
             }
             jdbc.update("INSERT INTO sq_user (user_id, username, display_name, password_hash, role, status, "
                             + "auth_version, must_change_password, creator_id, creator_name) "
-                            + "VALUES (?, ?, ?, 'test-only', 'USER', 'ACTIVE', 0, 0, 'test', 'test') "
-                            + "ON DUPLICATE KEY UPDATE status = 'ACTIVE', del_flag = '0'",
+                            + "VALUES (?, ?, ?, 'test-only', 'USER', 'ACTIVE', 0, false, 0, 'test') "
+                            + "ON CONFLICT (user_id) DO UPDATE SET status = 'ACTIVE', del_flag = '0'",
                     userId, "test-" + userId, userId);
         }
     }
 
-    public static void disable(ConfigurableApplicationContext context, String userId) {
+    public static void disable(ConfigurableApplicationContext context, Long userId) {
         context.getBean(JdbcTemplate.class).update(
                 "UPDATE sq_user SET status = 'DISABLED' WHERE user_id = ?", userId);
     }

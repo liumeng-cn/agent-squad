@@ -2,7 +2,7 @@ package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.service.ExecutionFailureService;
 import com.agentsquad.squad.service.UserStatusGuardService;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.agent.middleware.ModelBudgetMiddleware;
 import com.agentsquad.squad.config.properties.WorkerModelProfileProperties;
@@ -92,13 +92,13 @@ class ModelBudgetMiddlewareTest {
     private ConfigurableApplicationContext start(Path directory) {
         return SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=none",
-                "--spring.datasource.url=" + MySqlTestDatabase.url(directory.resolve("squad")),
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver");
+                "--spring.datasource.url=" + PostgresTestDatabase.url(directory.resolve("squad")),
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                "--spring.datasource.driver-class-name=org.postgresql.Driver");
     }
 
     private Fixture fixture(ConfigurableApplicationContext spring) {
-        String userId = "00000000-0000-0000-0000-000000000001";
+        Long userId = 1L;
         GoalTaskService tasks = spring.getBean(GoalTaskService.class);
         ConversationVO conversation = tasks.createConversation(userId, "模型预算");
         TaskReceiptVO task = tasks.submit(userId, conversation.conversationId(),
@@ -109,7 +109,7 @@ class ModelBudgetMiddlewareTest {
                 WHERE user_id = ? AND task_id = ?
                 """, String.class, userId, task.taskId());
         RuntimeContext runtime = RuntimeContext.builder()
-                .userId(userId).sessionId(sessionId).build();
+                .userId(String.valueOf(userId)).sessionId(sessionId).build();
         runtime.put(SessionRecorder.TURN_ID_KEY, "turn-model-budget");
 
         WorkerModelProfileProperties profile = new WorkerModelProfileProperties();
@@ -137,6 +137,6 @@ class ModelBudgetMiddlewareTest {
     }
 
     private record Fixture(ModelBudgetMiddleware middleware, RuntimeContext context,
-                           JdbcTemplate jdbc, String taskId) {
+                           JdbcTemplate jdbc, Long taskId) {
     }
 }

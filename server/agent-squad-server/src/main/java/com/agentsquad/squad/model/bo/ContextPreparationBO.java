@@ -22,11 +22,11 @@ public class ContextPreparationBO {
     /**
      * 资源归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 所属目标ID
      */
-    private String taskId;
+    private Long taskId;
     /**
      * 任务输入内容（JSON）
      */

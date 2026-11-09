@@ -12,19 +12,19 @@ import org.apache.ibatis.annotations.Param;
  */
 @Mapper
 public interface FinalDeliveryMapper {
-    FinalDeliveryPO lockCurrent(@Param("userId") String userId, @Param("messageId") String messageId);
+    FinalDeliveryPO lockCurrent(@Param("userId") Long userId, @Param("messageId") Long messageId);
 
-    int insert(@Param("deliveryId") String deliveryId, @Param("userId") String userId,
-               @Param("messageId") String messageId, @Param("generation") long generation,
-               @Param("executionId") String executionId);
+    int insert(@Param("deliveryId") Long deliveryId, @Param("userId") Long userId,
+               @Param("messageId") Long messageId, @Param("generation") long generation,
+               @Param("executionId") Long executionId);
 
-    int transfer(@Param("userId") String userId, @Param("messageId") String messageId,
-                 @Param("generation") long generation, @Param("executionId") String executionId,
-                 @Param("taskId") String taskId);
+    int transfer(@Param("userId") Long userId, @Param("messageId") Long messageId,
+                 @Param("generation") long generation, @Param("executionId") Long executionId,
+                 @Param("taskId") Long taskId);
 
-    int publish(@Param("userId") String userId, @Param("messageId") String messageId,
-                @Param("generation") long generation, @Param("answerId") String answerId);
+    int publish(@Param("userId") Long userId, @Param("messageId") Long messageId,
+                @Param("generation") long generation, @Param("answerId") Long answerId);
 
-    int close(@Param("userId") String userId, @Param("messageId") String messageId,
+    int close(@Param("userId") Long userId, @Param("messageId") Long messageId,
               @Param("generation") long generation);
 }

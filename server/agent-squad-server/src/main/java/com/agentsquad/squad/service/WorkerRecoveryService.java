@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.utils.ContentDigests;
 import com.agentsquad.squad.utils.RuntimePayloads;
 import com.agentsquad.squad.enums.RuntimeCommandAction;
@@ -77,7 +78,7 @@ public class WorkerRecoveryService {
     /**
      * 投影器仅对当前运行中 Worker 检查原始 SUBMIT 的 SDK 收据。
      */
-    public String originalSubmitCommandId(ProjectionTargetBO target) {
+    public Long originalSubmitCommandId(ProjectionTargetBO target) {
         WorkerLaunchBO job = dispatchMapper.findByBinding(target.getUserId(), target.getBindingId());
         if (job == null || !"RUNNING".equals(job.getJobStatus())
                 || !"ACTIVE".equals(job.getPlanStatus()) || job.getCancelRequestedAt() != null) {
@@ -145,7 +146,7 @@ public class WorkerRecoveryService {
             return;
         }
         String payload = RuntimePayloads.toJson(objectMapper, Map.of("turnId", receipt.turnId()));
-        String commandId = UUID.randomUUID().toString();
+        Long commandId = IdWorker.getId();
         commandMapper.insertControl(commandId, target.getUserId(), scopeKey, recoveryKey,
                 ContentDigests.sha256(payload), target.getTaskId(), target.getBindingId(),
                 RuntimeCommandAction.RESUME.name(), payload, LocalDateTime.now(ZoneOffset.UTC));
@@ -157,8 +158,8 @@ public class WorkerRecoveryService {
      * SDK 明确拒绝或有界重试耗尽时，只阻塞当前失败分支并保存候选，父目标保持可核对。
      */
     @Transactional
-    public void blockRejectedResume(String userId, String taskId, String bindingId,
-                                    String commandId, String deliveryToken, String errorCode) {
+    public void blockRejectedResume(Long userId, Long taskId, Long bindingId,
+                                    Long commandId, String deliveryToken, String errorCode) {
         taskMapper.lockOwned(userId, taskId);
         Long currentVersion = planMapper.lockTaskPlanVersion(userId, taskId);
         if (deliveryMapper.blockRejectedResume(commandId, deliveryToken, errorCode) != 1) {
@@ -186,7 +187,7 @@ public class WorkerRecoveryService {
     /**
      * 原生回合已结束时只关闭多余的恢复命令，终态交给同一原生日志的 run/end 投影裁决。
      */
-    public void discardSettledResume(String commandId, String deliveryToken) {
+    public void discardSettledResume(Long commandId, String deliveryToken) {
         deliveryMapper.blockRejectedResume(commandId, deliveryToken, "NATIVE_TURN_SETTLED");
     }
 }

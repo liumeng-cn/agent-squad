@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.utils.RuntimePayloads;
@@ -43,7 +44,7 @@ public class SkillRuntimeService {
      * 复用会话与执行所有者锁序，使同 Scope 并发首次读取只能固定一个目录，不授予任何工具权限。
      */
     @Transactional
-    public SkillCatalogBO freeze(String userId, String scopeId) {
+    public SkillCatalogBO freeze(Long userId, Long scopeId) {
         scopes.lockOwned(userId, scopeId, true);
         scopes.requireReadable(userId, scopeId);
         if (skillMapper.catalogExists(userId, scopeId).isEmpty()) {
@@ -51,9 +52,9 @@ public class SkillRuntimeService {
             if (versions.size() > 64) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "可用技能超过 64 项，请停用不需要的技能后重试");
             }
-            skillMapper.insertCatalog(UUID.randomUUID().toString(), userId, scopeId);
+            skillMapper.insertCatalog(IdWorker.getId(), userId, scopeId);
             for (SkillVersionPO version : versions) {
-                skillMapper.insertReference(UUID.randomUUID().toString(), userId, scopeId, version);
+                skillMapper.insertReference(IdWorker.getId(), userId, scopeId, version);
             }
         }
         SkillCatalogBO catalog = new SkillCatalogBO(scopeId, skillMapper.references(userId, scopeId));
@@ -65,7 +66,7 @@ public class SkillRuntimeService {
      * 模型调用、恢复和交付前可重复检查；不存在目录时不隐式补选新技能。
      */
     @Transactional
-    public void validate(String userId, String scopeId) {
+    public void validate(Long userId, Long scopeId) {
         scopes.lockOwned(userId, scopeId, false);
         scopes.requireReadable(userId, scopeId);
         validateReferences(userId, skillMapper.references(userId, scopeId));
@@ -75,7 +76,7 @@ public class SkillRuntimeService {
      * 只读取当前 Scope 已固定版本的包内文件；不访问宿主文件系统，不允许名称替代版本身份。
      */
     @Transactional
-    public SkillTextFilePO read(String userId, String scopeId, String versionId, String path) {
+    public SkillTextFilePO read(Long userId, Long scopeId, Long versionId, String path) {
         scopes.lockOwned(userId, scopeId, false);
         scopes.requireReadable(userId, scopeId);
         SkillReferenceBO reference = requireReference(userId, scopeId, versionId);
@@ -88,7 +89,7 @@ public class SkillRuntimeService {
     }
 
     @Transactional
-    public List<SkillTextFilePO> files(String userId, String scopeId, String versionId) {
+    public List<SkillTextFilePO> files(Long userId, Long scopeId, Long versionId) {
         scopes.lockOwned(userId, scopeId, false);
         scopes.requireReadable(userId, scopeId);
         SkillReferenceBO reference = requireReference(userId, scopeId, versionId);
@@ -100,7 +101,7 @@ public class SkillRuntimeService {
      * 工具依赖只做交集验证；缺少能力不会自动安装，也不会扩大调用方原有工具许可。
      */
     @Transactional
-    public void requireCapabilities(String userId, String scopeId, String versionId, Set<String> allowedTools) {
+    public void requireCapabilities(Long userId, Long scopeId, Long versionId, Set<String> allowedTools) {
         scopes.lockOwned(userId, scopeId, false);
         scopes.requireReadable(userId, scopeId);
         SkillReferenceBO reference = requireReference(userId, scopeId, versionId);
@@ -118,14 +119,14 @@ public class SkillRuntimeService {
         }
     }
 
-    private SkillReferenceBO requireReference(String userId, String scopeId, String versionId) {
+    private SkillReferenceBO requireReference(Long userId, Long scopeId, Long versionId) {
         return skillMapper.references(userId, scopeId).stream()
                 .filter(reference -> reference.getSkillVersionId().equals(versionId)).findFirst()
                 .orElseThrow(() -> new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN,
                         "当前执行未获授权使用此技能版本"));
     }
 
-    private void validateReferences(String userId, List<SkillReferenceBO> references) {
+    private void validateReferences(Long userId, List<SkillReferenceBO> references) {
         for (SkillReferenceBO reference : references) {
             SkillVersionPO current = skillMapper.lockVersion(userId, reference.getSkillVersionId());
             if (current == null || "REVOKED".equals(current.getStatus())
@@ -140,7 +141,7 @@ public class SkillRuntimeService {
     /**
      * 每个名称只选择最新启用版本；旧执行的引用由独立固定表保存。
      */
-    private List<SkillVersionPO> listSelectable(String userId) {
+    private List<SkillVersionPO> listSelectable(Long userId) {
         // 先按稳定顺序锁版本，再锁各版本授权；不使用带快照子查询的 JOIN 推断当前启用版本。
         List<SkillVersionPO> versions = skillMapper.lockVersions(userId);
         Map<String, SkillVersionPO> selected = new LinkedHashMap<>();

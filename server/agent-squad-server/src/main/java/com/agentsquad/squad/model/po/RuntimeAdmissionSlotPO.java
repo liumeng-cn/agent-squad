@@ -25,15 +25,15 @@ public class RuntimeAdmissionSlotPO {
     /**
      * 归属用户标识
      */
-    private String userId;
+    private Long userId;
     /**
      * 固定原生会话绑定标识
      */
-    private String bindingId;
+    private Long bindingId;
     /**
      * 持有占位的原始命令标识
      */
-    private String commandId;
+    private Long commandId;
     /**
      * 原始命令动作
      */

@@ -58,7 +58,7 @@ public class PlanAcceptanceService {
             for (var review : reviews) {
                 if (review == null || review.criterionId() == null || review.verdict() == null
                         || review.evidenceRefs() == null || review.evidenceRefs().size() > 20
-                        || review.evidenceRefs().stream().anyMatch(ref -> ref == null || ref.length() > 80)
+                        || review.evidenceRefs().stream().anyMatch(ref -> ref == null || ref <= 0)
                         || byId.put(review.criterionId(), review) != null
                         || definition.acceptanceCriteria().stream().noneMatch(c -> c.criterionId().equals(review.criterionId()))) {
                     throw invalid("检查条件或证据格式无效");
@@ -70,7 +70,7 @@ public class PlanAcceptanceService {
             var review = byId.get(criterion.criterionId());
             var verdict = PlanAcceptanceVerdict.UNKNOWN;
             String verifier = "UNVERIFIED";
-            List<String> refs = List.of();
+            List<Long> refs = List.of();
             if (criterion.verificationType() == AcceptanceVerificationType.DETERMINISTIC
                     && criterion.deterministicCheck() == DeterministicAcceptanceCheck.REQUIRED_RESULTS_READY) {
                 var requiredNodes = definition.nodes().stream().filter(node -> node.required()).map(node -> node.nodeKey()).toList();
@@ -83,7 +83,7 @@ public class PlanAcceptanceService {
                 refs = requiredJobs.stream().map(WorkerJobPO::getJobId).toList();
             } else if (review != null && !review.evidenceRefs().isEmpty()) {
                 if (criterion.verificationType() == AcceptanceVerificationType.MODEL_REVIEW) {
-                    for (String ref : review.evidenceRefs()) {
+                    for (Long ref : review.evidenceRefs()) {
                         if (jobs.stream().noneMatch(job -> job.getJobId().equals(ref) && job.getPlanVersion() == plan.getPlanVersion()
                                 && WorkerJobStatus.SUCCEEDED.name().equals(job.getStatus()) && job.getResultJson() != null)) {
                             throw invalid("模型检查引用的结果不属于当前计划的成功工作");
@@ -125,7 +125,7 @@ public class PlanAcceptanceService {
      * 仅当前目标 Master 可以请求验收，问题按不可变计划生成；实际挂起仍使用 SDK 公开机制。
      */
     @Transactional
-    public UserAcceptanceReviewBO prepareUserReview(String userId, String sessionId, AcceptanceReviewRequestBO request) {
+    public UserAcceptanceReviewBO prepareUserReview(Long userId, String sessionId, AcceptanceReviewRequestBO request) {
         scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), true);
         var context = plans.lockMasterContext(userId, sessionId);
         if (context == null || context.isCancellationRequested() || request == null

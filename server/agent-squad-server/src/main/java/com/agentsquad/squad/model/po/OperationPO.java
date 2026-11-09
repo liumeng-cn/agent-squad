@@ -22,23 +22,23 @@ public class OperationPO {
     /**
      * 操作ID
      */
-    private String operationId;
+    private Long operationId;
     /**
      * 资源归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 可选所属目标ID；普通回复为空
      */
-    private String taskId;
+    private Long taskId;
     /**
      * 节点ID；Master可空
      */
-    private String jobId;
+    private Long jobId;
     /**
      * 原生调用所属绑定
      */
-    private String bindingId;
+    private Long bindingId;
     /**
      * 原生TurnID
      */
@@ -66,7 +66,7 @@ public class OperationPO {
     /**
      * 用户连接ID
      */
-    private String connectionId;
+    private Long connectionId;
     /**
      * 派发时连接版本
      */
@@ -110,7 +110,7 @@ public class OperationPO {
     /**
      * 统一执行作用域ID
      */
-    private String scopeId;
+    private Long scopeId;
     /**
      * 该操作固定的预算预留稳定键
      */

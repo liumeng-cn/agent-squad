@@ -41,7 +41,7 @@ public class ExecutionTrace {
     /**
      * 在新执行范围受理时记录当前请求上下文，只持久化 W3C Trace 字段。
      */
-    public void capture(String userId, String scopeId) {
+    public void capture(Long userId, Long scopeId) {
         var current = tracer.currentSpan();
         if (current == null) {
             return;
@@ -57,21 +57,21 @@ public class ExecutionTrace {
     /**
      * 命令领取和投递共用持久父上下文，异常与正常退出均关闭线程内关联。
      */
-    public void deliver(String commandId, Runnable action) {
-        run(scopes.commandTrace(commandId), "squad.command.deliver", "squad.command.id", commandId, action);
+    public void deliver(Long commandId, Runnable action) {
+        run(scopes.commandTrace(commandId), "squad.command.deliver", "squad.command.id", String.valueOf(commandId), action);
     }
 
     /**
      * 将一次真实事件批次及其提交日志关联到原始受理链路。
      */
-    public void project(String userId, String bindingId, Runnable action) {
-        run(scopes.bindingTrace(userId, bindingId), "squad.journal.apply", "squad.binding.id", bindingId, action);
+    public void project(Long userId, Long bindingId, Runnable action) {
+        run(scopes.bindingTrace(userId, bindingId), "squad.journal.apply", "squad.binding.id", String.valueOf(bindingId), action);
     }
 
     /**
      * 每次订阅单独创建 Span，结束、失败与取消都以实际订阅生命周期为准。
      */
-    public <T> Flux<T> session(String userId, String sessionId, String name, Supplier<Flux<T>> action) {
+    public <T> Flux<T> session(Long userId, String sessionId, String name, Supplier<Flux<T>> action) {
         return Mono.fromCallable(() -> Optional.ofNullable(scopes.sessionTrace(userId, sessionId)))
                 .subscribeOn(Schedulers.boundedElastic())
                 .flatMapMany(parent -> {

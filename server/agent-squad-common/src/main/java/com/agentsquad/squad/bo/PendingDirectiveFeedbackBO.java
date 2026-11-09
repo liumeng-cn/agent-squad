@@ -5,5 +5,5 @@ package com.agentsquad.squad.bo;
  * <p>
  * 仅返回给已授权的目标协调工具，不放入异常消息或日志。
  */
-public record PendingDirectiveFeedbackBO(String directiveId, long expectedVersion, String kind, String content) {
+public record PendingDirectiveFeedbackBO(Long directiveId, long expectedVersion, String kind, String content) {
 }

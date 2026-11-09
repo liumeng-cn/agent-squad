@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.mapper.CompletionMapper;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
@@ -76,7 +77,7 @@ public class ConversationDeletionService {
      * 运行中目标写停止命令，由原生投影收尾。任何失败整体回滚。</p>
      */
     @Transactional
-    public void delete(String userId, String conversationId, String idempotencyKey, long expectedVersion) {
+    public void delete(Long userId, Long conversationId, String idempotencyKey, long expectedVersion) {
         if (idempotencyKey == null || idempotencyKey.isBlank() || idempotencyKey.length() > 160) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "幂等键长度必须为 1 到 160");
         }
@@ -106,18 +107,18 @@ public class ConversationDeletionService {
         }
         responseControls.cancelForDeletion(userId, conversationId);
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
-        String activeTaskId = conversation.getActiveTaskId();
+        Long activeTaskId = conversation.getActiveTaskId();
         if (activeTaskId != null) {
             settleActiveTask(userId, conversationId, activeTaskId, now);
         }
-        commandMapper.insertControl(UUID.randomUUID().toString(), userId, scopeKey,
+        commandMapper.insertControl(IdWorker.getId(), userId, scopeKey,
                 idempotencyKey, payloadHash, null, null,
                 RuntimeCommandAction.DELETE_CONVERSATION.name(), payloadJson, now);
         log.info("会话删除受理成功 conversationId={} userId={} activeTaskId={}",
                 conversationId, userId, activeTaskId);
     }
 
-    private void settleActiveTask(String userId, String conversationId, String taskId, LocalDateTime now) {
+    private void settleActiveTask(Long userId, Long conversationId, Long taskId, LocalDateTime now) {
         TaskPO task = taskMapper.lockOwned(userId, taskId);
         if (task == null || GoalTaskStatus.valueOf(task.getStatus()).isTerminal()) {
             conversationMapper.clearActiveTask(userId, conversationId, taskId);
@@ -142,7 +143,7 @@ public class ConversationDeletionService {
         taskControls.cancel(userId, taskId, "conversation-delete", task.getVersion());
     }
 
-    private void publishTaskCompleted(String userId, String taskId, String status, LocalDateTime now) {
+    private void publishTaskCompleted(Long userId, Long taskId, String status, LocalDateTime now) {
         if (projectionMapper.reserveEventSequence(userId, taskId) != 1) {
             throw new IllegalStateException("事件序号保留失败");
         }

@@ -23,7 +23,7 @@
         </constructor>
     </resultMap>
 
-    <select id="findScopeBySession" resultType="java.lang.String">
+    <select id="findScopeBySession" resultType="java.lang.Long">
         SELECT scope_id FROM sq_runtime_binding
         WHERE user_id = #{userId} AND framework_session_id = #{sessionId}
     </select>
@@ -36,7 +36,7 @@
     </select>
 
     <insert id="ensureUser">
-        INSERT INTO sq_user_budget (user_id) VALUES (#{userId}) ON DUPLICATE KEY UPDATE user_id = VALUES(user_id)
+        INSERT INTO sq_user_budget (user_id) VALUES (#{userId}) ON CONFLICT DO NOTHING
     </insert>
 
     <select id="lockUser" resultType="java.lang.String">

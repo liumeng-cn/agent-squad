@@ -7,5 +7,5 @@ import com.agentsquad.squad.model.bo.ReplyPreviewBO;
  * <p>
  * 无订阅者时可丢失，任何消费者都不能把预览当作持久终稿或执行完成证据。
  */
-public record ReplyPreviewSignal(String userId, String conversationId, ReplyPreviewBO preview) {
+public record ReplyPreviewSignal(Long userId, Long conversationId, ReplyPreviewBO preview) {
 }

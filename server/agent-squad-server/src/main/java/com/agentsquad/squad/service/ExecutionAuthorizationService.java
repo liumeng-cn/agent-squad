@@ -34,7 +34,7 @@ public class ExecutionAuthorizationService {
      * 锁顺序为会话/所有者、技能授权、记忆代际，事务内不调用模型或沙箱。
      */
     @Transactional
-    public ExecutionContextSnapshotBO prepare(String userId, String scopeId) {
+    public ExecutionContextSnapshotBO prepare(Long userId, Long scopeId) {
         userStatus.requireActive(userId);
         scopes.lockOwned(userId, scopeId, true);
         validate(userId, scopeId);
@@ -48,7 +48,7 @@ public class ExecutionAuthorizationService {
      * 复验固定引用，允许在结果发布事务中调用；不以新版本替换已经进入原生历史的旧内容。
      */
     @Transactional
-    public void requireScopeCurrent(String userId, String scopeId) {
+    public void requireScopeCurrent(Long userId, Long scopeId) {
         if (scopeMapper.findOwned(userId, scopeId) == null) {
             scopes.requireReadable(userId, scopeId);
         }
@@ -58,17 +58,17 @@ public class ExecutionAuthorizationService {
     }
 
     @Transactional
-    public void requireSessionCurrent(String userId, String sessionId) {
+    public void requireSessionCurrent(Long userId, String sessionId) {
         requireScopeCurrent(userId, scopes.scopeForSession(userId, sessionId));
     }
 
     @Transactional
-    public void requireBindingCurrent(String userId, String bindingId) {
-        String scopeId = scopeMapper.findScopeByBinding(userId, bindingId);
+    public void requireBindingCurrent(Long userId, Long bindingId) {
+        Long scopeId = scopeMapper.findScopeByBinding(userId, bindingId);
         requireScopeCurrent(userId, scopeId);
     }
 
-    private void validate(String userId, String scopeId) {
+    private void validate(Long userId, Long scopeId) {
         try {
             skills.validate(userId, scopeId);
             memories.requireCurrent(userId, scopeId);

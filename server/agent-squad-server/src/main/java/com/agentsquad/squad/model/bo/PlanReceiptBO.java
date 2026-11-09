@@ -7,5 +7,5 @@ import java.util.List;
  * <p>
  * 返回计划标识与全部委派节点 ID，不等待任何子节点执行完成。
  */
-public record PlanReceiptBO(String planId, String taskId, long planVersion, List<String> jobIds) {
+public record PlanReceiptBO(Long planId, Long taskId, long planVersion, List<Long> jobIds) {
 }

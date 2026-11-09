@@ -1,10 +1,14 @@
 package com.agentsquad.squad.memory;
 
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.agentsquad.squad.enums.ApiCode;
+import com.agentsquad.squad.testsupport.ApiResultJson;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.model.dto.MemoryCreateDTO;
 import com.agentsquad.squad.service.MemoryService;
 import com.agentsquad.squad.testsupport.TestAssertion;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
@@ -14,8 +18,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.nio.file.Path;
-import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -28,14 +32,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class MemoryHttpTest {
     @Test
     void enforcesIdentityAndConflictAtManagementBoundary(@TempDir Path directory) throws Exception {
-        String user = UUID.randomUUID().toString();
+        Long user = IdWorker.getId();
         try (var context = SpringApplication.run(AgentSquadApplication.class, "--server.port=0",
-                "--spring.datasource.url=" + MySqlTestDatabase.url(directory.resolve("http")),
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.url=" + PostgresTestDatabase.url(directory.resolve("http")),
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(), "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.delivery.enabled=false", "--agentsquad.auth.username=tester", "--agentsquad.auth.password=test-only",
                 "--agentsquad.auth.user-id=" + user, "--agentsquad.auth.role=USER")) {
             MockMvc mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();
-            String userId = context.getEnvironment().getProperty("agentsquad.auth.user-id");
+            ObjectMapper mapper = context.getBean(ObjectMapper.class);
+            Long userId = context.getEnvironment().getProperty("agentsquad.auth.user-id", Long.class);
             mvc.perform(get("/api/v1/memories")).andExpect(status().isUnauthorized());
             mvc.perform(post("/api/v1/memories").contentType(MediaType.APPLICATION_JSON)
                     .content("{\"key\":\"language\",\"content\":\"中文\"}")).andExpect(status().isUnauthorized());
@@ -50,12 +55,14 @@ class MemoryHttpTest {
             mvc.perform(patch("/api/v1/memories/{id}", id).with(TestAssertion.as(userId, "USER"))
                             .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0,\"content\":\"简体中文\"}"))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.data.memory.version").value(1));
-            mvc.perform(patch("/api/v1/memories/{id}", id).with(TestAssertion.as(userId, "USER"))
+            String staleBody = mvc.perform(patch("/api/v1/memories/{id}", id).with(TestAssertion.as(userId, "USER"))
                             .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0,\"content\":\"不能覆盖\"}"))
-                    .andExpect(status().isConflict());
-            String foreign = context.getBean(MemoryService.class).create(UUID.randomUUID().toString(), new MemoryCreateDTO("foreign", "secret", null)).memory().memoryId();
-            mvc.perform(delete("/api/v1/memories/{id}", foreign).param("expectedVersion", "0").with(TestAssertion.as(userId, "USER")))
-                    .andExpect(status().isNotFound());
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(ApiResultJson.code(mapper, staleBody)).isEqualTo(ApiCode.CONFLICT.getCode());
+            String foreign = String.valueOf(context.getBean(MemoryService.class).create(IdWorker.getId(), new MemoryCreateDTO("foreign", "secret", null)).memory().memoryId());
+            String foreignBody = mvc.perform(delete("/api/v1/memories/{id}", foreign).param("expectedVersion", "0").with(TestAssertion.as(userId, "USER")))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(ApiResultJson.code(mapper, foreignBody)).isEqualTo(ApiCode.NOT_FOUND.getCode());
             mvc.perform(delete("/api/v1/memories/{id}", id).param("expectedVersion", "1").with(TestAssertion.as(userId, "USER")))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.data.memory.status").value("DELETED"))
                     .andExpect(jsonPath("$.data.memory.content").value(""));

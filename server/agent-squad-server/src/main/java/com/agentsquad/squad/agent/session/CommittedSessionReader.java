@@ -26,7 +26,7 @@ public final class CommittedSessionReader {
         this.store = Objects.requireNonNull(store);
     }
 
-    public List<SessionEvent> read(String userId, String agentId, String sessionId, long after, int limit) {
+    public List<SessionEvent> read(Long userId, String agentId, String sessionId, long after, int limit) {
         if (after < 0 || limit < 1 || limit > MAX_READ_BATCH) {
             throw new IllegalArgumentException("原生日志读取范围无效");
         }
@@ -37,12 +37,14 @@ public final class CommittedSessionReader {
      * 按原提交找到所属Turn，再选择该Turn最新执行命令；只识别已提交状态，不伪造进程内starting状态。
      * writer失效时返回interrupted，由独立恢复服务决定是否继续；读取不会自行领取writer。
      */
-    public AgentSession.Task inspect(String userId, String agentId, String sessionId, String commandId) {
+    public AgentSession.Task inspect(Long userId, String agentId, String sessionId, Long commandId) {
         SessionLog log = open(userId, agentId, sessionId);
         var head = log.head();
         var inbox = new SessionInbox(log).snapshot();
+        // 原生命令 ID 在日志中按字符串保存，业务命令 ID 已统一为 Long，比较前需显式转换。
+        String nativeCommandId = String.valueOf(commandId);
         var original = inbox.commands().stream()
-                .filter(command -> command.execution() && command.id().equals(commandId))
+                .filter(command -> command.execution() && command.id().equals(nativeCommandId))
                 .findFirst().orElseThrow(() -> new IllegalArgumentException("原生提交不存在"));
         var latest = original;
         for (var command : inbox.commands()) {
@@ -76,7 +78,7 @@ public final class CommittedSessionReader {
     /**
      * 日志写入者已释放或失效才可认定静止；发出 interrupt 本身不等于运行已经停止。
      */
-    public boolean quiescent(String userId, String agentId, String sessionId) {
+    public boolean quiescent(Long userId, String agentId, String sessionId) {
         var log = open(userId, agentId, sessionId);
         var head = log.head();
         var inbox = new SessionInbox(log).snapshot();
@@ -84,11 +86,11 @@ public final class CommittedSessionReader {
                 && (head.owner() == null || head.leaseUntil() <= System.currentTimeMillis());
     }
 
-    private SessionLog open(String userId, String agentId, String sessionId) {
-        if (userId == null || userId.isBlank()) {
+    private SessionLog open(Long userId, String agentId, String sessionId) {
+        if (userId == null) {
             throw new IllegalArgumentException("必须指定日志归属用户");
         }
-        var context = RuntimeContext.builder().userId(userId).sessionId(sessionId).build();
-        return store.open(new SessionKey(userId, agentId, sessionId), context);
+        var context = RuntimeContext.builder().userId(String.valueOf(userId)).sessionId(sessionId).build();
+        return store.open(new SessionKey(String.valueOf(userId), agentId, sessionId), context);
     }
 }

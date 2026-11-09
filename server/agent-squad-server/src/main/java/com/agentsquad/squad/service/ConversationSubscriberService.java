@@ -28,7 +28,7 @@ public final class ConversationSubscriberService {
     private final AtomicBoolean closed = new AtomicBoolean();
     private final AtomicBoolean sending = new AtomicBoolean();
     private final AtomicBoolean heartbeatPending = new AtomicBoolean();
-    private final java.util.concurrent.ConcurrentHashMap<String, ReplyPreviewBO> previews = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentHashMap<Long, ReplyPreviewBO> previews = new java.util.concurrent.ConcurrentHashMap<>();
     private volatile String cursor;
 
     public ConversationSubscriberService(SseEmitter emitter, String cursor, Executor sender, Runnable onClosed, Runnable authorize) {

@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.mapper.ArtifactMapper;
 import com.agentsquad.squad.model.vo.ArtifactVO;
 import com.agentsquad.squad.policy.ArtifactContentPolicy;
@@ -51,7 +52,7 @@ public class ArtifactDeliveryService {
      * 沙箱结果落库事务内暂存，不立即向用户公开；同运行同路径只能具有同一内容。
      */
     @Transactional
-    public ArtifactStageViewBO stage(SandboxExecutionContextBO context, String executionId, String path, byte[] content) {
+    public ArtifactStageViewBO stage(SandboxExecutionContextBO context, Long executionId, String path, byte[] content) {
         access.requireCurrent(context);
         SandboxPolicy.requirePath(path);
         var run = runs.find(context.userId(), executionId);
@@ -69,7 +70,7 @@ public class ArtifactDeliveryService {
             }
             return view(prior);
         }
-        String id = UUID.randomUUID().toString();
+        Long id = IdWorker.getId();
         stages.insert(id, context.userId(), context.scopeId(), context.bindingId(), executionId,
                 path, name, hash, content, LocalDateTime.now(ZoneOffset.UTC).plusDays(1));
         return new ArtifactStageViewBO(id, executionId, name, hash, content.length, "STAGED", null);
@@ -79,12 +80,12 @@ public class ArtifactDeliveryService {
      * 同事务发布内容、Scope关联和暂存状态；重放返回原产物，不读取模型指定宿主文件。
      */
     @Transactional
-    public ArtifactVO commit(String userId, String sessionId, String guardToken, String stageId, String expectedHash) {
+    public ArtifactVO commit(Long userId, String sessionId, String guardToken, Long stageId, String expectedHash) {
         ArtifactStagePO stage = stages.find(userId, stageId);
         if (stage == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "暂存产物不存在或已过期");
         }
-        SandboxExecutionContextBO context = access.resolve(userId, sessionId, guardToken, "artifact-commit", stageId);
+        SandboxExecutionContextBO context = access.resolve(userId, sessionId, guardToken, "artifact-commit", String.valueOf(stageId));
         if (!stage.getScopeId().equals(context.scopeId()) || !stage.getBindingId().equals(context.bindingId())
                 || expectedHash == null || !expectedHash.equals(stage.getSha256())) {
             throw conflict("产物归属或摘要不匹配");
@@ -102,7 +103,7 @@ public class ArtifactDeliveryService {
             throw conflict("产物运行未成功或内容完整性校验失败");
         }
         String type = ArtifactContentPolicy.mediaType(stage.getFileName(), stage.getContent());
-        String artifactId = UUID.randomUUID().toString();
+        Long artifactId = IdWorker.getId();
         artifacts.insert(artifactId, userId, stage.getFileName(), type, stage.getContent().length, expectedHash,
                 "stage:" + stageId, stage.getContent(), LocalDateTime.now(ZoneOffset.UTC).plusDays(30));
         artifacts.attachScope(userId, context.scopeId(), artifactId);

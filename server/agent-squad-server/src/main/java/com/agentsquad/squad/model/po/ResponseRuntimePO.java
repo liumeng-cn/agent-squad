@@ -25,27 +25,27 @@ public class ResponseRuntimePO {
     /**
      * 回复执行业务ID
      */
-    private String executionId;
+    private Long executionId;
     /**
      * 资源归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 所属会话ID
      */
-    private String conversationId;
+    private Long conversationId;
     /**
      * 来源用户消息ID
      */
-    private String sourceMessageId;
+    private Long sourceMessageId;
     /**
      * 回复执行作用域ID
      */
-    private String scopeId;
+    private Long scopeId;
     /**
      * 固定原生绑定ID
      */
-    private String bindingId;
+    private Long bindingId;
     /**
      * 回复生命周期状态
      */
@@ -81,7 +81,7 @@ public class ResponseRuntimePO {
     /**
      * 授权助手回答消息ID
      */
-    private String answerMessageId;
+    private Long answerMessageId;
     /**
      * 回复完成协议[PROPOSAL-旧候选,NATURAL-自然输出]
      */

@@ -1,5 +1,6 @@
 package com.agentsquad.squad;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import io.agentscope.core.session.SessionKey;
 import org.junit.jupiter.api.Test;
 
@@ -16,7 +17,7 @@ class SessionKeyCompatibilityTest {
 
     @Test
     void shouldBuildSessionKeyWithStableIdentifiers() {
-        String userId = UUID.randomUUID().toString();
+        String userId = IdWorker.getIdStr();
         String sessionId = UUID.randomUUID().toString();
         String agentId = "0123456789abcdef0123456789abcdef";
 

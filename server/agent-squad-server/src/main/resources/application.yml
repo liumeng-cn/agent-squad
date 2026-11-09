@@ -14,13 +14,12 @@ spring:
   main:
     web-application-type: servlet
   datasource:
-    url: jdbc:mysql://127.0.0.1:13306/agent_squad
+    url: jdbc:postgresql://127.0.0.1:15432/agent_squad?stringtype=unspecified
     username: root
     password: test
   sql:
     init:
-      mode: always
-      schema-locations: classpath:db/schema.sql
+      mode: never
   servlet:
     multipart:
       max-file-size: 10MB
@@ -73,6 +72,8 @@ management:
 
 agentsquad:
   scheduler:
+    # 未知类型命令由低频任务隔离，正常投递扫描继续按原频率运行。
+    command-unknown-sweep-delay-ms: 15000
     artifact-retention-delay-ms: ${agentsquad.artifact.retention.interval-ms:3600000}
     cancellation-settlement-delay-ms: ${agentsquad.cancel.settle-delay-ms:3000}
     command-delivery-compensation-delay-ms: ${agentsquad.redis-wakeup.compensation-delay-ms:1000}
@@ -154,5 +155,6 @@ agentsquad:
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   configuration:
-    map-underscore-to-camel-case: false
+    # XML resultType 查询直接使用下划线列名，自动映射到驼峰属性。
+    map-underscore-to-camel-case: true
     log-impl: com.agentsquad.squad.config.SqlTemplateLog

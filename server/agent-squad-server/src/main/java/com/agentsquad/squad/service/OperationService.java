@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.model.bo.PrepareRequestBO;
 
 import com.agentsquad.squad.model.bo.OperationPreviewBO;
@@ -70,7 +71,7 @@ public class OperationService {
      */
     @Transactional
     public OperationPO prepare(PrepareRequestBO request) {
-        String scopeId = scopeService.scopeForSession(request.userId(), request.sessionId());
+        Long scopeId = scopeService.scopeForSession(request.userId(), request.sessionId());
         scopeService.lockOwned(request.userId(), scopeId, true);
         ToolExecutionContextBO context = operationMapper.lockToolContext(request.userId(),
                 request.sessionId());
@@ -119,7 +120,7 @@ public class OperationService {
         budgetService.reserve(request.userId(), context.getScopeId(),
                 usageKey(request), "TOOL", request.reservedUnits(), request.creatorName());
 
-        String operationId = UUID.randomUUID().toString();
+        Long operationId = IdWorker.getId();
         String status = request.requiresApproval() ? OperationStatus.WAITING_APPROVAL.name()
                 : OperationStatus.PREPARED.name();
         operationMapper.insert(operationId, request.userId(), context.getTaskId(), null,
@@ -138,7 +139,7 @@ public class OperationService {
      * 在取消事务内关闭尚未派发的工具并释放已知预留；不触碰在途或未知结果的写入。
      */
     @Transactional
-    public void cancelUnstarted(String userId, String scopeId) {
+    public void cancelUnstarted(Long userId, Long scopeId) {
         scopeService.lockOwned(userId, scopeId, false);
         var unstarted = operationMapper.lockUnstartedInScope(userId, scopeId);
         operationMapper.cancelUnstartedByScope(userId, scopeId);
@@ -152,7 +153,7 @@ public class OperationService {
     /**
      * 分页读取目标的操作视图；游标取最后一条操作的存储主键。
      */
-    public OperationPageVO listPage(String userId, String taskId, String cursor, int limit) {
+    public OperationPageVO listPage(Long userId, Long taskId, String cursor, int limit) {
         scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         Long cursorId = parseCursor(cursor);
         List<OperationPO> rows = operationMapper.listByTask(userId, taskId, cursorId,
@@ -174,7 +175,7 @@ public class OperationService {
     /**
      * 读取当前用户单个操作视图；不存在统一按 NOT_FOUND 处理。
      */
-    public OperationVO getOwned(String userId, String operationId) {
+    public OperationVO getOwned(Long userId, Long operationId) {
         OperationPO row = operationMapper.findOwned(userId, operationId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "操作不存在");
@@ -186,7 +187,7 @@ public class OperationService {
     /**
      * 按资源归属读取脱敏详情，核对动作仅由服务端显式授权计算。
      */
-    public OperationDetailVO detail(AuthView actor, String operationId) {
+    public OperationDetailVO detail(AuthView actor, Long operationId) {
         OperationPO row = operationMapper.findOwned(actor.userId(), operationId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "操作不存在");
@@ -206,7 +207,7 @@ public class OperationService {
             var refs = RuntimePayloads.readJson(objectMapper, resultJson).path("evidenceRefs");
             List<String> result = new ArrayList<>();
             for (var ref : refs) {
-                if (ref.isTextual() && ref.asText().matches("[0-9a-fA-F-]{36}")) {
+                if (ref.isTextual() && ref.asText().matches("[1-9][0-9]{0,18}")) {
                     result.add(ref.asText());
                 }
             }

@@ -10,5 +10,5 @@ import org.apache.ibatis.annotations.Param;
  */
 @Mapper
 public interface OperationAccessMapper {
-    int countGrant(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    int countGrant(@Param("userId") Long userId, @Param("scopeId") Long scopeId);
 }

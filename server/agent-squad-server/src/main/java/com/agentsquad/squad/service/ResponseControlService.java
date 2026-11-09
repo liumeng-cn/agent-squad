@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.mapper.InteractionMapper;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
@@ -60,12 +61,12 @@ public class ResponseControlService {
     private ObjectMapper json;
 
     @Transactional
-    public CommandReceiptVO cancel(String userId, String executionId, String key, long expectedVersion) {
+    public CommandReceiptVO cancel(Long userId, Long executionId, String key, long expectedVersion) {
         if (key == null || key.isBlank() || key.length() > 160) {
             throw error(RuntimeExceptionCode.VALIDATION, "幂等键无效");
         }
-        String binding = replies.bindingForExecution(userId, executionId);
-        String scopeId = scopeMapper.findScopeByBinding(userId, binding);
+        Long binding = replies.bindingForExecution(userId, executionId);
+        Long scopeId = scopeMapper.findScopeByBinding(userId, binding);
         scopes.requireReadable(userId, scopeId);
         ExecutionScopePO scope = scopes.lockOwned(userId, scopeId, false);
         ConversationPO conversation = conversations.lockOwned(userId, scope.getConversationId());
@@ -94,8 +95,8 @@ public class ResponseControlService {
      * 会话删除事务已经持有会话锁；逐个回复锁定所有者并保存停止意图，不清理未知操作。
      */
     @Transactional
-    public void cancelForDeletion(String userId, String conversationId) {
-        for (String binding : replies.activeBindings(userId, conversationId)) {
+    public void cancelForDeletion(Long userId, Long conversationId) {
+        for (Long binding : replies.activeBindings(userId, conversationId)) {
             ExecutionScopePO scope = scopes.lockOwned(userId, scopeMapper.findScopeByBinding(userId, binding), false);
             ResponseRuntimePO row = replies.lockByBinding(userId, binding);
             if (!row.isCancellationRequested()) {
@@ -110,7 +111,7 @@ public class ResponseControlService {
         replies.cancelPending(scope.getUserId(), row.getBindingId());
         operations.cancelUnstarted(scope.getUserId(), scope.getScopeId());
         interactions.cancelOpenByScope(scope.getUserId(), scope.getScopeId());
-        String id = UUID.randomUUID().toString();
+        Long id = IdWorker.getId();
         commands.insertControl(id, scope.getUserId(), scopeKey, key, hash, null, row.getBindingId(), "STOP", payload, LocalDateTime.now(ZoneOffset.UTC));
         events.publish(scope, "response:" + row.getExecutionId() + ":cancel", "execution.status_changed",
                 Map.of("executionId", row.getExecutionId(), "status", "CANCELLING", "version", row.getVersion() + 1));

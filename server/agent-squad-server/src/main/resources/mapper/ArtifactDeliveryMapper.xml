@@ -84,7 +84,7 @@
     <update id="commit">
         UPDATE sq_artifact_stage SET status = 'COMMITTED',
         artifact_id = #{artifactId},
-        content_bytes = X'',
+        content_bytes = ''::bytea,
         last_update_time = CURRENT_TIMESTAMP
         WHERE user_id = #{userId} AND stage_id = #{stageId} AND status = 'STAGED'
         AND expires_at &gt; CURRENT_TIMESTAMP AND del_flag = '0'
@@ -115,7 +115,7 @@
     </update>
 
     <update id="purgeContents">
-        UPDATE sq_artifact SET content_bytes = X''
+        UPDATE sq_artifact SET content_bytes = ''::bytea
         WHERE del_flag = '1' AND OCTET_LENGTH(content_bytes) &gt; 0
         AND NOT EXISTS (SELECT 1 FROM sq_scope_artifact r WHERE r.user_id = sq_artifact.user_id
         AND r.artifact_id = sq_artifact.artifact_id AND r.del_flag = '0')
@@ -128,7 +128,7 @@
     <update id="purgeStages">
         UPDATE sq_artifact_stage SET status = 'EXPIRED',
         del_flag = '1',
-        content_bytes = X''
+        content_bytes = ''::bytea
         WHERE expires_at &lt;= CURRENT_TIMESTAMP AND status = 'STAGED'
     </update>
 </mapper>

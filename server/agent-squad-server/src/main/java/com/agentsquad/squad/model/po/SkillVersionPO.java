@@ -33,12 +33,12 @@ public class SkillVersionPO {
      * 技能版本业务ID
      */
     @TableField("skill_version_id")
-    private String skillVersionId;
+    private Long skillVersionId;
     /**
      * 所属用户ID
      */
     @TableField("user_id")
-    private String userId;
+    private Long userId;
     /**
      * 显示名称
      */

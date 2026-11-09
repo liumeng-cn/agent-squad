@@ -1,7 +1,8 @@
 package com.agentsquad.squad.runtime;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.service.TaskSnapshotService;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.bo.GoalTaskCreateBO;
 import com.agentsquad.squad.model.dto.MessageCreateDTO;
@@ -43,7 +44,7 @@ class FinalDeliveryIntegrationTest {
     @Test
     void delegatedResponseCannotPublishSecondEssayAndReplayKeepsIdentity(@TempDir Path directory) {
         try (var context = start(directory)) {
-            String user = UUID.randomUUID().toString();
+            Long user = IdWorker.getId();
             var receipt = message(context, user, null, "first");
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             var goals = context.getBean(GoalTaskCreationService.class);
@@ -61,8 +62,8 @@ class FinalDeliveryIntegrationTest {
             assertThat(answers(jdbc, user)).isEqualTo(1);
             assertThat(jdbc.queryForObject("SELECT content FROM sq_message WHERE user_id=? AND role='ASSISTANT'", String.class, user))
                     .isEqualTo("权威两篇作文");
-            assertThat(jdbc.queryForObject("SELECT published_message_id FROM sq_final_delivery WHERE user_id=?", String.class, user))
-                    .isEqualTo(jdbc.queryForObject("SELECT message_id FROM sq_message WHERE user_id=? AND role='ASSISTANT'", String.class, user));
+            assertThat(jdbc.queryForObject("SELECT published_message_id FROM sq_final_delivery WHERE user_id=?", Long.class, user))
+                    .isEqualTo(jdbc.queryForObject("SELECT message_id FROM sq_message WHERE user_id=? AND role='ASSISTANT'", Long.class, user));
             var independent = message(context, user, receipt.conversationId(), "independent");
             complete(context, user, independent, "独立问题答案");
             assertThat(answers(jdbc, user)).isEqualTo(2);
@@ -73,7 +74,7 @@ class FinalDeliveryIntegrationTest {
     @Test
     void directAnswerAndIdempotentAcceptanceHaveOneDelivery(@TempDir Path directory) {
         try (var context = start(directory)) {
-            String user = UUID.randomUUID().toString();
+            Long user = IdWorker.getId();
             var receipt = message(context, user, null, "direct");
             assertThat(message(context, user, null, "direct").executionId()).isEqualTo(receipt.executionId());
             complete(context, user, receipt, "直接写两篇作文");
@@ -90,7 +91,7 @@ class FinalDeliveryIntegrationTest {
     @Test
     void rollbackAndNewGenerationRejectLateOwners(@TempDir Path directory) {
         try (var context = start(directory)) {
-            String user = UUID.randomUUID().toString();
+            Long user = IdWorker.getId();
             var receipt = message(context, user, null, "rollback");
             var delivery = context.getBean(FinalDeliveryService.class);
             var tx = transaction(context);
@@ -100,11 +101,11 @@ class FinalDeliveryIntegrationTest {
             })).isInstanceOf(IllegalStateException.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             assertThat(jdbc.queryForObject("SELECT state FROM sq_final_delivery WHERE user_id=?", String.class, user)).isEqualTo("OWNED");
-            String next = UUID.randomUUID().toString();
+            Long next = IdWorker.getId();
             tx.executeWithoutResult(status -> delivery.retry(user, receipt.messageId(), receipt.executionId(), next));
-            assertThat(tx.<String>execute(status -> delivery.claimPublication(user, receipt.messageId(), "RESPONSE", receipt.executionId()))).isNull();
-            String published = tx.execute(status -> delivery.claimPublication(user, receipt.messageId(), "RESPONSE", next));
-            assertThat(tx.<String>execute(status -> delivery.claimPublication(user, receipt.messageId(), "RESPONSE", next))).isEqualTo(published);
+            assertThat(tx.<Long>execute(status -> delivery.claimPublication(user, receipt.messageId(), "RESPONSE", receipt.executionId()))).isNull();
+            Long published = tx.execute(status -> delivery.claimPublication(user, receipt.messageId(), "RESPONSE", next));
+            assertThat(tx.<Long>execute(status -> delivery.claimPublication(user, receipt.messageId(), "RESPONSE", next))).isEqualTo(published);
             tx.executeWithoutResult(status -> delivery.close(user, receipt.messageId(), "RESPONSE", receipt.executionId()));
             assertThat(jdbc.queryForObject("SELECT state FROM sq_final_delivery WHERE user_id=? ORDER BY delivery_generation DESC LIMIT 1", String.class, user))
                     .isEqualTo("PUBLISHED");
@@ -114,7 +115,7 @@ class FinalDeliveryIntegrationTest {
     @Test
     void transferAndCompletionRaceHaveExactlyOneOwner(@TempDir Path directory) throws Exception {
         try (var context = start(directory); var workers = Executors.newFixedThreadPool(2)) {
-            String user = UUID.randomUUID().toString();
+            Long user = IdWorker.getId();
             var receipt = message(context, user, null, "race");
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             var gate = new CountDownLatch(1);
@@ -134,7 +135,7 @@ class FinalDeliveryIntegrationTest {
             });
             gate.countDown();
             assertThat(completion.get()).isTrue();
-            String taskId = transfer.get();
+            Long taskId = transfer.get();
             if (taskId != null) {
                 transaction(context).executeWithoutResult(status -> context.getBean(TaskEventPublishingService.class)
                         .insertProjected(user, taskId, 2, "race-final", "answer.completed",
@@ -148,10 +149,10 @@ class FinalDeliveryIntegrationTest {
     @Test
     void cancelledTaskRejectsLateResultWithoutRevivingOriginalResponse(@TempDir Path directory) {
         try (var context = start(directory)) {
-            String user = UUID.randomUUID().toString();
+            Long user = IdWorker.getId();
             var receipt = message(context, user, null, "cancelled");
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            String taskId = context.getBean(GoalTaskCreationService.class).create(user, session(jdbc, receipt),
+            Long taskId = context.getBean(GoalTaskCreationService.class).create(user, session(jdbc, receipt),
                     new GoalTaskCreateBO("cancel-goal", "取消目标", "完成工作", receipt.messageId())).taskId();
             transaction(context).executeWithoutResult(status -> {
                 jdbc.update("UPDATE sq_goal_task SET status='CANCELLED' WHERE task_id=?", taskId);
@@ -171,10 +172,10 @@ class FinalDeliveryIntegrationTest {
     @Test
     void failedTaskKeepsFailureResultAndDoesNotRestoreResponseOwnership(@TempDir Path directory) {
         try (var context = start(directory)) {
-            String user = UUID.randomUUID().toString();
+            Long user = IdWorker.getId();
             var receipt = message(context, user, null, "failed");
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            String taskId = context.getBean(GoalTaskCreationService.class).create(user, session(jdbc, receipt),
+            Long taskId = context.getBean(GoalTaskCreationService.class).create(user, session(jdbc, receipt),
                     new GoalTaskCreateBO("failed-goal", "失败目标", "完成工作", receipt.messageId())).taskId();
             transaction(context).executeWithoutResult(status -> {
                 jdbc.update("UPDATE sq_goal_task SET status='FAILED' WHERE task_id=?", taskId);
@@ -188,7 +189,7 @@ class FinalDeliveryIntegrationTest {
             assertThat(jdbc.queryForObject("SELECT content FROM sq_message WHERE user_id=? AND role='ASSISTANT'", String.class, user))
                     .isEqualTo("任务未完成，已保留输入");
             assertThatThrownBy(() -> transaction(context).executeWithoutResult(status -> context.getBean(FinalDeliveryService.class)
-                    .retry(user, receipt.messageId(), receipt.executionId(), UUID.randomUUID().toString())))
+                    .retry(user, receipt.messageId(), receipt.executionId(), IdWorker.getId())))
                     .isInstanceOf(RuntimeBusinessException.class);
         }
     }
@@ -196,10 +197,10 @@ class FinalDeliveryIntegrationTest {
     @Test
     void replayedCompletionAndStaleRevisionCannotReplaceCurrentAnswer(@TempDir Path directory) {
         try (var context = start(directory)) {
-            String user = UUID.randomUUID().toString();
+            Long user = IdWorker.getId();
             var receipt = message(context, user, null, "revision");
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            String taskId = context.getBean(GoalTaskCreationService.class).create(user, session(jdbc, receipt),
+            Long taskId = context.getBean(GoalTaskCreationService.class).create(user, session(jdbc, receipt),
                     new GoalTaskCreateBO("revision-goal", "修订目标", "完成工作", receipt.messageId())).taskId();
             var projector = context.getBean(TaskEventPublishingService.class);
             var tx = transaction(context);
@@ -229,13 +230,13 @@ class FinalDeliveryIntegrationTest {
         }
     }
 
-    private void complete(ConfigurableApplicationContext context, String user, MessageReceiptVO receipt, String answer) {
+    private void complete(ConfigurableApplicationContext context, Long user, MessageReceiptVO receipt, String answer) {
         JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-        String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
-        String scopeId = jdbc.queryForObject("SELECT scope_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
+        Long binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", Long.class, receipt.executionId());
+        Long scopeId = jdbc.queryForObject("SELECT scope_id FROM sq_response_execution WHERE execution_id=?", Long.class, receipt.executionId());
         var scope = context.getBean(ExecutionScopeMapper.class).findOwned(user, scopeId);
         var service = context.getBean(ResponseExecutionService.class);
-        String turn = UUID.randomUUID().toString();
+        String turn = IdWorker.getIdStr();
         // 此处只验证交付归属竞争，使用自然回复适配器的可信输出；SDK 日志映射由独立集成测试验证。
         var output = new NaturalReplyEvidenceBO(
                 ResponseExecutionStatus.SUCCEEDED, answer, null);
@@ -243,12 +244,12 @@ class FinalDeliveryIntegrationTest {
                 new NativeEventViewBO(1, "end", "run/end", "run", turn, "completed", 0, java.util.Map.of("naturalOutput", output)));
     }
 
-    private MessageReceiptVO message(ConfigurableApplicationContext context, String user, String conversation, String key) {
+    private MessageReceiptVO message(ConfigurableApplicationContext context, Long user, Long conversation, String key) {
         return context.getBean(MessageAcceptanceService.class).accept(user, conversation, key,
                 new MessageCreateDTO("写两篇作文", List.of()));
     }
 
-    private long answers(JdbcTemplate jdbc, String user) {
+    private long answers(JdbcTemplate jdbc, Long user) {
         return jdbc.queryForObject("SELECT COUNT(*) FROM sq_message WHERE user_id=? AND role='ASSISTANT'", Long.class, user);
     }
 
@@ -261,8 +262,8 @@ class FinalDeliveryIntegrationTest {
     }
 
     private ConfigurableApplicationContext start(Path directory) {
-        return MessageAcceptanceHttpTest.start(MySqlTestDatabase.url(directory),
-                MySqlTestDatabase.username(),
-                MySqlTestDatabase.password(), UUID.randomUUID().toString());
+        return MessageAcceptanceHttpTest.start(PostgresTestDatabase.url(directory),
+                PostgresTestDatabase.username(),
+                PostgresTestDatabase.password(), IdWorker.getId());
     }
 }

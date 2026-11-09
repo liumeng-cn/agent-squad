@@ -8,6 +8,6 @@ import java.util.List;
  * dependsOn 引用同一计划内其他节点的 nodeKey；required 标记该节点是否为汇合必需节点。
  */
 public record PlanNodeBO(String nodeKey, String workerKey, String workerVersion, String goal,
-                         String contextSnapshotId, List<String> dependsOn, boolean required,
+                         Long contextSnapshotId, List<String> dependsOn, boolean required,
                          int maxRecoveryAttempts) {
 }

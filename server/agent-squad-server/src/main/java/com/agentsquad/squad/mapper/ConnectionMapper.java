@@ -14,32 +14,32 @@ import java.util.List;
 @Mapper
 public interface ConnectionMapper extends BaseMapper<ConnectionPO> {
 
-    int insertConnection(@Param("connectionId") String connectionId, @Param("userId") String userId,
+    int insertConnection(@Param("connectionId") Long connectionId, @Param("userId") Long userId,
                          @Param("creatorName") String creatorName, @Param("name") String name,
                          @Param("provider") String provider, @Param("environment") String environment,
                          @Param("resourcePolicyJson") String resourcePolicyJson,
                          @Param("secretRef") String secretRef,
                          @Param("createIdempotencyKey") String createIdempotencyKey);
 
-    default ConnectionPO findOwned(String userId, String connectionId) {
+    default ConnectionPO findOwned(Long userId, Long connectionId) {
         return selectOne(new QueryWrapper<ConnectionPO>()
                 .eq("user_id", userId)
                 .eq("connection_id", connectionId)
                 .eq("del_flag", "0"));
     }
 
-    default ConnectionPO findByIdempotencyKey(String userId, String createIdempotencyKey) {
+    default ConnectionPO findByIdempotencyKey(Long userId, String createIdempotencyKey) {
         return selectOne(new QueryWrapper<ConnectionPO>()
                 .eq("user_id", userId)
                 .eq("create_idempotency_key", createIdempotencyKey)
                 .eq("del_flag", "0"));
     }
 
-    List<ConnectionPO> listByOwner(@Param("userId") String userId,
+    List<ConnectionPO> listByOwner(@Param("userId") Long userId,
                                    @Param("cursorId") Long cursorId, @Param("limit") int limit);
 
-    int updateOwned(@Param("userId") String userId,
-                    @Param("connectionId") String connectionId,
+    int updateOwned(@Param("userId") Long userId,
+                    @Param("connectionId") Long connectionId,
                     @Param("expectedRevision") long expectedRevision,
                     @Param("resourcePolicyJson") String resourcePolicyJson,
                     @Param("enabled") Boolean enabled,

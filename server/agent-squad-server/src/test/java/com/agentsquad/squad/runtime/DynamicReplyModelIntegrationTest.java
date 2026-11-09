@@ -10,7 +10,7 @@ import com.agentsquad.squad.enums.ReasoningMode;
 import com.agentsquad.squad.model.dto.MessageCreateDTO;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.ModelCatalogService;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -35,7 +35,7 @@ class DynamicReplyModelIntegrationTest {
         var json = new ObjectMapper();
         var schema = json.readTree("{\"type\":\"object\",\"required\":[\"poem\"],\"properties\":{\"poem\":{\"type\":\"string\"}}}");
         var tool = new ReportJobResultTool(null, json,
-                "user", "session", "binding", "guard").outputSchema(schema);
+                1L, "session", 2L, "guard").outputSchema(schema);
         assertThat(json.valueToTree(tool.getParameters()).path("properties").path("result")).isEqualTo(schema);
     }
 
@@ -81,11 +81,11 @@ class DynamicReplyModelIntegrationTest {
 
     @Test
     void freezesSelectionWhileQueuedAndCallsChosenModel(@TempDir Path directory) throws Exception {
-        String user = "00000000-0000-0000-0000-000000000001";
+        Long user = 1L;
         try (var firstModel = new NaturalReplyModelStub(); var secondModel = new NaturalReplyModelStub();
              var context = SpringApplication.run(AgentSquadApplication.class,
-                     "--spring.main.web-application-type=none", "--spring.datasource.url=" + MySqlTestDatabase.url(directory),
-                     "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
+                     "--spring.main.web-application-type=none", "--spring.datasource.url=" + PostgresTestDatabase.url(directory),
+                     "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(),
                      "--agentsquad.delivery.enabled=true", "--agentsquad.delivery.poll-delay-ms=100",
                      "--agentsquad.projection.poll-delay-ms=100", "--agentsquad.model.api-key=first-only",
                      "--agentsquad.model.base-url=" + firstModel.baseUrl(), "--agentsquad.model.name=first-model",

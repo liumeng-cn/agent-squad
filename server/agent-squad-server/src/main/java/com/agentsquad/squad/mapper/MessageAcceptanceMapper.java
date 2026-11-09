@@ -15,33 +15,33 @@ import java.time.LocalDateTime;
 @Mapper
 public interface MessageAcceptanceMapper {
 
-    MessageSubmissionBO findSubmission(@Param("userId") String userId, @Param("scopeKey") String scopeKey,
+    MessageSubmissionBO findSubmission(@Param("userId") Long userId, @Param("scopeKey") String scopeKey,
                                        @Param("key") String key);
 
-    int reserveMessage(@Param("userId") String userId, @Param("conversationId") String conversationId,
+    int reserveMessage(@Param("userId") Long userId, @Param("conversationId") Long conversationId,
                        @Param("now") LocalDateTime now);
 
-    long messageSequence(@Param("userId") String userId, @Param("conversationId") String conversationId);
+    long messageSequence(@Param("userId") Long userId, @Param("conversationId") Long conversationId);
 
-    int insertMessage(@Param("messageId") String messageId, @Param("userId") String userId,
-                      @Param("conversationId") String conversationId, @Param("sequence") long sequence,
-                      @Param("text") String text, @Param("executionId") String executionId,
+    int insertMessage(@Param("messageId") Long messageId, @Param("userId") Long userId,
+                      @Param("conversationId") Long conversationId, @Param("sequence") long sequence,
+                      @Param("text") String text, @Param("executionId") Long executionId,
                       @Param("now") LocalDateTime now);
 
-    int insertExecution(@Param("executionId") String executionId, @Param("userId") String userId,
-                        @Param("conversationId") String conversationId, @Param("messageId") String messageId,
-                        @Param("scopeId") String scopeId, @Param("bindingId") String bindingId,
+    int insertExecution(@Param("executionId") Long executionId, @Param("userId") Long userId,
+                        @Param("conversationId") Long conversationId, @Param("messageId") Long messageId,
+                        @Param("scopeId") Long scopeId, @Param("bindingId") Long bindingId,
                         @Param("completionProtocol") ResponseCompletionProtocol completionProtocol);
 
-    int setModelChoice(@Param("userId") String userId, @Param("executionId") String executionId, @Param("choice") String choice);
+    int setModelChoice(@Param("userId") Long userId, @Param("executionId") Long executionId, @Param("choice") String choice);
 
-    int markFallbackTitle(@Param("userId") String userId, @Param("conversationId") String conversationId);
+    int markFallbackTitle(@Param("userId") Long userId, @Param("conversationId") Long conversationId);
 
-    int reserveEvent(@Param("userId") String userId, @Param("conversationId") String conversationId);
+    int reserveEvent(@Param("userId") Long userId, @Param("conversationId") Long conversationId);
 
-    long eventSequence(@Param("userId") String userId, @Param("conversationId") String conversationId);
+    long eventSequence(@Param("userId") Long userId, @Param("conversationId") Long conversationId);
 
-    int insertEvent(@Param("userId") String userId, @Param("conversationId") String conversationId,
+    int insertEvent(@Param("userId") Long userId, @Param("conversationId") Long conversationId,
                     @Param("generation") long generation, @Param("sequence") long sequence,
                     @Param("producerKey") String producerKey, @Param("type") String type,
                     @Param("payloadJson") String payloadJson, @Param("now") LocalDateTime now);

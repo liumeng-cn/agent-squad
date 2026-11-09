@@ -31,12 +31,12 @@ public class ConversationPO {
      * 对话业务ID
      */
     @TableField("conversation_id")
-    private String conversationId;
+    private Long conversationId;
     /**
      * 资源归属用户ID
      */
     @TableField("user_id")
-    private String userId;
+    private Long userId;
     /**
      * 用户对话标题
      */
@@ -49,7 +49,7 @@ public class ConversationPO {
      * 未终结目标ID
      */
     @TableField("active_task_id")
-    private String activeTaskId;
+    private Long activeTaskId;
     /**
      * 会话代数
      */

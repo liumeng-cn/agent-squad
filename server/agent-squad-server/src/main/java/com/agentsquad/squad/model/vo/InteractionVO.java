@@ -12,13 +12,13 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 public class InteractionVO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("interactionId")
-    private final String interactionId;
+    private final Long interactionId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("taskId")
-    private final String taskId;
+    private final Long taskId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("jobId")
-    private final String jobId;
+    private final Long jobId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("kind")
     private final String kind;
@@ -52,9 +52,9 @@ public class InteractionVO {
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public InteractionVO(
-            @com.fasterxml.jackson.annotation.JsonProperty("interactionId") String interactionId,
-            @com.fasterxml.jackson.annotation.JsonProperty("taskId") String taskId,
-            @com.fasterxml.jackson.annotation.JsonProperty("jobId") String jobId,
+            @com.fasterxml.jackson.annotation.JsonProperty("interactionId") Long interactionId,
+            @com.fasterxml.jackson.annotation.JsonProperty("taskId") Long taskId,
+            @com.fasterxml.jackson.annotation.JsonProperty("jobId") Long jobId,
             @com.fasterxml.jackson.annotation.JsonProperty("kind") String kind,
             @com.fasterxml.jackson.annotation.JsonProperty("origin") String origin,
             @com.fasterxml.jackson.annotation.JsonProperty("question") String question,

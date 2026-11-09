@@ -44,8 +44,9 @@ public class RuntimeJournalImportService {
         long bytes = 0;
         List<Path> directories;
         try (var entries = Files.list(root)) {
+            // 用户 ID 已统一为雪花 Long，目录名为纯数字；兼容历史 UUID 目录便于旧数据迁移。
             directories = entries.filter(Files::isDirectory)
-                    .filter(path -> path.getFileName().toString().matches("[a-fA-F0-9-]{36}"))
+                    .filter(path -> path.getFileName().toString().matches("\\d+|[a-fA-F0-9-]{36}"))
                     .sorted().toList();
         }
         for (Path userRoot : directories) {

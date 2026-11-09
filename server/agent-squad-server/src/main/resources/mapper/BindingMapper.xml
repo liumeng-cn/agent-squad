@@ -46,7 +46,7 @@
         #{nextProjectionAt})
     </insert>
 
-    <select id="findMasterBindingId" resultType="java.lang.String">
+    <select id="findMasterBindingId" resultType="java.lang.Long">
         SELECT binding_id FROM sq_runtime_binding
         WHERE user_id = #{userId} AND task_id = #{taskId} AND role = 'MASTER'
     </select>
@@ -69,7 +69,7 @@
         'IDLE',
         #{nextProjectionAt})
     </insert>
-    <select id="taskBindingIds" resultType="java.lang.String">
+    <select id="taskBindingIds" resultType="java.lang.Long">
         SELECT binding_id
         FROM sq_runtime_binding
         WHERE user_id = #{userId}

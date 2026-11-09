@@ -11,74 +11,74 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 显式记忆、授权代际及执行引用的
+ * 显式记忆、授权代际及执行引用的持久化访问。
  * <p>
  * 不做SDK调用；写入方先锁用户记忆代际，再修改记忆与引用屏障，避免纠正与冻结交错。
  */
 @Mapper
 public interface MemoryMapper {
-    int ensureRevision(@Param("user") String user);
+    int ensureRevision(@Param("user") Long user);
 
-    long lockRevision(@Param("user") String user);
+    long lockRevision(@Param("user") Long user);
 
-    long revision(@Param("user") String user);
+    long revision(@Param("user") Long user);
 
-    int advanceRevision(@Param("user") String user);
+    int advanceRevision(@Param("user") Long user);
 
-    MemoryPO find(@Param("user") String user, @Param("id") String id);
+    MemoryPO find(@Param("user") Long user, @Param("id") Long id);
 
-    MemoryPO findActiveKey(@Param("user") String user, @Param("key") String key);
+    MemoryPO findActiveKey(@Param("user") Long user, @Param("key") String key);
 
-    List<MemoryPO> list(@Param("user") String user, @Param("before") Long before, @Param("limit") int limit);
+    List<MemoryPO> list(@Param("user") Long user, @Param("before") Long before, @Param("limit") int limit);
 
-    List<MemoryPO> active(@Param("user") String user, @Param("now") LocalDateTime now, @Param("limit") int limit);
+    List<MemoryPO> active(@Param("user") Long user, @Param("now") LocalDateTime now, @Param("limit") int limit);
 
-    List<String> recall(@Param("user") String user, @Param("query") String query,
-                        @Param("now") LocalDateTime now, @Param("limit") int limit);
+    List<Long> recall(@Param("user") Long user, @Param("query") String query,
+                      @Param("now") LocalDateTime now, @Param("limit") int limit);
 
-    int insert(@Param("id") String id, @Param("user") String user, @Param("key") String key,
+    int insert(@Param("id") Long id, @Param("user") Long user, @Param("key") String key,
                @Param("content") String content, @Param("expires") LocalDateTime expires,
-               @Param("sourceId") String sourceId, @Param("quote") String quote);
+               @Param("sourceId") Long sourceId, @Param("quote") String quote);
 
-    int update(@Param("user") String user, @Param("id") String id, @Param("version") long version,
+    int update(@Param("user") Long user, @Param("id") Long id, @Param("version") long version,
                @Param("content") String content, @Param("expires") LocalDateTime expires,
-               @Param("sourceId") String sourceId, @Param("quote") String quote);
+               @Param("sourceId") Long sourceId, @Param("quote") String quote);
 
-    int delete(@Param("user") String user, @Param("id") String id, @Param("version") long version);
+    int delete(@Param("user") Long user, @Param("id") Long id, @Param("version") long version);
 
-    int blockOldScopes(@Param("user") String user, @Param("revision") long revision);
+    int blockOldScopes(@Param("user") Long user, @Param("revision") long revision);
 
-    int blockedScopes(@Param("user") String user);
+    int blockedScopes(@Param("user") Long user);
 
-    MemoryScopePinPO pin(@Param("user") String user, @Param("scope") String scope);
+    MemoryScopePinPO pin(@Param("user") Long user, @Param("scope") Long scope);
 
-    int pinScope(@Param("user") String user, @Param("scope") String scope, @Param("revision") long revision);
+    int pinScope(@Param("user") Long user, @Param("scope") Long scope, @Param("revision") long revision);
 
-    int pinItem(@Param("user") String user, @Param("scope") String scope, @Param("id") String id, @Param("version") long version);
+    int pinItem(@Param("user") Long user, @Param("scope") Long scope, @Param("id") Long id, @Param("version") long version);
 
-    List<String> pinnedIds(@Param("user") String user, @Param("scope") String scope);
+    List<Long> pinnedIds(@Param("user") Long user, @Param("scope") Long scope);
 
-    Long pinnedVersion(@Param("user") String user, @Param("scope") String scope, @Param("id") String id);
+    Long pinnedVersion(@Param("user") Long user, @Param("scope") Long scope, @Param("id") Long id);
 
-    MemorySourceBO source(@Param("user") String user, @Param("scope") String scope);
+    MemorySourceBO source(@Param("user") Long user, @Param("scope") Long scope);
 
-    MemoryWriteReceiptPO receipt(@Param("user") String user, @Param("scope") String scope, @Param("key") String key);
+    MemoryWriteReceiptPO receipt(@Param("user") Long user, @Param("scope") Long scope, @Param("key") String key);
 
-    int insertReceipt(@Param("user") String user, @Param("scope") String scope, @Param("key") String key,
+    int insertReceipt(@Param("user") Long user, @Param("scope") Long scope, @Param("key") String key,
                       @Param("hash") String hash, @Param("result") String result);
 
-    int recordSource(@Param("user") String user, @Param("memoryId") String memoryId,
-                     @Param("version") long version, @Param("messageId") String messageId);
+    int recordSource(@Param("user") Long user, @Param("memoryId") Long memoryId,
+                     @Param("version") long version, @Param("messageId") Long messageId);
 
-    int invalidateSources(@Param("user") String user, @Param("memoryId") String memoryId);
+    int invalidateSources(@Param("user") Long user, @Param("memoryId") Long memoryId);
 
-    List<String> invalidatedSources(@Param("user") String user, @Param("now") LocalDateTime now);
+    List<Long> invalidatedSources(@Param("user") Long user, @Param("now") LocalDateTime now);
 
-    List<String> blockedScopeIds(@Param("user") String user, @Param("revision") long revision);
+    List<Long> blockedScopeIds(@Param("user") Long user, @Param("revision") long revision);
 
-    List<String> staleScopeIds(@Param("user") String user, @Param("now") LocalDateTime now);
+    List<Long> staleScopeIds(@Param("user") Long user, @Param("now") LocalDateTime now);
 
-    List<String> sourceMessages(@Param("user") String user, @Param("source") String source);
+    List<Long> sourceMessages(@Param("user") Long user, @Param("source") Long source);
 
-    List<String> scopeMessages(@Param("user") String user, @Param("scope") String scope);
+    List<Long> scopeMessages(@Param("user") Long user, @Param("scope") Long scope);
 }

@@ -1,7 +1,8 @@
 package com.agentsquad.squad.runtime;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.scheduler.ConversationCleanupTask;
 import com.agentsquad.squad.service.ConversationDeletionService;
@@ -36,10 +37,10 @@ class ResponseControlHttpTest {
     void cancelIsOwnedVersionedIdempotentAndDoesNotCancelTask(@TempDir Path directory) throws Exception {
         try (ConfigurableApplicationContext context = start(directory)) {
             MessageTestActor actor = MessageAcceptanceHttpTest.actor(context);
-            String user = actor.view().userId();
+            Long user = actor.view().userId();
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
-            String conversation = tasks.createConversation(user, "后台目标").conversationId();
-            String task = tasks.submit(user, conversation, "background", "写作目标").taskId();
+            Long conversation = tasks.createConversation(user, "后台目标").conversationId();
+            Long task = tasks.submit(user, conversation, "background", "写作目标").taskId();
             var receipt = MessageAcceptanceHttpTest.send(context, actor, "/api/v1/conversations/" + conversation + "/messages",
                     "question", Map.of("text", "进展如何"));
             MockMvc mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();
@@ -57,7 +58,7 @@ class ResponseControlHttpTest {
             assertThat(again).isEqualTo(first);
             assertThat(tasks.getConversation(user, conversation).activeTaskId()).isEqualTo(task);
             assertThat(tasks.findTask(user, task).status()).isEqualTo("QUEUED");
-            MessageTestActor other = new MessageTestActor(new AuthView(UUID.randomUUID().toString(), "other", java.util.List.of(AccountRole.USER), null));
+            MessageTestActor other = new MessageTestActor(new AuthView(IdWorker.getId(), "other", java.util.List.of(AccountRole.USER), null));
             mvc.perform(post(path).with(TestAssertion.as(other.view().userId(), "USER")).header("Idempotency-Key", "foreign")
                     .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":0}")).andExpect(status().isOk()).andExpect(jsonPath("$.code").value(404));
         }
@@ -67,7 +68,7 @@ class ResponseControlHttpTest {
     void deletionWaitsForReplyAndDoesNotPublishLateContent(@TempDir Path directory) throws Exception {
         try (ConfigurableApplicationContext context = start(directory)) {
             MessageTestActor actor = MessageAcceptanceHttpTest.actor(context);
-            String user = actor.view().userId();
+            Long user = actor.view().userId();
             var receipt = MessageAcceptanceHttpTest.send(context, actor, "/api/v1/conversations/messages", "delete", Map.of("text", "要删除的消息"));
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             context.getBean(ConversationDeletionService.class).delete(user, receipt.conversationId(), "delete",
@@ -76,7 +77,7 @@ class ResponseControlHttpTest {
             cleanup.cleanupDeletingConversations();
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             assertThat(jdbc.queryForObject("SELECT status FROM sq_conversation WHERE conversation_id=?", String.class, receipt.conversationId())).isEqualTo("DELETING");
-            String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
+            Long binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", Long.class, receipt.executionId());
             context.getBean(ResponseExecutionService.class).stopped(user, binding);
             cleanup.cleanupDeletingConversations();
             assertThat(jdbc.queryForObject("SELECT status FROM sq_conversation WHERE conversation_id=?", String.class, receipt.conversationId())).isEqualTo("DELETED");
@@ -86,6 +87,6 @@ class ResponseControlHttpTest {
     }
 
     private ConfigurableApplicationContext start(Path directory) {
-        return MessageAcceptanceHttpTest.start(MySqlTestDatabase.url(directory.resolve("controls")), MySqlTestDatabase.username(), MySqlTestDatabase.password(), UUID.randomUUID().toString());
+        return MessageAcceptanceHttpTest.start(PostgresTestDatabase.url(directory.resolve("controls")), PostgresTestDatabase.username(), PostgresTestDatabase.password(), IdWorker.getId());
     }
 }

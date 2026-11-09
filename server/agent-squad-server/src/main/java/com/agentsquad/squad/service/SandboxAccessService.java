@@ -24,7 +24,7 @@ public class SandboxAccessService {
     @Resource
     private ExecutionAuthorizationService authorization;
 
-    public SandboxExecutionContextBO resolve(String userId, String sessionId, String guardToken,
+    public SandboxExecutionContextBO resolve(Long userId, String sessionId, String guardToken,
                                              String turnId, String toolCallId) {
         if (turnId == null || turnId.isBlank() || toolCallId == null || toolCallId.isBlank()
                 || turnId.length() > 160 || toolCallId.length() > 160) {

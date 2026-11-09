@@ -4,12 +4,12 @@
 
     <resultMap id="findByFrameworkRequestResult" type="com.agentsquad.squad.model.po.InteractionPO">
         <constructor>
-            <arg column="interaction_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="job_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
-            <arg column="operation_id" javaType="java.lang.String"/>
+            <arg column="interaction_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="job_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
+            <arg column="operation_id" javaType="java.lang.Long"/>
             <arg column="origin" javaType="java.lang.String"/>
             <arg column="framework_request_id" javaType="java.lang.String"/>
             <arg column="kind" javaType="java.lang.String"/>
@@ -22,18 +22,18 @@
             <arg column="status" javaType="java.lang.String"/>
             <arg column="version" javaType="_long"/>
             <arg column="response_json" javaType="java.lang.String"/>
-            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.Long"/>
         </constructor>
     </resultMap>
 
     <resultMap id="findOwnedResult" type="com.agentsquad.squad.model.po.InteractionPO">
         <constructor>
-            <arg column="interaction_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="job_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
-            <arg column="operation_id" javaType="java.lang.String"/>
+            <arg column="interaction_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="job_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
+            <arg column="operation_id" javaType="java.lang.Long"/>
             <arg column="origin" javaType="java.lang.String"/>
             <arg column="framework_request_id" javaType="java.lang.String"/>
             <arg column="kind" javaType="java.lang.String"/>
@@ -46,18 +46,18 @@
             <arg column="status" javaType="java.lang.String"/>
             <arg column="version" javaType="_long"/>
             <arg column="response_json" javaType="java.lang.String"/>
-            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.Long"/>
         </constructor>
     </resultMap>
 
     <resultMap id="listByTaskResult" type="com.agentsquad.squad.model.po.InteractionPO">
         <constructor>
-            <arg column="interaction_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="job_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
-            <arg column="operation_id" javaType="java.lang.String"/>
+            <arg column="interaction_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="job_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
+            <arg column="operation_id" javaType="java.lang.Long"/>
             <arg column="origin" javaType="java.lang.String"/>
             <arg column="framework_request_id" javaType="java.lang.String"/>
             <arg column="kind" javaType="java.lang.String"/>
@@ -70,7 +70,7 @@
             <arg column="status" javaType="java.lang.String"/>
             <arg column="version" javaType="_long"/>
             <arg column="response_json" javaType="java.lang.String"/>
-            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.Long"/>
         </constructor>
     </resultMap>
 
@@ -199,7 +199,7 @@
         LIMIT #{limit}
     </select>
 
-    <select id="findOpenIds" resultType="java.lang.String">
+    <select id="findOpenIds" resultType="java.lang.Long">
         SELECT interaction_id FROM sq_interaction
         WHERE user_id = #{userId} AND task_id = #{taskId} AND status = 'OPEN'
         ORDER BY id ASC
@@ -234,12 +234,12 @@
         response_json = COALESCE(response_json,
         #{responseJson}),
         version = version + 1,
-        last_updater_id = 'framework'
+        last_updater_id = 0
         WHERE user_id = #{userId} AND binding_id = #{bindingId}
         AND framework_request_id = #{frameworkRequestId} AND status = 'OPEN'
     </update>
 
-    <select id="findOpenByScope" resultType="java.lang.String">
+    <select id="findOpenByScope" resultType="java.lang.Long">
         SELECT interaction_id FROM sq_interaction
         WHERE user_id = #{userId} AND scope_id = #{scopeId} AND status = 'OPEN' AND del_flag = '0'
         ORDER BY id

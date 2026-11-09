@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.enums.ActivityType;
 import com.agentsquad.squad.model.bo.ActivityBusinessFactBO;
 import com.agentsquad.squad.model.po.ExecutionFailurePO;
@@ -89,14 +90,14 @@ public class ExecutionFailureService {
      * 模型错误先按可信类型分类并持久化，再允许原生失败事件终结；取消、旧计划和已结束执行不新增用户故障。
      */
     @Transactional
-    public void reportModel(String userId, String sessionId, String key, Throwable error) {
+    public void reportModel(Long userId, String sessionId, String key, Throwable error) {
         var scope = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), false);
         var owner = "TASK".equals(scope.getKind()) ? scopeMapper.lockTaskOwner(userId, scope.getOwnerId(), scope.getScopeId())
                 : scopeMapper.lockResponseOwner(userId, scope.getOwnerId(), scope.getScopeId());
         if (owner.isCancellationRequested() || Set.of("SUCCEEDED", "PARTIAL", "FAILED", "CANCELLED").contains(owner.getStatus())) {
             return;
         }
-        String binding = scopeMapper.findBindingBySession(userId, sessionId);
+        Long binding = scopeMapper.findBindingBySession(userId, sessionId);
         register(scope, binding, "model:" + key, ModelFailureClassifier.classify(error));
     }
 
@@ -104,12 +105,12 @@ public class ExecutionFailureService {
      * 完成候选或原生终态有明确业务原因时使用固定分类，不能用异常文案推测权限。
      */
     @Transactional
-    public void record(ExecutionScopePO scope, String bindingId, String key, FailureClassificationBO classification) {
+    public void record(ExecutionScopePO scope, Long bindingId, String key, FailureClassificationBO classification) {
         register(scope, bindingId, key, classification);
     }
 
     @Transactional
-    public void ensureNativeFailure(ExecutionScopePO scope, String bindingId, String key) {
+    public void ensureNativeFailure(ExecutionScopePO scope, Long bindingId, String key) {
         if (failures.latest(scope.getUserId(), scope.getScopeId(), bindingId) == null) {
             register(scope, bindingId, key, new FailureClassificationBO("INTERNAL", "NATIVE_RUN_INCOMPLETE", "SYSTEM", "本次处理未能完成，已保留你的内容，系统已记录问题。"));
         }
@@ -119,7 +120,7 @@ public class ExecutionFailureService {
      * 同一失败来源只建立一条恢复命令，次数、到期时间及命令原子提交；等待审批或未知写入时不安排重试。
      */
     @Transactional
-    public boolean queueTransientRetry(ExecutionScopePO scope, String bindingId, String eventId, String turnId) {
+    public boolean queueTransientRetry(ExecutionScopePO scope, Long bindingId, String eventId, String turnId) {
         scope = scopes.lockOwned(scope.getUserId(), scope.getScopeId(), false);
         var owner = "TASK".equals(scope.getKind()) ? scopeMapper.lockTaskOwner(scope.getUserId(), scope.getOwnerId(), scope.getScopeId())
                 : scopeMapper.lockResponseOwner(scope.getUserId(), scope.getOwnerId(), scope.getScopeId());
@@ -151,7 +152,7 @@ public class ExecutionFailureService {
             failures.responseRetrying(scope.getUserId(), bindingId, next);
         }
         String payload = RuntimePayloads.toJson(json, Map.of("turnId", turnId));
-        commands.insertControl(UUID.randomUUID().toString(), scope.getUserId(), key, eventId, ContentDigests.sha256(payload),
+        commands.insertControl(IdWorker.getId(), scope.getUserId(), key, eventId, ContentDigests.sha256(payload),
                 "TASK".equals(scope.getKind()) ? scope.getOwnerId() : null, bindingId, "RESUME", payload, next);
         failures.approveRetry(scope.getUserId(), failure.getFailureId(), attempt + 1);
         activities.completed(scope, bindingId, new ActivityBusinessFactBO(
@@ -165,7 +166,7 @@ public class ExecutionFailureService {
      * 发布工具的无效计划最多允许两次纠正；记录在原Scope，重启和换Turn不会重新获得次数。
      */
     @Transactional
-    public boolean invalidPlan(String userId, String sessionId) {
+    public boolean invalidPlan(Long userId, String sessionId) {
         var scope = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), true);
         failures.invalidPlan(userId, scope.getScopeId());
         int attempts = failures.planAttempts(userId, scope.getScopeId());
@@ -180,9 +181,9 @@ public class ExecutionFailureService {
      * 只有已持久批准的暂时模型故障恢复可获得新计费尝试键；原请求的未知收费继续占额。
      */
     @Transactional
-    public String modelRetrySuffix(String userId, String sessionId) {
+    public String modelRetrySuffix(Long userId, String sessionId) {
         var scope = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), true);
-        String bindingId = scopeMapper.findBindingBySession(userId, sessionId);
+        Long bindingId = scopeMapper.findBindingBySession(userId, sessionId);
         var failure = failures.latest(userId, scope.getScopeId(), bindingId);
         if (failure == null || !"RETRYING".equals(failure.getStatus())
                 || !"SERVICE_TRANSIENT".equals(failure.getCategory()) || !failure.getCode().startsWith("MODEL_")) {
@@ -192,7 +193,7 @@ public class ExecutionFailureService {
     }
 
     @Transactional
-    public void requireModelAllowed(String userId, String sessionId) {
+    public void requireModelAllowed(Long userId, String sessionId) {
         var scope = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), true);
         if (failures.planAttempts(userId, scope.getScopeId()) > 2) {
             throw new PlanCorrectionExhaustedException();
@@ -200,14 +201,14 @@ public class ExecutionFailureService {
     }
 
     @Transactional
-    public void resolve(String userId, String bindingId) {
-        String scopeId = scopeMapper.findScopeByBinding(userId, bindingId);
+    public void resolve(Long userId, Long bindingId) {
+        Long scopeId = scopeMapper.findScopeByBinding(userId, bindingId);
         var scope = scopes.lockOwned(userId, scopeId, false);
         if ("RESPONSE".equals(scope.getKind())) {
-            String previous = failures.predecessor(userId, scope.getOwnerId());
-            java.util.Set<String> visited = new java.util.HashSet<>();
+            Long previous = failures.predecessor(userId, scope.getOwnerId());
+            java.util.Set<Long> visited = new java.util.HashSet<>();
             while (previous != null && visited.add(previous)) {
-                String previousBinding = responses.bindingForExecution(userId, previous);
+                Long previousBinding = responses.bindingForExecution(userId, previous);
                 if (previousBinding != null) {
                     failures.resolveBinding(userId, previousBinding);
                 }
@@ -226,7 +227,7 @@ public class ExecutionFailureService {
     public void resolveSuperseded(ExecutionScopePO scope) {
         var superseded = failures.activeResponseFailures(scope.getUserId(), scope.getConversationId(),
                 scope.getConversationGeneration(), scope.getScopeId());
-        for (String failureId : superseded) {
+        for (Long failureId : superseded) {
             failures.status(scope.getUserId(), failureId, "RESOLVED");
         }
         if (!superseded.isEmpty()) {
@@ -236,12 +237,12 @@ public class ExecutionFailureService {
         }
     }
 
-    public List<ExecutionFailureVO> list(String userId, String conversationId) {
+    public List<ExecutionFailureVO> list(Long userId, Long conversationId) {
         return failures.activeInConversation(userId, conversationId).stream().map(row -> {
             var scope = scopeMapper.findOwned(userId, row.getScopeId());
-            String executionId = "RESPONSE".equals(scope.getKind()) ? scope.getOwnerId() : null;
-            String taskId = "TASK".equals(scope.getKind()) ? scope.getOwnerId() : null;
-            String source = failures.sourceMessage(userId, scope.getScopeId());
+            Long executionId = "RESPONSE".equals(scope.getKind()) ? scope.getOwnerId() : null;
+            Long taskId = "TASK".equals(scope.getKind()) ? scope.getOwnerId() : null;
+            Long source = failures.sourceMessage(userId, scope.getScopeId());
             int attempt = failures.serviceAttemptsView(userId, scope.getScopeId());
             var next = failures.nextAttempt(userId, scope.getScopeId());
             List<String> actions = executionId != null && failures.retryAllowed(userId, executionId) ? List.of("RETRY") : List.of();
@@ -299,19 +300,19 @@ public class ExecutionFailureService {
         failures.approveRetry(scope.getUserId(), failure.getFailureId(), attempt + 1);
         failures.recoverTask(scope.getUserId(), scope.getOwnerId());
         String payload = RuntimePayloads.toJson(json, Map.of("turnId", receipt.turnId()));
-        commands.insertControl(UUID.randomUUID().toString(), scope.getUserId(), scopeKey, key, ContentDigests.sha256(payload), scope.getOwnerId(), target.getBindingId(), "RESUME", payload, next);
+        commands.insertControl(IdWorker.getId(), scope.getUserId(), scopeKey, key, ContentDigests.sha256(payload), scope.getOwnerId(), target.getBindingId(), "RESUME", payload, next);
         events.publish(scope, "task-resume:" + key, "failure.updated", Map.of("failureId", failure.getFailureId(), "status", "RETRYING", "attempt", attempt + 1));
         log.info("协调中断已按原Turn排队恢复 taskId={} bindingId={} attempt={}", scope.getOwnerId(), target.getBindingId(), attempt + 1);
     }
 
-    public String masterCommand(ProjectionTargetBO target) {
+    public Long masterCommand(ProjectionTargetBO target) {
         return failures.latestMasterCommand(target.getUserId(), target.getBindingId());
     }
 
     @Transactional
-    public void resolveOperation(String userId, String scopeId, String operationId) {
+    public void resolveOperation(Long userId, Long scopeId, Long operationId) {
         var scope = scopes.lockOwned(userId, scopeId, false);
-        String id = failures.byKey(userId, scopeId, ContentDigests.sha256("operation:" + operationId));
+        Long id = failures.byKey(userId, scopeId, ContentDigests.sha256("operation:" + operationId));
         if (id != null) {
             failures.status(userId, id, "RESOLVED");
             events.publish(scope, "operation-resolved:" + operationId, "failure.updated", Map.of("failureId", id, "status", "RESOLVED"));
@@ -319,9 +320,9 @@ public class ExecutionFailureService {
     }
 
     @Transactional
-    public void resolveInteraction(String userId, String scopeId, String interactionId) {
+    public void resolveInteraction(Long userId, Long scopeId, Long interactionId) {
         var scope = scopes.lockOwned(userId, scopeId, false);
-        String id = failures.byKey(userId, scopeId, ContentDigests.sha256("interaction:" + interactionId));
+        Long id = failures.byKey(userId, scopeId, ContentDigests.sha256("interaction:" + interactionId));
         if (id != null) {
             failures.status(userId, id, "RESOLVED");
             events.publish(scope, "interaction-resolved:" + interactionId, "failure.updated", Map.of("failureId", id, "status", "RESOLVED"));
@@ -332,7 +333,7 @@ public class ExecutionFailureService {
      * 明确失败且无法再恢复的目标安全收尾；保留未知账本时拒绝收尾，旧节点及其命令同步失效。
      */
     @Transactional
-    public boolean finishFailedTask(ExecutionScopePO scope, String bindingId, String eventId) {
+    public boolean finishFailedTask(ExecutionScopePO scope, Long bindingId, String eventId) {
         if (!"TASK".equals(scope.getKind())) {
             return false;
         }
@@ -363,11 +364,11 @@ public class ExecutionFailureService {
         return true;
     }
 
-    public boolean canRetry(String userId, String executionId) {
+    public boolean canRetry(Long userId, Long executionId) {
         return failures.retryAllowed(userId, executionId);
     }
 
-    private void register(ExecutionScopePO scope, String bindingId, String key, FailureClassificationBO classification) {
+    private void register(ExecutionScopePO scope, Long bindingId, String key, FailureClassificationBO classification) {
         String hash = ContentDigests.sha256(key);
         if (failures.byKey(scope.getUserId(), scope.getScopeId(), hash) != null) {
             return;
@@ -376,7 +377,7 @@ public class ExecutionFailureService {
         if (failures.countActiveByCode(scope.getUserId(), scope.getScopeId(), classification.code()) > 0) {
             return;
         }
-        var row = new ExecutionFailurePO(UUID.randomUUID().toString(), scope.getScopeId(), bindingId, classification.category(), classification.code(), classification.actor(), classification.safeMessage(), UUID.randomUUID().toString(), "ACTIVE", 0);
+        var row = new ExecutionFailurePO(IdWorker.getId(), scope.getScopeId(), bindingId, classification.category(), classification.code(), classification.actor(), classification.safeMessage(), IdWorker.getId(), "ACTIVE", 0);
         failures.insert(scope.getUserId(), row, hash);
         if ("RESPONSE".equals(scope.getKind())) {
             failures.linkFailure(scope.getUserId(), bindingId, row.getFailureId());

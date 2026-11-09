@@ -15,14 +15,14 @@ import java.util.List;
  */
 @Mapper
 public interface ResponseTaskFactsMapper {
-    Long scopeGeneration(@Param("userId") String userId, @Param("taskId") String taskId);
+    Long scopeGeneration(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    List<ResponseJobFactBO> jobs(@Param("userId") String userId, @Param("taskId") String taskId,
+    List<ResponseJobFactBO> jobs(@Param("userId") Long userId, @Param("taskId") Long taskId,
                                  @Param("planVersion") long planVersion);
 
-    List<ResponseTaskStatusFactBO> recentTasks(@Param("userId") String userId,
-                                               @Param("conversationId") String conversationId, @Param("generation") long generation, @Param("through") long through);
+    List<ResponseTaskStatusFactBO> recentTasks(@Param("userId") Long userId,
+                                               @Param("conversationId") Long conversationId, @Param("generation") long generation, @Param("through") long through);
 
-    List<ResponseFailureFactBO> recentFailures(@Param("userId") String userId,
-                                               @Param("conversationId") String conversationId, @Param("generation") long generation, @Param("through") long through);
+    List<ResponseFailureFactBO> recentFailures(@Param("userId") Long userId,
+                                               @Param("conversationId") Long conversationId, @Param("generation") long generation, @Param("through") long through);
 }

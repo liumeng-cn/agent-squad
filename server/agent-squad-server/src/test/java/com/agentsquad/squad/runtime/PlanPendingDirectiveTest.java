@@ -43,32 +43,32 @@ class PlanPendingDirectiveTest {
         ReflectionTestUtils.setField(service, "planMapper", plans);
         ReflectionTestUtils.setField(service, "executionScopes", scopes);
         ReflectionTestUtils.setField(service, "objectMapper", json);
-        when(plans.lockMasterContext("user", "session")).thenReturn(
-                new PlanContextBO("user", "task", "binding", 0, "RUNNING", false, 1, "ACTIVE"));
-        when(directives.goalState("user", "task")).thenReturn(new TaskGoalStateBO(1, "{}"));
-        when(directives.pending("user", "task")).thenReturn(List.of("first", "second"));
+        when(plans.lockMasterContext(1L, "session")).thenReturn(
+                new PlanContextBO(1L, 2L, 3L, 0, "RUNNING", false, 1, "ACTIVE"));
+        when(directives.goalState(1L, 2L)).thenReturn(new TaskGoalStateBO(1, "{}"));
+        when(directives.pending(1L, 2L)).thenReturn(List.of(11L, 12L));
         TaskPO task = mock(TaskPO.class);
         when(task.getVersion()).thenReturn(9L);
-        when(tasks.lockOwnedRow("user", "task")).thenReturn(task);
-        for (String id : List.of("first", "second")) {
+        when(tasks.lockOwnedRow(1L, 2L)).thenReturn(task);
+        for (Long id : List.of(11L, 12L)) {
             TaskDirectivePO row = mock(TaskDirectivePO.class);
             when(row.getDirectiveId()).thenReturn(id);
-            when(row.getTaskId()).thenReturn("task");
+            when(row.getTaskId()).thenReturn(2L);
             when(row.getStatus()).thenReturn("ACCEPTED");
             when(row.getKind()).thenReturn("SUPPLEMENT");
             when(row.getContent()).thenReturn("private-directive-text");
             when(row.getExpectedVersion()).thenReturn(2L);
-            when(directives.lock("user", id)).thenReturn(row);
+            when(directives.lock(1L, id)).thenReturn(row);
         }
         PlanPublishBO request = new PlanPublishBO("plan", 0,
-                List.of(new PlanNodeBO("node", "worker", "v1", "goal", "snapshot", List.of(), true, 0)),
+                List.of(new PlanNodeBO("node", "worker", "v1", "goal", 4L, List.of(), true, 0)),
                 "ALL_REQUIRED", List.of("done"));
         RuntimeBusinessException failure = assertThrows(RuntimeBusinessException.class,
-                () -> service.publish("user", "session", request));
+                () -> service.publish(1L, "session", request));
         var pending = (PendingDirectivesException) failure;
         assertThat(pending.directives()).hasSize(2);
-        assertThat(pending.directives().get(0).directiveId()).isEqualTo("first");
-        assertThat(pending.directives().get(1).directiveId()).isEqualTo("second");
+        assertThat(pending.directives().get(0).directiveId()).isEqualTo(11L);
+        assertThat(pending.directives().get(1).directiveId()).isEqualTo(12L);
         assertThat(pending.directives().get(0).expectedVersion()).isEqualTo(9);
         assertThat(pending.directives().get(0).content()).isEqualTo("private-directive-text");
         assertThat(failure.getMessage()).doesNotContain("private-directive-text");

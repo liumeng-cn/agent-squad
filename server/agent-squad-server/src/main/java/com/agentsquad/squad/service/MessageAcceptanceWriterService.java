@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.event.CommandReadySignal;
 import com.agentsquad.squad.observer.ExecutionTrace;
 import com.agentsquad.squad.utils.ConversationTitles;
@@ -51,7 +52,7 @@ public class MessageAcceptanceWriterService {
     @Resource
     private ExecutionTrace executionTrace;
 
-    @org.springframework.beans.factory.annotation.Value("${agentsquad.response.completion-protocol:NATURAL}")
+    @Value("${agentsquad.response.completion-protocol:NATURAL}")
     private ResponseCompletionProtocol completionProtocol;
 
     @Resource
@@ -97,7 +98,7 @@ public class MessageAcceptanceWriterService {
      * 独立受理事务保证并发唯一键失败可先回滚，再由外层补查胜出收据，避免在失败事务中继续读写
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public MessageSubmissionBO accept(String userId, String conversationId, String scopeKey, String key,
+    public MessageSubmissionBO accept(Long userId, Long conversationId, String scopeKey, String key,
                                       MessageCreateDTO request, String payloadHash) {
         ConversationPO conversation = conversationId == null ? null : lockConversation(userId, conversationId);
         MessageSubmissionBO prior = messages.findSubmission(userId, scopeKey, key);
@@ -105,17 +106,17 @@ public class MessageAcceptanceWriterService {
             return prior;
         }
         if (conversation == null) {
-            conversationId = UUID.randomUUID().toString();
+            conversationId = IdWorker.getId();
             conversations.insertConversation(conversationId, userId, fallbackTitle(request.text()));
             messages.markFallbackTitle(userId, conversationId);
             conversation = lockConversation(userId, conversationId);
         }
-        String messageId = UUID.randomUUID().toString();
-        String executionId = UUID.randomUUID().toString();
-        String scopeId = UUID.randomUUID().toString();
-        String accountId = UUID.randomUUID().toString();
-        String bindingId = UUID.randomUUID().toString();
-        String commandId = UUID.randomUUID().toString();
+        Long messageId = IdWorker.getId();
+        Long executionId = IdWorker.getId();
+        Long scopeId = IdWorker.getId();
+        Long accountId = IdWorker.getId();
+        Long bindingId = IdWorker.getId();
+        Long commandId = IdWorker.getId();
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         if (responseBudgetLimit <= 0) {
             throw new IllegalStateException("回复预算上限必须大于0");
@@ -135,7 +136,7 @@ public class MessageAcceptanceWriterService {
         messages.setModelChoice(userId, executionId, modelCatalog.encode(selectedModel));
         finalDeliveries.initialize(userId, messageId, executionId);
         artifacts.attachScope(userId, scopeId, request.artifactIds());
-        for (String artifactId : request.artifactIds()) {
+        for (Long artifactId : request.artifactIds()) {
             artifactMapper.attachMessage(userId, messageId, artifactId);
         }
 
@@ -175,7 +176,7 @@ public class MessageAcceptanceWriterService {
         return singleLine.length() <= 40 ? singleLine : singleLine.substring(0, 40) + "…";
     }
 
-    private ConversationPO lockConversation(String userId, String conversationId) {
+    private ConversationPO lockConversation(Long userId, Long conversationId) {
         ConversationPO row = conversations.lockOwned(userId, conversationId);
         if (row == null || !"ACTIVE".equals(row.getStatus())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "对话不存在或已删除");
@@ -183,7 +184,7 @@ public class MessageAcceptanceWriterService {
         return row;
     }
 
-    private void appendEvent(String userId, ConversationPO conversation, String commandId, String type,
+    private void appendEvent(Long userId, ConversationPO conversation, Long commandId, String type,
                              Object payload, LocalDateTime now) {
         if (messages.reserveEvent(userId, conversation.getConversationId()) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "会话公开水位已失效");

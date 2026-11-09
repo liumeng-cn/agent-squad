@@ -28,14 +28,14 @@ public class ResponseControlController {
 
     @PostMapping("/api/v1/executions/{executionId}/cancel")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public ApiResult<CommandReceiptVO> cancel(HttpServletRequest servletRequest, @PathVariable String executionId,
+    public ApiResult<CommandReceiptVO> cancel(HttpServletRequest servletRequest, @PathVariable Long executionId,
                                               @RequestHeader("Idempotency-Key") String key, @Valid @RequestBody ControlDTO request) {
         return ApiResult.success(controls.cancel(UserContext.current(servletRequest).userId(), executionId, key, request.expectedVersion()));
     }
 
     @PostMapping("/api/v1/executions/{executionId}/retry")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public ApiResult<MessageReceiptVO> retry(HttpServletRequest servletRequest, @PathVariable String executionId,
+    public ApiResult<MessageReceiptVO> retry(HttpServletRequest servletRequest, @PathVariable Long executionId,
                                              @RequestHeader("Idempotency-Key") String key, @Valid @RequestBody ControlDTO request) {
         return ApiResult.success(retries.retry(UserContext.current(servletRequest).userId(), executionId, key, request.expectedVersion()));
     }

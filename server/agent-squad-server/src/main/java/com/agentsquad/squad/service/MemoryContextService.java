@@ -38,7 +38,7 @@ public class MemoryContextService {
      * 在会话/所有者之后锁用户代际，原子冻结引用；不调用模型，不把正文复制到另一个可复活的存储。
      */
     @Transactional
-    public MemoryContextSnapshotBO freeze(String userId, String scopeId) {
+    public MemoryContextSnapshotBO freeze(Long userId, Long scopeId) {
         scopes.lockOwned(userId, scopeId, true);
         long revision = lockRevision(userId);
         MemoryScopePinPO prior = mapper.pin(userId, scopeId);
@@ -58,7 +58,7 @@ public class MemoryContextService {
      * 调用方须先取得会话/实际所有者锁；此处不反向取得所有者锁。
      */
     @Transactional
-    public void requireCurrent(String userId, String scopeId) {
+    public void requireCurrent(Long userId, Long scopeId) {
         scopes.requireReadable(userId, scopeId);
         long revision = lockRevision(userId);
         MemoryScopePinPO pin = mapper.pin(userId, scopeId);
@@ -71,7 +71,7 @@ public class MemoryContextService {
      * 返回已经冻结并复验的资料；没有冻结点时拒绝读取，不临时获取新记忆污染旧上下文。
      */
     @Transactional
-    public MemoryContextSnapshotBO read(String userId, String scopeId) {
+    public MemoryContextSnapshotBO read(Long userId, Long scopeId) {
         scopes.requireReadable(userId, scopeId);
         long revision = lockRevision(userId);
         MemoryScopePinPO pin = mapper.pin(userId, scopeId);
@@ -85,9 +85,9 @@ public class MemoryContextService {
      * Worker只取得调用方明确选择的固定引用，不将Master的整个记忆集合默认下发。
      */
     @Transactional
-    public MemoryContextSnapshotBO select(String userId, String scopeId, List<String> memoryIds) {
+    public MemoryContextSnapshotBO select(Long userId, Long scopeId, List<Long> memoryIds) {
         if (memoryIds == null || memoryIds.size() > MAX_REFERENCES
-                || memoryIds.stream().anyMatch(id -> id == null || id.isBlank())
+                || memoryIds.stream().anyMatch(java.util.Objects::isNull)
                 || memoryIds.stream().distinct().count() != memoryIds.size()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "局部记忆引用必须唯一且不超过20条");
         }
@@ -104,7 +104,7 @@ public class MemoryContextService {
      * 已撤销显式授权的原话来源；会话装配据此排除旧来源与其派生助手回复，不删除用户聊天账本。
      */
     @Transactional
-    public List<String> invalidatedSourceMessageIds(String userId) {
+    public List<Long> invalidatedSourceMessageIds(Long userId) {
         lockRevision(userId);
         return mapper.invalidatedSources(userId, now());
     }
@@ -114,22 +114,22 @@ public class MemoryContextService {
      * 当前读先取得失效引用，再按ID关联历史，避免MySQL可重复读快照放回已撤销来源。
      */
     @Transactional
-    public Set<String> excludedHistoryMessageIds(String userId) {
+    public Set<Long> excludedHistoryMessageIds(Long userId) {
         long revision = lockRevision(userId);
-        Set<String> excluded = new HashSet<>();
-        for (String sourceId : mapper.invalidatedSources(userId, now())) {
+        Set<Long> excluded = new HashSet<>();
+        for (Long sourceId : mapper.invalidatedSources(userId, now())) {
             excluded.add(sourceId);
             excluded.addAll(mapper.sourceMessages(userId, sourceId));
         }
-        Set<String> staleScopes = new HashSet<>(mapper.blockedScopeIds(userId, revision));
+        Set<Long> staleScopes = new HashSet<>(mapper.blockedScopeIds(userId, revision));
         staleScopes.addAll(mapper.staleScopeIds(userId, now()));
-        for (String scopeId : staleScopes) {
+        for (Long scopeId : staleScopes) {
             excluded.addAll(mapper.scopeMessages(userId, scopeId));
         }
         return Set.copyOf(excluded);
     }
 
-    private MemoryContextSnapshotBO currentSnapshot(String userId, String scopeId, MemoryScopePinPO pin, long revision) {
+    private MemoryContextSnapshotBO currentSnapshot(Long userId, Long scopeId, MemoryScopePinPO pin, long revision) {
         if (!"CURRENT".equals(pin.getBarrierStatus()) || pin.getMemoryRevision() != revision) {
             throw new MemoryContextInvalidatedException();
         }
@@ -146,7 +146,7 @@ public class MemoryContextService {
         return new MemoryContextSnapshotBO(pin.getMemoryRevision(), memories);
     }
 
-    private long lockRevision(String userId) {
+    private long lockRevision(Long userId) {
         mapper.ensureRevision(userId);
         return mapper.lockRevision(userId);
     }

@@ -22,23 +22,23 @@ public class MessageSubmissionBO {
     /**
      * 对话业务ID
      */
-    private String conversationId;
+    private Long conversationId;
     /**
      * 消息业务标识
      */
-    private String messageId;
+    private Long messageId;
     /**
      * 回复执行ID
      */
-    private String executionId;
+    private Long executionId;
     /**
      * 命令业务ID
      */
-    private String commandId;
+    private Long commandId;
     /**
      * 统一执行作用域ID
      */
-    private String scopeId;
+    private Long scopeId;
     /**
      * 规范化请求SHA256
      */

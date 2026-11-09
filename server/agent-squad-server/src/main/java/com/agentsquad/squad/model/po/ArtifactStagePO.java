@@ -24,23 +24,23 @@ public class ArtifactStagePO {
     /**
      * 暂存产物业务ID
      */
-    private String stageId;
+    private Long stageId;
     /**
      * 归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 交付作用域ID
      */
-    private String scopeId;
+    private Long scopeId;
     /**
      * 来源绑定ID
      */
-    private String bindingId;
+    private Long bindingId;
     /**
      * 来源沙箱执行ID
      */
-    private String executionId;
+    private Long executionId;
     /**
      * 来源隔离工作区相对路径
      */
@@ -64,5 +64,5 @@ public class ArtifactStagePO {
     /**
      * 已发布产物ID
      */
-    private String artifactId;
+    private Long artifactId;
 }

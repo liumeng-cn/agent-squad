@@ -15,13 +15,13 @@ import com.agentsquad.squad.model.po.TaskDirectivePO;
 public class TaskDirectiveVO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("directiveId")
-    private final String directiveId;
+    private final Long directiveId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("taskId")
-    private final String taskId;
+    private final Long taskId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId")
-    private final String sourceMessageId;
+    private final Long sourceMessageId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("status")
     private final TaskDirectiveStatus status;
@@ -43,9 +43,9 @@ public class TaskDirectiveVO {
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public TaskDirectiveVO(
-            @com.fasterxml.jackson.annotation.JsonProperty("directiveId") String directiveId,
-            @com.fasterxml.jackson.annotation.JsonProperty("taskId") String taskId,
-            @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId") String sourceMessageId,
+            @com.fasterxml.jackson.annotation.JsonProperty("directiveId") Long directiveId,
+            @com.fasterxml.jackson.annotation.JsonProperty("taskId") Long taskId,
+            @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId") Long sourceMessageId,
             @com.fasterxml.jackson.annotation.JsonProperty("status") TaskDirectiveStatus status,
             @com.fasterxml.jackson.annotation.JsonProperty("waitReason") TaskDirectiveWaitReason waitReason,
             @com.fasterxml.jackson.annotation.JsonProperty("appliedVersion") Long appliedVersion,

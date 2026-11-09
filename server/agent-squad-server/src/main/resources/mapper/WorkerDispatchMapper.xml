@@ -4,16 +4,16 @@
 
     <resultMap id="findByBindingResult" type="com.agentsquad.squad.model.bo.WorkerLaunchBO">
         <constructor>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="job_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="job_id" javaType="java.lang.Long"/>
             <arg column="plan_version" javaType="_long"/>
             <arg column="node_key" javaType="java.lang.String"/>
             <arg column="worker_key" javaType="java.lang.String"/>
             <arg column="worker_version" javaType="java.lang.String"/>
             <arg column="job_status" javaType="java.lang.String"/>
             <arg column="plan_status" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
             <arg column="agent_id" javaType="java.lang.String"/>
             <arg column="input_json" javaType="java.lang.String"/>
             <arg column="cancel_requested_at" javaType="java.time.LocalDateTime"/>
@@ -52,12 +52,12 @@
 
     <update id="claimGuard">
         UPDATE sq_worker_job j
-        SET j.status = 'RUNNING',
-        j.guard_token = #{guardToken},
-        j.candidate_guard_token = CASE WHEN j.result_candidate_json IS NOT NULL
+        SET status = 'RUNNING',
+        guard_token = #{guardToken},
+        candidate_guard_token = CASE WHEN j.result_candidate_json IS NOT NULL
         THEN #{guardToken} ELSE j.candidate_guard_token END,
-        j.guard_lease_until = #{leaseUntil},
-        j.version = j.version + 1
+        guard_lease_until = #{leaseUntil},
+        version = j.version + 1
         WHERE j.user_id = #{userId} AND j.binding_id = #{bindingId}
         AND j.cancel_requested_at IS NULL
         AND (j.status = 'READY'

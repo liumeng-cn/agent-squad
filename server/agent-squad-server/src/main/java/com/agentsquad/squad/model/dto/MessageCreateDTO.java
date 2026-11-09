@@ -24,7 +24,7 @@ public class MessageCreateDTO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("artifactIds")
     @Size(max = 20)
-    private final List<@NotBlank String> artifactIds;
+    private final List<Long> artifactIds;
 
     @com.fasterxml.jackson.annotation.JsonProperty("modelId")
     @Size(max = 100)
@@ -36,7 +36,7 @@ public class MessageCreateDTO {
     @com.fasterxml.jackson.annotation.JsonCreator
     public MessageCreateDTO(
             @com.fasterxml.jackson.annotation.JsonProperty("text") String text,
-            @com.fasterxml.jackson.annotation.JsonProperty("artifactIds") List<@NotBlank String> artifactIds,
+            @com.fasterxml.jackson.annotation.JsonProperty("artifactIds") List<Long> artifactIds,
             @com.fasterxml.jackson.annotation.JsonProperty("modelId") String modelId,
             @com.fasterxml.jackson.annotation.JsonProperty("reasoningMode") ReasoningMode reasoningMode) {
         this.text = text;
@@ -45,7 +45,7 @@ public class MessageCreateDTO {
         this.reasoningMode = reasoningMode;
     }
 
-    public MessageCreateDTO(String text, List<String> artifactIds) {
+    public MessageCreateDTO(String text, List<Long> artifactIds) {
         this(text, artifactIds, null, null);
     }
 

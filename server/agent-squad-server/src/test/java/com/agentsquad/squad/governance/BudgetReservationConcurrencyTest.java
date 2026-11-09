@@ -1,6 +1,6 @@
 package com.agentsquad.squad.governance;
 
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.config.properties.WorkerModelProfileProperties;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
@@ -32,14 +32,14 @@ class BudgetReservationConcurrencyTest {
 
     @Test
     void concurrentReservationsCannotExceedTaskLimit(@TempDir Path tempDirectory) throws Exception {
-        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("squad"));
+        String databaseUrl = PostgresTestDatabase.url(tempDirectory.resolve("squad"));
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.budget.max-microunits-per-task=100")) {
-            String userId = "00000000-0000-0000-0000-000000000001";
+            Long userId = 1L;
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             BudgetService budget = context.getBean(BudgetService.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
@@ -81,14 +81,14 @@ class BudgetReservationConcurrencyTest {
 
     @Test
     void modelReservationSettlesTrustedUsageAndRetainsUnknownCharge(@TempDir Path tempDirectory) {
-        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("squad"));
+        String databaseUrl = PostgresTestDatabase.url(tempDirectory.resolve("squad"));
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.budget.max-microunits-per-task=100")) {
-            String userId = "00000000-0000-0000-0000-000000000001";
+            Long userId = 1L;
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             BudgetService budget = context.getBean(BudgetService.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
@@ -125,7 +125,7 @@ class BudgetReservationConcurrencyTest {
         }
     }
 
-    private boolean reserveModel(BudgetService budget, String userId, String taskId,
+    private boolean reserveModel(BudgetService budget, Long userId, Long taskId,
                                  String usageKey, String profileKey, String hash,
                                  WorkerModelProfileProperties profile, CountDownLatch ready,
                                  CountDownLatch start) throws InterruptedException {
@@ -139,7 +139,7 @@ class BudgetReservationConcurrencyTest {
         }
     }
 
-    private boolean reserveTool(BudgetService budget, String userId, String taskId,
+    private boolean reserveTool(BudgetService budget, Long userId, Long taskId,
                                 CountDownLatch ready, CountDownLatch start) throws InterruptedException {
         ready.countDown();
         start.await();
@@ -151,7 +151,7 @@ class BudgetReservationConcurrencyTest {
         }
     }
 
-    private String scopeId(JdbcTemplate jdbc, String taskId) {
-        return jdbc.queryForObject("SELECT scope_id FROM sq_goal_task WHERE task_id = ?", String.class, taskId);
+    private Long scopeId(JdbcTemplate jdbc, Long taskId) {
+        return jdbc.queryForObject("SELECT scope_id FROM sq_goal_task WHERE task_id = ?", Long.class, taskId);
     }
 }

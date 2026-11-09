@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.model.po.ArtifactPO;
@@ -55,7 +56,7 @@ public class ArtifactService {
      * 内容校验与摘要完成后原子提交 READY；并发同键重放只返回同一产物。
      */
     @Transactional
-    public ArtifactVO upload(String userId, String key, String name, byte[] content) {
+    public ArtifactVO upload(Long userId, String key, String name, byte[] content) {
         if (key == null || key.isBlank() || key.length() > 160 || name == null || name.isBlank()
                 || name.length() > 240 || name.contains("/") || name.contains("\\")
                 || name.chars().anyMatch(value -> value < 32) || content == null || content.length > MAX_BYTES) {
@@ -76,7 +77,7 @@ public class ArtifactService {
         if (prior != null) {
             return sameUpload(userId, prior, name, hash);
         }
-        String id = UUID.randomUUID().toString();
+        Long id = IdWorker.getId();
         try {
             mapper.insert(id, userId, name, type, content.length, hash, key, content,
                     LocalDateTime.now(ZoneOffset.UTC).plusDays(30));
@@ -88,14 +89,14 @@ public class ArtifactService {
         return get(userId, id);
     }
 
-    public ArtifactVO get(String userId, String id) {
+    public ArtifactVO get(Long userId, Long id) {
         return view(requireOwned(userId, id));
     }
 
     /**
      * 下载前重验资源归属、有效期和存储摘要；不返回未经完整性校验的字节。
      */
-    public ArtifactPO content(String userId, String id) {
+    public ArtifactPO content(Long userId, Long id) {
         ArtifactPO row = mapper.findContent(userId, id);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "产物不存在、已过期或无权访问");
@@ -110,18 +111,18 @@ public class ArtifactService {
     /**
      * 目标受理事务内绑定已 READY 的同用户产物；任何无效引用使整个目标受理回滚。
      */
-    public void attach(String userId, String taskId, List<String> ids) {
+    public void attach(Long userId, Long taskId, List<Long> ids) {
         if (ids.size() > 20 || ids.stream().distinct().count() != ids.size()) {
             throw invalid("附件最多 20 个且不能重复");
         }
-        for (String id : ids) {
+        for (Long id : ids) {
             requireOwned(userId, id);
             mapper.attach(userId, taskId, id);
             mapper.attachScope(userId, scopeMapper.findScopeByTask(userId, taskId), id);
         }
     }
 
-    public List<ArtifactVO> listTask(String userId, String taskId) {
+    public List<ArtifactVO> listTask(Long userId, Long taskId) {
         if (taskMapper.findOwned(userId, taskId) == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
         }
@@ -132,19 +133,19 @@ public class ArtifactService {
      * 关联普通回复或目标的就绪附件，归属与删除屏障仍由服务端重验。
      */
     @Transactional
-    public void attachScope(String userId, String scopeId, List<String> ids) {
+    public void attachScope(Long userId, Long scopeId, List<Long> ids) {
         scopeService.lockOwned(userId, scopeId, false);
         scopeService.requireReadable(userId, scopeId);
         if (ids.size() > 20 || ids.stream().distinct().count() != ids.size()) {
             throw invalid("附件最多20个且不能重复");
         }
-        for (String id : ids) {
+        for (Long id : ids) {
             requireOwned(userId, id);
             mapper.attachScope(userId, scopeId, id);
         }
     }
 
-    public List<ArtifactVO> listScope(String userId, String scopeId) {
+    public List<ArtifactVO> listScope(Long userId, Long scopeId) {
         scopeService.requireReadable(userId, scopeId);
         return mapper.listScopeIds(userId, scopeId).stream().map(id -> get(userId, id)).toList();
     }
@@ -152,19 +153,19 @@ public class ArtifactService {
     /**
      * 校验产物已关联到指定执行作用域，供按需读取附件的工具入口使用。
      */
-    public boolean isLinkedToScope(String userId, String scopeId, String id) {
+    public boolean isLinkedToScope(Long userId, Long scopeId, Long id) {
         scopeService.requireReadable(userId, scopeId);
         return mapper.listScopeIds(userId, scopeId).contains(id);
     }
 
-    private ArtifactVO sameUpload(String userId, ArtifactPO row, String name, String hash) {
+    private ArtifactVO sameUpload(Long userId, ArtifactPO row, String name, String hash) {
         if (row == null || !row.getFileName().equals(name) || !row.getSha256().equals(hash)) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同上传键的文件不一致");
         }
         return get(userId, row.getArtifactId());
     }
 
-    private ArtifactPO requireOwned(String userId, String id) {
+    private ArtifactPO requireOwned(Long userId, Long id) {
         ArtifactPO row = mapper.findOwned(userId, id);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "产物不存在、已过期或无权访问");

@@ -1,9 +1,10 @@
 package com.agentsquad.squad.runtime;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.model.dto.MessageCreateDTO;
 import com.agentsquad.squad.service.ConversationQueryService;
 import com.agentsquad.squad.service.MessageAcceptanceService;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -25,10 +26,10 @@ class ConversationSseCrossInstanceIntegrationTest {
 
     @Test
     void sseWatermarkIsConsistentAcrossInstances(@TempDir Path directory) {
-        String url = MySqlTestDatabase.url(directory.resolve("sse-cross-instance"));
-        String username = MySqlTestDatabase.username();
-        String password = MySqlTestDatabase.password();
-        String user = UUID.randomUUID().toString();
+        String url = PostgresTestDatabase.url(directory.resolve("sse-cross-instance"));
+        String username = PostgresTestDatabase.username();
+        String password = PostgresTestDatabase.password();
+        Long user = IdWorker.getId();
 
         try (ConfigurableApplicationContext instanceA = MessageAcceptanceHttpTest.start(url, username, password, user);
              ConfigurableApplicationContext instanceB = MessageAcceptanceHttpTest.start(url, username, password, user)) {

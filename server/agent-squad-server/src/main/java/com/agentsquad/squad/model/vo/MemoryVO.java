@@ -11,7 +11,7 @@ package com.agentsquad.squad.model.vo;
 public class MemoryVO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("memoryId")
-    private final String memoryId;
+    private final Long memoryId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("key")
     private final String key;
@@ -32,18 +32,18 @@ public class MemoryVO {
     private final java.time.OffsetDateTime expiresAt;
 
     @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId")
-    private final String sourceMessageId;
+    private final Long sourceMessageId;
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public MemoryVO(
-            @com.fasterxml.jackson.annotation.JsonProperty("memoryId") String memoryId,
+            @com.fasterxml.jackson.annotation.JsonProperty("memoryId") Long memoryId,
             @com.fasterxml.jackson.annotation.JsonProperty("key") String key,
             @com.fasterxml.jackson.annotation.JsonProperty("content") String content,
             @com.fasterxml.jackson.annotation.JsonProperty("kind") String kind,
             @com.fasterxml.jackson.annotation.JsonProperty("status") String status,
             @com.fasterxml.jackson.annotation.JsonProperty("version") long version,
             @com.fasterxml.jackson.annotation.JsonProperty("expiresAt") java.time.OffsetDateTime expiresAt,
-            @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId") String sourceMessageId) {
+            @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId") Long sourceMessageId) {
         this.memoryId = memoryId;
         this.key = key;
         this.content = content;

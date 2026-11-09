@@ -12,5 +12,5 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface UserStatusMapper {
 
-    AccountStatus findStatus(@Param("userId") String userId);
+    AccountStatus findStatus(@Param("userId") Long userId);
 }

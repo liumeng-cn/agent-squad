@@ -9,10 +9,10 @@ package com.agentsquad.squad.model.vo;
 public class CommandVO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("commandId")
-    private final String commandId;
+    private final Long commandId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("taskId")
-    private final String taskId;
+    private final Long taskId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("status")
     private final String status;
@@ -28,8 +28,8 @@ public class CommandVO {
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public CommandVO(
-            @com.fasterxml.jackson.annotation.JsonProperty("commandId") String commandId,
-            @com.fasterxml.jackson.annotation.JsonProperty("taskId") String taskId,
+            @com.fasterxml.jackson.annotation.JsonProperty("commandId") Long commandId,
+            @com.fasterxml.jackson.annotation.JsonProperty("taskId") Long taskId,
             @com.fasterxml.jackson.annotation.JsonProperty("status") String status,
             @com.fasterxml.jackson.annotation.JsonProperty("nativeTurnId") String nativeTurnId,
             @com.fasterxml.jackson.annotation.JsonProperty("nativeRunId") String nativeRunId,

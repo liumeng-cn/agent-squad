@@ -89,7 +89,7 @@ public class ResponseContextService {
      * 超限明确拒绝，不截断用户前文；附件正文按单文件预算截断并保留标记。
      */
     @Transactional
-    public ResponseContextSnapshotBO freeze(String userId, String bindingId) {
+    public ResponseContextSnapshotBO freeze(Long userId, Long bindingId) {
         ExecutionScopePO scope = scopeService.lockOwned(userId,
                 scopeMapper.findScopeByBinding(userId, bindingId), true);
         if (!"RESPONSE".equals(scope.getKind())) {
@@ -121,7 +121,7 @@ public class ResponseContextService {
             if (characters > MAX_CONTEXT_CHARACTERS) {
                 throw contextTooLarge();
             }
-            List<String> artifactIds = mapper.artifactIds(userId, row.getMessageId());
+            List<Long> artifactIds = mapper.artifactIds(userId, row.getMessageId());
             List<ResponseContextMaterialBO> materials = buildMaterials(userId, artifactIds);
             for (ResponseContextMaterialBO material : materials) {
                 characters += material.content().length();
@@ -145,7 +145,7 @@ public class ResponseContextService {
             throw new IllegalStateException("回复上下文冻结发生竞争");
         }
         activities.completed(scope, new ActivityBusinessFactBO(
-                ActivityType.CONTEXT_PREPARE, source.getExecutionId()));
+                ActivityType.CONTEXT_PREPARE, String.valueOf(source.getExecutionId())));
         log.info("回复上下文已冻结 conversationId={} messageCount={} materialCount={} contextChars={}",
                 scope.getConversationId(), messages.size(),
                 messages.stream().mapToInt(m -> m.materials().size()).sum(), characters);
@@ -155,9 +155,9 @@ public class ResponseContextService {
     /**
      * 读取附件正文并按单文件预算格式化截断；归属与摘要校验由 ArtifactService 完成。
      */
-    private List<ResponseContextMaterialBO> buildMaterials(String userId, List<String> artifactIds) {
+    private List<ResponseContextMaterialBO> buildMaterials(Long userId, List<Long> artifactIds) {
         List<ResponseContextMaterialBO> materials = new ArrayList<>();
-        for (String artifactId : artifactIds) {
+        for (Long artifactId : artifactIds) {
             ArtifactPO artifact = artifactService.content(userId, artifactId);
             String raw = new String(artifact.getContent(), StandardCharsets.UTF_8);
             String formatted = MaterialFormatter.format(raw, artifact.getMediaType(), MAX_MATERIAL_CHARACTERS);
@@ -195,9 +195,9 @@ public class ResponseContextService {
                 "对话材料超过当前可处理范围，请新建对话并提供必要材料");
     }
 
-    private void validateArtifacts(String userId, List<ResponseContextMessageBO> messages) {
+    private void validateArtifacts(Long userId, List<ResponseContextMessageBO> messages) {
         for (ResponseContextMessageBO message : messages) {
-            for (String id : message.artifactIds()) {
+            for (Long id : message.artifactIds()) {
                 if (artifacts.findOwned(userId, id) == null) {
                     throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "对话材料已失效或无权读取");
                 }

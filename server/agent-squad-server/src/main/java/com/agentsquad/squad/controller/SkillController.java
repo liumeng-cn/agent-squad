@@ -44,19 +44,19 @@ public class SkillController {
 
     @GetMapping("/{versionId}")
     public ApiResult<SkillDetailVO> detail(HttpServletRequest servletRequest,
-                                           @PathVariable String versionId) {
+                                           @PathVariable Long versionId) {
         return ApiResult.success(skills.detail(UserContext.current(servletRequest).userId(), versionId));
     }
 
     @PutMapping("/{versionId}/grant")
     public ApiResult<SkillGrantVO> grant(HttpServletRequest servletRequest,
-                                         @PathVariable String versionId, @Valid @RequestBody SkillGrantDTO request) {
+                                         @PathVariable Long versionId, @Valid @RequestBody SkillGrantDTO request) {
         return ApiResult.success(skills.changeGrant(UserContext.current(servletRequest).userId(), versionId, request));
     }
 
     @PostMapping("/{versionId}/revoke")
     public ApiResult<SkillDetailVO> revoke(HttpServletRequest servletRequest,
-                                           @PathVariable String versionId, @Valid @RequestBody SkillRevokeDTO request) {
+                                           @PathVariable Long versionId, @Valid @RequestBody SkillRevokeDTO request) {
         return ApiResult.success(skills.revoke(UserContext.current(servletRequest).userId(), versionId,
                 request.expectedVersion()));
     }

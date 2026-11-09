@@ -1,8 +1,9 @@
 package com.agentsquad.squad.runtime;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.service.ConversationQueryService;
 import com.agentsquad.squad.service.TaskControlService;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.enums.TaskDirectiveStatus;
 import com.agentsquad.squad.enums.TaskDirectiveWaitReason;
@@ -52,7 +53,7 @@ class TaskDirectiveIntegrationTest {
     void concurrentChangesApplyOnceAndRejectStaleGoal(@TempDir Path directory) throws Exception {
         try (var context = start(directory)) {
             var jdbc = context.getBean(JdbcTemplate.class);
-            String user = UUID.randomUUID().toString();
+            Long user = IdWorker.getId();
             var messages = context.getBean(MessageAcceptanceService.class);
             var source = messages.accept(user, null, "source", new MessageCreateDTO("写介绍", List.of()));
             var task = context.getBean(GoalTaskCreationService.class).create(user, replySession(jdbc, source.executionId()),
@@ -95,7 +96,7 @@ class TaskDirectiveIntegrationTest {
     void cancelledTaskRejectsPendingChangeInsteadOfApplyingIt(@TempDir Path directory) {
         try (var context = start(directory)) {
             var jdbc = context.getBean(JdbcTemplate.class);
-            String user = UUID.randomUUID().toString();
+            Long user = IdWorker.getId();
             var messages = context.getBean(MessageAcceptanceService.class);
             var source = messages.accept(user, null, "source", new MessageCreateDTO("写介绍", List.of()));
             var task = context.getBean(GoalTaskCreationService.class).create(user, replySession(jdbc, source.executionId()),
@@ -119,7 +120,7 @@ class TaskDirectiveIntegrationTest {
 
     static void verifyApply(ConfigurableApplicationContext context) throws Exception {
         JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-        String user = UUID.randomUUID().toString();
+        Long user = IdWorker.getId();
         var messages = context.getBean(MessageAcceptanceService.class);
         var source = messages.accept(user, null, "source", new MessageCreateDTO("写一段正式介绍", List.of()));
         var task = context.getBean(GoalTaskCreationService.class).create(user, replySession(jdbc, source.executionId()),
@@ -129,11 +130,11 @@ class TaskDirectiveIntegrationTest {
         context.getBean(WorkerDefinitionService.class).publish(new AuthView(user, "admin", List.of(AccountRole.ADMIN), "csrf"), "writer-" + user,
                 new WorkerDefinitionCreateDTO("writer-" + user, "1.0.0", "写作", json.readTree("{}"), json.readTree("{}"), List.of(), "default", "default"));
         var snapshots = context.getBean(ContextSnapshotService.class);
-        String snapshot = snapshots.prepare(user, targetSession, "draft", "before").snapshotId();
+        Long snapshot = snapshots.prepare(user, targetSession, "draft", "before").snapshotId();
         var plans = context.getBean(PlanService.class);
         var planRequest = new PlanPublishBO("original", 0, List.of(new PlanNodeBO("draft", "writer-" + user, "1.0.0", "介绍", snapshot, List.of(), true, 1)), "ALL_REQUIRED", List.of("完成"));
         var original = plans.publish(user, targetSession, planRequest);
-        String oldBinding = jdbc.queryForObject("SELECT binding_id FROM sq_worker_job WHERE job_id=?", String.class, original.jobIds().getFirst());
+        Long oldBinding = jdbc.queryForObject("SELECT binding_id FROM sq_worker_job WHERE job_id=?", Long.class, original.jobIds().getFirst());
         jdbc.update("UPDATE sq_command SET status='DELIVERED' WHERE binding_id=?", oldBinding);
         String guard = context.getBean(WorkerDispatchService.class).claim(user, oldBinding).getGuardToken();
         var supplement = messages.accept(user, source.conversationId(), "supplement", new MessageCreateDTO("改成活泼风格，突出合作", List.of()));
@@ -151,12 +152,12 @@ class TaskDirectiveIntegrationTest {
             assertThat(item.waitReason()).isEqualTo(TaskDirectiveWaitReason.WAITING_SAFE_POINT);
             assertThat(item.sourceMessageId()).isEqualTo(supplement.messageId());
         });
-        assertThatThrownBy(() -> query.snapshot(UUID.randomUUID().toString(), source.conversationId(), null, 40))
+        assertThatThrownBy(() -> query.snapshot(IdWorker.getId(), source.conversationId(), null, 40))
                 .isInstanceOf(RuntimeBusinessException.class);
         assertThat(directives.submit(user, session, request)).isEqualTo(receipt);
         assertThatThrownBy(() -> directives.submit(user, session, new TaskDirectiveSubmitBO("supplement", task.taskId(), version, "REPLACE", "替换"))).isInstanceOf(RuntimeBusinessException.class);
         assertThatThrownBy(() -> directives.decide(user, session, new TaskDirectiveDecisionBO(receipt.directiveId(), version, "APPLY", null))).isInstanceOf(RuntimeBusinessException.class);
-        assertThatThrownBy(() -> directives.submit(UUID.randomUUID().toString(), session, request)).isInstanceOf(RuntimeBusinessException.class);
+        assertThatThrownBy(() -> directives.submit(IdWorker.getId(), session, request)).isInstanceOf(RuntimeBusinessException.class);
         assertThatThrownBy(() -> plans.publish(user, targetSession, planRequest)).isInstanceOf(RuntimeBusinessException.class);
         assertThatThrownBy(() -> directives.decide(user, targetSession, new TaskDirectiveDecisionBO(receipt.directiveId(), version + 1, "APPLY", null))).isInstanceOf(RuntimeBusinessException.class);
         TransactionTemplate tx = new TransactionTemplate(context.getBean(PlatformTransactionManager.class));
@@ -176,7 +177,7 @@ class TaskDirectiveIntegrationTest {
         assertThatThrownBy(() -> context.getBean(WorkerResultService.class).propose(user, oldBinding, guard, "late-turn", json.readTree("{}"))).isInstanceOf(RuntimeBusinessException.class);
         assertThatThrownBy(() -> snapshots.prepare(user, targetSession, "draft", "before")).isInstanceOf(RuntimeBusinessException.class);
         assertThatThrownBy(() -> plans.publish(user, targetSession, planRequest)).isInstanceOf(RuntimeBusinessException.class);
-        String after = snapshots.prepare(user, targetSession, "draft", "after").snapshotId();
+        Long after = snapshots.prepare(user, targetSession, "draft", "after").snapshotId();
         String items = jdbc.queryForObject("SELECT items_json FROM sq_context_snapshot WHERE snapshot_id=?", String.class, after);
         assertThat(items).contains("USER_SUPPLEMENT", "改成活泼风格，突出合作").doesNotContain("加入活泼风格与合作重点");
         var next = plans.publish(user, targetSession, new PlanPublishBO("updated", 1, List.of(new PlanNodeBO("draft", "writer-" + user, "1.0.0", "新介绍", after, List.of(), true, 1)), "ALL_REQUIRED", List.of("完成")));
@@ -188,7 +189,7 @@ class TaskDirectiveIntegrationTest {
 
     static void verifyUnknown(ConfigurableApplicationContext context) {
         JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-        String user = UUID.randomUUID().toString();
+        Long user = IdWorker.getId();
         var messages = context.getBean(MessageAcceptanceService.class);
         var source = messages.accept(user, null, "source", new MessageCreateDTO("完成工作", List.of()));
         var task = context.getBean(GoalTaskCreationService.class).create(user, replySession(jdbc, source.executionId()), new GoalTaskCreateBO("goal", "工作", "完成工作", source.messageId()));
@@ -202,7 +203,7 @@ class TaskDirectiveIntegrationTest {
         var receipt = service.submit(user, replySession(jdbc, message.executionId()), new TaskDirectiveSubmitBO("change", task.taskId(), version(jdbc, task.taskId()), "REPLACE", "另一工作"));
         jdbc.update("UPDATE sq_command SET status='APPLIED' WHERE task_id=?", task.taskId());
         service.dispatch(new TaskDirectiveTargetBO(receipt.directiveId(), user, task.taskId()));
-        assertThat(jdbc.queryForObject("SELECT command_id FROM sq_task_directive WHERE directive_id=?", String.class, receipt.directiveId())).isNull();
+        assertThat(jdbc.queryForObject("SELECT command_id FROM sq_task_directive WHERE directive_id=?", Long.class, receipt.directiveId())).isNull();
         var query = context.getBean(ConversationQueryService.class);
         var waiting = query.snapshot(user, source.conversationId(), null, 40);
         assertThat(waiting.directives()).singleElement().satisfies(item -> {
@@ -225,15 +226,15 @@ class TaskDirectiveIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT goal_revision FROM sq_goal_task WHERE task_id=?", Long.class, task.taskId())).isZero();
     }
 
-    private static long version(JdbcTemplate jdbc, String task) {
+    private static long version(JdbcTemplate jdbc, Long task) {
         return jdbc.queryForObject("SELECT version FROM sq_goal_task WHERE task_id=?", Long.class, task);
     }
 
-    private static String replySession(JdbcTemplate jdbc, String execution) {
+    private static String replySession(JdbcTemplate jdbc, Long execution) {
         return jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=(SELECT binding_id FROM sq_response_execution WHERE execution_id=?)", String.class, execution);
     }
 
     private ConfigurableApplicationContext start(Path directory) {
-        return MessageAcceptanceHttpTest.start(MySqlTestDatabase.url(directory.resolve("directive")), MySqlTestDatabase.username(), MySqlTestDatabase.password(), UUID.randomUUID().toString());
+        return MessageAcceptanceHttpTest.start(PostgresTestDatabase.url(directory.resolve("directive")), PostgresTestDatabase.username(), PostgresTestDatabase.password(), IdWorker.getId());
     }
 }

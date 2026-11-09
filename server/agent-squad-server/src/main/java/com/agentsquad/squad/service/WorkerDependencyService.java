@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.utils.ContentDigests;
 import com.agentsquad.squad.enums.WorkerJobStatus;
 import com.agentsquad.squad.enums.WorkerSkipReason;
@@ -61,7 +62,7 @@ public class WorkerDependencyService {
     /**
      * 调用方已锁定父 Task 和 Plan；依赖读取使用当前读，避免并行分支相互看不到已提交结果。
      */
-    public void activateReadyDependents(String userId, String taskId, long planVersion) {
+    public void activateReadyDependents(Long userId, Long taskId, long planVersion) {
         List<WorkerJobPO> jobs = planMapper.lockJobs(taskId, planVersion);
         var nodes = jobs.stream().map(job -> new WorkerDependencyNodeBO(job.getNodeKey(),
                 WorkerJobStatus.valueOf(job.getStatus()), dependencyNames(job))).toList();
@@ -144,12 +145,12 @@ public class WorkerDependencyService {
     private void activate(WorkerJobPO job, List<WorkerJobPO> dependencies) {
         WorkerDefinitionVO definition = definitionService.requireEnabled(
                 job.getWorkerKey(), job.getWorkerVersion());
-        String bindingId = UUID.randomUUID().toString();
+        Long bindingId = IdWorker.getId();
         if (planMapper.activateBlockedJob(job.getUserId(), job.getJobId(), bindingId) != 1) {
             throw new IllegalStateException("依赖节点激活竞争");
         }
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
-        String agentId = ContentDigests.sha256(definition.definitionId()).substring(0, 32);
+        String agentId = ContentDigests.sha256(String.valueOf(definition.definitionId())).substring(0, 32);
         bindingMapper.insertWorker(bindingId, job.getUserId(), job.getTaskId(), agentId,
                 UUID.randomUUID().toString(), now);
 
@@ -165,7 +166,7 @@ public class WorkerDependencyService {
         String message = input.path("goal").asText() + "\n已完成依赖节点结果："
                 + RuntimePayloads.toJson(objectMapper, results);
         String payload = RuntimePayloads.toJson(objectMapper, Map.of("message", message));
-        String commandId = UUID.randomUUID().toString();
+        Long commandId = IdWorker.getId();
         commandMapper.insertSubmit(commandId, job.getUserId(), "worker-job:" + job.getJobId(),
                 "plan:" + job.getPlanVersion() + ":" + job.getNodeKey(), ContentDigests.sha256(payload),
                 job.getTaskId(), bindingId, payload, now);

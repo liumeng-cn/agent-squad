@@ -54,5 +54,5 @@ public interface NativeSessionGateway {
     /**
      * 读取原命令的 SDK 持久收据，用于区分仍在运行与 writer 租约失效的未完成回合。
      */
-    NativeSubmissionReceiptBO inspectTask(ProjectionTargetBO target, String commandId);
+    NativeSubmissionReceiptBO inspectTask(ProjectionTargetBO target, Long commandId);
 }

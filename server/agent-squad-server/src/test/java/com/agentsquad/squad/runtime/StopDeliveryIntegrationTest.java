@@ -1,6 +1,7 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.agent.MasterAgentIdentity;
 import com.agentsquad.squad.mapper.*;
@@ -32,19 +33,19 @@ class StopDeliveryIntegrationTest {
 
     @Test
     void shouldFinalizeCancelledTaskWhenNoActiveNativeRun(@TempDir Path tempDirectory) {
-        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("squad"));
+        String databaseUrl = PostgresTestDatabase.url(tempDirectory.resolve("squad"));
         String[] properties = {
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.delivery.enabled=true",
                 "--agentsquad.delivery.poll-delay-ms=60000",
                 "--agentsquad.model.api-key=test-key",
                 "--agentsquad.model.base-url=https://example.invalid/v1",
                 "--agentsquad.model.name=test-model"
         };
-        String userId = "00000000-0000-0000-0000-000000000001";
+        Long userId = 1L;
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class, properties)) {
             ConversationMapper conversationMapper = context.getBean(ConversationMapper.class);
             TaskMapper taskMapper = context.getBean(TaskMapper.class);
@@ -55,17 +56,17 @@ class StopDeliveryIntegrationTest {
             GoalTaskService goalTaskService = context.getBean(GoalTaskService.class);
             ConversationCleanupTask cleanupScheduler = context.getBean(ConversationCleanupTask.class);
 
-            String conversationId = UUID.randomUUID().toString();
-            String taskId = UUID.randomUUID().toString();
-            String bindingId = UUID.randomUUID().toString();
-            String commandId = UUID.randomUUID().toString();
+            Long conversationId = IdWorker.getId();
+            Long taskId = IdWorker.getId();
+            Long bindingId = IdWorker.getId();
+            Long commandId = IdWorker.getId();
             LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
 
             conversationMapper.insertConversation(conversationId, userId, "停止投递");
             taskMapper.insert(taskId, userId, conversationId, "{\"message\":\"停止我\"}", 5000000L);
             context.getBean(ExecutionScopeService.class).createTaskScope(userId, taskId, conversationId, 0, "STANDARD", 5000000L);
             bindingMapper.insertMaster(bindingId, userId, taskId, MasterAgentIdentity.AGENT_ID,
-                    UUID.randomUUID().toString(), now);
+                    IdWorker.getIdStr(), now);
             assertThat(conversationMapper.activateTask(userId, conversationId, taskId)).isEqualTo(1);
             taskEventMapper.insertAccepted(userId, taskId, "command:" + UUID.randomUUID(),
                     "{\"taskId\":\"" + taskId + "\"}", now);

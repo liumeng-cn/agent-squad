@@ -20,15 +20,15 @@ public class ProjectionTargetBO {
     /**
      * 资源归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 可选所属目标ID；普通回复为空
      */
-    private String taskId;
+    private Long taskId;
     /**
      * 绑定业务ID
      */
-    private String bindingId;
+    private Long bindingId;
     /**
      * 固定能力版本标识
      */

@@ -16,7 +16,7 @@ import com.agentsquad.squad.model.dto.ActivityHistoryDTO;
 import com.agentsquad.squad.model.vo.ExecutionActivityVO;
 import com.agentsquad.squad.service.ConversationQueryService;
 import com.agentsquad.squad.model.bo.ProjectionTargetBO;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -42,10 +42,10 @@ class ActivityProjectionIntegrationTest {
     void projectsRealBoundariesWithoutLeakingArgumentsOrReopeningCompletedCalls(@TempDir Path directory) throws Exception {
         try (var context = SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=none", "--agentsquad.delivery.enabled=false",
-                "--spring.datasource.url=" + MySqlTestDatabase.url(directory),
-                "--spring.datasource.username=" + MySqlTestDatabase.username(),
-                "--spring.datasource.password=" + MySqlTestDatabase.password())) {
-            String user = "00000000-0000-0000-0000-000000000001";
+                "--spring.datasource.url=" + PostgresTestDatabase.url(directory),
+                "--spring.datasource.username=" + PostgresTestDatabase.username(),
+                "--spring.datasource.password=" + PostgresTestDatabase.password())) {
+            Long user = 1L;
             var tracer = context.getBean(Tracer.class);
             var parent = tracer.nextSpan().name("test.message.accept").start();
             MessageReceiptVO receipt;
@@ -63,13 +63,13 @@ class ActivityProjectionIntegrationTest {
             });
             assertThat(tracer.currentSpan()).isNull();
             var jdbc = context.getBean(JdbcTemplate.class);
-            String binding = jdbc.queryForObject("SELECT binding_id FROM sq_runtime_binding", String.class);
+            Long binding = jdbc.queryForObject("SELECT binding_id FROM sq_runtime_binding", Long.class);
             assertThatThrownBy(() -> tracing.project(user, binding, () -> {
                 assertThat(tracer.currentSpan().context().traceId()).isEqualTo(parent.context().traceId());
                 throw new IllegalStateException("test rollback");
             })).isInstanceOf(IllegalStateException.class);
             assertThat(tracer.currentSpan()).isNull();
-            String scopeId = jdbc.queryForObject("SELECT scope_id FROM sq_response_execution", String.class);
+            Long scopeId = jdbc.queryForObject("SELECT scope_id FROM sq_response_execution", Long.class);
             String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding", String.class);
             var executor = java.util.concurrent.Executors.newSingleThreadExecutor();
             var scheduler = reactor.core.scheduler.Schedulers.fromExecutorService(executor);
@@ -146,7 +146,7 @@ class ActivityProjectionIntegrationTest {
             assertThat(published).contains("FILE_READ", "FAILED", "MODEL_CALL").doesNotContain("private-");
             assertThat(jdbc.queryForList("SELECT payload_json FROM sq_conversation_event WHERE event_type='activity.updated'", String.class))
                     .allMatch(payload -> !payload.contains("private-"));
-            assertThatThrownBy(() -> reads.snapshot("00000000-0000-0000-0000-000000000002", receipt.conversationId(), null, 40))
+            assertThatThrownBy(() -> reads.snapshot(2L, receipt.conversationId(), null, 40))
                     .isInstanceOf(RuntimeBusinessException.class);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_execution_activity", Integer.class)).isEqualTo(4);
             transaction.executeWithoutResult(status -> {
@@ -157,13 +157,15 @@ class ActivityProjectionIntegrationTest {
             });
             var first = reads.activityHistory(user, receipt.conversationId(), new ActivityHistoryDTO(receipt.messageId(), null));
             assertThat(first.items()).hasSize(40);
-            assertThat(first.nextCursor()).isEqualTo(first.items().getLast().activityId());
-            var second = reads.activityHistory(user, receipt.conversationId(), new ActivityHistoryDTO(receipt.messageId(), first.nextCursor()));
+            assertThat(first.nextCursor()).isEqualTo(String.valueOf(first.items().getLast().activityId()));
+            var second = reads.activityHistory(user, receipt.conversationId(), new ActivityHistoryDTO(receipt.messageId(), Long.valueOf(first.nextCursor())));
             assertThat(second.items()).hasSize(5).extracting(ExecutionActivityVO::activityId)
                     .doesNotContainAnyElementsOf(first.items().stream().map(ExecutionActivityVO::activityId).toList());
             assertThat(second.nextCursor()).isNull();
-            assertThat(reads.activityHistory(user, receipt.conversationId(), new ActivityHistoryDTO("other-message", first.nextCursor())).items()).isEmpty();
-            assertThatThrownBy(() -> reads.activityHistory("00000000-0000-0000-0000-000000000002", receipt.conversationId(),
+            assertThatThrownBy(() -> reads.activityHistory(user, receipt.conversationId(),
+                    new ActivityHistoryDTO(-1L, Long.valueOf(first.nextCursor()))))
+                    .isInstanceOf(RuntimeBusinessException.class);
+            assertThatThrownBy(() -> reads.activityHistory(2L, receipt.conversationId(),
                     new ActivityHistoryDTO(receipt.messageId(), null)))
                     .isInstanceOf(RuntimeBusinessException.class);
         }

@@ -31,7 +31,7 @@ public class MockTicketConnector {
     /**
      * 执行模拟写工单：同幂等键重复创建返回原单，不产生第二张工单。
      */
-    public String createTicket(String userId, String externalKey, String title, String detail) {
+    public String createTicket(Long userId, String externalKey, String title, String detail) {
         String requestHash = ContentDigests.sha256(title + "\n" + detail);
         if (mockTicketMapper.countByKey(userId, externalKey) > 0) {
             String priorHash = mockTicketMapper.findRequestHash(userId, externalKey);

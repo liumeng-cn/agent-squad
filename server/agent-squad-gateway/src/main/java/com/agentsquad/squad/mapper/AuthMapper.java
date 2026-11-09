@@ -33,12 +33,12 @@ public interface AuthMapper {
 
     int revokeSession(@Param("sessionId") String sessionId, @Param("now") LocalDateTime now);
 
-    int revokeUserSessions(@Param("userId") String userId, @Param("now") LocalDateTime now);
+    int revokeUserSessions(@Param("userId") Long userId, @Param("now") LocalDateTime now);
 
     RateBucketPO findBucketForUpdate(@Param("bucketKey") String bucketKey);
 
-    int insertAudit(@Param("eventId") String eventId, @Param("userId") String userId,
-                    @Param("actorUserId") String actorUserId, @Param("eventType") String eventType,
+    int insertAudit(@Param("eventId") Long eventId, @Param("userId") Long userId,
+                    @Param("actorUserId") Long actorUserId, @Param("eventType") String eventType,
                     @Param("result") String result, @Param("occurredAt") LocalDateTime occurredAt,
                     @Param("requestId") String requestId);
 

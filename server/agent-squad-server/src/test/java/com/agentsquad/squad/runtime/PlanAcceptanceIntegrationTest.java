@@ -20,7 +20,7 @@ import com.agentsquad.squad.service.ContextSnapshotService;
 import com.agentsquad.squad.service.PlanAcceptanceService;
 import com.agentsquad.squad.service.PlanCompletionEvaluationService;
 import com.agentsquad.squad.service.PlanService;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.model.dto.WorkerDefinitionCreateDTO;
 import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,14 +46,14 @@ class PlanAcceptanceIntegrationTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void checksEvidenceAndRealUserDecision(boolean accepted, @TempDir Path directory) throws Exception {
-        String user = "00000000-0000-0000-0000-000000000001";
+        Long user = 1L;
         var actor = new AuthView(user, "tester", List.of(AccountRole.ADMIN), "csrf");
         try (var context = SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=" + ("true".equals(System.getenv("SQUAD_ACCEPTANCE_BROWSER_PROBE")) ? "servlet" : "none"),
                 "--server.port=0", "--server.shutdown=immediate", "--agentsquad.identity.allow-unsigned-local=true",
-                "--spring.datasource.url=" + MySqlTestDatabase.url(directory),
-                "--spring.datasource.username=" + MySqlTestDatabase.username(),
-                "--spring.datasource.password=" + MySqlTestDatabase.password(),
+                "--spring.datasource.url=" + PostgresTestDatabase.url(directory),
+                "--spring.datasource.username=" + PostgresTestDatabase.username(),
+                "--spring.datasource.password=" + PostgresTestDatabase.password(),
                 "--agentsquad.delivery.enabled=true", "--agentsquad.delivery.poll-delay-ms=3600000",
                 "--agentsquad.projection.poll-delay-ms=3600000", "--agentsquad.model.api-key=test-only",
                 "--agentsquad.model.base-url=http://127.0.0.1:1/v1", "--agentsquad.model.name=test-model")) {
@@ -64,12 +64,12 @@ class PlanAcceptanceIntegrationTest {
             var task = tasks.submit(user, conversation.conversationId(), "acceptance", "写作并核对结果");
             db.update("UPDATE sq_command SET status='CANCELLED'");
             String session = db.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE task_id=? AND role='MASTER'", String.class, task.taskId());
-            String binding = db.queryForObject("SELECT binding_id FROM sq_runtime_binding WHERE task_id=? AND role='MASTER'", String.class, task.taskId());
+            Long binding = db.queryForObject("SELECT binding_id FROM sq_runtime_binding WHERE task_id=? AND role='MASTER'", Long.class, task.taskId());
             context.getBean(WorkerDefinitionService.class).publish(actor, "acceptance-writer",
                     new WorkerDefinitionCreateDTO("acceptance-writer", "1.0.0", "写作", json.readTree("{}"),
                             json.readTree("{}"), List.of(), "default", "default"));
-            String snapshot = context.getBean(ContextSnapshotService.class).prepare(user, session, "write", "context").snapshotId();
-            String optionalSnapshot = context.getBean(ContextSnapshotService.class).prepare(user, session, "optional", "optional-context").snapshotId();
+            Long snapshot = context.getBean(ContextSnapshotService.class).prepare(user, session, "write", "context").snapshotId();
+            Long optionalSnapshot = context.getBean(ContextSnapshotService.class).prepare(user, session, "optional", "optional-context").snapshotId();
             var nodes = List.of(new PlanNodeBO("write", "acceptance-writer", "1.0.0", "完成短文", snapshot, List.of(), true, 1),
                     new PlanNodeBO("optional", "acceptance-writer", "1.0.0", "额外润色", optionalSnapshot, List.of(), false, 1));
             var criteria = List.of(
@@ -93,7 +93,7 @@ class PlanAcceptanceIntegrationTest {
             assertThat(evaluation.evaluate(user, task.taskId(), 1, List.of()).decision().stage()).isEqualTo(PlanJoinStage.WAITING_WORK);
             db.update("UPDATE sq_worker_job SET status='FAILED',result_json=NULL WHERE task_id=? AND node_key='optional'", task.taskId());
             db.update("UPDATE sq_goal_task SET status='RUNNING' WHERE task_id=?", task.taskId());
-            String job = db.queryForObject("SELECT job_id FROM sq_worker_job WHERE task_id=? AND node_key='write'", String.class, task.taskId());
+            Long job = db.queryForObject("SELECT job_id FROM sq_worker_job WHERE task_id=? AND node_key='write'", Long.class, task.taskId());
             var unknown = evaluation.evaluate(user, task.taskId(), 1, List.of());
             assertThat(context.getBean(TaskSnapshotService.class).listJobs(user, task.taskId()).items())
                     .anyMatch(item -> item.nodeKey().equals("optional") && Boolean.FALSE.equals(item.required()));
@@ -103,7 +103,7 @@ class PlanAcceptanceIntegrationTest {
             assertThatThrownBy(() -> completion.submit(new CompletionSubmissionBO(user, session, "turn", "call", "SUCCEEDED", "短文", List.of())))
                     .isInstanceOf(RuntimeBusinessException.class);
             assertThatThrownBy(() -> evaluation.evaluate(user, task.taskId(), 1,
-                    List.of(new AcceptanceReviewBO("quality", PlanAcceptanceVerdict.PASS, List.of("foreign-job")))))
+                    List.of(new AcceptanceReviewBO("quality", PlanAcceptanceVerdict.PASS, List.of(-1L)))))
                     .isInstanceOf(RuntimeBusinessException.class);
             var interactions = context.getBean(InteractionService.class);
             var review = interactions.bindFrameworkRequest(user, task.taskId(), binding, null, "turn-review", "review-request",
@@ -158,10 +158,10 @@ class PlanAcceptanceIntegrationTest {
             assertThat(snapshotService.listJobs(user, task.taskId()).items()).anyMatch(item -> job.equals(item.reusedFromJobId()));
             var publicReuse = json.readTree(db.queryForObject("SELECT payload_json FROM sq_conversation_event WHERE conversation_id=? AND event_type='job.reused' ORDER BY id DESC LIMIT 1",
                     String.class, conversation.conversationId()));
-            assertThat(publicReuse.path("reusedFromJobId").asText()).isEqualTo(job);
+            assertThat(publicReuse.path("reusedFromJobId").asText()).isEqualTo(String.valueOf(job));
             assertThat(publicReuse.path("planVersion").asInt()).isEqualTo(2);
             assertThat(snapshotService.listJobs(user, task.taskId(), 1L).acceptanceChecks()).isEmpty();
-            assertThatThrownBy(() -> snapshotService.listJobs("foreign-user", task.taskId(), 1L)).isInstanceOf(RuntimeBusinessException.class);
+            assertThatThrownBy(() -> snapshotService.listJobs(-1L, task.taskId(), 1L)).isInstanceOf(RuntimeBusinessException.class);
             assertThatThrownBy(() -> snapshotService.listJobs(user, task.taskId(), 3L)).isInstanceOf(RuntimeBusinessException.class);
             assertThatThrownBy(() -> acceptance.prepareUserReview(user, session, new AcceptanceReviewRequestBO("confirm", 1)))
                     .isInstanceOf(RuntimeBusinessException.class);

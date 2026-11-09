@@ -84,12 +84,12 @@ public class RuntimeSessionProvider {
         if (agentId == null || !agentId.equals(inboxMapper.findBoundAgent(source))) {
             throw new IllegalStateException("原生日志Agent与绑定不匹配");
         }
-        return journalStore.open(new SessionKey(source.userId(), agentId, source.sessionId()), readContext(source))
+        return journalStore.open(new SessionKey(String.valueOf(source.userId()), agentId, source.sessionId()), readContext(source))
                 .readAfter(after, limit);
     }
 
     private RuntimeContext readContext(RuntimeEventSourceBO source) {
-        return RuntimeContext.builder().userId(source.userId()).sessionId(source.sessionId()).build();
+        return RuntimeContext.builder().userId(String.valueOf(source.userId())).sessionId(source.sessionId()).build();
     }
 
     private void requireBinding(RuntimeEventSourceBO source) {

@@ -5,8 +5,8 @@
     <resultMap id="listByOwnerResult" type="com.agentsquad.squad.model.po.ConnectionPO">
         <constructor>
             <arg column="id" javaType="_long"/>
-            <arg column="connection_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="connection_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
             <arg column="name" javaType="java.lang.String"/>
             <arg column="provider" javaType="java.lang.String"/>
             <arg column="environment" javaType="java.lang.String"/>
@@ -15,9 +15,9 @@
             <arg column="create_idempotency_key" javaType="java.lang.String"/>
             <arg column="revision" javaType="_long"/>
             <arg column="enabled" javaType="_boolean"/>
-            <arg column="creator_id" javaType="java.lang.String"/>
+            <arg column="creator_id" javaType="java.lang.Long"/>
             <arg column="creator_name" javaType="java.lang.String"/>
-            <arg column="last_updater_id" javaType="java.lang.String"/>
+            <arg column="last_updater_id" javaType="java.lang.Long"/>
             <arg column="last_updater_name" javaType="java.lang.String"/>
         </constructor>
     </resultMap>
@@ -48,7 +48,7 @@
         #{secretRef},
         #{createIdempotencyKey},
         0,
-        1,
+        TRUE,
         #{userId},
         #{creatorName},
         #{userId},

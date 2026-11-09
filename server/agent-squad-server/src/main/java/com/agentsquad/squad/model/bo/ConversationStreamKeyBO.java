@@ -5,5 +5,5 @@ package com.agentsquad.squad.model.bo;
  * <p>
  * 不同用户即使使用相同会话标识也不共享订阅或缓冲。
  */
-public record ConversationStreamKeyBO(String userId, String conversationId) {
+public record ConversationStreamKeyBO(Long userId, Long conversationId) {
 }

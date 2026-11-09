@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.tool;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
@@ -66,7 +68,7 @@ public class SandboxPythonTool implements AgentTool {
                         "files", Map.of("type", "array", "maxItems", 20, "items", Map.of("type", "object",
                                 "properties", Map.of("path", Map.of("type", "string"), "content", Map.of("type", "string")),
                                 "required", List.of("path", "content"), "additionalProperties", false)),
-                        "artifactIds", Map.of("type", "array", "maxItems", 20, "uniqueItems", true, "items", Map.of("type", "string", "format", "uuid")),
+                        "artifactIds", Map.of("type", "array", "maxItems", 20, "uniqueItems", true, "items", Map.of("type", "string")),
                         "outputPaths", Map.of("type", "array", "maxItems", 20, "items", Map.of("type", "string")),
                         "timeoutSeconds", Map.of("type", "integer", "minimum", 1, "maximum", 30)),
                 "required", List.of("logicalKey", "script", "files", "outputPaths", "timeoutSeconds"),
@@ -82,7 +84,7 @@ public class SandboxPythonTool implements AgentTool {
             }
             try {
                 SandboxExecuteRequestBO request = json.convertValue(param.getInput(), SandboxExecuteRequestBO.class);
-                var result = sandbox.execute(context.getUserId(), context.getSessionId(), guard(context),
+                var result = sandbox.execute(RuntimeContextIds.userId(context), context.getSessionId(), guard(context),
                         context.get(SessionRecorder.TURN_ID_KEY, String.class), param.getToolUseBlock().getId(), request);
                 return ToolResultBlock.text(RuntimePayloads.toJson(json, result));
             } catch (RuntimeBusinessException exception) {
@@ -94,8 +96,8 @@ public class SandboxPythonTool implements AgentTool {
     }
 
     private String guard(RuntimeContext context) {
-        String bindingId = bindings.findBindingBySession(context.getUserId(), context.getSessionId());
-        var worker = workers.findByBinding(context.getUserId(), bindingId);
+        Long bindingId = bindings.findBindingBySession(RuntimeContextIds.userId(context), context.getSessionId());
+        var worker = workers.findByBinding(RuntimeContextIds.userId(context), bindingId);
         if (worker == null) {
             return null;
         }

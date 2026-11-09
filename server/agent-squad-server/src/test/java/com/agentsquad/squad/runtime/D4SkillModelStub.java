@@ -31,7 +31,8 @@ final class D4SkillModelStub implements AutoCloseable {
             Object message;
             String finish;
             if (call == 1) {
-                var match = Pattern.compile("tone_platform-skill:[a-f0-9-]{36}").matcher(request);
+                // 技能版本 ID 已统一为雪花 Long，目录标识形如 tone_platform-skill:1234567890。
+                var match = Pattern.compile("tone_platform-skill:\\d+").matcher(request);
                 if (!match.find()) {
                     throw new IllegalStateException("框架目录没有可选择的固定技能");
                 }
@@ -47,13 +48,31 @@ final class D4SkillModelStub implements AutoCloseable {
             byte[] body = json.writeValueAsBytes(Map.of("id", "d4-" + call, "object", "chat.completion", "created", 1,
                     "model", "test-model", "choices", List.of(Map.of("index", 0, "message", message, "finish_reason", finish)),
                     "usage", Map.of("prompt_tokens", 5, "completion_tokens", 5, "total_tokens", 10)));
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.sendResponseHeaders(200, body.length);
+            boolean streaming = json.readTree(request).path("stream").asBoolean();
+            byte[] response = streaming ? stream(json, body).getBytes(StandardCharsets.UTF_8) : body;
+            exchange.getResponseHeaders().set("Content-Type", streaming ? "text/event-stream" : "application/json");
+            exchange.sendResponseHeaders(200, response.length);
             try (var output = exchange.getResponseBody()) {
-                output.write(body);
+                output.write(response);
             }
         });
         server.start();
+    }
+
+    /**
+     * 原生 SDK 使用流式协议调用模型，夹具把整条消息包装成单个增量块并附带用量，避免缺少用量事件。
+     */
+    private String stream(ObjectMapper json, byte[] body) throws java.io.IOException {
+        var chunk = (com.fasterxml.jackson.databind.node.ObjectNode) json.readTree(body);
+        var choice = (com.fasterxml.jackson.databind.node.ObjectNode) chunk.path("choices").get(0);
+        var message = choice.remove("message");
+        int index = 0;
+        for (var tool : message.path("tool_calls")) {
+            ((com.fasterxml.jackson.databind.node.ObjectNode) tool).put("index", index++);
+        }
+        choice.set("delta", message);
+        chunk.put("object", "chat.completion.chunk");
+        return "data: " + json.writeValueAsString(chunk) + "\n\ndata: [DONE]\n\n";
     }
 
     private Map<String, Object> tool(int call, String name, Object arguments) throws java.io.IOException {

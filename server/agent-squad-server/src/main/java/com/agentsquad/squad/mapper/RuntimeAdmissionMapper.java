@@ -19,47 +19,47 @@ public interface RuntimeAdmissionMapper {
 
     Integer lockCounter(@Param("poolKey") String poolKey);
 
-    RuntimeAdmissionSlotPO lockSlot(@Param("bindingId") String bindingId);
+    RuntimeAdmissionSlotPO lockSlot(@Param("bindingId") Long bindingId);
 
-    Long lockBindingCursor(@Param("userId") String userId,
-                           @Param("bindingId") String bindingId);
+    Long lockBindingCursor(@Param("userId") Long userId,
+                           @Param("bindingId") Long bindingId);
 
-    int createSlot(@Param("userId") String userId,
-                   @Param("bindingId") String bindingId,
-                   @Param("commandId") String commandId,
+    int createSlot(@Param("userId") Long userId,
+                   @Param("bindingId") Long bindingId,
+                   @Param("commandId") Long commandId,
                    @Param("action") String action,
                    @Param("claimCursor") long claimCursor);
 
-    int activateSlot(@Param("userId") String userId,
-                     @Param("bindingId") String bindingId,
-                     @Param("commandId") String commandId,
+    int activateSlot(@Param("userId") Long userId,
+                     @Param("bindingId") Long bindingId,
+                     @Param("commandId") Long commandId,
                      @Param("action") String action,
                      @Param("claimCursor") long claimCursor);
 
-    int bindTurn(@Param("userId") String userId,
-                 @Param("bindingId") String bindingId,
-                 @Param("commandId") String commandId,
+    int bindTurn(@Param("userId") Long userId,
+                 @Param("bindingId") Long bindingId,
+                 @Param("commandId") Long commandId,
                  @Param("turnId") String turnId);
 
-    int bindRecoveryRun(@Param("userId") String userId,
-                        @Param("bindingId") String bindingId,
+    int bindRecoveryRun(@Param("userId") Long userId,
+                        @Param("bindingId") Long bindingId,
                         @Param("runId") String runId,
                         @Param("eventSequence") long eventSequence);
 
-    String findCommandTurn(@Param("userId") String userId,
-                           @Param("commandId") String commandId);
+    String findCommandTurn(@Param("userId") Long userId,
+                           @Param("commandId") Long commandId);
 
-    String findPriorTurn(@Param("userId") String userId,
-                         @Param("bindingId") String bindingId);
+    String findPriorTurn(@Param("userId") Long userId,
+                         @Param("bindingId") Long bindingId);
 
-    String findLastProjectedEndedTurn(@Param("userId") String userId,
-                                      @Param("bindingId") String bindingId);
+    String findLastProjectedEndedTurn(@Param("userId") Long userId,
+                                      @Param("bindingId") Long bindingId);
 
     List<String> findCounterMismatches(@Param("limit") int limit);
 
-    int releaseSlot(@Param("userId") String userId,
-                    @Param("bindingId") String bindingId,
-                    @Param("commandId") String commandId);
+    int releaseSlot(@Param("userId") Long userId,
+                    @Param("bindingId") Long bindingId,
+                    @Param("commandId") Long commandId);
 
     int increment(@Param("poolKey") String poolKey);
 

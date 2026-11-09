@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
@@ -66,7 +67,7 @@ public class ConnectionService {
             return toView(prior);
         }
 
-        String connectionId = UUID.randomUUID().toString();
+        Long connectionId = IdWorker.getId();
         String secretRef = secretVault.store(request.secret());
         connectionMapper.insertConnection(connectionId, actor.userId(), actor.username(), request.name(),
                 request.provider(), request.environment(), policyJson, secretRef, idempotencyKey);
@@ -78,7 +79,7 @@ public class ConnectionService {
     /**
      * 分页列出当前用户连接；cursor 为存储主键，空表示首页。
      */
-    public ConnectionPageVO list(String userId, String cursor, int limit) {
+    public ConnectionPageVO list(Long userId, String cursor, int limit) {
         Long cursorId = parseCursor(cursor);
         List<ConnectionPO> rows = connectionMapper.listByOwner(userId, cursorId,
                 Math.min(Math.max(limit, 1), 100));
@@ -91,7 +92,7 @@ public class ConnectionService {
     /**
      * 读取当前用户单个连接视图。
      */
-    public ConnectionVO get(String userId, String connectionId) {
+    public ConnectionVO get(Long userId, Long connectionId) {
         return toView(requireOwned(userId, connectionId));
     }
 
@@ -99,7 +100,7 @@ public class ConnectionService {
      * 按 expectedVersion 更新配置或轮换密钥；每次成功更新 revision 加一。
      */
     @Transactional
-    public ConnectionVO update(AuthView actor, String connectionId, String idempotencyKey,
+    public ConnectionVO update(AuthView actor, Long connectionId, String idempotencyKey,
                                ConnectionUpdateDTO request) {
         requireIdempotencyKey(idempotencyKey);
         ConnectionPO row = requireOwned(actor.userId(), connectionId);
@@ -120,7 +121,7 @@ public class ConnectionService {
         return toView(connectionMapper.findOwned(actor.userId(), connectionId));
     }
 
-    private ConnectionPO requireOwned(String userId, String connectionId) {
+    private ConnectionPO requireOwned(Long userId, Long connectionId) {
         ConnectionPO row = connectionMapper.findOwned(userId, connectionId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "连接不存在");

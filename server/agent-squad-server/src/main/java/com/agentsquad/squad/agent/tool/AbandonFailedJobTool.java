@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.tool;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.utils.RuntimePayloads;
 import com.agentsquad.squad.model.bo.AbandonFailedJobRequestBO;
@@ -44,7 +46,7 @@ public class AbandonFailedJobTool implements AgentTool {
     @Override
     public Map<String, Object> getParameters() {
         return Map.of("type", "object", "properties", Map.of(
-                        "jobId", Map.of("type", "string", "format", "uuid"),
+                        "jobId", Map.of("type", "string"),
                         "expectedPlanVersion", Map.of("type", "integer", "minimum", 1)),
                 "required", List.of("jobId", "expectedPlanVersion"), "additionalProperties", false);
     }
@@ -58,7 +60,7 @@ public class AbandonFailedJobTool implements AgentTool {
             }
             try {
                 var request = json.convertValue(param.getInput(), AbandonFailedJobRequestBO.class);
-                return ToolResultBlock.text(RuntimePayloads.toJson(json, resolutions.abandon(context.getUserId(), context.getSessionId(), request)));
+                return ToolResultBlock.text(RuntimePayloads.toJson(json, resolutions.abandon(RuntimeContextIds.userId(context), context.getSessionId(), request)));
             } catch (RuntimeBusinessException | IllegalArgumentException rejected) {
                 return ToolResultBlock.error(rejected.getMessage());
             }

@@ -8,7 +8,7 @@ package com.agentsquad.squad.model.bo;
  */
 public record SandboxExecuteRequestBO(String logicalKey, String script, java.util.List<SandboxFileBO> files,
                                       java.util.List<String> outputPaths, int timeoutSeconds,
-                                      java.util.List<String> artifactIds) {
+                                      java.util.List<Long> artifactIds) {
     public SandboxExecuteRequestBO {
         artifactIds = artifactIds == null ? java.util.List.of() : java.util.List.copyOf(artifactIds);
     }

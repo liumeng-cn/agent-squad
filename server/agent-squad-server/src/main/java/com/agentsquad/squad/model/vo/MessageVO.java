@@ -14,7 +14,7 @@ import java.util.List;
 public class MessageVO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("messageId")
-    private final String messageId;
+    private final Long messageId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("sequence")
     private final long sequence;
@@ -32,13 +32,13 @@ public class MessageVO {
     private final boolean completed;
 
     @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId")
-    private final String sourceMessageId;
+    private final Long sourceMessageId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("executionId")
-    private final String executionId;
+    private final Long executionId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("taskId")
-    private final String taskId;
+    private final Long taskId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("occurredAt")
     private final String occurredAt;
@@ -48,15 +48,15 @@ public class MessageVO {
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public MessageVO(
-            @com.fasterxml.jackson.annotation.JsonProperty("messageId") String messageId,
+            @com.fasterxml.jackson.annotation.JsonProperty("messageId") Long messageId,
             @com.fasterxml.jackson.annotation.JsonProperty("sequence") long sequence,
             @com.fasterxml.jackson.annotation.JsonProperty("role") String role,
             @com.fasterxml.jackson.annotation.JsonProperty("text") String text,
             @com.fasterxml.jackson.annotation.JsonProperty("revision") long revision,
             @com.fasterxml.jackson.annotation.JsonProperty("completed") boolean completed,
-            @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId") String sourceMessageId,
-            @com.fasterxml.jackson.annotation.JsonProperty("executionId") String executionId,
-            @com.fasterxml.jackson.annotation.JsonProperty("taskId") String taskId,
+            @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId") Long sourceMessageId,
+            @com.fasterxml.jackson.annotation.JsonProperty("executionId") Long executionId,
+            @com.fasterxml.jackson.annotation.JsonProperty("taskId") Long taskId,
             @com.fasterxml.jackson.annotation.JsonProperty("occurredAt") String occurredAt,
             @com.fasterxml.jackson.annotation.JsonProperty("artifacts") List<ArtifactVO> artifacts) {
         this.messageId = messageId;

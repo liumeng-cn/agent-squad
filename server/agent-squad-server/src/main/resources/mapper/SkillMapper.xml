@@ -4,8 +4,8 @@
     <resultMap id="SkillVersionRow" type="com.agentsquad.squad.model.po.SkillVersionPO">
         <constructor>
             <arg column="id" javaType="_long"/>
-            <arg column="skill_version_id" javaType="string"/>
-            <arg column="user_id" javaType="string"/>
+            <arg column="skill_version_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
             <arg column="skill_name" javaType="string"/>
             <arg column="skill_version" javaType="string"/>
             <arg column="description" javaType="string"/>
@@ -23,15 +23,15 @@
     </resultMap>
     <resultMap id="SkillGrantRow" type="com.agentsquad.squad.model.po.SkillGrantPO">
         <constructor>
-            <arg column="user_id" javaType="string"/>
-            <arg column="skill_version_id" javaType="string"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="skill_version_id" javaType="java.lang.Long"/>
             <arg column="enabled" javaType="_boolean"/>
             <arg column="version" javaType="_long"/>
         </constructor>
     </resultMap>
     <resultMap id="SkillReference" type="com.agentsquad.squad.model.bo.SkillReferenceBO">
         <constructor>
-            <arg column="skill_version_id" javaType="string"/>
+            <arg column="skill_version_id" javaType="java.lang.Long"/>
             <arg column="skill_name" javaType="string"/>
             <arg column="skill_version" javaType="string"/>
             <arg column="description" javaType="string"/>
@@ -231,7 +231,7 @@
         AND status &lt;> 'REVOKED'
         AND del_flag = '0'
     </update>
-    <select id="catalogExists" resultType="string">
+    <select id="catalogExists" resultType="java.lang.Long">
         SELECT catalog_id
         FROM sq_scope_skill_catalog
         WHERE user_id = #{userId}

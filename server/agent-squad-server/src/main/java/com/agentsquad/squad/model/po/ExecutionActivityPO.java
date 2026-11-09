@@ -31,39 +31,39 @@ public class ExecutionActivityPO {
     /**
      * 活动业务ID
      */
-    private String activityId;
+    private Long activityId;
     /**
      * 归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 执行作用域ID
      */
-    private String scopeId;
+    private Long scopeId;
     /**
      * 所属会话ID
      */
-    private String conversationId;
+    private Long conversationId;
     /**
      * 来源用户消息ID
      */
-    private String sourceMessageId;
+    private Long sourceMessageId;
     /**
      * 普通回复ID
      */
-    private String executionId;
+    private Long executionId;
     /**
      * 目标任务ID
      */
-    private String taskId;
+    private Long taskId;
     /**
      * 工作节点ID
      */
-    private String jobId;
+    private Long jobId;
     /**
      * 原生执行绑定ID
      */
-    private String bindingId;
+    private Long bindingId;
     /**
      * 原生运行ID
      */

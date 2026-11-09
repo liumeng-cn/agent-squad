@@ -12,7 +12,7 @@ package com.agentsquad.squad.model.vo;
 public class SkillGrantVO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("skillVersionId")
-    private final String skillVersionId;
+    private final Long skillVersionId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("enabled")
     private final boolean enabled;
@@ -22,7 +22,7 @@ public class SkillGrantVO {
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public SkillGrantVO(
-            @com.fasterxml.jackson.annotation.JsonProperty("skillVersionId") String skillVersionId,
+            @com.fasterxml.jackson.annotation.JsonProperty("skillVersionId") Long skillVersionId,
             @com.fasterxml.jackson.annotation.JsonProperty("enabled") boolean enabled,
             @com.fasterxml.jackson.annotation.JsonProperty("version") long version) {
         this.skillVersionId = skillVersionId;

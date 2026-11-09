@@ -9,5 +9,5 @@ import java.util.List;
  * <p>
  * 只是一项待核实声明；服务端检查证据归属、计划版本和检查方式后才保存正式结论。
  */
-public record AcceptanceReviewBO(String criterionId, PlanAcceptanceVerdict verdict, List<String> evidenceRefs) {
+public record AcceptanceReviewBO(String criterionId, PlanAcceptanceVerdict verdict, List<Long> evidenceRefs) {
 }

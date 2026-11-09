@@ -49,7 +49,7 @@ public class ConversationEventStreamerService {
     @Value("${agentsquad.events.max-connections-per-user:5}")
     private int maxConnectionsPerUser;
 
-    private final ConcurrentHashMap<String, Integer> userConnections = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, Integer> userConnections = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<ConversationStreamKeyBO, ConversationStreamHubService> hubs = new ConcurrentHashMap<>();
     private ThreadPoolExecutor readers;
     private ThreadPoolExecutor senders;
@@ -77,7 +77,7 @@ public class ConversationEventStreamerService {
     /**
      * 验证持久游标后订阅；首次补读与并发提交通过连续事件水位去重衔接。
      */
-    public SseEmitter stream(String userId, String conversationId, String cursor) {
+    public SseEmitter stream(Long userId, Long conversationId, String cursor) {
         userStatus.requireActive(userId);
         var initial = queries.events(userId, conversationId, cursor);
         String after = cursor;
@@ -159,7 +159,7 @@ public class ConversationEventStreamerService {
         hubs.values().forEach(ConversationStreamHubService::heartbeatAndReconcile);
     }
 
-    private void release(String userId) {
+    private void release(Long userId) {
         userConnections.compute(userId, (key, existing) -> existing == null || existing <= 1 ? null : existing - 1);
         slots.release();
     }

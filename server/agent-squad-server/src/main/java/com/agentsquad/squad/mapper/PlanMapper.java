@@ -16,7 +16,7 @@ import java.util.List;
 @Mapper
 public interface PlanMapper {
 
-    String completionProposal(@Param("userId") String userId, @Param("taskId") String taskId,
+    String completionProposal(@Param("userId") Long userId, @Param("taskId") Long taskId,
                               @Param("planVersion") long planVersion);
 
     String PLAN_COLUMNS = "id, plan_id, user_id, task_id, plan_version, status, logical_key, "
@@ -26,76 +26,76 @@ public interface PlanMapper {
             + "worker_version, status, depends_on_json, input_json, result_candidate_json, "
             + "result_json, binding_id, reused_from_job_id, cancel_requested_at, version";
 
-    PlanContextBO lockMasterContext(@Param("userId") String userId,
+    PlanContextBO lockMasterContext(@Param("userId") Long userId,
                                     @Param("sessionId") String sessionId);
 
-    PlanPO findLatestByLogicalKey(@Param("taskId") String taskId,
+    PlanPO findLatestByLogicalKey(@Param("taskId") Long taskId,
                                   @Param("logicalKey") String logicalKey);
 
-    Long lockTaskPlanVersion(@Param("userId") String userId, @Param("taskId") String taskId);
+    Long lockTaskPlanVersion(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    int countSignalEligibleTask(@Param("userId") String userId, @Param("taskId") String taskId);
+    int countSignalEligibleTask(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    PlanPO lockPlan(@Param("userId") String userId, @Param("taskId") String taskId,
+    PlanPO lockPlan(@Param("userId") Long userId, @Param("taskId") Long taskId,
                     @Param("planVersion") long planVersion);
 
-    int countUnfinishedJobs(@Param("userId") String userId, @Param("taskId") String taskId,
+    int countUnfinishedJobs(@Param("userId") Long userId, @Param("taskId") Long taskId,
                             @Param("planVersion") long planVersion);
 
-    int countActiveJobs(@Param("userId") String userId, @Param("taskId") String taskId,
+    int countActiveJobs(@Param("userId") Long userId, @Param("taskId") Long taskId,
                         @Param("planVersion") long planVersion);
 
-    int countActivePlan(@Param("userId") String userId, @Param("taskId") String taskId,
+    int countActivePlan(@Param("userId") Long userId, @Param("taskId") Long taskId,
                         @Param("planVersion") long planVersion);
 
-    int advanceSignalVersion(@Param("userId") String userId, @Param("taskId") String taskId,
+    int advanceSignalVersion(@Param("userId") Long userId, @Param("taskId") Long taskId,
                              @Param("planVersion") long planVersion);
 
-    List<WorkerJobPO> listJobs(@Param("taskId") String taskId,
+    List<WorkerJobPO> listJobs(@Param("taskId") Long taskId,
                                @Param("planVersion") long planVersion);
 
-    List<WorkerJobPO> lockJobs(@Param("taskId") String taskId,
+    List<WorkerJobPO> lockJobs(@Param("taskId") Long taskId,
                                @Param("planVersion") long planVersion);
 
-    int insertPlan(@Param("planId") String planId, @Param("userId") String userId,
-                   @Param("taskId") String taskId, @Param("planVersion") long planVersion,
+    int insertPlan(@Param("planId") Long planId, @Param("userId") Long userId,
+                   @Param("taskId") Long taskId, @Param("planVersion") long planVersion,
                    @Param("logicalKey") String logicalKey, @Param("definitionJson") String definitionJson,
                    @Param("signalVersion") long signalVersion, @Param("goalRevision") long goalRevision);
 
-    int insertJob(@Param("jobId") String jobId, @Param("userId") String userId,
-                  @Param("taskId") String taskId, @Param("planVersion") long planVersion,
+    int insertJob(@Param("jobId") Long jobId, @Param("userId") Long userId,
+                  @Param("taskId") Long taskId, @Param("planVersion") long planVersion,
                   @Param("nodeKey") String nodeKey, @Param("workerKey") String workerKey,
                   @Param("workerVersion") String workerVersion, @Param("status") String status,
                   @Param("dependsOnJson") String dependsOnJson, @Param("inputJson") String inputJson);
 
-    int reuseResult(@Param("userId") String userId, @Param("jobId") String jobId,
-                    @Param("sourceJobId") String sourceJobId,
+    int reuseResult(@Param("userId") Long userId, @Param("jobId") Long jobId,
+                    @Param("sourceJobId") Long sourceJobId,
                     @Param("resultJson") String resultJson);
 
-    int bindReadyJob(@Param("userId") String userId, @Param("jobId") String jobId,
-                     @Param("bindingId") String bindingId);
+    int bindReadyJob(@Param("userId") Long userId, @Param("jobId") Long jobId,
+                     @Param("bindingId") Long bindingId);
 
-    int activateBlockedJob(@Param("userId") String userId, @Param("jobId") String jobId,
-                           @Param("bindingId") String bindingId);
+    int activateBlockedJob(@Param("userId") Long userId, @Param("jobId") Long jobId,
+                           @Param("bindingId") Long bindingId);
 
-    int skipBlockedJob(@Param("userId") String userId, @Param("taskId") String taskId,
-                       @Param("planVersion") long planVersion, @Param("jobId") String jobId);
+    int skipBlockedJob(@Param("userId") Long userId, @Param("taskId") Long taskId,
+                       @Param("planVersion") long planVersion, @Param("jobId") Long jobId);
 
-    int abandonBlockedJob(@Param("userId") String userId, @Param("taskId") String taskId,
-                          @Param("planVersion") long planVersion, @Param("jobId") String jobId);
+    int abandonBlockedJob(@Param("userId") Long userId, @Param("taskId") Long taskId,
+                          @Param("planVersion") long planVersion, @Param("jobId") Long jobId);
 
-    int advanceTaskPlan(@Param("userId") String userId, @Param("taskId") String taskId,
+    int advanceTaskPlan(@Param("userId") Long userId, @Param("taskId") Long taskId,
                         @Param("expectedPlanVersion") long expectedPlanVersion,
                         @Param("planVersion") long planVersion);
 
-    int supersedePlans(@Param("taskId") String taskId, @Param("planVersion") long planVersion);
+    int supersedePlans(@Param("taskId") Long taskId, @Param("planVersion") long planVersion);
 
-    int supersedeUnstartedJobs(@Param("taskId") String taskId, @Param("planVersion") long planVersion);
+    int supersedeUnstartedJobs(@Param("taskId") Long taskId, @Param("planVersion") long planVersion);
 
-    int cancelSupersededCommands(@Param("taskId") String taskId,
+    int cancelSupersededCommands(@Param("taskId") Long taskId,
                                  @Param("planVersion") long planVersion);
 
-    int cancelSupersededSignals(@Param("taskId") String taskId);
+    int cancelSupersededSignals(@Param("taskId") Long taskId);
 
-    int barrierInFlightJobs(@Param("taskId") String taskId, @Param("planVersion") long planVersion);
+    int barrierInFlightJobs(@Param("taskId") Long taskId, @Param("planVersion") long planVersion);
 }

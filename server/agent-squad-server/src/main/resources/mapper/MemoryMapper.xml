@@ -4,14 +4,14 @@
 
     <resultMap id="findResult" type="com.agentsquad.squad.model.po.MemoryPO">
         <constructor>
-            <arg column="memory_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="memory_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
             <arg column="memory_key" javaType="java.lang.String"/>
             <arg column="content" javaType="java.lang.String"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="version" javaType="_long"/>
             <arg column="expires_at" javaType="java.time.LocalDateTime"/>
-            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="source_message_id" javaType="java.lang.Long"/>
             <arg column="source_quote" javaType="java.lang.String"/>
             <arg column="id" javaType="_long"/>
         </constructor>
@@ -19,14 +19,14 @@
 
     <resultMap id="findActiveKeyResult" type="com.agentsquad.squad.model.po.MemoryPO">
         <constructor>
-            <arg column="memory_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="memory_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
             <arg column="memory_key" javaType="java.lang.String"/>
             <arg column="content" javaType="java.lang.String"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="version" javaType="_long"/>
             <arg column="expires_at" javaType="java.time.LocalDateTime"/>
-            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="source_message_id" javaType="java.lang.Long"/>
             <arg column="source_quote" javaType="java.lang.String"/>
             <arg column="id" javaType="_long"/>
         </constructor>
@@ -34,14 +34,14 @@
 
     <resultMap id="listResult" type="com.agentsquad.squad.model.po.MemoryPO">
         <constructor>
-            <arg column="memory_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="memory_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
             <arg column="memory_key" javaType="java.lang.String"/>
             <arg column="content" javaType="java.lang.String"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="version" javaType="_long"/>
             <arg column="expires_at" javaType="java.time.LocalDateTime"/>
-            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="source_message_id" javaType="java.lang.Long"/>
             <arg column="source_quote" javaType="java.lang.String"/>
             <arg column="id" javaType="_long"/>
         </constructor>
@@ -49,14 +49,14 @@
 
     <resultMap id="activeResult" type="com.agentsquad.squad.model.po.MemoryPO">
         <constructor>
-            <arg column="memory_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="memory_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
             <arg column="memory_key" javaType="java.lang.String"/>
             <arg column="content" javaType="java.lang.String"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="version" javaType="_long"/>
             <arg column="expires_at" javaType="java.time.LocalDateTime"/>
-            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="source_message_id" javaType="java.lang.Long"/>
             <arg column="source_quote" javaType="java.lang.String"/>
             <arg column="id" javaType="_long"/>
         </constructor>
@@ -64,7 +64,7 @@
 
     <resultMap id="pinResult" type="com.agentsquad.squad.model.po.MemoryScopePinPO">
         <constructor>
-            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.Long"/>
             <arg column="memory_revision" javaType="_long"/>
             <arg column="barrier_status" javaType="java.lang.String"/>
         </constructor>
@@ -72,7 +72,7 @@
 
     <resultMap id="sourceResult" type="com.agentsquad.squad.model.bo.MemorySourceBO">
         <constructor>
-            <arg column="message_id" javaType="java.lang.String"/>
+            <arg column="message_id" javaType="java.lang.Long"/>
             <arg column="content" javaType="java.lang.String"/>
         </constructor>
     </resultMap>
@@ -87,7 +87,7 @@
     <insert id="ensureRevision">
         INSERT INTO sq_memory_revision (user_id,
         revision) VALUES (#{user},
-        0) ON DUPLICATE KEY UPDATE user_id = user_id
+        0) ON CONFLICT DO NOTHING
     </insert>
 
     <select id="lockRevision" resultType="_long">
@@ -139,7 +139,7 @@
         expires_at,
         source_message_id,
         source_quote,
-        id FROM sq_memory WHERE user_id = #{user} AND (#{before} IS NULL OR id &lt; #{before}) ORDER BY id DESC LIMIT
+        id FROM sq_memory WHERE user_id = #{user} AND (CAST(#{before} AS bigint) IS NULL OR id &lt; #{before}) ORDER BY id DESC LIMIT
         #{limit}
     </select>
 
@@ -157,12 +157,11 @@
         #{now}) ORDER BY id LIMIT #{limit} FOR UPDATE
     </select>
 
-    <select id="recall" resultType="java.lang.String">
+    <select id="recall" resultType="java.lang.Long">
         SELECT memory_id FROM sq_memory
         WHERE user_id = #{user} AND status = 'ACTIVE'
         AND (expires_at IS NULL OR expires_at &gt; #{now})
-        AND (#{query} IS NULL OR memory_key = #{query} OR LOCATE(#{query},
-        content) &gt; 0)
+        AND (CAST(#{query} AS text) IS NULL OR memory_key = #{query} OR strpos(content, #{query}) &gt; 0)
         ORDER BY id LIMIT #{limit}
     </select>
 
@@ -238,7 +237,7 @@
         #{version})
     </insert>
 
-    <select id="pinnedIds" resultType="java.lang.String">
+    <select id="pinnedIds" resultType="java.lang.Long">
         SELECT memory_id FROM sq_memory_scope_item WHERE user_id = #{user} AND scope_id = #{scope} ORDER BY id FOR
         UPDATE
     </select>
@@ -283,7 +282,7 @@
         #{memoryId},
         #{version},
         #{messageId})
-        ON DUPLICATE KEY UPDATE status = status
+        ON CONFLICT DO NOTHING
     </insert>
 
     <update id="invalidateSources">
@@ -291,7 +290,7 @@
         WHERE user_id = #{user} AND memory_id = #{memoryId} AND status = 'ACTIVE'
     </update>
 
-    <select id="invalidatedSources" resultType="java.lang.String">
+    <select id="invalidatedSources" resultType="java.lang.Long">
         SELECT s.source_message_id FROM sq_memory_source s
         JOIN sq_memory m ON m.user_id = s.user_id AND m.memory_id = s.memory_id
         WHERE s.user_id = #{user}
@@ -300,13 +299,13 @@
         FOR UPDATE
     </select>
 
-    <select id="blockedScopeIds" resultType="java.lang.String">
+    <select id="blockedScopeIds" resultType="java.lang.Long">
         SELECT scope_id FROM sq_memory_scope
         WHERE user_id = #{user} AND (barrier_status = 'BLOCKED' OR memory_revision &lt;&gt; #{revision})
         FOR UPDATE
     </select>
 
-    <select id="staleScopeIds" resultType="java.lang.String">
+    <select id="staleScopeIds" resultType="java.lang.Long">
         SELECT i.scope_id FROM sq_memory_scope_item i
         JOIN sq_memory m ON m.user_id = i.user_id AND m.memory_id = i.memory_id
         WHERE i.user_id = #{user} AND (m.status &lt;&gt; 'ACTIVE' OR m.version &lt;&gt; i.memory_version
@@ -314,12 +313,12 @@
         FOR UPDATE
     </select>
 
-    <select id="sourceMessages" resultType="java.lang.String">
+    <select id="sourceMessages" resultType="java.lang.Long">
         SELECT message_id FROM sq_message
         WHERE user_id = #{user} AND (message_id = #{source} OR source_message_id = #{source})
     </select>
 
-    <select id="scopeMessages" resultType="java.lang.String">
+    <select id="scopeMessages" resultType="java.lang.Long">
         SELECT m.message_id FROM sq_message m
         LEFT JOIN sq_response_execution r ON r.user_id = m.user_id AND r.execution_id = m.execution_id
         LEFT JOIN sq_goal_task t ON t.user_id = m.user_id AND t.task_id = m.task_id

@@ -1,6 +1,7 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.mapper.DeliveryMapper;
@@ -47,7 +48,7 @@ class MessageOrderingIntegrationTest {
     }
 
     static void verifyOrdering(ConfigurableApplicationContext context) {
-        String user = UUID.randomUUID().toString();
+        Long user = IdWorker.getId();
         var messages = context.getBean(MessageAcceptanceService.class);
         var first = messages.accept(user, null, "first", new MessageCreateDTO("第一条消息", List.of()));
         var second = messages.accept(user, first.conversationId(), "second", new MessageCreateDTO("第二条消息", List.of()));
@@ -56,26 +57,26 @@ class MessageOrderingIntegrationTest {
         var claims = context.getBean(CommandClaimService.class);
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC).plusSeconds(1);
         assertThat(context.getBean(DeliveryMapper.class).findDueIds(now)).contains(first.commandId()).doesNotContain(second.commandId());
-        assertThat(claims.claim(second.commandId(), UUID.randomUUID().toString(), now, now.plusSeconds(60))).isFalse();
-        assertThat(claims.claim(first.commandId(), UUID.randomUUID().toString(), now, now.plusSeconds(60))).isTrue();
-        assertThat(claims.claim(first.commandId(), UUID.randomUUID().toString(), now, now.plusSeconds(60))).isFalse();
+        assertThat(claims.claim(second.commandId(), IdWorker.getIdStr(), now, now.plusSeconds(60))).isFalse();
+        assertThat(claims.claim(first.commandId(), IdWorker.getIdStr(), now, now.plusSeconds(60))).isTrue();
+        assertThat(claims.claim(first.commandId(), IdWorker.getIdStr(), now, now.plusSeconds(60))).isFalse();
         jdbc.update("UPDATE sq_response_execution SET status='RUNNING' WHERE execution_id=?", first.executionId());
-        assertThat(claims.claim(second.commandId(), UUID.randomUUID().toString(), now, now.plusSeconds(60))).isFalse();
-        String interaction = UUID.randomUUID().toString();
-        String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, first.executionId());
+        assertThat(claims.claim(second.commandId(), IdWorker.getIdStr(), now, now.plusSeconds(60))).isFalse();
+        Long interaction = IdWorker.getId();
+        Long binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", Long.class, first.executionId());
         context.getBean(InteractionMapper.class).insert(interaction, user, null, null, binding, null, "FRAMEWORK", "pending-request",
                 "INPUT", "请提供材料", "{\"type\":\"string\"}", 0, "a".repeat(64), 0, now.plusHours(1), user, "tester");
         jdbc.update("UPDATE sq_response_execution SET status='WAITING_INPUT' WHERE execution_id=?", first.executionId());
-        assertThat(claims.claim(second.commandId(), UUID.randomUUID().toString(), now, now.plusSeconds(60))).isTrue();
+        assertThat(claims.claim(second.commandId(), IdWorker.getIdStr(), now, now.plusSeconds(60))).isTrue();
         assertThat(jdbc.queryForObject("SELECT status FROM sq_response_execution WHERE execution_id=?", String.class, first.executionId())).isEqualTo("WAITING_INPUT");
         assertThat(jdbc.queryForObject("SELECT status FROM sq_interaction WHERE interaction_id=?", String.class, interaction)).isEqualTo("OPEN");
         var other = messages.accept(user, null, "other", new MessageCreateDTO("另一会话", List.of()));
         jdbc.update("UPDATE sq_command SET due_at='2000-01-01' WHERE command_id=?", other.commandId());
-        assertThat(claims.claim(other.commandId(), UUID.randomUUID().toString(), now, now.plusSeconds(60))).isTrue();
+        assertThat(claims.claim(other.commandId(), IdWorker.getIdStr(), now, now.plusSeconds(60))).isTrue();
         jdbc.update("UPDATE sq_conversation SET generation=generation+1 WHERE conversation_id=?", first.conversationId());
         var nextGeneration = messages.accept(user, first.conversationId(), "next-generation", new MessageCreateDTO("新授权代际", List.of()));
         jdbc.update("UPDATE sq_command SET due_at='2000-01-01' WHERE command_id=?", nextGeneration.commandId());
-        assertThat(claims.claim(nextGeneration.commandId(), UUID.randomUUID().toString(), now, now.plusSeconds(60))).isTrue();
+        assertThat(claims.claim(nextGeneration.commandId(), IdWorker.getIdStr(), now, now.plusSeconds(60))).isTrue();
     }
 
     @Test
@@ -86,7 +87,7 @@ class MessageOrderingIntegrationTest {
     }
 
     static void verifyConcurrentCancel(ConfigurableApplicationContext context) throws Exception {
-        String user = UUID.randomUUID().toString();
+        Long user = IdWorker.getId();
         var message = context.getBean(MessageAcceptanceService.class).accept(user, null, "cancel-race", new MessageCreateDTO("消息", List.of()));
         JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
         jdbc.update("UPDATE sq_command SET due_at='2000-01-01' WHERE command_id=?", message.commandId());
@@ -95,7 +96,7 @@ class MessageOrderingIntegrationTest {
             var claim = threads.submit(() -> {
                 start.await(10, TimeUnit.SECONDS);
                 LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC).plusSeconds(1);
-                return context.getBean(CommandClaimService.class).claim(message.commandId(), UUID.randomUUID().toString(), now, now.plusSeconds(60));
+                return context.getBean(CommandClaimService.class).claim(message.commandId(), IdWorker.getIdStr(), now, now.plusSeconds(60));
             });
             var cancel = threads.submit(() -> {
                 start.await(10, TimeUnit.SECONDS);
@@ -103,29 +104,29 @@ class MessageOrderingIntegrationTest {
             });
             start.countDown();
             claim.get(20, TimeUnit.SECONDS);
-            assertThat(cancel.get(20, TimeUnit.SECONDS).commandId()).isNotBlank();
+            assertThat(cancel.get(20, TimeUnit.SECONDS).commandId()).isNotNull();
         }
         assertThat(jdbc.queryForObject("SELECT status FROM sq_command WHERE command_id=?", String.class, message.commandId())).isEqualTo("CANCELLED");
         assertThat(jdbc.queryForObject("SELECT status FROM sq_response_execution WHERE execution_id=?", String.class, message.executionId())).isEqualTo("CANCELLING");
     }
 
     static void verifyTaskFacts(ConfigurableApplicationContext context) {
-        String user = UUID.randomUUID().toString();
+        Long user = IdWorker.getId();
         GoalTaskService goals = context.getBean(GoalTaskService.class);
-        String conversation = goals.createConversation(user, "在途工作").conversationId();
-        String task = goals.submit(user, conversation, "goal", "请完成写作").taskId();
+        Long conversation = goals.createConversation(user, "在途工作").conversationId();
+        Long task = goals.submit(user, conversation, "goal", "请完成写作").taskId();
         JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
         jdbc.update("UPDATE sq_goal_task SET status='RUNNING', version=version+1 WHERE task_id=?", task);
         var messages = context.getBean(MessageAcceptanceService.class);
         var query = messages.accept(user, conversation, "progress", new MessageCreateDTO("目前进展如何", List.of()));
-        String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, query.executionId());
+        Long binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", Long.class, query.executionId());
         var contexts = context.getBean(ResponseContextService.class);
         var snapshot = contexts.freeze(user, binding);
         String replySession = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
         assertThatThrownBy(() -> context.getBean(ContextSnapshotService.class).prepare(user, replySession, "draft", "spoof"))
                 .isInstanceOfSatisfying(RuntimeBusinessException.class, exception -> assertThat(exception.code()).isEqualTo(RuntimeExceptionCode.NOT_FOUND));
         PlanPublishBO attempted = new PlanPublishBO("spoof-plan", 0, List.of(new PlanNodeBO("draft", "writer", "1", "目标",
-                UUID.randomUUID().toString(), List.of(), true, 1)), "ALL_REQUIRED", List.of("完成"));
+                IdWorker.getId(), List.of(), true, 1)), "ALL_REQUIRED", List.of("完成"));
         assertThatThrownBy(() -> context.getBean(PlanService.class).publish(user, replySession, attempted))
                 .isInstanceOfSatisfying(RuntimeBusinessException.class, exception -> assertThat(exception.code()).isEqualTo(RuntimeExceptionCode.NOT_FOUND));
         assertThat(snapshot.activeTask().taskId()).isEqualTo(task);
@@ -134,12 +135,12 @@ class MessageOrderingIntegrationTest {
         assertThat(contexts.freeze(user, binding)).isEqualTo(snapshot);
         jdbc.update("UPDATE sq_conversation SET generation=generation+1 WHERE conversation_id=?", conversation);
         var newMessage = messages.accept(user, conversation, "new-context", new MessageCreateDTO("新代际进展", List.of()));
-        String newBinding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, newMessage.executionId());
+        Long newBinding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", Long.class, newMessage.executionId());
         assertThat(contexts.freeze(user, newBinding).activeTask()).isNull();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_goal_task WHERE user_id=?", Long.class, user)).isEqualTo(1);
     }
 
     private ConfigurableApplicationContext start(Path directory) {
-        return MessageAcceptanceHttpTest.start(MySqlTestDatabase.url(directory.resolve("order")), MySqlTestDatabase.username(), MySqlTestDatabase.password(), UUID.randomUUID().toString());
+        return MessageAcceptanceHttpTest.start(PostgresTestDatabase.url(directory.resolve("order")), PostgresTestDatabase.username(), PostgresTestDatabase.password(), IdWorker.getId());
     }
 }

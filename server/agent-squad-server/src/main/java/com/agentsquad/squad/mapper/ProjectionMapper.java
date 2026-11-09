@@ -17,24 +17,24 @@ public interface ProjectionMapper {
 
     List<ProjectionTargetBO> findReconciliationTargets(@Param("now") LocalDateTime now);
 
-    ProjectionTargetBO findTarget(@Param("userId") String userId, @Param("bindingId") String bindingId);
+    ProjectionTargetBO findTarget(@Param("userId") Long userId, @Param("bindingId") Long bindingId);
 
-    Long lockCursor(@Param("userId") String userId, @Param("bindingId") String bindingId);
+    Long lockCursor(@Param("userId") Long userId, @Param("bindingId") Long bindingId);
 
-    int advanceCursor(@Param("userId") String userId, @Param("bindingId") String bindingId,
+    int advanceCursor(@Param("userId") Long userId, @Param("bindingId") Long bindingId,
                       @Param("previous") long previous, @Param("next") long next);
 
-    int defer(@Param("userId") String userId, @Param("bindingId") String bindingId,
+    int defer(@Param("userId") Long userId, @Param("bindingId") Long bindingId,
               @Param("nextPollAt") LocalDateTime nextPollAt);
 
-    int reserveEventSequence(@Param("userId") String userId, @Param("taskId") String taskId);
+    int reserveEventSequence(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    Long eventSequence(@Param("userId") String userId, @Param("taskId") String taskId);
+    Long eventSequence(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    int markRunning(@Param("userId") String userId, @Param("taskId") String taskId);
+    int markRunning(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    int recordEndedTurn(@Param("userId") String userId, @Param("bindingId") String bindingId,
+    int recordEndedTurn(@Param("userId") Long userId, @Param("bindingId") Long bindingId,
                         @Param("turnId") String turnId);
 
-    int settleControls(@Param("userId") String userId, @Param("bindingId") String bindingId);
+    int settleControls(@Param("userId") Long userId, @Param("bindingId") Long bindingId);
 }

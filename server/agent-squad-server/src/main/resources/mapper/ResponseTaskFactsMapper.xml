@@ -11,8 +11,8 @@
 
     <resultMap id="recentTasksResult" type="com.agentsquad.squad.model.bo.ResponseTaskStatusFactBO">
         <constructor>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="source_message_id" javaType="java.lang.Long"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="version" javaType="_long"/>
             <arg column="goal_revision" javaType="_long"/>
@@ -24,8 +24,8 @@
             <arg column="category" javaType="java.lang.String"/>
             <arg column="actor" javaType="java.lang.String"/>
             <arg column="safe_message" javaType="java.lang.String"/>
-            <arg column="source_message_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="source_message_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
         </constructor>
     </resultMap>
 
@@ -100,6 +100,6 @@
         AND f.status &lt;&gt; 'RESOLVED'
         AND f.del_flag = '0'
         ORDER BY f.id DESC
-        LIMIT 10 FOR UPDATE
+        LIMIT 10 FOR UPDATE OF f, s, m
     </select>
 </mapper>

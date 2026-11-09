@@ -1,8 +1,9 @@
 package com.agentsquad.squad.worker;
 
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.config.properties.WorkerProfileProperties;
+import com.agentsquad.squad.enums.ApiCode;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.agentsquad.squad.testsupport.ApiResultJson;
@@ -48,12 +49,12 @@ class WorkerDefinitionHttpTest {
             String role = context.getEnvironment().getProperty("agentsquad.auth.role", "ADMIN");
 
             String createdBody = mvc.perform(post("/api/v1/worker-definitions")
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
+                            .with(TestAssertion.as(201L, role))
                             .header("Idempotency-Key", "publish-1")
                             .contentType(MediaType.APPLICATION_JSON).content(DEFINITION))
                     .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
             JsonNode created = ApiResultJson.data(mapper, createdBody);
-            String definitionId = created.get("definitionId").asText();
+            long definitionId = created.get("definitionId").asLong();
             assertThat(created.get("status").asText()).isEqualTo("ENABLED");
             assertThat(created.get("version").asLong()).isZero();
             WorkerDefinitionService definitions = context.getBean(WorkerDefinitionService.class);
@@ -63,27 +64,29 @@ class WorkerDefinitionHttpTest {
                     .isEqualTo(definitionId);
 
             String repeatedBody = mvc.perform(post("/api/v1/worker-definitions")
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
+                            .with(TestAssertion.as(201L, role))
                             .header("Idempotency-Key", "publish-1")
                             .contentType(MediaType.APPLICATION_JSON).content(DEFINITION))
                     .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-            assertThat(ApiResultJson.data(mapper, repeatedBody).get("definitionId").asText()).isEqualTo(definitionId);
+            assertThat(ApiResultJson.data(mapper, repeatedBody).get("definitionId").asLong()).isEqualTo(definitionId);
 
-            mvc.perform(post("/api/v1/worker-definitions")
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
+            assertThat(ApiResultJson.code(mapper, mvc.perform(post("/api/v1/worker-definitions")
+                            .with(TestAssertion.as(201L, role))
                             .header("Idempotency-Key", "publish-1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(DEFINITION.replace("日志分析", "其他描述")))
-                    .andExpect(status().isConflict());
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()))
+                    .isEqualTo(ApiCode.CONFLICT.getCode());
 
-            mvc.perform(post("/api/v1/worker-definitions")
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
+            assertThat(ApiResultJson.code(mapper, mvc.perform(post("/api/v1/worker-definitions")
+                            .with(TestAssertion.as(201L, role))
                             .header("Idempotency-Key", "publish-2")
                             .contentType(MediaType.APPLICATION_JSON).content(DEFINITION))
-                    .andExpect(status().isConflict());
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()))
+                    .isEqualTo(ApiCode.CONFLICT.getCode());
 
             mvc.perform(post("/api/v1/worker-definitions")
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
+                            .with(TestAssertion.as(201L, role))
                             .header("Idempotency-Key", "publish-review")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(DEFINITION.replace("log-analysis", "draft-review")
@@ -94,12 +97,12 @@ class WorkerDefinitionHttpTest {
             assertThat(definitions.requireEnabled("draft-review", "1.0.0").description())
                     .isEqualTo("草稿审阅");
 
-            String listBody = mvc.perform(get("/api/v1/worker-definitions").with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role)))
+            String listBody = mvc.perform(get("/api/v1/worker-definitions").with(TestAssertion.as(201L, role)))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
             assertThat(ApiResultJson.data(mapper, listBody).get("items").size()).isEqualTo(2);
 
             String disabledBody = mvc.perform(patch("/api/v1/worker-definitions/{id}", definitionId)
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
+                            .with(TestAssertion.as(201L, role))
                             .header("Idempotency-Key", "status-1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"expectedVersion\":0,\"status\":\"DISABLED\"}"))
@@ -111,33 +114,35 @@ class WorkerDefinitionHttpTest {
                     .isInstanceOf(RuntimeBusinessException.class);
 
             String repeatedStatus = mvc.perform(patch("/api/v1/worker-definitions/{id}", definitionId)
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
+                            .with(TestAssertion.as(201L, role))
                             .header("Idempotency-Key", "status-1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"expectedVersion\":0,\"status\":\"DISABLED\"}"))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
             assertThat(ApiResultJson.data(mapper, repeatedStatus).get("version").asLong()).isEqualTo(1);
 
-            mvc.perform(patch("/api/v1/worker-definitions/{id}", definitionId)
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
+            assertThat(ApiResultJson.code(mapper, mvc.perform(patch("/api/v1/worker-definitions/{id}", definitionId)
+                            .with(TestAssertion.as(201L, role))
                             .header("Idempotency-Key", "status-2")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"expectedVersion\":0,\"status\":\"ENABLED\"}"))
-                    .andExpect(status().isConflict());
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()))
+                    .isEqualTo(ApiCode.CONFLICT.getCode());
 
             mvc.perform(patch("/api/v1/worker-definitions/{id}", definitionId)
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
+                            .with(TestAssertion.as(201L, role))
                             .header("Idempotency-Key", "status-3")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"expectedVersion\":1,\"status\":\"REVOKED\"}"))
                     .andExpect(status().isOk());
 
-            mvc.perform(patch("/api/v1/worker-definitions/{id}", definitionId)
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
+            assertThat(ApiResultJson.code(mapper, mvc.perform(patch("/api/v1/worker-definitions/{id}", definitionId)
+                            .with(TestAssertion.as(201L, role))
                             .header("Idempotency-Key", "status-4")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"expectedVersion\":2,\"status\":\"ENABLED\"}"))
-                    .andExpect(status().isConflict());
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()))
+                    .isEqualTo(ApiCode.CONFLICT.getCode());
         }
     }
 
@@ -148,14 +153,14 @@ class WorkerDefinitionHttpTest {
             String role = context.getEnvironment().getProperty("agentsquad.auth.role", "ADMIN");
 
             String createdBody = mvc.perform(post("/api/v1/worker-definitions")
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
+                            .with(TestAssertion.as(201L, role))
                             .header("Idempotency-Key", "invalid-status")
                             .contentType(MediaType.APPLICATION_JSON).content(DEFINITION))
                     .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
             String definitionId = ApiResultJson.data(context.getBean(ObjectMapper.class), createdBody).get("definitionId").asText();
 
             mvc.perform(patch("/api/v1/worker-definitions/{id}", definitionId)
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
+                            .with(TestAssertion.as(201L, role))
                             .header("Idempotency-Key", "invalid-status-patch")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"expectedVersion\":0,\"status\":\"FROZEN\"}"))
@@ -170,11 +175,12 @@ class WorkerDefinitionHttpTest {
             ObjectMapper mapper = context.getBean(ObjectMapper.class);
             String role = context.getEnvironment().getProperty("agentsquad.auth.role", "ADMIN");
 
-            mvc.perform(post("/api/v1/worker-definitions")
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
+            assertThat(ApiResultJson.code(mapper, mvc.perform(post("/api/v1/worker-definitions")
+                            .with(TestAssertion.as(201L, role))
                             .header("Idempotency-Key", "publish-1")
                             .contentType(MediaType.APPLICATION_JSON).content(DEFINITION))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()))
+                    .isEqualTo(ApiCode.FORBIDDEN.getCode());
         }
     }
 
@@ -199,7 +205,7 @@ class WorkerDefinitionHttpTest {
             String reviewDefinition = DEFINITION.replace("default", "review");
 
             mvc.perform(post("/api/v1/worker-definitions")
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
+                            .with(TestAssertion.as(201L, role))
                             .header("Idempotency-Key", "review-profile")
                             .contentType(MediaType.APPLICATION_JSON).content(reviewDefinition))
                     .andExpect(status().isCreated());
@@ -208,22 +214,23 @@ class WorkerDefinitionHttpTest {
                     .isEqualTo("review-fixture");
             assertThat(profiles.requireRuntime("review").getMaxModelCalls()).isEqualTo(5);
 
-            mvc.perform(post("/api/v1/worker-definitions")
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", role))
+            assertThat(ApiResultJson.code(mapper, mvc.perform(post("/api/v1/worker-definitions")
+                            .with(TestAssertion.as(201L, role))
                             .header("Idempotency-Key", "unknown-profile")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(DEFINITION.replace("default", "missing")))
-                    .andExpect(status().isBadRequest());
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()))
+                    .isEqualTo(ApiCode.BAD_REQUEST.getCode());
         }
     }
 
     private ConfigurableApplicationContext start(Path directory, String role, String... overrides) {
-        String databaseUrl = MySqlTestDatabase.url(directory.resolve("squad"));
+        String databaseUrl = PostgresTestDatabase.url(directory.resolve("squad"));
         List<String> properties = new ArrayList<>(List.of(
                 "--server.port=0",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.auth.username=local-user",
                 "--agentsquad.auth.password=local-password",
                 "--agentsquad.auth.role=" + role));

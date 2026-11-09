@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.mapper.BudgetMapper;
 import com.agentsquad.squad.model.bo.BudgetAccountBO;
 import com.agentsquad.squad.model.po.BudgetReservationPO;
@@ -13,7 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
 import java.math.BigInteger;
 
 /**
@@ -39,7 +39,7 @@ public class BudgetService {
      * 按稳定 usage_key 预留预算；重复预留返回原记录，超限抛业务冲突。
      */
     @Transactional
-    public void reserve(String userId, String scopeId, String usageKey, String kind,
+    public void reserve(Long userId, Long scopeId, String usageKey, String kind,
                         long units, String creatorName) {
         if (units <= 0 || usageKey == null || usageKey.isBlank() || usageKey.length() > 200) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "预算预留参数无效");
@@ -58,7 +58,7 @@ public class BudgetService {
             return;
         }
         requireAvailable(userId, scopeId, account, units);
-        if (budgetMapper.insert(UUID.randomUUID().toString(), userId, scopeId, usageKey, kind,
+        if (budgetMapper.insert(IdWorker.getId(), userId, scopeId, usageKey, kind,
                 units, creatorName) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "预算预留冲突，请重试");
         }
@@ -69,7 +69,7 @@ public class BudgetService {
      * 每次真实模型请求前固定请求摘要、Profile 和定价版本；未知收费保留原预留。
      */
     @Transactional
-    public void reserveModel(String userId, String scopeId, String usageKey,
+    public void reserveModel(Long userId, Long scopeId, String usageKey,
                              String requestHash, String modelProfileKey, WorkerModelProfileProperties profile) {
         if (usageKey == null || usageKey.isBlank() || usageKey.length() > 200
                 || requestHash == null || !requestHash.matches("[0-9a-f]{64}")) {
@@ -90,7 +90,7 @@ public class BudgetService {
                     "模型请求已有预留，须核对原请求而不能再次调用");
         }
         requireAvailable(userId, scopeId, account, units);
-        budgetMapper.insertModel(UUID.randomUUID().toString(), userId, scopeId, usageKey,
+        budgetMapper.insertModel(IdWorker.getId(), userId, scopeId, usageKey,
                 units, modelProfileKey, profile.getPricingVersion(), requestHash);
         // 模型档案放前面便于一眼定位链路所用模型；usageKey 是内部去重哈希，放最后。
         log.info("模型预算已预留 scopeId={} profileKey={} pricingVersion={} units={} usageKey={}",
@@ -101,7 +101,7 @@ public class BudgetService {
      * 仅凭可信模型用量结算；用量超出已预留的 Profile 上限时保留占额并阻断后续执行。
      */
     @Transactional
-    public void settleModel(String userId, String scopeId, String usageKey,
+    public void settleModel(Long userId, Long scopeId, String usageKey,
                             WorkerModelProfileProperties profile, long inputTokens, long outputTokens) {
         if (inputTokens < 0 || outputTokens < 0
                 || inputTokens > profile.getMaxInputTokens()
@@ -136,7 +136,7 @@ public class BudgetService {
      * 模型调用结果或收费不确定时保留原预留，不把它当作免费失败释放。
      */
     @Transactional
-    public void markModelUnknown(String userId, String scopeId, String usageKey) {
+    public void markModelUnknown(Long userId, Long scopeId, String usageKey) {
         lockBudget(userId, scopeId, false);
         budgetMapper.markModelUnknown(userId, scopeId, usageKey);
     }
@@ -145,12 +145,12 @@ public class BudgetService {
      * 执行已发生而结果无法确认时保留占额；不因失联释放预算或重置同键执行机会。
      */
     @Transactional
-    public void markUnknown(String userId, String scopeId, String usageKey) {
+    public void markUnknown(Long userId, Long scopeId, String usageKey) {
         lockBudget(userId, scopeId, false);
         budgetMapper.markUnknown(userId, scopeId, usageKey);
     }
 
-    private void requireAvailable(String userId, String scopeId, BudgetAccountBO account, long units) {
+    private void requireAvailable(Long userId, Long scopeId, BudgetAccountBO account, long units) {
         long userConsumed = budgetMapper.sumUserConsumed(userId);
         if (userLimitMicrounits <= 0 || userConsumed > userLimitMicrounits
                 || units > userLimitMicrounits - userConsumed) {
@@ -167,7 +167,7 @@ public class BudgetService {
     /**
      * 会话与实际所有者先锁定，再锁用户总账与共享账户；已知结果结算不被取消或删除吞掉。
      */
-    private BudgetAccountBO lockBudget(String userId, String scopeId, boolean forDispatch) {
+    private BudgetAccountBO lockBudget(Long userId, Long scopeId, boolean forDispatch) {
         scopeService.lockOwned(userId, scopeId, forDispatch);
         budgetMapper.ensureUser(userId);
         budgetMapper.lockUser(userId);
@@ -190,7 +190,7 @@ public class BudgetService {
      * 结算已确定消耗；UNKNOWN 预留不动，由核对流程处理。
      */
     @Transactional
-    public void settle(String userId, String scopeId, String usageKey, long settledUnits) {
+    public void settle(Long userId, Long scopeId, String usageKey, long settledUnits) {
         if (settledUnits < 0) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "工具预算结算金额无效");
         }
@@ -210,7 +210,7 @@ public class BudgetService {
      * 未派发工具经账本确认取消后按零消耗结算；未知收费和已有结算不撤销。
      */
     @Transactional
-    public void releaseUnsentTool(String userId, String scopeId, String usageKey) {
+    public void releaseUnsentTool(Long userId, Long scopeId, String usageKey) {
         lockBudget(userId, scopeId, false);
         BudgetReservationPO row = budgetMapper.findReservation(userId, scopeId, usageKey);
         if (row == null) {
@@ -228,7 +228,7 @@ public class BudgetService {
      * 核对确认成功后按原工具预留额出账；预留缺失或状态不匹配时拒绝，不能无账结算。
      */
     @Transactional
-    public void settleReserved(String userId, String scopeId, String usageKey) {
+    public void settleReserved(Long userId, Long scopeId, String usageKey) {
         lockBudget(userId, scopeId, false);
         Long reserved = budgetMapper.findReservedUnits(userId, scopeId, usageKey);
         if (reserved == null || budgetMapper.settle(userId, scopeId, usageKey, reserved) != 1) {

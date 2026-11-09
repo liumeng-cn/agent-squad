@@ -12,27 +12,27 @@ import org.apache.ibatis.annotations.Param;
  */
 @Mapper
 public interface SandboxMapper {
-    SandboxBindingBO binding(@Param("userId") String userId, @Param("sessionId") String sessionId);
+    SandboxBindingBO binding(@Param("userId") Long userId, @Param("sessionId") String sessionId);
 
-    int activeWorker(@Param("userId") String userId, @Param("bindingId") String bindingId,
+    int activeWorker(@Param("userId") Long userId, @Param("bindingId") Long bindingId,
                      @Param("guardToken") String guardToken);
 
-    SandboxRunPO prior(@Param("userId") String userId, @Param("bindingId") String bindingId,
+    SandboxRunPO prior(@Param("userId") Long userId, @Param("bindingId") Long bindingId,
                        @Param("logicalKey") String logicalKey, @Param("turnId") String turnId,
                        @Param("toolCallId") String toolCallId);
 
-    SandboxRunPO find(@Param("userId") String userId, @Param("executionId") String executionId);
+    SandboxRunPO find(@Param("userId") Long userId, @Param("executionId") Long executionId);
 
-    int insert(@Param("executionId") String executionId, @Param("userId") String userId,
-               @Param("scopeId") String scopeId, @Param("bindingId") String bindingId,
+    int insert(@Param("executionId") Long executionId, @Param("userId") Long userId,
+               @Param("scopeId") Long scopeId, @Param("bindingId") Long bindingId,
                @Param("logicalKey") String logicalKey, @Param("turnId") String turnId,
                @Param("toolCallId") String toolCallId, @Param("requestHash") String requestHash,
                @Param("deadlineAt") java.time.LocalDateTime deadlineAt);
 
-    int finish(@Param("userId") String userId, @Param("executionId") String executionId,
+    int finish(@Param("userId") Long userId, @Param("executionId") Long executionId,
                @Param("status") String status, @Param("resultJson") String resultJson);
 
     java.util.List<SandboxRunPO> expired();
 
-    int expireOne(@Param("userId") String userId, @Param("executionId") String executionId);
+    int expireOne(@Param("userId") Long userId, @Param("executionId") Long executionId);
 }

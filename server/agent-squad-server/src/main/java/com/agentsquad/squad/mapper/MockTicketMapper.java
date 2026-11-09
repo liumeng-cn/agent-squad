@@ -9,13 +9,13 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface MockTicketMapper {
 
-    int insert(@Param("userId") String userId, @Param("externalKey") String externalKey,
+    int insert(@Param("userId") Long userId, @Param("externalKey") String externalKey,
                @Param("requestHash") String requestHash, @Param("title") String title,
                @Param("detail") String detail);
 
-    int countByKey(@Param("userId") String userId, @Param("externalKey") String externalKey);
+    int countByKey(@Param("userId") Long userId, @Param("externalKey") String externalKey);
 
-    int countByUser(@Param("userId") String userId);
+    int countByUser(@Param("userId") Long userId);
 
-    String findRequestHash(@Param("userId") String userId, @Param("externalKey") String externalKey);
+    String findRequestHash(@Param("userId") Long userId, @Param("externalKey") String externalKey);
 }

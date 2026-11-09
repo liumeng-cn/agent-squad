@@ -44,7 +44,7 @@ public class LocalSessionStopper {
     /**
      * 仅由命令执行入口登记，读取日志和控制连接不登记、不恢复执行。
      */
-    public AgentSession register(String userId, String bindingId, AgentSession session) {
+    public AgentSession register(Long userId, Long bindingId, AgentSession session) {
         var handle = new LocalSessionHandleBO(userId, bindingId, session);
         sessions.put(handle.key(), handle);
         return session;

@@ -24,15 +24,15 @@ public class ExecutionFailurePO {
     /**
      * 故障业务ID
      */
-    private String failureId;
+    private Long failureId;
     /**
      * 受权执行作用域ID
      */
-    private String scopeId;
+    private Long scopeId;
     /**
      * 故障来源原生绑定ID
      */
-    private String bindingId;
+    private Long bindingId;
     /**
      * 故障分类
      */
@@ -52,7 +52,7 @@ public class ExecutionFailurePO {
     /**
      * 内部诊断关联ID，不含原始异常
      */
-    private String diagnosticId;
+    private Long diagnosticId;
     /**
      * 状态[ACTIVE,RETRYING,RESOLVED]
      */

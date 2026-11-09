@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.middleware;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import com.agentsquad.squad.model.bo.AcceptedModelChoiceBO;
 import com.agentsquad.squad.service.ExecutionFailureService;
 import com.agentsquad.squad.utils.ContentDigests;
@@ -81,7 +83,7 @@ public class ModelBudgetMiddleware implements MiddlewareBase {
                                                   ModelCallInput input,
                                                   Function<ModelCallInput, Flux<AgentEvent>> next) {
         return Flux.defer(() -> {
-            String userId = context.getUserId();
+            Long userId = RuntimeContextIds.userId(context);
             String sessionId = context.getSessionId();
             String turnId = context.get(SessionRecorder.TURN_ID_KEY, String.class);
             if (userId == null || sessionId == null || turnId == null || turnId.isBlank()) {
@@ -97,7 +99,7 @@ public class ModelBudgetMiddleware implements MiddlewareBase {
                         return Mono.fromCallable(() -> {
                                     userStatusGuard.requireActive(userId);
                                     failures.requireModelAllowed(userId, sessionId);
-                                    String scopeId = budgetMapper.findScopeBySession(userId, sessionId);
+                                    Long scopeId = budgetMapper.findScopeBySession(userId, sessionId);
                                     if (scopeId == null) {
                                         throw new IllegalStateException("模型会话未绑定执行作用域");
                                     }
@@ -150,7 +152,7 @@ public class ModelBudgetMiddleware implements MiddlewareBase {
         }
     }
 
-    private Mono<Void> markUnknown(String userId, String scopeId, String usageKey, String profileKey) {
+    private Mono<Void> markUnknown(Long userId, Long scopeId, String usageKey, String profileKey) {
         return Mono.fromRunnable(() -> {
                     budgetService.markModelUnknown(userId, scopeId, usageKey);
                     log.warn("模型收费待核对 scopeId={} profileKey={} usageKey={}", scopeId, profileKey, usageKey);

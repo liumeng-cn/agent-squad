@@ -3,6 +3,8 @@ package com.agentsquad.squad.model.bo;
 import com.agentsquad.squad.enums.PlanAcceptanceVerdict;
 
 import com.agentsquad.squad.enums.AcceptanceVerificationType;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 import java.util.List;
 
@@ -13,6 +15,7 @@ import java.util.List;
  */
 public record PlanAcceptanceResultBO(String criterionId, String text, boolean required,
                                      AcceptanceVerificationType verificationType,
-                                     PlanAcceptanceVerdict verdict, String verifier, List<String> evidenceRefs,
+                                     PlanAcceptanceVerdict verdict, String verifier,
+                                     @JsonSerialize(contentUsing = ToStringSerializer.class) List<Long> evidenceRefs,
                                      long planVersion, long goalRevision) {
 }

@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.session;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.session.SessionKey;
 import io.agentscope.core.session.SessionLog;
@@ -40,7 +42,7 @@ public final class RuntimeJournalStore implements SessionLogStore {
     @Override
     public SessionLog open(SessionKey key, RuntimeContext context) {
         requireUser(context);
-        if (!context.getUserId().equals(key.userId())
+        if (!String.valueOf(RuntimeContextIds.userId(context)).equals(key.userId())
                 || !Objects.equals(context.getSessionId(), key.sessionId())) {
             throw new IllegalArgumentException("原生日志读取身份与会话不匹配");
         }
@@ -55,11 +57,11 @@ public final class RuntimeJournalStore implements SessionLogStore {
 
     private static List<String> namespace(RuntimeContext context) {
         requireUser(context);
-        return List.of(PLATFORM_NAMESPACE, JOURNAL_NAMESPACE, context.getUserId());
+        return List.of(PLATFORM_NAMESPACE, JOURNAL_NAMESPACE, String.valueOf(RuntimeContextIds.userId(context)));
     }
 
     private static void requireUser(RuntimeContext context) {
-        if (context == null || context.getUserId() == null || context.getUserId().isBlank()) {
+        if (context == null) {
             throw new IllegalArgumentException("原生日志必须显式指定归属用户");
         }
     }

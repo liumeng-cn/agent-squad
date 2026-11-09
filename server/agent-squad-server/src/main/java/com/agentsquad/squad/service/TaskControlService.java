@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.mapper.InteractionMapper;
 import com.agentsquad.squad.model.po.CommandPO;
 import com.agentsquad.squad.model.po.TaskPO;
@@ -80,7 +81,7 @@ public class TaskControlService {
      * 提交取消命令：校验归属与版本、按幂等键去重、撤销未送达业务命令并写入 STOP 命令。
      */
     @Transactional
-    public CommandReceiptVO cancel(String userId, String taskId, String idempotencyKey, long expectedVersion) {
+    public CommandReceiptVO cancel(Long userId, Long taskId, String idempotencyKey, long expectedVersion) {
         validateIdempotencyKey(idempotencyKey);
         TaskPO task = taskMapper.lockOwned(userId, taskId);
         if (task == null) {
@@ -111,13 +112,13 @@ public class TaskControlService {
         workerDispatch.requestCancellation(userId, taskId, now);
         operations.cancelUnstarted(userId, executionScopes.scopeForTask(userId, taskId));
         interactions.cancelOpenByTask(userId, taskId);
-        String commandId = UUID.randomUUID().toString();
-        String bindingId = requireMasterBinding(userId, taskId);
+        Long commandId = IdWorker.getId();
+        Long bindingId = requireMasterBinding(userId, taskId);
         commandMapper.insertControl(commandId, userId, scopeKey, idempotencyKey, payloadHash,
                 taskId, bindingId, RuntimeCommandAction.STOP.name(), payloadJson, now);
-        for (String workerBinding : bindingMapper.taskBindingIds(userId, taskId)) {
+        for (Long workerBinding : bindingMapper.taskBindingIds(userId, taskId)) {
             if (!workerBinding.equals(bindingId)) {
-                commandMapper.insertControl(UUID.randomUUID().toString(), userId,
+                commandMapper.insertControl(IdWorker.getId(), userId,
                         "task.cancel.binding:" + taskId + ":" + workerBinding, idempotencyKey, payloadHash,
                         taskId, workerBinding, RuntimeCommandAction.STOP.name(), payloadJson, now);
             }
@@ -137,7 +138,7 @@ public class TaskControlService {
      * 提交恢复命令：校验归属、版本与可恢复状态，按幂等键去重并写入 RESUME 命令。
      */
     @Transactional
-    public CommandReceiptVO resume(String userId, String taskId, String idempotencyKey, long expectedVersion) {
+    public CommandReceiptVO resume(Long userId, Long taskId, String idempotencyKey, long expectedVersion) {
         validateIdempotencyKey(idempotencyKey);
         TaskPO task = taskMapper.lockOwned(userId, taskId);
         if (task == null) {
@@ -168,8 +169,8 @@ public class TaskControlService {
         if (taskMapper.updateResuming(userId, taskId, expectedVersion) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标版本已变化");
         }
-        String commandId = UUID.randomUUID().toString();
-        String bindingId = requireMasterBinding(userId, taskId);
+        Long commandId = IdWorker.getId();
+        Long bindingId = requireMasterBinding(userId, taskId);
         commandMapper.insertControl(commandId, userId, scopeKey, idempotencyKey, payloadHash,
                 taskId, bindingId, RuntimeCommandAction.RESUME.name(), payloadJson, now);
         log.info("恢复命令受理成功 taskId={} commandId={} userId={}", taskId, commandId, userId);
@@ -181,7 +182,7 @@ public class TaskControlService {
      * 若取消已抢先受理，只阻塞失效的恢复命令，不覆盖取消状态。
      */
     @Transactional
-    public void blockRejectedResume(String userId, String taskId, String commandId,
+    public void blockRejectedResume(Long userId, Long taskId, Long commandId,
                                     String deliveryToken, String errorCode) {
         taskMapper.lockOwned(userId, taskId);
         if (deliveryMapper.blockRejectedResume(commandId, deliveryToken, errorCode) != 1) {
@@ -206,8 +207,8 @@ public class TaskControlService {
                 command.getNativeTurnId(), null);
     }
 
-    private String requireMasterBinding(String userId, String taskId) {
-        String bindingId = bindingMapper.findMasterBindingId(userId, taskId);
+    private Long requireMasterBinding(Long userId, Long taskId) {
+        Long bindingId = bindingMapper.findMasterBindingId(userId, taskId);
         if (bindingId == null) {
             throw new IllegalStateException("目标缺少 Master 绑定：" + taskId);
         }

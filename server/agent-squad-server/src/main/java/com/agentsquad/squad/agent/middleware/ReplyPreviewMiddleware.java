@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.middleware;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import com.agentsquad.squad.event.ReplyPreviewSignal;
 import com.agentsquad.squad.service.ReplyPreviewBuffer;
 
@@ -49,7 +51,7 @@ public class ReplyPreviewMiddleware implements MiddlewareBase {
     @Override
     public Flux<AgentEvent> onModelCall(Agent agent, RuntimeContext context, ModelCallInput input,
                                         Function<ModelCallInput, Flux<AgentEvent>> next) {
-        return Mono.fromCallable(() -> Optional.ofNullable(replies.previewTarget(context.getUserId(), context.getSessionId())))
+        return Mono.fromCallable(() -> Optional.ofNullable(replies.previewTarget(RuntimeContextIds.userId(context), context.getSessionId())))
                 .subscribeOn(Schedulers.boundedElastic()).flatMapMany(target -> {
                     if (target.isEmpty()) {
                         return next.apply(input);

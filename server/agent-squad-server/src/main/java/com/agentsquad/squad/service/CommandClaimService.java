@@ -34,7 +34,7 @@ public class CommandClaimService {
     private ObservationSupport observations;
 
     @Transactional
-    public boolean claim(String commandId, String token, LocalDateTime now, LocalDateTime leaseUntil) {
+    public boolean claim(Long commandId, String token, LocalDateTime now, LocalDateTime leaseUntil) {
         CommandClaimContextBO context = deliveries.claimContext(commandId);
         if (context == null) {
             return false;

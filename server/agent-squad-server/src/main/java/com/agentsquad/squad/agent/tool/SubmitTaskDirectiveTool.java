@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.tool;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.bo.TaskDirectiveSubmitBO;
 import com.agentsquad.squad.service.TaskDirectiveService;
@@ -45,7 +47,7 @@ public class SubmitTaskDirectiveTool implements AgentTool {
 
     @Override
     public Map<String, Object> getParameters() {
-        var schema = new java.util.LinkedHashMap<String, Object>(Map.of("type", "object", "properties", Map.of("logicalKey", Map.of("type", "string", "maxLength", 160), "taskId", Map.of("type", "string", "format", "uuid"), "expectedVersion", Map.of("type", "integer", "minimum", 0), "kind", Map.of("type", "string", "enum", List.of("SUPPLEMENT", "REPLACE")), "content", Map.of("type", "string", "maxLength", 20000)), "required", List.of("logicalKey", "taskId", "expectedVersion", "kind", "content")));
+        var schema = new java.util.LinkedHashMap<String, Object>(Map.of("type", "object", "properties", Map.of("logicalKey", Map.of("type", "string", "maxLength", 160), "taskId", Map.of("type", "string"), "expectedVersion", Map.of("type", "integer", "minimum", 0), "kind", Map.of("type", "string", "enum", List.of("SUPPLEMENT", "REPLACE")), "content", Map.of("type", "string", "maxLength", 20000)), "required", List.of("logicalKey", "taskId", "expectedVersion", "kind", "content")));
         schema.put("additionalProperties", false);
         return schema;
     }
@@ -68,7 +70,7 @@ public class SubmitTaskDirectiveTool implements AgentTool {
         }
         try {
             var request = json.convertValue(input, TaskDirectiveSubmitBO.class);
-            return ToolResultBlock.text(RuntimePayloads.toJson(json, directives.submit(context.getUserId(), context.getSessionId(), request)));
+            return ToolResultBlock.text(RuntimePayloads.toJson(json, directives.submit(RuntimeContextIds.userId(context), context.getSessionId(), request)));
         } catch (RuntimeBusinessException exception) {
             return ToolResultBlock.error(exception.getMessage());
         }

@@ -5,6 +5,6 @@ package com.agentsquad.squad.runtime;
  * <p>
  * 只代表测试数据库内的真实归属行，不代表SDK已经接受或执行了回合。
  */
-record ScopeTestExecution(String userId, String conversationId, String executionId,
-                          String scopeId, String bindingId, String sessionId, String accountId) {
+record ScopeTestExecution(Long userId, Long conversationId, Long executionId,
+                          Long scopeId, Long bindingId, String sessionId, Long accountId) {
 }

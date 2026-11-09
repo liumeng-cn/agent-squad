@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.enums.WorkerDefinitionStatus;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
@@ -76,7 +77,7 @@ public class WorkerDefinitionService {
             return requireSamePayload(prior, hash);
         }
 
-        String definitionId = UUID.randomUUID().toString();
+        Long definitionId = IdWorker.getId();
         try {
             definitionMapper.insertDefinition(definitionId, request.workerKey(), request.workerVersion(),
                     json, idempotencyKey, hash, actor.userId(), actor.username());
@@ -141,7 +142,7 @@ public class WorkerDefinitionService {
      * 状态变更只修改状态和版本。撤销后不可重新启用，旧版本正文始终可读。
      */
     @Transactional
-    public WorkerDefinitionVO changeStatus(AuthView actor, String definitionId,
+    public WorkerDefinitionVO changeStatus(AuthView actor, Long definitionId,
                                            String idempotencyKey, WorkerStatusUpdateDTO request) {
         requireAdmin(actor);
         requireIdempotencyKey(idempotencyKey);
@@ -171,7 +172,7 @@ public class WorkerDefinitionService {
         return toResponse(requireDefinition(definitionId));
     }
 
-    private WorkerDefinitionPO requireDefinition(String definitionId) {
+    private WorkerDefinitionPO requireDefinition(Long definitionId) {
         WorkerDefinitionPO row = definitionMapper.findByDefinitionId(definitionId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "Worker 能力定义不存在");

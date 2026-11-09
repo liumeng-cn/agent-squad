@@ -4,8 +4,8 @@
 
     <resultMap id="findSourceResult" type="com.agentsquad.squad.model.bo.ResponseContextBO">
         <constructor>
-            <arg column="execution_id" javaType="java.lang.String"/>
-            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="execution_id" javaType="java.lang.Long"/>
+            <arg column="source_message_id" javaType="java.lang.Long"/>
             <arg column="message_seq" javaType="_long"/>
             <arg column="context_json" javaType="java.lang.String"/>
             <arg column="context_hash" javaType="java.lang.String"/>
@@ -14,7 +14,7 @@
 
     <resultMap id="prefixResult" type="com.agentsquad.squad.model.bo.ResponseHistoryBO">
         <constructor>
-            <arg column="message_id" javaType="java.lang.String"/>
+            <arg column="message_id" javaType="java.lang.Long"/>
             <arg column="message_seq" javaType="_long"/>
             <arg column="role" javaType="java.lang.String"/>
             <arg column="content" javaType="java.lang.String"/>
@@ -53,7 +53,7 @@
         ORDER BY message_seq FOR UPDATE
     </select>
 
-    <select id="artifactIds" resultType="java.lang.String">
+    <select id="artifactIds" resultType="java.lang.Long">
         SELECT artifact_id FROM sq_message_artifact
         WHERE user_id = #{userId} AND message_id = #{messageId} AND del_flag = '0' ORDER BY id
     </select>

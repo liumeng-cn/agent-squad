@@ -1,7 +1,7 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.testsupport.ModelAcceptanceFixture;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.identity.AuthView;
@@ -185,13 +185,13 @@ class GoalTaskNativeCreationIntegrationTest {
         });
         model.start();
         try {
-            String database = MySqlTestDatabase.url(directory.resolve("squad"));
+            String database = PostgresTestDatabase.url(directory.resolve("squad"));
             String baseUrl = "http://127.0.0.1:" + model.getAddress().getPort() + "/v1";
             String[] properties = {
                     "--spring.main.web-application-type=none",
                     "--spring.datasource.url=" + database,
-                    "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                    "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                    "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                    "--spring.datasource.driver-class-name=org.postgresql.Driver",
                     "--agentsquad.model.api-key=test-only",
                     "--agentsquad.model.base-url=" + baseUrl,
                     "--agentsquad.model.name=test-model",
@@ -202,7 +202,7 @@ class GoalTaskNativeCreationIntegrationTest {
                     "--agentsquad.delivery.poll-delay-ms=100",
                     "--agentsquad.projection.poll-delay-ms=100"
             };
-            String userId = "00000000-0000-0000-0000-000000000001";
+            Long userId = 1L;
             try (ConfigurableApplicationContext spring = SpringApplication.run(
                     AgentSquadApplication.class, properties)) {
                 JdbcTemplate jdbc = spring.getBean(JdbcTemplate.class);

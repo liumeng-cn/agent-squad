@@ -1,6 +1,6 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.testsupport.ApiResultJson;
 import com.agentsquad.squad.testsupport.TestAssertion;
@@ -30,12 +30,12 @@ class TaskSnapshotHttpTest {
 
     @Test
     void shouldReturnTaskSnapshotWithCursorAndEmptyJobs(@TempDir Path tempDirectory) throws Exception {
-        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("squad"));
+        String databaseUrl = PostgresTestDatabase.url(tempDirectory.resolve("squad"));
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class,
                 "--server.port=0",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.auth.username=local-user",
                 "--agentsquad.auth.password=local-password")) {
             MockMvc mvc = MockMvcBuilders.webAppContextSetup((WebApplicationContext) context).build();
@@ -43,7 +43,7 @@ class TaskSnapshotHttpTest {
 
 
             var conversation = mvc.perform(post("/api/v1/conversations")
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
+                            .with(TestAssertion.as(201L, "ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"title\":\"快照测试\"}"))
                     .andExpect(status().isCreated()).andReturn();
@@ -51,7 +51,7 @@ class TaskSnapshotHttpTest {
                     .get("conversationId").asText();
 
             var receipt = mvc.perform(post("/api/v1/conversations/{conversationId}/tasks", conversationId)
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN"))
+                            .with(TestAssertion.as(201L, "ADMIN"))
                             .header("Idempotency-Key", "snapshot-test-1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"message\":\"检查快照字段\"}"))
@@ -59,7 +59,7 @@ class TaskSnapshotHttpTest {
             String taskId = ApiResultJson.data(mapper, receipt.getResponse().getContentAsString()).get("taskId").asText();
 
             MvcResult result = mvc.perform(get("/api/v1/tasks/{taskId}/snapshot", taskId)
-                            .with(TestAssertion.as("20000000-0000-0000-0000-000000000001", "ADMIN")))
+                            .with(TestAssertion.as(201L, "ADMIN")))
                     .andExpect(status().isOk()).andReturn();
             JsonNode snapshot = ApiResultJson.data(mapper, result.getResponse().getContentAsString());
 

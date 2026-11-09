@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.mapper.TaskDirectiveMapper;
 import com.agentsquad.squad.utils.ContentDigests;
 import com.agentsquad.squad.enums.WorkerJobStatus;
@@ -69,7 +70,7 @@ public class MasterSignalService {
     /**
      * 原生 Master 回合结束并完成投影后，补发因协调回合未结束而暂缓的汇合命令。
      */
-    public void onMasterTurnEnded(String userId, String taskId, String turnId) {
+    public void onMasterTurnEnded(Long userId, Long taskId, String turnId) {
         if (turnId == null || turnId.isBlank()) {
             return;
         }
@@ -106,7 +107,7 @@ public class MasterSignalService {
         if (commandMapper.findByKey(plan.getUserId(), scopeKey, String.valueOf(signalVersion)) != null) {
             return;
         }
-        String bindingId = bindingMapper.findMasterBindingId(plan.getUserId(), plan.getTaskId());
+        Long bindingId = bindingMapper.findMasterBindingId(plan.getUserId(), plan.getTaskId());
         if (bindingId == null) {
             throw new IllegalStateException("汇合时 Master Binding 已消失");
         }
@@ -142,7 +143,7 @@ public class MasterSignalService {
                 "message", message,
                 "planVersion", plan.getPlanVersion(),
                 "signalVersion", signalVersion));
-        String commandId = UUID.randomUUID().toString();
+        Long commandId = IdWorker.getId();
         commandMapper.insertControl(commandId, plan.getUserId(),
                 scopeKey,
                 String.valueOf(signalVersion),

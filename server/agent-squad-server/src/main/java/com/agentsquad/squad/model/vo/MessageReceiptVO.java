@@ -13,16 +13,16 @@ import com.agentsquad.squad.enums.ResponseExecutionStatus;
 public class MessageReceiptVO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("conversationId")
-    private final String conversationId;
+    private final Long conversationId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("messageId")
-    private final String messageId;
+    private final Long messageId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("executionId")
-    private final String executionId;
+    private final Long executionId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("commandId")
-    private final String commandId;
+    private final Long commandId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("status")
     private final ResponseExecutionStatus status;
@@ -32,10 +32,10 @@ public class MessageReceiptVO {
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public MessageReceiptVO(
-            @com.fasterxml.jackson.annotation.JsonProperty("conversationId") String conversationId,
-            @com.fasterxml.jackson.annotation.JsonProperty("messageId") String messageId,
-            @com.fasterxml.jackson.annotation.JsonProperty("executionId") String executionId,
-            @com.fasterxml.jackson.annotation.JsonProperty("commandId") String commandId,
+            @com.fasterxml.jackson.annotation.JsonProperty("conversationId") Long conversationId,
+            @com.fasterxml.jackson.annotation.JsonProperty("messageId") Long messageId,
+            @com.fasterxml.jackson.annotation.JsonProperty("executionId") Long executionId,
+            @com.fasterxml.jackson.annotation.JsonProperty("commandId") Long commandId,
             @com.fasterxml.jackson.annotation.JsonProperty("status") ResponseExecutionStatus status,
             @com.fasterxml.jackson.annotation.JsonProperty("cursor") String cursor) {
         this.conversationId = conversationId;

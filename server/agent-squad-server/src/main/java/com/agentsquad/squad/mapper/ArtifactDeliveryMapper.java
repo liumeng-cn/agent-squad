@@ -11,21 +11,21 @@ import org.apache.ibatis.annotations.Param;
  */
 @Mapper
 public interface ArtifactDeliveryMapper {
-    int insert(@Param("stageId") String stageId, @Param("userId") String userId,
-               @Param("scopeId") String scopeId, @Param("bindingId") String bindingId,
-               @Param("executionId") String executionId, @Param("workspaceKey") String workspaceKey,
+    int insert(@Param("stageId") Long stageId, @Param("userId") Long userId,
+               @Param("scopeId") Long scopeId, @Param("bindingId") Long bindingId,
+               @Param("executionId") Long executionId, @Param("workspaceKey") String workspaceKey,
                @Param("fileName") String fileName, @Param("hash") String hash, @Param("content") byte[] content,
                @Param("expiresAt") java.time.LocalDateTime expiresAt);
 
-    ArtifactStagePO find(@Param("userId") String userId, @Param("stageId") String stageId);
+    ArtifactStagePO find(@Param("userId") Long userId, @Param("stageId") Long stageId);
 
-    ArtifactStagePO lock(@Param("userId") String userId, @Param("stageId") String stageId);
+    ArtifactStagePO lock(@Param("userId") Long userId, @Param("stageId") Long stageId);
 
-    ArtifactStagePO findPath(@Param("userId") String userId, @Param("executionId") String executionId,
+    ArtifactStagePO findPath(@Param("userId") Long userId, @Param("executionId") Long executionId,
                              @Param("workspaceKey") String workspaceKey);
 
-    int commit(@Param("userId") String userId, @Param("stageId") String stageId,
-               @Param("artifactId") String artifactId);
+    int commit(@Param("userId") Long userId, @Param("stageId") Long stageId,
+               @Param("artifactId") Long artifactId);
 
     int expireArtifacts();
 

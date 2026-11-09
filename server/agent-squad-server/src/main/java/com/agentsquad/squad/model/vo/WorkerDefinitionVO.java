@@ -16,7 +16,7 @@ import java.util.List;
 public class WorkerDefinitionVO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("definitionId")
-    private final String definitionId;
+    private final Long definitionId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("workerKey")
     private final String workerKey;
@@ -50,7 +50,7 @@ public class WorkerDefinitionVO {
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public WorkerDefinitionVO(
-            @com.fasterxml.jackson.annotation.JsonProperty("definitionId") String definitionId,
+            @com.fasterxml.jackson.annotation.JsonProperty("definitionId") Long definitionId,
             @com.fasterxml.jackson.annotation.JsonProperty("workerKey") String workerKey,
             @com.fasterxml.jackson.annotation.JsonProperty("workerVersion") String workerVersion,
             @com.fasterxml.jackson.annotation.JsonProperty("description") String description,

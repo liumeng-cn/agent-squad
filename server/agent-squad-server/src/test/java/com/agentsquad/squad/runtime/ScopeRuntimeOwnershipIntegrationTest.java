@@ -1,6 +1,7 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.agent.middleware.ModelBudgetMiddleware;
 import com.agentsquad.squad.config.properties.WorkerProfileProperties;
@@ -50,21 +51,21 @@ class ScopeRuntimeOwnershipIntegrationTest {
 
     @Test
     void responseCanUseGovernedCapabilitiesWithoutTask(@TempDir Path directory) {
-        try (ConfigurableApplicationContext context = start(databaseUrl(directory), MySqlTestDatabase.username(), MySqlTestDatabase.password(), 50000000)) {
+        try (ConfigurableApplicationContext context = start(databaseUrl(directory), PostgresTestDatabase.username(), PostgresTestDatabase.password(), 50000000)) {
             verifyCapabilitiesWithoutTask(context);
         }
     }
 
     @Test
     void concurrentScopesCannotExceedUserBudget(@TempDir Path directory) throws Exception {
-        try (ConfigurableApplicationContext context = start(databaseUrl(directory), MySqlTestDatabase.username(), MySqlTestDatabase.password(), 100)) {
+        try (ConfigurableApplicationContext context = start(databaseUrl(directory), PostgresTestDatabase.username(), PostgresTestDatabase.password(), 100)) {
             verifyConcurrentUserBudget(context);
         }
     }
 
     @Test
     void sharedAccountAndUnknownChargeSurviveScopeChanges(@TempDir Path directory) {
-        try (ConfigurableApplicationContext context = start(databaseUrl(directory), MySqlTestDatabase.username(), MySqlTestDatabase.password(), 1000)) {
+        try (ConfigurableApplicationContext context = start(databaseUrl(directory), PostgresTestDatabase.username(), PostgresTestDatabase.password(), 1000)) {
             verifySharedAccount(context);
         }
     }
@@ -74,7 +75,7 @@ class ScopeRuntimeOwnershipIntegrationTest {
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + url, "--spring.datasource.username=" + username,
                 "--spring.datasource.password=" + password,
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.delivery.enabled=true", "--agentsquad.delivery.poll-delay-ms=3600000",
                 "--agentsquad.projection.poll-delay-ms=3600000", "--agentsquad.conversation.cleanup.delay-ms=3600000",
                 "--agentsquad.budget.max-microunits-per-user=" + userLimit,
@@ -88,19 +89,19 @@ class ScopeRuntimeOwnershipIntegrationTest {
     }
 
     static void verifyCapabilitiesWithoutTask(ConfigurableApplicationContext context) {
-        String userId = UUID.randomUUID().toString();
+        Long userId = IdWorker.getId();
         ScopeTestExecution execution = response(context, userId, null, null, 3000000);
         JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
         ArtifactService artifacts = context.getBean(ArtifactService.class);
         byte[] content = "回复附件".getBytes(StandardCharsets.UTF_8);
-        String artifact = artifacts.upload(userId, UUID.randomUUID().toString(), "source.txt", content).artifactId();
+        Long artifact = artifacts.upload(userId, IdWorker.getIdStr(), "source.txt", content).artifactId();
         artifacts.attachScope(userId, execution.scopeId(), List.of(artifact));
         assertThat(artifacts.listScope(userId, execution.scopeId())).extracting("artifactId").containsExactly(artifact);
         assertThat(artifacts.content(userId, artifact).getContent()).isEqualTo(content);
-        assertThatThrownBy(() -> artifacts.content(UUID.randomUUID().toString(), artifact))
+        assertThatThrownBy(() -> artifacts.content(IdWorker.getId(), artifact))
                 .isInstanceOf(RuntimeBusinessException.class);
 
-        RuntimeContext nativeContext = RuntimeContext.builder().userId(userId).sessionId(execution.sessionId()).build();
+        RuntimeContext nativeContext = RuntimeContext.builder().userId(String.valueOf(userId)).sessionId(execution.sessionId()).build();
         nativeContext.put(SessionRecorder.TURN_ID_KEY, "fixed-scope-turn");
         context.getBean(ModelBudgetMiddleware.class).onModelCall(null, nativeContext,
                 new ModelCallInput(null, null, GenerateOptions.builder().maxTokens(10).build(), null),
@@ -200,7 +201,7 @@ class ScopeRuntimeOwnershipIntegrationTest {
     }
 
     static void verifyConcurrentUserBudget(ConfigurableApplicationContext context) throws Exception {
-        String userId = UUID.randomUUID().toString();
+        Long userId = IdWorker.getId();
         ScopeTestExecution first = response(context, userId, null, null, 100);
         ScopeTestExecution second = response(context, userId, null, null, 100);
         BudgetService budget = context.getBean(BudgetService.class);
@@ -218,7 +219,7 @@ class ScopeRuntimeOwnershipIntegrationTest {
     }
 
     static void verifySharedAccount(ConfigurableApplicationContext context) {
-        String userId = UUID.randomUUID().toString();
+        Long userId = IdWorker.getId();
         ScopeTestExecution first = response(context, userId, null, null, 100);
         ScopeTestExecution second = response(context, userId, first.conversationId(), first.accountId(), 100);
         BudgetService budget = context.getBean(BudgetService.class);
@@ -264,22 +265,22 @@ class ScopeRuntimeOwnershipIntegrationTest {
         }));
     }
 
-    private static ScopeTestExecution response(ConfigurableApplicationContext context, String userId,
-                                               String conversationId, String accountId, long limit) {
+    private static ScopeTestExecution response(ConfigurableApplicationContext context, Long userId,
+                                               Long conversationId, Long accountId, long limit) {
         JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
         if (conversationId == null) {
             conversationId = context.getBean(GoalTaskService.class).createConversation(userId, "回复边界").conversationId();
         }
         ExecutionScopeMapper scopes = context.getBean(ExecutionScopeMapper.class);
         if (accountId == null) {
-            accountId = UUID.randomUUID().toString();
+            accountId = IdWorker.getId();
             scopes.insertAccount(userId, accountId, "STANDARD", limit);
         }
-        String executionId = UUID.randomUUID().toString();
-        String scopeId = UUID.randomUUID().toString();
-        String bindingId = UUID.randomUUID().toString();
+        Long executionId = IdWorker.getId();
+        Long scopeId = IdWorker.getId();
+        Long bindingId = IdWorker.getId();
         String sessionId = UUID.randomUUID().toString();
-        String messageId = UUID.randomUUID().toString();
+        Long messageId = IdWorker.getId();
         scopes.insertScope(scopeId, userId, conversationId, 0, "RESPONSE", executionId, accountId);
         jdbc.update("UPDATE sq_conversation SET message_seq = message_seq + 1 WHERE user_id = ? AND conversation_id = ?", userId, conversationId);
         jdbc.update("""
@@ -302,6 +303,6 @@ class ScopeRuntimeOwnershipIntegrationTest {
     }
 
     private String databaseUrl(Path directory) {
-        return MySqlTestDatabase.url(directory.resolve("scope"));
+        return PostgresTestDatabase.url(directory.resolve("scope"));
     }
 }

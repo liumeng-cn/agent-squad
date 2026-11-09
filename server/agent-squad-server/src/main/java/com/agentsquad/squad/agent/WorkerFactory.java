@@ -52,6 +52,7 @@ import io.agentscope.harness.agent.session.AgentSession;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitialization;
 import org.springframework.stereotype.Component;
@@ -118,13 +119,13 @@ public class WorkerFactory {
     @Resource
     private CommitArtifactTool commitArtifact;
 
-    @org.springframework.beans.factory.annotation.Value("${agentsquad.sandbox.enabled:false}")
+    @Value("${agentsquad.sandbox.enabled:false}")
     private boolean sandboxEnabled;
 
     @Resource
     private RuntimeWorkspace runtimeWorkspace;
 
-    private final Map<String, WorkerAgentHandleBO> active = new ConcurrentHashMap<>();
+    private final Map<Long, WorkerAgentHandleBO> active = new ConcurrentHashMap<>();
 
     @Resource
     private ModelCatalogService modelCatalog;
@@ -161,7 +162,7 @@ public class WorkerFactory {
     /**
      * 取得固定 Binding 的本进程 Agent；首次执行先 CAS 领取业务 guard。
      */
-    public AgentSession sessionFor(String userId, String bindingId, String sessionId, String agentId) {
+    public AgentSession sessionFor(Long userId, Long bindingId, String sessionId, String agentId) {
         WorkerAgentHandleBO handle = active.computeIfAbsent(bindingId,
                 ignored -> create(userId, bindingId, sessionId, agentId));
         if (!userId.equals(handle.userId()) || !sessionId.equals(handle.sessionId())
@@ -169,7 +170,7 @@ public class WorkerFactory {
             throw new IllegalStateException("Worker Binding 身份不一致");
         }
         dispatchService.renew(userId, bindingId, handle.guardToken());
-        RuntimeContext context = RuntimeContext.builder().userId(userId).sessionId(sessionId).build();
+        RuntimeContext context = RuntimeContext.builder().userId(String.valueOf(userId)).sessionId(sessionId).build();
         context.put(io.agentscope.core.session.SessionExportSink.CONTEXT_KEY,
                 eventSinks.bind(new RuntimeEventSourceBO(
                         userId, bindingId, sessionId,
@@ -179,11 +180,11 @@ public class WorkerFactory {
                 new WorkerExecutionIdentityBO(bindingId, handle.guardToken()));
         WorkerLaunchBO job = dispatchMapper.findByBinding(userId, bindingId);
         JsonNode selectedInput = readInput(job.getInputJson());
-        ContextSnapshotPO selected = snapshotMapper.findOwned(userId, job.getTaskId(), selectedInput.path("contextSnapshotId").asText());
-        java.util.List<String> ids = new java.util.ArrayList<>();
+        ContextSnapshotPO selected = snapshotMapper.findOwned(userId, job.getTaskId(), Long.parseLong(selectedInput.path("contextSnapshotId").asText()));
+        java.util.List<Long> ids = new java.util.ArrayList<>();
         for (JsonNode item : readInput(selected.getItemsJson())) {
             if ("SKILL_REFERENCE".equals(item.path("kind").asText())) {
-                ids.add(item.path("sourceId").asText());
+                ids.add(Long.parseLong(item.path("sourceId").asText()));
             }
         }
         context.put(SkillSelectionBO.class,
@@ -204,7 +205,7 @@ public class WorkerFactory {
         }
     }
 
-    private WorkerAgentHandleBO create(String userId, String bindingId,
+    private WorkerAgentHandleBO create(Long userId, Long bindingId,
                                        String sessionId, String agentId) {
         WorkerLaunchBO job = dispatchMapper.findByBinding(userId, bindingId);
         if (job == null || !"ACTIVE".equals(job.getPlanStatus())
@@ -214,7 +215,7 @@ public class WorkerFactory {
         WorkerDefinitionVO definition = "READY".equals(job.getJobStatus())
                 ? definitionService.requireEnabled(job.getWorkerKey(), job.getWorkerVersion())
                 : definitionService.requirePublished(job.getWorkerKey(), job.getWorkerVersion());
-        String expectedAgentId = ContentDigests.sha256(definition.definitionId()).substring(0, 32);
+        String expectedAgentId = ContentDigests.sha256(String.valueOf(definition.definitionId())).substring(0, 32);
         if (!expectedAgentId.equals(agentId)) {
             throw new IllegalStateException("Worker 固定能力版本与 Binding 不一致");
         }
@@ -230,7 +231,8 @@ public class WorkerFactory {
         } catch (Exception exception) {
             throw new IllegalStateException("Worker 固定输入无法读取", exception);
         }
-        String snapshotId = input.path("contextSnapshotId").asText(null);
+        JsonNode snapshotNode = input.path("contextSnapshotId");
+        Long snapshotId = snapshotNode.isMissingNode() || snapshotNode.isNull() ? null : snapshotNode.asLong();
         ContextSnapshotPO snapshot = snapshotMapper.findOwned(userId, job.getTaskId(), snapshotId);
         if (snapshot == null || !job.getNodeKey().equals(snapshot.getTargetNodeKey())
                 || !CanonicalJson.sha256(objectMapper, snapshot.getItemsJson()).equals(snapshot.getContentHash())) {

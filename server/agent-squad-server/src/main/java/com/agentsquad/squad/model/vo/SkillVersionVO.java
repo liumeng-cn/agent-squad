@@ -12,7 +12,7 @@ package com.agentsquad.squad.model.vo;
 public class SkillVersionVO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("skillVersionId")
-    private final String skillVersionId;
+    private final Long skillVersionId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("name")
     private final String name;
@@ -31,7 +31,7 @@ public class SkillVersionVO {
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public SkillVersionVO(
-            @com.fasterxml.jackson.annotation.JsonProperty("skillVersionId") String skillVersionId,
+            @com.fasterxml.jackson.annotation.JsonProperty("skillVersionId") Long skillVersionId,
             @com.fasterxml.jackson.annotation.JsonProperty("name") String name,
             @com.fasterxml.jackson.annotation.JsonProperty("version") String version,
             @com.fasterxml.jackson.annotation.JsonProperty("contentHash") String contentHash,

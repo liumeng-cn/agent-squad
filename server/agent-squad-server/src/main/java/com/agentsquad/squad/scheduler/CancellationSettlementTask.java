@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class CancellationSettlementTask {
     private long afterId;
-    private String afterBinding = "";
+    private Long afterBinding = 0L;
 
     @Resource
     private CompletionMapper mapper;
@@ -44,7 +44,7 @@ public class CancellationSettlementTask {
      */
     public void settle() {
         var tasks = mapper.cancellingTasks(afterId);
-        if (tasks.isEmpty()) {
+        if (tasks.isEmpty() && afterId != 0) {
             afterId = 0;
             tasks = mapper.cancellingTasks(afterId);
         }
@@ -64,8 +64,8 @@ public class CancellationSettlementTask {
      */
     private void settleReplies() {
         var targets = replies.cancellationTargets(afterBinding);
-        if (targets.isEmpty()) {
-            afterBinding = "";
+        if (targets.isEmpty() && afterBinding != 0L) {
+            afterBinding = 0L;
             targets = replies.cancellationTargets(afterBinding);
         }
         for (var target : targets) {

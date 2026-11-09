@@ -65,7 +65,7 @@ public class SignedIdentityVerifier {
             long issued = Long.parseLong(parts[6]), expiry = Long.parseLong(parts[7]), now = Instant.now().getEpochSecond();
             if (issued > now + 5 || issued < now - 35 || expiry < now - 5 || expiry > issued + 30) throw invalid();
             if (!parts[8].equals(request.getMethod()) || !parts[9].equals(request.getRequestURI())) throw invalid();
-            if (!parts[3].matches("[0-9a-fA-F-]{36}")) throw invalid();
+            if (Long.parseLong(parts[3]) <= 0) throw invalid();
             AccountRole role;
             try {
                 role = AccountRole.valueOf(parts[5]);
@@ -73,7 +73,7 @@ public class SignedIdentityVerifier {
                 throw invalid();
             }
             if (!parts[10].matches("[0-9a-fA-F-]{36}")) throw invalid();
-            return new AuthView(parts[3], parts[4], List.of(role), null);
+            return new AuthView(Long.parseLong(parts[3]), parts[4], List.of(role), null);
         } catch (IllegalArgumentException | java.security.GeneralSecurityException ex) {
             throw invalid();
         }

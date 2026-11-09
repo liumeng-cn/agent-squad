@@ -29,15 +29,15 @@ public class TaskPO {
     /**
      * 目标业务ID
      */
-    private String taskId;
+    private Long taskId;
     /**
      * 资源归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 所属对话ID
      */
-    private String conversationId;
+    private Long conversationId;
     /**
      * 产品状态
      */

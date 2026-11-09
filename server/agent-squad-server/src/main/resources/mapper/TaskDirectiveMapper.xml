@@ -4,13 +4,13 @@
 
     <resultMap id="lockResult" type="com.agentsquad.squad.model.po.TaskDirectivePO">
         <constructor>
-            <arg column="directive_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="directive_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="conversation_id" javaType="java.lang.Long"/>
             <arg column="conversation_generation" javaType="_long"/>
-            <arg column="source_message_id" javaType="java.lang.String"/>
-            <arg column="source_scope_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="source_message_id" javaType="java.lang.Long"/>
+            <arg column="source_scope_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
             <arg column="logical_key" javaType="java.lang.String"/>
             <arg column="payload_hash" javaType="java.lang.String"/>
             <arg column="expected_version" javaType="_long"/>
@@ -20,7 +20,7 @@
             <arg column="source_text" javaType="java.lang.String"/>
             <arg column="artifact_ids_json" javaType="java.lang.String"/>
             <arg column="status" javaType="java.lang.String"/>
-            <arg column="command_id" javaType="java.lang.String"/>
+            <arg column="command_id" javaType="java.lang.Long"/>
             <arg column="applied_version" javaType="java.lang.Long"/>
             <arg column="applied_goal_revision" javaType="java.lang.Long"/>
             <arg column="reason_code" javaType="java.lang.String"/>
@@ -30,13 +30,13 @@
 
     <resultMap id="findByKeyResult" type="com.agentsquad.squad.model.po.TaskDirectivePO">
         <constructor>
-            <arg column="directive_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="directive_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="conversation_id" javaType="java.lang.Long"/>
             <arg column="conversation_generation" javaType="_long"/>
-            <arg column="source_message_id" javaType="java.lang.String"/>
-            <arg column="source_scope_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="source_message_id" javaType="java.lang.Long"/>
+            <arg column="source_scope_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
             <arg column="logical_key" javaType="java.lang.String"/>
             <arg column="payload_hash" javaType="java.lang.String"/>
             <arg column="expected_version" javaType="_long"/>
@@ -46,7 +46,7 @@
             <arg column="source_text" javaType="java.lang.String"/>
             <arg column="artifact_ids_json" javaType="java.lang.String"/>
             <arg column="status" javaType="java.lang.String"/>
-            <arg column="command_id" javaType="java.lang.String"/>
+            <arg column="command_id" javaType="java.lang.Long"/>
             <arg column="applied_version" javaType="java.lang.Long"/>
             <arg column="applied_goal_revision" javaType="java.lang.Long"/>
             <arg column="reason_code" javaType="java.lang.String"/>
@@ -56,13 +56,13 @@
 
     <resultMap id="appliedResult" type="com.agentsquad.squad.model.po.TaskDirectivePO">
         <constructor>
-            <arg column="directive_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="directive_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="conversation_id" javaType="java.lang.Long"/>
             <arg column="conversation_generation" javaType="_long"/>
-            <arg column="source_message_id" javaType="java.lang.String"/>
-            <arg column="source_scope_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="source_message_id" javaType="java.lang.Long"/>
+            <arg column="source_scope_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
             <arg column="logical_key" javaType="java.lang.String"/>
             <arg column="payload_hash" javaType="java.lang.String"/>
             <arg column="expected_version" javaType="_long"/>
@@ -72,7 +72,7 @@
             <arg column="source_text" javaType="java.lang.String"/>
             <arg column="artifact_ids_json" javaType="java.lang.String"/>
             <arg column="status" javaType="java.lang.String"/>
-            <arg column="command_id" javaType="java.lang.String"/>
+            <arg column="command_id" javaType="java.lang.Long"/>
             <arg column="applied_version" javaType="java.lang.Long"/>
             <arg column="applied_goal_revision" javaType="java.lang.Long"/>
             <arg column="reason_code" javaType="java.lang.String"/>
@@ -89,16 +89,16 @@
 
     <resultMap id="dueResult" type="com.agentsquad.squad.model.bo.TaskDirectiveTargetBO">
         <constructor>
-            <arg column="directive_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="directive_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
         </constructor>
     </resultMap>
 
     <resultMap id="latestFactsResult" type="com.agentsquad.squad.model.bo.TaskDirectiveFactBO">
         <constructor>
-            <arg column="directive_id" javaType="java.lang.String"/>
-            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="directive_id" javaType="java.lang.Long"/>
+            <arg column="source_message_id" javaType="java.lang.Long"/>
             <arg column="kind" javaType="java.lang.String"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="applied_version" javaType="java.lang.Long"/>
@@ -248,7 +248,7 @@
         FOR UPDATE
     </select>
 
-    <select id="pending" resultType="java.lang.String">
+    <select id="pending" resultType="java.lang.Long">
         SELECT directive_id
         FROM sq_task_directive
         WHERE user_id = #{userId}
@@ -378,7 +378,7 @@
         AND task_id = #{taskId}
     </update>
 
-    <select id="openOperations" resultType="java.lang.String">
+    <select id="openOperations" resultType="java.lang.Long">
         SELECT operation_id
         FROM sq_operation
         WHERE user_id = #{userId}
@@ -392,7 +392,7 @@
         FOR UPDATE
     </select>
 
-    <select id="openInteractions" resultType="java.lang.String">
+    <select id="openInteractions" resultType="java.lang.Long">
         SELECT interaction_id
         FROM sq_interaction
         WHERE user_id = #{userId}
@@ -432,7 +432,7 @@
         LIMIT 1 FOR UPDATE
     </select>
 
-    <select id="pendingControlIds" resultType="java.lang.String">
+    <select id="pendingControlIds" resultType="java.lang.Long">
         SELECT c.command_id
         FROM sq_command c
         JOIN sq_runtime_binding b ON b.user_id = c.user_id

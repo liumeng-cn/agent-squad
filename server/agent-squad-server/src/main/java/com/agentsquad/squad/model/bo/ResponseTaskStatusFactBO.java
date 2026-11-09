@@ -22,11 +22,11 @@ public class ResponseTaskStatusFactBO {
     /**
      * 目标业务ID
      */
-    private String taskId;
+    private Long taskId;
     /**
      * 来源消息标识
      */
-    private String sourceMessageId;
+    private Long sourceMessageId;
     /**
      * 产品状态
      */

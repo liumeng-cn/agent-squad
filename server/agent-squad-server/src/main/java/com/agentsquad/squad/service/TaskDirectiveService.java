@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.mapper.ArtifactMapper;
 import com.agentsquad.squad.enums.TaskDirectiveWaitReason;
 import com.agentsquad.squad.model.vo.TaskDirectiveVO;
@@ -101,7 +102,7 @@ public class TaskDirectiveService {
      * 当前消息与目标归属、版本同事务校验；同键重放不重复生成协调命令，受理不代表已经应用。
      */
     @Transactional
-    public TaskDirectiveReceiptBO submit(String userId, String sessionId, TaskDirectiveSubmitBO request) {
+    public TaskDirectiveReceiptBO submit(Long userId, String sessionId, TaskDirectiveSubmitBO request) {
         validate(request);
         ExecutionScopePO source = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), false);
         if (!"RESPONSE".equals(source.getKind())) {
@@ -138,7 +139,7 @@ public class TaskDirectiveService {
             throw error(RuntimeExceptionCode.CONFLICT, "目标内容已变化，请确认当前目标后再提交修改");
         }
         var message = snapshot.messages().getLast();
-        TaskDirectivePO row = new TaskDirectivePO(UUID.randomUUID().toString(), userId, source.getConversationId(),
+        TaskDirectivePO row = new TaskDirectivePO(IdWorker.getId(), userId, source.getConversationId(),
                 source.getConversationGeneration(), message.messageId(), source.getScopeId(), task.getTaskId(), request.logicalKey(), hash,
                 task.getVersion(), goal.getGoalRevision(), request.kind(), request.content(), message.text(),
                 RuntimePayloads.toJson(json, message.artifactIds()), "ACCEPTED", null, null, null, null, null);
@@ -153,8 +154,8 @@ public class TaskDirectiveService {
      * 独立任务Master在当前Turn内应用或拒绝；目标语义变化阻断旧计划，等待中的外部操作须先明确结果。
      */
     @Transactional
-    public TaskDirectiveReceiptBO decide(String userId, String sessionId, TaskDirectiveDecisionBO request) {
-        if (request == null || invalid(request.directiveId(), 36) || request.expectedVersion() < 0
+    public TaskDirectiveReceiptBO decide(Long userId, String sessionId, TaskDirectiveDecisionBO request) {
+        if (request == null || request.directiveId() == null || request.directiveId() <= 0 || request.expectedVersion() < 0
                 || request.reason() != null && request.reason().length() > 500
                 || request.decision() == null || !Set.of("APPLY", "REJECT").contains(request.decision())
                 || ("REJECT".equals(request.decision()) && invalid(request.reason(), 500))) {
@@ -190,8 +191,8 @@ public class TaskDirectiveService {
         if (!Set.of("QUEUED", "RUNNING").contains(task.getStatus()) || hasOpenEffects(target)) {
             throw error(RuntimeExceptionCode.CONFLICT, "当前操作或交互尚未处理完成，修改仍为已收到，暂不应用");
         }
-        List<String> files = artifactIds(row);
-        for (String id : files) {
+        List<Long> files = artifactIds(row);
+        for (Long id : files) {
             if (artifactMapper.findOwned(userId, id) == null) {
                 return reject(target, task, row, "MATERIAL_UNAVAILABLE", "补充材料已失效，请重新添加材料");
             }
@@ -224,7 +225,7 @@ public class TaskDirectiveService {
         events.publish(target, "goal-change:" + row.getDirectiveId(), "task.goal_changed", Map.of(
                 "taskId", task.getTaskId(), "version", task.getVersion() + 1, "goalRevision", goal.getGoalRevision() + 1,
                 "sourceMessageId", row.getSourceMessageId()));
-        for (String pending : directives.pending(userId, task.getTaskId())) {
+        for (Long pending : directives.pending(userId, task.getTaskId())) {
             TaskDirectivePO other = directives.lock(userId, pending);
             if (other.getExpectedGoalRevision() != goal.getGoalRevision() + 1) {
                 reject(target, task, other, "GOAL_CHANGED", "目标内容已变化，本次并发修改未应用，请重新确认");
@@ -239,7 +240,7 @@ public class TaskDirectiveService {
      */
     @Transactional
     public void dispatch(TaskDirectiveTargetBO candidate) {
-        String userId = candidate.getUserId();
+        Long userId = candidate.getUserId();
         ExecutionScopePO target = scopes.lockOwned(userId, scopes.scopeForTask(userId, candidate.getTaskId()), false);
         TaskPO task = tasks.lockOwnedRow(userId, candidate.getTaskId());
         TaskDirectivePO row = directives.lock(userId, candidate.getDirectiveId());
@@ -279,13 +280,13 @@ public class TaskDirectiveService {
             }
             return;
         }
-        String first = directives.pending(userId, task.getTaskId()).getFirst();
+        Long first = directives.pending(userId, task.getTaskId()).getFirst();
         if (!first.equals(row.getDirectiveId())) {
             return;
         }
         directives.clearCandidate(userId, task.getTaskId());
-        String binding = bindings.findMasterBindingId(userId, task.getTaskId());
-        String commandId = UUID.randomUUID().toString();
+        Long binding = bindings.findMasterBindingId(userId, task.getTaskId());
+        Long commandId = IdWorker.getId();
         String message = "用户对当前目标提出修改。只在本目标协调会话处理，先调用apply_task_directive作出APPLY或REJECT决定。"
                 + "ACCEPTED仅表示收到，未应用不能声称生效；有待审批或结果未知的操作先处理，不能重放未知写入。"
                 + "应用后必须用新目标修订号准备新的局部上下文并重发计划，旧结果不是新目标的交付。参数与来源原文：\n"
@@ -350,9 +351,9 @@ public class TaskDirectiveService {
                 row.getAppliedVersion(), row.getAppliedGoalRevision(), row.getReasonCode(), row.getReasonMessage());
     }
 
-    private List<String> artifactIds(TaskDirectivePO row) {
+    private List<Long> artifactIds(TaskDirectivePO row) {
         try {
-            return java.util.Arrays.asList(json.treeToValue(RuntimePayloads.readJson(json, row.getArtifactIdsJson()), String[].class));
+            return java.util.Arrays.asList(json.treeToValue(RuntimePayloads.readJson(json, row.getArtifactIdsJson()), Long[].class));
         } catch (Exception exception) {
             throw new IllegalStateException("修改材料引用无法读取", exception);
         }
@@ -377,7 +378,7 @@ public class TaskDirectiveService {
     }
 
     private void validate(TaskDirectiveSubmitBO request) {
-        if (request == null || invalid(request.logicalKey(), 160) || invalid(request.taskId(), 36)
+        if (request == null || invalid(request.logicalKey(), 160) || request.taskId() == null || request.taskId() <= 0
                 || request.expectedVersion() < 0 || request.kind() == null || !Set.of("SUPPLEMENT", "REPLACE").contains(request.kind())
                 || invalid(request.content(), 20000)) {
             throw error(RuntimeExceptionCode.VALIDATION, "修改请求参数无效");

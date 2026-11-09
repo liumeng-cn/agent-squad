@@ -8,7 +8,7 @@ import com.agentsquad.squad.enums.ReplyPreviewPhase;
  * text为当前模型调用累计公开文本，phase区分推理中与正文输出，offset固定为零并按revision整段替换；
  * 无持久序号，不证明执行完成，也不包含推理正文本身。
  */
-public record ReplyPreviewBO(int schemaVersion, String executionId, String sourceMessageId,
+public record ReplyPreviewBO(int schemaVersion, Long executionId, Long sourceMessageId,
                              String runId, String streamId, long revision, int offset,
                              String text, ReplyPreviewPhase phase, boolean replace, boolean preview) {
 }

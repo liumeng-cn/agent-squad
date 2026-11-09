@@ -24,19 +24,19 @@ public class SandboxRunPO {
     /**
      * 沙箱执行业务ID
      */
-    private String executionId;
+    private Long executionId;
     /**
      * 归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 执行作用域ID
      */
-    private String scopeId;
+    private Long scopeId;
     /**
      * 固定原生绑定ID
      */
-    private String bindingId;
+    private Long bindingId;
     /**
      * 固定请求SHA256摘要
      */

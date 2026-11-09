@@ -22,11 +22,11 @@ public class TaskDirectiveFactBO {
     /**
      * 目标修订指令业务ID
      */
-    private String directiveId;
+    private Long directiveId;
     /**
      * 受权用户消息ID
      */
-    private String sourceMessageId;
+    private Long sourceMessageId;
     /**
      * 类型[SUPPLEMENT,REPLACE]
      */

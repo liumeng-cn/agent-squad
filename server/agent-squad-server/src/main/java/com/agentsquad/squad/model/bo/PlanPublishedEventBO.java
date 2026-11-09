@@ -9,6 +9,6 @@ import java.util.List;
  *
  * <p>保留任务事件流使用的计划版本、工作编号和验收条件。</p>
  */
-public record PlanPublishedEventBO(long planVersion, List<String> jobIds, PlanJoinPolicy joinPolicy,
+public record PlanPublishedEventBO(long planVersion, List<Long> jobIds, PlanJoinPolicy joinPolicy,
                                    List<PlanAcceptanceCriterionBO> acceptanceCriteria) {
 }

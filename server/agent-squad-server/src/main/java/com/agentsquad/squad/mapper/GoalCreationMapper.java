@@ -10,8 +10,8 @@ import org.apache.ibatis.annotations.Param;
  */
 @Mapper
 public interface GoalCreationMapper {
-    String taskForSourceExecution(@Param("userId") String userId, @Param("executionId") String executionId);
+    Long taskForSourceExecution(@Param("userId") Long userId, @Param("executionId") Long executionId);
 
-    int linkSource(@Param("userId") String userId, @Param("taskId") String taskId,
-                   @Param("messageId") String messageId, @Param("executionId") String executionId);
+    int linkSource(@Param("userId") Long userId, @Param("taskId") Long taskId,
+                   @Param("messageId") Long messageId, @Param("executionId") Long executionId);
 }

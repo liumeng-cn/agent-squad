@@ -5,5 +5,5 @@ package com.agentsquad.squad.model.bo;
  * <p>
  * 计划版本必须匹配当前目标；用户及协调会话身份由运行上下文提供。
  */
-public record AbandonFailedJobRequestBO(String jobId, long expectedPlanVersion) {
+public record AbandonFailedJobRequestBO(Long jobId, long expectedPlanVersion) {
 }

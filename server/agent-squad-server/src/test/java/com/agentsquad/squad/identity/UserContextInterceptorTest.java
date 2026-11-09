@@ -28,7 +28,7 @@ import static org.mockito.Mockito.when;
  */
 class UserContextInterceptorTest {
 
-    private static final String USER_ID = "11111111-1111-1111-1111-111111111111";
+    private static final Long USER_ID = 111L;
 
     @Test
     void signedAssertionTakesPrecedenceAndChecksUserStatus() {
@@ -48,7 +48,7 @@ class UserContextInterceptorTest {
     void strictModeRejectsUnsignedHeadersEvenWhenLocalCompatibilityEnabled() {
         SignedIdentityVerifier verifier = mock(SignedIdentityVerifier.class);
         UserStatusGuardService status = mock(UserStatusGuardService.class);
-        MockHttpServletRequest request = unsignedRequest(USER_ID, "USER");
+        MockHttpServletRequest request = unsignedRequest(USER_ID.toString(), "USER");
         when(verifier.verify(request)).thenReturn(null);
         UserContextInterceptor interceptor = interceptor(verifier, status, true, true);
 
@@ -63,9 +63,9 @@ class UserContextInterceptorTest {
         UserStatusGuardService status = mock(UserStatusGuardService.class);
         UserContextInterceptor interceptor = interceptor(verifier, status, false, true);
 
-        assertUnauthorized(interceptor, unsignedRequest("not-a-uuid", "USER"));
-        assertUnauthorized(interceptor, unsignedRequest(USER_ID, "ADMIN,USER"));
-        assertUnauthorized(interceptor, unsignedRequest(USER_ID, ""));
+        assertUnauthorized(interceptor, unsignedRequest("not-a-number", "USER"));
+        assertUnauthorized(interceptor, unsignedRequest(USER_ID.toString(), "ADMIN,USER"));
+        assertUnauthorized(interceptor, unsignedRequest(USER_ID.toString(), ""));
     }
 
     @Test
@@ -74,14 +74,14 @@ class UserContextInterceptorTest {
         UserStatusGuardService status = mock(UserStatusGuardService.class);
         UserContextInterceptor interceptor = interceptor(verifier, status, false, false);
 
-        assertUnauthorized(interceptor, unsignedRequest(USER_ID, "USER"));
+        assertUnauthorized(interceptor, unsignedRequest(USER_ID.toString(), "USER"));
     }
 
     @Test
     void localCompatibilityAcceptsOperatorRole() {
         SignedIdentityVerifier verifier = mock(SignedIdentityVerifier.class);
         UserStatusGuardService status = mock(UserStatusGuardService.class);
-        MockHttpServletRequest request = unsignedRequest(USER_ID, "OPERATOR");
+        MockHttpServletRequest request = unsignedRequest(USER_ID.toString(), "OPERATOR");
         UserContextInterceptor interceptor = interceptor(verifier, status, false, true);
 
         assertThat(interceptor.preHandle(request, new MockHttpServletResponse(), new Object())).isTrue();
@@ -93,7 +93,7 @@ class UserContextInterceptorTest {
     void localCompatibilityAcceptsValidUnsignedIdentity() {
         SignedIdentityVerifier verifier = mock(SignedIdentityVerifier.class);
         UserStatusGuardService status = mock(UserStatusGuardService.class);
-        MockHttpServletRequest request = unsignedRequest(USER_ID, "USER");
+        MockHttpServletRequest request = unsignedRequest(USER_ID.toString(), "USER");
         request.addHeader("X-User-Name", "local-user");
         UserContextInterceptor interceptor = interceptor(verifier, status, false, true);
 

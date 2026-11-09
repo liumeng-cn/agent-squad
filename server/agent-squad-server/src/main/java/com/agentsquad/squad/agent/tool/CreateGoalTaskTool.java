@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.tool;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.bo.GoalTaskCreateBO;
 import com.agentsquad.squad.service.GoalTaskCreationService;
@@ -56,7 +58,7 @@ public class CreateGoalTaskTool implements AgentTool {
                         "logicalKey", Map.of("type", "string", "minLength", 1, "maxLength", 160),
                         "title", Map.of("type", "string", "minLength", 1, "maxLength", 200),
                         "objective", Map.of("type", "string", "minLength", 1, "maxLength", 20000),
-                        "sourceMessageId", Map.of("type", "string", "format", "uuid")),
+                        "sourceMessageId", Map.of("type", "string")),
                 "required", List.of("logicalKey", "title", "objective", "sourceMessageId"), "additionalProperties", false);
     }
 
@@ -73,7 +75,7 @@ public class CreateGoalTaskTool implements AgentTool {
         }
         try {
             GoalTaskCreateBO request = json.convertValue(param.getInput(), GoalTaskCreateBO.class);
-            goals.create(context.getUserId(), context.getSessionId(), request);
+            goals.create(RuntimeContextIds.userId(context), context.getSessionId(), request);
             return ToolResultBlock.text("任务已受理，完成后会统一给出结果。");
         } catch (RuntimeBusinessException exception) {
             return ToolResultBlock.error(exception.getMessage());

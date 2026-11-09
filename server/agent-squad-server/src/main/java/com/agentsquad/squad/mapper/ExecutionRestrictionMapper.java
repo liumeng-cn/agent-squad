@@ -10,11 +10,11 @@ import org.apache.ibatis.annotations.Param;
  */
 @Mapper
 public interface ExecutionRestrictionMapper {
-    int failResponse(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    int failResponse(@Param("userId") Long userId, @Param("scopeId") Long scopeId);
 
-    int blockTask(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    int blockTask(@Param("userId") Long userId, @Param("scopeId") Long scopeId);
 
-    int blockJobs(@Param("userId") String userId, @Param("taskId") String taskId);
+    int blockJobs(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    int blockCommands(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    int blockCommands(@Param("userId") Long userId, @Param("scopeId") Long scopeId);
 }

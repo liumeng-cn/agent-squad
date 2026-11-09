@@ -25,13 +25,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class SessionPolicyHttpTest {
 
-    private static final String ADMIN_ID = "66666666-6666-4666-8666-666666666666";
+    private static final String ADMIN_ID = "3003";
     private static final String DB_URL;
     private static final ObjectMapper JSON = new ObjectMapper();
 
     static {
         DB_URL = GatewayTestDatabase.create("session-policy");
-        GatewayTestDatabase.seedUser(DB_URL, ADMIN_ID, "policy-admin", "policy-password", "ADMIN", false);
+        GatewayTestDatabase.seedUser(DB_URL, Long.parseLong(ADMIN_ID), "policy-admin", "policy-password", "ADMIN", false);
     }
 
     @LocalServerPort
@@ -42,7 +42,7 @@ class SessionPolicyHttpTest {
         registry.add("spring.datasource.url", () -> DB_URL);
         registry.add("spring.datasource.username", GatewayTestDatabase::username);
         registry.add("spring.datasource.password", GatewayTestDatabase::password);
-        registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
+        registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
         registry.add("agentsquad.auth.secure-cookie", () -> "true");
         registry.add("agentsquad.auth.cleanup-initial-delay-ms", () -> "3600000");
     }
@@ -71,13 +71,13 @@ class SessionPolicyHttpTest {
         String cookie = setCookie.split(";", 2)[0];
         String csrf = JSON.readTree(login.body()).get("data").get("csrfToken").asText();
 
-        assertEquals(401, myStatus(client, cookie), "CSRF 不匹配的写请求必须 401");
+        assertEquals(401, myCode(client, cookie), "CSRF 不匹配的写请求必须拒绝");
         HttpResponse<String> me = get(client, "/api/v1/auth/me", cookie);
         assertEquals(200, me.statusCode());
         assertTrue(me.headers().firstValue("Cache-Control").orElse("").contains("no-store"));
 
-        execute("UPDATE sq_auth_session SET absolute_expires_at = DATE_SUB(NOW(3), INTERVAL 1 MINUTE)");
-        assertEquals(401, myStatus(client, cookie));
+        execute("UPDATE sq_auth_session SET absolute_expires_at = NOW() - INTERVAL '1 minute'");
+        assertEquals(401, myCode(client, cookie));
 
         HttpResponse<String> second = client.send(HttpRequest.newBuilder(
                                 URI.create(base() + "/api/v1/auth/login"))
@@ -88,16 +88,24 @@ class SessionPolicyHttpTest {
         String secondCookie = second.headers().firstValue("Set-Cookie").orElseThrow().split(";", 2)[0];
         assertEquals(200, get(client, "/api/v1/auth/me", secondCookie).statusCode());
 
-        execute("UPDATE sq_user SET status = 'DISABLED' WHERE user_id = '" + ADMIN_ID + "'");
-        assertEquals(401, get(client, "/api/v1/auth/me", secondCookie).statusCode());
-        execute("UPDATE sq_user SET status = 'ACTIVE' WHERE user_id = '" + ADMIN_ID + "'");
+        execute("UPDATE sq_user SET status = 'DISABLED' WHERE user_id = " + ADMIN_ID);
+        assertEquals(401, code(get(client, "/api/v1/auth/me", secondCookie)));
+        execute("UPDATE sq_user SET status = 'ACTIVE' WHERE user_id = " + ADMIN_ID);
     }
 
-    private int myStatus(HttpClient client, String cookie) throws Exception {
-        return client.send(HttpRequest.newBuilder(URI.create(base() + "/api/v1/auth/logout"))
+    private int myCode(HttpClient client, String cookie) throws Exception {
+        return code(client.send(HttpRequest.newBuilder(URI.create(base() + "/api/v1/auth/logout"))
                         .header("Cookie", cookie).header("X-CSRF-Token", "mismatched-token")
                         .POST(HttpRequest.BodyPublishers.noBody()).build(),
-                HttpResponse.BodyHandlers.ofString()).statusCode();
+                HttpResponse.BodyHandlers.ofString()));
+    }
+
+    /**
+     * 网关业务拒绝统一返回 HTTP 200，结果以响应体 code 判定。
+     */
+    private static int code(HttpResponse<String> response) throws Exception {
+        assertEquals(200, response.statusCode(), response.body());
+        return JSON.readTree(response.body()).get("code").asInt();
     }
 
     private HttpResponse<String> get(HttpClient client, String path, String cookie) throws Exception {

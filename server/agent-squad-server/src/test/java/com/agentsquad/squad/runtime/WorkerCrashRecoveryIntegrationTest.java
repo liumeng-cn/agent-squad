@@ -1,7 +1,7 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.service.WorkerResultService;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.agent.WorkerFactory;
 import com.agentsquad.squad.enums.AccountRole;
@@ -85,13 +85,13 @@ class WorkerCrashRecoveryIntegrationTest {
         });
         model.start();
         try {
-            String database = MySqlTestDatabase.url(directory.resolve("squad"));
+            String database = PostgresTestDatabase.url(directory.resolve("squad"));
             String baseUrl = "http://127.0.0.1:" + model.getAddress().getPort() + "/v1";
             String[] base = {
                     "--spring.main.web-application-type=none",
                     "--spring.datasource.url=" + database,
-                    "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                    "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                    "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                    "--spring.datasource.driver-class-name=org.postgresql.Driver",
                     "--agentsquad.model.api-key=test-only",
                     "--agentsquad.model.base-url=" + baseUrl,
                     "--agentsquad.model.name=test-model",
@@ -103,7 +103,7 @@ class WorkerCrashRecoveryIntegrationTest {
             String[] slow = java.util.Arrays.copyOf(base, base.length + 2);
             slow[base.length] = "--agentsquad.delivery.poll-delay-ms=60000";
             slow[base.length + 1] = "--agentsquad.projection.poll-delay-ms=60000";
-            String userId = "00000000-0000-0000-0000-000000000001";
+            Long userId = 1L;
             try (ConfigurableApplicationContext first = SpringApplication.run(
                     AgentSquadApplication.class, slow)) {
                 JdbcTemplate jdbc = first.getBean(JdbcTemplate.class);
@@ -123,9 +123,9 @@ class WorkerCrashRecoveryIntegrationTest {
                         SELECT framework_session_id FROM sq_runtime_binding
                         WHERE task_id = ? AND role = 'MASTER'
                         """, String.class, task.taskId());
-                String snapshot = first.getBean(ContextSnapshotService.class).prepare(
+                Long snapshot = first.getBean(ContextSnapshotService.class).prepare(
                         userId, masterSession, "draft", "draft-context").snapshotId();
-                String otherSnapshot = first.getBean(ContextSnapshotService.class).prepare(
+                Long otherSnapshot = first.getBean(ContextSnapshotService.class).prepare(
                         userId, masterSession, "outline", "outline-context").snapshotId();
                 PlanReceiptBO plan = first.getBean(PlanService.class).publish(userId, masterSession,
                         new PlanPublishBO("crash-plan", 0, List.of(
@@ -134,12 +134,12 @@ class WorkerCrashRecoveryIntegrationTest {
                                 new PlanNodeBO("draft", "crash-writer", "1.0.0", "写摘要",
                                         snapshot, List.of(), true, 1)),
                                 "ALL_REQUIRED", List.of("摘要完成")));
-                String successfulJobId = plan.jobIds().getFirst();
-                String successfulBinding = jdbc.queryForObject(
-                        "SELECT binding_id FROM sq_worker_job WHERE job_id = ?", String.class, successfulJobId);
-                String successfulCommand = jdbc.queryForObject("""
+                Long successfulJobId = plan.jobIds().getFirst();
+                Long successfulBinding = jdbc.queryForObject(
+                        "SELECT binding_id FROM sq_worker_job WHERE job_id = ?", Long.class, successfulJobId);
+                Long successfulCommand = jdbc.queryForObject("""
                         SELECT command_id FROM sq_command WHERE binding_id = ? AND action = 'SUBMIT'
-                        """, String.class, successfulBinding);
+                        """, Long.class, successfulBinding);
                 first.getBean(CommandDeliveryService.class).deliver(successfulCommand);
                 for (int attempt = 0; attempt < 100; attempt++) {
                     jdbc.update("UPDATE sq_runtime_binding SET next_projection_at = ? WHERE binding_id = ?",
@@ -153,14 +153,14 @@ class WorkerCrashRecoveryIntegrationTest {
                 }
                 assertThat(jdbc.queryForObject("SELECT status FROM sq_worker_job WHERE job_id = ?",
                         String.class, successfulJobId)).isEqualTo("SUCCEEDED");
-                String jobId = plan.jobIds().get(1);
-                String bindingId = jdbc.queryForObject(
+                Long jobId = plan.jobIds().get(1);
+                Long bindingId = jdbc.queryForObject(
                         "SELECT binding_id FROM sq_worker_job WHERE job_id = ?",
-                        String.class, jobId);
-                String commandId = jdbc.queryForObject("""
+                        Long.class, jobId);
+                Long commandId = jdbc.queryForObject("""
                         SELECT command_id FROM sq_command
                         WHERE binding_id = ? AND action = 'SUBMIT'
-                        """, String.class, bindingId);
+                        """, Long.class, bindingId);
                 String workerSession = jdbc.queryForObject("""
                         SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id = ?
                         """, String.class, bindingId);

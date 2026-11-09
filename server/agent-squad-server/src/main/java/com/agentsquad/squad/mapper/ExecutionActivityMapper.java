@@ -14,24 +14,24 @@ import java.util.List;
  */
 @Mapper
 public interface ExecutionActivityMapper {
-    String masterBinding(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    Long masterBinding(@Param("userId") Long userId, @Param("scopeId") Long scopeId);
 
-    String sourceMessage(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    Long sourceMessage(@Param("userId") Long userId, @Param("scopeId") Long scopeId);
 
-    ExecutionActivityPO find(@Param("userId") String userId, @Param("bindingId") String bindingId,
+    ExecutionActivityPO find(@Param("userId") Long userId, @Param("bindingId") Long bindingId,
                              @Param("sourceKey") String sourceKey);
 
     int insert(ExecutionActivityPO row);
 
     int update(ExecutionActivityPO row);
 
-    List<ExecutionActivityPO> activeRun(@Param("userId") String userId, @Param("bindingId") String bindingId,
+    List<ExecutionActivityPO> activeRun(@Param("userId") Long userId, @Param("bindingId") Long bindingId,
                                         @Param("runId") String runId);
 
-    List<ExecutionActivityPO> recent(@Param("userId") String userId, @Param("conversationId") String conversationId,
+    List<ExecutionActivityPO> recent(@Param("userId") Long userId, @Param("conversationId") Long conversationId,
                                      @Param("generation") long generation, @Param("limit") int limit);
 
-    List<ExecutionActivityPO> history(@Param("userId") String userId, @Param("conversationId") String conversationId,
+    List<ExecutionActivityPO> history(@Param("userId") Long userId, @Param("conversationId") Long conversationId,
                                       @Param("generation") long generation, @Param("query") ActivityHistoryDTO query,
                                       @Param("limit") int limit);
 }

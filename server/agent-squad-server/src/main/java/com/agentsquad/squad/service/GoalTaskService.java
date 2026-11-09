@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 
@@ -77,8 +78,8 @@ public class GoalTaskService {
      * 创建归属明确的对话，后续提交必须再锁该对话。
      */
     @Transactional
-    public ConversationVO createConversation(String userId, String title) {
-        String conversationId = UUID.randomUUID().toString();
+    public ConversationVO createConversation(Long userId, String title) {
+        Long conversationId = IdWorker.getId();
         conversationMapper.insertConversation(conversationId, userId, title);
         log.info("对话创建成功 conversationId={} userId={}", conversationId, userId);
         return new ConversationVO(conversationId, title, 0, ConversationStatus.ACTIVE.name(), 0, null);
@@ -87,7 +88,7 @@ public class GoalTaskService {
     /**
      * 按用户分页列出未删除对话；cursor 为存储主键 id 字符串，空表示首页。
      */
-    public ConversationPageVO listConversations(String userId, String cursor, int limit) {
+    public ConversationPageVO listConversations(Long userId, String cursor, int limit) {
         Long cursorId = parseCursor(cursor);
         List<ConversationPO> rows = conversationMapper.listByOwner(userId, cursorId,
                 Math.min(Math.max(limit, 1), 100));
@@ -99,7 +100,7 @@ public class GoalTaskService {
     /**
      * 读取当前用户单个对话快照；删除中与已删除会话立即拒绝读取。
      */
-    public ConversationVO getConversation(String userId, String conversationId) {
+    public ConversationVO getConversation(Long userId, Long conversationId) {
         ConversationPO row = conversationMapper.findOwned(userId, conversationId);
         if (row == null || !ConversationStatus.ACTIVE.name().equals(row.getStatus())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "会话不存在");
@@ -129,7 +130,7 @@ public class GoalTaskService {
      * <p>任何 SQL 失败都回滚；重试同键同输入返回原收据，不创建新任务。</p>
      */
     @Transactional
-    public TaskReceiptVO submit(String userId, String conversationId, String idempotencyKey, String message) {
+    public TaskReceiptVO submit(Long userId, Long conversationId, String idempotencyKey, String message) {
         return submit(userId, conversationId, idempotencyKey, message, List.of());
     }
 
@@ -137,12 +138,12 @@ public class GoalTaskService {
      * 将附件引用与目标、命令在同一事务提交；不接收未 READY 或其他用户的引用。
      */
     @Transactional
-    public TaskReceiptVO submit(String userId, String conversationId, String idempotencyKey, String message,
-                                List<String> artifactIds) {
-        if (artifactIds != null && artifactIds.stream().anyMatch(id -> id == null || id.isBlank())) {
+    public TaskReceiptVO submit(Long userId, Long conversationId, String idempotencyKey, String message,
+                                List<Long> artifactIds) {
+        if (artifactIds != null && artifactIds.stream().anyMatch(id -> id == null || id <= 0)) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "附件引用不能为空");
         }
-        List<String> attachments = artifactIds == null ? List.of() : List.copyOf(artifactIds);
+        List<Long> attachments = artifactIds == null ? List.of() : List.copyOf(artifactIds);
         if (idempotencyKey == null || idempotencyKey.isBlank() || idempotencyKey.length() > 160) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "幂等键长度必须为 1 到 160");
         }
@@ -167,9 +168,9 @@ public class GoalTaskService {
         if (conversation.getActiveTaskId() != null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "会话已有未完成目标");
         }
-        String taskId = UUID.randomUUID().toString();
-        String bindingId = UUID.randomUUID().toString();
-        String commandId = UUID.randomUUID().toString();
+        Long taskId = IdWorker.getId();
+        Long bindingId = IdWorker.getId();
+        Long commandId = IdWorker.getId();
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         if (budgetLimitMicrounits <= 0) {
             throw new IllegalStateException("目标预算上限必须大于 0");
@@ -194,7 +195,7 @@ public class GoalTaskService {
     /**
      * 按登录主体读取目标，不暴露其他用户的存在性。
      */
-    public TaskVO findTask(String userId, String taskId) {
+    public TaskVO findTask(Long userId, Long taskId) {
         TaskPO task = taskMapper.findOwned(userId, taskId);
         if (task == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
@@ -206,7 +207,7 @@ public class GoalTaskService {
     /**
      * 列出某一会话下的目标，按创建时间倒序。
      */
-    public GoalTaskPageVO listConversationTasks(String userId, String conversationId, String cursor, int limit) {
+    public GoalTaskPageVO listConversationTasks(Long userId, Long conversationId, String cursor, int limit) {
         getConversation(userId, conversationId);
         Long cursorId = parseCursor(cursor);
         List<TaskPO> rows = taskMapper.listByConversation(userId, conversationId, cursorId,
@@ -230,12 +231,12 @@ public class GoalTaskService {
     /**
      * 仅返回当前用户的命令收据。
      */
-    public CommandVO findCommand(String userId, String commandId) {
+    public CommandVO findCommand(Long userId, Long commandId) {
         CommandPO command = commandMapper.findOwned(userId, commandId);
         if (command == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "命令不存在");
         }
-        String executionScopeId = commandMapper.findScopeId(userId, commandId);
+        Long executionScopeId = commandMapper.findScopeId(userId, commandId);
         if (executionScopeId != null) {
             executionScopeService.requireReadable(userId, executionScopeId);
         }
@@ -246,7 +247,7 @@ public class GoalTaskService {
     /**
      * 从已提交事件按序号回放，客户端重连可从最后水位继续。
      */
-    public List<TaskEventResponseBO> listEvents(String userId, String taskId, long after) {
+    public List<TaskEventResponseBO> listEvents(Long userId, Long taskId, long after) {
         findTask(userId, taskId);
         return taskEventMapper.listAfter(userId, taskId, after).stream()
                 .map(this::toEventResponse)

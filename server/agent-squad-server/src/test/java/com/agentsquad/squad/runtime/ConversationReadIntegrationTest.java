@@ -1,6 +1,7 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.dto.ConversationTitleUpdateDTO;
 import com.agentsquad.squad.model.dto.MessageCreateDTO;
@@ -40,7 +41,7 @@ class ConversationReadIntegrationTest {
     }
 
     static void verifyHistory(ConfigurableApplicationContext context) {
-        String user = UUID.randomUUID().toString();
+        Long user = IdWorker.getId();
         var messages = context.getBean(MessageAcceptanceService.class);
         var first = messages.accept(user, null, "first", new MessageCreateDTO("第一条消息", List.of()));
         for (int i = 2; i <= 43; i++) {
@@ -60,7 +61,7 @@ class ConversationReadIntegrationTest {
         assertThat(oldest.nextBeforeSeq()).isNull();
         assertThat(reads.events(user, first.conversationId(), page.cursor())).isEmpty();
         assertThat(reads.events(user, first.conversationId(), first.cursor())).hasSize(84);
-        assertThatThrownBy(() -> reads.snapshot(UUID.randomUUID().toString(), first.conversationId(), null, 20)).isInstanceOf(RuntimeBusinessException.class);
+        assertThatThrownBy(() -> reads.snapshot(IdWorker.getId(), first.conversationId(), null, 20)).isInstanceOf(RuntimeBusinessException.class);
         assertThatThrownBy(() -> reads.events(user, first.conversationId(), UUID.randomUUID() + ":0:0")).isInstanceOf(RuntimeBusinessException.class);
         assertThatThrownBy(() -> reads.events(user, first.conversationId(), first.conversationId() + ":0:10000")).isInstanceOf(RuntimeBusinessException.class);
         assertThatThrownBy(() -> reads.events(user, first.conversationId(), first.conversationId() + ":1:0")).isInstanceOf(RuntimeBusinessException.class);
@@ -75,7 +76,7 @@ class ConversationReadIntegrationTest {
     }
 
     static void verifyTitles(ConfigurableApplicationContext context) {
-        String user = UUID.randomUUID().toString();
+        Long user = IdWorker.getId();
         var messages = context.getBean(MessageAcceptanceService.class);
         var first = messages.accept(user, null, "first", new MessageCreateDTO("\u0001  讨论一下   合作方案\n", List.of()));
         var second = messages.accept(user, null, "second", new MessageCreateDTO("第二个主题", List.of()));
@@ -87,17 +88,17 @@ class ConversationReadIntegrationTest {
         var older = service.list(user, page.nextCursor(), 1);
         assertThat(older.items().getFirst().title()).isEqualTo("讨论一下 合作方案");
         assertThat(older.nextCursor()).isNull();
-        assertThatThrownBy(() -> service.list(UUID.randomUUID().toString(), page.nextCursor(), 1)).isInstanceOf(RuntimeBusinessException.class);
+        assertThatThrownBy(() -> service.list(IdWorker.getId(), page.nextCursor(), 1)).isInstanceOf(RuntimeBusinessException.class);
         var renamed = service.rename(user, first.conversationId(), new ConversationTitleUpdateDTO(" 我的\n 合作主题 ", 0L));
         assertThat(renamed.title()).isEqualTo("我的 合作主题");
         assertThat(renamed.titleSource()).isEqualTo("MANUAL");
         assertThatThrownBy(() -> service.rename(user, first.conversationId(), new ConversationTitleUpdateDTO("旧版本名称", 0L))).isInstanceOf(RuntimeBusinessException.class);
         assertThatThrownBy(() -> service.rename(user, first.conversationId(), new ConversationTitleUpdateDTO("\u200b\u0001", 1L))).isInstanceOf(RuntimeBusinessException.class);
-        assertThatThrownBy(() -> service.rename(UUID.randomUUID().toString(), first.conversationId(), new ConversationTitleUpdateDTO("其他人名称", 1L))).isInstanceOf(RuntimeBusinessException.class);
+        assertThatThrownBy(() -> service.rename(IdWorker.getId(), first.conversationId(), new ConversationTitleUpdateDTO("其他人名称", 1L))).isInstanceOf(RuntimeBusinessException.class);
         assertThat(context.getBean(ConversationQueryService.class).snapshot(user, first.conversationId(), null, 20).conversation().title()).isEqualTo("我的 合作主题");
     }
 
     private ConfigurableApplicationContext start(Path directory) {
-        return MessageAcceptanceHttpTest.start(MySqlTestDatabase.url(directory.resolve("read")), MySqlTestDatabase.username(), MySqlTestDatabase.password(), UUID.randomUUID().toString());
+        return MessageAcceptanceHttpTest.start(PostgresTestDatabase.url(directory.resolve("read")), PostgresTestDatabase.username(), PostgresTestDatabase.password(), IdWorker.getId());
     }
 }

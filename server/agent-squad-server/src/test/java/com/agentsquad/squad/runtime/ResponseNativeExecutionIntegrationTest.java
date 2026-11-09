@@ -1,8 +1,9 @@
 package com.agentsquad.squad.runtime;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.agent.MasterAgent;
 import com.agentsquad.squad.scheduler.CancellationSettlementTask;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.agent.MasterAgentIdentity;
 import com.agentsquad.squad.agent.session.NativeSessionGateway;
@@ -41,7 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 使用持久消息入口、真实Bridge/SDK/journal和本地模型协议桩，覆盖追问、收据丢失与投影恢复。
  */
 class ResponseNativeExecutionIntegrationTest {
-    private static final String USER = "00000000-0000-0000-0000-000000000001";
+    private static final Long USER = 1L;
 
     @ParameterizedTest
     @ValueSource(strings = {"{}", "null", "\"{\""})
@@ -107,7 +108,11 @@ class ResponseNativeExecutionIntegrationTest {
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             jdbc.update("UPDATE sq_command SET action='UNSUPPORTED', due_at='2000-01-01' WHERE command_id=?",
                     receipt.commandId());
-            context.getBean(CommandDeliveryService.class).deliverDue();
+            CommandDeliveryService delivery = context.getBean(CommandDeliveryService.class);
+            delivery.deliverDue();
+            assertThat(jdbc.queryForObject("SELECT status FROM sq_command WHERE command_id=?",
+                    String.class, receipt.commandId())).isEqualTo("PENDING");
+            delivery.blockUnknownDueCommands();
             assertThat(jdbc.queryForObject("SELECT status FROM sq_command WHERE command_id=?",
                     String.class, receipt.commandId())).isEqualTo("BLOCKED");
             assertThat(jdbc.queryForObject("SELECT last_error_code FROM sq_command WHERE command_id=?",
@@ -118,7 +123,7 @@ class ResponseNativeExecutionIntegrationTest {
 
     @Test
     void concurrentSdkSessionsKeepUserMessagesAndCompletionToolsIsolated(@TempDir Path directory) throws Exception {
-        String otherUser = "00000000-0000-0000-0000-000000000002";
+        Long otherUser = 2L;
         try (ResponseModelStub model = new ResponseModelStub(false, true);
              ConfigurableApplicationContext context = start(directory, model, true)) {
             MessageAcceptanceService messages = context.getBean(MessageAcceptanceService.class);
@@ -202,8 +207,8 @@ class ResponseNativeExecutionIntegrationTest {
                 } else {
                     // 模拟SDK已接受旧格式输入；接管时不能按新版上下文重编码同一提交键。
                     HarnessAgent previous = (HarnessAgent) ReflectionTestUtils.getField(gateway, "master");
-                    turn = previous.session(RuntimeContext.builder().userId(USER).sessionId(delivery.getSessionId()).build())
-                            .submit(delivery.getCommandId(), "主角叫小明").turnId();
+                    turn = previous.session(RuntimeContext.builder().userId(String.valueOf(USER)).sessionId(delivery.getSessionId()).build())
+                            .submit(String.valueOf(delivery.getCommandId()), "主角叫小明").turnId();
                 }
                 ProjectionTargetBO target = target(delivery);
                 for (int i = 0; i < 150; i++) {
@@ -229,7 +234,7 @@ class ResponseNativeExecutionIntegrationTest {
                 JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
                 assertThat(jdbc.queryForObject("SELECT native_turn_id FROM sq_command WHERE command_id=?", String.class, receipt.commandId())).isEqualTo(turn);
                 assertThat(model.calls.get()).isEqualTo(2);
-                String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
+                Long binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", Long.class, receipt.executionId());
                 String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
                 ProjectionTargetBO target = new ProjectionTargetBO(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
                 for (var event : context.getBean(NativeSessionGateway.class).readEvents(target, 0, 100)) {
@@ -264,13 +269,13 @@ class ResponseNativeExecutionIntegrationTest {
             first.getBean(CommandDeliveryService.class).deliver(receipt.commandId());
             assertThat(model.blocked.await(10, TimeUnit.SECONDS)).isTrue();
             JdbcTemplate jdbc = first.getBean(JdbcTemplate.class);
-            String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
+            Long binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", Long.class, receipt.executionId());
             String sessionId = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
             String turn = jdbc.queryForObject("SELECT native_turn_id FROM sq_command WHERE command_id=?", String.class, receipt.commandId());
             assertThat(jdbc.queryForObject("SELECT completion_proposal_json FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId()))
                     .contains("小明");
             HarnessAgent master = (HarnessAgent) ReflectionTestUtils.getField(first.getBean(NativeSessionGateway.class), "master");
-            AgentSession oldSession = master.session(RuntimeContext.builder().userId(USER).sessionId(sessionId).build());
+            AgentSession oldSession = master.session(RuntimeContext.builder().userId(String.valueOf(USER)).sessionId(sessionId).build());
             String writer = oldSession.log().head().owner();
             assertThat(writer).isNotBlank();
             oldSession.log().sealWriter(writer);
@@ -293,9 +298,9 @@ class ResponseNativeExecutionIntegrationTest {
         try (ResponseModelStub model = new ResponseModelStub(); ConfigurableApplicationContext context = start(directory, model, false)) {
             MessageReceiptVO receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "revoked", new MessageCreateDTO("请回答", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
+            Long binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", Long.class, receipt.executionId());
             String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
-            String turn = UUID.randomUUID().toString();
+            String turn = IdWorker.getIdStr();
             ProjectionTargetBO target = new ProjectionTargetBO(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
             NativeProjectionService projector = context.getBean(NativeProjectionService.class);
             projector.accept(target, new NativeEventViewBO(1, "start", "run/start", "run", turn, null, 0, java.util.Map.of()));
@@ -313,15 +318,15 @@ class ResponseNativeExecutionIntegrationTest {
         try (ResponseModelStub model = new ResponseModelStub(); ConfigurableApplicationContext context = start(directory, model, false)) {
             MessageReceiptVO receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "unknown", new MessageCreateDTO("请处理", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
+            Long binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", Long.class, receipt.executionId());
             String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
-            String turn = UUID.randomUUID().toString();
+            String turn = IdWorker.getIdStr();
             ProjectionTargetBO target = new ProjectionTargetBO(USER, null, binding, MasterAgentIdentity.AGENT_ID, session, 0);
             NativeProjectionService projector = context.getBean(NativeProjectionService.class);
             projector.accept(target, new NativeEventViewBO(1, "start", "run/start", "run", turn, null, 0, java.util.Map.of()));
-            String operation = UUID.randomUUID().toString();
+            Long operation = IdWorker.getId();
             context.getBean(OperationMapper.class).insert(operation, USER, null, null, binding, turn, "write", "mock_ticket_create", "1.0.0",
-                    "intent", "WRITE", UUID.randomUUID().toString(), 0, 0, "0".repeat(64), "{}", "UNKNOWN", "tester", "tool:intent");
+                    "intent", "WRITE", IdWorker.getId(), 0, 0, "0".repeat(64), "{}", "UNKNOWN", "tester", "tool:intent");
             projector.accept(target, new NativeEventViewBO(2, "end", "run/end", "run", turn, "completed", 0, java.util.Map.of()));
             assertThat(jdbc.queryForObject("SELECT status FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId())).isEqualTo("RECONCILING");
             assertThat(jdbc.queryForObject("SELECT correction_count FROM sq_response_execution WHERE execution_id=?", Integer.class, receipt.executionId())).isZero();
@@ -344,13 +349,12 @@ class ResponseNativeExecutionIntegrationTest {
         try (var model = new ResponseModelStub(); var context = start(directory, model, false)) {
             var receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "stop-writer", new MessageCreateDTO("请回答", List.of()));
             var jdbc = context.getBean(JdbcTemplate.class);
-            String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
+            Long binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", Long.class, receipt.executionId());
             String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
-            var master = (io.agentscope.harness.agent.HarnessAgent) org.springframework.test.util.ReflectionTestUtils
-                    .getField(context.getBean(MasterAgent.class), "master");
-            var runtime = io.agentscope.core.agent.RuntimeContext.builder().userId(USER).sessionId(session).build();
-            var store = new io.agentscope.harness.agent.session.WorkspaceSessionLogStore(master.getWorkspaceManager());
-            var log = store.open(new io.agentscope.core.session.SessionKey(USER, MasterAgentIdentity.AGENT_ID, session), runtime);
+            var runtime = io.agentscope.core.agent.RuntimeContext.builder().userId(String.valueOf(USER)).sessionId(session).build();
+            // 外部写入者必须与被测服务使用同一journal后端，否则静止判定会读到另一份空日志。
+            var store = context.getBean(com.agentsquad.squad.agent.session.RuntimeSessionProvider.class).logStore();
+            var log = store.open(new io.agentscope.core.session.SessionKey(String.valueOf(USER), MasterAgentIdentity.AGENT_ID, session), runtime);
             var writer = log.acquire("remote-owner", java.time.Duration.ofSeconds(30));
             var stop = context.getBean(ResponseControlService.class).cancel(USER, receipt.executionId(), "stop", 0);
             context.getBean(CommandDeliveryService.class).deliver(stop.commandId());
@@ -390,8 +394,8 @@ class ResponseNativeExecutionIntegrationTest {
 
     static ConfigurableApplicationContext start(Path directory, ResponseModelStub model, boolean fast) {
         return SpringApplication.run(AgentSquadApplication.class, "--spring.main.web-application-type=none",
-                "--spring.datasource.url=" + MySqlTestDatabase.url(directory.resolve("reply")),
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.url=" + PostgresTestDatabase.url(directory.resolve("reply")),
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(), "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.response.completion-protocol=PROPOSAL",
                 "--agentsquad.delivery.wakeup-enabled=false", "--agentsquad.projection.wakeup-enabled=false",
                 "--agentsquad.delivery.enabled=true", "--agentsquad.delivery.poll-delay-ms=" + (fast ? 100 : 3600000),

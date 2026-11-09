@@ -29,7 +29,7 @@ public final class SandboxPolicy {
                 || request.timeoutSeconds() < 1 || request.timeoutSeconds() > 60
                 || request.files() == null || request.files().size() > 32
                 || request.artifactIds().size() > 20
-                || request.artifactIds().stream().anyMatch(id -> id == null || id.isBlank())
+                || request.artifactIds().stream().anyMatch(id -> id == null || id <= 0)
                 || request.artifactIds().stream().distinct().count() != request.artifactIds().size()
                 || request.outputPaths() == null || request.outputPaths().size() > 20) {
             throw invalid("沙箱输入、文件数或执行时限无效");

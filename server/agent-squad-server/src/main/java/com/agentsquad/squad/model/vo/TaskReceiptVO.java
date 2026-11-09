@@ -9,18 +9,18 @@ package com.agentsquad.squad.model.vo;
 public class TaskReceiptVO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("taskId")
-    private final String taskId;
+    private final Long taskId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("commandId")
-    private final String commandId;
+    private final Long commandId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("status")
     private final String status;
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public TaskReceiptVO(
-            @com.fasterxml.jackson.annotation.JsonProperty("taskId") String taskId,
-            @com.fasterxml.jackson.annotation.JsonProperty("commandId") String commandId,
+            @com.fasterxml.jackson.annotation.JsonProperty("taskId") Long taskId,
+            @com.fasterxml.jackson.annotation.JsonProperty("commandId") Long commandId,
             @com.fasterxml.jackson.annotation.JsonProperty("status") String status) {
         this.taskId = taskId;
         this.commandId = commandId;

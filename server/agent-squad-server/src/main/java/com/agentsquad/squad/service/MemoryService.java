@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.model.po.MemoryPO;
@@ -33,7 +34,7 @@ public class MemoryService {
     @Resource
     private MemoryMapper mapper;
 
-    public MemoryPageVO list(String userId, String cursor, int limit) {
+    public MemoryPageVO list(Long userId, String cursor, int limit) {
         Long before = parseCursor(cursor);
         int size = Math.min(Math.max(limit, 1), 100);
         List<MemoryPO> rows = mapper.list(userId, before, size + 1);
@@ -48,7 +49,7 @@ public class MemoryService {
      * 用户设置页明确创建；有效同键同内容返回原记录，异内容走带版本纠正；删除后的同键创建使用新身份，保留旧墓碑。
      */
     @Transactional
-    public MemoryMutationVO create(String userId, MemoryCreateDTO request) {
+    public MemoryMutationVO create(Long userId, MemoryCreateDTO request) {
         return createFromSource(userId, request, null, null);
     }
 
@@ -56,8 +57,8 @@ public class MemoryService {
      * 来源引用由受权工具入口提供，普通设置页不能伪造来源消息。
      */
     @Transactional
-    public MemoryMutationVO createFromSource(String userId, MemoryCreateDTO request,
-                                             String sourceMessageId, String sourceQuote) {
+    public MemoryMutationVO createFromSource(Long userId, MemoryCreateDTO request,
+                                             Long sourceMessageId, String sourceQuote) {
         MemoryRules.requireContent(request.key(), request.content(), utc(request.expiresAt()), now());
         lockRevision(userId);
         MemoryPO prior = mapper.findActiveKey(userId, request.key());
@@ -71,7 +72,7 @@ public class MemoryService {
             }
             throw conflict("这个记忆键已有有效记录，请刷新后纠正现有内容");
         }
-        String id = UUID.randomUUID().toString();
+        Long id = IdWorker.getId();
         mapper.insert(id, userId, request.key(), request.content(), utc(request.expiresAt()), sourceMessageId, sourceQuote);
         if (sourceMessageId != null) {
             mapper.recordSource(userId, id, 0, sourceMessageId);
@@ -84,13 +85,13 @@ public class MemoryService {
      * 纠正正文与失效代际同事务提交；旧Scope引用只能阻塞，不能原位变成新版本。
      */
     @Transactional
-    public MemoryMutationVO update(String userId, String memoryId, MemoryUpdateDTO request) {
+    public MemoryMutationVO update(Long userId, Long memoryId, MemoryUpdateDTO request) {
         return updateFromSource(userId, memoryId, request, null, null);
     }
 
     @Transactional
-    public MemoryMutationVO updateFromSource(String userId, String memoryId, MemoryUpdateDTO request,
-                                             String sourceMessageId, String sourceQuote) {
+    public MemoryMutationVO updateFromSource(Long userId, Long memoryId, MemoryUpdateDTO request,
+                                             Long sourceMessageId, String sourceQuote) {
         lockRevision(userId);
         MemoryPO current = requireOwned(userId, memoryId);
         MemoryRules.requireContent(current.getKey(), request.content(), utc(request.expiresAt()), now());
@@ -111,7 +112,7 @@ public class MemoryService {
      * 删除先写墓碑并清空正文，再原子阻塞所有旧代际上下文；不声称已撤回已发出的模型调用。
      */
     @Transactional
-    public MemoryMutationVO delete(String userId, String memoryId, long expectedVersion) {
+    public MemoryMutationVO delete(Long userId, Long memoryId, long expectedVersion) {
         lockRevision(userId);
         MemoryPO current = requireOwned(userId, memoryId);
         if ("DELETED".equals(current.getStatus()) && current.getVersion() == expectedVersion + 1) {
@@ -131,7 +132,7 @@ public class MemoryService {
      * 检索仅召回ID，再校验权威记录；不接收跨用户命中的正文。
      */
     @Transactional
-    public List<MemoryVO> search(String userId, String query, int limit) {
+    public List<MemoryVO> search(Long userId, String query, int limit) {
         if (query != null && query.length() > 200) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "记忆检索词最多200字");
         }
@@ -143,7 +144,7 @@ public class MemoryService {
                 .map(this::view).toList();
     }
 
-    public MemoryPO requireOwned(String userId, String memoryId) {
+    public MemoryPO requireOwned(Long userId, Long memoryId) {
         MemoryPO memory = mapper.find(userId, memoryId);
         if (memory == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "记忆不存在或无权访问");
@@ -151,17 +152,17 @@ public class MemoryService {
         return memory;
     }
 
-    private void lockRevision(String userId) {
+    private void lockRevision(Long userId) {
         mapper.ensureRevision(userId);
         mapper.lockRevision(userId);
     }
 
-    private void invalidate(String userId) {
+    private void invalidate(Long userId) {
         mapper.advanceRevision(userId);
         mapper.blockOldScopes(userId, mapper.revision(userId));
     }
 
-    private MemoryMutationVO result(String userId, MemoryPO memory) {
+    private MemoryMutationVO result(Long userId, MemoryPO memory) {
         int scopes = mapper.blockedScopes(userId);
         return new MemoryMutationVO(view(memory), mapper.revision(userId), scopes,
                 scopes == 0 ? "已保存；后续新执行使用当前有效记忆" : "记忆已变更；旧执行上下文已阻塞，需从有效资料重新发起，已发出的请求不能撤回");

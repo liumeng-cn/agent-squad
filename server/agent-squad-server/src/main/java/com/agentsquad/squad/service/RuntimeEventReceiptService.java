@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.event.RuntimeJournalReadySignal;
 
 import com.agentsquad.squad.enums.RuntimeEventInboxStatus;
@@ -18,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Objects;
-import java.util.UUID;
 
 /**
  * 运行集成模块的原生事件持久收件服务
@@ -52,7 +52,7 @@ public class RuntimeEventReceiptService {
             throw new IllegalStateException("原生事件会话归属不匹配");
         }
 
-        var incoming = new RuntimeEventInboxPO(UUID.randomUUID().toString(), source.userId(),
+        var incoming = new RuntimeEventInboxPO(IdWorker.getId(), source.userId(),
                 source.bindingId(), source.sessionId(), event.seq(), event.eventId(), event.type(),
                 event.executionRunId(), event.turnId(), event.occurredAt(), event.required(),
                 event.schemaVersion(), RuntimeEventFingerprint.of(event), source.mappingVersion(), RuntimeEventInboxStatus.RECEIVED);

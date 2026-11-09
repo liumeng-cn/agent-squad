@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.tool;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
@@ -58,7 +60,7 @@ public class CommitArtifactTool implements AgentTool {
     @Override
     public Map<String, Object> getParameters() {
         return Map.of("type", "object", "properties", Map.of(
-                        "stageId", Map.of("type", "string", "format", "uuid"),
+                        "stageId", Map.of("type", "string"),
                         "expectedHash", Map.of("type", "string", "pattern", "^[0-9a-f]{64}$")),
                 "required", List.of("stageId", "expectedHash"), "additionalProperties", false);
     }
@@ -72,8 +74,8 @@ public class CommitArtifactTool implements AgentTool {
             }
             try {
                 ArtifactCommitRequestBO request = json.convertValue(param.getInput(), ArtifactCommitRequestBO.class);
-                String bindingId = bindings.findBindingBySession(context.getUserId(), context.getSessionId());
-                var worker = workers.findByBinding(context.getUserId(), bindingId);
+                Long bindingId = bindings.findBindingBySession(RuntimeContextIds.userId(context), context.getSessionId());
+                var worker = workers.findByBinding(RuntimeContextIds.userId(context), bindingId);
                 String guard = null;
                 if (worker != null) {
                     if (!definitions.requirePublished(worker.getWorkerKey(), worker.getWorkerVersion()).toolAllowlist().contains(getName())) {
@@ -85,7 +87,7 @@ public class CommitArtifactTool implements AgentTool {
                     }
                     guard = identity.guardToken();
                 }
-                return ToolResultBlock.text(RuntimePayloads.toJson(json, delivery.commit(context.getUserId(),
+                return ToolResultBlock.text(RuntimePayloads.toJson(json, delivery.commit(RuntimeContextIds.userId(context),
                         context.getSessionId(), guard, request.stageId(), request.expectedHash())));
             } catch (RuntimeBusinessException exception) {
                 return ToolResultBlock.error(exception.getMessage());

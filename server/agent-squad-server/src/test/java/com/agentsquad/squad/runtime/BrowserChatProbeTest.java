@@ -1,7 +1,7 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.io.TempDir;
@@ -31,9 +31,9 @@ class BrowserChatProbeTest {
         try (var model = new NaturalReplyModelStub();
              var context = SpringApplication.run(AgentSquadApplication.class,
                      "--server.port=0", "--server.shutdown=immediate", "--agentsquad.identity.allow-unsigned-local=true",
-                     "--spring.datasource.url=" + MySqlTestDatabase.url(directory),
-                     "--spring.datasource.username=" + MySqlTestDatabase.username(),
-                     "--spring.datasource.password=" + MySqlTestDatabase.password(),
+                     "--spring.datasource.url=" + PostgresTestDatabase.url(directory),
+                     "--spring.datasource.username=" + PostgresTestDatabase.username(),
+                     "--spring.datasource.password=" + PostgresTestDatabase.password(),
                      "--agentsquad.delivery.enabled=true", "--agentsquad.delivery.poll-delay-ms=3600000",
                      "--agentsquad.projection.poll-delay-ms=3600000", "--agentsquad.events.reconcile-delay-ms=3600000",
                      "--agentsquad.model.api-key=test-only", "--agentsquad.model.base-url=" + model.baseUrl(),

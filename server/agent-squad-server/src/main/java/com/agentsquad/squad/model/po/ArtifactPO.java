@@ -27,11 +27,11 @@ public class ArtifactPO {
     /**
      * 产物业务ID
      */
-    private String artifactId;
+    private Long artifactId;
     /**
      * 归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 安全展示文件名
      */

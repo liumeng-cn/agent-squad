@@ -22,11 +22,11 @@ public class ResponseContextBO {
     /**
      * 回复执行业务ID
      */
-    private String executionId;
+    private Long executionId;
     /**
      * 来源用户消息ID
      */
-    private String sourceMessageId;
+    private Long sourceMessageId;
     /**
      * 来源执行序号
      */

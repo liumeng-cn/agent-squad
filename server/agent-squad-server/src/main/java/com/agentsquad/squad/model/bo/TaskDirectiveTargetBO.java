@@ -22,13 +22,13 @@ public class TaskDirectiveTargetBO {
     /**
      * 目标修订指令业务ID
      */
-    private String directiveId;
+    private Long directiveId;
     /**
      * 归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 当前受权目标ID
      */
-    private String taskId;
+    private Long taskId;
 }

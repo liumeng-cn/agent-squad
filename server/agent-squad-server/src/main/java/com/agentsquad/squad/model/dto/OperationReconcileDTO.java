@@ -28,7 +28,7 @@ public class OperationReconcileDTO {
     @com.fasterxml.jackson.annotation.JsonProperty("evidenceRefs")
     @NotNull
     @Size(min = 1, max = 20)
-    private final List<String> evidenceRefs;
+    private final List<Long> evidenceRefs;
 
     @com.fasterxml.jackson.annotation.JsonProperty("note")
     @NotBlank
@@ -39,7 +39,7 @@ public class OperationReconcileDTO {
     public OperationReconcileDTO(
             @com.fasterxml.jackson.annotation.JsonProperty("expectedVersion") Long expectedVersion,
             @com.fasterxml.jackson.annotation.JsonProperty("disposition") String disposition,
-            @com.fasterxml.jackson.annotation.JsonProperty("evidenceRefs") List<String> evidenceRefs,
+            @com.fasterxml.jackson.annotation.JsonProperty("evidenceRefs") List<Long> evidenceRefs,
             @com.fasterxml.jackson.annotation.JsonProperty("note") String note) {
         this.expectedVersion = expectedVersion;
         this.disposition = disposition;

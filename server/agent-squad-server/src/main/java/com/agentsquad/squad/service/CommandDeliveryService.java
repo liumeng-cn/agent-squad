@@ -113,7 +113,7 @@ public class CommandDeliveryService {
 
     private ThreadPoolExecutor deliveryExecutor;
     private ThreadPoolExecutor controlExecutor;
-    private final Set<String> scheduledCommands = ConcurrentHashMap.newKeySet();
+    private final Set<Long> scheduledCommands = ConcurrentHashMap.newKeySet();
 
     @Resource
     private org.springframework.beans.factory.ObjectProvider<RedisCommandWakeup> redisWakeups;
@@ -165,10 +165,19 @@ public class CommandDeliveryService {
      */
     public void deliverDue() {
         LocalDateTime scannedAt = now();
-        deliveryMapper.blockUnknownPending(scannedAt);
-        Set<String> commandIds = new LinkedHashSet<>(deliveryMapper.findDueControlIds(scannedAt));
+        Set<Long> commandIds = new LinkedHashSet<>(deliveryMapper.findDueControlIds(scannedAt));
         commandIds.addAll(deliveryMapper.findDueIds(scannedAt));
         commandIds.forEach(this::notifyOrSchedule);
+    }
+
+    /**
+     * 低频隔离已到期的未知命令，保留业务执行白名单。
+     */
+    public void blockUnknownDueCommands() {
+        int blocked = deliveryMapper.blockUnknownPending(now());
+        if (blocked > 0) {
+            log.warn("已隔离未知类型的待投递命令 count={}", blocked);
+        }
     }
 
     /**
@@ -181,14 +190,14 @@ public class CommandDeliveryService {
         }
     }
 
-    private void notifyOrSchedule(String commandId) {
+    private void notifyOrSchedule(Long commandId) {
         RedisCommandWakeup wakeup = redisWakeups.getIfAvailable();
         if (wakeup == null || !wakeup.publish(commandId)) {
             schedule(commandId);
         }
     }
 
-    private void schedule(String commandId) {
+    private void schedule(Long commandId) {
         scheduleFromQueue(commandId, () -> {
         });
     }
@@ -197,7 +206,7 @@ public class CommandDeliveryService {
      * 就绪引用复用原投递入口；成功完成一次持久领取/投递尝试后才确认通知。
      * 容量不足或异常时不确认，Redis pending接管和数据库扫描均可恢复。
      */
-    public void scheduleFromQueue(String commandId, Runnable acknowledged) {
+    public void scheduleFromQueue(Long commandId, Runnable acknowledged) {
         if (!scheduledCommands.add(commandId)) {
             return;
         }
@@ -227,7 +236,7 @@ public class CommandDeliveryService {
     /**
      * 单条投递不跨数据库事务等待模型；失败按有界退避重新排队。
      */
-    public void deliver(String commandId) {
+    public void deliver(Long commandId) {
         log.debug("开始投递运行命令 commandId={}", commandId);
         try {
             executionTrace.deliver(commandId, () -> deliverCommand(commandId));
@@ -236,7 +245,7 @@ public class CommandDeliveryService {
         }
     }
 
-    private void deliverCommand(String commandId) {
+    private void deliverCommand(Long commandId) {
         String token = UUID.randomUUID().toString();
         LocalDateTime claimedAt = now();
         try {
@@ -272,7 +281,7 @@ public class CommandDeliveryService {
                 return;
             }
             if (action != RuntimeCommandAction.STOP && action != RuntimeCommandAction.DELETE_CONVERSATION) {
-                String scopeId = scopes.scopeForSession(delivery.getUserId(), delivery.getSessionId());
+                Long scopeId = scopes.scopeForSession(delivery.getUserId(), delivery.getSessionId());
                 authorization.prepare(delivery.getUserId(), scopeId);
             }
             // 领取成功后按持久命令类型调用原生执行。
@@ -300,7 +309,7 @@ public class CommandDeliveryService {
         }
     }
 
-    private void deliverSubmit(String commandId, String token, DeliveryBO delivery) throws Exception {
+    private void deliverSubmit(Long commandId, String token, DeliveryBO delivery) throws Exception {
         JsonNode payload = RuntimePayloads.readJson(objectMapper, delivery.getPayloadJson());
         String message = payload == null ? null : payload.path("message").textValue();
         if (message == null || message.isBlank()) {
@@ -318,7 +327,7 @@ public class CommandDeliveryService {
     /**
      * 投递中断意图；原生会话已无活跃运行时就地取消目标，不伪造等待停止。
      */
-    private void deliverStop(String commandId, String token, DeliveryBO delivery) {
+    private void deliverStop(Long commandId, String token, DeliveryBO delivery) {
         boolean interrupted = nativeSessionGateway.stop(delivery);
         if (!interrupted) {
             if (delivery.getTaskId() == null) {
@@ -338,7 +347,7 @@ public class CommandDeliveryService {
     /**
      * 投递恢复意图；恢复前必须已存在原生回合，未受理目标先等 SUBMIT 投递成功。
      */
-    private void deliverResume(String commandId, String token, DeliveryBO delivery) {
+    private void deliverResume(Long commandId, String token, DeliveryBO delivery) {
         String turnId = deliveryMapper.findSubmitTurnId(delivery.getUserId(), delivery.getTaskId(),
                 delivery.getBindingId());
         if (turnId == null) {
@@ -384,7 +393,7 @@ public class CommandDeliveryService {
      * 投递交互答复；先让目标离开等待态，再注入答案驱动原生回合恢复。
      * 原生请求已消失说明交互已被框架侧解析，按终局受理不再重试。
      */
-    private void deliverRespond(String commandId, String token, DeliveryBO delivery) throws Exception {
+    private void deliverRespond(Long commandId, String token, DeliveryBO delivery) throws Exception {
         JsonNode payload = RuntimePayloads.readJson(objectMapper, delivery.getPayloadJson());
         String requestId = payload == null ? null : payload.path("requestId").textValue();
         String answerText = payload == null ? null : payload.path("answerText").textValue();
@@ -400,7 +409,7 @@ public class CommandDeliveryService {
         saveReceipt(commandId, token, delivery, null, null, nativeStatus);
     }
 
-    private void saveReceipt(String commandId, String token, DeliveryBO delivery,
+    private void saveReceipt(Long commandId, String token, DeliveryBO delivery,
                              String turnId, String runId, String nativeStatus) {
         int saved = deliveryMapper.saveReceipt(commandId, token, turnId, runId, nativeStatus, now());
         if (saved == 1) {
@@ -423,7 +432,7 @@ public class CommandDeliveryService {
     /**
      * 组装命令投递日志的公共字段；未关联任务的命令不输出空 taskId。
      */
-    private Map<String, Object> commandFields(String commandId, DeliveryBO delivery) {
+    private Map<String, Object> commandFields(Long commandId, DeliveryBO delivery) {
         Map<String, Object> fields = new LinkedHashMap<>();
         fields.put("commandId", commandId);
         if (delivery.getTaskId() != null) {
@@ -434,7 +443,7 @@ public class CommandDeliveryService {
         return fields;
     }
 
-    private void retry(String commandId, String token, int attempts, String errorCode) {
+    private void retry(Long commandId, String token, int attempts, String errorCode) {
         long delaySeconds = Math.min(300, 1L << Math.min(Math.max(attempts, 1), 8));
         deliveryMapper.retry(commandId, token, now().plusSeconds(delaySeconds), errorCode);
         log.warn("命令投递待重试 {}", observations.logFields(Map.of(
@@ -442,7 +451,7 @@ public class CommandDeliveryService {
                 "attempt", attempts, "delayMs", delaySeconds * 1000)));
     }
 
-    private void fail(String commandId, String token, int attempts, String errorCode) {
+    private void fail(Long commandId, String token, int attempts, String errorCode) {
         int blocked = deliveryMapper.blockInvalid(commandId, token, errorCode);
         if (blocked == 1) {
             log.warn("非法命令已阻断 {}", observations.logFields(Map.of(

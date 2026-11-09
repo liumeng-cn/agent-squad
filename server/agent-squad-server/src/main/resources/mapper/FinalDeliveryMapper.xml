@@ -3,12 +3,12 @@
 <mapper namespace="com.agentsquad.squad.mapper.FinalDeliveryMapper">
     <resultMap id="delivery" type="com.agentsquad.squad.model.po.FinalDeliveryPO">
         <constructor>
-            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="source_message_id" javaType="java.lang.Long"/>
             <arg column="delivery_generation" javaType="_long"/>
             <arg column="owner_type" javaType="java.lang.String"/>
-            <arg column="owner_id" javaType="java.lang.String"/>
+            <arg column="owner_id" javaType="java.lang.Long"/>
             <arg column="state" javaType="java.lang.String"/>
-            <arg column="published_message_id" javaType="java.lang.String"/>
+            <arg column="published_message_id" javaType="java.lang.Long"/>
         </constructor>
     </resultMap>
 

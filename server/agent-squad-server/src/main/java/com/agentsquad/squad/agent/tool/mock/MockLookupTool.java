@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.tool.mock;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import com.agentsquad.squad.connector.MockTicketConnector;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
@@ -79,7 +81,7 @@ public class MockLookupTool implements AgentTool {
         String turnId = context.get(TURN_ID_KEY, String.class);
         try {
             OperationPO operation = operationService.prepare(new PrepareRequestBO(
-                    context.getUserId(), context.getSessionId(), turnId,
+                    RuntimeContextIds.userId(context), context.getSessionId(), turnId,
                     param.getToolUseBlock().getId(), getName(), "v1", "READ",
                     Map.of("resource", resourceName, "key", keyValue),
                     null, false, null, 0L, RESERVED_UNITS, "model"));

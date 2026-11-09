@@ -6,6 +6,6 @@ package com.agentsquad.squad.model.bo;
  * <p>
  * 用于沙箱执行或产物传输，不接受宿主路径或模型提供的用户身份。
  */
-public record ArtifactStageViewBO(String stageId, String executionId, String fileName, String sha256, long sizeBytes,
-                                  String status, String artifactId) {
+public record ArtifactStageViewBO(Long stageId, Long executionId, String fileName, String sha256, long sizeBytes,
+                                  String status, Long artifactId) {
 }

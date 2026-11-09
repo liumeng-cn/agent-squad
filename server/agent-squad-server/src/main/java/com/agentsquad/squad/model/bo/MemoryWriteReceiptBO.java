@@ -5,6 +5,6 @@ package com.agentsquad.squad.model.bo;
  * <p>
  * 仅保存身份与版本，不在幂等日志重复保存正文，删除后无法从回执重新注入旧值。
  */
-public record MemoryWriteReceiptBO(String memoryId, long version, long memoryRevision, int affectedScopes,
+public record MemoryWriteReceiptBO(Long memoryId, long version, long memoryRevision, int affectedScopes,
                                    String impact) {
 }

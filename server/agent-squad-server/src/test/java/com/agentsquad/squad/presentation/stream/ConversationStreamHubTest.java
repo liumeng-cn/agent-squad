@@ -31,10 +31,10 @@ class ConversationStreamHubTest {
         var executor = new QueuedExecutor();
         var subscription = subscriber(emitter, executor, () -> {
         });
-        var answer = new ReplyPreviewBO(2, "execution", "message", "run", "stream", 2, 0,
+        var answer = new ReplyPreviewBO(2, 1L, 2L, "run", "stream", 2, 0,
                 "正文首段", ReplyPreviewPhase.ANSWERING, true, true);
         subscription.preview(answer);
-        subscription.preview(new ReplyPreviewBO(2, "execution", "message", "run", "stream", 1, 0,
+        subscription.preview(new ReplyPreviewBO(2, 1L, 2L, "run", "stream", 1, 0,
                 "", ReplyPreviewPhase.THINKING, true, true));
         executor.runNext();
         assertThat(emitter.previews).containsExactly(answer);
@@ -44,8 +44,8 @@ class ConversationStreamHubTest {
     void twoSubscribersShareOneCommittedEventRead() {
         var queries = mock(ConversationQueryService.class);
         var users = mock(UserStatusGuardService.class);
-        when(queries.events(eq("user"), eq("conversation"), anyString())).thenReturn(List.of(event(1)));
-        var hub = new ConversationStreamHubService(new ConversationStreamKeyBO("user", "conversation"), queries, users, Runnable::run);
+        when(queries.events(eq(1L), eq(2L), anyString())).thenReturn(List.of(event(1)));
+        var hub = new ConversationStreamHubService(new ConversationStreamKeyBO(1L, 2L), queries, users, Runnable::run);
         var first = new RecordingSseEmitter();
         var second = new RecordingSseEmitter();
         hub.add("first", subscriber(first, Runnable::run, () -> {
@@ -55,7 +55,7 @@ class ConversationStreamHubTest {
         hub.wake();
         assertThat(first.events).hasSize(1);
         assertThat(second.events).hasSize(1);
-        verify(queries, times(1)).events("user", "conversation", "conversation:1:0");
+        verify(queries, times(1)).events(1L, 2L, "conversation:1:0");
     }
 
     @Test
@@ -63,9 +63,9 @@ class ConversationStreamHubTest {
         var queries = mock(ConversationQueryService.class);
         var users = mock(UserStatusGuardService.class);
         var executor = new QueuedExecutor();
-        var hub = new ConversationStreamHubService(new ConversationStreamKeyBO("user", "conversation"), queries, users, executor);
+        var hub = new ConversationStreamHubService(new ConversationStreamKeyBO(1L, 2L), queries, users, executor);
         var calls = new AtomicInteger();
-        when(queries.events(eq("user"), eq("conversation"), anyString())).thenAnswer(call -> {
+        when(queries.events(eq(1L), eq(2L), anyString())).thenAnswer(call -> {
             int count = calls.incrementAndGet();
             if (count == 1) {
                 hub.wake();
@@ -135,7 +135,7 @@ class ConversationStreamHubTest {
     }
 
     private ConversationEventBO event(long sequence) {
-        return new ConversationEventBO("conversation", 1, sequence, "message.completed", "2026-11-04T00:00:00Z",
+        return new ConversationEventBO(2L, 1, sequence, "message.completed", "2026-11-04T00:00:00Z",
                 JsonNodeFactory.instance.objectNode());
     }
 }

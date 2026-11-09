@@ -13,20 +13,20 @@ import java.util.List;
 @Mapper
 public interface TaskEventMapper {
 
-    int insertAccepted(@Param("userId") String userId, @Param("taskId") String taskId,
+    int insertAccepted(@Param("userId") Long userId, @Param("taskId") Long taskId,
                        @Param("producerKey") String producerKey, @Param("payloadJson") String payloadJson,
                        @Param("occurredAt") LocalDateTime occurredAt);
 
-    int insertProjected(@Param("userId") String userId, @Param("taskId") String taskId,
+    int insertProjected(@Param("userId") Long userId, @Param("taskId") Long taskId,
                         @Param("sequence") long sequence, @Param("producerKey") String producerKey,
                         @Param("eventType") String eventType, @Param("payloadJson") String payloadJson,
                         @Param("occurredAt") LocalDateTime occurredAt);
 
-    List<EventPO> listAfter(@Param("userId") String userId, @Param("taskId") String taskId,
+    List<EventPO> listAfter(@Param("userId") Long userId, @Param("taskId") Long taskId,
                             @Param("after") long after);
 
-    long maxSeq(@Param("userId") String userId, @Param("taskId") String taskId);
+    long maxSeq(@Param("userId") Long userId, @Param("taskId") Long taskId);
 
-    EventPO findLatestAnswerEvent(@Param("userId") String userId, @Param("taskId") String taskId,
+    EventPO findLatestAnswerEvent(@Param("userId") Long userId, @Param("taskId") Long taskId,
                                   @Param("revision") long revision);
 }

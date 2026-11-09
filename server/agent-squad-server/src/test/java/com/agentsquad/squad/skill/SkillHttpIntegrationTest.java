@@ -1,6 +1,6 @@
 package com.agentsquad.squad.skill;
 
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.agent.skill.ScopeSkillRepository;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
@@ -47,9 +47,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 class SkillHttpIntegrationTest {
 
-    private static final String USER = "20000000-0000-0000-0000-000000000001";
+    private static final Long USER = 201L;
 
-    private static final String OTHER = "20000000-0000-0000-0000-000000000002";
+    private static final Long OTHER = 202L;
 
     @Test
     void importsOnlyOwnedVersionsAndPinsActualSdkResources(@TempDir Path directory) throws Exception {
@@ -70,12 +70,12 @@ class SkillHttpIntegrationTest {
                             .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(request("1.0.0", "旧资源"))))
                     .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
             JsonNode created = ApiResultJson.data(json, imported);
-            String versionId = created.get("skillVersionId").asText();
+            Long versionId = created.get("skillVersionId").asLong();
             assertThat(created.get("status").asText()).isEqualTo("DISABLED");
             assertThat(skills.importPackage(USER, request("1.0.0", "旧资源")).skillVersionId()).isEqualTo(versionId);
             assertThatThrownBy(() -> skills.importPackage(USER, request("1.0.0", "不同资源")))
                     .hasMessageContaining("内容不同");
-            String otherVersion = skills.importPackage(OTHER, request("1.0.0", "其他用户资源")).skillVersionId();
+            Long otherVersion = skills.importPackage(OTHER, request("1.0.0", "其他用户资源")).skillVersionId();
             mvc.perform(get("/api/v1/skills/{id}", otherVersion).with(TestAssertion.as(USER, "ADMIN")))
                     .andExpect(status().isOk())
                     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.code").value(404));
@@ -83,7 +83,7 @@ class SkillHttpIntegrationTest {
             assertThatThrownBy(() -> skills.detail(OTHER, versionId)).isInstanceOf(RuntimeBusinessException.class);
 
             var emptyReceipt = messages.accept(USER, null, "empty-catalog", new MessageCreateDTO("普通回复", List.of()));
-            String emptyScope = scope(jdbc, emptyReceipt.executionId());
+            Long emptyScope = scope(jdbc, emptyReceipt.executionId());
             assertThat(runtime.freeze(USER, emptyScope).skills()).isEmpty();
             mvc.perform(put("/api/v1/skills/{id}/grant", versionId).with(TestAssertion.as(USER, "ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":null,\"enabled\":true}"))
@@ -100,12 +100,12 @@ class SkillHttpIntegrationTest {
             assertThat(runtime.freeze(USER, emptyScope).skills()).isEmpty();
 
             var receipt = messages.accept(USER, null, "fixed-v1", new MessageCreateDTO("使用写作技能", List.of()));
-            String scopeId = scope(jdbc, receipt.executionId());
+            Long scopeId = scope(jdbc, receipt.executionId());
             SkillCatalogBO fixed = runtime.freeze(USER, scopeId);
             assertThat(fixed.skills()).extracting("skillVersionId").containsExactly(versionId);
             String sessionId = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE scope_id = ?",
                     String.class, scopeId);
-            RuntimeContext runtimeContext = RuntimeContext.builder().userId(USER).sessionId(sessionId).build();
+            RuntimeContext runtimeContext = RuntimeContext.builder().userId(String.valueOf(USER)).sessionId(sessionId).build();
             ScopeSkillRepository repository = context.getBean(ScopeSkillRepository.class);
             assertThat(repository.getAllSkills()).isEmpty();
             assertThat(repository.getAllSkills(RuntimeContext.empty())).isEmpty();
@@ -121,7 +121,7 @@ class SkillHttpIntegrationTest {
 
             skills.changeGrant(USER, versionId, new SkillGrantDTO(false, 1L));
             assertThat(runtime.read(USER, scopeId, versionId, "references/guide.md").getContent()).isEqualTo("旧资源");
-            String newVersion = skills.importPackage(USER, request("2.0.0", "新资源")).skillVersionId();
+            Long newVersion = skills.importPackage(USER, request("2.0.0", "新资源")).skillVersionId();
             skills.changeGrant(USER, newVersion, new SkillGrantDTO(true, 0L));
             assertThat(runtime.freeze(USER, scopeId).skills()).extracting("skillVersionId").containsExactly(versionId);
             var newer = messages.accept(USER, null, "fixed-v2", new MessageCreateDTO("新执行", List.of()));
@@ -146,11 +146,11 @@ class SkillHttpIntegrationTest {
             SkillService skills = context.getBean(SkillService.class);
             var request = new SkillImportDTO(List.of(new SkillFileDTO("SKILL.md",
                     "---\nname: needs-write\nversion: 1.0.0\ndescription: 需要外部工具\nrequires-tools: [restricted_write]\n---\n执行写入。")));
-            String version = skills.importPackage(USER, request).skillVersionId();
+            Long version = skills.importPackage(USER, request).skillVersionId();
             skills.changeGrant(USER, version, new SkillGrantDTO(true, 0L));
             var receipt = context.getBean(MessageAcceptanceService.class).accept(USER, null, "restricted",
                     new MessageCreateDTO("测试受限工具", List.of()));
-            String scope = scope(context.getBean(JdbcTemplate.class), receipt.executionId());
+            Long scope = scope(context.getBean(JdbcTemplate.class), receipt.executionId());
             SkillRuntimeService runtime = context.getBean(SkillRuntimeService.class);
             runtime.freeze(USER, scope);
             assertThatThrownBy(() -> runtime.requireCapabilities(USER, scope, version, Set.of("mock_lookup")))
@@ -160,17 +160,17 @@ class SkillHttpIntegrationTest {
     }
 
     @Test
-    void repeatableReadDoesNotSelectGrantDisabledAfterSnapshot(@TempDir Path directory) {
+    void readCommittedDoesNotSelectGrantDisabledAfterCommit(@TempDir Path directory) {
         try (ConfigurableApplicationContext context = start(directory)) {
             SkillService skills = context.getBean(SkillService.class);
             SkillRuntimeService runtime = context.getBean(SkillRuntimeService.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            String version = skills.importPackage(USER, request("1.0.0", "需停用的资源")).skillVersionId();
+            Long version = skills.importPackage(USER, request("1.0.0", "需停用的资源")).skillVersionId();
             skills.changeGrant(USER, version, new SkillGrantDTO(true, 0L));
             var message = context.getBean(MessageAcceptanceService.class).accept(USER, null, "rr-disable",
                     new MessageCreateDTO("冻结前有授权变化", List.of()));
-            String scopeId = scope(jdbc, message.executionId());
-            TransactionTemplate outer = repeatableRead(context);
+            Long scopeId = scope(jdbc, message.executionId());
+            TransactionTemplate outer = readCommitted(context);
             TransactionTemplate independent = independent(context);
 
             SkillCatalogBO result = outer.execute(status -> {
@@ -186,17 +186,17 @@ class SkillHttpIntegrationTest {
     }
 
     @Test
-    void repeatableReadSeesCatalogCommittedAfterSnapshot(@TempDir Path directory) {
+    void readCommittedSeesCatalogCommittedAfterInsert(@TempDir Path directory) {
         try (ConfigurableApplicationContext context = start(directory)) {
             SkillService skills = context.getBean(SkillService.class);
             SkillRuntimeService runtime = context.getBean(SkillRuntimeService.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            String version = skills.importPackage(USER, request("1.0.0", "已固定资源")).skillVersionId();
+            Long version = skills.importPackage(USER, request("1.0.0", "已固定资源")).skillVersionId();
             skills.changeGrant(USER, version, new SkillGrantDTO(true, 0L));
             var message = context.getBean(MessageAcceptanceService.class).accept(USER, null, "rr-catalog",
                     new MessageCreateDTO("并发固定目录", List.of()));
-            String scopeId = scope(jdbc, message.executionId());
-            TransactionTemplate outer = repeatableRead(context);
+            Long scopeId = scope(jdbc, message.executionId());
+            TransactionTemplate outer = readCommitted(context);
             TransactionTemplate independent = independent(context);
 
             SkillCatalogBO result = outer.execute(status -> {
@@ -211,17 +211,17 @@ class SkillHttpIntegrationTest {
     }
 
     @Test
-    void repeatableReadDoesNotHideNewPinnedRevocation(@TempDir Path directory) {
+    void readCommittedDoesNotHideNewPinnedRevocation(@TempDir Path directory) {
         try (ConfigurableApplicationContext context = start(directory)) {
             SkillService skills = context.getBean(SkillService.class);
             SkillRuntimeService runtime = context.getBean(SkillRuntimeService.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            String version = skills.importPackage(USER, request("1.0.0", "禁止回流资源")).skillVersionId();
+            Long version = skills.importPackage(USER, request("1.0.0", "禁止回流资源")).skillVersionId();
             skills.changeGrant(USER, version, new SkillGrantDTO(true, 0L));
             var message = context.getBean(MessageAcceptanceService.class).accept(USER, null, "rr-revocation",
                     new MessageCreateDTO("并发安全撤销", List.of()));
-            String scopeId = scope(jdbc, message.executionId());
-            TransactionTemplate outer = repeatableRead(context);
+            Long scopeId = scope(jdbc, message.executionId());
+            TransactionTemplate outer = readCommitted(context);
             TransactionTemplate independent = independent(context);
 
             assertThatThrownBy(() -> outer.execute(status -> {
@@ -234,9 +234,13 @@ class SkillHttpIntegrationTest {
         }
     }
 
-    private TransactionTemplate repeatableRead(ConfigurableApplicationContext context) {
+    /**
+     * PostgreSQL 在可重复读下锁定已并发更新的行会直接序列化失败，生产链路使用读已提交；
+     * 这里按读已提交验证并发提交后的可见性保证。
+     */
+    private TransactionTemplate readCommitted(ConfigurableApplicationContext context) {
         TransactionTemplate template = new TransactionTemplate(context.getBean(PlatformTransactionManager.class));
-        template.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
+        template.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
         return template;
     }
 
@@ -252,15 +256,15 @@ class SkillHttpIntegrationTest {
                 new SkillFileDTO("references/guide.md", resource)));
     }
 
-    private String scope(JdbcTemplate jdbc, String executionId) {
+    private Long scope(JdbcTemplate jdbc, Long executionId) {
         return jdbc.queryForObject("SELECT scope_id FROM sq_response_execution WHERE execution_id = ?",
-                String.class, executionId);
+                Long.class, executionId);
     }
 
     private ConfigurableApplicationContext start(Path directory) {
         return SpringApplication.run(AgentSquadApplication.class,
-                "--server.port=0", "--spring.datasource.url=" + MySqlTestDatabase.url(directory.resolve("skills")),
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(), "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--server.port=0", "--spring.datasource.url=" + PostgresTestDatabase.url(directory.resolve("skills")),
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(), "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.auth.username=local-user", "--agentsquad.auth.password=local-password",
                 "--agentsquad.auth.user-id=" + USER, "--agentsquad.delivery.enabled=false");
     }

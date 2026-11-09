@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.observer.ExecutionTrace;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
@@ -13,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Set;
-import java.util.UUID;
 
 /**
  * 回复与目标的执行范围管理
@@ -37,14 +37,14 @@ public class ExecutionScopeService {
      * 目标受理事务中创建固定账户与Scope；不预留花费、不派发模型，事务失败全部回滚。
      */
     @Transactional
-    public String createTaskScope(String userId, String taskId, String conversationId, long generation,
+    public Long createTaskScope(Long userId, Long taskId, Long conversationId, long generation,
                                   String profileKey, long limit) {
         ConversationPO conversation = conversations.lockOwned(userId, conversationId);
         if (conversation == null || !"ACTIVE".equals(conversation.getStatus()) || conversation.getGeneration() != generation) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标所属会话已失效");
         }
-        String accountId = UUID.randomUUID().toString();
-        String scopeId = UUID.randomUUID().toString();
+        Long accountId = IdWorker.getId();
+        Long scopeId = IdWorker.getId();
         mapper.insertAccount(userId, accountId, profileKey, limit);
         mapper.insertScope(scopeId, userId, conversationId, generation, "TASK", taskId, accountId);
         executionTrace.capture(userId, scopeId);
@@ -54,7 +54,7 @@ public class ExecutionScopeService {
         return scopeId;
     }
 
-    public ExecutionScopePO requireReadable(String userId, String scopeId) {
+    public ExecutionScopePO requireReadable(Long userId, Long scopeId) {
         ExecutionScopePO scope = mapper.findActiveOwned(userId, scopeId);
         if (scope == null) {
             throw missing();
@@ -66,7 +66,7 @@ public class ExecutionScopeService {
      * 固定会话→所有者锁序；结算可越过生命周期终态，但仍必须满足原用户与Scope归属。
      */
     @Transactional
-    public ExecutionScopePO lockOwned(String userId, String scopeId, boolean forDispatch) {
+    public ExecutionScopePO lockOwned(Long userId, Long scopeId, boolean forDispatch) {
         ExecutionScopePO scope = mapper.findOwned(userId, scopeId);
         if (scope == null) {
             throw missing();
@@ -93,16 +93,16 @@ public class ExecutionScopeService {
     /**
      * 工具执行身份只从SDK会话映射，模型不能自选Scope或目标。
      */
-    public String scopeForSession(String userId, String sessionId) {
-        String scopeId = mapper.findScopeBySession(userId, sessionId);
+    public Long scopeForSession(Long userId, String sessionId) {
+        Long scopeId = mapper.findScopeBySession(userId, sessionId);
         if (scopeId == null) {
             throw missing();
         }
         return scopeId;
     }
 
-    public String scopeForTask(String userId, String taskId) {
-        String scopeId = mapper.findScopeByTask(userId, taskId);
+    public Long scopeForTask(Long userId, Long taskId) {
+        Long scopeId = mapper.findScopeByTask(userId, taskId);
         if (scopeId == null) {
             throw missing();
         }

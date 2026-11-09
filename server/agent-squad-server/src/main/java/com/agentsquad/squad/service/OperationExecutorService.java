@@ -108,7 +108,7 @@ public class OperationExecutorService {
     public boolean completeAsSucceeded(OperationPO operation, String resultJson) {
         return operationMapper.completeInFlight(operation.getUserId(), operation.getOperationId(),
                 operation.getVersion() + 1, instanceId, 1L, OperationStatus.SUCCEEDED.name(),
-                resultJson, instanceId) == 1;
+                resultJson, OperationUnknownService.SYSTEM_ACTOR_ID) == 1;
     }
 
     /**
@@ -118,14 +118,14 @@ public class OperationExecutorService {
         String message = cause.getClass().getSimpleName();
         return operationMapper.completeInFlight(operation.getUserId(), operation.getOperationId(),
                 operation.getVersion() + 1, instanceId, 1L, OperationStatus.FAILED.name(),
-                RuntimePayloads.toJson(objectMapper, Map.of("error", message)), instanceId) == 1;
+                RuntimePayloads.toJson(objectMapper, Map.of("error", message)), OperationUnknownService.SYSTEM_ACTOR_ID) == 1;
     }
 
     /**
      * 结果不明出账；只能由核对流程再推进。
      */
     public void markUnknown(OperationPO operation) {
-        if (unknowns.mark(operation, operation.getVersion() + 1, instanceId)) {
+        if (unknowns.mark(operation, operation.getVersion() + 1, OperationUnknownService.SYSTEM_ACTOR_ID)) {
             log.warn("操作转入 UNKNOWN，等待人工或连接器核对 operationId={}", operation.getOperationId());
         }
     }

@@ -106,8 +106,10 @@ public class TaskSchedulingConfiguration implements SchedulingConfigurer {
                 register(registrar, task::projectDue, properties::getNativeProjectionPollDelayMs));
         workerFactoryProvider.ifAvailable(task ->
                 register(registrar, task::pruneFinished, properties::getWorkerPruneDelayMs));
-        commandDeliveryServiceProvider.ifAvailable(task ->
-                register(registrar, task::deliverDue, this::commandDeliveryDelay));
+        commandDeliveryServiceProvider.ifAvailable(service -> {
+            register(registrar, service::deliverDue, this::commandDeliveryDelay);
+            register(registrar, service::blockUnknownDueCommands, properties::getCommandUnknownSweepDelayMs);
+        });
         register(registrar, conversationEventStreamerService::reconcile, properties::getConversationEventReconcileDelayMs);
         localSessionStopperProvider.ifAvailable(task ->
                 register(registrar, task::stopRequested, properties::getLocalSessionStopCheckDelayMs));

@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.mapper.GoalCreationMapper;
 import com.agentsquad.squad.enums.*;
 import com.agentsquad.squad.model.bo.*;
@@ -85,7 +86,7 @@ public class ResponseExecutionService {
      * 只允许当前有权限的 Agent 会话提交答案；同一回合重复提交相同内容时返回原结果，执行真正成功前不向用户发布。
      */
     @Transactional
-    public CompletionProposalReceiptBO propose(String userId, String bindingId, String turnId, String callId,
+    public CompletionProposalReceiptBO propose(Long userId, Long bindingId, String turnId, String callId,
                                                String outcome, String answer) {
         if (turnId == null || turnId.isBlank() || callId == null || callId.isBlank()
                 || !Set.of("SUCCEEDED", "PARTIAL").contains(outcome) || answer == null || answer.isBlank()
@@ -285,13 +286,13 @@ public class ResponseExecutionService {
     }
 
     @Transactional
-    public void stopped(String userId, String bindingId) {
+    public void stopped(Long userId, Long bindingId) {
         ExecutionScopePO scope = lock(userId, bindingId, false);
         settleCancelled(scope, replies.lockByBinding(userId, bindingId));
     }
 
     @Transactional
-    public void rejectedResume(String userId, String bindingId) {
+    public void rejectedResume(Long userId, Long bindingId) {
         ExecutionScopePO scope = lock(userId, bindingId, false);
         ResponseRuntimePO row = replies.lockByBinding(userId, bindingId);
         if (row != null && !TERMINAL.contains(row.getStatus())) {
@@ -303,7 +304,7 @@ public class ResponseExecutionService {
         }
     }
 
-    public String originalCommand(ProjectionTargetBO target) {
+    public Long originalCommand(ProjectionTargetBO target) {
         return replies.originalCommand(target.getUserId(), target.getBindingId());
     }
 
@@ -317,7 +318,7 @@ public class ResponseExecutionService {
 
     private boolean validProposal(ResponseRuntimePO row, ProjectionTargetBO target, NativeEventViewBO event, JsonNode proposal) {
         return proposal != null && event.turnId() != null && event.turnId().equals(row.getProposalTurnId())
-                && target.getBindingId().equals(proposal.path("sourceBindingId").asText())
+                && String.valueOf(target.getBindingId()).equals(proposal.path("sourceBindingId").asText())
                 && event.turnId().equals(proposal.path("sourceTurnId").asText())
                 && Set.of("SUCCEEDED", "PARTIAL").contains(proposal.path("outcome").asText())
                 && !proposal.path("finalAnswer").asText().isBlank()
@@ -363,7 +364,7 @@ public class ResponseExecutionService {
         if ("FAILED".equals(status)) {
             failures.ensureNativeFailure(scope, row.getBindingId(), "execution-failed:" + row.getExecutionId());
         }
-        String answerId = null;
+        Long answerId = null;
         ConversationPO conversation = conversations.lockOwned(scope.getUserId(), scope.getConversationId());
         if (answer != null && "ACTIVE".equals(conversation.getStatus())
                 && conversation.getGeneration() == scope.getConversationGeneration()) {
@@ -380,7 +381,7 @@ public class ResponseExecutionService {
             events.publish(scope, "response:" + row.getExecutionId() + ":answer", ConversationDeltaType.MESSAGE_COMPLETED.code(),
                     new MessageCompletedPayloadBO(ConversationDeltaType.SCHEMA_VERSION, message));
             activities.completed(scope, new ActivityBusinessFactBO(
-                    ActivityType.ANSWER_PUBLISH, answerId));
+                    ActivityType.ANSWER_PUBLISH, String.valueOf(answerId)));
         }
         if ("CANCELLED".equals(status)) {
             finalDeliveries.close(scope.getUserId(), row.getSourceMessageId(), "RESPONSE", row.getExecutionId());
@@ -416,11 +417,11 @@ public class ResponseExecutionService {
 
     private void command(ExecutionScopePO scope, ResponseRuntimePO row, String scopeKey, String key, String action, Object payload) {
         String value = RuntimePayloads.toJson(json, payload);
-        commands.insertControl(UUID.randomUUID().toString(), scope.getUserId(), scopeKey, key, ContentDigests.sha256(value),
+        commands.insertControl(IdWorker.getId(), scope.getUserId(), scopeKey, key, ContentDigests.sha256(value),
                 null, row.getBindingId(), action, value, now());
     }
 
-    private ExecutionScopePO lock(String userId, String bindingId, boolean dispatch) {
+    private ExecutionScopePO lock(Long userId, Long bindingId, boolean dispatch) {
         return scopes.lockOwned(userId, scopeMapper.findScopeByBinding(userId, bindingId), dispatch);
     }
 

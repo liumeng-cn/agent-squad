@@ -12,9 +12,9 @@
 
     <resultMap id="lockMasterContextResult" type="com.agentsquad.squad.model.bo.PlanContextBO">
         <constructor>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
             <arg column="plan_version" javaType="_long"/>
             <arg column="task_status" javaType="java.lang.String"/>
             <arg column="cancellation_requested" javaType="_boolean"/>
@@ -26,9 +26,9 @@
     <resultMap id="findLatestByLogicalKeyResult" type="com.agentsquad.squad.model.po.PlanPO">
         <constructor>
             <arg column="id" javaType="_long"/>
-            <arg column="plan_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="plan_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
             <arg column="plan_version" javaType="_long"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="logical_key" javaType="java.lang.String"/>
@@ -42,9 +42,9 @@
     <resultMap id="lockPlanResult" type="com.agentsquad.squad.model.po.PlanPO">
         <constructor>
             <arg column="id" javaType="_long"/>
-            <arg column="plan_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="plan_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
             <arg column="plan_version" javaType="_long"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="logical_key" javaType="java.lang.String"/>
@@ -58,9 +58,9 @@
     <resultMap id="listJobsResult" type="com.agentsquad.squad.model.po.WorkerJobPO">
         <constructor>
             <arg column="id" javaType="_long"/>
-            <arg column="job_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="job_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
             <arg column="plan_version" javaType="_long"/>
             <arg column="node_key" javaType="java.lang.String"/>
             <arg column="worker_key" javaType="java.lang.String"/>
@@ -70,8 +70,8 @@
             <arg column="input_json" javaType="java.lang.String"/>
             <arg column="result_candidate_json" javaType="java.lang.String"/>
             <arg column="result_json" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
-            <arg column="reused_from_job_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
+            <arg column="reused_from_job_id" javaType="java.lang.Long"/>
             <arg column="cancel_requested_at" javaType="java.time.LocalDateTime"/>
             <arg column="version" javaType="_long"/>
         </constructor>
@@ -80,9 +80,9 @@
     <resultMap id="lockJobsResult" type="com.agentsquad.squad.model.po.WorkerJobPO">
         <constructor>
             <arg column="id" javaType="_long"/>
-            <arg column="job_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="job_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
             <arg column="plan_version" javaType="_long"/>
             <arg column="node_key" javaType="java.lang.String"/>
             <arg column="worker_key" javaType="java.lang.String"/>
@@ -92,8 +92,8 @@
             <arg column="input_json" javaType="java.lang.String"/>
             <arg column="result_candidate_json" javaType="java.lang.String"/>
             <arg column="result_json" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
-            <arg column="reused_from_job_id" javaType="java.lang.String"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
+            <arg column="reused_from_job_id" javaType="java.lang.Long"/>
             <arg column="cancel_requested_at" javaType="java.time.LocalDateTime"/>
             <arg column="version" javaType="_long"/>
         </constructor>

@@ -22,15 +22,15 @@ public class FinalizationBO {
     /**
      * 资源归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 目标业务ID
      */
-    private String taskId;
+    private Long taskId;
     /**
      * 所属对话ID
      */
-    private String conversationId;
+    private Long conversationId;
     /**
      * 产品状态
      */
@@ -50,7 +50,7 @@ public class FinalizationBO {
     /**
      * 候选来源绑定ID
      */
-    private String proposalBindingId;
+    private Long proposalBindingId;
     /**
      * 候选来源原生TurnID
      */

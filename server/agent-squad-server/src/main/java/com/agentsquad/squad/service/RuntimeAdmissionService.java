@@ -51,7 +51,7 @@ public class RuntimeAdmissionService {
      * STOP 只负责停止原有运行，不占用新的执行配额。
      */
     @Transactional(propagation = Propagation.MANDATORY)
-    public void acquire(String userId, String bindingId, String commandId, String action) {
+    public void acquire(Long userId, Long bindingId, Long commandId, String action) {
         if (!enabled || "STOP".equals(action)) {
             return;
         }
@@ -104,7 +104,7 @@ public class RuntimeAdmissionService {
      * 在同一事务内补偿释放。RESUME/RESPOND 无法仅凭旧 Turn 断言新 Run 已结束。
      */
     @Transactional
-    public void bindReceipt(String userId, String bindingId, String commandId,
+    public void bindReceipt(Long userId, Long bindingId, Long commandId,
                             String action, String turnId) {
         if (!enabled || "STOP".equals(action)) {
             return;
@@ -149,7 +149,7 @@ public class RuntimeAdmissionService {
      * 仅识别领取时原生投影水位之后的事件，操作与事件投影同事务。
      */
     @Transactional(propagation = Propagation.MANDATORY)
-    public void recordRunStarted(String userId, String bindingId, String runId, long sequence) {
+    public void recordRunStarted(Long userId, Long bindingId, String runId, long sequence) {
         if (!enabled || runId == null || runId.isBlank() || sequence <= 0) {
             return;
         }
@@ -163,7 +163,7 @@ public class RuntimeAdmissionService {
      * 普通提交按 Turn 识别；恢复/答复必须匹配新 Run ID。
      */
     @Transactional(propagation = Propagation.MANDATORY)
-    public void releaseEnded(String userId, String bindingId, String turnId, String runId) {
+    public void releaseEnded(Long userId, Long bindingId, String turnId, String runId) {
         if (!enabled || (turnId == null && runId == null)) {
             return;
         }
@@ -197,7 +197,7 @@ public class RuntimeAdmissionService {
      * 只对未调用 SDK 的确定性拒绝执行进行释放；外部提交结果未知时不能调用。
      */
     @Transactional
-    public void releaseUnsubmitted(String userId, String bindingId, String commandId) {
+    public void releaseUnsubmitted(Long userId, Long bindingId, Long commandId) {
         if (!enabled) {
             return;
         }
@@ -244,7 +244,7 @@ public class RuntimeAdmissionService {
         }
     }
 
-    private String poolKey(String userId) {
+    private String poolKey(Long userId) {
         return "USER:" + userId;
     }
 

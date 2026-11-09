@@ -1,6 +1,7 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
@@ -35,13 +36,13 @@ class WorkerGuardIntegrationTest {
 
     @Test
     void onlyOneGuardCanRunAndCandidateNeedsMatchingTurn(@TempDir Path directory) throws Exception {
-        String databaseUrl = MySqlTestDatabase.url(directory.resolve("squad"));
+        String databaseUrl = PostgresTestDatabase.url(directory.resolve("squad"));
         try (ConfigurableApplicationContext spring = SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver")) {
-            String userId = "00000000-0000-0000-0000-000000000001";
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                "--spring.datasource.driver-class-name=org.postgresql.Driver")) {
+            Long userId = 1L;
             GoalTaskService tasks = spring.getBean(GoalTaskService.class);
             ContextSnapshotService snapshots = spring.getBean(ContextSnapshotService.class);
             PlanService plans = spring.getBean(PlanService.class);
@@ -65,16 +66,16 @@ class WorkerGuardIntegrationTest {
                     SELECT framework_session_id FROM sq_runtime_binding
                     WHERE task_id = ? AND role = 'MASTER'
                     """, String.class, task.taskId());
-            String snapshotId = snapshots.prepare(userId, masterSession,
+            Long snapshotId = snapshots.prepare(userId, masterSession,
                     "write", "guard-snapshot").snapshotId();
             PlanReceiptBO plan = plans.publish(userId, masterSession,
                     new PlanPublishBO("guard-plan", 0, List.of(
                             new PlanNodeBO("write", "writer", "1.0.0", "写摘要",
                                     snapshotId, List.of(), true, 1)),
                             "ALL_REQUIRED", List.of("文字完成")));
-            String bindingId = jdbc.queryForObject(
+            Long bindingId = jdbc.queryForObject(
                     "SELECT binding_id FROM sq_worker_job WHERE job_id = ?",
-                    String.class, plan.jobIds().getFirst());
+                    Long.class, plan.jobIds().getFirst());
 
             WorkerLaunchBO claimed = dispatch.claim(userId, bindingId);
             assertThat(claimed.getJobStatus()).isEqualTo("RUNNING");
@@ -87,7 +88,7 @@ class WorkerGuardIntegrationTest {
                     "turn-1", json.readTree("{}")))
                     .isInstanceOf(RuntimeBusinessException.class);
 
-            String jobId = results.propose(userId, bindingId, claimed.getGuardToken(),
+            Long jobId = results.propose(userId, bindingId, claimed.getGuardToken(),
                     "turn-1", json.readTree("{\"text\":\"结果\"}"));
             assertThat(jobId).isEqualTo(plan.jobIds().getFirst());
             assertThat(results.finalizeSuccess(userId, bindingId, "turn-old")).isFalse();
@@ -95,7 +96,7 @@ class WorkerGuardIntegrationTest {
             assertThat(jdbc.queryForObject(
                     "SELECT status FROM sq_worker_job WHERE job_id = ?",
                     String.class, jobId)).isEqualTo("SUCCEEDED");
-            String finishSnapshot = snapshots.prepare(userId, masterSession,
+            Long finishSnapshot = snapshots.prepare(userId, masterSession,
                     "finish", "finish-snapshot").snapshotId();
 
             PlanReceiptBO oldPlan = plans.publish(userId, masterSession,
@@ -103,18 +104,18 @@ class WorkerGuardIntegrationTest {
                             new PlanNodeBO("write", "writer", "1.0.0", "写新摘要",
                                     snapshotId, List.of(), true, 1)),
                             "ALL_REQUIRED", List.of("文字完成")));
-            String oldJobId = oldPlan.jobIds().getFirst();
-            String oldBindingId = jdbc.queryForObject(
+            Long oldJobId = oldPlan.jobIds().getFirst();
+            Long oldBindingId = jdbc.queryForObject(
                     "SELECT binding_id FROM sq_worker_job WHERE job_id = ?",
-                    String.class, oldJobId);
+                    Long.class, oldJobId);
             WorkerLaunchBO oldWriter = dispatch.claim(userId, oldBindingId);
             results.propose(userId, oldBindingId, oldWriter.getGuardToken(), "old-turn",
                     json.readTree("{\"text\":\"旧结果与已发生的副作用证据\"}"));
             try (ConfigurableApplicationContext peer = SpringApplication.run(AgentSquadApplication.class,
                     "--spring.main.web-application-type=none",
                     "--spring.datasource.url=" + databaseUrl,
-                    "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                    "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver")) {
+                    "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                    "--spring.datasource.driver-class-name=org.postgresql.Driver")) {
                 WorkerDispatchService peerDispatch = peer.getBean(WorkerDispatchService.class);
                 WorkerResultService peerResults = peer.getBean(WorkerResultService.class);
                 assertThatThrownBy(() -> peerDispatch.claim(userId, oldBindingId))
@@ -134,10 +135,10 @@ class WorkerGuardIntegrationTest {
                         WHERE binding_id = ? AND action = 'SUBMIT'
                         """, oldBindingId);
                 WorkerRecoveryService recovery = peer.getBean(WorkerRecoveryService.class);
-                String oldCommandId = jdbc.queryForObject("""
+                Long oldCommandId = jdbc.queryForObject("""
                         SELECT command_id FROM sq_command
                         WHERE binding_id = ? AND action = 'SUBMIT'
-                        """, String.class, oldBindingId);
+                        """, Long.class, oldBindingId);
                 String workerSession = jdbc.queryForObject("""
                         SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id = ?
                         """, String.class, oldBindingId);
@@ -153,7 +154,7 @@ class WorkerGuardIntegrationTest {
                         WHERE binding_id = ? AND action = 'RESUME'
                         """, Integer.class, oldBindingId)).isEqualTo(1);
             }
-            String operationId = UUID.randomUUID().toString();
+            Long operationId = IdWorker.getId();
             jdbc.update("""
                     INSERT INTO sq_operation
                         (operation_id, user_id, task_id, job_id, binding_id,
@@ -194,13 +195,13 @@ class WorkerGuardIntegrationTest {
                     "SELECT status FROM sq_worker_job WHERE job_id = ?",
                     String.class, newPlan.jobIds().get(1))).isEqualTo("BLOCKED");
 
-            String limitedJob = newPlan.jobIds().getFirst();
-            String limitedBinding = jdbc.queryForObject(
-                    "SELECT binding_id FROM sq_worker_job WHERE job_id = ?", String.class, limitedJob);
+            Long limitedJob = newPlan.jobIds().getFirst();
+            Long limitedBinding = jdbc.queryForObject(
+                    "SELECT binding_id FROM sq_worker_job WHERE job_id = ?", Long.class, limitedJob);
             WorkerLaunchBO firstGuard = dispatch.claim(userId, limitedBinding);
-            String limitedCommand = jdbc.queryForObject("""
+            Long limitedCommand = jdbc.queryForObject("""
                     SELECT command_id FROM sq_command WHERE binding_id = ? AND action = 'SUBMIT'
-                    """, String.class, limitedBinding);
+                    """, Long.class, limitedBinding);
             jdbc.update("UPDATE sq_command SET status = 'DELIVERED', native_turn_id = 'limited-turn' WHERE command_id = ?",
                     limitedCommand);
             String limitedSession = jdbc.queryForObject(

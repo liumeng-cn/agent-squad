@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.po.RateBucketPO;
 
 import com.agentsquad.squad.bo.AuthAccountBO;
@@ -13,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * 网关认证持久层。
@@ -64,13 +64,13 @@ public class AuthRepository {
         authMapper.revokeSession(sessionId, now);
     }
 
-    public void revokeUserSessions(String userId, LocalDateTime now) {
+    public void revokeUserSessions(Long userId, LocalDateTime now) {
         authMapper.revokeUserSessions(userId, now);
     }
 
-    public void insertAudit(String userId, String actorUserId, String eventType, String result,
+    public void insertAudit(Long userId, Long actorUserId, String eventType, String result,
                             String requestId) {
-        authMapper.insertAudit(UUID.randomUUID().toString(), userId, actorUserId, eventType, result,
+        authMapper.insertAudit(IdWorker.getId(), userId, actorUserId, eventType, result,
                 LocalDateTime.now(java.time.ZoneOffset.UTC), requestId == null ? "" : requestId);
     }
 

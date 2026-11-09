@@ -22,7 +22,7 @@ public class ResponseHistoryBO {
     /**
      * 消息业务ID
      */
-    private String messageId;
+    private Long messageId;
     /**
      * 回复序号
      */

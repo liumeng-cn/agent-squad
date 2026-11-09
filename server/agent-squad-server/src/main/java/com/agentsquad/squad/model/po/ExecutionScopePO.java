@@ -24,15 +24,15 @@ public class ExecutionScopePO {
     /**
      * 执行作用域业务ID
      */
-    private String scopeId;
+    private Long scopeId;
     /**
      * 资源归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 所属会话ID
      */
-    private String conversationId;
+    private Long conversationId;
     /**
      * 请求受理时的会话版本号
      */
@@ -44,9 +44,9 @@ public class ExecutionScopePO {
     /**
      * 回复执行或目标业务ID
      */
-    private String ownerId;
+    private Long ownerId;
     /**
      * 共享预算账户ID
      */
-    private String accountId;
+    private Long accountId;
 }

@@ -57,7 +57,7 @@ public class WorkerDefinitionController {
     public ApiResult<WorkerDefinitionVO> changeStatus(
             HttpServletRequest servletRequest,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
-            @PathVariable String definitionId,
+            @PathVariable Long definitionId,
             @Valid @RequestBody WorkerStatusUpdateDTO request) {
         return ApiResult.success(definitionService.changeStatus(UserContext.current(servletRequest),
                 definitionId, idempotencyKey, request));

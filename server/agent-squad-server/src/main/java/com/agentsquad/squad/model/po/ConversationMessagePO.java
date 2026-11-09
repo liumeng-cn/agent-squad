@@ -24,7 +24,7 @@ public class ConversationMessagePO {
     /**
      * 消息业务ID
      */
-    private String messageId;
+    private Long messageId;
     /**
      * 消息序号
      */
@@ -48,15 +48,15 @@ public class ConversationMessagePO {
     /**
      * 回复所关联的用户消息ID
      */
-    private String sourceMessageId;
+    private Long sourceMessageId;
     /**
      * 回复执行ID；旧任务消息为空
      */
-    private String executionId;
+    private Long executionId;
     /**
      * 可选关联目标ID
      */
-    private String taskId;
+    private Long taskId;
     /**
      * 消息发生时间
      */

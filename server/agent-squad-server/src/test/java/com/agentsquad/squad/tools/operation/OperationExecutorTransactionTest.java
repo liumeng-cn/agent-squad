@@ -1,7 +1,7 @@
 package com.agentsquad.squad.tools.operation;
 
 import com.agentsquad.squad.service.UserStatusGuardService;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.mapper.OperationMapper;
 import com.agentsquad.squad.model.po.OperationPO;
 import com.agentsquad.squad.service.OperationDispatchService;
@@ -34,10 +34,10 @@ class OperationExecutorTransactionTest {
     @Test
     void shouldSuspendCallerTransactionBeforeExternalCall() {
         OperationMapper operationMapper = mock(OperationMapper.class);
-        when(operationMapper.markInFlight(anyString(), anyString(), anyLong(), anyString(),
+        when(operationMapper.markInFlight(anyLong(), anyLong(), anyLong(), anyString(),
                 anyLong(), any(LocalDateTime.class), anyString())).thenReturn(1);
-        when(operationMapper.completeInFlight(anyString(), anyString(), anyLong(), anyString(),
-                anyLong(), anyString(), anyString(), anyString())).thenReturn(1);
+        when(operationMapper.completeInFlight(anyLong(), anyLong(), anyLong(), anyString(),
+                anyLong(), anyString(), anyString(), anyLong())).thenReturn(1);
 
         OperationExecutorService target = new OperationExecutorService();
         ReflectionTestUtils.setField(target, "userStatus", mock(UserStatusGuardService.class));
@@ -47,7 +47,7 @@ class OperationExecutorTransactionTest {
         ReflectionTestUtils.setField(target, "dispatchService", dispatch);
         ReflectionTestUtils.setField(target, "objectMapper", new ObjectMapper());
         DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(
-                new DriverManagerDataSource(MySqlTestDatabase.url(java.nio.file.Path.of(System.getProperty("java.io.tmpdir"), "operation-boundary-" + java.util.UUID.randomUUID())), MySqlTestDatabase.username(), MySqlTestDatabase.password()));
+                new DriverManagerDataSource(PostgresTestDatabase.url(java.nio.file.Path.of(System.getProperty("java.io.tmpdir"), "operation-boundary-" + java.util.UUID.randomUUID())), PostgresTestDatabase.username(), PostgresTestDatabase.password()));
         ProxyFactory proxyFactory = new ProxyFactory(target);
         proxyFactory.setProxyTargetClass(true);
         proxyFactory.addAdvice(new TransactionInterceptor(transactionManager,
@@ -55,8 +55,8 @@ class OperationExecutorTransactionTest {
         OperationExecutorService executor = (OperationExecutorService) proxyFactory.getProxy();
 
         OperationPO operation = mock(OperationPO.class);
-        when(operation.getUserId()).thenReturn("user-1");
-        when(operation.getOperationId()).thenReturn("operation-1");
+        when(operation.getUserId()).thenReturn(1L);
+        when(operation.getOperationId()).thenReturn(2L);
         when(operation.getVersion()).thenReturn(0L);
 
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {

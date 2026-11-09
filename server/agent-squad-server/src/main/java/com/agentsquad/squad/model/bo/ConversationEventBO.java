@@ -7,6 +7,6 @@ import com.fasterxml.jackson.databind.JsonNode;
  * <p>
  * generation与sequence共同界定订阅水位，payload仅包含已提交的公开事实。
  */
-public record ConversationEventBO(String conversationId, long generation, long sequence, String type,
+public record ConversationEventBO(Long conversationId, long generation, long sequence, String type,
                                   String occurredAt, JsonNode payload) {
 }

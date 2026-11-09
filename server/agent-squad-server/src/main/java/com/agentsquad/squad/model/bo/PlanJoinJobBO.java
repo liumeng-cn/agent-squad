@@ -7,5 +7,5 @@ import com.agentsquad.squad.enums.WorkerJobStatus;
  * <p>
  * 保留计划版本、必要性和可信执行状态，避免把旧计划结果混入当前完成判断。
  */
-public record PlanJoinJobBO(String jobId, long planVersion, boolean required, WorkerJobStatus status) {
+public record PlanJoinJobBO(Long jobId, long planVersion, boolean required, WorkerJobStatus status) {
 }

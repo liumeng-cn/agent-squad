@@ -5,5 +5,5 @@ package com.agentsquad.squad.model.bo;
  * <p>
  * 不接受用户、会话、预算或绑定参数；来源消息必须与当前回复的受权消息一致。
  */
-public record GoalTaskCreateBO(String logicalKey, String title, String objective, String sourceMessageId) {
+public record GoalTaskCreateBO(String logicalKey, String title, String objective, Long sourceMessageId) {
 }

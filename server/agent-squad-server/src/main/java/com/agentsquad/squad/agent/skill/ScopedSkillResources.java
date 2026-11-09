@@ -20,15 +20,15 @@ public final class ScopedSkillResources implements SkillResources {
 
     private final SkillRuntimeService skills;
 
-    private final String userId;
+    private final Long userId;
 
-    private final String scopeId;
+    private final Long scopeId;
 
-    private final String versionId;
+    private final Long versionId;
 
     private final Set<String> allowedTools;
 
-    public ScopedSkillResources(SkillRuntimeService skills, String userId, String scopeId, String versionId, Set<String> allowedTools) {
+    public ScopedSkillResources(SkillRuntimeService skills, Long userId, Long scopeId, Long versionId, Set<String> allowedTools) {
         this.skills = skills;
         this.userId = userId;
         this.scopeId = scopeId;

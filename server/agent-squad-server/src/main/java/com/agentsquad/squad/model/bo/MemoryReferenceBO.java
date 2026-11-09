@@ -5,6 +5,6 @@ package com.agentsquad.squad.model.bo;
  * <p>
  * 固定业务ID、内容版本与有效期，注入前必须回权威记录复验。
  */
-public record MemoryReferenceBO(String memoryId, String key, String content, long version,
+public record MemoryReferenceBO(Long memoryId, String key, String content, long version,
                                 java.time.LocalDateTime expiresAt) {
 }

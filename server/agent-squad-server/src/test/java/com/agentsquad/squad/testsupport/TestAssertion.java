@@ -27,11 +27,11 @@ public final class TestAssertion {
     /**
      * 按当前 MockMvc 请求的方法和路径生成断言，附加到请求头。
      */
-    public static RequestPostProcessor as(String userId, String... roles) {
+    public static RequestPostProcessor as(Long userId, String... roles) {
         return request -> {
             List<String> roleList = roles == null || roles.length == 0 ? List.of("USER") : List.of(roles);
             request.addHeader("X-Squad-Assertion",
-                    sign(userId, roleList, request.getMethod(), request.getRequestURI(), Instant.now()));
+                    sign(String.valueOf(userId), roleList, request.getMethod(), request.getRequestURI(), Instant.now()));
             return request;
         };
     }

@@ -34,11 +34,11 @@ class InteractionServiceTest {
         ReflectionTestUtils.setField(service, "objectMapper", new ObjectMapper());
         ReflectionTestUtils.setField(service, "scopeService", mock(ExecutionScopeService.class));
 
-        AuthView actor = new AuthView("user-1", "tester", List.of(AccountRole.USER), "csrf");
-        InteractionPO row = new InteractionPO("interaction-1", actor.userId(), "task-1",
-                "job-1", "binding-1", "operation-1", "FRAMEWORK", "request-1",
+        AuthView actor = new AuthView(1L, "tester", List.of(AccountRole.USER), "csrf");
+        InteractionPO row = new InteractionPO(21L, actor.userId(), 31L,
+                41L, 51L, 61L, "FRAMEWORK", "request-1",
                 "APPROVAL", "确认执行", "{}", 0L, "hash-1", 0L,
-                LocalDateTime.now().plusHours(1), "OPEN", 2L, null, "scope-1");
+                LocalDateTime.now().plusHours(1), "OPEN", 2L, null, 71L);
         when(interactionMapper.findOwned(actor.userId(), row.getInteractionId())).thenReturn(row);
 
         assertThrows(RuntimeBusinessException.class,

@@ -40,14 +40,14 @@ public class MemoryController {
 
     @PatchMapping("/{memoryId}")
     public ApiResult<MemoryMutationVO> update(HttpServletRequest servletRequest,
-                                              @PathVariable String memoryId,
+                                              @PathVariable Long memoryId,
                                               @Valid @RequestBody MemoryUpdateDTO request) {
         return ApiResult.success(memories.update(UserContext.current(servletRequest).userId(), memoryId, request));
     }
 
     @DeleteMapping("/{memoryId}")
     public ApiResult<MemoryMutationVO> delete(HttpServletRequest servletRequest,
-                                              @PathVariable String memoryId,
+                                              @PathVariable Long memoryId,
                                               @RequestParam long expectedVersion) {
         return ApiResult.success(memories.delete(UserContext.current(servletRequest).userId(), memoryId, expectedVersion));
     }

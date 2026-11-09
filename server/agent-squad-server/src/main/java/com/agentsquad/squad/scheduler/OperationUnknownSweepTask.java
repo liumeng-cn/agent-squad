@@ -41,7 +41,7 @@ public class OperationUnknownSweepTask {
         List<OperationPO> expired = operationMapper.findExpiredInFlight(
                 LocalDateTime.now(ZoneOffset.UTC), taskScheduleProperties.getOperationUnknownSweepBatch());
         for (OperationPO row : expired) {
-            if (unknowns.mark(row, row.getVersion(), "unknown-sweeper")) {
+            if (unknowns.mark(row, row.getVersion(), OperationUnknownService.SYSTEM_ACTOR_ID)) {
                 log.warn("IN_FLIGHT 租约过期转 UNKNOWN operationId={} taskId={} owner={}",
                         row.getOperationId(), row.getTaskId(), row.getExecutorOwner());
             }

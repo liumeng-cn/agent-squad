@@ -16,31 +16,31 @@ import java.util.List;
 @Mapper
 public interface AdminUserMapper {
 
-    UserAccountPO findUserById(@Param("userId") String userId);
+    UserAccountPO findUserById(@Param("userId") Long userId);
 
-    UserAccountPO findUserForUpdate(@Param("userId") String userId);
+    UserAccountPO findUserForUpdate(@Param("userId") Long userId);
 
-    List<UserAccountPO> listUsers(@Param("cursor") String cursor, @Param("limit") int limit);
+    List<UserAccountPO> listUsers(@Param("cursor") Long cursor, @Param("limit") int limit);
 
-    String findAnyUserIdForUpdate();
+    Long findAnyUserIdForUpdate();
 
     int acquireBootstrapLock();
 
     int releaseBootstrapLock();
 
-    List<String> lockActiveAdmins();
+    List<Long> lockActiveAdmins();
 
-    int insertUser(@Param("userId") String userId, @Param("username") String username,
+    int insertUser(@Param("userId") Long userId, @Param("username") String username,
                    @Param("displayName") String displayName, @Param("passwordHash") String passwordHash,
                    @Param("role") AccountRole role, @Param("mustChangePassword") boolean mustChangePassword,
-                   @Param("actorId") String actorId, @Param("actorName") String actorName);
+                   @Param("actorId") Long actorId, @Param("actorName") String actorName);
 
-    int updateProfile(@Param("userId") String userId, @Param("displayName") String displayName,
+    int updateProfile(@Param("userId") Long userId, @Param("displayName") String displayName,
                       @Param("role") AccountRole role, @Param("status") AccountStatus status,
                       @Param("expectedVersion") long expectedVersion, @Param("authBump") long authBump,
-                      @Param("actorId") String actorId, @Param("actorName") String actorName);
+                      @Param("actorId") Long actorId, @Param("actorName") String actorName);
 
-    int updatePassword(@Param("userId") String userId, @Param("passwordHash") String passwordHash,
+    int updatePassword(@Param("userId") Long userId, @Param("passwordHash") String passwordHash,
                        @Param("mustChangePassword") boolean mustChangePassword,
-                       @Param("actorId") String actorId, @Param("actorName") String actorName);
+                       @Param("actorId") Long actorId, @Param("actorName") String actorName);
 }

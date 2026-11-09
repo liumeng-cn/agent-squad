@@ -29,7 +29,7 @@ public class WorkerDispatchService {
      * CAS 领取单个 Job，失败说明其他实例持有有效 guard 或计划已失效。
      */
     @Transactional
-    public WorkerLaunchBO claim(String userId, String bindingId) {
+    public WorkerLaunchBO claim(Long userId, Long bindingId) {
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         String guardToken = UUID.randomUUID().toString();
         if (dispatchMapper.claimGuard(userId, bindingId, guardToken, now,
@@ -43,7 +43,7 @@ public class WorkerDispatchService {
     /**
      * 仅当前令牌可续租；租约过期、取消屏障或被接管后停止继续运行。
      */
-    public void renew(String userId, String bindingId, String guardToken) {
+    public void renew(Long userId, Long bindingId, String guardToken) {
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         if (dispatchMapper.renewGuard(userId, bindingId, guardToken, now,
                 now.plusSeconds(GUARD_LEASE_SECONDS)) != 1) {

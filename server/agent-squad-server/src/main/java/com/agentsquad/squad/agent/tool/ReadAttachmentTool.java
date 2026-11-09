@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.tool;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import com.agentsquad.squad.model.po.ArtifactPO;
 import com.agentsquad.squad.service.ArtifactService;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
@@ -58,7 +60,7 @@ public class ReadAttachmentTool implements AgentTool {
         return Map.of(
                 "type", "object",
                 "properties", Map.of(
-                        "artifactId", Map.of("type", "string", "format", "uuid")),
+                        "artifactId", Map.of("type", "string")),
                 "required", List.of("artifactId"),
                 "additionalProperties", false);
     }
@@ -75,15 +77,16 @@ public class ReadAttachmentTool implements AgentTool {
             return ToolResultBlock.error("缺少原生运行上下文");
         }
         Object idValue = param.getInput().get("artifactId");
-        if (!(idValue instanceof String artifactId) || artifactId.isBlank()) {
+        Long artifactId = parseId(idValue);
+        if (artifactId == null) {
             return ToolResultBlock.error("附件 ID 无效");
         }
         try {
-            String scopeId = scopes.scopeForSession(context.getUserId(), context.getSessionId());
-            if (!artifacts.isLinkedToScope(context.getUserId(), scopeId, artifactId)) {
+            Long scopeId = scopes.scopeForSession(RuntimeContextIds.userId(context), context.getSessionId());
+            if (!artifacts.isLinkedToScope(RuntimeContextIds.userId(context), scopeId, artifactId)) {
                 return ToolResultBlock.error("附件不属于当前执行");
             }
-            ArtifactPO artifact = artifacts.content(context.getUserId(), artifactId);
+            ArtifactPO artifact = artifacts.content(RuntimeContextIds.userId(context), artifactId);
             String raw = new String(artifact.getContent(), StandardCharsets.UTF_8);
             String formatted = MaterialFormatter.format(raw, artifact.getMediaType(), MAX_READ_CHARACTERS);
             boolean truncated = formatted.length() < raw.length();
@@ -98,6 +101,25 @@ public class ReadAttachmentTool implements AgentTool {
             return ToolResultBlock.error(exception.getMessage());
         } catch (IllegalArgumentException exception) {
             return ToolResultBlock.error("附件读取请求结构无效");
+        }
+    }
+
+    /**
+     * 模型可能以数字或字符串传入大整数 ID，统一解析为正数 Long；无法解析按无效参数处理。
+     */
+    private Long parseId(Object value) {
+        try {
+            long parsed;
+            if (value instanceof Number number) {
+                parsed = number.longValue();
+            } else if (value instanceof String text && !text.isBlank()) {
+                parsed = Long.parseLong(text.trim());
+            } else {
+                return null;
+            }
+            return parsed > 0 ? parsed : null;
+        } catch (NumberFormatException exception) {
+            return null;
         }
     }
 }

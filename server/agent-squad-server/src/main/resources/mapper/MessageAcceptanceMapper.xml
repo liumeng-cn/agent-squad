@@ -4,11 +4,11 @@
 
     <resultMap id="findSubmissionResult" type="com.agentsquad.squad.model.bo.MessageSubmissionBO">
         <constructor>
-            <arg column="conversation_id" javaType="java.lang.String"/>
-            <arg column="source_message_id" javaType="java.lang.String"/>
-            <arg column="execution_id" javaType="java.lang.String"/>
-            <arg column="command_id" javaType="java.lang.String"/>
-            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="conversation_id" javaType="java.lang.Long"/>
+            <arg column="source_message_id" javaType="java.lang.Long"/>
+            <arg column="execution_id" javaType="java.lang.Long"/>
+            <arg column="command_id" javaType="java.lang.Long"/>
+            <arg column="scope_id" javaType="java.lang.Long"/>
             <arg column="payload_hash" javaType="java.lang.String"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="conversation_generation" javaType="_long"/>

@@ -79,9 +79,11 @@ public class RedisProjectionWakeup {
             return false;
         }
         try {
+            // StringRedisTemplate 的脚本参数必须是字符串，业务 ID 为 Long 时先显式转换。
             redis.execute(enqueue, List.of(state(source.bindingId()), stream()),
                     String.valueOf(properties.getCapacity()), "1", RedisWakeupChannel.PROJECTION.name(),
-                    source.userId(), source.bindingId(), "", "", source.sessionId(), String.valueOf(source.mappingVersion()));
+                    String.valueOf(source.userId()), String.valueOf(source.bindingId()), "", "",
+                    source.sessionId(), String.valueOf(source.mappingVersion()));
             recovered();
             return true;
         } catch (RuntimeException failure) {
@@ -119,9 +121,9 @@ public class RedisProjectionWakeup {
 
     private void dispatch(MapRecord<String, String, String> record) {
         var fields = record.getValue();
-        String bindingId = fields.get("bindingId");
-        String userId = fields.get("userId");
-        if (bindingId == null || !bindingId.matches("[A-Za-z0-9-]{1,36}") || userId == null) {
+        Long bindingId = parseId(fields.get("bindingId"));
+        Long userId = parseId(fields.get("userId"));
+        if (bindingId == null || userId == null) {
             log.warn("Redis投影引用身份无效 streamId={}", record.getId());
             streams().acknowledge(stream(), GROUP, record.getId());
             streams().delete(stream(), record.getId());
@@ -184,7 +186,7 @@ public class RedisProjectionWakeup {
         return properties.getNamespace() + ":{p0}:PROJECTION:ready";
     }
 
-    private String state(String bindingId) {
+    private String state(Object bindingId) {
         return properties.getNamespace() + ":{p0}:PROJECTION:binding:" + bindingId;
     }
 
@@ -210,5 +212,17 @@ public class RedisProjectionWakeup {
     private boolean backingOff() {
         long next = retryAfter.get();
         return next != 0 && System.nanoTime() - next < 0;
+    }
+
+    /**
+     * Redis Stream 字段均为字符串，身份引用统一解析为正数 Long；非法值按重复投递丢弃。
+     */
+    private static Long parseId(String value) {
+        try {
+            long parsed = Long.parseLong(value);
+            return parsed > 0 ? parsed : null;
+        } catch (NumberFormatException | NullPointerException exception) {
+            return null;
+        }
     }
 }

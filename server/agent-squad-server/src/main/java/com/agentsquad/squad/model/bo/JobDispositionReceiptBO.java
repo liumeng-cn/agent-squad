@@ -7,5 +7,5 @@ import com.agentsquad.squad.enums.WorkerJobStatus;
  * <p>
  * 仅确认当前计划内某项工作已收尾，不表示整个用户任务已经完成。
  */
-public record JobDispositionReceiptBO(String jobId, long planVersion, WorkerJobStatus status) {
+public record JobDispositionReceiptBO(Long jobId, long planVersion, WorkerJobStatus status) {
 }

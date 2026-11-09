@@ -30,11 +30,11 @@ public class UserStatusGuardService {
     /**
      * 账号必须存在且为 ACTIVE；停用、删除或未知账号统一拒绝，避免异步任务在停用后继续产生副作用。
      */
-    public void requireActive(String userId) {
+    public void requireActive(Long userId) {
         if (!enabled) {
             return;
         }
-        AccountStatus status = userId == null || userId.isBlank() ? null : mapper.findStatus(userId);
+        AccountStatus status = userId == null ? null : mapper.findStatus(userId);
         if (status != AccountStatus.ACTIVE) {
             log.warn("账号状态阻止新的受控动作 userId={} status={}", userId, status == null ? "MISSING" : status);
             throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "账号已停用或不可用");

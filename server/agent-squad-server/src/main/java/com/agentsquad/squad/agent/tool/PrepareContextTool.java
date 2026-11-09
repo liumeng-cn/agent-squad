@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.tool;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.bo.ContextPreparationRequestBO;
 import com.agentsquad.squad.model.bo.ContextSnapshotReceiptBO;
@@ -76,7 +78,7 @@ public class PrepareContextTool implements AgentTool {
         }
         try {
             ContextSnapshotReceiptBO receipt = contextSnapshotService.prepare(
-                    context.getUserId(), context.getSessionId(), json.convertValue(param.getInput(),
+                    RuntimeContextIds.userId(context), context.getSessionId(), json.convertValue(param.getInput(),
                             ContextPreparationRequestBO.class));
             return ToolResultBlock.text("局部上下文已准备。contextSnapshotId=" + receipt.snapshotId()
                     + " contentHash=" + receipt.contentHash());

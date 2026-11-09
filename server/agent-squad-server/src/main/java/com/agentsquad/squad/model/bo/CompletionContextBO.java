@@ -22,15 +22,15 @@ public class CompletionContextBO {
     /**
      * 资源归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 目标业务ID
      */
-    private String taskId;
+    private Long taskId;
     /**
      * 原生会话绑定标识
      */
-    private String bindingId;
+    private Long bindingId;
     /**
      * 目标任务状态
      */

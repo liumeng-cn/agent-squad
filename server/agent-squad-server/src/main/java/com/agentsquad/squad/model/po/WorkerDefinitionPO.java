@@ -34,7 +34,7 @@ public class WorkerDefinitionPO {
      * 能力定义业务ID
      */
     @TableField("definition_id")
-    private String definitionId;
+    private Long definitionId;
     /**
      * 稳定能力键
      */
@@ -77,7 +77,7 @@ public class WorkerDefinitionPO {
      * 最近一次状态修改主体ID
      */
     @TableField("last_status_actor")
-    private String lastStatusActor;
+    private Long lastStatusActor;
     /**
      * 最近一次状态修改内容摘要
      */

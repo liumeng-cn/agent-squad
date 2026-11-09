@@ -13,7 +13,6 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * 读取并校验网关传入的用户身份
@@ -52,9 +51,9 @@ public class UserContextInterceptor implements HandlerInterceptor {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "业务服务拒绝未签名身份");
         }
 
-        String userId = request.getHeader("X-User-Id");
+        String rawUserId = request.getHeader("X-User-Id");
         String role = request.getHeader("X-User-Role");
-        if (userId == null || role == null) {
+        if (rawUserId == null || role == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "缺少有效的本地开发身份");
         }
         final AccountRole accountRole;
@@ -63,16 +62,20 @@ public class UserContextInterceptor implements HandlerInterceptor {
         } catch (IllegalArgumentException exception) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "本地开发角色无效");
         }
+        final long parsedUserId;
         try {
-            userId = UUID.fromString(userId).toString();
-        } catch (IllegalArgumentException exception) {
+            parsedUserId = Long.parseLong(rawUserId);
+            if (parsedUserId <= 0) {
+                throw new NumberFormatException("用户标识必须为正数");
+            }
+        } catch (NumberFormatException exception) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "本地开发用户标识格式无效");
         }
 
-        userStatus.requireActive(userId);
+        userStatus.requireActive(parsedUserId);
         String username = request.getHeader("X-User-Name");
         request.setAttribute(UserContext.ATTRIBUTE,
-                new AuthView(userId, username == null ? userId : username, List.of(accountRole), null));
+                new AuthView(parsedUserId, username == null ? rawUserId : username, List.of(accountRole), null));
         return true;
     }
 }

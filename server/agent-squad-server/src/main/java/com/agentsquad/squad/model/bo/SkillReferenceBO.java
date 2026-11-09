@@ -22,7 +22,7 @@ public class SkillReferenceBO {
     /**
      * 技能版本业务ID
      */
-    private String skillVersionId;
+    private Long skillVersionId;
     /**
      * 显示名称
      */

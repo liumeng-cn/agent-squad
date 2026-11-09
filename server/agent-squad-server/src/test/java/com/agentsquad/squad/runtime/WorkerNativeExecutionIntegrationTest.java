@@ -3,7 +3,7 @@ package com.agentsquad.squad.runtime;
 import com.agentsquad.squad.agent.session.RuntimeSessionProvider;
 import com.agentsquad.squad.service.RuntimeJournalImportService;
 import com.agentsquad.squad.testsupport.ModelAcceptanceFixture;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.identity.AuthView;
@@ -42,7 +42,7 @@ class WorkerNativeExecutionIntegrationTest {
 
     @Test
     void importsLegacyJournalInboxBlobsAndExportCursorWithoutOverwritingDatabase(@TempDir Path directory) throws Exception {
-        String user = "00000000-0000-0000-0000-000000000001";
+        String user = "1";
         Path legacy = directory.resolve("legacy");
         var context = io.agentscope.core.agent.RuntimeContext.builder().userId(user).sessionId("legacy-session").build();
         var key = new io.agentscope.core.session.SessionKey(user, "legacy-agent", "legacy-session");
@@ -63,9 +63,9 @@ class WorkerNativeExecutionIntegrationTest {
         inbox.release(inboxWriter);
         try (var spring = SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=none",
-                "--spring.datasource.url=" + MySqlTestDatabase.url(directory.resolve("database")),
-                "--spring.datasource.username=" + MySqlTestDatabase.username(),
-                "--spring.datasource.password=" + MySqlTestDatabase.password(),
+                "--spring.datasource.url=" + PostgresTestDatabase.url(directory.resolve("database")),
+                "--spring.datasource.username=" + PostgresTestDatabase.username(),
+                "--spring.datasource.password=" + PostgresTestDatabase.password(),
                 "--agentsquad.delivery.enabled=false")) {
             var importer = spring.getBean(RuntimeJournalImportService.class);
             var imported = importer.importWorkspace(legacy);
@@ -109,13 +109,13 @@ class WorkerNativeExecutionIntegrationTest {
         });
         model.start();
         try {
-            String database = MySqlTestDatabase.url(directory.resolve("squad"));
+            String database = PostgresTestDatabase.url(directory.resolve("squad"));
             String baseUrl = "http://127.0.0.1:" + model.getAddress().getPort() + "/v1";
             String[] base = {
                     "--spring.main.web-application-type=none",
                     "--spring.datasource.url=" + database,
-                    "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                    "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                    "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                    "--spring.datasource.driver-class-name=org.postgresql.Driver",
                     "--agentsquad.model.api-key=test-only",
                     "--agentsquad.model.base-url=" + baseUrl,
                     "--agentsquad.model.name=test-model",
@@ -139,9 +139,9 @@ class WorkerNativeExecutionIntegrationTest {
                     "--agentsquad.delivery.poll-delay-ms=100",
                     "--agentsquad.projection.poll-delay-ms=100"
             };
-            String userId = "00000000-0000-0000-0000-000000000001";
-            String jobId;
-            String taskId;
+            Long userId = 1L;
+            Long jobId;
+            Long taskId;
             try (ConfigurableApplicationContext spring = SpringApplication.run(
                     AgentSquadApplication.class, base)) {
                 GoalTaskService tasks = spring.getBean(GoalTaskService.class);
@@ -165,7 +165,7 @@ class WorkerNativeExecutionIntegrationTest {
                         SELECT framework_session_id FROM sq_runtime_binding
                         WHERE task_id = ? AND role = 'MASTER'
                         """, String.class, task.taskId());
-                String snapshot = snapshots.prepare(userId, masterSession,
+                Long snapshot = snapshots.prepare(userId, masterSession,
                         "write", "native-snapshot").snapshotId();
                 PlanReceiptBO plan = plans.publish(userId, masterSession,
                         new PlanPublishBO("native-plan", 0, List.of(

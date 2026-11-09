@@ -8,7 +8,7 @@ import com.agentsquad.squad.mapper.TaskDirectiveMapper;
 import com.agentsquad.squad.mapper.TaskMapper;
 import com.agentsquad.squad.service.ExecutionScopeService;
 import com.agentsquad.squad.service.TaskFinalizerService;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.agent.middleware.ScopedMasterToolsMiddleware;
 import com.agentsquad.squad.enums.AccountRole;
@@ -42,14 +42,14 @@ class PlanPublishIntegrationTest {
 
     @Test
     void shouldReuseMatchingSerialResults(@TempDir Path tempDirectory) throws Exception {
-        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("reuse"));
-        String userId = "00000000-0000-0000-0000-000000000001";
+        String databaseUrl = PostgresTestDatabase.url(tempDirectory.resolve("reuse"));
+        Long userId = 1L;
         try (ConfigurableApplicationContext context = SpringApplication.run(
                 AgentSquadApplication.class,
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver")) {
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                "--spring.datasource.driver-class-name=org.postgresql.Driver")) {
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             WorkerDefinitionService definitions = context.getBean(WorkerDefinitionService.class);
             ContextSnapshotService snapshots = context.getBean(ContextSnapshotService.class);
@@ -69,9 +69,9 @@ class PlanPublishIntegrationTest {
                     SELECT framework_session_id FROM sq_runtime_binding
                     WHERE task_id = ? AND role = 'MASTER'
                     """, String.class, task.taskId());
-            String snapshot = snapshots.prepare(userId, sessionId,
+            Long snapshot = snapshots.prepare(userId, sessionId,
                     "draft", "reuse-context").snapshotId();
-            String finishSnapshot = snapshots.prepare(userId, sessionId,
+            Long finishSnapshot = snapshots.prepare(userId, sessionId,
                     "finish", "finish-context").snapshotId();
             PlanReceiptBO first = plans.publish(userId, sessionId,
                     new PlanPublishBO("first-plan", 0, List.of(
@@ -80,18 +80,18 @@ class PlanPublishIntegrationTest {
                             new PlanNodeBO("finish", "reuse-writer", "1.0.0", "整理摘要",
                                     finishSnapshot, List.of("draft"), true, 1)),
                             "ALL_REQUIRED", List.of("摘要完成")));
-            String firstBinding = jdbc.queryForObject(
+            Long firstBinding = jdbc.queryForObject(
                     "SELECT binding_id FROM sq_worker_job WHERE job_id = ?",
-                    String.class, first.jobIds().getFirst());
+                    Long.class, first.jobIds().getFirst());
             jdbc.update("UPDATE sq_command SET status = 'DELIVERED' WHERE binding_id = ?",
                     firstBinding);
             String guard = dispatch.claim(userId, firstBinding).getGuardToken();
             results.propose(userId, firstBinding, guard, "draft-turn",
                     json.readTree("{\"text\":\"已写摘要\"}"));
             assertThat(results.finalizeSuccess(userId, firstBinding, "draft-turn")).isTrue();
-            String finishBinding = jdbc.queryForObject(
+            Long finishBinding = jdbc.queryForObject(
                     "SELECT binding_id FROM sq_worker_job WHERE job_id = ?",
-                    String.class, first.jobIds().get(1));
+                    Long.class, first.jobIds().get(1));
             jdbc.update("UPDATE sq_command SET status = 'DELIVERED' WHERE binding_id = ?",
                     finishBinding);
             String finishGuard = dispatch.claim(userId, finishBinding).getGuardToken();
@@ -107,13 +107,13 @@ class PlanPublishIntegrationTest {
                                     finishSnapshot, List.of("draft"), true, 1)),
                             "ALL_REQUIRED", List.of("摘要完成")));
             for (int index = 0; index < 2; index++) {
-                String reusedId = reused.jobIds().get(index);
+                Long reusedId = reused.jobIds().get(index);
                 assertThat(jdbc.queryForObject("""
                         SELECT status FROM sq_worker_job WHERE job_id = ?
                         """, String.class, reusedId)).isEqualTo("SUCCEEDED");
                 assertThat(jdbc.queryForObject("""
                         SELECT reused_from_job_id FROM sq_worker_job WHERE job_id = ?
-                        """, String.class, reusedId)).isEqualTo(first.jobIds().get(index));
+                        """, Long.class, reusedId)).isEqualTo(first.jobIds().get(index));
                 assertThat(jdbc.queryForObject("""
                         SELECT COUNT(*) FROM sq_command WHERE scope_key = ?
                         """, Integer.class, "worker-job:" + reusedId)).isZero();
@@ -130,9 +130,9 @@ class PlanPublishIntegrationTest {
             assertThat(jdbc.queryForObject("""
                     SELECT status FROM sq_worker_job WHERE job_id = ?
                     """, String.class, changedGoal.jobIds().getFirst())).isEqualTo("READY");
-            String changedBinding = jdbc.queryForObject(
+            Long changedBinding = jdbc.queryForObject(
                     "SELECT binding_id FROM sq_worker_job WHERE job_id = ?",
-                    String.class, changedGoal.jobIds().getFirst());
+                    Long.class, changedGoal.jobIds().getFirst());
             jdbc.update("UPDATE sq_command SET status = 'DELIVERED' WHERE binding_id = ?",
                     changedBinding);
             String changedGuard = dispatch.claim(userId, changedBinding).getGuardToken();
@@ -156,14 +156,14 @@ class PlanPublishIntegrationTest {
 
     @Test
     void shouldPublishPlanAndRejectInvalidDag(@TempDir Path tempDirectory) throws Exception {
-        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("squad"));
+        String databaseUrl = PostgresTestDatabase.url(tempDirectory.resolve("squad"));
         String[] properties = {
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                "--spring.datasource.driver-class-name=org.postgresql.Driver",
         };
-        String userId = "00000000-0000-0000-0000-000000000001";
+        Long userId = 1L;
 
         try (ConfigurableApplicationContext context =
                      SpringApplication.run(AgentSquadApplication.class, properties)) {
@@ -199,22 +199,22 @@ class PlanPublishIntegrationTest {
                     "SELECT framework_session_id FROM sq_runtime_binding "
                             + "WHERE user_id = ? AND task_id = ? AND role = 'MASTER'",
                     String.class, userId, task.taskId());
-            String analyzeContext = contextSnapshotService.prepare(userId, sessionId,
+            Long analyzeContext = contextSnapshotService.prepare(userId, sessionId,
                     "analyze", "context-analyze").snapshotId();
             assertThat(contextSnapshotService.prepare(userId, sessionId,
                     "analyze", "context-analyze").snapshotId()).isEqualTo(analyzeContext);
-            String reportContext = contextSnapshotService.prepare(userId, sessionId,
+            Long reportContext = contextSnapshotService.prepare(userId, sessionId,
                     "report", "context-report").snapshotId();
-            String summaryContext = contextSnapshotService.prepare(userId, sessionId,
+            Long summaryContext = contextSnapshotService.prepare(userId, sessionId,
                     "summary", "context-summary").snapshotId();
             assertThatThrownBy(() -> contextSnapshotService.prepare(
-                    "00000000-0000-0000-0000-000000000002", sessionId,
+                    2L, sessionId,
                     "analyze", "foreign-context"))
                     .isInstanceOf(RuntimeBusinessException.class);
 
             PlanPublishBO missingContext = new PlanPublishBO("missing-context", 0, List.of(
                     new PlanNodeBO("analyze", "log-analysis", "1.0.0", "分析日志",
-                            "00000000-0000-0000-0000-000000000099", List.of(), true, 1)),
+                            99L, List.of(), true, 1)),
                     "ALL_REQUIRED", List.of("完成"));
             assertThatThrownBy(() -> planService.publish(userId, sessionId, missingContext))
                     .isInstanceOf(RuntimeBusinessException.class)
@@ -258,9 +258,9 @@ class PlanPublishIntegrationTest {
                       AND c.action = 'SUBMIT' AND c.status = 'PENDING'
                     """, Integer.class, task.taskId())).isEqualTo(1);
 
-            String rootBinding = jdbc.queryForObject(
+            Long rootBinding = jdbc.queryForObject(
                     "SELECT binding_id FROM sq_worker_job WHERE job_id = ?",
-                    String.class, receipt.jobIds().getFirst());
+                    Long.class, receipt.jobIds().getFirst());
             jdbc.update("UPDATE sq_command SET status = 'DELIVERED' WHERE binding_id = ?",
                     rootBinding);
             String rootGuard = dispatchService.claim(userId, rootBinding).getGuardToken();
@@ -282,9 +282,9 @@ class PlanPublishIntegrationTest {
                     WHERE j.job_id = ? AND c.action = 'SUBMIT'
                     """, String.class, receipt.jobIds().get(1))).contains("分析完成");
 
-            String reportBinding = jdbc.queryForObject(
+            Long reportBinding = jdbc.queryForObject(
                     "SELECT binding_id FROM sq_worker_job WHERE job_id = ?",
-                    String.class, receipt.jobIds().get(1));
+                    Long.class, receipt.jobIds().get(1));
             jdbc.update("UPDATE sq_command SET status = 'DELIVERED' WHERE binding_id = ?",
                     reportBinding);
             String reportGuard = dispatchService.claim(userId, reportBinding).getGuardToken();
@@ -350,7 +350,7 @@ class PlanPublishIntegrationTest {
             assertThat(commands.countPlanSignalTurn(userId, task.taskId(), "old-plan-signal", 1)).isEqualTo(1);
             assertThat(commands.countPlanSignalTurn(userId, task.taskId(), "old-plan-signal", 2)).isZero();
             jdbc.update("UPDATE sq_goal_task SET status = 'RUNNING' WHERE task_id = ?", task.taskId());
-            String masterBinding = jdbc.queryForObject("SELECT binding_id FROM sq_runtime_binding WHERE framework_session_id = ?", String.class, sessionId);
+            Long masterBinding = jdbc.queryForObject("SELECT binding_id FROM sq_runtime_binding WHERE framework_session_id = ?", Long.class, sessionId);
             var finalizer = new TaskFinalizerService();
             org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "directives", context.getBean(TaskDirectiveMapper.class));
             org.springframework.test.util.ReflectionTestUtils.setField(finalizer, "completionMapper", context.getBean(CompletionMapper.class));
@@ -371,7 +371,7 @@ class PlanPublishIntegrationTest {
             org.springframework.test.util.ReflectionTestUtils.setField(middleware, "plans", context.getBean(PlanMapper.class));
             for (String state : List.of("READY", "RECOVERY_BLOCKED")) {
                 jdbc.update("UPDATE sq_worker_job SET status = ? WHERE job_id = ?", state, secondReceipt.jobIds().getFirst());
-                middleware.onModelCall(null, io.agentscope.core.agent.RuntimeContext.builder().userId(userId).sessionId(sessionId).build(),
+                middleware.onModelCall(null, io.agentscope.core.agent.RuntimeContext.builder().userId(String.valueOf(userId)).sessionId(sessionId).build(),
                         new io.agentscope.core.middleware.ModelCallInput(List.of(), List.of(io.agentscope.core.model.ToolSchema.builder().name("propose_completion").description("完成").build()), null, null), adjusted -> {
                             assertThat(adjusted.tools().isEmpty()).isEqualTo("READY".equals(state));
                             if ("RECOVERY_BLOCKED".equals(state)) {
@@ -400,9 +400,9 @@ class PlanPublishIntegrationTest {
                     WHERE j.task_id = ? AND j.plan_version = 1 AND c.status = 'CANCELLED'
                     """, Integer.class, task.taskId())).isZero();
 
-            String secondBinding = jdbc.queryForObject(
+            Long secondBinding = jdbc.queryForObject(
                     "SELECT binding_id FROM sq_worker_job WHERE job_id = ?",
-                    String.class, secondReceipt.jobIds().getFirst());
+                    Long.class, secondReceipt.jobIds().getFirst());
             jdbc.update("UPDATE sq_command SET status = 'DELIVERED' WHERE binding_id = ?",
                     secondBinding);
             String secondGuard = dispatchService.claim(userId, secondBinding).getGuardToken();

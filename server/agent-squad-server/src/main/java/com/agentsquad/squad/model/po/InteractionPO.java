@@ -25,27 +25,27 @@ public class InteractionPO {
     /**
      * 交互ID
      */
-    private String interactionId;
+    private Long interactionId;
     /**
      * 资源归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 可选所属目标ID；普通回复为空
      */
-    private String taskId;
+    private Long taskId;
     /**
      * 节点ID
      */
-    private String jobId;
+    private Long jobId;
     /**
      * 所属绑定
      */
-    private String bindingId;
+    private Long bindingId;
     /**
      * 关联操作
      */
-    private String operationId;
+    private Long operationId;
     /**
      * BUSINESS/FRAMEWORK
      */
@@ -97,5 +97,5 @@ public class InteractionPO {
     /**
      * 统一执行作用域ID
      */
-    private String scopeId;
+    private Long scopeId;
 }

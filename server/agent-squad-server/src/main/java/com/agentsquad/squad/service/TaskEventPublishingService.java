@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.enums.ActivityType;
 import com.agentsquad.squad.enums.PlanJoinPolicy;
 import com.agentsquad.squad.mapper.TaskEventMapper;
@@ -59,7 +60,7 @@ public class TaskEventPublishingService {
      * 调用方已按会话和实际所有者加锁；完成答案只来自已裁决的公开事件，内部回合不成为新用户消息。
      */
     @Transactional(propagation = Propagation.MANDATORY)
-    public int insertProjected(String userId, String taskId, long sequence, String producerKey,
+    public int insertProjected(Long userId, Long taskId, long sequence, String producerKey,
                                String eventType, String payloadJson, LocalDateTime occurredAt) {
         int inserted = taskEvents.insertProjected(userId, taskId, sequence, producerKey, eventType, payloadJson, occurredAt);
         var scope = scopes.lockOwned(userId, scopes.scopeForTask(userId, taskId), false);
@@ -74,15 +75,15 @@ public class TaskEventPublishingService {
                 var payload = RuntimePayloads.readJson(json, payloadJson);
                 String text = payload.path("text").asText();
                 long revision = payload.path("revision").asLong(task.getAnswerRevision());
-                String sourceMessageId = reads.taskSource(userId, taskId);
-                String claimedId = sourceMessageId == null ? null
+                Long sourceMessageId = reads.taskSource(userId, taskId);
+                Long claimedId = sourceMessageId == null ? null
                         : finalDeliveries.claimPublication(userId, sourceMessageId, "TASK", taskId);
                 if (sourceMessageId != null && claimedId == null) {
                     return inserted;
                 }
-                String messageId = reads.taskAnswer(userId, taskId);
+                Long messageId = reads.taskAnswer(userId, taskId);
                 if (messageId == null) {
-                    messageId = claimedId == null ? UUID.randomUUID().toString() : claimedId;
+                    messageId = claimedId == null ? IdWorker.getId() : claimedId;
                     LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
                     sequences.reserveMessage(userId, scope.getConversationId(), now);
                     reads.insertTaskAnswer(messageId, userId, scope.getConversationId(), sequences.messageSequence(userId, scope.getConversationId()), text, revision, reads.taskSource(userId, taskId), taskId, now);
@@ -107,8 +108,8 @@ public class TaskEventPublishingService {
                     return inserted;
                 }
                 if ("plan.published".equals(eventType)) {
-                    java.util.List<String> jobIds = json.convertValue(payload.path("jobIds"),
-                            json.getTypeFactory().constructCollectionType(java.util.List.class, String.class));
+                    java.util.List<Long> jobIds = json.convertValue(payload.path("jobIds"),
+                            json.getTypeFactory().constructCollectionType(java.util.List.class, Long.class));
                     java.util.List<PlanAcceptanceCriterionBO> criteria = json.convertValue(
                             payload.path("acceptanceCriteria"), json.getTypeFactory().constructCollectionType(java.util.List.class,
                                     PlanAcceptanceCriterionBO.class));
@@ -117,7 +118,8 @@ public class TaskEventPublishingService {
                             payload.path("joinPolicy").asText()), criteria));
                 } else {
                     events.publish(scope, key, eventType, new JobReusedPayloadBO(2,
-                            taskId, planVersion, payload.path("jobId").asText(), payload.path("reusedFromJobId").asText()));
+                            taskId, planVersion, Long.parseLong(payload.path("jobId").asText()),
+                            Long.parseLong(payload.path("reusedFromJobId").asText())));
                 }
             } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
                 throw new IllegalStateException("计划公开载荷无法解析", exception);
@@ -127,7 +129,7 @@ public class TaskEventPublishingService {
         } else {
             if ("task.completed".equals(eventType)
                     && ("CANCELLED".equals(task.getStatus()) || "FAILED".equals(task.getStatus()))) {
-                String sourceMessageId = reads.taskSource(userId, taskId);
+                Long sourceMessageId = reads.taskSource(userId, taskId);
                 if (sourceMessageId != null) {
                     finalDeliveries.close(userId, sourceMessageId, "TASK", taskId);
                 }

@@ -22,11 +22,11 @@ public class ConversationTaskStateBO {
     /**
      * 目标任务ID
      */
-    private String taskId;
+    private Long taskId;
     /**
      * 来源用户消息ID
      */
-    private String sourceMessageId;
+    private Long sourceMessageId;
     /**
      * 活动状态
      */

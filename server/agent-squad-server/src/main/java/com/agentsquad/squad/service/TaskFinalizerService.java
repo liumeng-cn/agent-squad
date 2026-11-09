@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.agent.session.NativeSessionGateway;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.bo.FinalizationBO;
@@ -125,7 +126,7 @@ public class TaskFinalizerService {
                 || !proposal.path("evidenceRefs").isArray()
                 || proposal.path("planVersion").asLong(-1) != row.getPlanVersion()
                 || proposal.path("answerRevision").asLong(-1) != row.getAnswerRevision()
-                || !target.getBindingId().equals(proposal.path("sourceBindingId").asText())
+                || !String.valueOf(target.getBindingId()).equals(proposal.path("sourceBindingId").asText())
                 || !event.turnId().equals(proposal.path("sourceTurnId").asText())) {
             blockInvalidProposal(row, target);
             return true;
@@ -218,7 +219,7 @@ public class TaskFinalizerService {
             if (completionMapper.markCorrectionRequested(row.getUserId(), row.getTaskId()) != 1) {
                 throw new IllegalStateException("完成纠正次数写入竞争");
             }
-            String commandId = UUID.randomUUID().toString();
+            Long commandId = IdWorker.getId();
             String payloadJson = RuntimePayloads.toJson(objectMapper, Map.of("message", CORRECTION_MESSAGE));
             if (commandMapper.insertControl(commandId, row.getUserId(),
                     "task.completion-correction:" + row.getTaskId(), event.turnId(),
@@ -311,7 +312,7 @@ public class TaskFinalizerService {
      * 交互答复投递前把等待态目标转回 RUNNING，让恢复回合可以重新提交完成候选。
      * 单条 CAS 自动提交；已不处于等待态时静默跳过，由回合结束裁决兜底。
      */
-    public void resumeFromInteraction(String userId, String taskId) {
+    public void resumeFromInteraction(Long userId, Long taskId) {
         if (completionMapper.resumeFromInteraction(userId, taskId) == 1) {
             FinalizationBO row = completionMapper.lockTask(userId, taskId);
             if (row != null) {
@@ -327,11 +328,11 @@ public class TaskFinalizerService {
      * 停止投递时发现原生会话已无活跃运行，就地取消目标并释放会话占用。
      */
     @Transactional
-    public void finalizeCancelledTask(String userId, String taskId) {
+    public void finalizeCancelledTask(Long userId, Long taskId) {
         finalizeCancelled(userId, taskId, "stop-delivery:" + taskId + ":task.completed");
     }
 
-    private boolean finalizeCancelled(String userId, String taskId, String producerKey) {
+    private boolean finalizeCancelled(Long userId, Long taskId, String producerKey) {
         scopes.lockOwned(userId, scopes.scopeForTask(userId, taskId), false);
         FinalizationBO row = completionMapper.lockTask(userId, taskId);
         if (row == null || !row.isCancellationRequested()

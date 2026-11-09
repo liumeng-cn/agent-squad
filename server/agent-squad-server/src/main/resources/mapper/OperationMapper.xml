@@ -4,28 +4,28 @@
 
     <resultMap id="lockToolContextResult" type="com.agentsquad.squad.model.bo.ToolExecutionContextBO">
         <constructor>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
             <arg column="task_status" javaType="java.lang.String"/>
             <arg column="cancellation_requested" javaType="_boolean"/>
-            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.Long"/>
         </constructor>
     </resultMap>
 
     <resultMap id="findByNativeCallResult" type="com.agentsquad.squad.model.po.OperationPO">
         <constructor>
-            <arg column="operation_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="job_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="operation_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="job_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
             <arg column="framework_turn_id" javaType="java.lang.String"/>
             <arg column="tool_call_id" javaType="java.lang.String"/>
             <arg column="tool_key" javaType="java.lang.String"/>
             <arg column="tool_version" javaType="java.lang.String"/>
             <arg column="business_intent_key" javaType="java.lang.String"/>
             <arg column="effect" javaType="java.lang.String"/>
-            <arg column="connection_id" javaType="java.lang.String"/>
+            <arg column="connection_id" javaType="java.lang.Long"/>
             <arg column="connection_revision" javaType="_long"/>
             <arg column="auth_version" javaType="_long"/>
             <arg column="request_hash" javaType="java.lang.String"/>
@@ -36,25 +36,25 @@
             <arg column="executor_fence" javaType="_long"/>
             <arg column="external_key" javaType="java.lang.String"/>
             <arg column="result_json" javaType="java.lang.String"/>
-            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.Long"/>
             <arg column="budget_usage_key" javaType="java.lang.String"/>
         </constructor>
     </resultMap>
 
     <resultMap id="findByBusinessIntentResult" type="com.agentsquad.squad.model.po.OperationPO">
         <constructor>
-            <arg column="operation_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="job_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="operation_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="job_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
             <arg column="framework_turn_id" javaType="java.lang.String"/>
             <arg column="tool_call_id" javaType="java.lang.String"/>
             <arg column="tool_key" javaType="java.lang.String"/>
             <arg column="tool_version" javaType="java.lang.String"/>
             <arg column="business_intent_key" javaType="java.lang.String"/>
             <arg column="effect" javaType="java.lang.String"/>
-            <arg column="connection_id" javaType="java.lang.String"/>
+            <arg column="connection_id" javaType="java.lang.Long"/>
             <arg column="connection_revision" javaType="_long"/>
             <arg column="auth_version" javaType="_long"/>
             <arg column="request_hash" javaType="java.lang.String"/>
@@ -65,25 +65,25 @@
             <arg column="executor_fence" javaType="_long"/>
             <arg column="external_key" javaType="java.lang.String"/>
             <arg column="result_json" javaType="java.lang.String"/>
-            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.Long"/>
             <arg column="budget_usage_key" javaType="java.lang.String"/>
         </constructor>
     </resultMap>
 
     <resultMap id="findOwnedResult" type="com.agentsquad.squad.model.po.OperationPO">
         <constructor>
-            <arg column="operation_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="job_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="operation_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="job_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
             <arg column="framework_turn_id" javaType="java.lang.String"/>
             <arg column="tool_call_id" javaType="java.lang.String"/>
             <arg column="tool_key" javaType="java.lang.String"/>
             <arg column="tool_version" javaType="java.lang.String"/>
             <arg column="business_intent_key" javaType="java.lang.String"/>
             <arg column="effect" javaType="java.lang.String"/>
-            <arg column="connection_id" javaType="java.lang.String"/>
+            <arg column="connection_id" javaType="java.lang.Long"/>
             <arg column="connection_revision" javaType="_long"/>
             <arg column="auth_version" javaType="_long"/>
             <arg column="request_hash" javaType="java.lang.String"/>
@@ -94,25 +94,25 @@
             <arg column="executor_fence" javaType="_long"/>
             <arg column="external_key" javaType="java.lang.String"/>
             <arg column="result_json" javaType="java.lang.String"/>
-            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.Long"/>
             <arg column="budget_usage_key" javaType="java.lang.String"/>
         </constructor>
     </resultMap>
 
     <resultMap id="listByTaskResult" type="com.agentsquad.squad.model.po.OperationPO">
         <constructor>
-            <arg column="operation_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="job_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="operation_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="job_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
             <arg column="framework_turn_id" javaType="java.lang.String"/>
             <arg column="tool_call_id" javaType="java.lang.String"/>
             <arg column="tool_key" javaType="java.lang.String"/>
             <arg column="tool_version" javaType="java.lang.String"/>
             <arg column="business_intent_key" javaType="java.lang.String"/>
             <arg column="effect" javaType="java.lang.String"/>
-            <arg column="connection_id" javaType="java.lang.String"/>
+            <arg column="connection_id" javaType="java.lang.Long"/>
             <arg column="connection_revision" javaType="_long"/>
             <arg column="auth_version" javaType="_long"/>
             <arg column="request_hash" javaType="java.lang.String"/>
@@ -123,25 +123,25 @@
             <arg column="executor_fence" javaType="_long"/>
             <arg column="external_key" javaType="java.lang.String"/>
             <arg column="result_json" javaType="java.lang.String"/>
-            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.Long"/>
             <arg column="budget_usage_key" javaType="java.lang.String"/>
         </constructor>
     </resultMap>
 
     <resultMap id="findExpiredInFlightResult" type="com.agentsquad.squad.model.po.OperationPO">
         <constructor>
-            <arg column="operation_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="job_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="operation_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="job_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
             <arg column="framework_turn_id" javaType="java.lang.String"/>
             <arg column="tool_call_id" javaType="java.lang.String"/>
             <arg column="tool_key" javaType="java.lang.String"/>
             <arg column="tool_version" javaType="java.lang.String"/>
             <arg column="business_intent_key" javaType="java.lang.String"/>
             <arg column="effect" javaType="java.lang.String"/>
-            <arg column="connection_id" javaType="java.lang.String"/>
+            <arg column="connection_id" javaType="java.lang.Long"/>
             <arg column="connection_revision" javaType="_long"/>
             <arg column="auth_version" javaType="_long"/>
             <arg column="request_hash" javaType="java.lang.String"/>
@@ -152,7 +152,7 @@
             <arg column="executor_fence" javaType="_long"/>
             <arg column="external_key" javaType="java.lang.String"/>
             <arg column="result_json" javaType="java.lang.String"/>
-            <arg column="scope_id" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.Long"/>
             <arg column="budget_usage_key" javaType="java.lang.String"/>
         </constructor>
     </resultMap>
@@ -369,7 +369,7 @@
         executor_until = #{leaseUntil},
         external_key = #{externalKey},
         version = version + 1,
-        last_updater_id = #{owner}
+        last_updater_id = user_id
         WHERE user_id = #{userId} AND operation_id = #{operationId}
         AND status IN ('PREPARED',
         'WAITING_APPROVAL') AND version = #{expectedVersion}
@@ -475,7 +475,7 @@
         AND status = 'WAITING_APPROVAL' AND version = #{expectedVersion}
     </update>
 
-    <select id="findUncertainInConversation" resultType="java.lang.String">
+    <select id="findUncertainInConversation" resultType="java.lang.Long">
         SELECT o.operation_id FROM sq_operation o JOIN sq_execution_scope s
         ON s.user_id = o.user_id AND s.scope_id = o.scope_id
         WHERE o.user_id = #{userId} AND o.status IN ('UNKNOWN',

@@ -50,7 +50,7 @@ public class RuntimeController {
      */
     @GetMapping("/tasks/{taskId}/jobs")
     public ApiResult<WorkerJobPageVO> listJobs(HttpServletRequest servletRequest,
-                                               @PathVariable String taskId,
+                                               @PathVariable Long taskId,
                                                @org.springframework.web.bind.annotation.RequestParam(required = false) Long planVersion) {
         return ApiResult.success(taskSnapshotService.listJobs(UserContext.current(servletRequest).userId(), taskId, planVersion));
     }
@@ -83,7 +83,7 @@ public class RuntimeController {
     @GetMapping("/conversations/{conversationId}")
     public ApiResult<ConversationVO> getConversation(
             HttpServletRequest servletRequest,
-            @PathVariable String conversationId) {
+            @PathVariable Long conversationId) {
         return ApiResult.success(goalTaskService.getConversation(UserContext.current(servletRequest).userId(), conversationId));
     }
 
@@ -94,7 +94,7 @@ public class RuntimeController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     public ApiResult<Void> deleteConversation(
             HttpServletRequest servletRequest,
-            @PathVariable String conversationId,
+            @PathVariable Long conversationId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @RequestHeader("If-Match") String ifMatch) {
         conversationDeletionService.delete(UserContext.current(servletRequest).userId(),
@@ -119,7 +119,7 @@ public class RuntimeController {
     @GetMapping("/conversations/{conversationId}/tasks")
     public ApiResult<GoalTaskPageVO> listConversationTasks(
             HttpServletRequest servletRequest,
-            @PathVariable String conversationId,
+            @PathVariable Long conversationId,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit) {
         return ApiResult.success(goalTaskService.listConversationTasks(UserContext.current(servletRequest).userId(), conversationId, cursor, limit));
@@ -132,7 +132,7 @@ public class RuntimeController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     public ApiResult<TaskReceiptVO> createTask(
             HttpServletRequest servletRequest,
-            @PathVariable String conversationId,
+            @PathVariable Long conversationId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody TaskCreateDTO request) {
         return ApiResult.success(goalTaskService.submit(UserContext.current(servletRequest).userId(),
@@ -144,7 +144,7 @@ public class RuntimeController {
      */
     @GetMapping("/tasks/{taskId}")
     public ApiResult<TaskVO> getTask(HttpServletRequest servletRequest,
-                                     @PathVariable String taskId) {
+                                     @PathVariable Long taskId) {
         return ApiResult.success(goalTaskService.findTask(UserContext.current(servletRequest).userId(), taskId));
     }
 
@@ -153,7 +153,7 @@ public class RuntimeController {
      */
     @GetMapping("/tasks/{taskId}/snapshot")
     public ApiResult<TaskSnapshotVO> getTaskSnapshot(HttpServletRequest servletRequest,
-                                                     @PathVariable String taskId) {
+                                                     @PathVariable Long taskId) {
         return ApiResult.success(taskSnapshotService.snapshot(UserContext.current(servletRequest).userId(), taskId));
     }
 
@@ -164,7 +164,7 @@ public class RuntimeController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     public ApiResult<CommandReceiptVO> cancelTask(
             HttpServletRequest servletRequest,
-            @PathVariable String taskId,
+            @PathVariable Long taskId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody ControlDTO request) {
         return ApiResult.success(taskControlService.cancel(UserContext.current(servletRequest).userId(),
@@ -178,7 +178,7 @@ public class RuntimeController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     public ApiResult<CommandReceiptVO> resumeTask(
             HttpServletRequest servletRequest,
-            @PathVariable String taskId,
+            @PathVariable Long taskId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody ControlDTO request) {
         return ApiResult.success(taskControlService.resume(UserContext.current(servletRequest).userId(),
@@ -191,13 +191,13 @@ public class RuntimeController {
     @GetMapping(value = "/tasks/{taskId}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter observeEvents(
             HttpServletRequest servletRequest,
-            @PathVariable String taskId,
+            @PathVariable Long taskId,
             @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId,
             @RequestParam(required = false) String after) {
         return taskEventStreamer.stream(UserContext.current(servletRequest).userId(), taskId, resolveEventCursor(taskId, lastEventId, after));
     }
 
-    private long resolveEventCursor(String taskId, String lastEventId, String after) {
+    private long resolveEventCursor(Long taskId, String lastEventId, String after) {
         if (lastEventId != null && !lastEventId.isBlank()) {
             int separator = lastEventId.lastIndexOf(':');
             if (separator <= 0 || separator == lastEventId.length() - 1) {
@@ -229,7 +229,7 @@ public class RuntimeController {
      */
     @GetMapping("/commands/{commandId}")
     public ApiResult<CommandVO> getCommand(HttpServletRequest servletRequest,
-                                           @PathVariable String commandId) {
+                                           @PathVariable Long commandId) {
         return ApiResult.success(goalTaskService.findCommand(UserContext.current(servletRequest).userId(), commandId));
     }
 

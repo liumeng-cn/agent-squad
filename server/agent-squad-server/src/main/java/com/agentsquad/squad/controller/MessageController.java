@@ -34,7 +34,7 @@ public class MessageController {
     @PostMapping("/{conversationId}/messages")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public ApiResult<MessageReceiptVO> append(HttpServletRequest servletRequest,
-                                              @PathVariable String conversationId,
+                                              @PathVariable Long conversationId,
                                               @RequestHeader("Idempotency-Key") String key,
                                               @Valid @RequestBody MessageCreateDTO request) {
         return ApiResult.success(messages.accept(UserContext.current(servletRequest).userId(), conversationId, key, request));

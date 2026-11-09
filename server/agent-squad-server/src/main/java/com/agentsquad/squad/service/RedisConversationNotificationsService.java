@@ -212,6 +212,10 @@ public class RedisConversationNotificationsService {
         return value != null && value.matches("[A-Za-z0-9-]{1,36}");
     }
 
+    private boolean identity(Long value) {
+        return value != null && value > 0;
+    }
+
     @PreDestroy
     public void shutdown() throws Exception {
         try {

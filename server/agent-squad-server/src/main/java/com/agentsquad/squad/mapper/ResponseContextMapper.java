@@ -15,16 +15,16 @@ import java.util.List;
 @Mapper
 public interface ResponseContextMapper {
 
-    ResponseContextBO findSource(@Param("userId") String userId, @Param("bindingId") String bindingId);
+    ResponseContextBO findSource(@Param("userId") Long userId, @Param("bindingId") Long bindingId);
 
-    long characterCount(@Param("userId") String userId, @Param("conversationId") String conversationId,
+    long characterCount(@Param("userId") Long userId, @Param("conversationId") Long conversationId,
                         @Param("through") long through);
 
-    List<ResponseHistoryBO> prefix(@Param("userId") String userId,
-                                   @Param("conversationId") String conversationId, @Param("through") long through);
+    List<ResponseHistoryBO> prefix(@Param("userId") Long userId,
+                                   @Param("conversationId") Long conversationId, @Param("through") long through);
 
-    List<String> artifactIds(@Param("userId") String userId, @Param("messageId") String messageId);
+    List<Long> artifactIds(@Param("userId") Long userId, @Param("messageId") Long messageId);
 
-    int freeze(@Param("userId") String userId, @Param("executionId") String executionId,
+    int freeze(@Param("userId") Long userId, @Param("executionId") Long executionId,
                @Param("json") String json, @Param("hash") String hash);
 }

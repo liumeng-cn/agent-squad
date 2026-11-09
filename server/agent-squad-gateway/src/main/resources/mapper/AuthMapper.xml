@@ -4,7 +4,7 @@
 
     <resultMap id="accountRow" type="com.agentsquad.squad.bo.AuthAccountBO">
         <constructor>
-            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
             <arg column="username" javaType="java.lang.String"/>
             <arg column="display_name" javaType="java.lang.String"/>
             <arg column="password_hash" javaType="java.lang.String"/>
@@ -19,7 +19,7 @@
     <resultMap id="sessionRow" type="com.agentsquad.squad.bo.AuthSessionBO">
         <constructor>
             <arg column="session_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
             <arg column="username" javaType="java.lang.String"/>
             <arg column="role" javaType="com.agentsquad.squad.enums.AccountRole"/>
             <arg column="must_change_password" javaType="_boolean"/>
@@ -44,16 +44,17 @@
     </resultMap>
 
     <insert id="ensureLoginBucket">
-        INSERT IGNORE INTO sq_auth_rate_bucket (bucket_key, window_start, failures)
+        INSERT INTO sq_auth_rate_bucket (bucket_key, window_start, failures)
         VALUES (#{bucketKey}, #{now}, 0)
+        ON CONFLICT DO NOTHING
     </insert>
 
     <update id="recordLoginFailure">
         UPDATE sq_auth_rate_bucket
-        SET failures = CASE WHEN window_start &lt; DATE_SUB(#{now}, INTERVAL 15 MINUTE) THEN 1 ELSE failures + 1 END,
-        locked_until = CASE WHEN window_start &gt;= DATE_SUB(#{now}, INTERVAL 15 MINUTE)
-        AND failures &gt;= 4 THEN DATE_ADD(#{now}, INTERVAL 15 MINUTE) ELSE NULL END,
-        window_start = CASE WHEN window_start &lt; DATE_SUB(#{now}, INTERVAL 15 MINUTE) THEN #{now} ELSE window_start
+        SET failures = CASE WHEN window_start &lt; (CAST(#{now} AS timestamp) - INTERVAL '15 minutes') THEN 1 ELSE failures + 1 END,
+        locked_until = CASE WHEN window_start &gt;= (CAST(#{now} AS timestamp) - INTERVAL '15 minutes')
+        AND failures &gt;= 4 THEN (CAST(#{now} AS timestamp) + INTERVAL '15 minutes') ELSE NULL END,
+        window_start = CASE WHEN window_start &lt; (CAST(#{now} AS timestamp) - INTERVAL '15 minutes') THEN #{now} ELSE window_start
         END
         WHERE bucket_key = #{bucketKey}
     </update>
@@ -94,7 +95,7 @@
         UPDATE sq_auth_session
         SET last_seen_at = #{lastSeenAt}, idle_expires_at = LEAST(absolute_expires_at, #{idleExpiresAt})
         WHERE session_id = #{sessionId} AND revoked_at IS NULL
-        AND last_seen_at &lt; DATE_SUB(#{lastSeenAt}, INTERVAL 5 MINUTE)
+        AND last_seen_at &lt; (CAST(#{lastSeenAt} AS timestamp) - INTERVAL '5 minutes')
     </update>
 
     <update id="revokeSession">
@@ -123,15 +124,25 @@
 
     <delete id="deleteExpiredSessions">
         DELETE FROM sq_auth_session
-        WHERE absolute_expires_at &lt; #{now}
-        OR (revoked_at IS NOT NULL AND revoked_at &lt; #{now})
-        LIMIT 1000
+        WHERE id IN (
+            SELECT id FROM sq_auth_session
+            WHERE absolute_expires_at &lt; #{now}
+            OR (revoked_at IS NOT NULL AND revoked_at &lt; #{now})
+            ORDER BY id
+            LIMIT 1000
+            FOR UPDATE SKIP LOCKED
+        )
     </delete>
 
     <delete id="deleteStaleRateBuckets">
         DELETE FROM sq_auth_rate_bucket
-        WHERE window_start &lt; #{before}
-        AND (locked_until IS NULL OR locked_until &lt; #{before})
-        LIMIT 1000
+        WHERE id IN (
+            SELECT id FROM sq_auth_rate_bucket
+            WHERE window_start &lt; #{before}
+            AND (locked_until IS NULL OR locked_until &lt; #{before})
+            ORDER BY id
+            LIMIT 1000
+            FOR UPDATE SKIP LOCKED
+        )
     </delete>
 </mapper>

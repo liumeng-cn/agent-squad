@@ -24,15 +24,15 @@ public class TaskDirectivePO {
     /**
      * 目标修订指令业务ID
      */
-    private String directiveId;
+    private Long directiveId;
     /**
      * 归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 归属会话ID
      */
-    private String conversationId;
+    private Long conversationId;
     /**
      * 会话代际
      */
@@ -40,15 +40,15 @@ public class TaskDirectivePO {
     /**
      * 受权用户消息ID
      */
-    private String sourceMessageId;
+    private Long sourceMessageId;
     /**
      * 来源回复执行作用域ID
      */
-    private String sourceScopeId;
+    private Long sourceScopeId;
     /**
      * 当前受权目标ID
      */
-    private String taskId;
+    private Long taskId;
     /**
      * 来源Scope内稳定业务调用键
      */
@@ -88,7 +88,7 @@ public class TaskDirectivePO {
     /**
      * 独立任务协调命令ID
      */
-    private String commandId;
+    private Long commandId;
     /**
      * 实际应用后的目标运行版本
      */

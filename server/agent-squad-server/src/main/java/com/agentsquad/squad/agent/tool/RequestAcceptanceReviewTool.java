@@ -1,5 +1,7 @@
 package com.agentsquad.squad.agent.tool;
 
+import com.agentsquad.squad.agent.RuntimeContextIds;
+
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.bo.AcceptanceReviewRequestBO;
 import com.agentsquad.squad.service.PlanAcceptanceService;
@@ -58,7 +60,7 @@ public class RequestAcceptanceReviewTool implements AgentTool {
         }
         try {
             var context = param.getRuntimeContext();
-            var review = acceptance.prepareUserReview(context.getUserId(), context.getSessionId(),
+            var review = acceptance.prepareUserReview(RuntimeContextIds.userId(context), context.getSessionId(),
                     json.convertValue(param.getInput(), AcceptanceReviewRequestBO.class));
             throw new ToolSuspendException(review.question());
         } catch (RuntimeBusinessException | IllegalArgumentException exception) {

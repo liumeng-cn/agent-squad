@@ -41,7 +41,8 @@ public class InternalIdentitySigner {
         String role = actor.roles().getFirst().name();
         String requestId = java.util.UUID.randomUUID().toString();
         String value = String.join("|", "agent-squad-gateway", "agent-squad-server", keyId,
-                actor.userId(), actor.username(), role, Long.toString(issued), Long.toString(expires),
+                Long.toString(actor.userId()), actor.username(), role,
+                Long.toString(issued), Long.toString(expires),
                 method, path, requestId);
         String payload = Base64.getUrlEncoder().withoutPadding()
                 .encodeToString(value.getBytes(StandardCharsets.UTF_8));

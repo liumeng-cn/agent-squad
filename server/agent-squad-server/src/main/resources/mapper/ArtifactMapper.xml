@@ -112,7 +112,7 @@
         #{id})
     </insert>
 
-    <select id="listTaskIds" resultType="java.lang.String">
+    <select id="listTaskIds" resultType="java.lang.Long">
         SELECT artifact_id FROM sq_task_artifact WHERE user_id = #{userId} AND task_id = #{taskId} ORDER BY id
     </select>
 
@@ -124,7 +124,7 @@
         #{id})
     </insert>
 
-    <select id="listScopeIds" resultType="java.lang.String">
+    <select id="listScopeIds" resultType="java.lang.Long">
         SELECT artifact_id FROM sq_scope_artifact WHERE user_id = #{userId} AND scope_id = #{scopeId} AND del_flag = '0'
         ORDER BY id
     </select>

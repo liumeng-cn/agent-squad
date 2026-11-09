@@ -15,6 +15,10 @@ import org.springframework.transaction.annotation.Propagation;
  */
 @Service
 public class OperationUnknownService {
+
+    /** 系统进程推进的状态不归属具体网页用户，执行实例身份记录在 executor_owner。 */
+    public static final long SYSTEM_ACTOR_ID = 0L;
+
     @Resource
     private ExecutionScopeService scopes;
 
@@ -25,7 +29,7 @@ public class OperationUnknownService {
     private ExecutionFailureService failures;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public boolean mark(OperationPO operation, long expectedVersion, String actor) {
+    public boolean mark(OperationPO operation, long expectedVersion, long actor) {
         var scope = scopes.lockOwned(operation.getUserId(), operation.getScopeId(), false);
         if (operations.markUnknown(operation.getUserId(), operation.getOperationId(), expectedVersion, actor) != 1) {
             return false;

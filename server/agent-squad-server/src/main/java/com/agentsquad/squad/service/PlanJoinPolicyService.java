@@ -69,9 +69,9 @@ public final class PlanJoinPolicyService {
         if (facts.planVersion() < 1 || facts.jobs().isEmpty() || facts.jobs().stream().noneMatch(PlanJoinJobBO::required)) {
             throw new IllegalArgumentException("计划版本无效或没有必要工作");
         }
-        var ids = new HashSet<String>();
+        var ids = new HashSet<Long>();
         for (var job : facts.jobs()) {
-            if (job.jobId() == null || job.jobId().isBlank() || !ids.add(job.jobId())
+            if (job.jobId() == null || job.jobId() <= 0 || !ids.add(job.jobId())
                     || job.planVersion() != facts.planVersion() || job.status() == null) {
                 throw new IllegalArgumentException("工作身份重复、状态无效或不属于当前计划");
             }

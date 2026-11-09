@@ -12,6 +12,13 @@ public final class ApiResultJson {
     private ApiResultJson() {
     }
 
+    /**
+     * 业务拒绝统一返回 HTTP 200，结果以响应体 code 判定。
+     */
+    public static int code(ObjectMapper mapper, String body) throws JsonProcessingException {
+        return mapper.readTree(body).path("code").asInt();
+    }
+
     public static JsonNode data(ObjectMapper mapper, String body) throws JsonProcessingException {
         JsonNode root = mapper.readTree(body);
         JsonNode data = root.get("data");

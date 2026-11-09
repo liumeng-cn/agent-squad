@@ -1,6 +1,7 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.converter.ModelFailureClassifier;
 import com.agentsquad.squad.exceptions.PlanCorrectionExhaustedException;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
@@ -66,13 +67,13 @@ class ExecutionFailureIntegrationTest {
 
     @Test
     void billingFailureOffersManualRetryButDoesNotAutomaticallyRetry(@TempDir Path directory) {
-        try (var context = start(MySqlTestDatabase.url(directory))) {
-            String user = UUID.randomUUID().toString();
+        try (var context = start(PostgresTestDatabase.url(directory))) {
+            Long user = IdWorker.getId();
             var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "billing", new MessageCreateDTO("你好", List.of()));
             var jdbc = context.getBean(JdbcTemplate.class);
             String session = session(jdbc, receipt.executionId());
-            String scopeId = context.getBean(ExecutionScopeService.class).scopeForSession(user, session);
-            String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
+            Long scopeId = context.getBean(ExecutionScopeService.class).scopeForSession(user, session);
+            Long binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", Long.class, receipt.executionId());
             var service = context.getBean(ExecutionFailureService.class);
             service.reportModel(user, session, "billing-call", new OpenAIException("private-secret", 402, "hidden", "hidden"));
             var scope = context.getBean(ExecutionScopeMapper.class).findOwned(user, scopeId);
@@ -93,12 +94,12 @@ class ExecutionFailureIntegrationTest {
 
     @Test
     void retainsRetryLimitAcrossRestartAndCreatesOneSuccessor(@TempDir Path directory) {
-        String database = MySqlTestDatabase.url(directory.resolve("failure"));
-        String user = UUID.randomUUID().toString();
-        String execution;
+        String database = PostgresTestDatabase.url(directory.resolve("failure"));
+        Long user = IdWorker.getId();
+        Long execution;
         String session;
-        String scopeId;
-        String message;
+        Long scopeId;
+        Long message;
         try (var context = start(database)) {
             var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateDTO("请回答", List.of()));
             execution = receipt.executionId();
@@ -109,7 +110,7 @@ class ExecutionFailureIntegrationTest {
             var service = context.getBean(ExecutionFailureService.class);
             service.reportModel(user, session, "call-1", new OpenAIException("private-secret", 503, "hidden", "hidden"));
             var scope = context.getBean(ExecutionScopeMapper.class).findOwned(user, scopeId);
-            String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, execution);
+            Long binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", Long.class, execution);
             assertThat(service.queueTransientRetry(scope, binding, "failure-one", "fixed-turn")).isTrue();
             assertThat(service.queueTransientRetry(scope, binding, "failure-one", "fixed-turn")).isTrue();
             assertThat(context.getBean(ExecutionFailureMapper.class).serviceAttempts(user, scopeId)).isEqualTo(1);
@@ -119,7 +120,7 @@ class ExecutionFailureIntegrationTest {
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             var service = context.getBean(ExecutionFailureService.class);
             var scope = context.getBean(ExecutionScopeMapper.class).findOwned(user, scopeId);
-            String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, execution);
+            Long binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", Long.class, execution);
             assertThat(service.queueTransientRetry(scope, binding, "failure-two", "fixed-turn")).isTrue();
             assertThat(service.queueTransientRetry(scope, binding, "failure-three", "fixed-turn")).isFalse();
             assertThat(context.getBean(ExecutionFailureMapper.class).serviceAttempts(user, scopeId)).isEqualTo(2);
@@ -143,19 +144,19 @@ class ExecutionFailureIntegrationTest {
 
     @Test
     void unknownWriteBlocksAutomaticAndManualRetry(@TempDir Path directory) {
-        try (var context = start(MySqlTestDatabase.url(directory.resolve("unknown")))) {
-            String user = UUID.randomUUID().toString();
+        try (var context = start(PostgresTestDatabase.url(directory.resolve("unknown")))) {
+            Long user = IdWorker.getId();
             var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateDTO("处理这项工作", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             String session = session(jdbc, receipt.executionId());
             var scopeService = context.getBean(ExecutionScopeService.class);
-            String scopeId = scopeService.scopeForSession(user, session);
+            Long scopeId = scopeService.scopeForSession(user, session);
             var operation = context.getBean(OperationService.class).prepare(new PrepareRequestBO(user, session, "turn", "write", "mock_ticket_create", "v1", "WRITE", Map.of("title", "test"), "stable", false, null, 0, 1, "tester"));
             jdbc.update("UPDATE sq_operation SET status='UNKNOWN' WHERE operation_id=?", operation.getOperationId());
             var failures = context.getBean(ExecutionFailureService.class);
             failures.reportModel(user, session, "error", new OpenAIException("private-secret", 503, "x", "x"));
             var scope = context.getBean(ExecutionScopeMapper.class).findOwned(user, scopeId);
-            String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
+            Long binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", Long.class, receipt.executionId());
             assertThat(failures.queueTransientRetry(scope, binding, "failed", "fixed-turn")).isFalse();
             jdbc.update("UPDATE sq_response_execution SET status='FAILED' WHERE execution_id=?", receipt.executionId());
             var snapshot = context.getBean(ConversationQueryService.class).snapshot(user, receipt.conversationId(), null, 40);
@@ -170,10 +171,10 @@ class ExecutionFailureIntegrationTest {
 
     @Test
     void invalidPlanLimitSurvivesRestart(@TempDir Path directory) {
-        String database = MySqlTestDatabase.url(directory.resolve("plan-limit"));
-        String user = UUID.randomUUID().toString();
+        String database = PostgresTestDatabase.url(directory.resolve("plan-limit"));
+        Long user = IdWorker.getId();
         String session;
-        String scopeId;
+        Long scopeId;
         try (var context = start(database)) {
             var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "plan-check", new MessageCreateDTO("验证纠正边界", List.of()));
             session = session(context.getBean(JdbcTemplate.class), receipt.executionId());
@@ -197,11 +198,11 @@ class ExecutionFailureIntegrationTest {
         }
     }
 
-    private static String session(JdbcTemplate jdbc, String execution) {
+    private static String session(JdbcTemplate jdbc, Long execution) {
         return jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=(SELECT binding_id FROM sq_response_execution WHERE execution_id=?)", String.class, execution);
     }
 
     private static ConfigurableApplicationContext start(String database) {
-        return MessageAcceptanceHttpTest.start(database, MySqlTestDatabase.username(), MySqlTestDatabase.password(), UUID.randomUUID().toString());
+        return MessageAcceptanceHttpTest.start(database, PostgresTestDatabase.username(), PostgresTestDatabase.password(), IdWorker.getId());
     }
 }

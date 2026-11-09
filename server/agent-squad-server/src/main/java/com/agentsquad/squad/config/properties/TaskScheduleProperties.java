@@ -26,6 +26,9 @@ public class TaskScheduleProperties {
     /** 未启用 Redis 唤醒时的命令轮询间隔，单位毫秒 */
     private volatile long commandDeliveryPollDelayMs = 1000;
 
+    /** 已到期未知命令的隔离扫描间隔，单位毫秒 */
+    private volatile long commandUnknownSweepDelayMs = 15000;
+
     /** 待删除会话清理间隔，单位毫秒 */
     private volatile long conversationCleanupDelayMs = 2000;
 

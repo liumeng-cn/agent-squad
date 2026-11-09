@@ -28,15 +28,15 @@ public class PlanPO {
     /**
      * 计划业务ID
      */
-    private String planId;
+    private Long planId;
     /**
      * 资源归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 所属目标ID
      */
-    private String taskId;
+    private Long taskId;
     /**
      * 计划版本（taskId 内递增）
      */

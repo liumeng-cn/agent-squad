@@ -34,9 +34,9 @@ public class ResponseFailureFactBO {
     /**
      * 来源消息标识
      */
-    private String sourceMessageId;
+    private Long sourceMessageId;
     /**
      * 目标业务标识
      */
-    private String taskId;
+    private Long taskId;
 }

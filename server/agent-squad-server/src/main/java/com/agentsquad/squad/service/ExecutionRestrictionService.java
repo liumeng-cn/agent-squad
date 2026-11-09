@@ -33,7 +33,7 @@ public class ExecutionRestrictionService {
      * 共享会话锁下原子写阻塞、命令与安全故障事件；重复发现不重复修改版本或追加状态事件。
      */
     @Transactional
-    public void restrict(String userId, String scopeId, String bindingId) {
+    public void restrict(Long userId, Long scopeId, Long bindingId) {
         var scope = scopes.lockOwned(userId, scopeId, false);
         int changed;
         if ("RESPONSE".equals(scope.getKind())) {

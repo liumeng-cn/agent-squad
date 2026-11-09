@@ -53,7 +53,7 @@ public class ConnectionController {
     @GetMapping("/connections/{connectionId}")
     public ApiResult<ConnectionVO> get(
             HttpServletRequest servletRequest,
-            @PathVariable String connectionId) {
+            @PathVariable Long connectionId) {
         return ApiResult.success(connectionService.get(UserContext.current(servletRequest).userId(), connectionId));
     }
 
@@ -64,7 +64,7 @@ public class ConnectionController {
     public ApiResult<ConnectionVO> update(
             HttpServletRequest servletRequest,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
-            @PathVariable String connectionId,
+            @PathVariable Long connectionId,
             @Valid @RequestBody ConnectionUpdateDTO request) {
         return ApiResult.success(connectionService.update(UserContext.current(servletRequest),
                 connectionId, idempotencyKey, request));

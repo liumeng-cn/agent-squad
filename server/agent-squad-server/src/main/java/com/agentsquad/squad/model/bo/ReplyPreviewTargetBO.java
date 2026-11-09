@@ -22,17 +22,17 @@ public class ReplyPreviewTargetBO {
     /**
      * 资源归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 所属会话ID
      */
-    private String conversationId;
+    private Long conversationId;
     /**
      * 回复执行ID；旧任务消息为空
      */
-    private String executionId;
+    private Long executionId;
     /**
      * 回复所关联的用户消息ID
      */
-    private String sourceMessageId;
+    private Long sourceMessageId;
 }

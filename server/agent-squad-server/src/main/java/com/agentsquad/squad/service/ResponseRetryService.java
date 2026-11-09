@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.observer.ExecutionTrace;
 import com.agentsquad.squad.enums.ActivityType;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
@@ -20,6 +21,7 @@ import com.agentsquad.squad.mapper.ExecutionFailureMapper;
 import com.agentsquad.squad.agent.MasterAgentIdentity;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,7 +41,7 @@ public class ResponseRetryService {
     private ExecutionTrace executionTrace;
     @Resource
     private ActivityProjectionService activities;
-    @org.springframework.beans.factory.annotation.Value("${agentsquad.response.completion-protocol:NATURAL}")
+    @Value("${agentsquad.response.completion-protocol:NATURAL}")
     private ResponseCompletionProtocol completionProtocol;
 
     @Resource
@@ -82,11 +84,11 @@ public class ResponseRetryService {
      * 同键返回原后继收据；多个键不能为同一失败记录建立两个后继，UNKNOWN账本不允许重试。
      */
     @Transactional
-    public MessageReceiptVO retry(String userId, String executionId, String key, long expectedVersion) {
+    public MessageReceiptVO retry(Long userId, Long executionId, String key, long expectedVersion) {
         if (key == null || key.isBlank() || key.length() > 160) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "重试幂等键无效");
         }
-        String oldBinding = responses.bindingForExecution(userId, executionId);
+        Long oldBinding = responses.bindingForExecution(userId, executionId);
         var scope = scopes.lockOwned(userId, scopeMapper.findScopeByBinding(userId, oldBinding), false);
         scopes.requireReadable(userId, scope.getScopeId());
         var original = responses.lockByBinding(userId, oldBinding);
@@ -104,10 +106,10 @@ public class ResponseRetryService {
                 || !failures.retryAllowed(userId, executionId)) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "当前状态不允许重试，请刷新对话");
         }
-        String next = UUID.randomUUID().toString();
-        String nextScope = UUID.randomUUID().toString();
-        String binding = UUID.randomUUID().toString();
-        String command = UUID.randomUUID().toString();
+        Long next = IdWorker.getId();
+        Long nextScope = IdWorker.getId();
+        Long binding = IdWorker.getId();
+        Long command = IdWorker.getId();
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         scopeMapper.insertScope(nextScope, userId, scope.getConversationId(), scope.getConversationGeneration(), "RESPONSE", next, scope.getAccountId());
         executionTrace.capture(userId, nextScope);
@@ -126,8 +128,10 @@ public class ResponseRetryService {
         commands.insertControl(command, userId, scopeKey, key, hash, null, binding, "MESSAGE_SUBMIT", payload, now);
         var created = scopeMapper.findOwned(userId, nextScope);
         events.publish(created, "command:" + command + ":execution.queued", "execution.queued", Map.of("executionId", next, "sourceMessageId", original.getSourceMessageId(), "retryOfExecutionId", executionId, "status", "QUEUED"));
+        // 回执游标必须固定为排队事件序号，后续活动事件会继续推进会话事件计数。
+        String cursor = scope.getConversationId() + ":" + scope.getConversationGeneration() + ":" + messages.eventSequence(userId, scope.getConversationId());
         activities.completed(created, binding, new ActivityBusinessFactBO(
-                ActivityType.USER_RETRY_SCHEDULED, command));
-        return new MessageReceiptVO(scope.getConversationId(), original.getSourceMessageId(), next, command, ResponseExecutionStatus.QUEUED, scope.getConversationId() + ":" + scope.getConversationGeneration() + ":" + messages.eventSequence(userId, scope.getConversationId()));
+                ActivityType.USER_RETRY_SCHEDULED, String.valueOf(command)));
+        return new MessageReceiptVO(scope.getConversationId(), original.getSourceMessageId(), next, command, ResponseExecutionStatus.QUEUED, cursor);
     }
 }

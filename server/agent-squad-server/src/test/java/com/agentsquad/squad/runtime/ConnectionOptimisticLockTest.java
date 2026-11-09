@@ -1,6 +1,7 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.identity.AuthView;
@@ -30,10 +31,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class ConnectionOptimisticLockTest {
     @Test
     void staleRevisionCannotOverwriteCommittedConnection(@TempDir Path directory) {
-        String owner = UUID.randomUUID().toString();
-        try (var context = MessageAcceptanceHttpTest.start(MySqlTestDatabase.url(directory),
-                MySqlTestDatabase.username(),
-                MySqlTestDatabase.password(), owner)) {
+        Long owner = IdWorker.getId();
+        try (var context = MessageAcceptanceHttpTest.start(PostgresTestDatabase.url(directory),
+                PostgresTestDatabase.username(),
+                PostgresTestDatabase.password(), owner)) {
             byte[] key = new byte[32];
             new java.security.SecureRandom().nextBytes(key);
             ReflectionTestUtils.setField(context.getBean(LocalSecretVaultService.class), "masterKeyBase64",
@@ -43,7 +44,7 @@ class ConnectionOptimisticLockTest {
             AuthView actor = new AuthView(owner, "tester", List.of(AccountRole.USER), null);
             var created = service.create(actor, "create", new ConnectionCreateDTO(
                     "隔离连接", "mock", "test", Map.of("scope", "test"), "test-only-secret"));
-            String id = created.connectionId();
+            Long id = created.connectionId();
             assertThat(mapper.findOwned(owner, id).getRevision()).isZero();
 
             service.update(actor, id, "first", new ConnectionUpdateDTO(0L, false, null, null));

@@ -50,7 +50,7 @@ public class GatewayAuthenticationFilter implements GlobalFilter, Ordered {
                 headers.remove("X-User-Name");
                 headers.remove("X-Squad-Assertion");
                 if (assertion != null) headers.set("X-Squad-Assertion", assertion);
-                headers.set("X-User-Id", user.userId());
+                headers.set("X-User-Id", Long.toString(user.userId()));
                 headers.set("X-User-Role", user.roles().stream().map(Enum::name).collect(java.util.stream.Collectors.joining(",")));
                 headers.set("X-User-Name", user.username());
                 headers.remove("Cookie");

@@ -15,10 +15,10 @@ import java.util.List;
 public class ResponseExecutionVO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("executionId")
-    private final String executionId;
+    private final Long executionId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId")
-    private final String sourceMessageId;
+    private final Long sourceMessageId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("status")
     private final ResponseExecutionStatus status;
@@ -27,22 +27,22 @@ public class ResponseExecutionVO {
     private final long version;
 
     @com.fasterxml.jackson.annotation.JsonProperty("answerMessageId")
-    private final String answerMessageId;
+    private final Long answerMessageId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("failureId")
-    private final String failureId;
+    private final Long failureId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("allowedActions")
     private final List<String> allowedActions;
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public ResponseExecutionVO(
-            @com.fasterxml.jackson.annotation.JsonProperty("executionId") String executionId,
-            @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId") String sourceMessageId,
+            @com.fasterxml.jackson.annotation.JsonProperty("executionId") Long executionId,
+            @com.fasterxml.jackson.annotation.JsonProperty("sourceMessageId") Long sourceMessageId,
             @com.fasterxml.jackson.annotation.JsonProperty("status") ResponseExecutionStatus status,
             @com.fasterxml.jackson.annotation.JsonProperty("version") long version,
-            @com.fasterxml.jackson.annotation.JsonProperty("answerMessageId") String answerMessageId,
-            @com.fasterxml.jackson.annotation.JsonProperty("failureId") String failureId,
+            @com.fasterxml.jackson.annotation.JsonProperty("answerMessageId") Long answerMessageId,
+            @com.fasterxml.jackson.annotation.JsonProperty("failureId") Long failureId,
             @com.fasterxml.jackson.annotation.JsonProperty("allowedActions") List<String> allowedActions) {
         this.executionId = executionId;
         this.sourceMessageId = sourceMessageId;

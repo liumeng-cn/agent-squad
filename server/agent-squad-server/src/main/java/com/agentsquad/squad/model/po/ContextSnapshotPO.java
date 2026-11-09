@@ -24,15 +24,15 @@ public class ContextSnapshotPO {
     /**
      * 局部上下文快照业务ID
      */
-    private String snapshotId;
+    private Long snapshotId;
     /**
      * 资源归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 所属目标ID
      */
-    private String taskId;
+    private Long taskId;
     /**
      * 目标计划节点键
      */

@@ -22,11 +22,11 @@ public class ConversationExecutionBO {
     /**
      * 回复执行业务ID
      */
-    private String executionId;
+    private Long executionId;
     /**
      * 来源用户消息ID
      */
-    private String sourceMessageId;
+    private Long sourceMessageId;
     /**
      * 回复生命周期状态
      */
@@ -42,9 +42,9 @@ public class ConversationExecutionBO {
     /**
      * 授权助手回答消息ID
      */
-    private String answerMessageId;
+    private Long answerMessageId;
     /**
      * 最近结构化故障ID
      */
-    private String failureId;
+    private Long failureId;
 }

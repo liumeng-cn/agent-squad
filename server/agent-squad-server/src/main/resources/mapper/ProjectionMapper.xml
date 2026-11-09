@@ -4,9 +4,9 @@
 
     <resultMap id="findDueTargetsResult" type="com.agentsquad.squad.model.bo.ProjectionTargetBO">
         <constructor>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="binding_id" javaType="java.lang.String"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="binding_id" javaType="java.lang.Long"/>
             <arg column="agent_id" javaType="java.lang.String"/>
             <arg column="framework_session_id" javaType="java.lang.String"/>
             <arg column="native_event_cursor" javaType="_long"/>

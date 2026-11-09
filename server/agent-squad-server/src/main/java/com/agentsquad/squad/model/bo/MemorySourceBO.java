@@ -22,7 +22,7 @@ public class MemorySourceBO {
     /**
      * 消息业务ID
      */
-    private String messageId;
+    private Long messageId;
     /**
      * 用户消息或授权助手正文
      */

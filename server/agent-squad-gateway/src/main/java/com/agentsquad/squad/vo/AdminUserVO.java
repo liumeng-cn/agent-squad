@@ -17,8 +17,10 @@ import java.time.LocalDateTime;
 @lombok.experimental.Accessors(fluent = true)
 public class AdminUserVO {
 
+    /** 业务用户 ID 在 Java 内为 Long，JSON 输出十进制字符串以免浏览器精度丢失。 */
     @com.fasterxml.jackson.annotation.JsonProperty("userId")
-    private final String userId;
+    @com.fasterxml.jackson.databind.annotation.JsonSerialize(using = com.fasterxml.jackson.databind.ser.std.ToStringSerializer.class)
+    private final Long userId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("username")
     private final String username;
@@ -43,7 +45,7 @@ public class AdminUserVO {
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public AdminUserVO(
-            @com.fasterxml.jackson.annotation.JsonProperty("userId") String userId,
+            @com.fasterxml.jackson.annotation.JsonProperty("userId") Long userId,
             @com.fasterxml.jackson.annotation.JsonProperty("username") String username,
             @com.fasterxml.jackson.annotation.JsonProperty("displayName") String displayName,
             @com.fasterxml.jackson.annotation.JsonProperty("role") AccountRole role,

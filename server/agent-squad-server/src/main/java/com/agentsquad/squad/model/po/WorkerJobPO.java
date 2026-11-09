@@ -32,15 +32,15 @@ public class WorkerJobPO {
     /**
      * 委派节点业务ID
      */
-    private String jobId;
+    private Long jobId;
     /**
      * 资源归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 所属目标ID
      */
-    private String taskId;
+    private Long taskId;
     /**
      * 所属计划版本
      */
@@ -80,11 +80,11 @@ public class WorkerJobPO {
     /**
      * 运行时绑定ID
      */
-    private String bindingId;
+    private Long bindingId;
     /**
      * 结果复用来源JobID
      */
-    private String reusedFromJobId;
+    private Long reusedFromJobId;
     /**
      * 取消屏障时间；新计划替代在途旧Job时写入
      */

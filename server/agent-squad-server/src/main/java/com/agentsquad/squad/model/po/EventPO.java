@@ -29,7 +29,7 @@ public class EventPO {
     /**
      * 目标ID
      */
-    private String taskId;
+    private Long taskId;
     /**
      * 公开事件类型
      */

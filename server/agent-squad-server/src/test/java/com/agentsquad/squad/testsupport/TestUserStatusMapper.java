@@ -23,7 +23,7 @@ public class TestUserStatusMapper implements UserStatusMapper {
     private JdbcTemplate jdbcTemplate;
 
     @Override
-    public AccountStatus findStatus(String userId) {
+    public AccountStatus findStatus(Long userId) {
         List<String> statuses = jdbcTemplate.queryForList(
                 "SELECT status FROM sq_user WHERE user_id = ? AND del_flag = '0'", String.class, userId);
         return statuses.isEmpty() ? AccountStatus.ACTIVE : AccountStatus.valueOf(statuses.getFirst());

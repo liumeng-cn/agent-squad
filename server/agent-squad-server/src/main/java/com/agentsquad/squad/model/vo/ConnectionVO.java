@@ -11,7 +11,7 @@ import java.util.Map;
 public class ConnectionVO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("connectionId")
-    private final String connectionId;
+    private final Long connectionId;
 
     @com.fasterxml.jackson.annotation.JsonProperty("name")
     private final String name;
@@ -36,7 +36,7 @@ public class ConnectionVO {
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public ConnectionVO(
-            @com.fasterxml.jackson.annotation.JsonProperty("connectionId") String connectionId,
+            @com.fasterxml.jackson.annotation.JsonProperty("connectionId") Long connectionId,
             @com.fasterxml.jackson.annotation.JsonProperty("name") String name,
             @com.fasterxml.jackson.annotation.JsonProperty("provider") String provider,
             @com.fasterxml.jackson.annotation.JsonProperty("environment") String environment,

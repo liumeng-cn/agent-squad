@@ -7,7 +7,7 @@ import java.util.List;
  * <p>
  * 由已验证上下文快照产生，模型不能自报；空集合表示该执行不获得任何技能。
  */
-public record SkillSelectionBO(List<String> skillVersionIds) {
+public record SkillSelectionBO(List<Long> skillVersionIds) {
     public SkillSelectionBO {
         skillVersionIds = List.copyOf(skillVersionIds);
     }

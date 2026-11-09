@@ -22,15 +22,15 @@ public class SandboxBindingBO {
     /**
      * 资源归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 统一执行作用域ID
      */
-    private String scopeId;
+    private Long scopeId;
     /**
      * 绑定业务ID
      */
-    private String bindingId;
+    private Long bindingId;
     /**
      * 原生会话标识
      */

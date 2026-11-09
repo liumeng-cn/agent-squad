@@ -4,25 +4,25 @@
 
     <resultMap id="findActiveOwnedResult" type="com.agentsquad.squad.model.po.ExecutionScopePO">
         <constructor>
-            <arg column="scope_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="conversation_id" javaType="java.lang.Long"/>
             <arg column="conversation_generation" javaType="_long"/>
             <arg column="kind" javaType="java.lang.String"/>
-            <arg column="owner_id" javaType="java.lang.String"/>
-            <arg column="account_id" javaType="java.lang.String"/>
+            <arg column="owner_id" javaType="java.lang.Long"/>
+            <arg column="account_id" javaType="java.lang.Long"/>
         </constructor>
     </resultMap>
 
     <resultMap id="findOwnedResult" type="com.agentsquad.squad.model.po.ExecutionScopePO">
         <constructor>
-            <arg column="scope_id" javaType="java.lang.String"/>
-            <arg column="user_id" javaType="java.lang.String"/>
-            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="scope_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="conversation_id" javaType="java.lang.Long"/>
             <arg column="conversation_generation" javaType="_long"/>
             <arg column="kind" javaType="java.lang.String"/>
-            <arg column="owner_id" javaType="java.lang.String"/>
-            <arg column="account_id" javaType="java.lang.String"/>
+            <arg column="owner_id" javaType="java.lang.Long"/>
+            <arg column="account_id" javaType="java.lang.Long"/>
         </constructor>
     </resultMap>
 
@@ -87,12 +87,12 @@
 
     <update id="inheritTrace">
         UPDATE sq_execution_scope child
-        JOIN sq_execution_scope parent
-        ON parent.user_id = child.user_id
+        SET traceparent = parent.traceparent,
+        tracestate = parent.tracestate
+        FROM sq_execution_scope parent
+        WHERE parent.user_id = child.user_id
         AND parent.scope_id = #{parentScopeId}
-        SET child.traceparent = parent.traceparent,
-        child.tracestate = parent.tracestate
-        WHERE child.user_id = #{userId}
+        AND child.user_id = #{userId}
         AND child.scope_id = #{scopeId}
         AND child.traceparent IS NULL
         AND parent.traceparent IS NOT NULL
@@ -170,22 +170,22 @@
         FROM sq_execution_scope WHERE user_id = #{userId} AND scope_id = #{scopeId} AND del_flag = '0'
     </select>
 
-    <select id="findBindingBySession" resultType="java.lang.String">
+    <select id="findBindingBySession" resultType="java.lang.Long">
         SELECT binding_id FROM sq_runtime_binding WHERE user_id = #{userId} AND framework_session_id = #{sessionId} AND
         del_flag = '0'
     </select>
 
-    <select id="findScopeBySession" resultType="java.lang.String">
+    <select id="findScopeBySession" resultType="java.lang.Long">
         SELECT scope_id FROM sq_runtime_binding WHERE user_id = #{userId} AND framework_session_id = #{sessionId} AND
         del_flag = '0'
     </select>
 
-    <select id="findScopeByBinding" resultType="java.lang.String">
+    <select id="findScopeByBinding" resultType="java.lang.Long">
         SELECT scope_id FROM sq_runtime_binding WHERE user_id = #{userId} AND binding_id = #{bindingId} AND del_flag =
         '0'
     </select>
 
-    <select id="findScopeByTask" resultType="java.lang.String">
+    <select id="findScopeByTask" resultType="java.lang.Long">
         SELECT scope_id FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}
     </select>
 

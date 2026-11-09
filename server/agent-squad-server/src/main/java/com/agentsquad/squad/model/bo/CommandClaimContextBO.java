@@ -22,11 +22,11 @@ public class CommandClaimContextBO {
     /**
      * 资源归属用户ID
      */
-    private String userId;
+    private Long userId;
     /**
      * 统一执行作用域ID
      */
-    private String scopeId;
+    private Long scopeId;
     /**
      * 命令动作
      */
@@ -34,5 +34,5 @@ public class CommandClaimContextBO {
     /**
      * 原生会话绑定ID；删除类命令可为空
      */
-    private String bindingId;
+    private Long bindingId;
 }

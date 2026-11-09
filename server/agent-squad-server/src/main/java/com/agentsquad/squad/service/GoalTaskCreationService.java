@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.utils.CanonicalJson;
@@ -95,7 +96,7 @@ public class GoalTaskCreationService {
      * 首次创建检查运行状态；原调用重放仅返回原收据，不重新激活已结束目标或刷新额度。
      */
     @Transactional
-    public TaskReceiptVO create(String userId, String sessionId, GoalTaskCreateBO request) {
+    public TaskReceiptVO create(Long userId, String sessionId, GoalTaskCreateBO request) {
         validate(request);
         userStatusGuard.requireActive(userId);
         ExecutionScopePO source = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), false);
@@ -106,7 +107,7 @@ public class GoalTaskCreationService {
         if (!"ACTIVE".equals(conversation.getStatus()) || conversation.getGeneration() != source.getConversationGeneration()) {
             throw error(RuntimeExceptionCode.NOT_FOUND, "来源会话已失效");
         }
-        String sourceBinding = scopeMapper.findBindingBySession(userId, sessionId);
+        Long sourceBinding = scopeMapper.findBindingBySession(userId, sessionId);
         ResponseRuntimePO reply = replies.lockByBinding(userId, sourceBinding);
         if (reply == null || !reply.getSourceMessageId().equals(request.sourceMessageId())) {
             throw error(RuntimeExceptionCode.FORBIDDEN, "目标来源必须是当前受权消息");
@@ -135,10 +136,10 @@ public class GoalTaskCreationService {
         if (account == null) {
             throw error(RuntimeExceptionCode.CONFLICT, "来源预算账户已不可用");
         }
-        String taskId = UUID.randomUUID().toString();
-        String bindingId = UUID.randomUUID().toString();
-        String commandId = UUID.randomUUID().toString();
-        String scopeId = UUID.randomUUID().toString();
+        Long taskId = IdWorker.getId();
+        Long bindingId = IdWorker.getId();
+        Long commandId = IdWorker.getId();
+        Long scopeId = IdWorker.getId();
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         // 用户原文和模型拟定的目标分别保存，不能把模型改写标记成用户原话。
         String input = RuntimePayloads.toJson(json, Map.of("message", message.text(), "title", request.title(),
@@ -174,13 +175,9 @@ public class GoalTaskCreationService {
 
     private void validate(GoalTaskCreateBO request) {
         if (request == null || invalid(request.logicalKey(), 160) || invalid(request.title(), 200)
-                || invalid(request.objective(), 20000) || invalid(request.sourceMessageId(), 36)) {
+                || invalid(request.objective(), 20000) || request.sourceMessageId() == null
+                || request.sourceMessageId() <= 0) {
             throw error(RuntimeExceptionCode.VALIDATION, "目标创建参数无效");
-        }
-        try {
-            UUID.fromString(request.sourceMessageId());
-        } catch (IllegalArgumentException exception) {
-            throw error(RuntimeExceptionCode.VALIDATION, "来源消息标识无效");
         }
     }
 

@@ -1,9 +1,9 @@
 # 本机验证配置，直接填写实际值，不依赖环境变量。
 spring:
   datasource:
-    url: jdbc:mysql://127.0.0.1:13306/agent_squad
-    username: root
-    password: test
+    url: jdbc:postgresql://127.0.0.1:15432/agent_squad?stringtype=unspecified
+    username: squad
+    password: 4e59485ceda19845fac6833a19bdd53953f8756f1dd5a934
 server:
   address: 127.0.0.1
   port: 18081

@@ -37,20 +37,20 @@ public class ConversationReadController {
 
     @GetMapping("/snapshot")
     public ApiResult<ConversationSnapshotVO> snapshot(HttpServletRequest servletRequest,
-                                                      @PathVariable String conversationId, @RequestParam(required = false) Long beforeMessageSeq,
+                                                      @PathVariable Long conversationId, @RequestParam(required = false) Long beforeMessageSeq,
                                                       @RequestParam(defaultValue = "40") int limit) {
         return ApiResult.success(queries.snapshot(UserContext.current(servletRequest).userId(), conversationId, beforeMessageSeq, limit));
     }
 
     @GetMapping("/activities")
-    public ApiResult<ActivityHistoryPageVO> activities(HttpServletRequest request, @PathVariable String conversationId,
+    public ApiResult<ActivityHistoryPageVO> activities(HttpServletRequest request, @PathVariable Long conversationId,
                                                        @ModelAttribute ActivityHistoryDTO query) {
         return ApiResult.success(queries.activityHistory(UserContext.current(request).userId(), conversationId, query));
     }
 
     @GetMapping(value = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(HttpServletRequest servletRequest,
-                             @PathVariable String conversationId, @RequestParam(required = false) String after,
+                             @PathVariable Long conversationId, @RequestParam(required = false) String after,
                              @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId) {
         if (servletRequest.getDispatcherType() == DispatcherType.ASYNC) {
             // 连接结束或断开后容器会再派发一次，此时响应已提交，不能再建立订阅。
@@ -62,7 +62,7 @@ public class ConversationReadController {
 
     @PatchMapping("/title")
     public ApiResult<ConversationViewVO> rename(
-            HttpServletRequest servletRequest, @PathVariable String conversationId,
+            HttpServletRequest servletRequest, @PathVariable Long conversationId,
             @Valid @RequestBody ConversationTitleUpdateDTO request) {
         return ApiResult.success(titles.rename(UserContext.current(servletRequest).userId(), conversationId, request));
     }

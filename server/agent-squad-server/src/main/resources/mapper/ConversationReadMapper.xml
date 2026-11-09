@@ -4,14 +4,14 @@
 
     <resultMap id="headerResult" type="com.agentsquad.squad.model.bo.ConversationHeaderBO">
         <constructor>
-            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="conversation_id" javaType="java.lang.Long"/>
             <arg column="title" javaType="java.lang.String"/>
             <arg column="title_source" javaType="java.lang.String"/>
             <arg column="title_version" javaType="_long"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="generation" javaType="_long"/>
             <arg column="version" javaType="_long"/>
-            <arg column="active_task_id" javaType="java.lang.String"/>
+            <arg column="active_task_id" javaType="java.lang.Long"/>
             <arg column="event_sequence" javaType="_long"/>
             <arg column="last_activity_at" javaType="java.time.LocalDateTime"/>
         </constructor>
@@ -19,28 +19,28 @@
 
     <resultMap id="messagesResult" type="com.agentsquad.squad.model.po.ConversationMessagePO">
         <constructor>
-            <arg column="message_id" javaType="java.lang.String"/>
+            <arg column="message_id" javaType="java.lang.Long"/>
             <arg column="sequence" javaType="_long"/>
             <arg column="role" javaType="java.lang.String"/>
             <arg column="text" javaType="java.lang.String"/>
             <arg column="revision" javaType="_long"/>
             <arg column="completed" javaType="_boolean"/>
-            <arg column="source_message_id" javaType="java.lang.String"/>
-            <arg column="execution_id" javaType="java.lang.String"/>
-            <arg column="task_id" javaType="java.lang.String"/>
+            <arg column="source_message_id" javaType="java.lang.Long"/>
+            <arg column="execution_id" javaType="java.lang.Long"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
             <arg column="occurred_at" javaType="java.time.LocalDateTime"/>
         </constructor>
     </resultMap>
 
     <resultMap id="activeExecutionsResult" type="com.agentsquad.squad.model.bo.ConversationExecutionBO">
         <constructor>
-            <arg column="execution_id" javaType="java.lang.String"/>
-            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="execution_id" javaType="java.lang.Long"/>
+            <arg column="source_message_id" javaType="java.lang.Long"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="version" javaType="_long"/>
             <arg column="cancelled" javaType="_boolean"/>
-            <arg column="answer_message_id" javaType="java.lang.String"/>
-            <arg column="failure_id" javaType="java.lang.String"/>
+            <arg column="answer_message_id" javaType="java.lang.Long"/>
+            <arg column="failure_id" javaType="java.lang.Long"/>
         </constructor>
     </resultMap>
 
@@ -56,14 +56,14 @@
 
     <resultMap id="conversationsResult" type="com.agentsquad.squad.model.bo.ConversationHeaderBO">
         <constructor>
-            <arg column="conversation_id" javaType="java.lang.String"/>
+            <arg column="conversation_id" javaType="java.lang.Long"/>
             <arg column="title" javaType="java.lang.String"/>
             <arg column="title_source" javaType="java.lang.String"/>
             <arg column="title_version" javaType="_long"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="generation" javaType="_long"/>
             <arg column="version" javaType="_long"/>
-            <arg column="active_task_id" javaType="java.lang.String"/>
+            <arg column="active_task_id" javaType="java.lang.Long"/>
             <arg column="event_sequence" javaType="_long"/>
             <arg column="last_activity_at" javaType="java.time.LocalDateTime"/>
         </constructor>
@@ -71,20 +71,20 @@
 
     <resultMap id="pageExecutionsResult" type="com.agentsquad.squad.model.bo.ConversationExecutionBO">
         <constructor>
-            <arg column="execution_id" javaType="java.lang.String"/>
-            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="execution_id" javaType="java.lang.Long"/>
+            <arg column="source_message_id" javaType="java.lang.Long"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="version" javaType="_long"/>
             <arg column="cancelled" javaType="_boolean"/>
-            <arg column="answer_message_id" javaType="java.lang.String"/>
-            <arg column="failure_id" javaType="java.lang.String"/>
+            <arg column="answer_message_id" javaType="java.lang.Long"/>
+            <arg column="failure_id" javaType="java.lang.Long"/>
         </constructor>
     </resultMap>
 
     <resultMap id="pageTasksResult" type="com.agentsquad.squad.model.bo.ConversationTaskStateBO">
         <constructor>
-            <arg column="task_id" javaType="java.lang.String"/>
-            <arg column="source_message_id" javaType="java.lang.String"/>
+            <arg column="task_id" javaType="java.lang.Long"/>
+            <arg column="source_message_id" javaType="java.lang.Long"/>
             <arg column="status" javaType="java.lang.String"/>
             <arg column="version" javaType="_long"/>
         </constructor>
@@ -124,7 +124,7 @@
         WHERE user_id = #{userId}
         AND conversation_id = #{conversationId}
         AND del_flag = '0'
-        AND (#{before} IS NULL OR message_seq &lt; #{before})
+        AND (CAST(#{before} AS bigint) IS NULL OR message_seq &lt; #{before})
         ORDER BY message_seq DESC
         LIMIT #{limit}
     </select>
@@ -197,7 +197,7 @@
         AND generation = #{generation}
     </select>
 
-    <select id="interactionIds" resultType="java.lang.String">
+    <select id="interactionIds" resultType="java.lang.Long">
         SELECT i.interaction_id
         FROM sq_interaction i
         JOIN sq_execution_scope s ON s.user_id = i.user_id
@@ -212,7 +212,7 @@
         ORDER BY i.id
     </select>
 
-    <select id="deliverableIds" resultType="java.lang.String">
+    <select id="deliverableIds" resultType="java.lang.Long">
         SELECT DISTINCT a.artifact_id
         FROM sq_scope_artifact a
         JOIN sq_execution_scope s ON s.user_id = a.user_id
@@ -227,7 +227,7 @@
         WHERE m.user_id = a.user_id AND m.artifact_id = a.artifact_id)
     </select>
 
-    <select id="taskAnswer" resultType="java.lang.String">
+    <select id="taskAnswer" resultType="java.lang.Long">
         SELECT message_id
         FROM sq_message
         WHERE user_id = #{userId}
@@ -239,7 +239,7 @@
         FOR UPDATE
     </select>
 
-    <select id="taskSource" resultType="java.lang.String">
+    <select id="taskSource" resultType="java.lang.Long">
         SELECT origin_message_id
         FROM sq_goal_task
         WHERE user_id = #{userId}
@@ -304,7 +304,7 @@
         WHERE user_id = #{userId}
         AND status = 'ACTIVE'
         AND del_flag = '0'
-        AND (#{beforeTime} IS NULL
+        AND (CAST(#{beforeTime} AS timestamp) IS NULL
         OR COALESCE(last_activity_at,
         create_time) &lt; #{beforeTime}
         OR (COALESCE(last_activity_at,
@@ -334,7 +334,7 @@
         AND status = 'ACTIVE'
     </update>
 
-    <select id="uncertainOperationIds" resultType="java.lang.String">
+    <select id="uncertainOperationIds" resultType="java.lang.Long">
         SELECT o.operation_id
         FROM sq_operation o
         JOIN sq_execution_scope s ON s.user_id = o.user_id

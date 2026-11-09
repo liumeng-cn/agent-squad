@@ -5,7 +5,8 @@ import com.agentsquad.squad.model.dto.MessageCreateDTO;
 import com.agentsquad.squad.service.ConversationEventStreamerService;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.RedisConversationNotificationsService;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
+import com.agentsquad.squad.testsupport.TestRedis;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
@@ -45,8 +46,8 @@ class CrossInstanceSseIntegrationTest {
     @ValueSource(booleans = {false, true})
     @Timeout(45)
     void anotherInstanceReceivesFinalAnswerOrReconcilesMissedNotice(boolean missNotice, @TempDir Path directory) throws Exception {
-        String user = "00000000-0000-0000-0000-000000000001";
-        String database = MySqlTestDatabase.url(directory);
+        Long user = 1L;
+        String database = PostgresTestDatabase.url(directory);
         String namespace = "squad:notify-test:" + UUID.randomUUID();
         try (var model = new NaturalReplyModelStub();
              var execution = start(database, namespace, model.baseUrl(), false);
@@ -61,7 +62,7 @@ class CrossInstanceSseIntegrationTest {
             int port = ((ServletWebServerApplicationContext) page).getWebServer().getPort();
             var request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port
                             + "/api/v1/conversations/" + accepted.conversationId() + "/events"))
-                    .timeout(Duration.ofSeconds(15)).header("X-User-Id", user).header("X-User-Role", "USER")
+                    .timeout(Duration.ofSeconds(15)).header("X-User-Id", String.valueOf(user)).header("X-User-Role", "USER")
                     .header("Last-Event-ID", accepted.conversationId() + ":0:" + sequence).GET().build();
             var response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
             assertThat(response.statusCode()).isEqualTo(200);
@@ -135,13 +136,13 @@ class CrossInstanceSseIntegrationTest {
 
     private ConfigurableApplicationContext start(String database, String namespace, String model, boolean page) {
         var properties = new ArrayList<>(List.of(
-                "--spring.datasource.url=" + database, "--spring.datasource.username=" + MySqlTestDatabase.username(),
-                "--spring.datasource.password=" + MySqlTestDatabase.password(), "--server.shutdown=immediate",
+                "--spring.datasource.url=" + database, "--spring.datasource.username=" + PostgresTestDatabase.username(),
+                "--spring.datasource.password=" + PostgresTestDatabase.password(), "--server.shutdown=immediate",
                 "--agentsquad.identity.allow-unsigned-local=true", "--agentsquad.delivery.enabled=" + !page,
                 "--agentsquad.events.reconcile-delay-ms=3600000", "--agentsquad.events.redis-reconnect-delay-ms=3600000",
                 "--agentsquad.redis-wakeup.enabled=true", "--agentsquad.redis-wakeup.namespace=" + namespace,
-                "--spring.data.redis.host=127.0.0.1", "--spring.data.redis.port=" + System.getenv("SQUAD_TEST_REDIS_PORT"),
-                "--spring.data.redis.password=" + System.getenv("SQUAD_TEST_REDIS_PASSWORD"),
+                "--spring.data.redis.host=" + TestRedis.host(), "--spring.data.redis.port=" + TestRedis.port(),
+                "--spring.data.redis.password=" + TestRedis.password(),
                 "--spring.data.redis.timeout=300ms", "--spring.data.redis.connect-timeout=300ms",
                 "--agentsquad.model.api-key=test-only", "--agentsquad.model.name=test-model", "--agentsquad.model.base-url=" + model,
                 "--agentsquad.worker.model-profiles.default.api-key=test-only",

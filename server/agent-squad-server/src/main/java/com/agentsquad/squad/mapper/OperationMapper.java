@@ -14,85 +14,85 @@ import java.util.List;
 @Mapper
 public interface OperationMapper {
 
-    ToolExecutionContextBO lockToolContext(@Param("userId") String userId, @Param("sessionId") String sessionId);
+    ToolExecutionContextBO lockToolContext(@Param("userId") Long userId, @Param("sessionId") String sessionId);
 
-    int insert(@Param("operationId") String operationId, @Param("userId") String userId,
-               @Param("taskId") String taskId, @Param("jobId") String jobId,
-               @Param("bindingId") String bindingId, @Param("frameworkTurnId") String frameworkTurnId,
+    int insert(@Param("operationId") Long operationId, @Param("userId") Long userId,
+               @Param("taskId") Long taskId, @Param("jobId") Long jobId,
+               @Param("bindingId") Long bindingId, @Param("frameworkTurnId") String frameworkTurnId,
                @Param("toolCallId") String toolCallId, @Param("toolKey") String toolKey,
                @Param("toolVersion") String toolVersion,
                @Param("businessIntentKey") String businessIntentKey, @Param("effect") String effect,
-               @Param("connectionId") String connectionId,
+               @Param("connectionId") Long connectionId,
                @Param("connectionRevision") long connectionRevision,
                @Param("authVersion") long authVersion, @Param("requestHash") String requestHash,
                @Param("argumentsJson") String argumentsJson, @Param("status") String status,
                @Param("creatorName") String creatorName, @Param("budgetUsageKey") String budgetUsageKey);
 
-    OperationPO findByNativeCall(@Param("userId") String userId,
-                                 @Param("bindingId") String bindingId,
+    OperationPO findByNativeCall(@Param("userId") Long userId,
+                                 @Param("bindingId") Long bindingId,
                                  @Param("frameworkTurnId") String frameworkTurnId,
                                  @Param("toolCallId") String toolCallId);
 
-    OperationPO findByBusinessIntent(@Param("userId") String userId,
-                                     @Param("scopeId") String scopeId,
+    OperationPO findByBusinessIntent(@Param("userId") Long userId,
+                                     @Param("scopeId") Long scopeId,
                                      @Param("toolKey") String toolKey,
                                      @Param("businessIntentKey") String businessIntentKey);
 
-    OperationPO findOwned(@Param("userId") String userId,
-                          @Param("operationId") String operationId);
+    OperationPO findOwned(@Param("userId") Long userId,
+                          @Param("operationId") Long operationId);
 
-    List<OperationPO> listByTask(@Param("userId") String userId, @Param("taskId") String taskId,
+    List<OperationPO> listByTask(@Param("userId") Long userId, @Param("taskId") Long taskId,
                                  @Param("cursorId") Long cursorId, @Param("limit") int limit);
 
-    Long cursorIdOf(@Param("userId") String userId, @Param("operationId") String operationId);
+    Long cursorIdOf(@Param("userId") Long userId, @Param("operationId") Long operationId);
 
-    int markWaitingApproval(@Param("userId") String userId,
-                            @Param("operationId") String operationId,
+    int markWaitingApproval(@Param("userId") Long userId,
+                            @Param("operationId") Long operationId,
                             @Param("expectedVersion") long expectedVersion);
 
-    int markInFlight(@Param("userId") String userId, @Param("operationId") String operationId,
+    int markInFlight(@Param("userId") Long userId, @Param("operationId") Long operationId,
                      @Param("expectedVersion") long expectedVersion, @Param("owner") String owner,
                      @Param("fence") long fence,
                      @Param("leaseUntil") LocalDateTime leaseUntil,
                      @Param("externalKey") String externalKey);
 
-    int completeInFlight(@Param("userId") String userId,
-                         @Param("operationId") String operationId,
+    int completeInFlight(@Param("userId") Long userId,
+                         @Param("operationId") Long operationId,
                          @Param("expectedVersion") long expectedVersion,
                          @Param("owner") String owner, @Param("fence") long fence,
                          @Param("status") String status,
                          @Param("resultJson") String resultJson,
-                         @Param("updaterId") String updaterId);
+                         @Param("updaterId") Long updaterId);
 
-    int markUnknown(@Param("userId") String userId, @Param("operationId") String operationId,
+    int markUnknown(@Param("userId") Long userId, @Param("operationId") Long operationId,
                     @Param("expectedVersion") long expectedVersion,
-                    @Param("updaterId") String updaterId);
+                    @Param("updaterId") Long updaterId);
 
     List<OperationPO> findExpiredInFlight(@Param("now") LocalDateTime now,
                                           @Param("limit") int limit);
 
-    int reconcileOutcome(@Param("userId") String userId,
-                         @Param("operationId") String operationId,
+    int reconcileOutcome(@Param("userId") Long userId,
+                         @Param("operationId") Long operationId,
                          @Param("expectedVersion") long expectedVersion,
                          @Param("status") String status,
                          @Param("resultJson") String resultJson,
-                         @Param("updaterId") String updaterId);
+                         @Param("updaterId") Long updaterId);
 
-    int recordUnresolved(@Param("userId") String userId,
-                         @Param("operationId") String operationId,
+    int recordUnresolved(@Param("userId") Long userId,
+                         @Param("operationId") Long operationId,
                          @Param("expectedVersion") long expectedVersion,
                          @Param("resultJson") String resultJson,
-                         @Param("updaterId") String updaterId);
+                         @Param("updaterId") Long updaterId);
 
-    int cancelWaitingApproval(@Param("userId") String userId,
-                              @Param("operationId") String operationId,
+    int cancelWaitingApproval(@Param("userId") Long userId,
+                              @Param("operationId") Long operationId,
                               @Param("expectedVersion") long expectedVersion,
                               @Param("resultJson") String resultJson,
-                              @Param("updaterId") String updaterId);
+                              @Param("updaterId") Long updaterId);
 
-    List<String> findUncertainInConversation(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    List<Long> findUncertainInConversation(@Param("userId") Long userId, @Param("scopeId") Long scopeId);
 
-    int cancelUnstartedByScope(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    int cancelUnstartedByScope(@Param("userId") Long userId, @Param("scopeId") Long scopeId);
 
-    java.util.List<OperationPO> lockUnstartedInScope(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    java.util.List<OperationPO> lockUnstartedInScope(@Param("userId") Long userId, @Param("scopeId") Long scopeId);
 }

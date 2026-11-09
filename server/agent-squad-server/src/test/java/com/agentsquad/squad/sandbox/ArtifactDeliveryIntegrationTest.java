@@ -1,6 +1,7 @@
 package com.agentsquad.squad.sandbox;
 
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.model.bo.SandboxDriverResultBO;
 import com.agentsquad.squad.model.bo.SandboxExecuteRequestBO;
@@ -16,7 +17,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -29,13 +29,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class ArtifactDeliveryIntegrationTest {
     @Test
     void durableClaimStageCommitAndRetention(@TempDir Path directory) {
-        String userId = UUID.randomUUID().toString();
+        Long userId = IdWorker.getId();
         try (ConfigurableApplicationContext context = start(directory, userId)) {
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             var receipt = context.getBean(MessageAcceptanceService.class).accept(userId, null, "sandbox-first",
                     new MessageCreateDTO("生成文本附件", List.of()));
-            String scopeId = jdbc.queryForObject("SELECT scope_id FROM sq_response_execution WHERE execution_id = ?",
-                    String.class, receipt.executionId());
+            Long scopeId = jdbc.queryForObject("SELECT scope_id FROM sq_response_execution WHERE execution_id = ?",
+                    Long.class, receipt.executionId());
             String sessionId = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE scope_id = ?",
                     String.class, scopeId);
             context.getBean(ExecutionAuthorizationService.class).prepare(userId, scopeId);
@@ -55,7 +55,7 @@ class ArtifactDeliveryIntegrationTest {
             ArtifactService artifacts = context.getBean(ArtifactService.class);
             assertThatThrownBy(() -> artifacts.content(userId, stage.stageId())).hasMessageContaining("不存在");
             ArtifactDeliveryService delivery = context.getBean(ArtifactDeliveryService.class);
-            assertThatThrownBy(() -> delivery.commit(UUID.randomUUID().toString(), sessionId, null, stage.stageId(), stage.sha256()))
+            assertThatThrownBy(() -> delivery.commit(IdWorker.getId(), sessionId, null, stage.stageId(), stage.sha256()))
                     .hasMessageContaining("不存在");
             assertThatThrownBy(() -> delivery.commit(userId, sessionId, null, stage.stageId(), "c".repeat(64)))
                     .hasMessageContaining("摘要");
@@ -65,7 +65,7 @@ class ArtifactDeliveryIntegrationTest {
             assertThat(artifacts.content(userId, published.artifactId()).getContent()).isEqualTo(content);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_scope_artifact WHERE scope_id = ?", Integer.class, scopeId))
                     .isEqualTo(1);
-            jdbc.update("UPDATE sq_artifact SET expires_at = DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 DAY) WHERE artifact_id = ?",
+            jdbc.update("UPDATE sq_artifact SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 day' WHERE artifact_id = ?",
                     published.artifactId());
             assertThat(context.getBean(ArtifactRetentionService.class).purgeExpired()).isEqualTo(1);
             assertThatThrownBy(() -> artifacts.content(userId, published.artifactId())).hasMessageContaining("不存在");
@@ -76,11 +76,11 @@ class ArtifactDeliveryIntegrationTest {
         }
     }
 
-    private ConfigurableApplicationContext start(Path directory, String userId) {
+    private ConfigurableApplicationContext start(Path directory, Long userId) {
         return SpringApplication.run(AgentSquadApplication.class, "--server.port=0",
-                "--spring.datasource.url=" + MySqlTestDatabase.url(directory.resolve("sandbox")),
-                "--spring.datasource.username=" + MySqlTestDatabase.username(), "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver", "--agentsquad.delivery.enabled=false",
+                "--spring.datasource.url=" + PostgresTestDatabase.url(directory.resolve("sandbox")),
+                "--spring.datasource.username=" + PostgresTestDatabase.username(), "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                "--spring.datasource.driver-class-name=org.postgresql.Driver", "--agentsquad.delivery.enabled=false",
                 "--agentsquad.auth.user-id=" + userId, "--agentsquad.auth.username=tester",
                 "--agentsquad.auth.password=test-only");
     }

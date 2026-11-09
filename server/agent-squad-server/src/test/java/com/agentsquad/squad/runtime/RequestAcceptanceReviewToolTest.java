@@ -33,12 +33,12 @@ class RequestAcceptanceReviewToolTest {
         ReflectionTestUtils.setField(tool, "acceptance", service);
         ReflectionTestUtils.setField(tool, "json", new ObjectMapper());
         var param = mock(ToolCallParam.class);
-        when(param.getRuntimeContext()).thenReturn(RuntimeContext.builder().userId("user").sessionId("session").build());
+        when(param.getRuntimeContext()).thenReturn(RuntimeContext.builder().userId("1").sessionId("session").build());
         when(param.getToolUseBlock()).thenReturn(mock(ToolUseBlock.class));
         when(param.getInput()).thenReturn(Map.of("criterionId", "confirm", "expectedPlanVersion", 2));
         var request = new AcceptanceReviewRequestBO("confirm", 2);
-        when(service.prepareUserReview("user", "session", request)).thenReturn(new UserAcceptanceReviewBO("confirm", 2, "请确认结果", "hash"));
+        when(service.prepareUserReview(1L, "session", request)).thenReturn(new UserAcceptanceReviewBO("confirm", 2, "请确认结果", "hash"));
         assertThatThrownBy(() -> tool.callAsync(param).block(Duration.ofSeconds(3))).isInstanceOf(ToolSuspendException.class);
-        verify(service).prepareUserReview("user", "session", request);
+        verify(service).prepareUserReview(1L, "session", request);
     }
 }

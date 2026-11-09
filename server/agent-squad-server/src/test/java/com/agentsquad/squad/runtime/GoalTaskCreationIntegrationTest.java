@@ -1,6 +1,7 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.bo.GoalTaskCreateBO;
 import com.agentsquad.squad.model.dto.MessageCreateDTO;
@@ -50,7 +51,7 @@ class GoalTaskCreationIntegrationTest {
     @Test
     void outerTransactionRollsBackEveryTaskFact(@TempDir Path directory) {
         try (ConfigurableApplicationContext context = start(directory)) {
-            String user = UUID.randomUUID().toString();
+            Long user = IdWorker.getId();
             var message = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateDTO("用户原文", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             String session = session(jdbc, message.executionId());
@@ -65,16 +66,16 @@ class GoalTaskCreationIntegrationTest {
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM " + table, Long.class)).as(table).isEqualTo(1);
             }
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_conversation_event", Long.class)).isEqualTo(2);
-            assertThat(jdbc.queryForObject("SELECT active_task_id FROM sq_conversation", String.class)).isNull();
-            assertThat(context.getBean(GoalTaskCreationService.class).create(user, session, request).taskId()).isNotBlank();
+            assertThat(jdbc.queryForObject("SELECT active_task_id FROM sq_conversation", Long.class)).isNull();
+            assertThat(context.getBean(GoalTaskCreationService.class).create(user, session, request).taskId()).isNotNull();
         }
     }
 
     @Test
     void inheritedAttachmentsAreValidatedBeforeTaskCommit(@TempDir Path directory) {
         try (ConfigurableApplicationContext context = start(directory)) {
-            String user = UUID.randomUUID().toString();
-            String file = context.getBean(ArtifactService.class).upload(user, "file", "facts.txt",
+            Long user = IdWorker.getId();
+            Long file = context.getBean(ArtifactService.class).upload(user, "file", "facts.txt",
                     "授权材料".getBytes(StandardCharsets.UTF_8)).artifactId();
             var message = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateDTO("请使用附件", List.of(file)));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
@@ -93,20 +94,20 @@ class GoalTaskCreationIntegrationTest {
     }
 
     static void verifyOwnershipAndBudget(ConfigurableApplicationContext context) {
-        String user = UUID.randomUUID().toString();
+        Long user = IdWorker.getId();
         var message = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateDTO("用户授权原文", List.of()));
         JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
         String session = session(jdbc, message.executionId());
-        String sourceScope = jdbc.queryForObject("SELECT scope_id FROM sq_response_execution WHERE execution_id=?", String.class, message.executionId());
+        Long sourceScope = jdbc.queryForObject("SELECT scope_id FROM sq_response_execution WHERE execution_id=?", Long.class, message.executionId());
         jdbc.update("UPDATE sq_budget_account SET limit_microunits=100 WHERE user_id=?", user);
         BudgetService budget = context.getBean(BudgetService.class);
         budget.reserve(user, sourceScope, "source-cost", "TOOL", 60, "tester");
         jdbc.update("UPDATE sq_budget_reservation SET status='UNKNOWN' WHERE user_id=?", user);
         var goals = context.getBean(GoalTaskCreationService.class);
         var request = new GoalTaskCreateBO("goal", "标题", "模型整理的工作目标", message.messageId());
-        assertThatThrownBy(() -> goals.create(user, session, new GoalTaskCreateBO("forged", "标题", "目标", UUID.randomUUID().toString())))
+        assertThatThrownBy(() -> goals.create(user, session, new GoalTaskCreateBO("forged", "标题", "目标", IdWorker.getId())))
                 .isInstanceOf(RuntimeBusinessException.class).hasMessageContaining("当前受权消息");
-        assertThatThrownBy(() -> goals.create(UUID.randomUUID().toString(), session, request)).isInstanceOf(RuntimeBusinessException.class);
+        assertThatThrownBy(() -> goals.create(IdWorker.getId(), session, request)).isInstanceOf(RuntimeBusinessException.class);
         TaskReceiptVO task = goals.create(user, session, request);
         assertThat(goals.create(user, session, request)).isEqualTo(task);
         assertThatThrownBy(() -> goals.create(user, session, new GoalTaskCreateBO("goal", "标题", "不同目标", message.messageId())))
@@ -116,10 +117,10 @@ class GoalTaskCreationIntegrationTest {
         String taskSession = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE task_id=? AND role='MASTER'", String.class, task.taskId());
         assertThat(taskSession).isNotEqualTo(session);
         assertThatThrownBy(() -> goals.create(user, taskSession, request)).isInstanceOf(RuntimeBusinessException.class);
-        String taskScope = jdbc.queryForObject("SELECT scope_id FROM sq_goal_task WHERE task_id=?", String.class, task.taskId());
-        assertThat(jdbc.queryForList("SELECT DISTINCT account_id FROM sq_execution_scope WHERE user_id=?", String.class, user)).hasSize(1);
+        Long taskScope = jdbc.queryForObject("SELECT scope_id FROM sq_goal_task WHERE task_id=?", Long.class, task.taskId());
+        assertThat(jdbc.queryForList("SELECT DISTINCT account_id FROM sq_execution_scope WHERE user_id=?", Long.class, user)).hasSize(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_budget_account WHERE user_id=?", Long.class, user)).isEqualTo(1);
-        assertThat(jdbc.queryForObject("SELECT origin_message_id FROM sq_goal_task WHERE task_id=?", String.class, task.taskId())).isEqualTo(message.messageId());
+        assertThat(jdbc.queryForObject("SELECT origin_message_id FROM sq_goal_task WHERE task_id=?", Long.class, task.taskId())).isEqualTo(message.messageId());
         String input = jdbc.queryForObject("SELECT input_json FROM sq_goal_task WHERE task_id=?", String.class, task.taskId());
         assertThat(input).contains("用户授权原文", "模型整理的工作目标");
         jdbc.update("UPDATE sq_response_execution SET status='SUCCEEDED' WHERE execution_id=?", message.executionId());
@@ -131,13 +132,13 @@ class GoalTaskCreationIntegrationTest {
         jdbc.update("UPDATE sq_goal_task SET status='SUCCEEDED' WHERE task_id=?", task.taskId());
         jdbc.update("UPDATE sq_conversation SET active_task_id=NULL WHERE conversation_id=?", message.conversationId());
         assertThat(goals.create(user, session, request)).isEqualTo(task);
-        assertThat(jdbc.queryForObject("SELECT active_task_id FROM sq_conversation WHERE conversation_id=?", String.class, message.conversationId())).isNull();
+        assertThat(jdbc.queryForObject("SELECT active_task_id FROM sq_conversation WHERE conversation_id=?", Long.class, message.conversationId())).isNull();
         jdbc.update("UPDATE sq_conversation SET generation=generation+1 WHERE conversation_id=?", message.conversationId());
         assertThatThrownBy(() -> goals.create(user, session, request)).isInstanceOf(RuntimeBusinessException.class);
     }
 
     static void verifyConcurrentCreation(ConfigurableApplicationContext context) throws Exception {
-        String user = UUID.randomUUID().toString();
+        Long user = IdWorker.getId();
         var message = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateDTO("并发重放", List.of()));
         JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
         String session = session(jdbc, message.executionId());
@@ -156,7 +157,7 @@ class GoalTaskCreationIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_conversation_event WHERE user_id=? AND event_type='task.created'", Long.class, user)).isEqualTo(1);
     }
 
-    private static TaskReceiptVO concurrent(ConfigurableApplicationContext context, String user, String session, GoalTaskCreateBO request,
+    private static TaskReceiptVO concurrent(ConfigurableApplicationContext context, Long user, String session, GoalTaskCreateBO request,
                                             CountDownLatch ready, CountDownLatch go) throws Exception {
         ready.countDown();
         if (!go.await(10, TimeUnit.SECONDS)) {
@@ -165,11 +166,11 @@ class GoalTaskCreationIntegrationTest {
         return context.getBean(GoalTaskCreationService.class).create(user, session, request);
     }
 
-    private static String session(JdbcTemplate jdbc, String execution) {
+    private static String session(JdbcTemplate jdbc, Long execution) {
         return jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=(SELECT binding_id FROM sq_response_execution WHERE execution_id=?)", String.class, execution);
     }
 
     private ConfigurableApplicationContext start(Path directory) {
-        return MessageAcceptanceHttpTest.start(MySqlTestDatabase.url(directory.resolve("goals")), MySqlTestDatabase.username(), MySqlTestDatabase.password(), UUID.randomUUID().toString());
+        return MessageAcceptanceHttpTest.start(PostgresTestDatabase.url(directory.resolve("goals")), PostgresTestDatabase.username(), PostgresTestDatabase.password(), IdWorker.getId());
     }
 }

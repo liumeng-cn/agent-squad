@@ -36,7 +36,7 @@ public class InteractionController {
     @GetMapping("/tasks/{taskId}/interactions")
     public ApiResult<InteractionPageVO> listByTask(
             HttpServletRequest servletRequest,
-            @PathVariable String taskId,
+            @PathVariable Long taskId,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit) {
         return ApiResult.success(interactionQueryService.listPage(UserContext.current(servletRequest).userId(),
@@ -49,7 +49,7 @@ public class InteractionController {
     @GetMapping("/interactions/{interactionId}")
     public ApiResult<InteractionVO> getOwned(
             HttpServletRequest servletRequest,
-            @PathVariable String interactionId) {
+            @PathVariable Long interactionId) {
         return ApiResult.success(interactionQueryService.getOwned(UserContext.current(servletRequest).userId(),
                 interactionId));
     }
@@ -61,7 +61,7 @@ public class InteractionController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     public ApiResult<CommandReceiptVO> respond(
             HttpServletRequest servletRequest,
-            @PathVariable String interactionId,
+            @PathVariable Long interactionId,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody InteractionAnswerDTO request) {
         return ApiResult.success(interactionService.respond(UserContext.current(servletRequest),

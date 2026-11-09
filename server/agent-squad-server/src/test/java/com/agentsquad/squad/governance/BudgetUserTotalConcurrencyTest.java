@@ -7,7 +7,7 @@ import com.agentsquad.squad.model.vo.ConversationVO;
 import com.agentsquad.squad.model.vo.TaskReceiptVO;
 import com.agentsquad.squad.service.BudgetService;
 import com.agentsquad.squad.service.GoalTaskService;
-import com.agentsquad.squad.testsupport.MySqlTestDatabase;
+import com.agentsquad.squad.testsupport.PostgresTestDatabase;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
@@ -32,15 +32,15 @@ class BudgetUserTotalConcurrencyTest {
 
     @Test
     void concurrentReservationsAcrossScopesCannotExceedUserTotal(@TempDir Path tempDirectory) throws Exception {
-        String databaseUrl = MySqlTestDatabase.url(tempDirectory.resolve("squad-user-total"));
+        String databaseUrl = PostgresTestDatabase.url(tempDirectory.resolve("squad-user-total"));
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class,
                 "--spring.main.web-application-type=none",
                 "--spring.datasource.url=" + databaseUrl,
-                "--spring.datasource.username=" + MySqlTestDatabase.username(),
-                "--spring.datasource.password=" + MySqlTestDatabase.password(),
-                "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
+                "--spring.datasource.username=" + PostgresTestDatabase.username(),
+                "--spring.datasource.password=" + PostgresTestDatabase.password(),
+                "--spring.datasource.driver-class-name=org.postgresql.Driver",
                 "--agentsquad.budget.max-microunits-per-user=100")) {
-            String userId = "00000000-0000-0000-0000-000000000002";
+            Long userId = 2L;
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             BudgetService budget = context.getBean(BudgetService.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
@@ -57,8 +57,8 @@ class BudgetUserTotalConcurrencyTest {
             profile.setInputMicrounitsPerMillionTokens(1000000);
             profile.setOutputMicrounitsPerMillionTokens(1000000);
 
-            String scopeOne = scopeId(jdbc, taskOne.taskId());
-            String scopeTwo = scopeId(jdbc, taskTwo.taskId());
+            Long scopeOne = scopeId(jdbc, taskOne.taskId());
+            Long scopeTwo = scopeId(jdbc, taskTwo.taskId());
             ExecutorService executor = Executors.newFixedThreadPool(2);
             CountDownLatch ready = new CountDownLatch(2);
             CountDownLatch start = new CountDownLatch(1);
@@ -81,7 +81,7 @@ class BudgetUserTotalConcurrencyTest {
         }
     }
 
-    private boolean reserveModel(BudgetService budget, String userId, String scopeId,
+    private boolean reserveModel(BudgetService budget, Long userId, Long scopeId,
                                  String usageKey, String hash, WorkerModelProfileProperties profile,
                                  CountDownLatch ready, CountDownLatch start) throws InterruptedException {
         ready.countDown();
@@ -94,7 +94,7 @@ class BudgetUserTotalConcurrencyTest {
         }
     }
 
-    private boolean reserveTool(BudgetService budget, String userId, String scopeId,
+    private boolean reserveTool(BudgetService budget, Long userId, Long scopeId,
                                 CountDownLatch ready, CountDownLatch start) throws InterruptedException {
         ready.countDown();
         start.await();
@@ -106,7 +106,7 @@ class BudgetUserTotalConcurrencyTest {
         }
     }
 
-    private String scopeId(JdbcTemplate jdbc, String taskId) {
-        return jdbc.queryForObject("SELECT scope_id FROM sq_goal_task WHERE task_id = ?", String.class, taskId);
+    private Long scopeId(JdbcTemplate jdbc, Long taskId) {
+        return jdbc.queryForObject("SELECT scope_id FROM sq_goal_task WHERE task_id = ?", Long.class, taskId);
     }
 }

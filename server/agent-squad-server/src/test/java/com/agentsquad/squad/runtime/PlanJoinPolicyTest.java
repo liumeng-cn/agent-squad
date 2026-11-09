@@ -30,8 +30,8 @@ class PlanJoinPolicyTest {
         for (var status : List.of(WorkerJobStatus.READY, WorkerJobStatus.RUNNING, WorkerJobStatus.WAITING_INPUT,
                 WorkerJobStatus.WAITING_APPROVAL, WorkerJobStatus.RECOVERING, WorkerJobStatus.RECONCILING,
                 WorkerJobStatus.CANCELLING)) {
-            var decision = policy.evaluate(facts(strategy, List.of(job("required", true, WorkerJobStatus.SUCCEEDED),
-                    job("optional", false, status)), false, List.of(PlanAcceptanceVerdict.PASS), true));
+            var decision = policy.evaluate(facts(strategy, List.of(job(101L, true, WorkerJobStatus.SUCCEEDED),
+                    job(102L, false, status)), false, List.of(PlanAcceptanceVerdict.PASS), true));
             assertThat(decision.stage()).isEqualTo(PlanJoinStage.WAITING_WORK);
             assertThat(decision.outcome()).isNull();
         }
@@ -41,7 +41,7 @@ class PlanJoinPolicyTest {
     @EnumSource(PlanJoinPolicy.class)
     void doesNotConfuseCoordinationWithCompletion(PlanJoinPolicy strategy) {
         for (var status : List.of(WorkerJobStatus.BLOCKED, WorkerJobStatus.RECOVERY_BLOCKED)) {
-            var decision = policy.evaluate(facts(strategy, List.of(job("work", true, status)), false,
+            var decision = policy.evaluate(facts(strategy, List.of(job(103L, true, status)), false,
                     List.of(PlanAcceptanceVerdict.PASS), true));
             assertThat(decision.stage()).isEqualTo(PlanJoinStage.NEEDS_COORDINATION);
             assertThat(decision.outcome()).isNull();
@@ -51,7 +51,7 @@ class PlanJoinPolicyTest {
     @ParameterizedTest
     @EnumSource(PlanJoinPolicy.class)
     void unknownEffectsBlockPublication(PlanJoinPolicy strategy) {
-        var decision = policy.evaluate(facts(strategy, List.of(job("work", true, WorkerJobStatus.SUCCEEDED)), true,
+        var decision = policy.evaluate(facts(strategy, List.of(job(103L, true, WorkerJobStatus.SUCCEEDED)), true,
                 List.of(PlanAcceptanceVerdict.PASS), true));
         assertThat(decision.stage()).isEqualTo(PlanJoinStage.WAITING_EFFECTS);
         assertThat(decision.outcome()).isNull();
@@ -60,8 +60,8 @@ class PlanJoinPolicyTest {
     @ParameterizedTest
     @EnumSource(PlanJoinPolicy.class)
     void optionalFailureDoesNotOverrideSatisfiedAcceptance(PlanJoinPolicy strategy) {
-        var decision = policy.evaluate(facts(strategy, List.of(job("work", true, WorkerJobStatus.SUCCEEDED),
-                job("extra", false, WorkerJobStatus.FAILED)), false, List.of(PlanAcceptanceVerdict.PASS), true));
+        var decision = policy.evaluate(facts(strategy, List.of(job(103L, true, WorkerJobStatus.SUCCEEDED),
+                job(104L, false, WorkerJobStatus.FAILED)), false, List.of(PlanAcceptanceVerdict.PASS), true));
         assertThat(decision.stage()).isEqualTo(PlanJoinStage.READY);
         assertThat(decision.outcome()).isEqualTo(GoalTaskStatus.SUCCEEDED);
     }
@@ -70,7 +70,7 @@ class PlanJoinPolicyTest {
     @EnumSource(PlanJoinPolicy.class)
     void requiredFailureNeverSucceeds(PlanJoinPolicy strategy) {
         for (var status : List.of(WorkerJobStatus.FAILED, WorkerJobStatus.PARTIAL, WorkerJobStatus.CANCELLED, WorkerJobStatus.SKIPPED, WorkerJobStatus.SUPERSEDED)) {
-            var jobs = List.of(job("work", true, status));
+            var jobs = List.of(job(103L, true, status));
             assertThat(policy.evaluate(facts(strategy, jobs, false, List.of(PlanAcceptanceVerdict.PASS), true)).outcome())
                     .isEqualTo(GoalTaskStatus.PARTIAL);
             assertThat(policy.evaluate(facts(strategy, jobs, false, List.of(PlanAcceptanceVerdict.PASS), false)).outcome())
@@ -81,7 +81,7 @@ class PlanJoinPolicyTest {
     @ParameterizedTest
     @EnumSource(PlanJoinPolicy.class)
     void missingOrUnsuccessfulAcceptanceNeverSucceeds(PlanJoinPolicy strategy) {
-        var jobs = List.of(job("work", true, WorkerJobStatus.SUCCEEDED));
+        var jobs = List.of(job(103L, true, WorkerJobStatus.SUCCEEDED));
         for (List<PlanAcceptanceVerdict> verdicts : List.of(List.<PlanAcceptanceVerdict>of(),
                 List.of(PlanAcceptanceVerdict.UNKNOWN), List.of(PlanAcceptanceVerdict.PASS, PlanAcceptanceVerdict.FAIL))) {
             assertThat(policy.evaluate(facts(strategy, jobs, false, verdicts, true)).outcome()).isEqualTo(GoalTaskStatus.PARTIAL);
@@ -93,15 +93,15 @@ class PlanJoinPolicyTest {
     @ParameterizedTest
     @EnumSource(PlanJoinPolicy.class)
     void rejectsOldDuplicateOrEmptyPlanFacts(PlanJoinPolicy strategy) {
-        for (var jobs : List.of(List.<PlanJoinJobBO>of(), List.of(job("optional", false, WorkerJobStatus.SUCCEEDED)),
-                List.of(new PlanJoinJobBO("old", 1, true, WorkerJobStatus.SUCCEEDED)),
-                List.of(job("same", true, WorkerJobStatus.SUCCEEDED), job("same", false, WorkerJobStatus.FAILED)))) {
+        for (var jobs : List.of(List.<PlanJoinJobBO>of(), List.of(job(102L, false, WorkerJobStatus.SUCCEEDED)),
+                List.of(new PlanJoinJobBO(105L, 1, true, WorkerJobStatus.SUCCEEDED)),
+                List.of(job(106L, true, WorkerJobStatus.SUCCEEDED), job(106L, false, WorkerJobStatus.FAILED)))) {
             assertThatThrownBy(() -> policy.evaluate(facts(strategy, jobs, false, List.of(PlanAcceptanceVerdict.PASS), true)))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }
 
-    private PlanJoinJobBO job(String id, boolean required, WorkerJobStatus status) {
+    private PlanJoinJobBO job(Long id, boolean required, WorkerJobStatus status) {
         return new PlanJoinJobBO(id, 2, required, status);
     }
 
