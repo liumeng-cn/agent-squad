@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.mapper.TaskMapper">
 
-    <resultMap id="lockOwnedRowResult" type="com.agentsquad.squad.domain.entity.TaskDO">
+    <resultMap id="lockOwnedRowResult" type="com.agentsquad.squad.po.TaskPO">
         <constructor>
             <arg column="id" javaType="_long"/>
             <arg column="task_id" javaType="java.lang.String"/>
@@ -19,7 +19,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="findOwnedResult" type="com.agentsquad.squad.domain.entity.TaskDO">
+    <resultMap id="findOwnedResult" type="com.agentsquad.squad.po.TaskPO">
         <constructor>
             <arg column="id" javaType="_long"/>
             <arg column="task_id" javaType="java.lang.String"/>
@@ -36,7 +36,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="listByConversationResult" type="com.agentsquad.squad.domain.entity.TaskDO">
+    <resultMap id="listByConversationResult" type="com.agentsquad.squad.po.TaskPO">
         <constructor>
             <arg column="id" javaType="_long"/>
             <arg column="task_id" javaType="java.lang.String"/>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.mapper.ExecutionActivityMapper">
-    <resultMap id="activity" type="com.agentsquad.squad.domain.entity.ExecutionActivityDO">
+    <resultMap id="activity" type="com.agentsquad.squad.po.ExecutionActivityPO">
         <constructor>
             <arg column="activity_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>
@@ -16,10 +16,10 @@
             <arg column="turn_id" javaType="java.lang.String"/>
             <arg column="source_key" javaType="java.lang.String"/>
             <arg column="plan_version" javaType="_long"/>
-            <arg column="activity_type" javaType="com.agentsquad.squad.domain.enums.ActivityType"/>
-            <arg column="activity_group" javaType="com.agentsquad.squad.domain.enums.ActivityGroup"/>
-            <arg column="status" javaType="com.agentsquad.squad.domain.enums.ActivityStatus"/>
-            <arg column="wait_reason" javaType="com.agentsquad.squad.domain.enums.ActivityWaitReason"/>
+            <arg column="activity_type" javaType="com.agentsquad.squad.enums.ActivityType"/>
+            <arg column="activity_group" javaType="com.agentsquad.squad.enums.ActivityGroup"/>
+            <arg column="status" javaType="com.agentsquad.squad.enums.ActivityStatus"/>
+            <arg column="wait_reason" javaType="com.agentsquad.squad.enums.ActivityWaitReason"/>
             <arg column="safe_summary" javaType="java.lang.String"/>
             <arg column="started_at" javaType="java.time.LocalDateTime"/>
             <arg column="ended_at" javaType="java.time.LocalDateTime"/>

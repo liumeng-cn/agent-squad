@@ -1,25 +1,25 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.domain.entity.FinalizationDO;
-import com.agentsquad.squad.domain.enums.GoalTaskStatus;
-import com.agentsquad.squad.domain.enums.PlanJoinStage;
-import com.agentsquad.squad.domain.enums.RuntimeCommandAction;
-import com.agentsquad.squad.domain.model.FailureClassification;
+import com.agentsquad.squad.bo.FinalizationBO;
+import com.agentsquad.squad.enums.GoalTaskStatus;
+import com.agentsquad.squad.enums.PlanJoinStage;
+import com.agentsquad.squad.enums.RuntimeCommandAction;
+import com.agentsquad.squad.bo.FailureClassificationBO;
 
-import com.agentsquad.squad.domain.enums.NativeRunOutcome;
+import com.agentsquad.squad.enums.NativeRunOutcome;
 
-import com.agentsquad.squad.domain.dto.AcceptanceReview;
+import com.agentsquad.squad.bo.AcceptanceReviewBO;
 import com.agentsquad.squad.mapper.TaskDirectiveMapper;
-import com.agentsquad.squad.integration.agentscope.NativeEventView;
-import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
+import com.agentsquad.squad.bo.NativeEventViewBO;
+import com.agentsquad.squad.bo.ProjectionTargetBO;
 import com.agentsquad.squad.mapper.CommandMapper;
 import com.agentsquad.squad.mapper.ConversationMapper;
 import com.agentsquad.squad.mapper.TaskEventMapper;
 import com.agentsquad.squad.mapper.CompletionMapper;
 import com.agentsquad.squad.mapper.PlanMapper;
 import com.agentsquad.squad.mapper.ProjectionMapper;
-import com.agentsquad.squad.common.util.ContentDigests;
-import com.agentsquad.squad.common.util.RuntimePayloads;
+import com.agentsquad.squad.utils.ContentDigests;
+import com.agentsquad.squad.utils.RuntimePayloads;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -53,7 +53,7 @@ public class TaskFinalizerService {
     private static final String MISSING_PROPOSAL_ANSWER = "本次目标未能生成有效的最终回答，请重新发起。";
 
     @Resource
-    private com.agentsquad.squad.integration.agentscope.NativeSessionGateway nativeGateway;
+    private com.agentsquad.squad.agent.session.NativeSessionGateway nativeGateway;
 
     @Resource
     private ExecutionFailureService failures;
@@ -95,11 +95,11 @@ public class TaskFinalizerService {
      * 原生成功回合只接受当前 Binding、Turn 和版本的候选；失效候选阻塞恢复并推进投影水位。
      */
     @Transactional
-    public boolean tryComplete(ProjectionTargetDO target, NativeEventView event) {
+    public boolean tryComplete(ProjectionTargetBO target, NativeEventViewBO event) {
         if (!directives.pending(target.getUserId(), target.getTaskId()).isEmpty()) {
             return false;
         }
-        FinalizationDO row = completionMapper.lockTask(target.getUserId(), target.getTaskId());
+        FinalizationBO row = completionMapper.lockTask(target.getUserId(), target.getTaskId());
         if (row == null || !GoalTaskStatus.RUNNING.name().equals(row.getStatus()) || row.isCancellationRequested()
                 || row.getProposalJson() == null) {
             return false;
@@ -130,9 +130,9 @@ public class TaskFinalizerService {
         }
         if (row.getPlanVersion() > 0) {
             try {
-                List<AcceptanceReview> reviews = objectMapper.convertValue(proposal.path("acceptanceReviews"),
+                List<AcceptanceReviewBO> reviews = objectMapper.convertValue(proposal.path("acceptanceReviews"),
                         objectMapper.getTypeFactory().constructCollectionType(List.class,
-                                AcceptanceReview.class));
+                                AcceptanceReviewBO.class));
                 var evaluation = planEvaluation.evaluate(row.getUserId(), row.getTaskId(), row.getPlanVersion(), reviews);
                 if (evaluation.decision().stage() != PlanJoinStage.READY
                         || (GoalTaskStatus.SUCCEEDED.name().equals(outcome)
@@ -143,7 +143,7 @@ public class TaskFinalizerService {
                     return true;
                 }
             } catch (RuntimeException exception) {
-                if (!(exception instanceof com.agentsquad.squad.common.exception.RuntimeBusinessException)
+                if (!(exception instanceof com.agentsquad.squad.exceptions.RuntimeBusinessException)
                         && !(exception instanceof IllegalArgumentException)) {
                     throw exception;
                 }
@@ -171,7 +171,7 @@ public class TaskFinalizerService {
     /**
      * 候选已持久化但无法安全发布时显式阻塞，防止同一原生结束事件无限回放。
      */
-    private void blockInvalidProposal(FinalizationDO row, ProjectionTargetDO target) {
+    private void blockInvalidProposal(FinalizationBO row, ProjectionTargetBO target) {
         String reason = "完成候选校验未通过，需核对后恢复";
         if (completionMapper.blockForRecovery(row.getUserId(), row.getTaskId(), reason) != 1) {
             throw new IllegalStateException("失效完成候选阻塞状态写入竞争");
@@ -185,7 +185,7 @@ public class TaskFinalizerService {
      * 停止意图存在且原生回合已结束时收尾为 CANCELLED；无取消意图的任务保持原状等待正常完成。
      */
     @Transactional
-    public boolean tryCancelAfterStop(ProjectionTargetDO target, NativeEventView event) {
+    public boolean tryCancelAfterStop(ProjectionTargetBO target, NativeEventViewBO event) {
         return finalizeCancelled(target.getUserId(), target.getTaskId(),
                 "native:" + target.getBindingId() + ":" + event.turnId() + ":task.completed");
     }
@@ -195,11 +195,11 @@ public class TaskFinalizerService {
      * 调用方的原生投影事务同时保存命令、公开事件和水位，崩溃重放不会重复生成纠正回合。
      */
     @Transactional
-    public boolean recoverMissingProposal(ProjectionTargetDO target, NativeEventView event) {
+    public boolean recoverMissingProposal(ProjectionTargetBO target, NativeEventViewBO event) {
         if (!directives.pending(target.getUserId(), target.getTaskId()).isEmpty()) {
             return true;
         }
-        FinalizationDO row = completionMapper.lockTask(target.getUserId(), target.getTaskId());
+        FinalizationBO row = completionMapper.lockTask(target.getUserId(), target.getTaskId());
         if (row == null || !GoalTaskStatus.RUNNING.name().equals(row.getStatus()) || row.isCancellationRequested()
                 || row.getProposalJson() != null || event.turnId() == null) {
             return false;
@@ -240,7 +240,7 @@ public class TaskFinalizerService {
         }
         var scope = scopes.lockOwned(row.getUserId(), scopes.scopeForSession(row.getUserId(), target.getSessionId()), false);
         failures.record(scope, target.getBindingId(), "completion-correction-exhausted:" + event.turnId(),
-                new FailureClassification("LOGIC_INVALID", "COMPLETION_CORRECTION_EXHAUSTED", "SYSTEM",
+                new FailureClassificationBO("LOGIC_INVALID", "COMPLETION_CORRECTION_EXHAUSTED", "SYSTEM",
                         "本次未能形成有效的完整结果，已保留你的内容。"));
         String producerPrefix = "completion:" + row.getTaskId() + ":" + event.turnId();
         publish(row, producerPrefix + ":answer.completed", "answer.completed",
@@ -257,9 +257,9 @@ public class TaskFinalizerService {
      * 原因只记录平台归一化文案，避免把模型或框架异常原文暴露给页面。
      */
     @Transactional
-    public boolean blockAfterNativeRun(ProjectionTargetDO target, NativeEventView event,
+    public boolean blockAfterNativeRun(ProjectionTargetBO target, NativeEventViewBO event,
                                        NativeRunOutcome outcome) {
-        FinalizationDO row = completionMapper.lockTask(target.getUserId(), target.getTaskId());
+        FinalizationBO row = completionMapper.lockTask(target.getUserId(), target.getTaskId());
         if (row == null || row.isCancellationRequested()
                 || !GoalTaskStatus.RUNNING.name().equals(row.getStatus())
                 && !GoalTaskStatus.QUEUED.name().equals(row.getStatus())) {
@@ -287,9 +287,9 @@ public class TaskFinalizerService {
      * 页面答复经 RESPOND 命令回填后由新一轮原生事件继续裁决。
      */
     @Transactional
-    public boolean waitForInteraction(ProjectionTargetDO target, NativeEventView event,
+    public boolean waitForInteraction(ProjectionTargetBO target, NativeEventViewBO event,
                                       String status, String reason) {
-        FinalizationDO row = completionMapper.lockTask(target.getUserId(), target.getTaskId());
+        FinalizationBO row = completionMapper.lockTask(target.getUserId(), target.getTaskId());
         if (row == null || row.isCancellationRequested()
                 || !GoalTaskStatus.RUNNING.name().equals(row.getStatus())
                 && !GoalTaskStatus.QUEUED.name().equals(row.getStatus())) {
@@ -311,7 +311,7 @@ public class TaskFinalizerService {
      */
     public void resumeFromInteraction(String userId, String taskId) {
         if (completionMapper.resumeFromInteraction(userId, taskId) == 1) {
-            FinalizationDO row = completionMapper.lockTask(userId, taskId);
+            FinalizationBO row = completionMapper.lockTask(userId, taskId);
             if (row != null) {
                 publish(row, "control:interaction-resume:" + taskId + ":" + row.getVersion(),
                         "task.state_changed", Map.of("status", GoalTaskStatus.RUNNING.name(),
@@ -331,7 +331,7 @@ public class TaskFinalizerService {
 
     private boolean finalizeCancelled(String userId, String taskId, String producerKey) {
         scopes.lockOwned(userId, scopes.scopeForTask(userId, taskId), false);
-        FinalizationDO row = completionMapper.lockTask(userId, taskId);
+        FinalizationBO row = completionMapper.lockTask(userId, taskId);
         if (row == null || !row.isCancellationRequested()
                 || !GoalTaskStatus.RUNNING.name().equals(row.getStatus())
                 && !GoalTaskStatus.CANCELLING.name().equals(row.getStatus())) {
@@ -359,7 +359,7 @@ public class TaskFinalizerService {
         return true;
     }
 
-    private void publish(FinalizationDO row, String producerKey, String type, Object payload) {
+    private void publish(FinalizationBO row, String producerKey, String type, Object payload) {
         if (projectionMapper.reserveEventSequence(row.getUserId(), row.getTaskId()) != 1) {
             throw new IllegalStateException("最终事件序号保留失败");
         }

@@ -1,27 +1,27 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.domain.dto.AcceptanceReviewRequest;
-import com.agentsquad.squad.domain.model.BindingResult;
+import com.agentsquad.squad.bo.AcceptanceReviewRequestBO;
+import com.agentsquad.squad.bo.BindingResultBO;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
-import com.agentsquad.squad.domain.entity.CommandDO;
-import com.agentsquad.squad.domain.enums.GoalTaskStatus;
-import com.agentsquad.squad.domain.response.CommandReceiptResponse;
+import com.agentsquad.squad.po.CommandPO;
+import com.agentsquad.squad.enums.GoalTaskStatus;
+import com.agentsquad.squad.vo.CommandReceiptVO;
 import com.agentsquad.squad.mapper.CommandMapper;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.common.util.ContentDigests;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.InteractionDO;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.utils.ContentDigests;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.po.InteractionPO;
 import com.agentsquad.squad.mapper.InteractionMapper;
-import com.agentsquad.squad.tools.mock.MockTicketConnector;
-import com.agentsquad.squad.domain.entity.OperationDO;
-import com.agentsquad.squad.domain.enums.OperationStatus;
+import com.agentsquad.squad.connector.MockTicketConnector;
+import com.agentsquad.squad.po.OperationPO;
+import com.agentsquad.squad.enums.OperationStatus;
 import com.agentsquad.squad.mapper.OperationMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.agentsquad.squad.common.util.JsonSchemaValidator;
+import com.agentsquad.squad.utils.JsonSchemaValidator;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -103,7 +103,7 @@ public class InteractionService {
      * frameworkTurnId 来自原生日志事件，用于在账本内定位对应原生工具调用。
      */
     @Transactional
-    public BindingResult bindFrameworkRequest(String userId, String taskId, String bindingId,
+    public BindingResultBO bindFrameworkRequest(String userId, String taskId, String bindingId,
                                               String jobId, String frameworkTurnId,
                                               String frameworkRequestId,
                                               Map<String, Object> call) {
@@ -111,13 +111,13 @@ public class InteractionService {
         if (scopeId == null || scopeMapper.findActiveOwned(userId, scopeId) == null) {
             return null;
         }
-        InteractionDO existing = interactionMapper.findByFrameworkRequest(userId, bindingId,
+        InteractionPO existing = interactionMapper.findByFrameworkRequest(userId, bindingId,
                 frameworkRequestId);
         if (existing != null) {
-            return new BindingResult(existing.getInteractionId(), existing.getKind());
+            return new BindingResultBO(existing.getInteractionId(), existing.getKind());
         }
         String toolName = String.valueOf(call.get("name"));
-        OperationDO operation = frameworkTurnId == null ? null
+        OperationPO operation = frameworkTurnId == null ? null
                 : operationMapper.findByNativeCall(userId, bindingId, frameworkTurnId,
                 frameworkRequestId);
         String interactionId = UUID.randomUUID().toString();
@@ -130,7 +130,7 @@ public class InteractionService {
                     userId, "model");
             log.info("审批交互已绑定 interactionId={} operationId={} toolKey={}",
                     interactionId, operation.getOperationId(), operation.getToolKey());
-            return new BindingResult(interactionId, KIND_APPROVAL);
+            return new BindingResultBO(interactionId, KIND_APPROVAL);
         }
         if ("request_acceptance_review".equals(toolName)) {
             var target = projections.findTarget(userId, bindingId);
@@ -138,7 +138,7 @@ public class InteractionService {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "只能由目标协调会话请求用户验收");
             }
             var review = planAcceptance.prepareUserReview(userId, target.getSessionId(), objectMapper.convertValue(
-                    call.get("input"), AcceptanceReviewRequest.class));
+                    call.get("input"), AcceptanceReviewRequestBO.class));
             String schema = RuntimePayloads.toJson(objectMapper, Map.of("type", "object", "properties",
                     Map.of("accepted", Map.of("type", "boolean", "title", "这项结果符合要求")),
                     "required", List.of("accepted"), "additionalProperties", false));
@@ -146,7 +146,7 @@ public class InteractionService {
                     null, "FRAMEWORK", frameworkRequestId, KIND_INPUT, review.question(), schema,
                     review.planVersion(), review.requestHash(), 0L,
                     LocalDateTime.now().plusHours(ttlHours), userId, "model");
-            return new BindingResult(interactionId, KIND_INPUT);
+            return new BindingResultBO(interactionId, KIND_INPUT);
         }
         if ("request_input".equals(toolName)) {
             String question = extractQuestion(call);
@@ -157,7 +157,7 @@ public class InteractionService {
                     ContentDigests.sha256(question), 0L,
                     LocalDateTime.now().plusHours(ttlHours), userId, "model");
             log.info("追问交互已绑定 interactionId={} bindingId={}", interactionId, bindingId);
-            return new BindingResult(interactionId, KIND_INPUT);
+            return new BindingResultBO(interactionId, KIND_INPUT);
         }
         log.warn("未识别的挂起请求不绑定交互 bindingId={} requestId={} tool={}",
                 bindingId, frameworkRequestId, toolName);
@@ -168,8 +168,8 @@ public class InteractionService {
      * 框架侧解析事件落账：仅把 OPEN 推到 RESPONDED，幂等无害；返回最新交互行供投影发布。
      */
     @Transactional
-    public InteractionDO resolveFromFramework(String userId, String bindingId, String requestId) {
-        InteractionDO row = interactionMapper.findByFrameworkRequest(userId, bindingId, requestId);
+    public InteractionPO resolveFromFramework(String userId, String bindingId, String requestId) {
+        InteractionPO row = interactionMapper.findByFrameworkRequest(userId, bindingId, requestId);
         if (row == null) {
             return null;
         }
@@ -205,14 +205,14 @@ public class InteractionService {
      * 用户答复：批准派发、拒绝取消、追问回填；全部先落账本再排队 RESPOND 命令。
      */
     @Transactional
-    public CommandReceiptResponse respond(AuthView actor, String interactionId, String idempotencyKey,
+    public CommandReceiptVO respond(AuthView actor, String interactionId, String idempotencyKey,
                                   long expectedVersion, String answerKind, Boolean approve,
                                   String confirmedRequestHash, Map<String, Object> inputValue) {
         if (idempotencyKey == null || idempotencyKey.isBlank() || idempotencyKey.length() > 160) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION,
                     "Idempotency-Key 必须是 1-160 个字符");
         }
-        InteractionDO row = interactionMapper.findOwned(actor.userId(), interactionId);
+        InteractionPO row = interactionMapper.findOwned(actor.userId(), interactionId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "交互不存在");
         }
@@ -258,11 +258,11 @@ public class InteractionService {
 
         if (!"OPEN".equals(row.getStatus())) {
             if (sameJson(answerJsonText, row.getResponseJson())) {
-                CommandDO prior = commandMapper.findByKey(actor.userId(), scopeKey, idempotencyKey);
+                CommandPO prior = commandMapper.findByKey(actor.userId(), scopeKey, idempotencyKey);
                 if (prior != null) {
                     log.info("交互答复幂等复用原回执 interactionId={} commandId={}",
                             interactionId, prior.getCommandId());
-                    return new CommandReceiptResponse(prior.getCommandId(), prior.getTaskId(),
+                    return new CommandReceiptVO(prior.getCommandId(), prior.getTaskId(),
                             prior.getStatus(), null, null);
                 }
             }
@@ -301,14 +301,14 @@ public class InteractionService {
         scopeMapper.queueResponseAfterInteraction(actor.userId(), row.getScopeId());
         log.info("交互答复已受理 interactionId={} kind={} commandId={} approve={}",
                 interactionId, row.getKind(), commandId, approve);
-        return new CommandReceiptResponse(commandId, row.getTaskId(), "PENDING", null, null);
+        return new CommandReceiptVO(commandId, row.getTaskId(), "PENDING", null, null);
     }
 
     /**
      * 审批决定的平台处置：批准派发连接器，拒绝取消操作；已成功操作复用结果实现重放幂等。
      */
-    private String resolveApproval(AuthView actor, InteractionDO row, boolean approve) {
-        OperationDO operation = operationMapper.findOwned(actor.userId(), row.getOperationId());
+    private String resolveApproval(AuthView actor, InteractionPO row, boolean approve) {
+        OperationPO operation = operationMapper.findOwned(actor.userId(), row.getOperationId());
         if (operation == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "审批对应的操作不存在");
         }
@@ -360,7 +360,7 @@ public class InteractionService {
         }
     }
 
-    private String buildApprovalQuestion(String toolName, OperationDO operation) {
+    private String buildApprovalQuestion(String toolName, OperationPO operation) {
         return "请求审批：" + toolName + "（" + operation.getEffect() + "），请核对脱敏参数及操作摘要";
     }
 

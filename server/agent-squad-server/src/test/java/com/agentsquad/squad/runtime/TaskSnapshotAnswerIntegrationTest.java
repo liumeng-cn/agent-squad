@@ -1,7 +1,7 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.domain.response.TaskSnapshotResponse;
+import com.agentsquad.squad.vo.TaskSnapshotVO;
 import com.agentsquad.squad.mapper.TaskEventMapper;
 import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.service.TaskSnapshotService;
@@ -40,7 +40,7 @@ class TaskSnapshotAnswerIntegrationTest {
             var receipt = goalTaskService.submit(userId, conversation.conversationId(),
                     "answer-test-1", "请给出最终回答");
 
-            TaskSnapshotResponse before = snapshotService.snapshot(userId, receipt.taskId());
+            TaskSnapshotVO before = snapshotService.snapshot(userId, receipt.taskId());
             assertThat(before.answer().text()).isEmpty();
             assertThat(before.answer().completed()).isFalse();
 
@@ -49,7 +49,7 @@ class TaskSnapshotAnswerIntegrationTest {
                     "answer.completed", "{\"text\":\"" + answerText + "\",\"evidenceRefs\":[]}",
                     LocalDateTime.now(ZoneOffset.UTC));
 
-            TaskSnapshotResponse after = snapshotService.snapshot(userId, receipt.taskId());
+            TaskSnapshotVO after = snapshotService.snapshot(userId, receipt.taskId());
             assertThat(after.answer().text()).isEqualTo(answerText);
             assertThat(after.answer().completed()).isTrue();
             assertThat(after.cursor()).isEqualTo(receipt.taskId() + ":2");

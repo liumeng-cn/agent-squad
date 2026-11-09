@@ -1,6 +1,6 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.domain.model.FailureClassification;
+import com.agentsquad.squad.bo.FailureClassificationBO;
 import com.agentsquad.squad.mapper.ExecutionRestrictionMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -47,7 +47,7 @@ public class ExecutionRestrictionService {
             return;
         }
         failures.record(scope, bindingId, "context-invalidated:" + scopeId,
-                new FailureClassification("AUTH_REQUIRED", "EXECUTION_CONTEXT_INVALIDATED", "SYSTEM",
+                new FailureClassificationBO("AUTH_REQUIRED", "EXECUTION_CONTEXT_INVALIDATED", "SYSTEM",
                         "技能授权或记忆已变化，已停止使用旧上下文。已完成内容仍保留，请重新发起。"));
         events.publish(scope, "context-restricted:" + scopeId, "execution.status_changed",
                 Map.of("scopeId", scopeId, "status", "RESPONSE".equals(scope.getKind()) ? "FAILED" : "RECOVERY_BLOCKED"));

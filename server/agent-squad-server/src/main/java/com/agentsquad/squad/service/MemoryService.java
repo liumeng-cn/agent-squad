@@ -1,14 +1,14 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.domain.entity.MemoryDO;
-import com.agentsquad.squad.domain.model.MemoryRules;
-import com.agentsquad.squad.domain.request.MemoryCreateRequest;
-import com.agentsquad.squad.domain.response.MemoryMutationResponse;
-import com.agentsquad.squad.domain.response.MemoryPageResponse;
-import com.agentsquad.squad.domain.request.MemoryUpdateRequest;
-import com.agentsquad.squad.domain.dto.MemoryView;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.po.MemoryPO;
+import com.agentsquad.squad.policy.MemoryRules;
+import com.agentsquad.squad.dto.MemoryCreateDTO;
+import com.agentsquad.squad.vo.MemoryMutationVO;
+import com.agentsquad.squad.vo.MemoryPageVO;
+import com.agentsquad.squad.dto.MemoryUpdateDTO;
+import com.agentsquad.squad.vo.MemoryVO;
 import com.agentsquad.squad.mapper.MemoryMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -33,14 +33,14 @@ public class MemoryService {
     @Resource
     private MemoryMapper mapper;
 
-    public MemoryPageResponse list(String userId, String cursor, int limit) {
+    public MemoryPageVO list(String userId, String cursor, int limit) {
         Long before = parseCursor(cursor);
         int size = Math.min(Math.max(limit, 1), 100);
-        List<MemoryDO> rows = mapper.list(userId, before, size + 1);
+        List<MemoryPO> rows = mapper.list(userId, before, size + 1);
         boolean more = rows.size() > size;
-        List<MemoryDO> page = more ? rows.subList(0, size) : rows;
+        List<MemoryPO> page = more ? rows.subList(0, size) : rows;
         String next = more ? Long.toString(page.getLast().getStorageId()) : null;
-        return new MemoryPageResponse(page.stream().map(this::view).toList(), next,
+        return new MemoryPageVO(page.stream().map(this::view).toList(), next,
                 mapper.revision(userId), mapper.blockedScopes(userId));
     }
 
@@ -48,7 +48,7 @@ public class MemoryService {
      * 用户设置页明确创建；有效同键同内容返回原记录，异内容走带版本纠正；删除后的同键创建使用新身份，保留旧墓碑。
      */
     @Transactional
-    public MemoryMutationResponse create(String userId, MemoryCreateRequest request) {
+    public MemoryMutationVO create(String userId, MemoryCreateDTO request) {
         return createFromSource(userId, request, null, null);
     }
 
@@ -56,11 +56,11 @@ public class MemoryService {
      * 来源引用由受权工具入口提供，普通设置页不能伪造来源消息。
      */
     @Transactional
-    public MemoryMutationResponse createFromSource(String userId, MemoryCreateRequest request,
+    public MemoryMutationVO createFromSource(String userId, MemoryCreateDTO request,
                                                  String sourceMessageId, String sourceQuote) {
         MemoryRules.requireContent(request.key(), request.content(), utc(request.expiresAt()), now());
         lockRevision(userId);
-        MemoryDO prior = mapper.findActiveKey(userId, request.key());
+        MemoryPO prior = mapper.findActiveKey(userId, request.key());
         if (prior != null) {
             if ("ACTIVE".equals(prior.getStatus()) && prior.getContent().equals(request.content())
                     && java.util.Objects.equals(prior.getExpiresAt(), utc(request.expiresAt()))) {
@@ -84,15 +84,15 @@ public class MemoryService {
      * 纠正正文与失效代际同事务提交；旧Scope引用只能阻塞，不能原位变成新版本。
      */
     @Transactional
-    public MemoryMutationResponse update(String userId, String memoryId, MemoryUpdateRequest request) {
+    public MemoryMutationVO update(String userId, String memoryId, MemoryUpdateDTO request) {
         return updateFromSource(userId, memoryId, request, null, null);
     }
 
     @Transactional
-    public MemoryMutationResponse updateFromSource(String userId, String memoryId, MemoryUpdateRequest request,
+    public MemoryMutationVO updateFromSource(String userId, String memoryId, MemoryUpdateDTO request,
                                                  String sourceMessageId, String sourceQuote) {
         lockRevision(userId);
-        MemoryDO current = requireOwned(userId, memoryId);
+        MemoryPO current = requireOwned(userId, memoryId);
         MemoryRules.requireContent(current.getKey(), request.content(), utc(request.expiresAt()), now());
         MemoryRules.requireVersion(current, request.expectedVersion());
         if (mapper.update(userId, memoryId, request.expectedVersion(), request.content(), utc(request.expiresAt()), sourceMessageId, sourceQuote) != 1) {
@@ -111,9 +111,9 @@ public class MemoryService {
      * 删除先写墓碑并清空正文，再原子阻塞所有旧代际上下文；不声称已撤回已发出的模型调用。
      */
     @Transactional
-    public MemoryMutationResponse delete(String userId, String memoryId, long expectedVersion) {
+    public MemoryMutationVO delete(String userId, String memoryId, long expectedVersion) {
         lockRevision(userId);
-        MemoryDO current = requireOwned(userId, memoryId);
+        MemoryPO current = requireOwned(userId, memoryId);
         if ("DELETED".equals(current.getStatus()) && current.getVersion() == expectedVersion + 1) {
             return result(userId, current);
         }
@@ -131,7 +131,7 @@ public class MemoryService {
      * 检索仅召回ID，再校验权威记录；不接收跨用户命中的正文。
      */
     @Transactional
-    public List<MemoryView> search(String userId, String query, int limit) {
+    public List<MemoryVO> search(String userId, String query, int limit) {
         if (query != null && query.length() > 200) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "记忆检索词最多200字");
         }
@@ -143,8 +143,8 @@ public class MemoryService {
                 .map(this::view).toList();
     }
 
-    public MemoryDO requireOwned(String userId, String memoryId) {
-        MemoryDO memory = mapper.find(userId, memoryId);
+    public MemoryPO requireOwned(String userId, String memoryId) {
+        MemoryPO memory = mapper.find(userId, memoryId);
         if (memory == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "记忆不存在或无权访问");
         }
@@ -161,15 +161,15 @@ public class MemoryService {
         mapper.blockOldScopes(userId, mapper.revision(userId));
     }
 
-    private MemoryMutationResponse result(String userId, MemoryDO memory) {
+    private MemoryMutationVO result(String userId, MemoryPO memory) {
         int scopes = mapper.blockedScopes(userId);
-        return new MemoryMutationResponse(view(memory), mapper.revision(userId), scopes,
+        return new MemoryMutationVO(view(memory), mapper.revision(userId), scopes,
                 scopes == 0 ? "已保存；后续新执行使用当前有效记忆" : "记忆已变更；旧执行上下文已阻塞，需从有效资料重新发起，已发出的请求不能撤回");
     }
 
-    private MemoryView view(MemoryDO row) {
+    private MemoryVO view(MemoryPO row) {
         String status = "ACTIVE".equals(row.getStatus()) && !MemoryRules.active(row, now()) ? "EXPIRED" : row.getStatus();
-        return new MemoryView(row.getMemoryId(), row.getKey(), "DELETED".equals(status) ? "" : row.getContent(),
+        return new MemoryVO(row.getMemoryId(), row.getKey(), "DELETED".equals(status) ? "" : row.getContent(),
                 "EXPLICIT", status, row.getVersion(), row.getExpiresAt() == null ? null : row.getExpiresAt().atOffset(ZoneOffset.UTC), row.getSourceMessageId());
     }
 

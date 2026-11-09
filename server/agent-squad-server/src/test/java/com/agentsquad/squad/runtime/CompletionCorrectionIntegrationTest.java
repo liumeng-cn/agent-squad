@@ -1,17 +1,18 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
-import com.agentsquad.squad.domain.enums.GoalTaskStatus;
-import com.agentsquad.squad.domain.enums.NativeRunOutcome;
-import com.agentsquad.squad.domain.enums.RuntimeCommandStatus;
-import com.agentsquad.squad.domain.model.MasterAgentIdentity;
+import com.agentsquad.squad.enums.AccountRole;
+import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.enums.GoalTaskStatus;
+import com.agentsquad.squad.enums.NativeRunOutcome;
+import com.agentsquad.squad.enums.RuntimeCommandStatus;
+import com.agentsquad.squad.agent.MasterAgentIdentity;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.service.ExecutionScopeService;
-import com.agentsquad.squad.domain.dto.PlanNode;
-import com.agentsquad.squad.domain.dto.PlanPublish;
-import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
-import com.agentsquad.squad.integration.agentscope.NativeEventView;
+import com.agentsquad.squad.bo.PlanNodeBO;
+import com.agentsquad.squad.bo.PlanPublishBO;
+import com.agentsquad.squad.dto.WorkerDefinitionCreateDTO;
+import com.agentsquad.squad.bo.NativeEventViewBO;
 import com.agentsquad.squad.service.NativeProjectionService;
 import com.agentsquad.squad.mapper.BindingMapper;
 import com.agentsquad.squad.mapper.CommandMapper;
@@ -53,7 +54,7 @@ class CompletionCorrectionIntegrationTest {
     @Test
     void shouldCompleteMatchedProposal(@TempDir Path tempDirectory) {
         try (ConfigurableApplicationContext context = start(tempDirectory)) {
-            ProjectionTargetDO target = createTask(context);
+            ProjectionTargetBO target = createTask(context);
             NativeProjectionService projection = context.getBean(NativeProjectionService.class);
             CompletionProposalService proposals = context.getBean(CompletionProposalService.class);
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
@@ -86,7 +87,7 @@ class CompletionCorrectionIntegrationTest {
     @Test
     void shouldBlockStaleCompletionCandidate(@TempDir Path tempDirectory) {
         try (ConfigurableApplicationContext context = start(tempDirectory)) {
-            ProjectionTargetDO target = createTask(context);
+            ProjectionTargetBO target = createTask(context);
             NativeProjectionService projection = context.getBean(NativeProjectionService.class);
             CompletionProposalService proposals = context.getBean(CompletionProposalService.class);
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
@@ -99,7 +100,7 @@ class CompletionCorrectionIntegrationTest {
                     "tool-call-stale", GoalTaskStatus.SUCCEEDED.name(), "旧计划答案");
             jdbc.update("UPDATE sq_goal_task SET plan_version = plan_version + 1 WHERE task_id = ?", target.getTaskId());
 
-            NativeEventView completed = event(2, "run/end", turnId, NativeRunOutcome.COMPLETED.code());
+            NativeEventViewBO completed = event(2, "run/end", turnId, NativeRunOutcome.COMPLETED.code());
             projection.accept(target, completed);
             projection.accept(target, completed);
 
@@ -119,7 +120,7 @@ class CompletionCorrectionIntegrationTest {
     @Test
     void shouldCorrectOnceThenFailWithoutProposal(@TempDir Path tempDirectory) {
         try (ConfigurableApplicationContext context = start(tempDirectory)) {
-            ProjectionTargetDO target = createTask(context);
+            ProjectionTargetBO target = createTask(context);
             NativeProjectionService projection = context.getBean(NativeProjectionService.class);
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             CommandMapper commands = context.getBean(CommandMapper.class);
@@ -160,7 +161,7 @@ class CompletionCorrectionIntegrationTest {
     @Test
     void shouldHonorCancellationWhenNativeRunCompletes(@TempDir Path tempDirectory) {
         try (ConfigurableApplicationContext context = start(tempDirectory)) {
-            ProjectionTargetDO target = createTask(context);
+            ProjectionTargetBO target = createTask(context);
             NativeProjectionService projection = context.getBean(NativeProjectionService.class);
             TaskMapper taskMapper = context.getBean(TaskMapper.class);
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
@@ -187,7 +188,7 @@ class CompletionCorrectionIntegrationTest {
     @Test
     void shouldBlockFailedRunAndKeepTaskRecoverable(@TempDir Path tempDirectory) {
         try (ConfigurableApplicationContext context = start(tempDirectory)) {
-            ProjectionTargetDO target = createTask(context);
+            ProjectionTargetBO target = createTask(context);
             NativeProjectionService projection = context.getBean(NativeProjectionService.class);
             CompletionProposalService proposals = context.getBean(CompletionProposalService.class);
             CompletionMapper completions = context.getBean(CompletionMapper.class);
@@ -200,7 +201,7 @@ class CompletionCorrectionIntegrationTest {
             projection.accept(target, event(1, "run/start", turnId, null));
             proposals.propose(USER_ID, target.getSessionId(), turnId,
                     "tool-call-before-failure", GoalTaskStatus.SUCCEEDED.name(), "旧候选");
-            NativeEventView failed = event(2, "run/end", turnId, NativeRunOutcome.FAILED.code());
+            NativeEventViewBO failed = event(2, "run/end", turnId, NativeRunOutcome.FAILED.code());
             projection.accept(target, failed);
             projection.accept(target, failed);
 
@@ -246,7 +247,7 @@ class CompletionCorrectionIntegrationTest {
     @Test
     void shouldCancelInsteadOfBlockingFailedRun(@TempDir Path tempDirectory) {
         try (ConfigurableApplicationContext context = start(tempDirectory)) {
-            ProjectionTargetDO target = createTask(context);
+            ProjectionTargetBO target = createTask(context);
             NativeProjectionService projection = context.getBean(NativeProjectionService.class);
             TaskMapper taskMapper = context.getBean(TaskMapper.class);
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
@@ -274,15 +275,15 @@ class CompletionCorrectionIntegrationTest {
             String workerAgent = UUID.randomUUID().toString().replace("-", "");
             String workerSession = UUID.randomUUID().toString();
             bindings.insertWorker(workerBinding, USER_ID, target.getTaskId(), workerAgent, workerSession, LocalDateTime.now(ZoneOffset.UTC));
-            var store = context.getBean(com.agentsquad.squad.integration.agentscope.journal.RuntimeSessionProvider.class).logStore();
+            var store = context.getBean(com.agentsquad.squad.agent.session.RuntimeSessionProvider.class).logStore();
             var runtime = io.agentscope.core.agent.RuntimeContext.builder().userId(USER_ID).sessionId(workerSession).build();
             var log = store.open(new io.agentscope.core.session.SessionKey(USER_ID, workerAgent, workerSession), runtime);
             var writer = log.acquire("other-node", java.time.Duration.ofSeconds(30));
             var operation = context.getBean(com.agentsquad.squad.service.OperationService.class).prepare(
-                    new com.agentsquad.squad.tools.operation.PrepareRequest(USER_ID, target.getSessionId(), "turn", "write",
+                    new com.agentsquad.squad.bo.PrepareRequestBO(USER_ID, target.getSessionId(), "turn", "write",
                             "mock_ticket_create", "v1", "WRITE", java.util.Map.of("title", "test"), "stable", false, null, 0, 1, "tester"));
             var unstarted = context.getBean(com.agentsquad.squad.service.OperationService.class).prepare(
-                    new com.agentsquad.squad.tools.operation.PrepareRequest(USER_ID, target.getSessionId(), "turn", "write-not-started",
+                    new com.agentsquad.squad.bo.PrepareRequestBO(USER_ID, target.getSessionId(), "turn", "write-not-started",
                             "mock_ticket_create", "v1", "WRITE", java.util.Map.of("title", "next"), "another", false, null, 0, 1, "tester"));
             var interaction = context.getBean(com.agentsquad.squad.service.InteractionService.class).bindFrameworkRequest(
                     USER_ID, target.getTaskId(), target.getBindingId(), null, "turn", "input-request",
@@ -292,7 +293,7 @@ class CompletionCorrectionIntegrationTest {
             var receipt = control.cancel(USER_ID, target.getTaskId(), "stop-all", 0);
             assertThat(control.cancel(USER_ID, target.getTaskId(), "stop-all", 0)).isEqualTo(receipt);
             org.assertj.core.api.Assertions.assertThatThrownBy(() -> control.cancel(USER_ID, target.getTaskId(), "another-stop", 1))
-                    .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
+                    .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
             assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id=?", String.class, unstarted.getOperationId())).isEqualTo("CANCELLED");
             assertThat(jdbc.queryForObject("SELECT status FROM sq_budget_reservation WHERE user_id=? AND usage_key=?", String.class,
                     USER_ID, unstarted.getBudgetUsageKey())).isEqualTo("SETTLED");
@@ -345,15 +346,15 @@ class CompletionCorrectionIntegrationTest {
             var json = context.getBean(com.fasterxml.jackson.databind.ObjectMapper.class);
             String key = "writer-" + UUID.randomUUID();
             context.getBean(com.agentsquad.squad.service.WorkerDefinitionService.class).publish(
-                    new com.agentsquad.squad.identity.AuthView(USER_ID, "admin", java.util.List.of(com.agentsquad.squad.domain.enums.AccountRole.ADMIN), null), key,
-                    new WorkerDefinitionCreateRequest(key, "1.0.0", "写作", json.readTree("{}"), json.readTree("{}"), java.util.List.of(), "default", "default"));
+                    new com.agentsquad.squad.identity.AuthView(USER_ID, "admin", java.util.List.of(AccountRole.ADMIN), null), key,
+                    new WorkerDefinitionCreateDTO(key, "1.0.0", "写作", json.readTree("{}"), json.readTree("{}"), java.util.List.of(), "default", "default"));
             var snapshots = context.getBean(com.agentsquad.squad.service.ContextSnapshotService.class);
             String one = snapshots.prepare(USER_ID, target.getSessionId(), "one", "one").snapshotId();
             String two = snapshots.prepare(USER_ID, target.getSessionId(), "two", "two").snapshotId();
             var plan = context.getBean(com.agentsquad.squad.service.PlanService.class).publish(USER_ID, target.getSessionId(),
-                    new PlanPublish("plan", 0, java.util.List.of(
-                            new PlanNode("one", key, "1.0.0", "分析一", one, java.util.List.of(), true, 1),
-                            new PlanNode("two", key, "1.0.0", "分析二", two, java.util.List.of(), true, 1)), "ALL_REQUIRED", java.util.List.of("完成")));
+                    new PlanPublishBO("plan", 0, java.util.List.of(
+                            new PlanNodeBO("one", key, "1.0.0", "分析一", one, java.util.List.of(), true, 1),
+                            new PlanNodeBO("two", key, "1.0.0", "分析二", two, java.util.List.of(), true, 1)), "ALL_REQUIRED", java.util.List.of("完成")));
             String firstBinding = jdbc.queryForObject("SELECT binding_id FROM sq_worker_job WHERE job_id=?", String.class, plan.jobIds().getFirst());
             String secondBinding = jdbc.queryForObject("SELECT binding_id FROM sq_worker_job WHERE job_id=?", String.class, plan.jobIds().getLast());
             var dispatch = context.getBean(com.agentsquad.squad.service.WorkerDispatchService.class);
@@ -361,9 +362,9 @@ class CompletionCorrectionIntegrationTest {
             long version = context.getBean(TaskMapper.class).findOwned(USER_ID, target.getTaskId()).getVersion();
             context.getBean(TaskControlService.class).cancel(USER_ID, target.getTaskId(), "stop-jobs", version);
             org.assertj.core.api.Assertions.assertThatThrownBy(() -> dispatch.renew(USER_ID, firstBinding, claimed.getGuardToken()))
-                    .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
+                    .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
             org.assertj.core.api.Assertions.assertThatThrownBy(() -> dispatch.claim(USER_ID, secondBinding))
-                    .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
+                    .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
             var stops = jdbc.queryForList("SELECT command_id FROM sq_command WHERE task_id=? AND action='STOP' ORDER BY id", String.class, target.getTaskId());
             assertThat(stops).hasSize(3);
             var delivery = context.getBean(com.agentsquad.squad.service.CommandDeliveryService.class);
@@ -395,7 +396,7 @@ class CompletionCorrectionIntegrationTest {
                 "--agentsquad.model.name=test-model");
     }
 
-    private ProjectionTargetDO createTask(ConfigurableApplicationContext context) {
+    private ProjectionTargetBO createTask(ConfigurableApplicationContext context) {
         ConversationMapper conversations = context.getBean(ConversationMapper.class);
         TaskMapper tasks = context.getBean(TaskMapper.class);
         BindingMapper bindings = context.getBean(BindingMapper.class);
@@ -412,11 +413,11 @@ class CompletionCorrectionIntegrationTest {
         conversations.activateTask(USER_ID, conversationId, taskId);
         events.insertAccepted(USER_ID, taskId, "command:" + UUID.randomUUID(),
                 "{\"taskId\":\"" + taskId + "\"}", now);
-        return new ProjectionTargetDO(USER_ID, taskId, bindingId, MasterAgentIdentity.AGENT_ID, sessionId, 0);
+        return new ProjectionTargetBO(USER_ID, taskId, bindingId, MasterAgentIdentity.AGENT_ID, sessionId, 0);
     }
 
-    private NativeEventView event(long sequence, String type, String turnId, String outcome) {
-        return new NativeEventView(sequence, UUID.randomUUID().toString(), type,
+    private NativeEventViewBO event(long sequence, String type, String turnId, String outcome) {
+        return new NativeEventViewBO(sequence, UUID.randomUUID().toString(), type,
                 UUID.randomUUID().toString(), turnId, outcome, System.currentTimeMillis(),
                 java.util.Map.of());
     }

@@ -2,14 +2,14 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.mapper.ResponseTaskFactsMapper">
 
-    <resultMap id="jobsResult" type="com.agentsquad.squad.domain.entity.ResponseJobFactDO">
+    <resultMap id="jobsResult" type="com.agentsquad.squad.bo.ResponseJobFactBO">
         <constructor>
             <arg column="node_key" javaType="java.lang.String"/>
             <arg column="status" javaType="java.lang.String"/>
         </constructor>
     </resultMap>
 
-    <resultMap id="recentTasksResult" type="com.agentsquad.squad.domain.entity.ResponseTaskStatusFactDO">
+    <resultMap id="recentTasksResult" type="com.agentsquad.squad.bo.ResponseTaskStatusFactBO">
         <constructor>
             <arg column="task_id" javaType="java.lang.String"/>
             <arg column="source_message_id" javaType="java.lang.String"/>
@@ -19,7 +19,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="recentFailuresResult" type="com.agentsquad.squad.domain.entity.ResponseFailureFactDO">
+    <resultMap id="recentFailuresResult" type="com.agentsquad.squad.bo.ResponseFailureFactBO">
         <constructor>
             <arg column="category" javaType="java.lang.String"/>
             <arg column="actor" javaType="java.lang.String"/>

@@ -1,34 +1,36 @@
 package com.agentsquad.squad.service;
 
+import com.agentsquad.squad.bo.PlanPublishedEventBO;
+import com.agentsquad.squad.enums.AcceptanceVerificationType;
 import com.agentsquad.squad.mapper.TaskDirectiveMapper;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.common.util.CanonicalJson;
-import com.agentsquad.squad.common.util.ContentDigests;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.utils.CanonicalJson;
+import com.agentsquad.squad.utils.ContentDigests;
 import com.agentsquad.squad.mapper.BindingMapper;
 import com.agentsquad.squad.mapper.CommandMapper;
-import com.agentsquad.squad.domain.entity.BudgetAccountDO;
-import com.agentsquad.squad.common.exception.PendingDirectivesException;
+import com.agentsquad.squad.bo.BudgetAccountBO;
+import com.agentsquad.squad.exceptions.PendingDirectivesException;
 import com.agentsquad.squad.mapper.BudgetMapper;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
-import com.agentsquad.squad.domain.enums.GoalTaskStatus;
+import com.agentsquad.squad.enums.GoalTaskStatus;
 import com.agentsquad.squad.mapper.TaskEventMapper;
-import com.agentsquad.squad.domain.entity.PlanContextDO;
-import com.agentsquad.squad.domain.entity.PlanDO;
-import com.agentsquad.squad.domain.entity.ContextSnapshotDO;
-import com.agentsquad.squad.domain.entity.WorkerJobDO;
-import com.agentsquad.squad.domain.dto.PlanNode;
-import com.agentsquad.squad.domain.dto.PlanPublish;
-import com.agentsquad.squad.domain.dto.PlanReceipt;
-import com.agentsquad.squad.common.model.PendingDirectiveFeedback;
+import com.agentsquad.squad.bo.PlanContextBO;
+import com.agentsquad.squad.po.PlanPO;
+import com.agentsquad.squad.po.ContextSnapshotPO;
+import com.agentsquad.squad.po.WorkerJobPO;
+import com.agentsquad.squad.bo.PlanNodeBO;
+import com.agentsquad.squad.bo.PlanPublishBO;
+import com.agentsquad.squad.bo.PlanReceiptBO;
+import com.agentsquad.squad.bo.PendingDirectiveFeedbackBO;
 import com.agentsquad.squad.mapper.PlanMapper;
 import com.agentsquad.squad.mapper.ProjectionMapper;
 import com.agentsquad.squad.mapper.ContextSnapshotMapper;
 import com.agentsquad.squad.mapper.WorkerDefinitionMapper;
-import com.agentsquad.squad.domain.dto.WorkerDefinitionResponse;
-import com.agentsquad.squad.worker.profile.WorkerModelProfile;
-import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;
+import com.agentsquad.squad.vo.WorkerDefinitionVO;
+import com.agentsquad.squad.properties.WorkerModelProfile;
+import com.agentsquad.squad.properties.WorkerProfileRegistry;
 import com.agentsquad.squad.mapper.TaskMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -128,11 +130,11 @@ public class PlanService {
      * 事务提交后即使工具回包丢失，同 logicalKey 重放也只返回原回执。
      */
     @Transactional
-    public PlanReceipt publish(String userId, String sessionId, PlanPublish publish) {
+    public PlanReceiptBO publish(String userId, String sessionId, PlanPublishBO publish) {
         validateShape(publish);
 
         executionScopes.lockOwned(userId, executionScopes.scopeForSession(userId, sessionId), true);
-        PlanContextDO context = planMapper.lockMasterContext(userId, sessionId);
+        PlanContextBO context = planMapper.lockMasterContext(userId, sessionId);
         if (context == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "Master 会话未绑定目标");
         }
@@ -146,18 +148,18 @@ public class PlanService {
         if (!pendingDirectives.isEmpty()) {
             // 在已锁定的目标范围内返回全部真实标识，避免模型猜测来源消息 ID。
             long expectedVersion = tasks.lockOwnedRow(userId, context.getTaskId()).getVersion();
-            List<PendingDirectiveFeedback> pending = new ArrayList<>();
+            List<PendingDirectiveFeedbackBO> pending = new ArrayList<>();
             for (String directiveId : pendingDirectives) {
                 var directive = directives.lock(userId, directiveId);
                 if (directive != null && context.getTaskId().equals(directive.getTaskId())
                         && "ACCEPTED".equals(directive.getStatus())) {
-                    pending.add(new PendingDirectiveFeedback(
+                    pending.add(new PendingDirectiveFeedbackBO(
                             directive.getDirectiveId(), expectedVersion, directive.getKind(), directive.getContent()));
                 }
             }
             throw new PendingDirectivesException(context.getTaskId(), pending);
         }
-        PlanDO existing = planMapper.findLatestByLogicalKey(context.getTaskId(), publish.logicalKey());
+        PlanPO existing = planMapper.findLatestByLogicalKey(context.getTaskId(), publish.logicalKey());
         if (existing != null) {
             if (existing.getGoalRevision() != goalRevision) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "旧计划对应的目标内容已变化，请使用新的计划键");
@@ -168,10 +170,10 @@ public class PlanService {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "计划逻辑键对应的内容不同");
             }
             List<String> jobIds = planMapper.listJobs(context.getTaskId(), existing.getPlanVersion())
-                    .stream().map(WorkerJobDO::getJobId).toList();
+                    .stream().map(WorkerJobPO::getJobId).toList();
             log.info("计划重放返回原回执 taskId={} planId={} planVersion={} jobCount={}",
                     context.getTaskId(), existing.getPlanId(), existing.getPlanVersion(), jobIds.size());
-            return new PlanReceipt(existing.getPlanId(), context.getTaskId(), existing.getPlanVersion(), jobIds);
+            return new PlanReceiptBO(existing.getPlanId(), context.getTaskId(), existing.getPlanVersion(), jobIds);
         }
 
         if (publish.expectedPlanVersion() != context.getPlanVersion()) {
@@ -180,17 +182,17 @@ public class PlanService {
 
         validateDag(publish.nodes());
         validateContexts(context, publish.nodes());
-        List<WorkerJobDO> previousJobs = context.getPlanVersion() == 0
+        List<WorkerJobPO> previousJobs = context.getPlanVersion() == 0
                 ? List.of() : planMapper.listJobs(context.getTaskId(), context.getPlanVersion());
-        Map<String, WorkerJobDO> reusable = new LinkedHashMap<>();
+        Map<String, WorkerJobPO> reusable = new LinkedHashMap<>();
         boolean foundReusable;
         do {
             foundReusable = false;
-            for (PlanNode node : publish.nodes()) {
+            for (PlanNodeBO node : publish.nodes()) {
                 if (reusable.containsKey(node.nodeKey())) {
                     continue;
                 }
-                WorkerJobDO source = reuseService.reusableNode(
+                WorkerJobPO source = reuseService.reusableNode(
                         context.getUserId(), context.getTaskId(), node, previousJobs, reusable);
                 if (source != null) {
                     reusable.put(node.nodeKey(), source);
@@ -203,7 +205,7 @@ public class PlanService {
         long newVersion = context.getPlanVersion() + 1;
         long priorSignalVersion = 0;
         if (context.getPlanVersion() > 0) {
-            PlanDO previous = planMapper.lockPlan(context.getUserId(), context.getTaskId(),
+            PlanPO previous = planMapper.lockPlan(context.getUserId(), context.getTaskId(),
                     context.getPlanVersion());
             if (previous == null) {
                 throw new IllegalStateException("当前计划头已消失");
@@ -217,7 +219,7 @@ public class PlanService {
 
         List<String> jobIds = new ArrayList<>(publish.nodes().size());
         Map<String, String> reusedJobIds = new LinkedHashMap<>();
-        for (PlanNode node : publish.nodes()) {
+        for (PlanNodeBO node : publish.nodes()) {
             String jobId = UUID.randomUUID().toString();
             boolean root = node.dependsOn() == null || node.dependsOn().isEmpty();
             String status = root ? "READY" : "BLOCKED";
@@ -229,7 +231,7 @@ public class PlanService {
             planMapper.insertJob(jobId, context.getUserId(), context.getTaskId(), newVersion,
                     node.nodeKey(), node.workerKey(), node.workerVersion(), status,
                     dependsJson, RuntimePayloads.toJson(objectMapper, input));
-            WorkerJobDO source = reusable.get(node.nodeKey());
+            WorkerJobPO source = reusable.get(node.nodeKey());
             if (source != null) {
                 if (planMapper.reuseResult(context.getUserId(), jobId,
                         source.getJobId(), source.getResultJson()) != 1) {
@@ -254,17 +256,14 @@ public class PlanService {
         planMapper.cancelSupersededSignals(context.getTaskId());
         if (!reusedJobIds.isEmpty()) {
             dependencyService.activateReadyDependents(context.getUserId(), context.getTaskId(), newVersion);
-            PlanDO activePlan = planMapper.lockPlan(context.getUserId(), context.getTaskId(), newVersion);
+            PlanPO activePlan = planMapper.lockPlan(context.getUserId(), context.getTaskId(), newVersion);
             for (String ignored : reusedJobIds.keySet()) {
                 masterSignalService.onJobStateChanged(activePlan);
             }
         }
 
-        Map<String, Object> eventPayload = new LinkedHashMap<>();
-        eventPayload.put("planVersion", newVersion);
-        eventPayload.put("jobIds", jobIds);
-        eventPayload.put("joinPolicy", publish.joinPolicy());
-        eventPayload.put("acceptanceCriteria", publish.acceptanceCriteria());
+        PlanPublishedEventBO eventPayload = new PlanPublishedEventBO(newVersion, jobIds,
+                publish.joinPolicy(), publish.acceptanceCriteria());
         if (projectionMapper.reserveEventSequence(context.getUserId(), context.getTaskId()) != 1) {
             throw new IllegalStateException("计划事件序号预留失败");
         }
@@ -286,26 +285,26 @@ public class PlanService {
 
         log.info("计划已发布 taskId={} planVersion={} planId={} jobCount={}",
                 context.getTaskId(), newVersion, planId, jobIds.size());
-        return new PlanReceipt(planId, context.getTaskId(), newVersion, jobIds);
+        return new PlanReceiptBO(planId, context.getTaskId(), newVersion, jobIds);
     }
 
     /**
      * 发布前按每个节点的一次最大模型调用估算最低启动额；余额不足时整个发布事务回滚。
      */
-    private void requirePlanBudget(PlanContextDO context, List<PlanNode> nodes,
+    private void requirePlanBudget(PlanContextBO context, List<PlanNodeBO> nodes,
                                    Set<String> reusedNodeKeys) {
         String scopeId = scopeMapper.findScopeByTask(context.getUserId(), context.getTaskId());
-        BudgetAccountDO taskBudget = budgetMapper.lockAccount(context.getUserId(), scopeId);
+        BudgetAccountBO taskBudget = budgetMapper.lockAccount(context.getUserId(), scopeId);
         if (taskBudget == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标预算不存在");
         }
         BigInteger required = BigInteger.valueOf(budgetMapper.sumConsumedUnits(
                 context.getUserId(), scopeId));
-        for (PlanNode node : nodes) {
+        for (PlanNodeBO node : nodes) {
             if (reusedNodeKeys.contains(node.nodeKey())) {
                 continue;
             }
-            WorkerDefinitionResponse definition = workerDefinitionService.requireEnabled(
+            WorkerDefinitionVO definition = workerDefinitionService.requireEnabled(
                     node.workerKey(), node.workerVersion());
             WorkerModelProfile profile = profileRegistry.requirePricedModel(definition.modelProfileKey());
             BigInteger input = BigInteger.valueOf(profile.getMaxInputTokens())
@@ -325,9 +324,9 @@ public class PlanService {
     /**
      * 根节点与固定 Binding/Command 同事务落库；原生提交失败时由同一命令键重投。
      */
-    private void createRootDelivery(PlanContextDO context, PlanNode node,
+    private void createRootDelivery(PlanContextBO context, PlanNodeBO node,
                                     String jobId, long planVersion) {
-        WorkerDefinitionResponse definition = workerDefinitionService.requireEnabled(
+        WorkerDefinitionVO definition = workerDefinitionService.requireEnabled(
                 node.workerKey(), node.workerVersion());
         String bindingId = UUID.randomUUID().toString();
         String agentId = ContentDigests.sha256(definition.definitionId()).substring(0, 32);
@@ -344,7 +343,7 @@ public class PlanService {
                 context.getTaskId(), bindingId, payload, now);
     }
 
-    private void validateShape(PlanPublish publish) {
+    private void validateShape(PlanPublishBO publish) {
         if (publish == null || isBlank(publish.logicalKey()) || publish.logicalKey().length() > 160) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "计划逻辑键无效");
         }
@@ -360,7 +359,7 @@ public class PlanService {
         if (publish.acceptanceCriteria() == null || publish.acceptanceCriteria().isEmpty()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "缺少完成条件");
         }
-        if (publish.nodes().stream().noneMatch(PlanNode::required)
+        if (publish.nodes().stream().noneMatch(PlanNodeBO::required)
                 || publish.acceptanceCriteria().stream().noneMatch(item -> item != null && item.required())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "计划至少需要一项必要工作和必要完成条件");
         }
@@ -373,11 +372,11 @@ public class PlanService {
                     || isBlank(criterion.text()) || criterion.text().length() > 2000
                     || criterion.verificationType() == null || !criterionIds.add(criterion.criterionId())
                     || (criterion.deterministicCheck() != null
-                    && criterion.verificationType() != com.agentsquad.squad.domain.enums.AcceptanceVerificationType.DETERMINISTIC)) {
+                    && criterion.verificationType() != AcceptanceVerificationType.DETERMINISTIC)) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "完成条件内容或标识无效");
             }
         }
-        for (PlanNode node : publish.nodes()) {
+        for (PlanNodeBO node : publish.nodes()) {
             if (isBlank(node.nodeKey()) || node.nodeKey().length() > 80
                     || isBlank(node.workerKey()) || isBlank(node.workerVersion())
                     || isBlank(node.goal()) || isBlank(node.contextSnapshotId())
@@ -390,9 +389,9 @@ public class PlanService {
     /**
      * 节点只引用同用户、同目标、同对话代际且内容摘要未变化的已准备快照。
      */
-    private void validateContexts(PlanContextDO context, List<PlanNode> nodes) {
-        for (PlanNode node : nodes) {
-            ContextSnapshotDO snapshot = contextSnapshotMapper.findOwned(
+    private void validateContexts(PlanContextBO context, List<PlanNodeBO> nodes) {
+        for (PlanNodeBO node : nodes) {
+            ContextSnapshotPO snapshot = contextSnapshotMapper.findOwned(
                     context.getUserId(), context.getTaskId(), node.contextSnapshotId());
             if (snapshot == null || !node.nodeKey().equals(snapshot.getTargetNodeKey())
                     || snapshot.getConversationGeneration() != context.getConversationGeneration()
@@ -408,11 +407,11 @@ public class PlanService {
     /**
      * 校验节点键唯一、依赖引用存在、能力版本可用，并用拓扑分层检查无环与并行宽度上限。
      */
-    private void validateDag(List<PlanNode> nodes) {
+    private void validateDag(List<PlanNodeBO> nodes) {
         Map<String, Set<String>> dependents = new HashMap<>();
         Map<String, Integer> indegree = new HashMap<>();
         Set<String> keys = new HashSet<>();
-        for (PlanNode node : nodes) {
+        for (PlanNodeBO node : nodes) {
             if (!keys.add(node.nodeKey())) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "计划节点键重复");
             }
@@ -420,7 +419,7 @@ public class PlanService {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "Worker 能力版本不可用");
             }
         }
-        for (PlanNode node : nodes) {
+        for (PlanNodeBO node : nodes) {
             Set<String> deps = node.dependsOn() == null ? Set.of() : new HashSet<>(node.dependsOn());
             for (String dep : deps) {
                 if (!keys.contains(dep)) {

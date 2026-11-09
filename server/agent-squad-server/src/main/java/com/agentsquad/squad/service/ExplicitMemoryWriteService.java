@@ -1,18 +1,18 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.common.util.CanonicalJson;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
-import com.agentsquad.squad.domain.entity.MemoryDO;
-import com.agentsquad.squad.domain.entity.MemorySourceDO;
-import com.agentsquad.squad.domain.entity.MemoryWriteReceiptDO;
-import com.agentsquad.squad.domain.request.MemoryCreateRequest;
-import com.agentsquad.squad.domain.response.MemoryMutationResponse;
-import com.agentsquad.squad.domain.request.MemoryUpdateRequest;
-import com.agentsquad.squad.domain.dto.MemoryWriteReceipt;
-import com.agentsquad.squad.domain.dto.MemoryWriteRequest;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.utils.CanonicalJson;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.po.ExecutionScopePO;
+import com.agentsquad.squad.po.MemoryPO;
+import com.agentsquad.squad.bo.MemorySourceBO;
+import com.agentsquad.squad.po.MemoryWriteReceiptPO;
+import com.agentsquad.squad.dto.MemoryCreateDTO;
+import com.agentsquad.squad.vo.MemoryMutationVO;
+import com.agentsquad.squad.dto.MemoryUpdateDTO;
+import com.agentsquad.squad.bo.MemoryWriteReceiptBO;
+import com.agentsquad.squad.bo.MemoryWriteRequestBO;
 import com.agentsquad.squad.mapper.MemoryMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -48,10 +48,10 @@ public class ExplicitMemoryWriteService {
      * 会话/所有者→用户记忆代际的锁序；先恢复稳定回执，再校验当前上下文并执行一次变更。
      */
     @Transactional
-    public MemoryWriteReceipt write(String userId, String sessionId, MemoryWriteRequest request) {
+    public MemoryWriteReceiptBO write(String userId, String sessionId, MemoryWriteRequestBO request) {
         validateShape(request);
         String scopeId = scopes.scopeForSession(userId, sessionId);
-        ExecutionScopeDO scope = scopes.lockOwned(userId, scopeId, true);
+        ExecutionScopePO scope = scopes.lockOwned(userId, scopeId, true);
         if (!"RESPONSE".equals(scope.getKind())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "只有受权用户消息的回复可以写入显式记忆");
         }
@@ -59,7 +59,7 @@ public class ExplicitMemoryWriteService {
         mapper.lockRevision(userId);
         String payload = RuntimePayloads.toJson(json, request);
         String hash = CanonicalJson.sha256(json, payload);
-        MemoryWriteReceiptDO prior = mapper.receipt(userId, scopeId, request.logicalKey());
+        MemoryWriteReceiptPO prior = mapper.receipt(userId, scopeId, request.logicalKey());
         if (prior != null) {
             if (!prior.getPayloadHash().equals(hash)) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同记忆逻辑键的输入不同");
@@ -67,27 +67,27 @@ public class ExplicitMemoryWriteService {
             return readReceipt(prior.getResultJson());
         }
         contexts.requireCurrent(userId, scopeId);
-        MemorySourceDO source = mapper.source(userId, scopeId);
+        MemorySourceBO source = mapper.source(userId, scopeId);
         if (source == null || !source.getContent().contains(request.sourceQuote())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "显式记忆必须引用本次受权用户消息中的原话");
         }
 
-        MemoryMutationResponse result = apply(userId, request, source);
-        MemoryWriteReceipt receipt = new MemoryWriteReceipt(result.memory().memoryId(), result.memory().version(),
+        MemoryMutationVO result = apply(userId, request, source);
+        MemoryWriteReceiptBO receipt = new MemoryWriteReceiptBO(result.memory().memoryId(), result.memory().version(),
                 result.memoryRevision(), result.affectedScopes(), result.impact());
         mapper.insertReceipt(userId, scopeId, request.logicalKey(), hash, RuntimePayloads.toJson(json, receipt));
         return receipt;
     }
 
-    private MemoryMutationResponse apply(String userId, MemoryWriteRequest request, MemorySourceDO source) {
+    private MemoryMutationVO apply(String userId, MemoryWriteRequestBO request, MemorySourceBO source) {
         if ("CREATE".equals(request.action())) {
             if (request.expectedVersion() != null) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "创建记忆不接受旧版本");
             }
-            return memories.createFromSource(userId, new MemoryCreateRequest(request.key(), request.content(), request.expiresAt()),
+            return memories.createFromSource(userId, new MemoryCreateDTO(request.key(), request.content(), request.expiresAt()),
                     source.getMessageId(), request.sourceQuote());
         }
-        MemoryDO current = mapper.findActiveKey(userId, request.key());
+        MemoryPO current = mapper.findActiveKey(userId, request.key());
         if (current == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "待纠正或删除的记忆不存在");
         }
@@ -98,11 +98,11 @@ public class ExplicitMemoryWriteService {
             return memories.delete(userId, current.getMemoryId(), request.expectedVersion());
         }
         return memories.updateFromSource(userId, current.getMemoryId(),
-                new MemoryUpdateRequest(request.expectedVersion(), request.content(), request.expiresAt()),
+                new MemoryUpdateDTO(request.expectedVersion(), request.content(), request.expiresAt()),
                 source.getMessageId(), request.sourceQuote());
     }
 
-    private void validateShape(MemoryWriteRequest request) {
+    private void validateShape(MemoryWriteRequestBO request) {
         if (request == null || request.logicalKey() == null || request.logicalKey().isBlank()
                 || request.logicalKey().length() > 160 || request.action() == null || !Set.of("CREATE", "UPDATE", "DELETE").contains(request.action())
                 || request.key() == null || request.key().isBlank() || request.key().length() > 100
@@ -111,9 +111,9 @@ public class ExplicitMemoryWriteService {
         }
     }
 
-    private MemoryWriteReceipt readReceipt(String value) {
+    private MemoryWriteReceiptBO readReceipt(String value) {
         try {
-            return json.treeToValue(RuntimePayloads.readJson(json, value), MemoryWriteReceipt.class);
+            return json.treeToValue(RuntimePayloads.readJson(json, value), MemoryWriteReceiptBO.class);
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("显式记忆持久收据损坏", exception);
         }

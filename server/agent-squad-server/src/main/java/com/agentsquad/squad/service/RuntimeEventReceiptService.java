@@ -1,14 +1,14 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.integration.agentscope.inbox.RuntimeJournalReadySignal;
+import com.agentsquad.squad.event.RuntimeJournalReadySignal;
 
-import com.agentsquad.squad.domain.enums.RuntimeEventInboxStatus;
+import com.agentsquad.squad.enums.RuntimeEventInboxStatus;
 
-import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventFingerprint;
+import com.agentsquad.squad.utils.RuntimeEventFingerprint;
 
-import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource;
+import com.agentsquad.squad.bo.RuntimeEventSourceBO;
 
-import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventInboxRow;
+import com.agentsquad.squad.po.RuntimeEventInboxPO;
 
 import com.agentsquad.squad.mapper.RuntimeEventInboxMapper;
 
@@ -44,7 +44,7 @@ public class RuntimeEventReceiptService {
      * 同序号或同事件ID异内容不覆盖，重投已消费事件也不回退其消费状态。
      */
     @Transactional
-    public void receive(RuntimeEventSource source, SessionEvent event) {
+    public void receive(RuntimeEventSourceBO source, SessionEvent event) {
         Objects.requireNonNull(source);
         Objects.requireNonNull(event);
         validateEnvelope(event);
@@ -52,7 +52,7 @@ public class RuntimeEventReceiptService {
             throw new IllegalStateException("原生事件会话归属不匹配");
         }
 
-        var incoming = new RuntimeEventInboxRow(UUID.randomUUID().toString(), source.userId(),
+        var incoming = new RuntimeEventInboxPO(UUID.randomUUID().toString(), source.userId(),
                 source.bindingId(), source.sessionId(), event.seq(), event.eventId(), event.type(),
                 event.executionRunId(), event.turnId(), event.occurredAt(), event.required(),
                 event.schemaVersion(), RuntimeEventFingerprint.of(event), source.mappingVersion(), RuntimeEventInboxStatus.RECEIVED);
@@ -66,7 +66,7 @@ public class RuntimeEventReceiptService {
         }
     }
 
-    private boolean sameFact(RuntimeEventInboxRow stored, RuntimeEventInboxRow incoming) {
+    private boolean sameFact(RuntimeEventInboxPO stored, RuntimeEventInboxPO incoming) {
         return stored.nativeSeq() == incoming.nativeSeq()
                 && stored.nativeEventId().equals(incoming.nativeEventId())
                 && stored.sessionId().equals(incoming.sessionId())

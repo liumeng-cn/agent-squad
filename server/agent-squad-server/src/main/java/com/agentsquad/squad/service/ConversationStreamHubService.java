@@ -1,8 +1,8 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.domain.dto.ReplyPreview;
+import com.agentsquad.squad.bo.ReplyPreviewBO;
 
-import com.agentsquad.squad.domain.model.ConversationStreamKey;
+import com.agentsquad.squad.bo.ConversationStreamKeyBO;
 import java.util.Comparator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class ConversationStreamHubService {
     private static final int EVENT_PAGE_SIZE = 100;
     private static final int MAX_BATCHES_PER_DRAIN = 4;
-    private final ConversationStreamKey key;
+    private final ConversationStreamKeyBO key;
     private final ConversationQueryService queries;
     private final UserStatusGuardService users;
     private final Executor executor;
@@ -25,7 +25,7 @@ public final class ConversationStreamHubService {
     private final AtomicBoolean queued = new AtomicBoolean();
     private final AtomicBoolean dirty = new AtomicBoolean();
 
-    public ConversationStreamHubService(ConversationStreamKey key, ConversationQueryService queries,
+    public ConversationStreamHubService(ConversationStreamKeyBO key, ConversationQueryService queries,
                                  UserStatusGuardService users, Executor executor) {
         this.key = key;
         this.queries = queries;
@@ -94,7 +94,7 @@ public final class ConversationStreamHubService {
         return Long.parseLong(cursor.substring(cursor.lastIndexOf(':') + 1));
     }
 
-    public void preview(ReplyPreview preview) {
+    public void preview(ReplyPreviewBO preview) {
         subscribers.values().forEach(subscriber -> subscriber.preview(preview));
     }
 

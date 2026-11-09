@@ -1,6 +1,6 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.domain.entity.CommandDO;
+import com.agentsquad.squad.po.CommandPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -26,13 +26,13 @@ public interface CommandMapper {
 
     int cancelPendingByTask(@Param("userId") String userId, @Param("taskId") String taskId);
 
-    CommandDO findByKey(@Param("userId") String userId, @Param("scopeKey") String scopeKey,
+    CommandPO findByKey(@Param("userId") String userId, @Param("scopeKey") String scopeKey,
                          @Param("idempotencyKey") String idempotencyKey);
 
-    CommandDO findByKeyCurrent(@Param("userId") String userId, @Param("scopeKey") String scopeKey,
+    CommandPO findByKeyCurrent(@Param("userId") String userId, @Param("scopeKey") String scopeKey,
                          @Param("idempotencyKey") String idempotencyKey);
 
-    CommandDO findOwned(@Param("userId") String userId, @Param("commandId") String commandId);
+    CommandPO findOwned(@Param("userId") String userId, @Param("commandId") String commandId);
 
     int countSignalTurn(@Param("userId") String userId, @Param("taskId") String taskId,
                         @Param("turnId") String turnId);

@@ -1,20 +1,21 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.domain.enums.AcceptanceVerificationType;
-import com.agentsquad.squad.domain.enums.WorkerJobStatus;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.common.util.ContentDigests;
+import com.agentsquad.squad.enums.AcceptanceVerificationType;
+import com.agentsquad.squad.enums.DeterministicAcceptanceCheck;
+import com.agentsquad.squad.enums.WorkerJobStatus;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.utils.ContentDigests;
 import com.agentsquad.squad.mapper.InteractionMapper;
-import com.agentsquad.squad.domain.model.PlanAcceptanceResult;
-import com.agentsquad.squad.domain.enums.PlanAcceptanceVerdict;
-import com.agentsquad.squad.domain.entity.PlanDO;
-import com.agentsquad.squad.domain.model.UserAcceptanceReview;
-import com.agentsquad.squad.domain.entity.WorkerJobDO;
-import com.agentsquad.squad.domain.dto.AcceptanceReview;
-import com.agentsquad.squad.domain.dto.AcceptanceReviewRequest;
-import com.agentsquad.squad.domain.dto.PlanAcceptanceCriterion;
-import com.agentsquad.squad.domain.dto.PlanPublish;
+import com.agentsquad.squad.bo.PlanAcceptanceResultBO;
+import com.agentsquad.squad.enums.PlanAcceptanceVerdict;
+import com.agentsquad.squad.po.PlanPO;
+import com.agentsquad.squad.bo.UserAcceptanceReviewBO;
+import com.agentsquad.squad.po.WorkerJobPO;
+import com.agentsquad.squad.bo.AcceptanceReviewBO;
+import com.agentsquad.squad.bo.AcceptanceReviewRequestBO;
+import com.agentsquad.squad.bo.PlanAcceptanceCriterionBO;
+import com.agentsquad.squad.bo.PlanPublishBO;
 import com.agentsquad.squad.mapper.PlanMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -47,9 +48,9 @@ public class PlanAcceptanceService {
     @Resource
     private ObjectMapper json;
 
-    public List<PlanAcceptanceResult> assess(PlanDO plan, List<WorkerJobDO> jobs, List<AcceptanceReview> reviews) {
+    public List<PlanAcceptanceResultBO> assess(PlanPO plan, List<WorkerJobPO> jobs, List<AcceptanceReviewBO> reviews) {
         var definition = definition(plan);
-        var byId = new HashMap<String, AcceptanceReview>();
+        var byId = new HashMap<String, AcceptanceReviewBO>();
         if (reviews != null) {
             if (reviews.size() > 20) {
                 throw invalid("检查意见不能超过20项");
@@ -64,14 +65,14 @@ public class PlanAcceptanceService {
                 }
             }
         }
-        var results = new ArrayList<PlanAcceptanceResult>();
+        var results = new ArrayList<PlanAcceptanceResultBO>();
         for (var criterion : definition.acceptanceCriteria()) {
             var review = byId.get(criterion.criterionId());
             var verdict = PlanAcceptanceVerdict.UNKNOWN;
             String verifier = "UNVERIFIED";
             List<String> refs = List.of();
             if (criterion.verificationType() == AcceptanceVerificationType.DETERMINISTIC
-                    && criterion.deterministicCheck() == com.agentsquad.squad.domain.enums.DeterministicAcceptanceCheck.REQUIRED_RESULTS_READY) {
+                    && criterion.deterministicCheck() == DeterministicAcceptanceCheck.REQUIRED_RESULTS_READY) {
                 var requiredNodes = definition.nodes().stream().filter(node -> node.required()).map(node -> node.nodeKey()).toList();
                 var requiredJobs = jobs.stream().filter(job -> requiredNodes.contains(job.getNodeKey())).toList();
                 boolean passed = !requiredNodes.isEmpty() && requiredJobs.size() == requiredNodes.size()
@@ -79,7 +80,7 @@ public class PlanAcceptanceService {
                         && WorkerJobStatus.SUCCEEDED.name().equals(job.getStatus()) && job.getResultJson() != null);
                 verdict = passed ? PlanAcceptanceVerdict.PASS : PlanAcceptanceVerdict.FAIL;
                 verifier = "PLATFORM:REQUIRED_RESULTS_READY";
-                refs = requiredJobs.stream().map(WorkerJobDO::getJobId).toList();
+                refs = requiredJobs.stream().map(WorkerJobPO::getJobId).toList();
             } else if (review != null && !review.evidenceRefs().isEmpty()) {
                 if (criterion.verificationType() == AcceptanceVerificationType.MODEL_REVIEW) {
                     for (String ref : review.evidenceRefs()) {
@@ -114,7 +115,7 @@ public class PlanAcceptanceService {
                     }
                 }
             }
-            results.add(new PlanAcceptanceResult(criterion.criterionId(), criterion.text(), criterion.required(), criterion.verificationType(),
+            results.add(new PlanAcceptanceResultBO(criterion.criterionId(), criterion.text(), criterion.required(), criterion.verificationType(),
                     verdict, verifier, refs, plan.getPlanVersion(), plan.getGoalRevision()));
         }
         return List.copyOf(results);
@@ -124,7 +125,7 @@ public class PlanAcceptanceService {
      * 仅当前目标 Master 可以请求验收，问题按不可变计划生成；实际挂起仍使用 SDK 公开机制。
      */
     @Transactional
-    public UserAcceptanceReview prepareUserReview(String userId, String sessionId, AcceptanceReviewRequest request) {
+    public UserAcceptanceReviewBO prepareUserReview(String userId, String sessionId, AcceptanceReviewRequestBO request) {
         scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), true);
         var context = plans.lockMasterContext(userId, sessionId);
         if (context == null || context.isCancellationRequested() || request == null
@@ -143,19 +144,19 @@ public class PlanAcceptanceService {
                 .orElseThrow(() -> invalid("当前计划没有这项用户确认条件"));
         log.debug("用户验收条件已核对 taskId={} planVersion={} criterionId={}",
                 plan.getTaskId(), plan.getPlanVersion(), criterion.criterionId());
-        return new UserAcceptanceReview(criterion.criterionId(), plan.getPlanVersion(),
+        return new UserAcceptanceReviewBO(criterion.criterionId(), plan.getPlanVersion(),
                 "请确认这项结果是否符合要求：" + criterion.text(), reviewHash(plan, criterion));
     }
 
-    public PlanPublish definition(PlanDO plan) {
+    public PlanPublishBO definition(PlanPO plan) {
         try {
-            return json.readValue(plan.getDefinitionJson(), PlanPublish.class);
+            return json.readValue(plan.getDefinitionJson(), PlanPublishBO.class);
         } catch (java.io.IOException exception) {
             throw new IllegalStateException("当前计划完成条件无法解析", exception);
         }
     }
 
-    private String reviewHash(PlanDO plan, PlanAcceptanceCriterion criterion) {
+    private String reviewHash(PlanPO plan, PlanAcceptanceCriterionBO criterion) {
         return ContentDigests.sha256(plan.getTaskId() + ":" + plan.getPlanVersion() + ":" + plan.getGoalRevision()
                 + ":" + criterion.criterionId() + ":" + criterion.text());
     }

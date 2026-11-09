@@ -1,12 +1,12 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.OperationDO;
-import com.agentsquad.squad.domain.enums.OperationStatus;
-import com.agentsquad.squad.domain.dto.OperationView;
-import com.agentsquad.squad.domain.dto.OperationReconcileRequest;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.po.OperationPO;
+import com.agentsquad.squad.enums.OperationStatus;
+import com.agentsquad.squad.vo.OperationVO;
+import com.agentsquad.squad.dto.OperationReconcileDTO;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.mapper.MockTicketMapper;
 import com.agentsquad.squad.mapper.OperationMapper;
@@ -66,9 +66,9 @@ public class OperationReconcileService {
      * 核对 UNKNOWN 操作并出账；确认成功按预留额结算，确认未执行释放预留。
      */
     @Transactional
-    public OperationView reconcile(AuthView actor, String operationId, OperationReconcileRequest request) {
+    public OperationVO reconcile(AuthView actor, String operationId, OperationReconcileDTO request) {
         String userId = actor.userId();
-        OperationDO row = operationMapper.findOwned(userId, operationId);
+        OperationPO row = operationMapper.findOwned(userId, operationId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "操作不存在");
         }
@@ -110,7 +110,7 @@ public class OperationReconcileService {
     /**
      * 确认已执行：优先按 KEY 语义查证外部系统；查不到时接受人工证据。
      */
-    private void reconcileSucceeded(String userId, OperationDO row, Map<String, Object> evidence) {
+    private void reconcileSucceeded(String userId, OperationPO row, Map<String, Object> evidence) {
         String connectorResult = lookupExternalTicket(userId, row);
         if (connectorResult != null) {
             evidence.put("source", "CONNECTOR_KEY_LOOKUP");
@@ -131,7 +131,7 @@ public class OperationReconcileService {
     /**
      * 确认未执行：出账为 FAILED 并释放预算；重试需重新走预检与审批。
      */
-    private void reconcileNotExecuted(String userId, OperationDO row, Map<String, Object> evidence) {
+    private void reconcileNotExecuted(String userId, OperationPO row, Map<String, Object> evidence) {
         evidence.put("source", "HUMAN_ATTESTED");
         if (operationMapper.reconcileOutcome(userId, row.getOperationId(), row.getVersion(),
                 OperationStatus.FAILED.name(), RuntimePayloads.toJson(objectMapper, evidence),
@@ -145,7 +145,7 @@ public class OperationReconcileService {
     /**
      * 无法确认：只记录证据，状态保持 UNKNOWN，等待更多事实。
      */
-    private void recordUnresolved(String userId, OperationDO row, Map<String, Object> evidence) {
+    private void recordUnresolved(String userId, OperationPO row, Map<String, Object> evidence) {
         evidence.put("source", "HUMAN_UNRESOLVED");
         evidence.put("stillUnknown", true);
         if (operationMapper.recordUnresolved(userId, row.getOperationId(), row.getVersion(),
@@ -158,7 +158,7 @@ public class OperationReconcileService {
     /**
      * 按连接器 KEY 幂等键查证模拟工单是否已存在；非工单写入或键不存在返回 null。
      */
-    private String lookupExternalTicket(String userId, OperationDO row) {
+    private String lookupExternalTicket(String userId, OperationPO row) {
         if (!"mock_ticket_create".equals(row.getToolKey()) || row.getExternalKey() == null) {
             return null;
         }

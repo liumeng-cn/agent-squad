@@ -1,15 +1,15 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.common.util.ContentDigests;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.CommandDO;
-import com.agentsquad.squad.domain.entity.ConversationDO;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.utils.ContentDigests;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.po.CommandPO;
+import com.agentsquad.squad.po.ConversationPO;
 import com.agentsquad.squad.mapper.ConversationMapper;
-import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
-import com.agentsquad.squad.domain.entity.ResponseRuntimeDO;
-import com.agentsquad.squad.domain.response.CommandReceiptResponse;
+import com.agentsquad.squad.po.ExecutionScopePO;
+import com.agentsquad.squad.po.ResponseRuntimePO;
+import com.agentsquad.squad.vo.CommandReceiptVO;
 import com.agentsquad.squad.mapper.CommandMapper;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.mapper.ResponseRuntimeMapper;
@@ -59,28 +59,28 @@ public class ResponseControlService {
     private ObjectMapper json;
 
     @Transactional
-    public CommandReceiptResponse cancel(String userId, String executionId, String key, long expectedVersion) {
+    public CommandReceiptVO cancel(String userId, String executionId, String key, long expectedVersion) {
         if (key == null || key.isBlank() || key.length() > 160) {
             throw error(RuntimeExceptionCode.VALIDATION, "幂等键无效");
         }
         String binding = replies.bindingForExecution(userId, executionId);
         String scopeId = scopeMapper.findScopeByBinding(userId, binding);
         scopes.requireReadable(userId, scopeId);
-        ExecutionScopeDO scope = scopes.lockOwned(userId, scopeId, false);
-        ConversationDO conversation = conversations.lockOwned(userId, scope.getConversationId());
+        ExecutionScopePO scope = scopes.lockOwned(userId, scopeId, false);
+        ConversationPO conversation = conversations.lockOwned(userId, scope.getConversationId());
         if (!"ACTIVE".equals(conversation.getStatus()) || conversation.getGeneration() != scope.getConversationGeneration()) {
             throw error(RuntimeExceptionCode.NOT_FOUND, "回复所属会话已失效");
         }
-        ResponseRuntimeDO row = replies.lockByBinding(userId, binding);
+        ResponseRuntimePO row = replies.lockByBinding(userId, binding);
         String payload = RuntimePayloads.toJson(json, Map.of("expectedVersion", expectedVersion));
         String hash = ContentDigests.sha256(payload);
         String scopeKey = "response.cancel:" + executionId;
-        CommandDO prior = commands.findByKeyCurrent(userId, scopeKey, key);
+        CommandPO prior = commands.findByKeyCurrent(userId, scopeKey, key);
         if (prior != null) {
             if (!hash.equals(prior.getPayloadHash())) {
                 throw error(RuntimeExceptionCode.CONFLICT, "相同幂等键的输入不一致");
             }
-            return new CommandReceiptResponse(prior.getCommandId(), null, prior.getStatus(), prior.getNativeTurnId(), null);
+            return new CommandReceiptVO(prior.getCommandId(), null, prior.getStatus(), prior.getNativeTurnId(), null);
         }
         if (row.getVersion() != expectedVersion || row.isCancellationRequested()
                 || Set.of("SUCCEEDED", "PARTIAL", "FAILED", "CANCELLED").contains(row.getStatus())) {
@@ -95,8 +95,8 @@ public class ResponseControlService {
     @Transactional
     public void cancelForDeletion(String userId, String conversationId) {
         for (String binding : replies.activeBindings(userId, conversationId)) {
-            ExecutionScopeDO scope = scopes.lockOwned(userId, scopeMapper.findScopeByBinding(userId, binding), false);
-            ResponseRuntimeDO row = replies.lockByBinding(userId, binding);
+            ExecutionScopePO scope = scopes.lockOwned(userId, scopeMapper.findScopeByBinding(userId, binding), false);
+            ResponseRuntimePO row = replies.lockByBinding(userId, binding);
             if (!row.isCancellationRequested()) {
                 String payload = RuntimePayloads.toJson(json, Map.of("reason", "conversation-delete"));
                 queueStop(scope, row, "response.cancel:" + row.getExecutionId(), "conversation-delete", payload, ContentDigests.sha256(payload));
@@ -104,7 +104,7 @@ public class ResponseControlService {
         }
     }
 
-    private CommandReceiptResponse queueStop(ExecutionScopeDO scope, ResponseRuntimeDO row, String scopeKey, String key, String payload, String hash) {
+    private CommandReceiptVO queueStop(ExecutionScopePO scope, ResponseRuntimePO row, String scopeKey, String key, String payload, String hash) {
         replies.cancelling(scope.getUserId(), row.getBindingId(), LocalDateTime.now(ZoneOffset.UTC));
         replies.cancelPending(scope.getUserId(), row.getBindingId());
         operations.cancelUnstarted(scope.getUserId(), scope.getScopeId());
@@ -113,7 +113,7 @@ public class ResponseControlService {
         commands.insertControl(id, scope.getUserId(), scopeKey, key, hash, null, row.getBindingId(), "STOP", payload, LocalDateTime.now(ZoneOffset.UTC));
         events.publish(scope, "response:" + row.getExecutionId() + ":cancel", "execution.status_changed",
                 Map.of("executionId", row.getExecutionId(), "status", "CANCELLING", "version", row.getVersion() + 1));
-        return new CommandReceiptResponse(id, null, "PENDING", null, null);
+        return new CommandReceiptVO(id, null, "PENDING", null, null);
     }
 
     private RuntimeBusinessException error(RuntimeExceptionCode code, String text) {

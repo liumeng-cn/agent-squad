@@ -1,7 +1,7 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.domain.entity.OperationDO;
-import com.agentsquad.squad.domain.entity.ToolExecutionContextDO;
+import com.agentsquad.squad.po.OperationPO;
+import com.agentsquad.squad.bo.ToolExecutionContextBO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -14,7 +14,7 @@ import java.util.List;
 @Mapper
 public interface OperationMapper {
 
-    ToolExecutionContextDO lockToolContext(@Param("userId") String userId, @Param("sessionId") String sessionId);
+    ToolExecutionContextBO lockToolContext(@Param("userId") String userId, @Param("sessionId") String sessionId);
 
     int insert(@Param("operationId") String operationId, @Param("userId") String userId,
                @Param("taskId") String taskId, @Param("jobId") String jobId,
@@ -28,20 +28,20 @@ public interface OperationMapper {
                @Param("argumentsJson") String argumentsJson, @Param("status") String status,
                @Param("creatorName") String creatorName, @Param("budgetUsageKey") String budgetUsageKey);
 
-    OperationDO findByNativeCall(@Param("userId") String userId,
+    OperationPO findByNativeCall(@Param("userId") String userId,
                                   @Param("bindingId") String bindingId,
                                   @Param("frameworkTurnId") String frameworkTurnId,
                                   @Param("toolCallId") String toolCallId);
 
-    OperationDO findByBusinessIntent(@Param("userId") String userId,
+    OperationPO findByBusinessIntent(@Param("userId") String userId,
                                       @Param("scopeId") String scopeId,
                                       @Param("toolKey") String toolKey,
                                       @Param("businessIntentKey") String businessIntentKey);
 
-    OperationDO findOwned(@Param("userId") String userId,
+    OperationPO findOwned(@Param("userId") String userId,
                            @Param("operationId") String operationId);
 
-    List<OperationDO> listByTask(@Param("userId") String userId, @Param("taskId") String taskId,
+    List<OperationPO> listByTask(@Param("userId") String userId, @Param("taskId") String taskId,
                                   @Param("cursorId") Long cursorId, @Param("limit") int limit);
 
     Long cursorIdOf(@Param("userId") String userId, @Param("operationId") String operationId);
@@ -68,7 +68,7 @@ public interface OperationMapper {
                     @Param("expectedVersion") long expectedVersion,
                     @Param("updaterId") String updaterId);
 
-    List<OperationDO> findExpiredInFlight(@Param("now") LocalDateTime now,
+    List<OperationPO> findExpiredInFlight(@Param("now") LocalDateTime now,
                                            @Param("limit") int limit);
 
     int reconcileOutcome(@Param("userId") String userId,
@@ -92,5 +92,5 @@ public interface OperationMapper {
 
     List<String> findUncertainInConversation(@Param("userId") String userId, @Param("scopeId") String scopeId);
     int cancelUnstartedByScope(@Param("userId") String userId, @Param("scopeId") String scopeId);
-    java.util.List<OperationDO> lockUnstartedInScope(@Param("userId") String userId, @Param("scopeId") String scopeId);
+    java.util.List<OperationPO> lockUnstartedInScope(@Param("userId") String userId, @Param("scopeId") String scopeId);
 }

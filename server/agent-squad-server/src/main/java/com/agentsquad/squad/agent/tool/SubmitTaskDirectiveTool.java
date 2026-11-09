@@ -1,8 +1,8 @@
 package com.agentsquad.squad.agent.tool;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.dto.TaskDirectiveSubmit;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.bo.TaskDirectiveSubmitBO;
 import com.agentsquad.squad.service.TaskDirectiveService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;
@@ -67,7 +67,7 @@ public class SubmitTaskDirectiveTool implements AgentTool {
             return ToolResultBlock.error("目标修改参数或运行上下文无效");
         }
         try {
-            var request = json.convertValue(input, TaskDirectiveSubmit.class);
+            var request = json.convertValue(input, TaskDirectiveSubmitBO.class);
             return ToolResultBlock.text(RuntimePayloads.toJson(json, directives.submit(context.getUserId(), context.getSessionId(), request)));
         } catch (RuntimeBusinessException exception) {
             return ToolResultBlock.error(exception.getMessage());

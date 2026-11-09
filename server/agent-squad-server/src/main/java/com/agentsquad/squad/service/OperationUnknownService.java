@@ -1,8 +1,8 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.domain.entity.OperationDO;
+import com.agentsquad.squad.po.OperationPO;
 import com.agentsquad.squad.mapper.OperationMapper;
-import com.agentsquad.squad.domain.model.FailureClassification;
+import com.agentsquad.squad.bo.FailureClassificationBO;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,12 +25,12 @@ public class OperationUnknownService {
     private ExecutionFailureService failures;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public boolean mark(OperationDO operation, long expectedVersion, String actor) {
+    public boolean mark(OperationPO operation, long expectedVersion, String actor) {
         var scope = scopes.lockOwned(operation.getUserId(), operation.getScopeId(), false);
         if (operations.markUnknown(operation.getUserId(), operation.getOperationId(), expectedVersion, actor) != 1) {
             return false;
         }
-        failures.record(scope, operation.getBindingId(), "operation:" + operation.getOperationId(), new FailureClassification(
+        failures.record(scope, operation.getBindingId(), "operation:" + operation.getOperationId(), new FailureClassificationBO(
                 "EXTERNAL_UNKNOWN", "OPERATION_RESULT_UNCONFIRMED", "OPERATOR", "有一项外部操作的结果尚未确认，系统会先核对，期间不会重复执行。"));
         return true;
     }

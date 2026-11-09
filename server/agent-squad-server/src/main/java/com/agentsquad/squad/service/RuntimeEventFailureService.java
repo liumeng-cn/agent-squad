@@ -1,10 +1,10 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource;
+import com.agentsquad.squad.bo.RuntimeEventSourceBO;
 
 import com.agentsquad.squad.mapper.RuntimeEventInboxMapper;
 
-import com.agentsquad.squad.domain.enums.RuntimeEventFailureCode;
+import com.agentsquad.squad.enums.RuntimeEventFailureCode;
 
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -27,7 +27,7 @@ public class RuntimeEventFailureService {
     private RuntimeEventInboxMapper inboxMapper;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void record(RuntimeEventSource source, long sequence, RuntimeEventFailureCode code) {
+    public void record(RuntimeEventSourceBO source, long sequence, RuntimeEventFailureCode code) {
         inboxMapper.recordFailure(source, sequence, code.status(), code,
                 LocalDateTime.now(ZoneOffset.UTC).plusSeconds(RETRY_DELAY_SECONDS));
     }

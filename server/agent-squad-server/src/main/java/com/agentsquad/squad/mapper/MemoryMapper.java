@@ -1,9 +1,9 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.domain.entity.MemoryDO;
-import com.agentsquad.squad.domain.entity.MemoryScopePinDO;
-import com.agentsquad.squad.domain.entity.MemorySourceDO;
-import com.agentsquad.squad.domain.entity.MemoryWriteReceiptDO;
+import com.agentsquad.squad.po.MemoryPO;
+import com.agentsquad.squad.po.MemoryScopePinPO;
+import com.agentsquad.squad.bo.MemorySourceBO;
+import com.agentsquad.squad.po.MemoryWriteReceiptPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -25,13 +25,13 @@ public interface MemoryMapper {
 
     int advanceRevision(@Param("user") String user);
 
-    MemoryDO find(@Param("user") String user, @Param("id") String id);
+    MemoryPO find(@Param("user") String user, @Param("id") String id);
 
-    MemoryDO findActiveKey(@Param("user") String user, @Param("key") String key);
+    MemoryPO findActiveKey(@Param("user") String user, @Param("key") String key);
 
-    List<MemoryDO> list(@Param("user") String user, @Param("before") Long before, @Param("limit") int limit);
+    List<MemoryPO> list(@Param("user") String user, @Param("before") Long before, @Param("limit") int limit);
 
-    List<MemoryDO> active(@Param("user") String user, @Param("now") LocalDateTime now, @Param("limit") int limit);
+    List<MemoryPO> active(@Param("user") String user, @Param("now") LocalDateTime now, @Param("limit") int limit);
 
     List<String> recall(@Param("user") String user, @Param("query") String query,
                         @Param("now") LocalDateTime now, @Param("limit") int limit);
@@ -50,7 +50,7 @@ public interface MemoryMapper {
 
     int blockedScopes(@Param("user") String user);
 
-    MemoryScopePinDO pin(@Param("user") String user, @Param("scope") String scope);
+    MemoryScopePinPO pin(@Param("user") String user, @Param("scope") String scope);
 
     int pinScope(@Param("user") String user, @Param("scope") String scope, @Param("revision") long revision);
 
@@ -60,9 +60,9 @@ public interface MemoryMapper {
 
     Long pinnedVersion(@Param("user") String user, @Param("scope") String scope, @Param("id") String id);
 
-    MemorySourceDO source(@Param("user") String user, @Param("scope") String scope);
+    MemorySourceBO source(@Param("user") String user, @Param("scope") String scope);
 
-    MemoryWriteReceiptDO receipt(@Param("user") String user, @Param("scope") String scope, @Param("key") String key);
+    MemoryWriteReceiptPO receipt(@Param("user") String user, @Param("scope") String scope, @Param("key") String key);
 
     int insertReceipt(@Param("user") String user, @Param("scope") String scope, @Param("key") String key,
                       @Param("hash") String hash, @Param("result") String result);

@@ -4,12 +4,12 @@ import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.service.ArtifactService;
 import com.agentsquad.squad.service.ArtifactDeliveryService;
 import com.agentsquad.squad.service.ArtifactRetentionService;
-import com.agentsquad.squad.domain.request.MessageCreateRequest;
+import com.agentsquad.squad.dto.MessageCreateDTO;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.ExecutionAuthorizationService;
-import com.agentsquad.squad.domain.dto.SandboxDriverResult;
-import com.agentsquad.squad.domain.dto.SandboxExecuteRequest;
-import com.agentsquad.squad.domain.dto.SandboxOutput;
+import com.agentsquad.squad.bo.SandboxDriverResultBO;
+import com.agentsquad.squad.bo.SandboxExecuteRequestBO;
+import com.agentsquad.squad.bo.SandboxOutputBO;
 import com.agentsquad.squad.service.SandboxAccessService;
 import com.agentsquad.squad.service.SandboxRunTransactionService;
 import org.junit.jupiter.api.Test;
@@ -38,14 +38,14 @@ class ArtifactDeliveryIntegrationTest {
         try (ConfigurableApplicationContext context = start(directory, userId)) {
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             var receipt = context.getBean(MessageAcceptanceService.class).accept(userId, null, "sandbox-first",
-                    new MessageCreateRequest("生成文本附件", List.of()));
+                    new MessageCreateDTO("生成文本附件", List.of()));
             String scopeId = jdbc.queryForObject("SELECT scope_id FROM sq_response_execution WHERE execution_id = ?",
                     String.class, receipt.executionId());
             String sessionId = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE scope_id = ?",
                     String.class, scopeId);
             context.getBean(ExecutionAuthorizationService.class).prepare(userId, scopeId);
             var identity = context.getBean(SandboxAccessService.class).resolve(userId, sessionId, null, "turn", "call");
-            var request = new SandboxExecuteRequest("report", "print('report')", List.of(), List.of("result.txt"), 5);
+            var request = new SandboxExecuteRequestBO("report", "print('report')", List.of(), List.of("result.txt"), 5);
             SandboxRunTransactionService ledger = context.getBean(SandboxRunTransactionService.class);
             var claim = ledger.begin(identity, request, "a".repeat(64));
             assertThat(claim.newlyAccepted()).isTrue();
@@ -55,7 +55,7 @@ class ArtifactDeliveryIntegrationTest {
             assertThatThrownBy(() -> ledger.begin(identity, request, "b".repeat(64))).hasMessageContaining("输入不一致");
             byte[] content = "已验证的交付".getBytes(StandardCharsets.UTF_8);
             var result = ledger.finish(identity, claim.run().getExecutionId(), request,
-                    new SandboxDriverResult(0, "report", "", false, List.of(new SandboxOutput("result.txt", content))));
+                    new SandboxDriverResultBO(0, "report", "", false, List.of(new SandboxOutputBO("result.txt", content))));
             var stage = result.stagedArtifacts().getFirst();
             ArtifactService artifacts = context.getBean(ArtifactService.class);
             assertThatThrownBy(() -> artifacts.content(userId, stage.stageId())).hasMessageContaining("不存在");

@@ -1,8 +1,8 @@
 package com.agentsquad.squad.agent.tool;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.dto.MemoryWriteRequest;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.bo.MemoryWriteRequestBO;
 import com.agentsquad.squad.service.ExplicitMemoryWriteService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;
@@ -72,7 +72,7 @@ public class WriteExplicitMemoryTool implements AgentTool {
             return ToolResultBlock.error("显式记忆参数或原生执行身份无效");
         }
         try {
-            MemoryWriteRequest request = json.convertValue(param.getInput(), MemoryWriteRequest.class);
+            MemoryWriteRequestBO request = json.convertValue(param.getInput(), MemoryWriteRequestBO.class);
             return ToolResultBlock.text(RuntimePayloads.toJson(json, writes.write(context.getUserId(), context.getSessionId(), request)));
         } catch (RuntimeBusinessException exception) {
             return ToolResultBlock.error(exception.getMessage());

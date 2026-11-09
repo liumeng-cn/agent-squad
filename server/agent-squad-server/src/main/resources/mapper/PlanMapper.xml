@@ -10,7 +10,7 @@
           AND plan_version = #{planVersion}
     </select>
 
-    <resultMap id="lockMasterContextResult" type="com.agentsquad.squad.domain.entity.PlanContextDO">
+    <resultMap id="lockMasterContextResult" type="com.agentsquad.squad.bo.PlanContextBO">
         <constructor>
             <arg column="user_id" javaType="java.lang.String"/>
             <arg column="task_id" javaType="java.lang.String"/>
@@ -23,7 +23,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="findLatestByLogicalKeyResult" type="com.agentsquad.squad.domain.entity.PlanDO">
+    <resultMap id="findLatestByLogicalKeyResult" type="com.agentsquad.squad.po.PlanPO">
         <constructor>
             <arg column="id" javaType="_long"/>
             <arg column="plan_id" javaType="java.lang.String"/>
@@ -39,7 +39,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="lockPlanResult" type="com.agentsquad.squad.domain.entity.PlanDO">
+    <resultMap id="lockPlanResult" type="com.agentsquad.squad.po.PlanPO">
         <constructor>
             <arg column="id" javaType="_long"/>
             <arg column="plan_id" javaType="java.lang.String"/>
@@ -55,7 +55,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="listJobsResult" type="com.agentsquad.squad.domain.entity.WorkerJobDO">
+    <resultMap id="listJobsResult" type="com.agentsquad.squad.po.WorkerJobPO">
         <constructor>
             <arg column="id" javaType="_long"/>
             <arg column="job_id" javaType="java.lang.String"/>
@@ -77,7 +77,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="lockJobsResult" type="com.agentsquad.squad.domain.entity.WorkerJobDO">
+    <resultMap id="lockJobsResult" type="com.agentsquad.squad.po.WorkerJobPO">
         <constructor>
             <arg column="id" javaType="_long"/>
             <arg column="job_id" javaType="java.lang.String"/>

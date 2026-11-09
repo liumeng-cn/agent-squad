@@ -1,12 +1,12 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.domain.dto.ConversationResponse;
-import com.agentsquad.squad.domain.response.TaskReceiptResponse;
+import com.agentsquad.squad.vo.ConversationVO;
+import com.agentsquad.squad.vo.TaskReceiptVO;
 import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.service.WorkerDefinitionService;
-import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.dto.WorkerDefinitionCreateDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
@@ -20,7 +20,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
-import com.agentsquad.squad.domain.enums.AccountRole;
+import com.agentsquad.squad.enums.AccountRole;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -110,15 +110,15 @@ class AutonomousWritingFlowIntegrationTest {
                 jdbcRef.set(jdbc);
                 WorkerDefinitionService definitions = spring.getBean(WorkerDefinitionService.class);
                 definitions.publish(new AuthView(userId, "admin", List.of(AccountRole.ADMIN), "csrf"),
-                        "draft-writer", new WorkerDefinitionCreateRequest(
+                        "draft-writer", new WorkerDefinitionCreateDTO(
                                 "draft-writer", "1.0.0", "写作短文",
                                 json.readTree("{}"), json.readTree("""
                                 {"type":"object","required":["text"],
                                  "properties":{"text":{"type":"string"}}}
                                 """), List.of(), "default", "default"));
                 GoalTaskService tasks = spring.getBean(GoalTaskService.class);
-                ConversationResponse conversation = tasks.createConversation(userId, "写作目标");
-                TaskReceiptResponse task = tasks.submit(userId, conversation.conversationId(),
+                ConversationVO conversation = tasks.createConversation(userId, "写作目标");
+                TaskReceiptVO task = tasks.submit(userId, conversation.conversationId(),
                         "autonomous-writing", "请写一段短文");
                 taskIdRef.set(task.taskId());
 

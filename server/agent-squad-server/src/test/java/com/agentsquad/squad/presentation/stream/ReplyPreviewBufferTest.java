@@ -1,9 +1,9 @@
 package com.agentsquad.squad.presentation.stream;
 
-import com.agentsquad.squad.domain.entity.ReplyPreviewTargetDO;
-import com.agentsquad.squad.integration.agentscope.ReplyPreviewBuffer;
-import com.agentsquad.squad.domain.enums.ReplyPreviewPhase;
-import com.agentsquad.squad.domain.model.ReplyPreviewSignal;
+import com.agentsquad.squad.bo.ReplyPreviewTargetBO;
+import com.agentsquad.squad.service.ReplyPreviewBuffer;
+import com.agentsquad.squad.enums.ReplyPreviewPhase;
+import com.agentsquad.squad.event.ReplyPreviewSignal;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -19,7 +19,7 @@ class ReplyPreviewBufferTest {
     @Test
     void abortRetiresOnlyThisStreamAndNeverPublishesLateText() {
         var signals = new ArrayList<ReplyPreviewSignal>();
-        var buffer = new ReplyPreviewBuffer(new ReplyPreviewTargetDO("u", "c", "e", "m"), "run", signals::add);
+        var buffer = new ReplyPreviewBuffer(new ReplyPreviewTargetBO("u", "c", "e", "m"), "run", signals::add);
         buffer.append("不完整正文");
         buffer.abort();
         var aborted = signals.getLast().preview();
@@ -36,7 +36,7 @@ class ReplyPreviewBufferTest {
     @Test
     void preservesSurrogatePairAcrossChunksAndReplacesWholeText() {
         var signals = new ArrayList<ReplyPreviewSignal>();
-        var buffer = new ReplyPreviewBuffer(new ReplyPreviewTargetDO("u", "c", "e", "m"), "run", signals::add);
+        var buffer = new ReplyPreviewBuffer(new ReplyPreviewTargetBO("u", "c", "e", "m"), "run", signals::add);
         buffer.append("首段\uD83D");
         assertThat(signals.getFirst().preview().text()).isEqualTo("首段");
         buffer.append("\uDE00结尾");
@@ -52,7 +52,7 @@ class ReplyPreviewBufferTest {
     @Test
     void boundsTextWithoutPublishingHalfSurrogatePair() {
         var signals = new ArrayList<ReplyPreviewSignal>();
-        var buffer = new ReplyPreviewBuffer(new ReplyPreviewTargetDO("u", "c", "e", "m"), "run", signals::add);
+        var buffer = new ReplyPreviewBuffer(new ReplyPreviewTargetBO("u", "c", "e", "m"), "run", signals::add);
         buffer.append("a".repeat(65535) + "😀");
         buffer.flush();
         assertThat(signals.getLast().preview().text()).hasSize(65535);
@@ -62,7 +62,7 @@ class ReplyPreviewBufferTest {
     @Test
     void reportsThinkingPhaseWithoutReasoningTextAndMergesRepeats() {
         var signals = new ArrayList<ReplyPreviewSignal>();
-        var buffer = new ReplyPreviewBuffer(new ReplyPreviewTargetDO("u", "c", "e", "m"), "run", signals::add);
+        var buffer = new ReplyPreviewBuffer(new ReplyPreviewTargetBO("u", "c", "e", "m"), "run", signals::add);
         buffer.thinking();
         buffer.thinking();
         assertThat(signals).hasSize(1);

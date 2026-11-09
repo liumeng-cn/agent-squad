@@ -1,11 +1,11 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.mapper.TaskMapper;
 import com.agentsquad.squad.mapper.TaskEventMapper;
-import com.agentsquad.squad.domain.dto.ConversationResponse;
-import com.agentsquad.squad.domain.response.TaskReceiptResponse;
+import com.agentsquad.squad.vo.ConversationVO;
+import com.agentsquad.squad.vo.TaskReceiptVO;
 import com.agentsquad.squad.service.ConversationCleanupSchedulerService;
 import com.agentsquad.squad.service.ConversationDeletionService;
 import com.agentsquad.squad.service.GoalTaskService;
@@ -40,8 +40,8 @@ class ConversationDeletionTaskSettleTest {
             ConversationDeletionService deletionService = context.getBean(ConversationDeletionService.class);
             ConversationCleanupSchedulerService cleanupScheduler = context.getBean(ConversationCleanupSchedulerService.class);
 
-            ConversationResponse conversation = goalTaskService.createConversation(userId, "删除收尾");
-            TaskReceiptResponse receipt = goalTaskService.submit(userId, conversation.conversationId(),
+            ConversationVO conversation = goalTaskService.createConversation(userId, "删除收尾");
+            TaskReceiptVO receipt = goalTaskService.submit(userId, conversation.conversationId(),
                     "delete-settle-1", "未受理的目标");
             long currentVersion = goalTaskService
                     .getConversation(userId, conversation.conversationId()).version();

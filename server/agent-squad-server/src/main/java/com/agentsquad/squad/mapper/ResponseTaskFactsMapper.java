@@ -1,8 +1,8 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.domain.entity.ResponseJobFactDO;
-import com.agentsquad.squad.domain.entity.ResponseFailureFactDO;
-import com.agentsquad.squad.domain.entity.ResponseTaskStatusFactDO;
+import com.agentsquad.squad.bo.ResponseJobFactBO;
+import com.agentsquad.squad.bo.ResponseFailureFactBO;
+import com.agentsquad.squad.bo.ResponseTaskStatusFactBO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -17,12 +17,12 @@ import java.util.List;
 public interface ResponseTaskFactsMapper {
     Long scopeGeneration(@Param("userId") String userId, @Param("taskId") String taskId);
 
-    List<ResponseJobFactDO> jobs(@Param("userId") String userId, @Param("taskId") String taskId,
+    List<ResponseJobFactBO> jobs(@Param("userId") String userId, @Param("taskId") String taskId,
                                @Param("planVersion") long planVersion);
 
-    List<ResponseTaskStatusFactDO> recentTasks(@Param("userId") String userId,
+    List<ResponseTaskStatusFactBO> recentTasks(@Param("userId") String userId,
                                              @Param("conversationId") String conversationId, @Param("generation") long generation, @Param("through") long through);
 
-    List<ResponseFailureFactDO> recentFailures(@Param("userId") String userId,
+    List<ResponseFailureFactBO> recentFailures(@Param("userId") String userId,
                                              @Param("conversationId") String conversationId, @Param("generation") long generation, @Param("through") long through);
 }

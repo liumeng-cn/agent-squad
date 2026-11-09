@@ -29,7 +29,7 @@
           AND del_flag = '0'
     </select>
 
-    <select id="pendingSources" resultType="com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource">
+    <select id="pendingSources" resultType="com.agentsquad.squad.bo.RuntimeEventSourceBO">
         SELECT i.user_id AS userId,
                i.binding_id AS bindingId,
                i.session_id AS sessionId,
@@ -93,7 +93,7 @@
         ON DUPLICATE KEY UPDATE id = id
     </insert>
 
-    <select id="findCollisions" resultType="com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventInboxRow">
+    <select id="findCollisions" resultType="com.agentsquad.squad.po.RuntimeEventInboxPO">
         SELECT <include refid="receiptColumns"/>
         FROM sq_runtime_event_inbox
         WHERE user_id = #{event.userId}
@@ -129,13 +129,13 @@
         AND del_flag = '0'
     </sql>
 
-    <select id="findBySequence" resultType="com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventInboxRow">
+    <select id="findBySequence" resultType="com.agentsquad.squad.po.RuntimeEventInboxPO">
         SELECT <include refid="receiptColumns"/>
         FROM sq_runtime_event_inbox
         WHERE <include refid="sequencePredicate"/>
     </select>
 
-    <select id="lockBySequence" resultType="com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventInboxRow">
+    <select id="lockBySequence" resultType="com.agentsquad.squad.po.RuntimeEventInboxPO">
         SELECT <include refid="receiptColumns"/>
         FROM sq_runtime_event_inbox
         WHERE <include refid="sequencePredicate"/>

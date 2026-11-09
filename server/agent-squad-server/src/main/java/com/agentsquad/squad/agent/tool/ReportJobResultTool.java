@@ -1,6 +1,6 @@
 package com.agentsquad.squad.agent.tool;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.service.WorkerResultService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

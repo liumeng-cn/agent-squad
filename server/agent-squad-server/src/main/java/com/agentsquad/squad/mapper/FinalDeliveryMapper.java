@@ -1,6 +1,6 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.domain.entity.FinalDeliveryDO;
+import com.agentsquad.squad.po.FinalDeliveryPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -12,7 +12,7 @@ import org.apache.ibatis.annotations.Param;
  */
 @Mapper
 public interface FinalDeliveryMapper {
-    FinalDeliveryDO lockCurrent(@Param("userId") String userId, @Param("messageId") String messageId);
+    FinalDeliveryPO lockCurrent(@Param("userId") String userId, @Param("messageId") String messageId);
 
     int insert(@Param("deliveryId") String deliveryId, @Param("userId") String userId,
                @Param("messageId") String messageId, @Param("generation") long generation,

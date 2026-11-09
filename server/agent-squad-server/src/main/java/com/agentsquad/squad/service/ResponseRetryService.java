@@ -1,21 +1,21 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.common.util.ContentDigests;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.model.ActivityBusinessFact;
-import com.agentsquad.squad.domain.response.MessageReceiptResponse;
-import com.agentsquad.squad.domain.enums.ResponseExecutionStatus;
+import com.agentsquad.squad.enums.ActivityType;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.utils.ContentDigests;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.vo.MessageReceiptVO;
+import com.agentsquad.squad.enums.ResponseExecutionStatus;
 import com.agentsquad.squad.mapper.BindingMapper;
 import com.agentsquad.squad.mapper.CommandMapper;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.mapper.ResponseRuntimeMapper;
 import com.agentsquad.squad.mapper.ResponseContextMapper;
 import com.agentsquad.squad.mapper.MessageAcceptanceMapper;
-import com.agentsquad.squad.domain.enums.ResponseCompletionProtocol;
+import com.agentsquad.squad.enums.ResponseCompletionProtocol;
 import com.agentsquad.squad.mapper.ExecutionFailureMapper;
-import com.agentsquad.squad.domain.model.MasterAgentIdentity;
+import com.agentsquad.squad.agent.MasterAgentIdentity;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -34,7 +34,7 @@ import java.util.UUID;
 @Service
 public class ResponseRetryService {
     @Resource
-    private com.agentsquad.squad.common.observability.ExecutionTrace executionTrace;
+    private com.agentsquad.squad.observer.ExecutionTrace executionTrace;
     @Resource
     private com.agentsquad.squad.service.ActivityProjectionService activities;
     @org.springframework.beans.factory.annotation.Value("${agentsquad.response.completion-protocol:NATURAL}")
@@ -80,7 +80,7 @@ public class ResponseRetryService {
      * 同键返回原后继收据；多个键不能为同一失败记录建立两个后继，UNKNOWN账本不允许重试。
      */
     @Transactional
-    public MessageReceiptResponse retry(String userId, String executionId, String key, long expectedVersion) {
+    public MessageReceiptVO retry(String userId, String executionId, String key, long expectedVersion) {
         if (key == null || key.isBlank() || key.length() > 160) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "重试幂等键无效");
         }
@@ -95,7 +95,7 @@ public class ResponseRetryService {
             if (!hash.equals(prior.getPayloadHash())) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "同一重试键的请求不同");
             }
-            return new MessageReceiptResponse(prior.getConversationId(), prior.getMessageId(), prior.getExecutionId(), prior.getCommandId(), ResponseExecutionStatus.valueOf(prior.getStatus()), prior.getConversationId() + ":" + prior.getGeneration() + ":" + prior.getReceiptSequence());
+            return new MessageReceiptVO(prior.getConversationId(), prior.getMessageId(), prior.getExecutionId(), prior.getCommandId(), ResponseExecutionStatus.valueOf(prior.getStatus()), prior.getConversationId() + ":" + prior.getGeneration() + ":" + prior.getReceiptSequence());
         }
         var failure = failures.latest(userId, scope.getScopeId(), oldBinding);
         if (original.getVersion() != expectedVersion || failure == null
@@ -124,8 +124,8 @@ public class ResponseRetryService {
         commands.insertControl(command, userId, scopeKey, key, hash, null, binding, "MESSAGE_SUBMIT", payload, now);
         var created = scopeMapper.findOwned(userId, nextScope);
         events.publish(created, "command:" + command + ":execution.queued", "execution.queued", Map.of("executionId", next, "sourceMessageId", original.getSourceMessageId(), "retryOfExecutionId", executionId, "status", "QUEUED"));
-        activities.completed(created, binding, new com.agentsquad.squad.domain.model.ActivityBusinessFact(
-                com.agentsquad.squad.domain.enums.ActivityType.USER_RETRY_SCHEDULED, command));
-        return new MessageReceiptResponse(scope.getConversationId(), original.getSourceMessageId(), next, command, ResponseExecutionStatus.QUEUED, scope.getConversationId() + ":" + scope.getConversationGeneration() + ":" + messages.eventSequence(userId, scope.getConversationId()));
+        activities.completed(created, binding, new com.agentsquad.squad.bo.ActivityBusinessFactBO(
+                ActivityType.USER_RETRY_SCHEDULED, command));
+        return new MessageReceiptVO(scope.getConversationId(), original.getSourceMessageId(), next, command, ResponseExecutionStatus.QUEUED, scope.getConversationId() + ":" + scope.getConversationGeneration() + ":" + messages.eventSequence(userId, scope.getConversationId()));
     }
 }

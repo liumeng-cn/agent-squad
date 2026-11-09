@@ -1,26 +1,27 @@
 package com.agentsquad.squad.service;
 
+import com.agentsquad.squad.enums.ResponseCompletionProtocol;
 import com.agentsquad.squad.mapper.ArtifactMapper;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.common.observability.ObservationSupport;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.ConversationDO;
-import com.agentsquad.squad.domain.entity.MessageSubmissionDO;
-import com.agentsquad.squad.domain.model.ConversationCommittedSignal;
-import com.agentsquad.squad.domain.request.MessageCreateRequest;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.observer.ObservationSupport;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.po.ConversationPO;
+import com.agentsquad.squad.bo.MessageSubmissionBO;
+import com.agentsquad.squad.event.ConversationCommittedSignal;
+import com.agentsquad.squad.dto.MessageCreateDTO;
 import com.agentsquad.squad.mapper.BindingMapper;
 import com.agentsquad.squad.mapper.CommandMapper;
 import com.agentsquad.squad.mapper.ConversationMapper;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.mapper.MessageAcceptanceMapper;
-import com.agentsquad.squad.domain.model.MasterAgentIdentity;
-import com.agentsquad.squad.domain.enums.ResponseExecutionStatus;
-import com.agentsquad.squad.domain.dto.MessageView;
-import com.agentsquad.squad.domain.dto.ResponseExecutionView;
-import com.agentsquad.squad.domain.dto.MessageAcceptedPayload;
-import com.agentsquad.squad.domain.dto.ExecutionChangedPayload;
-import com.agentsquad.squad.domain.enums.ConversationDeltaType;
+import com.agentsquad.squad.agent.MasterAgentIdentity;
+import com.agentsquad.squad.enums.ResponseExecutionStatus;
+import com.agentsquad.squad.vo.MessageVO;
+import com.agentsquad.squad.vo.ResponseExecutionVO;
+import com.agentsquad.squad.bo.MessageAcceptedPayloadBO;
+import com.agentsquad.squad.bo.ExecutionChangedPayloadBO;
+import com.agentsquad.squad.enums.ConversationDeltaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import org.springframework.context.ApplicationEventPublisher;
@@ -45,10 +46,10 @@ import java.util.UUID;
 @Service
 public class MessageAcceptanceWriterService {
     @Resource
-    private com.agentsquad.squad.common.observability.ExecutionTrace executionTrace;
+    private com.agentsquad.squad.observer.ExecutionTrace executionTrace;
 
     @org.springframework.beans.factory.annotation.Value("${agentsquad.response.completion-protocol:NATURAL}")
-    private com.agentsquad.squad.domain.enums.ResponseCompletionProtocol completionProtocol;
+    private ResponseCompletionProtocol completionProtocol;
 
     @Resource
     private com.agentsquad.squad.service.ModelCatalogService modelCatalog;
@@ -93,10 +94,10 @@ public class MessageAcceptanceWriterService {
      * 独立受理事务保证并发唯一键失败可先回滚，再由外层补查胜出收据，避免在失败事务中继续读写
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public MessageSubmissionDO accept(String userId, String conversationId, String scopeKey, String key,
-                                       MessageCreateRequest request, String payloadHash) {
-        ConversationDO conversation = conversationId == null ? null : lockConversation(userId, conversationId);
-        MessageSubmissionDO prior = messages.findSubmission(userId, scopeKey, key);
+    public MessageSubmissionBO accept(String userId, String conversationId, String scopeKey, String key,
+                                       MessageCreateDTO request, String payloadHash) {
+        ConversationPO conversation = conversationId == null ? null : lockConversation(userId, conversationId);
+        MessageSubmissionBO prior = messages.findSubmission(userId, scopeKey, key);
         if (prior != null) {
             return prior;
         }
@@ -144,17 +145,17 @@ public class MessageAcceptanceWriterService {
         payload.put("artifactIds", request.artifactIds());
         commands.insertControl(commandId, userId, scopeKey, key, payloadHash, null, bindingId,
                 "MESSAGE_SUBMIT", RuntimePayloads.toJson(objectMapper, payload), now);
-        var execution = new ResponseExecutionView(executionId, messageId, ResponseExecutionStatus.QUEUED,
+        var execution = new ResponseExecutionVO(executionId, messageId, ResponseExecutionStatus.QUEUED,
                 0, null, null, java.util.List.of("STOP"));
-        var message = new MessageView(messageId, sequence, "USER", request.text(), 0, true,
+        var message = new MessageVO(messageId, sequence, "USER", request.text(), 0, true,
                 null, executionId, null, now.atOffset(ZoneOffset.UTC).toString(),
                 request.artifactIds().stream().map(id -> artifacts.get(userId, id)).toList());
         appendEvent(userId, conversation, commandId, ConversationDeltaType.MESSAGE_ACCEPTED.code(),
-                new MessageAcceptedPayload(ConversationDeltaType.SCHEMA_VERSION, message, execution), now);
+                new MessageAcceptedPayloadBO(ConversationDeltaType.SCHEMA_VERSION, message, execution), now);
         appendEvent(userId, conversation, commandId, ConversationDeltaType.EXECUTION_QUEUED.code(),
-                new ExecutionChangedPayload(ConversationDeltaType.SCHEMA_VERSION, execution), now);
-        committedEvents.publishEvent(new com.agentsquad.squad.domain.model.CommandReadySignal(commandId));
-        MessageSubmissionDO submission = messages.findSubmission(userId, scopeKey, key);
+                new ExecutionChangedPayloadBO(ConversationDeltaType.SCHEMA_VERSION, execution), now);
+        committedEvents.publishEvent(new com.agentsquad.squad.event.CommandReadySignal(commandId));
+        MessageSubmissionBO submission = messages.findSubmission(userId, scopeKey, key);
         log.info("用户消息已受理 {}", observations.logFields(Map.of(
                 "conversationId", conversationId, "messageId", messageId, "executionId", executionId,
                 "scopeId", scopeId, "commandId", commandId, "sequence", sequence,
@@ -171,15 +172,15 @@ public class MessageAcceptanceWriterService {
         return singleLine.length() <= 40 ? singleLine : singleLine.substring(0, 40) + "…";
     }
 
-    private ConversationDO lockConversation(String userId, String conversationId) {
-        ConversationDO row = conversations.lockOwned(userId, conversationId);
+    private ConversationPO lockConversation(String userId, String conversationId) {
+        ConversationPO row = conversations.lockOwned(userId, conversationId);
         if (row == null || !"ACTIVE".equals(row.getStatus())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "对话不存在或已删除");
         }
         return row;
     }
 
-    private void appendEvent(String userId, ConversationDO conversation, String commandId, String type,
+    private void appendEvent(String userId, ConversationPO conversation, String commandId, String type,
                              Object payload, LocalDateTime now) {
         if (messages.reserveEvent(userId, conversation.getConversationId()) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "会话公开水位已失效");
@@ -191,7 +192,7 @@ public class MessageAcceptanceWriterService {
     }
 
     private String fallbackTitle(String text) {
-        String title = com.agentsquad.squad.domain.model.ConversationTitles.safe(text, 32);
+        String title = com.agentsquad.squad.utils.ConversationTitles.safe(text, 32);
         return title.isEmpty() ? "新对话" : title;
     }
 }

@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.mapper.ConnectionMapper">
 
-    <resultMap id="findOwnedResult" type="com.agentsquad.squad.domain.entity.ConnectionDO">
+    <resultMap id="findOwnedResult" type="com.agentsquad.squad.po.ConnectionPO">
         <constructor>
             <arg column="id" javaType="_long"/>
             <arg column="connection_id" javaType="java.lang.String"/>
@@ -22,7 +22,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="findByIdempotencyKeyResult" type="com.agentsquad.squad.domain.entity.ConnectionDO">
+    <resultMap id="findByIdempotencyKeyResult" type="com.agentsquad.squad.po.ConnectionPO">
         <constructor>
             <arg column="id" javaType="_long"/>
             <arg column="connection_id" javaType="java.lang.String"/>
@@ -42,7 +42,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="listByOwnerResult" type="com.agentsquad.squad.domain.entity.ConnectionDO">
+    <resultMap id="listByOwnerResult" type="com.agentsquad.squad.po.ConnectionPO">
         <constructor>
             <arg column="id" javaType="_long"/>
             <arg column="connection_id" javaType="java.lang.String"/>

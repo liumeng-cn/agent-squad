@@ -1,21 +1,21 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
 
-import com.agentsquad.squad.domain.entity.CommandDO;
-import com.agentsquad.squad.domain.entity.ConversationDO;
-import com.agentsquad.squad.domain.enums.ConversationStatus;
-import com.agentsquad.squad.domain.enums.GoalTaskStatus;
-import com.agentsquad.squad.domain.enums.RuntimeCommandAction;
-import com.agentsquad.squad.domain.entity.TaskDO;
+import com.agentsquad.squad.po.CommandPO;
+import com.agentsquad.squad.po.ConversationPO;
+import com.agentsquad.squad.enums.ConversationStatus;
+import com.agentsquad.squad.enums.GoalTaskStatus;
+import com.agentsquad.squad.enums.RuntimeCommandAction;
+import com.agentsquad.squad.po.TaskPO;
 import com.agentsquad.squad.mapper.CommandMapper;
 import com.agentsquad.squad.mapper.ConversationMapper;
 import com.agentsquad.squad.mapper.TaskEventMapper;
 import com.agentsquad.squad.mapper.TaskMapper;
 import com.agentsquad.squad.mapper.ProjectionMapper;
-import com.agentsquad.squad.common.util.ContentDigests;
-import com.agentsquad.squad.common.util.RuntimePayloads;
+import com.agentsquad.squad.utils.ContentDigests;
+import com.agentsquad.squad.utils.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -79,7 +79,7 @@ public class ConversationDeletionService {
         if (idempotencyKey == null || idempotencyKey.isBlank() || idempotencyKey.length() > 160) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "幂等键长度必须为 1 到 160");
         }
-        ConversationDO conversation = conversationMapper.lockOwned(userId, conversationId);
+        ConversationPO conversation = conversationMapper.lockOwned(userId, conversationId);
         if (conversation == null || ConversationStatus.DELETED.name().equals(conversation.getStatus())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "会话不存在");
         }
@@ -87,7 +87,7 @@ public class ConversationDeletionService {
         String payloadJson = RuntimePayloads.toJson(objectMapper, Map.of(
                 "action", RuntimeCommandAction.DELETE_CONVERSATION.name(), "expectedVersion", expectedVersion));
         String payloadHash = ContentDigests.sha256(payloadJson);
-        CommandDO prior = commandMapper.findByKey(userId, scopeKey, idempotencyKey);
+        CommandPO prior = commandMapper.findByKey(userId, scopeKey, idempotencyKey);
         if (prior != null) {
             if (!prior.getPayloadHash().equals(payloadHash)) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同幂等键的输入不一致");
@@ -117,7 +117,7 @@ public class ConversationDeletionService {
     }
 
     private void settleActiveTask(String userId, String conversationId, String taskId, LocalDateTime now) {
-        TaskDO task = taskMapper.lockOwned(userId, taskId);
+        TaskPO task = taskMapper.lockOwned(userId, taskId);
         if (task == null || GoalTaskStatus.valueOf(task.getStatus()).isTerminal()) {
             conversationMapper.clearActiveTask(userId, conversationId, taskId);
             return;

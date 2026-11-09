@@ -1,8 +1,8 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.entity.InteractionDO;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.po.InteractionPO;
 import com.agentsquad.squad.mapper.InteractionMapper;
 import com.agentsquad.squad.mapper.OperationMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,7 +11,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import com.agentsquad.squad.domain.enums.AccountRole;
+import com.agentsquad.squad.enums.AccountRole;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
@@ -34,7 +34,7 @@ class InteractionServiceTest {
         ReflectionTestUtils.setField(service, "scopeService", mock(com.agentsquad.squad.service.ExecutionScopeService.class));
 
         AuthView actor = new AuthView("user-1", "tester", List.of(AccountRole.USER), "csrf");
-        InteractionDO row = new InteractionDO("interaction-1", actor.userId(), "task-1",
+        InteractionPO row = new InteractionPO("interaction-1", actor.userId(), "task-1",
                 "job-1", "binding-1", "operation-1", "FRAMEWORK", "request-1",
                 "APPROVAL", "确认执行", "{}", 0L, "hash-1", 0L,
                 LocalDateTime.now().plusHours(1), "OPEN", 2L, null, "scope-1");

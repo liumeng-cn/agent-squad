@@ -1,8 +1,8 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.domain.entity.OperationDO;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.po.OperationPO;
 import com.agentsquad.squad.mapper.OperationMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -32,8 +32,8 @@ public class OperationDispatchService {
      * 独立事务领取操作；UNKNOWN或RECONCILING未核清前，同会话不得发出新的外部请求。
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public int begin(OperationDO operation, String owner, long fence, LocalDateTime leaseUntil, String externalKey) {
-        OperationDO current = mapper.findOwned(operation.getUserId(), operation.getOperationId());
+    public int begin(OperationPO operation, String owner, long fence, LocalDateTime leaseUntil, String externalKey) {
+        OperationPO current = mapper.findOwned(operation.getUserId(), operation.getOperationId());
         if (current == null || !java.util.Objects.equals(current.getScopeId(), operation.getScopeId())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "操作执行归属已变化");
         }

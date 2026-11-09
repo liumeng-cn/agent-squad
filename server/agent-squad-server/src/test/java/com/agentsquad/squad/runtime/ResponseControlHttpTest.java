@@ -1,6 +1,6 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.domain.enums.AccountRole;
+import com.agentsquad.squad.enums.AccountRole;
 
 import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.service.ConversationCleanupSchedulerService;

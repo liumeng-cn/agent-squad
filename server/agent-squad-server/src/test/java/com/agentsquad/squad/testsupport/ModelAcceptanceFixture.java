@@ -1,6 +1,6 @@
 package com.agentsquad.squad.testsupport;
 
-import com.agentsquad.squad.domain.dto.PlanPublish;
+import com.agentsquad.squad.bo.PlanPublishBO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -26,7 +26,7 @@ public final class ModelAcceptanceFixture {
             result.put("finalAnswer", answer);
             if (!rows.isEmpty()) {
                 var row = rows.get(0);
-                var plan = json.readValue(String.valueOf(row.get("definition_json")), PlanPublish.class);
+                var plan = json.readValue(String.valueOf(row.get("definition_json")), PlanPublishBO.class);
                 var ids = db.queryForList("SELECT job_id FROM sq_worker_job WHERE task_id=? AND plan_version=? AND status='SUCCEEDED' ORDER BY id",
                         String.class, row.get("task_id"), row.get("plan_version"));
                 var reviews = new ArrayList<Map<String, Object>>();

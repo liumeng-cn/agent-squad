@@ -4,10 +4,10 @@ import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.identity.UserContext;
 import jakarta.servlet.http.HttpServletRequest;
 import com.agentsquad.squad.service.WorkerDefinitionService;
-import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
-import com.agentsquad.squad.domain.response.WorkerDefinitionPageResponse;
-import com.agentsquad.squad.domain.dto.WorkerDefinitionResponse;
-import com.agentsquad.squad.domain.request.WorkerStatusUpdateRequest;
+import com.agentsquad.squad.dto.WorkerDefinitionCreateDTO;
+import com.agentsquad.squad.vo.WorkerDefinitionPageVO;
+import com.agentsquad.squad.vo.WorkerDefinitionVO;
+import com.agentsquad.squad.dto.WorkerStatusUpdateDTO;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -30,10 +30,10 @@ public class WorkerDefinitionController {
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResult<WorkerDefinitionResponse> publish(
+    public ApiResult<WorkerDefinitionVO> publish(
             HttpServletRequest servletRequest,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
-            @Valid @RequestBody WorkerDefinitionCreateRequest request) {
+            @Valid @RequestBody WorkerDefinitionCreateDTO request) {
         return ApiResult.success(definitionService.publish(UserContext.current(servletRequest),
                 idempotencyKey, request));
     }
@@ -42,7 +42,7 @@ public class WorkerDefinitionController {
      * 查询已发布能力，不触发 Worker 执行。
      */
     @GetMapping
-    public ApiResult<WorkerDefinitionPageResponse> list(
+    public ApiResult<WorkerDefinitionPageVO> list(
             HttpServletRequest servletRequest,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit) {
@@ -54,11 +54,11 @@ public class WorkerDefinitionController {
      * 按状态版本启停或撤销能力，避免并发管理决定互相覆盖。
      */
     @PatchMapping("/{definitionId}")
-    public ApiResult<WorkerDefinitionResponse> changeStatus(
+    public ApiResult<WorkerDefinitionVO> changeStatus(
             HttpServletRequest servletRequest,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @PathVariable String definitionId,
-            @Valid @RequestBody WorkerStatusUpdateRequest request) {
+            @Valid @RequestBody WorkerStatusUpdateDTO request) {
         return ApiResult.success(definitionService.changeStatus(UserContext.current(servletRequest),
                 definitionId, idempotencyKey, request));
     }

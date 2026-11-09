@@ -1,12 +1,12 @@
 package com.agentsquad.squad.presentation.stream;
 
 import com.agentsquad.squad.service.UserStatusGuardService;
-import com.agentsquad.squad.domain.dto.ConversationEvent;
-import com.agentsquad.squad.domain.dto.ReplyPreview;
-import com.agentsquad.squad.domain.enums.ReplyPreviewPhase;
+import com.agentsquad.squad.bo.ConversationEventBO;
+import com.agentsquad.squad.bo.ReplyPreviewBO;
+import com.agentsquad.squad.enums.ReplyPreviewPhase;
 import com.agentsquad.squad.service.ConversationQueryService;
 import com.agentsquad.squad.service.ConversationStreamHubService;
-import com.agentsquad.squad.domain.model.ConversationStreamKey;
+import com.agentsquad.squad.bo.ConversationStreamKeyBO;
 import com.agentsquad.squad.service.ConversationSubscriberService;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import org.junit.jupiter.api.Test;
@@ -33,10 +33,10 @@ class ConversationStreamHubTest {
         var emitter = new RecordingSseEmitter();
         var executor = new QueuedExecutor();
         var subscription = subscriber(emitter, executor, () -> { });
-        var answer = new ReplyPreview(2, "execution", "message", "run", "stream", 2, 0,
+        var answer = new ReplyPreviewBO(2, "execution", "message", "run", "stream", 2, 0,
                 "正文首段", ReplyPreviewPhase.ANSWERING, true, true);
         subscription.preview(answer);
-        subscription.preview(new ReplyPreview(2, "execution", "message", "run", "stream", 1, 0,
+        subscription.preview(new ReplyPreviewBO(2, "execution", "message", "run", "stream", 1, 0,
                 "", ReplyPreviewPhase.THINKING, true, true));
         executor.runNext();
         assertThat(emitter.previews).containsExactly(answer);
@@ -47,7 +47,7 @@ class ConversationStreamHubTest {
         var queries = mock(ConversationQueryService.class);
         var users = mock(UserStatusGuardService.class);
         when(queries.events(eq("user"), eq("conversation"), anyString())).thenReturn(List.of(event(1)));
-        var hub = new ConversationStreamHubService(new ConversationStreamKey("user", "conversation"), queries, users, Runnable::run);
+        var hub = new ConversationStreamHubService(new ConversationStreamKeyBO("user", "conversation"), queries, users, Runnable::run);
         var first = new RecordingSseEmitter();
         var second = new RecordingSseEmitter();
         hub.add("first", subscriber(first, Runnable::run, () -> {
@@ -65,7 +65,7 @@ class ConversationStreamHubTest {
         var queries = mock(ConversationQueryService.class);
         var users = mock(UserStatusGuardService.class);
         var executor = new QueuedExecutor();
-        var hub = new ConversationStreamHubService(new ConversationStreamKey("user", "conversation"), queries, users, executor);
+        var hub = new ConversationStreamHubService(new ConversationStreamKeyBO("user", "conversation"), queries, users, executor);
         var calls = new AtomicInteger();
         when(queries.events(eq("user"), eq("conversation"), anyString())).thenAnswer(call -> {
             int count = calls.incrementAndGet();
@@ -84,7 +84,7 @@ class ConversationStreamHubTest {
         assertThat(executor.tasks).hasSize(1);
         executor.runNext();
         assertThat(calls).hasValue(2);
-        assertThat(emitter.events.stream().map(ConversationEvent::sequence)).containsExactly(1L, 2L);
+        assertThat(emitter.events.stream().map(ConversationEventBO::sequence)).containsExactly(1L, 2L);
         assertThat(executor.tasks).isEmpty();
     }
 
@@ -136,8 +136,8 @@ class ConversationStreamHubTest {
         });
     }
 
-    private ConversationEvent event(long sequence) {
-        return new ConversationEvent("conversation", 1, sequence, "message.completed", "2026-11-04T00:00:00Z",
+    private ConversationEventBO event(long sequence) {
+        return new ConversationEventBO("conversation", 1, sequence, "message.completed", "2026-11-04T00:00:00Z",
                 JsonNodeFactory.instance.objectNode());
     }
 }

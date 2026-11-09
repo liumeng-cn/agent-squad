@@ -1,10 +1,10 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.domain.entity.ConversationTaskStateDO;
-import com.agentsquad.squad.domain.entity.ConversationHeaderDO;
-import com.agentsquad.squad.domain.entity.ConversationMessageDO;
-import com.agentsquad.squad.domain.entity.ConversationExecutionDO;
-import com.agentsquad.squad.domain.entity.ConversationEventDO;
+import com.agentsquad.squad.bo.ConversationTaskStateBO;
+import com.agentsquad.squad.bo.ConversationHeaderBO;
+import com.agentsquad.squad.po.ConversationMessagePO;
+import com.agentsquad.squad.bo.ConversationExecutionBO;
+import com.agentsquad.squad.po.ConversationEventPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -18,16 +18,16 @@ import java.util.List;
  */
 @Mapper
 public interface ConversationReadMapper {
-    ConversationHeaderDO header(@Param("userId") String userId, @Param("conversationId") String conversationId);
+    ConversationHeaderBO header(@Param("userId") String userId, @Param("conversationId") String conversationId);
 
-    List<ConversationMessageDO> messages(@Param("userId") String userId, @Param("conversationId") String conversationId, @Param("before") Long before, @Param("limit") int limit);
+    List<ConversationMessagePO> messages(@Param("userId") String userId, @Param("conversationId") String conversationId, @Param("before") Long before, @Param("limit") int limit);
 
-    ConversationExecutionDO execution(@Param("userId") String userId, @Param("conversationId") String conversationId,
+    ConversationExecutionBO execution(@Param("userId") String userId, @Param("conversationId") String conversationId,
                                      @Param("executionId") String executionId);
 
-    List<ConversationExecutionDO> activeExecutions(@Param("userId") String userId, @Param("conversationId") String conversationId);
+    List<ConversationExecutionBO> activeExecutions(@Param("userId") String userId, @Param("conversationId") String conversationId);
 
-    List<ConversationEventDO> events(@Param("userId") String userId, @Param("conversationId") String conversationId, @Param("generation") long generation, @Param("after") long after);
+    List<ConversationEventPO> events(@Param("userId") String userId, @Param("conversationId") String conversationId, @Param("generation") long generation, @Param("after") long after);
 
     Long firstEvent(@Param("userId") String userId, @Param("conversationId") String conversationId, @Param("generation") long generation);
 
@@ -43,7 +43,7 @@ public interface ConversationReadMapper {
 
     int replaceTaskAnswer(@Param("userId") String userId, @Param("messageId") String messageId, @Param("text") String text, @Param("revision") long revision);
 
-    List<ConversationHeaderDO> conversations(@Param("userId") String userId, @Param("beforeTime") LocalDateTime beforeTime, @Param("beforeId") Long beforeId, @Param("limit") int limit);
+    List<ConversationHeaderBO> conversations(@Param("userId") String userId, @Param("beforeTime") LocalDateTime beforeTime, @Param("beforeId") Long beforeId, @Param("limit") int limit);
 
     long conversationId(@Param("userId") String userId, @Param("conversationId") String conversationId);
 
@@ -51,9 +51,9 @@ public interface ConversationReadMapper {
 
     List<String> uncertainOperationIds(@Param("userId") String userId, @Param("conversationId") String conversationId);
 
-    List<ConversationExecutionDO> pageExecutions(@Param("userId") String userId, @Param("conversationId") String conversationId,
+    List<ConversationExecutionBO> pageExecutions(@Param("userId") String userId, @Param("conversationId") String conversationId,
                                                @Param("first") long first, @Param("last") long last);
 
-    List<ConversationTaskStateDO> pageTasks(@Param("userId") String userId, @Param("conversationId") String conversationId,
+    List<ConversationTaskStateBO> pageTasks(@Param("userId") String userId, @Param("conversationId") String conversationId,
                                           @Param("first") long first, @Param("last") long last);
 }

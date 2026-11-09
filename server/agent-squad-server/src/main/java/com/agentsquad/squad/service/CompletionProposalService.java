@@ -1,22 +1,22 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.domain.entity.CompletionContextDO;
-import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
-import com.agentsquad.squad.domain.enums.GoalTaskStatus;
-import com.agentsquad.squad.domain.enums.PlanJoinStage;
-import com.agentsquad.squad.domain.model.PlanAcceptanceResult;
+import com.agentsquad.squad.bo.CompletionContextBO;
+import com.agentsquad.squad.po.ExecutionScopePO;
+import com.agentsquad.squad.enums.GoalTaskStatus;
+import com.agentsquad.squad.enums.PlanJoinStage;
+import com.agentsquad.squad.bo.PlanAcceptanceResultBO;
 
 import com.agentsquad.squad.mapper.TaskDirectiveMapper;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
 
-import com.agentsquad.squad.domain.dto.CompletionSubmission;
+import com.agentsquad.squad.bo.CompletionSubmissionBO;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
-import com.agentsquad.squad.domain.dto.CompletionProposalReceipt;
+import com.agentsquad.squad.bo.CompletionProposalReceiptBO;
 import com.agentsquad.squad.mapper.CompletionMapper;
 import com.agentsquad.squad.mapper.PlanMapper;
-import com.agentsquad.squad.common.util.ContentDigests;
-import com.agentsquad.squad.common.util.RuntimePayloads;
+import com.agentsquad.squad.utils.ContentDigests;
+import com.agentsquad.squad.utils.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -71,15 +71,15 @@ public class CompletionProposalService {
      * 事务提交后即使工具回包丢失，重放也不会生成第二个候选。
      */
     @Transactional
-    public CompletionProposalReceipt propose(String userId, String sessionId, String turnId,
+    public CompletionProposalReceiptBO propose(String userId, String sessionId, String turnId,
                                              String toolCallId, String outcome, String finalAnswer) {
-        return submit(new CompletionSubmission(userId, sessionId, turnId,
+        return submit(new CompletionSubmissionBO(userId, sessionId, turnId,
                 toolCallId, outcome, finalAnswer, List.of()));
     }
 
     /** 保存当前计划逐项检查结果；没有证据的成功声明被拒绝，发布前还需再次核对。 */
     @Transactional
-    public CompletionProposalReceipt submit(CompletionSubmission submission) {
+    public CompletionProposalReceiptBO submit(CompletionSubmissionBO submission) {
         String userId = submission.userId();
         String sessionId = submission.sessionId();
         String turnId = submission.turnId();
@@ -95,14 +95,14 @@ public class CompletionProposalService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "完成候选内容无效");
         }
 
-        ExecutionScopeDO scope = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), true);
+        ExecutionScopePO scope = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), true);
         if ("RESPONSE".equals(scope.getKind())) {
             return responses.propose(userId, scopeMapper.findBindingBySession(userId, sessionId), turnId, toolCallId, outcome, finalAnswer);
         }
         if (!directives.pending(userId, scope.getOwnerId()).isEmpty()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "尚有用户要求待协调处理，请结束当前回合等待修改通知");
         }
-        CompletionContextDO context = completionMapper.lockByMasterSession(userId, sessionId);
+        CompletionContextBO context = completionMapper.lockByMasterSession(userId, sessionId);
         if (context == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "Master 会话未绑定目标");
         }
@@ -111,7 +111,7 @@ public class CompletionProposalService {
                 || GoalTaskStatus.RUNNING.name().equals(context.getTaskStatus()))) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已不能提交完成候选");
         }
-        var acceptanceResults = List.<PlanAcceptanceResult>of();
+        var acceptanceResults = List.<PlanAcceptanceResultBO>of();
         if (context.getPlanVersion() > 0) {
             var evaluation = planEvaluation.evaluate(userId, context.getTaskId(), context.getPlanVersion(), submission.reviews());
             if (evaluation.decision().stage() != PlanJoinStage.READY
@@ -143,7 +143,7 @@ public class CompletionProposalService {
         String proposalHash = ContentDigests.sha256(proposalJson);
         if (context.getProposalJson() != null) {
             if (turnId.equals(context.getProposalTurnId()) && proposalHash.equals(context.getProposalHash())) {
-                return new CompletionProposalReceipt(context.getTaskId(), context.getBindingId(), turnId,
+                return new CompletionProposalReceiptBO(context.getTaskId(), context.getBindingId(), turnId,
                         context.getProposalToolCallId(), "RECORDED");
             }
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已有不同的完成候选");
@@ -154,7 +154,7 @@ public class CompletionProposalService {
         }
         log.info("最终回答及检查结果已保存 taskId={} bindingId={} turnId={} outcome={} answerLength={} acceptanceChecks={}",
                 context.getTaskId(), context.getBindingId(), turnId, outcome, finalAnswer.length(), acceptanceResults.size());
-        return new CompletionProposalReceipt(context.getTaskId(), context.getBindingId(), turnId,
+        return new CompletionProposalReceiptBO(context.getTaskId(), context.getBindingId(), turnId,
                 toolCallId, "RECORDED");
     }
 

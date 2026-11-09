@@ -1,18 +1,18 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.request.MessageCreateRequest;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.dto.MessageCreateDTO;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.ResponseRetryService;
 import com.agentsquad.squad.service.ExecutionScopeService;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
-import com.agentsquad.squad.common.exception.PlanCorrectionExhaustedException;
+import com.agentsquad.squad.exceptions.PlanCorrectionExhaustedException;
 import com.agentsquad.squad.mapper.ExecutionFailureMapper;
 import com.agentsquad.squad.service.ExecutionFailureService;
-import com.agentsquad.squad.domain.model.ModelFailureClassifier;
+import com.agentsquad.squad.converter.ModelFailureClassifier;
 import com.agentsquad.squad.service.ConversationQueryService;
 import com.agentsquad.squad.service.OperationService;
-import com.agentsquad.squad.tools.operation.PrepareRequest;
+import com.agentsquad.squad.bo.PrepareRequestBO;
 import io.agentscope.extensions.model.openai.exception.OpenAIException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -72,7 +72,7 @@ class ExecutionFailureIntegrationTest {
     void billingFailureOffersManualRetryButDoesNotAutomaticallyRetry(@TempDir Path directory) {
         try (var context = start(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory))) {
             String user = UUID.randomUUID().toString();
-            var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "billing", new MessageCreateRequest("你好", List.of()));
+            var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "billing", new MessageCreateDTO("你好", List.of()));
             var jdbc = context.getBean(JdbcTemplate.class);
             String session = session(jdbc, receipt.executionId());
             String scopeId = context.getBean(ExecutionScopeService.class).scopeForSession(user, session);
@@ -104,7 +104,7 @@ class ExecutionFailureIntegrationTest {
         String scopeId;
         String message;
         try (var context = start(database)) {
-            var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateRequest("请回答", List.of()));
+            var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateDTO("请回答", List.of()));
             execution = receipt.executionId();
             message = receipt.messageId();
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
@@ -149,12 +149,12 @@ class ExecutionFailureIntegrationTest {
     void unknownWriteBlocksAutomaticAndManualRetry(@TempDir Path directory) {
         try (var context = start(com.agentsquad.squad.testsupport.MySqlTestDatabase.url(directory.resolve("unknown")))) {
             String user = UUID.randomUUID().toString();
-            var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateRequest("处理这项工作", List.of()));
+            var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateDTO("处理这项工作", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             String session = session(jdbc, receipt.executionId());
             var scopeService = context.getBean(ExecutionScopeService.class);
             String scopeId = scopeService.scopeForSession(user, session);
-            var operation = context.getBean(OperationService.class).prepare(new PrepareRequest(user, session, "turn", "write", "mock_ticket_create", "v1", "WRITE", Map.of("title", "test"), "stable", false, null, 0, 1, "tester"));
+            var operation = context.getBean(OperationService.class).prepare(new PrepareRequestBO(user, session, "turn", "write", "mock_ticket_create", "v1", "WRITE", Map.of("title", "test"), "stable", false, null, 0, 1, "tester"));
             jdbc.update("UPDATE sq_operation SET status='UNKNOWN' WHERE operation_id=?", operation.getOperationId());
             var failures = context.getBean(ExecutionFailureService.class);
             failures.reportModel(user, session, "error", new OpenAIException("private-secret", 503, "x", "x"));
@@ -179,7 +179,7 @@ class ExecutionFailureIntegrationTest {
         String session;
         String scopeId;
         try (var context = start(database)) {
-            var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "plan-check", new MessageCreateRequest("验证纠正边界", List.of()));
+            var receipt = context.getBean(MessageAcceptanceService.class).accept(user, null, "plan-check", new MessageCreateDTO("验证纠正边界", List.of()));
             session = session(context.getBean(JdbcTemplate.class), receipt.executionId());
             scopeId = context.getBean(ExecutionScopeService.class).scopeForSession(user, session);
             var service = context.getBean(ExecutionFailureService.class);

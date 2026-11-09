@@ -1,8 +1,8 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.domain.dto.ConversationResponse;
-import com.agentsquad.squad.domain.response.TaskReceiptResponse;
+import com.agentsquad.squad.vo.ConversationVO;
+import com.agentsquad.squad.vo.TaskReceiptVO;
 import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.service.ArtifactService;
 import org.junit.jupiter.api.Test;
@@ -32,8 +32,8 @@ class MySqlGoalTaskIntegrationTest {
             byte[] content = "MySQL 产物完整性验证".getBytes(StandardCharsets.UTF_8);
             String artifactId = artifacts.upload(userId, UUID.randomUUID().toString(), "evidence.txt", content)
                     .artifactId();
-            ConversationResponse conversation = service.createConversation(userId, "MySQL 受理测试");
-            TaskReceiptResponse receipt = service.submit(userId, conversation.conversationId(),
+            ConversationVO conversation = service.createConversation(userId, "MySQL 受理测试");
+            TaskReceiptVO receipt = service.submit(userId, conversation.conversationId(),
                     UUID.randomUUID().toString(), "检查事务链路", List.of(artifactId));
             assertThat(service.findTask(userId, receipt.taskId()).status()).isEqualTo("QUEUED");
             assertThat(service.findCommand(userId, receipt.commandId()).status()).isEqualTo("PENDING");

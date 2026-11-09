@@ -1,9 +1,9 @@
 package com.agentsquad.squad.controller;
 
 import com.agentsquad.squad.common.model.ApiResult;
-import com.agentsquad.squad.domain.response.CommandReceiptResponse;
-import com.agentsquad.squad.domain.request.ControlRequest;
-import com.agentsquad.squad.domain.response.MessageReceiptResponse;
+import com.agentsquad.squad.vo.CommandReceiptVO;
+import com.agentsquad.squad.dto.ControlDTO;
+import com.agentsquad.squad.vo.MessageReceiptVO;
 import com.agentsquad.squad.service.ResponseRetryService;
 import com.agentsquad.squad.service.ResponseControlService;
 import com.agentsquad.squad.identity.UserContext;
@@ -33,15 +33,15 @@ public class ResponseControlController {
 
     @PostMapping("/api/v1/executions/{executionId}/cancel")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public ApiResult<CommandReceiptResponse> cancel(HttpServletRequest servletRequest, @PathVariable String executionId,
-                                            @RequestHeader("Idempotency-Key") String key, @Valid @RequestBody ControlRequest request) {
+    public ApiResult<CommandReceiptVO> cancel(HttpServletRequest servletRequest, @PathVariable String executionId,
+                                            @RequestHeader("Idempotency-Key") String key, @Valid @RequestBody ControlDTO request) {
         return ApiResult.success(controls.cancel(UserContext.current(servletRequest).userId(), executionId, key, request.expectedVersion()));
     }
 
     @PostMapping("/api/v1/executions/{executionId}/retry")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public ApiResult<MessageReceiptResponse> retry(HttpServletRequest servletRequest, @PathVariable String executionId,
-                                           @RequestHeader("Idempotency-Key") String key, @Valid @RequestBody ControlRequest request) {
+    public ApiResult<MessageReceiptVO> retry(HttpServletRequest servletRequest, @PathVariable String executionId,
+                                           @RequestHeader("Idempotency-Key") String key, @Valid @RequestBody ControlDTO request) {
         return ApiResult.success(retries.retry(UserContext.current(servletRequest).userId(), executionId, key, request.expectedVersion()));
     }
 }

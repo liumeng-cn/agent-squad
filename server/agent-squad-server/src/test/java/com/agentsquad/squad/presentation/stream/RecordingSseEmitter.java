@@ -1,7 +1,7 @@
 package com.agentsquad.squad.presentation.stream;
 
-import com.agentsquad.squad.domain.dto.ConversationEvent;
-import com.agentsquad.squad.domain.dto.ReplyPreview;
+import com.agentsquad.squad.bo.ConversationEventBO;
+import com.agentsquad.squad.bo.ReplyPreviewBO;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
@@ -14,16 +14,16 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 只记录公开事件对象供断言，不启动HTTP请求或业务执行。
  */
 final class RecordingSseEmitter extends SseEmitter {
-    final List<ConversationEvent> events = new CopyOnWriteArrayList<>();
-    final List<ReplyPreview> previews = new CopyOnWriteArrayList<>();
+    final List<ConversationEventBO> events = new CopyOnWriteArrayList<>();
+    final List<ReplyPreviewBO> previews = new CopyOnWriteArrayList<>();
     final AtomicInteger completions = new AtomicInteger();
 
     @Override
     public void send(SseEventBuilder builder) {
         for (var item : builder.build()) {
-            if (item.getData() instanceof ConversationEvent event) {
+            if (item.getData() instanceof ConversationEventBO event) {
                 events.add(event);
-            } else if (item.getData() instanceof ReplyPreview preview) {
+            } else if (item.getData() instanceof ReplyPreviewBO preview) {
                 previews.add(preview);
             }
         }

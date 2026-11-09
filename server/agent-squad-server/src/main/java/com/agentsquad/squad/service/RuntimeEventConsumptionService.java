@@ -1,19 +1,18 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource;
+import com.agentsquad.squad.bo.RuntimeEventSourceBO;
 
-import com.agentsquad.squad.domain.enums.RuntimeEventInboxStatus;
+import com.agentsquad.squad.enums.RuntimeEventInboxStatus;
 
-import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventFingerprint;
+import com.agentsquad.squad.utils.RuntimeEventFingerprint;
 
-import com.agentsquad.squad.domain.enums.RuntimeEventFailureCode;
+import com.agentsquad.squad.enums.RuntimeEventFailureCode;
 
 import com.agentsquad.squad.mapper.RuntimeEventInboxMapper;
 
-import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventBusinessWriter;
 
-import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
-import com.agentsquad.squad.common.exception.RuntimeEventConsumptionException;
+import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.exceptions.RuntimeEventConsumptionException;
 import io.agentscope.core.session.SessionEvent;
 import io.agentscope.core.session.SessionEventTypes;
 import jakarta.annotation.Resource;
@@ -44,12 +43,12 @@ public class RuntimeEventConsumptionService {
      * 不先锁inbox，避免与业务的会话、所有者、绑定锁顺序倒置；不同绑定的失败互不传播。
      */
     @Transactional
-    public void consume(ProjectionTargetDO target, List<SessionEvent> events) {
+    public void consume(ProjectionTargetBO target, List<SessionEvent> events) {
         if (events == null || events.size() > MAX_BATCH_SIZE) {
             throw new IllegalArgumentException("原生事件消费批次无效");
         }
-        var source = new RuntimeEventSource(target.getUserId(), target.getBindingId(), target.getSessionId(),
-                RuntimeEventSource.CURRENT_MAPPING_VERSION);
+        var source = new RuntimeEventSourceBO(target.getUserId(), target.getBindingId(), target.getSessionId(),
+                RuntimeEventSourceBO.CURRENT_MAPPING_VERSION);
         long previous = -1;
         for (SessionEvent event : events) {
             if (previous >= 0 && event.seq() != previous + 1) {

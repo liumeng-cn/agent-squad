@@ -1,9 +1,9 @@
 package com.agentsquad.squad.sandbox;
 
-import com.agentsquad.squad.domain.model.SandboxPolicy;
-import com.agentsquad.squad.domain.dto.SandboxExecuteRequest;
-import com.agentsquad.squad.domain.dto.SandboxFile;
-import com.agentsquad.squad.domain.model.ArtifactContentPolicy;
+import com.agentsquad.squad.policy.SandboxPolicy;
+import com.agentsquad.squad.bo.SandboxExecuteRequestBO;
+import com.agentsquad.squad.bo.SandboxFileBO;
+import com.agentsquad.squad.policy.ArtifactContentPolicy;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -27,10 +27,10 @@ class SandboxPolicyTest {
 
     @Test
     void duplicateFilesAndUnboundedTimeoutAreRejected() {
-        var files = List.of(new SandboxFile("x.txt", "one"), new SandboxFile("x.txt", "two"));
-        assertThatThrownBy(() -> SandboxPolicy.validate(new SandboxExecuteRequest("key", "print(1)", files,
+        var files = List.of(new SandboxFileBO("x.txt", "one"), new SandboxFileBO("x.txt", "two"));
+        assertThatThrownBy(() -> SandboxPolicy.validate(new SandboxExecuteRequestBO("key", "print(1)", files,
                 List.of(), 5))).hasMessageContaining("重复");
-        assertThatThrownBy(() -> SandboxPolicy.validate(new SandboxExecuteRequest("key", "print(1)", List.of(),
+        assertThatThrownBy(() -> SandboxPolicy.validate(new SandboxExecuteRequestBO("key", "print(1)", List.of(),
                 List.of(), 61))).hasMessageContaining("时限");
     }
 

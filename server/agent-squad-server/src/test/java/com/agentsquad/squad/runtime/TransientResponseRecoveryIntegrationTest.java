@@ -1,8 +1,8 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.domain.request.ActivityHistoryRequest;
-import com.agentsquad.squad.domain.request.MessageCreateRequest;
+import com.agentsquad.squad.dto.ActivityHistoryDTO;
+import com.agentsquad.squad.dto.MessageCreateDTO;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.ResponseRetryService;
 import com.agentsquad.squad.service.ConversationQueryService;
@@ -102,7 +102,7 @@ class TransientResponseRecoveryIntegrationTest {
                 "--agentsquad.model.api-key=test-only", "--agentsquad.model.base-url=" + base, "--agentsquad.model.name=test-model",
                 "--agentsquad.worker.model-profiles.default.api-key=test-only", "--agentsquad.worker.model-profiles.default.base-url=" + base, "--agentsquad.worker.model-profiles.default.model-name=test-model")) {
             String user = "00000000-0000-0000-0000-000000000001";
-            var message = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateRequest("请给出回答", List.of()));
+            var message = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateDTO("请给出回答", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             String status = awaitStatus(jdbc, message.executionId());
             assertThat(status).isEqualTo(exhaust ? "FAILED" : "SUCCEEDED");
@@ -126,7 +126,7 @@ class TransientResponseRecoveryIntegrationTest {
             assertThat(reads.snapshot(user, message.conversationId(), null, 40).messages()).anyMatch(item -> "恢复后的回答".equals(item.text()));
             assertThat(reads.snapshot(user, message.conversationId(), null, 40).failures()).isEmpty();
             var history = reads.activityHistory(user, message.conversationId(),
-                    new ActivityHistoryRequest(message.messageId(), null));
+                    new ActivityHistoryDTO(message.messageId(), null));
             assertThat(history.items().stream().filter(item -> item.type().name().equals("AUTO_RETRY_SCHEDULED")))
                     .hasSize(exhaust ? 2 : 1);
             assertThat(history.items().stream().filter(item -> item.type().name().equals("USER_RETRY_SCHEDULED")))

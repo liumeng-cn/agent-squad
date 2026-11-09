@@ -1,8 +1,8 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.request.ConversationTitleUpdateRequest;
-import com.agentsquad.squad.domain.request.MessageCreateRequest;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.dto.ConversationTitleUpdateDTO;
+import com.agentsquad.squad.dto.MessageCreateDTO;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.ConversationTitleService;
 import com.agentsquad.squad.service.ConversationQueryService;
@@ -41,9 +41,9 @@ class ConversationReadIntegrationTest {
     static void verifyHistory(ConfigurableApplicationContext context) {
         String user = UUID.randomUUID().toString();
         var messages = context.getBean(MessageAcceptanceService.class);
-        var first = messages.accept(user, null, "first", new MessageCreateRequest("第一条消息", List.of()));
+        var first = messages.accept(user, null, "first", new MessageCreateDTO("第一条消息", List.of()));
         for (int i = 2; i <= 43; i++) {
-            messages.accept(user, first.conversationId(), "message-" + i, new MessageCreateRequest("消息" + i, List.of()));
+            messages.accept(user, first.conversationId(), "message-" + i, new MessageCreateDTO("消息" + i, List.of()));
         }
         var reads = context.getBean(ConversationQueryService.class);
         var page = reads.snapshot(user, first.conversationId(), null, 20);
@@ -76,8 +76,8 @@ class ConversationReadIntegrationTest {
     static void verifyTitles(ConfigurableApplicationContext context) {
         String user = UUID.randomUUID().toString();
         var messages = context.getBean(MessageAcceptanceService.class);
-        var first = messages.accept(user, null, "first", new MessageCreateRequest("\u0001  讨论一下   合作方案\n", List.of()));
-        var second = messages.accept(user, null, "second", new MessageCreateRequest("第二个主题", List.of()));
+        var first = messages.accept(user, null, "first", new MessageCreateDTO("\u0001  讨论一下   合作方案\n", List.of()));
+        var second = messages.accept(user, null, "second", new MessageCreateDTO("第二个主题", List.of()));
         var service = context.getBean(ConversationTitleService.class);
         var page = service.list(user, null, 1);
         assertThat(page.items()).hasSize(1);
@@ -87,12 +87,12 @@ class ConversationReadIntegrationTest {
         assertThat(older.items().getFirst().title()).isEqualTo("讨论一下 合作方案");
         assertThat(older.nextCursor()).isNull();
         assertThatThrownBy(() -> service.list(UUID.randomUUID().toString(), page.nextCursor(), 1)).isInstanceOf(RuntimeBusinessException.class);
-        var renamed = service.rename(user, first.conversationId(), new ConversationTitleUpdateRequest(" 我的\n 合作主题 ", 0L));
+        var renamed = service.rename(user, first.conversationId(), new ConversationTitleUpdateDTO(" 我的\n 合作主题 ", 0L));
         assertThat(renamed.title()).isEqualTo("我的 合作主题");
         assertThat(renamed.titleSource()).isEqualTo("MANUAL");
-        assertThatThrownBy(() -> service.rename(user, first.conversationId(), new ConversationTitleUpdateRequest("旧版本名称", 0L))).isInstanceOf(RuntimeBusinessException.class);
-        assertThatThrownBy(() -> service.rename(user, first.conversationId(), new ConversationTitleUpdateRequest("\u200b\u0001", 1L))).isInstanceOf(RuntimeBusinessException.class);
-        assertThatThrownBy(() -> service.rename(UUID.randomUUID().toString(), first.conversationId(), new ConversationTitleUpdateRequest("其他人名称", 1L))).isInstanceOf(RuntimeBusinessException.class);
+        assertThatThrownBy(() -> service.rename(user, first.conversationId(), new ConversationTitleUpdateDTO("旧版本名称", 0L))).isInstanceOf(RuntimeBusinessException.class);
+        assertThatThrownBy(() -> service.rename(user, first.conversationId(), new ConversationTitleUpdateDTO("\u200b\u0001", 1L))).isInstanceOf(RuntimeBusinessException.class);
+        assertThatThrownBy(() -> service.rename(UUID.randomUUID().toString(), first.conversationId(), new ConversationTitleUpdateDTO("其他人名称", 1L))).isInstanceOf(RuntimeBusinessException.class);
         assertThat(context.getBean(ConversationQueryService.class).snapshot(user, first.conversationId(), null, 20).conversation().title()).isEqualTo("我的 合作主题");
     }
 

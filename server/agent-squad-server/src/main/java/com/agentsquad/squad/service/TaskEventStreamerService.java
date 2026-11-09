@@ -1,10 +1,10 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
 
-import com.agentsquad.squad.domain.entity.EventDO;
-import com.agentsquad.squad.domain.dto.TaskEventResponse;
+import com.agentsquad.squad.po.EventPO;
+import com.agentsquad.squad.bo.TaskEventResponseBO;
 import com.agentsquad.squad.mapper.TaskEventMapper;
 import com.agentsquad.squad.mapper.TaskMapper;
 import jakarta.annotation.PostConstruct;
@@ -109,8 +109,8 @@ public class TaskEventStreamerService {
                 return;
             }
             try {
-                List<EventDO> rows = taskEventMapper.listAfter(userId, taskId, lastSeq.get());
-                for (EventDO row : rows) {
+                List<EventPO> rows = taskEventMapper.listAfter(userId, taskId, lastSeq.get());
+                for (EventPO row : rows) {
                     emitter.send(SseEmitter.event()
                             .name("message")
                             .id(taskId + ":" + row.getEventSeq())
@@ -145,8 +145,8 @@ public class TaskEventStreamerService {
         return emitter;
     }
 
-    private TaskEventResponse toResponse(EventDO row) {
-        return new TaskEventResponse(row.getEventSeq(), row.getTaskId(), row.getEventType(),
+    private TaskEventResponseBO toResponse(EventPO row) {
+        return new TaskEventResponseBO(row.getEventSeq(), row.getTaskId(), row.getEventType(),
                 row.getPayloadJson(), row.getOccurredAt());
     }
 }

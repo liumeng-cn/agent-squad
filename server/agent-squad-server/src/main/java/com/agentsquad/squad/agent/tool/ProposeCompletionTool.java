@@ -1,9 +1,9 @@
 package com.agentsquad.squad.agent.tool;
 
-import com.agentsquad.squad.domain.enums.GoalTaskStatus;
-import com.agentsquad.squad.domain.dto.CompletionProposalReceipt;
+import com.agentsquad.squad.enums.GoalTaskStatus;
+import com.agentsquad.squad.bo.CompletionProposalReceiptBO;
 import com.agentsquad.squad.service.CompletionProposalService;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.tool.AgentTool;
@@ -16,8 +16,8 @@ import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 import java.util.Map;
-import com.agentsquad.squad.domain.dto.AcceptanceReview;
-import com.agentsquad.squad.domain.dto.CompletionSubmission;
+import com.agentsquad.squad.bo.AcceptanceReviewBO;
+import com.agentsquad.squad.bo.CompletionSubmissionBO;
 
 /**
  * AgentScope 暴露给 Master 的完成候选工具。工具结果只是持久回执，不能当作用户最终答案。
@@ -82,10 +82,10 @@ public class ProposeCompletionTool implements AgentTool {
             return ToolResultBlock.error("完成候选参数必须是字符串");
         }
         try {
-            List<AcceptanceReview> reviews = param.getInput().get("acceptanceReviews") == null ? List.of()
+            List<AcceptanceReviewBO> reviews = param.getInput().get("acceptanceReviews") == null ? List.of()
                     : mapper.convertValue(param.getInput().get("acceptanceReviews"),
-                    mapper.getTypeFactory().constructCollectionType(List.class, AcceptanceReview.class));
-            CompletionProposalReceipt receipt = completionProposalService.submit(new CompletionSubmission(
+                    mapper.getTypeFactory().constructCollectionType(List.class, AcceptanceReviewBO.class));
+            CompletionProposalReceiptBO receipt = completionProposalService.submit(new CompletionSubmissionBO(
                     context.getUserId(), context.getSessionId(), context.get(TURN_ID_KEY, String.class),
                     param.getToolUseBlock().getId(), outcome, answer, reviews));
             return ToolResultBlock.text("完成候选已保存，等待当前回合结束。");

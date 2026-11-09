@@ -1,6 +1,6 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.domain.entity.InteractionDO;
+import com.agentsquad.squad.po.InteractionPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -24,14 +24,14 @@ public interface InteractionMapper {
                @Param("expiresAt") LocalDateTime expiresAt,
                @Param("creatorId") String creatorId, @Param("creatorName") String creatorName);
 
-    InteractionDO findByFrameworkRequest(@Param("userId") String userId,
+    InteractionPO findByFrameworkRequest(@Param("userId") String userId,
                                           @Param("bindingId") String bindingId,
                                           @Param("frameworkRequestId") String frameworkRequestId);
 
-    InteractionDO findOwned(@Param("userId") String userId,
+    InteractionPO findOwned(@Param("userId") String userId,
                              @Param("interactionId") String interactionId);
 
-    List<InteractionDO> listByTask(@Param("userId") String userId, @Param("taskId") String taskId,
+    List<InteractionPO> listByTask(@Param("userId") String userId, @Param("taskId") String taskId,
                                     @Param("cursorId") Long cursorId, @Param("limit") int limit);
 
     List<String> findOpenIds(@Param("userId") String userId, @Param("taskId") String taskId);

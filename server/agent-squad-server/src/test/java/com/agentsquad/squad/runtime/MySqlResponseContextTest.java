@@ -1,7 +1,7 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.domain.model.ResponseContextSnapshot;
-import com.agentsquad.squad.domain.response.MessageReceiptResponse;
+import com.agentsquad.squad.bo.ResponseContextSnapshotBO;
+import com.agentsquad.squad.vo.MessageReceiptVO;
 import com.agentsquad.squad.service.ResponseContextService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -31,7 +31,7 @@ class MySqlResponseContextTest {
                 System.getenv("SQUAD_MESSAGE_TEST_URL"), System.getenv("SQUAD_MESSAGE_TEST_USER"),
                 System.getenv("SQUAD_MESSAGE_TEST_PASSWORD"), owner)) {
             MessageTestActor actor = MessageAcceptanceHttpTest.actor(context);
-            MessageReceiptResponse first = MessageAcceptanceHttpTest.send(context, actor, "/api/v1/conversations/messages",
+            MessageReceiptVO first = MessageAcceptanceHttpTest.send(context, actor, "/api/v1/conversations/messages",
                     "context-first", Map.of("text", "只能读到这条"));
             MessageAcceptanceHttpTest.send(context, actor, "/api/v1/conversations/" + first.conversationId() + "/messages",
                     "context-later", Map.of("text", "不能提前进入前一个回复"));
@@ -46,7 +46,7 @@ class MySqlResponseContextTest {
                 var b = threads.submit(() -> freeze(service, owner, binding, ready, start));
                 assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
                 start.countDown();
-                ResponseContextSnapshot snapshot = a.get(15, TimeUnit.SECONDS);
+                ResponseContextSnapshotBO snapshot = a.get(15, TimeUnit.SECONDS);
                 assertThat(b.get(15, TimeUnit.SECONDS)).isEqualTo(snapshot);
                 assertThat(snapshot.messages()).extracting(m -> m.text()).containsExactly("只能读到这条");
             }
@@ -55,7 +55,7 @@ class MySqlResponseContextTest {
         }
     }
 
-    private ResponseContextSnapshot freeze(ResponseContextService service, String owner, String binding,
+    private ResponseContextSnapshotBO freeze(ResponseContextService service, String owner, String binding,
                                            CountDownLatch ready, CountDownLatch start) throws InterruptedException {
         ready.countDown();
         if (!start.await(10, TimeUnit.SECONDS)) {

@@ -4,7 +4,7 @@ import com.agentsquad.squad.service.OperationExecutorService;
 
 import com.agentsquad.squad.service.OperationDispatchService;
 
-import com.agentsquad.squad.domain.entity.OperationDO;
+import com.agentsquad.squad.po.OperationPO;
 import com.agentsquad.squad.mapper.OperationMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -54,7 +54,7 @@ class OperationExecutorTransactionTest {
                 new AnnotationTransactionAttributeSource()));
         OperationExecutorService executor = (OperationExecutorService) proxyFactory.getProxy();
 
-        OperationDO operation = mock(OperationDO.class);
+        OperationPO operation = mock(OperationPO.class);
         when(operation.getUserId()).thenReturn("user-1");
         when(operation.getOperationId()).thenReturn("operation-1");
         when(operation.getVersion()).thenReturn(0L);

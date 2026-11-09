@@ -1,7 +1,7 @@
 package com.agentsquad.squad.agent.tool;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.dto.GoalTaskCreate;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.bo.GoalTaskCreateBO;
 import com.agentsquad.squad.service.GoalTaskCreationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;
@@ -72,7 +72,7 @@ public class CreateGoalTaskTool implements AgentTool {
             return ToolResultBlock.error("目标创建参数或原生上下文无效");
         }
         try {
-            GoalTaskCreate request = json.convertValue(param.getInput(), GoalTaskCreate.class);
+            GoalTaskCreateBO request = json.convertValue(param.getInput(), GoalTaskCreateBO.class);
             goals.create(context.getUserId(), context.getSessionId(), request);
             return ToolResultBlock.text("任务已受理，完成后会统一给出结果。");
         } catch (RuntimeBusinessException exception) {

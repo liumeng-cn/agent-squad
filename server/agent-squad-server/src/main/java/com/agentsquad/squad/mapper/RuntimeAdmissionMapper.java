@@ -1,6 +1,6 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.domain.entity.RuntimeAdmissionSlotDO;
+import com.agentsquad.squad.po.RuntimeAdmissionSlotPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -19,7 +19,7 @@ public interface RuntimeAdmissionMapper {
 
     Integer lockCounter(@Param("poolKey") String poolKey);
 
-    RuntimeAdmissionSlotDO lockSlot(@Param("bindingId") String bindingId);
+    RuntimeAdmissionSlotPO lockSlot(@Param("bindingId") String bindingId);
 
     Long lockBindingCursor(@Param("userId") String userId,
                            @Param("bindingId") String bindingId);

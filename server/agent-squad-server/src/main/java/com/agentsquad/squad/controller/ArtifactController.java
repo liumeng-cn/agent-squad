@@ -1,7 +1,7 @@
 package com.agentsquad.squad.controller;
 
-import com.agentsquad.squad.domain.entity.ArtifactDO;
-import com.agentsquad.squad.domain.response.ArtifactResponse;
+import com.agentsquad.squad.po.ArtifactPO;
+import com.agentsquad.squad.vo.ArtifactVO;
 import com.agentsquad.squad.service.ArtifactService;
 import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.identity.UserContext;
@@ -39,20 +39,20 @@ public class ArtifactController {
 
     @PostMapping("/artifacts")
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResult<ArtifactResponse> upload(HttpServletRequest servletRequest,
+    public ApiResult<ArtifactVO> upload(HttpServletRequest servletRequest,
                                           @RequestHeader("Idempotency-Key") String key, @RequestParam("file") MultipartFile file) throws IOException {
         String userId = UserContext.current(servletRequest).userId();
         return ApiResult.success(artifactService.upload(userId, key, file.getOriginalFilename(), file.getBytes()));
     }
 
     @GetMapping("/artifacts/{artifactId}")
-    public ApiResult<ArtifactResponse> get(HttpServletRequest servletRequest,
+    public ApiResult<ArtifactVO> get(HttpServletRequest servletRequest,
                                        @PathVariable String artifactId) {
         return ApiResult.success(artifactService.get(UserContext.current(servletRequest).userId(), artifactId));
     }
 
     @GetMapping("/tasks/{taskId}/artifacts")
-    public ApiResult<List<ArtifactResponse>> list(HttpServletRequest servletRequest,
+    public ApiResult<List<ArtifactVO>> list(HttpServletRequest servletRequest,
                                               @PathVariable String taskId) {
         return ApiResult.success(artifactService.listTask(UserContext.current(servletRequest).userId(), taskId));
     }
@@ -60,7 +60,7 @@ public class ArtifactController {
     @GetMapping("/artifacts/{artifactId}/content")
     public ResponseEntity<byte[]> download(HttpServletRequest servletRequest,
                                            @PathVariable String artifactId) {
-        ArtifactDO row = artifactService.content(UserContext.current(servletRequest).userId(), artifactId);
+        ArtifactPO row = artifactService.content(UserContext.current(servletRequest).userId(), artifactId);
         return ResponseEntity.ok().contentType(MediaType.parseMediaType(row.getMediaType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
                         .filename(row.getFileName(), StandardCharsets.UTF_8).build().toString())

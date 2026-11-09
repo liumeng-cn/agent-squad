@@ -1,8 +1,8 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.domain.entity.PlanContextDO;
-import com.agentsquad.squad.domain.entity.PlanDO;
-import com.agentsquad.squad.domain.entity.WorkerJobDO;
+import com.agentsquad.squad.bo.PlanContextBO;
+import com.agentsquad.squad.po.PlanPO;
+import com.agentsquad.squad.po.WorkerJobPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -26,17 +26,17 @@ public interface PlanMapper {
             + "worker_version, status, depends_on_json, input_json, result_candidate_json, "
             + "result_json, binding_id, reused_from_job_id, cancel_requested_at, version";
 
-    PlanContextDO lockMasterContext(@Param("userId") String userId,
+    PlanContextBO lockMasterContext(@Param("userId") String userId,
                                      @Param("sessionId") String sessionId);
 
-    PlanDO findLatestByLogicalKey(@Param("taskId") String taskId,
+    PlanPO findLatestByLogicalKey(@Param("taskId") String taskId,
                                    @Param("logicalKey") String logicalKey);
 
     Long lockTaskPlanVersion(@Param("userId") String userId, @Param("taskId") String taskId);
 
     int countSignalEligibleTask(@Param("userId") String userId, @Param("taskId") String taskId);
 
-    PlanDO lockPlan(@Param("userId") String userId, @Param("taskId") String taskId,
+    PlanPO lockPlan(@Param("userId") String userId, @Param("taskId") String taskId,
                      @Param("planVersion") long planVersion);
 
     int countUnfinishedJobs(@Param("userId") String userId, @Param("taskId") String taskId,
@@ -51,10 +51,10 @@ public interface PlanMapper {
     int advanceSignalVersion(@Param("userId") String userId, @Param("taskId") String taskId,
                              @Param("planVersion") long planVersion);
 
-    List<WorkerJobDO> listJobs(@Param("taskId") String taskId,
+    List<WorkerJobPO> listJobs(@Param("taskId") String taskId,
                                 @Param("planVersion") long planVersion);
 
-    List<WorkerJobDO> lockJobs(@Param("taskId") String taskId,
+    List<WorkerJobPO> lockJobs(@Param("taskId") String taskId,
                                  @Param("planVersion") long planVersion);
 
     int insertPlan(@Param("planId") String planId, @Param("userId") String userId,

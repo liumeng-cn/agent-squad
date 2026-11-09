@@ -2,13 +2,13 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.mapper.WorkerDefinitionMapper">
 
-    <resultMap id="findByPublishKeyResult" type="com.agentsquad.squad.domain.entity.WorkerDefinitionDO">
+    <resultMap id="findByPublishKeyResult" type="com.agentsquad.squad.po.WorkerDefinitionPO">
         <constructor>
             <arg column="id" javaType="_long"/>
             <arg column="definition_id" javaType="java.lang.String"/>
             <arg column="worker_key" javaType="java.lang.String"/>
             <arg column="worker_version" javaType="java.lang.String"/>
-            <arg column="status" javaType="com.agentsquad.squad.domain.enums.WorkerDefinitionStatus"/>
+            <arg column="status" javaType="com.agentsquad.squad.enums.WorkerDefinitionStatus"/>
             <arg column="version" javaType="_long"/>
             <arg column="definition_json" javaType="java.lang.String"/>
             <arg column="publish_key" javaType="java.lang.String"/>
@@ -19,13 +19,13 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="findByDefinitionIdResult" type="com.agentsquad.squad.domain.entity.WorkerDefinitionDO">
+    <resultMap id="findByDefinitionIdResult" type="com.agentsquad.squad.po.WorkerDefinitionPO">
         <constructor>
             <arg column="id" javaType="_long"/>
             <arg column="definition_id" javaType="java.lang.String"/>
             <arg column="worker_key" javaType="java.lang.String"/>
             <arg column="worker_version" javaType="java.lang.String"/>
-            <arg column="status" javaType="com.agentsquad.squad.domain.enums.WorkerDefinitionStatus"/>
+            <arg column="status" javaType="com.agentsquad.squad.enums.WorkerDefinitionStatus"/>
             <arg column="version" javaType="_long"/>
             <arg column="definition_json" javaType="java.lang.String"/>
             <arg column="publish_key" javaType="java.lang.String"/>
@@ -36,13 +36,13 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="listAfterResult" type="com.agentsquad.squad.domain.entity.WorkerDefinitionDO">
+    <resultMap id="listAfterResult" type="com.agentsquad.squad.po.WorkerDefinitionPO">
         <constructor>
             <arg column="id" javaType="_long"/>
             <arg column="definition_id" javaType="java.lang.String"/>
             <arg column="worker_key" javaType="java.lang.String"/>
             <arg column="worker_version" javaType="java.lang.String"/>
-            <arg column="status" javaType="com.agentsquad.squad.domain.enums.WorkerDefinitionStatus"/>
+            <arg column="status" javaType="com.agentsquad.squad.enums.WorkerDefinitionStatus"/>
             <arg column="version" javaType="_long"/>
             <arg column="definition_json" javaType="java.lang.String"/>
             <arg column="publish_key" javaType="java.lang.String"/>
@@ -53,13 +53,13 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="listEnabledAfterResult" type="com.agentsquad.squad.domain.entity.WorkerDefinitionDO">
+    <resultMap id="listEnabledAfterResult" type="com.agentsquad.squad.po.WorkerDefinitionPO">
         <constructor>
             <arg column="id" javaType="_long"/>
             <arg column="definition_id" javaType="java.lang.String"/>
             <arg column="worker_key" javaType="java.lang.String"/>
             <arg column="worker_version" javaType="java.lang.String"/>
-            <arg column="status" javaType="com.agentsquad.squad.domain.enums.WorkerDefinitionStatus"/>
+            <arg column="status" javaType="com.agentsquad.squad.enums.WorkerDefinitionStatus"/>
             <arg column="version" javaType="_long"/>
             <arg column="definition_json" javaType="java.lang.String"/>
             <arg column="publish_key" javaType="java.lang.String"/>
@@ -70,13 +70,13 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="findEnabledResult" type="com.agentsquad.squad.domain.entity.WorkerDefinitionDO">
+    <resultMap id="findEnabledResult" type="com.agentsquad.squad.po.WorkerDefinitionPO">
         <constructor>
             <arg column="id" javaType="_long"/>
             <arg column="definition_id" javaType="java.lang.String"/>
             <arg column="worker_key" javaType="java.lang.String"/>
             <arg column="worker_version" javaType="java.lang.String"/>
-            <arg column="status" javaType="com.agentsquad.squad.domain.enums.WorkerDefinitionStatus"/>
+            <arg column="status" javaType="com.agentsquad.squad.enums.WorkerDefinitionStatus"/>
             <arg column="version" javaType="_long"/>
             <arg column="definition_json" javaType="java.lang.String"/>
             <arg column="publish_key" javaType="java.lang.String"/>
@@ -87,13 +87,13 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="findPublishedResult" type="com.agentsquad.squad.domain.entity.WorkerDefinitionDO">
+    <resultMap id="findPublishedResult" type="com.agentsquad.squad.po.WorkerDefinitionPO">
         <constructor>
             <arg column="id" javaType="_long"/>
             <arg column="definition_id" javaType="java.lang.String"/>
             <arg column="worker_key" javaType="java.lang.String"/>
             <arg column="worker_version" javaType="java.lang.String"/>
-            <arg column="status" javaType="com.agentsquad.squad.domain.enums.WorkerDefinitionStatus"/>
+            <arg column="status" javaType="com.agentsquad.squad.enums.WorkerDefinitionStatus"/>
             <arg column="version" javaType="_long"/>
             <arg column="definition_json" javaType="java.lang.String"/>
             <arg column="publish_key" javaType="java.lang.String"/>

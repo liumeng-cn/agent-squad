@@ -1,19 +1,19 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.tools.operation.PrepareRequest;
+import com.agentsquad.squad.bo.PrepareRequestBO;
 
-import com.agentsquad.squad.tools.operation.OperationPreview;
+import com.agentsquad.squad.bo.OperationPreviewBO;
 
 import com.agentsquad.squad.mapper.TaskDirectiveMapper;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.OperationDO;
-import com.agentsquad.squad.domain.enums.OperationStatus;
-import com.agentsquad.squad.domain.entity.ToolExecutionContextDO;
-import com.agentsquad.squad.domain.dto.OperationPage;
-import com.agentsquad.squad.domain.dto.OperationView;
-import com.agentsquad.squad.domain.dto.OperationDetail;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.po.OperationPO;
+import com.agentsquad.squad.enums.OperationStatus;
+import com.agentsquad.squad.bo.ToolExecutionContextBO;
+import com.agentsquad.squad.vo.OperationPageVO;
+import com.agentsquad.squad.vo.OperationVO;
+import com.agentsquad.squad.vo.OperationDetailVO;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.mapper.OperationMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,8 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static com.agentsquad.squad.common.util.ContentDigests.sha256;
-import static com.agentsquad.squad.common.util.RuntimePayloads.toJson;
+import static com.agentsquad.squad.utils.ContentDigests.sha256;
+import static com.agentsquad.squad.utils.RuntimePayloads.toJson;
 
 /**
  * 外部操作账本预检服务（M07 事务 A）。
@@ -49,7 +49,7 @@ public class OperationService {
     private OperationAccessService operationAccessService;
 
     @Resource
-    private OperationPreview operationPreview;
+    private OperationPreviewBO operationPreview;
 
     private static final String EFFECT_WRITE = "WRITE";
 
@@ -69,10 +69,10 @@ public class OperationService {
      * 预检并创建操作账本记录；原生调用键或业务意图键命中即返回原记录，不产生第二行。
      */
     @Transactional
-    public OperationDO prepare(PrepareRequest request) {
+    public OperationPO prepare(PrepareRequestBO request) {
         String scopeId = scopeService.scopeForSession(request.userId(), request.sessionId());
         scopeService.lockOwned(request.userId(), scopeId, true);
-        ToolExecutionContextDO context = operationMapper.lockToolContext(request.userId(),
+        ToolExecutionContextBO context = operationMapper.lockToolContext(request.userId(),
                 request.sessionId());
         if (context == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "会话未绑定目标");
@@ -82,7 +82,7 @@ public class OperationService {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "目标已取消或结束，不再受理工具操作");
         }
 
-        OperationDO existing = operationMapper.findByNativeCall(request.userId(), context.getBindingId(),
+        OperationPO existing = operationMapper.findByNativeCall(request.userId(), context.getBindingId(),
                 request.frameworkTurnId(), request.toolCallId());
         if (existing != null) {
             log.info("工具调用幂等复用原操作 operationId={} toolCallId={}",
@@ -96,7 +96,7 @@ public class OperationService {
                     || request.businessIntentKey().length() > 160) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "写入操作缺少业务幂等键");
             }
-            OperationDO intent = operationMapper.findByBusinessIntent(request.userId(),
+            OperationPO intent = operationMapper.findByBusinessIntent(request.userId(),
                     context.getScopeId(), request.toolKey(), request.businessIntentKey());
             if (intent != null) {
                 if (!intent.getRequestHash().equals(requestHash)) {
@@ -140,7 +140,7 @@ public class OperationService {
         scopeService.lockOwned(userId, scopeId, false);
         var unstarted = operationMapper.lockUnstartedInScope(userId, scopeId);
         operationMapper.cancelUnstartedByScope(userId, scopeId);
-        for (OperationDO operation : unstarted) {
+        for (OperationPO operation : unstarted) {
             if (operation.getBudgetUsageKey() != null) {
                 budgetService.releaseUnsentTool(userId, scopeId, operation.getBudgetUsageKey());
             }
@@ -150,13 +150,13 @@ public class OperationService {
     /**
      * 分页读取目标的操作视图；游标取最后一条操作的存储主键。
      */
-    public OperationPage listPage(String userId, String taskId, String cursor, int limit) {
+    public OperationPageVO listPage(String userId, String taskId, String cursor, int limit) {
         scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         Long cursorId = parseCursor(cursor);
-        List<OperationDO> rows = operationMapper.listByTask(userId, taskId, cursorId,
+        List<OperationPO> rows = operationMapper.listByTask(userId, taskId, cursorId,
                 Math.min(Math.max(limit, 1), 100) + 1);
         boolean hasMore = rows.size() > Math.min(Math.max(limit, 1), 100);
-        List<OperationView> items = rows.stream()
+        List<OperationVO> items = rows.stream()
                 .limit(Math.min(Math.max(limit, 1), 100))
                 .map(this::viewOf)
                 .toList();
@@ -166,14 +166,14 @@ public class OperationService {
                     rows.get(items.size() - 1).getOperationId());
             nextCursor = lastCursorId == null ? null : String.valueOf(lastCursorId);
         }
-        return new OperationPage(items, nextCursor);
+        return new OperationPageVO(items, nextCursor);
     }
 
     /**
      * 读取当前用户单个操作视图；不存在统一按 NOT_FOUND 处理。
      */
-    public OperationView getOwned(String userId, String operationId) {
-        OperationDO row = operationMapper.findOwned(userId, operationId);
+    public OperationVO getOwned(String userId, String operationId) {
+        OperationPO row = operationMapper.findOwned(userId, operationId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "操作不存在");
         }
@@ -184,14 +184,14 @@ public class OperationService {
     /**
      * 按资源归属读取脱敏详情，核对动作仅由服务端显式授权计算。
      */
-    public OperationDetail detail(AuthView actor, String operationId) {
-        OperationDO row = operationMapper.findOwned(actor.userId(), operationId);
+    public OperationDetailVO detail(AuthView actor, String operationId) {
+        OperationPO row = operationMapper.findOwned(actor.userId(), operationId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "操作不存在");
         }
         scopeService.requireReadable(actor.userId(), row.getScopeId());
         List<String> evidenceRefs = evidenceRefs(row.getResultJson());
-        return new OperationDetail(viewOf(row), operationPreview.arguments(row.getArgumentsJson()),
+        return new OperationDetailVO(viewOf(row), operationPreview.arguments(row.getArgumentsJson()),
                 "操作状态：" + row.getStatus() + "；已记录核对证据 " + evidenceRefs.size() + " 项", evidenceRefs,
                 operationAccessService.canReconcile(actor, row.getScopeId(), row.getStatus()));
     }
@@ -217,8 +217,8 @@ public class OperationService {
     /**
      * 账本行映射为公开摘要；参数与结果正文不进入列表。
      */
-    public OperationView viewOf(OperationDO row) {
-        return new OperationView(row.getOperationId(), row.getTaskId(), row.getJobId(), row.getToolKey(),
+    public OperationVO viewOf(OperationPO row) {
+        return new OperationVO(row.getOperationId(), row.getTaskId(), row.getJobId(), row.getToolKey(),
                 row.getEffect(), row.getStatus(), row.getRequestHash(), row.getVersion(),
                 row.getToolKey() + " · " + row.getEffect() + " · " + row.getStatus());
     }
@@ -237,7 +237,7 @@ public class OperationService {
     /**
      * 结算该操作的预算预留；金额由调用方按工具声明传入。
      */
-    public void settle(OperationDO operation, long settledUnits) {
+    public void settle(OperationPO operation, long settledUnits) {
         budgetService.settle(operation.getUserId(), operation.getScopeId(), usageKeyOf(operation),
                 settledUnits);
     }
@@ -245,11 +245,11 @@ public class OperationService {
     /**
      * 操作的预算稳定键；核对流程复用同一派生规则，避免两处口径漂移。
      */
-    public String usageKeyOf(OperationDO operation) {
+    public String usageKeyOf(OperationPO operation) {
         return operation.getBudgetUsageKey();
     }
 
-    private String usageKey(PrepareRequest request) {
+    private String usageKey(PrepareRequestBO request) {
         String identity = EFFECT_WRITE.equals(request.effect())
                 ? "intent:" + sha256(request.businessIntentKey())
                 : "call:" + sha256(request.sessionId() + "\n" + request.frameworkTurnId() + "\n" + request.toolCallId());

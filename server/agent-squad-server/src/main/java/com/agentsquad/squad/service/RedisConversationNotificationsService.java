@@ -1,11 +1,11 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.config.RedisWakeupProperties;
-import com.agentsquad.squad.domain.model.ConversationCommittedSignal;
-import com.agentsquad.squad.domain.model.ConversationWakeupNotice;
-import com.agentsquad.squad.domain.model.ConversationPreviewNotice;
-import com.agentsquad.squad.domain.dto.ReplyPreview;
-import com.agentsquad.squad.domain.model.ReplyPreviewSignal;
+import com.agentsquad.squad.properties.RedisWakeupProperties;
+import com.agentsquad.squad.event.ConversationCommittedSignal;
+import com.agentsquad.squad.bo.ConversationWakeupNoticeBO;
+import com.agentsquad.squad.bo.ConversationPreviewNoticeBO;
+import com.agentsquad.squad.bo.ReplyPreviewBO;
+import com.agentsquad.squad.event.ReplyPreviewSignal;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -114,7 +114,7 @@ public class RedisConversationNotificationsService {
 
     private void publishPreview(ReplyPreviewSignal signal) {
         try {
-            var notice = new ConversationPreviewNotice(1, instanceId, signal.userId(), signal.conversationId(), signal.preview());
+            var notice = new ConversationPreviewNoticeBO(1, instanceId, signal.userId(), signal.conversationId(), signal.preview());
             redis.convertAndSend(previewTopic(), json.writeValueAsString(notice));
         } catch (Exception failure) {
             // 只丢弃可替换预览，故障状态由持久事件通知发布路径记录，避免逐块刷屏。
@@ -128,7 +128,7 @@ public class RedisConversationNotificationsService {
             return;
         }
         try {
-            var notice = json.readValue(payload, ConversationPreviewNotice.class);
+            var notice = json.readValue(payload, ConversationPreviewNoticeBO.class);
             if (notice.schemaVersion() != 1 || !identity(notice.instanceId())
                     || instanceId.equals(notice.instanceId()) || !identity(notice.userId())
                     || !identity(notice.conversationId()) || !validPreview(notice.preview())) {
@@ -141,7 +141,7 @@ public class RedisConversationNotificationsService {
         }
     }
 
-    private boolean validPreview(ReplyPreview preview) {
+    private boolean validPreview(ReplyPreviewBO preview) {
         return preview != null && preview.schemaVersion() == 2 && preview.preview() && preview.replace()
                 && preview.offset() == 0 && preview.revision() > 0 && identity(preview.executionId())
                 && identity(preview.sourceMessageId()) && identity(preview.runId()) && identity(preview.streamId())
@@ -150,7 +150,7 @@ public class RedisConversationNotificationsService {
 
     private void publish(ConversationCommittedSignal signal) {
         try {
-            var notice = new ConversationWakeupNotice(1, instanceId, signal.userId(), signal.conversationId());
+            var notice = new ConversationWakeupNoticeBO(1, instanceId, signal.userId(), signal.conversationId());
             redis.convertAndSend(topic(), json.writeValueAsString(notice));
             if (publishUnavailable.compareAndSet(true, false)) {
                 log.info("跨实例会话通知发布已恢复");
@@ -168,7 +168,7 @@ public class RedisConversationNotificationsService {
             return;
         }
         try {
-            var notice = json.readValue(new String(payload, StandardCharsets.UTF_8), ConversationWakeupNotice.class);
+            var notice = json.readValue(new String(payload, StandardCharsets.UTF_8), ConversationWakeupNoticeBO.class);
             if (notice.schemaVersion() != 1 || !identity(notice.instanceId())
                     || !identity(notice.userId()) || !identity(notice.conversationId())
                     || instanceId.equals(notice.instanceId())) {

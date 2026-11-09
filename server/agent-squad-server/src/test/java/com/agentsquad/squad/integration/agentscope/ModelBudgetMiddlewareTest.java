@@ -1,14 +1,14 @@
 package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.domain.dto.ConversationResponse;
-import com.agentsquad.squad.domain.response.TaskReceiptResponse;
+import com.agentsquad.squad.vo.ConversationVO;
+import com.agentsquad.squad.vo.TaskReceiptVO;
 import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.service.BudgetService;
 import com.agentsquad.squad.mapper.BudgetMapper;
-import com.agentsquad.squad.integration.agentscope.middleware.ModelBudgetMiddleware;
-import com.agentsquad.squad.worker.profile.WorkerModelProfile;
-import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;
+import com.agentsquad.squad.agent.middleware.ModelBudgetMiddleware;
+import com.agentsquad.squad.properties.WorkerModelProfile;
+import com.agentsquad.squad.properties.WorkerProfileRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.event.ModelCallEndEvent;
@@ -97,8 +97,8 @@ class ModelBudgetMiddlewareTest {
     private Fixture fixture(ConfigurableApplicationContext spring) {
         String userId = "00000000-0000-0000-0000-000000000001";
         GoalTaskService tasks = spring.getBean(GoalTaskService.class);
-        ConversationResponse conversation = tasks.createConversation(userId, "模型预算");
-        TaskReceiptResponse task = tasks.submit(userId, conversation.conversationId(),
+        ConversationVO conversation = tasks.createConversation(userId, "模型预算");
+        TaskReceiptVO task = tasks.submit(userId, conversation.conversationId(),
                 "model-budget", "测试模型调用预算");
         JdbcTemplate jdbc = spring.getBean(JdbcTemplate.class);
         String sessionId = jdbc.queryForObject("""

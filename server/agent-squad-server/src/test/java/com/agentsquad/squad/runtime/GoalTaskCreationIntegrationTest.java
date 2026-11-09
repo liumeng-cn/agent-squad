@@ -1,13 +1,13 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.service.ArtifactService;
 
 import java.nio.charset.StandardCharsets;
 
-import com.agentsquad.squad.domain.dto.GoalTaskCreate;
-import com.agentsquad.squad.domain.request.MessageCreateRequest;
-import com.agentsquad.squad.domain.response.TaskReceiptResponse;
+import com.agentsquad.squad.bo.GoalTaskCreateBO;
+import com.agentsquad.squad.dto.MessageCreateDTO;
+import com.agentsquad.squad.vo.TaskReceiptVO;
 import com.agentsquad.squad.service.GoalTaskCreationService;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.BudgetService;
@@ -52,10 +52,10 @@ class GoalTaskCreationIntegrationTest {
     void outerTransactionRollsBackEveryTaskFact(@TempDir Path directory) {
         try (ConfigurableApplicationContext context = start(directory)) {
             String user = UUID.randomUUID().toString();
-            var message = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateRequest("用户原文", List.of()));
+            var message = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateDTO("用户原文", List.of()));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             String session = session(jdbc, message.executionId());
-            var request = new GoalTaskCreate("goal", "写作目标", "模型整理的目标", message.messageId());
+            var request = new GoalTaskCreateBO("goal", "写作目标", "模型整理的目标", message.messageId());
             var transaction = new TransactionTemplate(context.getBean(PlatformTransactionManager.class));
             assertThatThrownBy(() -> transaction.execute(status -> {
                 context.getBean(GoalTaskCreationService.class).create(user, session, request);
@@ -77,9 +77,9 @@ class GoalTaskCreationIntegrationTest {
             String user = UUID.randomUUID().toString();
             String file = context.getBean(ArtifactService.class).upload(user, "file", "facts.txt",
                     "授权材料".getBytes(StandardCharsets.UTF_8)).artifactId();
-            var message = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateRequest("请使用附件", List.of(file)));
+            var message = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateDTO("请使用附件", List.of(file)));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            var request = new GoalTaskCreate("goal", "标题", "工作目标", message.messageId());
+            var request = new GoalTaskCreateBO("goal", "标题", "工作目标", message.messageId());
             String session = session(jdbc, message.executionId());
             jdbc.update("UPDATE sq_artifact SET expires_at='2000-01-01' WHERE artifact_id=?", file);
             assertThatThrownBy(() -> context.getBean(GoalTaskCreationService.class).create(user, session, request))
@@ -95,7 +95,7 @@ class GoalTaskCreationIntegrationTest {
 
     static void verifyOwnershipAndBudget(ConfigurableApplicationContext context) {
         String user = UUID.randomUUID().toString();
-        var message = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateRequest("用户授权原文", List.of()));
+        var message = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateDTO("用户授权原文", List.of()));
         JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
         String session = session(jdbc, message.executionId());
         String sourceScope = jdbc.queryForObject("SELECT scope_id FROM sq_response_execution WHERE execution_id=?", String.class, message.executionId());
@@ -104,15 +104,15 @@ class GoalTaskCreationIntegrationTest {
         budget.reserve(user, sourceScope, "source-cost", "TOOL", 60, "tester");
         jdbc.update("UPDATE sq_budget_reservation SET status='UNKNOWN' WHERE user_id=?", user);
         var goals = context.getBean(GoalTaskCreationService.class);
-        var request = new GoalTaskCreate("goal", "标题", "模型整理的工作目标", message.messageId());
-        assertThatThrownBy(() -> goals.create(user, session, new GoalTaskCreate("forged", "标题", "目标", UUID.randomUUID().toString())))
+        var request = new GoalTaskCreateBO("goal", "标题", "模型整理的工作目标", message.messageId());
+        assertThatThrownBy(() -> goals.create(user, session, new GoalTaskCreateBO("forged", "标题", "目标", UUID.randomUUID().toString())))
                 .isInstanceOf(RuntimeBusinessException.class).hasMessageContaining("当前受权消息");
         assertThatThrownBy(() -> goals.create(UUID.randomUUID().toString(), session, request)).isInstanceOf(RuntimeBusinessException.class);
-        TaskReceiptResponse task = goals.create(user, session, request);
+        TaskReceiptVO task = goals.create(user, session, request);
         assertThat(goals.create(user, session, request)).isEqualTo(task);
-        assertThatThrownBy(() -> goals.create(user, session, new GoalTaskCreate("goal", "标题", "不同目标", message.messageId())))
+        assertThatThrownBy(() -> goals.create(user, session, new GoalTaskCreateBO("goal", "标题", "不同目标", message.messageId())))
                 .isInstanceOf(RuntimeBusinessException.class).hasMessageContaining("内容不一致");
-        assertThatThrownBy(() -> goals.create(user, session, new GoalTaskCreate("another", "标题", "另一目标", message.messageId())))
+        assertThatThrownBy(() -> goals.create(user, session, new GoalTaskCreateBO("another", "标题", "另一目标", message.messageId())))
                 .isInstanceOf(RuntimeBusinessException.class).hasMessageContaining("未完成目标");
         String taskSession = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE task_id=? AND role='MASTER'", String.class, task.taskId());
         assertThat(taskSession).isNotEqualTo(session);
@@ -139,10 +139,10 @@ class GoalTaskCreationIntegrationTest {
 
     static void verifyConcurrentCreation(ConfigurableApplicationContext context) throws Exception {
         String user = UUID.randomUUID().toString();
-        var message = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateRequest("并发重放", List.of()));
+        var message = context.getBean(MessageAcceptanceService.class).accept(user, null, "source", new MessageCreateDTO("并发重放", List.of()));
         JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
         String session = session(jdbc, message.executionId());
-        var request = new GoalTaskCreate("goal", "标题", "工作目标", message.messageId());
+        var request = new GoalTaskCreateBO("goal", "标题", "工作目标", message.messageId());
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch go = new CountDownLatch(1);
         try (var threads = Executors.newFixedThreadPool(2)) {
@@ -157,7 +157,7 @@ class GoalTaskCreationIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_conversation_event WHERE user_id=? AND event_type='task.created'", Long.class, user)).isEqualTo(1);
     }
 
-    private static TaskReceiptResponse concurrent(ConfigurableApplicationContext context, String user, String session, GoalTaskCreate request,
+    private static TaskReceiptVO concurrent(ConfigurableApplicationContext context, String user, String session, GoalTaskCreateBO request,
                                           CountDownLatch ready, CountDownLatch go) throws Exception {
         ready.countDown();
         if (!go.await(10, TimeUnit.SECONDS)) {

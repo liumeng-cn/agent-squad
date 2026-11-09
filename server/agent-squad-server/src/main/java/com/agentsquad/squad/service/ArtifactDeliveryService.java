@@ -1,15 +1,15 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.mapper.ArtifactMapper;
-import com.agentsquad.squad.domain.response.ArtifactResponse;
-import com.agentsquad.squad.domain.model.ArtifactContentPolicy;
-import com.agentsquad.squad.domain.entity.ArtifactStageDO;
-import com.agentsquad.squad.domain.dto.ArtifactStageView;
+import com.agentsquad.squad.vo.ArtifactVO;
+import com.agentsquad.squad.policy.ArtifactContentPolicy;
+import com.agentsquad.squad.po.ArtifactStagePO;
+import com.agentsquad.squad.bo.ArtifactStageViewBO;
 import com.agentsquad.squad.mapper.ArtifactDeliveryMapper;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.domain.model.SandboxExecutionContext;
-import com.agentsquad.squad.domain.model.SandboxPolicy;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.bo.SandboxExecutionContextBO;
+import com.agentsquad.squad.policy.SandboxPolicy;
 import com.agentsquad.squad.mapper.SandboxMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -51,7 +51,7 @@ public class ArtifactDeliveryService {
      * 沙箱结果落库事务内暂存，不立即向用户公开；同运行同路径只能具有同一内容。
      */
     @Transactional
-    public ArtifactStageView stage(SandboxExecutionContext context, String executionId, String path, byte[] content) {
+    public ArtifactStageViewBO stage(SandboxExecutionContextBO context, String executionId, String path, byte[] content) {
         access.requireCurrent(context);
         SandboxPolicy.requirePath(path);
         var run = runs.find(context.userId(), executionId);
@@ -62,7 +62,7 @@ public class ArtifactDeliveryService {
         String name = path.substring(path.lastIndexOf('/') + 1);
         ArtifactContentPolicy.mediaType(name, content);
         String hash = ArtifactContentPolicy.digest(content);
-        ArtifactStageDO prior = stages.findPath(context.userId(), executionId, path);
+        ArtifactStagePO prior = stages.findPath(context.userId(), executionId, path);
         if (prior != null) {
             if (!hash.equals(prior.getSha256())) {
                 throw conflict("相同工作区路径的内容已变化");
@@ -72,19 +72,19 @@ public class ArtifactDeliveryService {
         String id = UUID.randomUUID().toString();
         stages.insert(id, context.userId(), context.scopeId(), context.bindingId(), executionId,
                 path, name, hash, content, LocalDateTime.now(ZoneOffset.UTC).plusDays(1));
-        return new ArtifactStageView(id, executionId, name, hash, content.length, "STAGED", null);
+        return new ArtifactStageViewBO(id, executionId, name, hash, content.length, "STAGED", null);
     }
 
     /**
      * 同事务发布内容、Scope关联和暂存状态；重放返回原产物，不读取模型指定宿主文件。
      */
     @Transactional
-    public ArtifactResponse commit(String userId, String sessionId, String guardToken, String stageId, String expectedHash) {
-        ArtifactStageDO stage = stages.find(userId, stageId);
+    public ArtifactVO commit(String userId, String sessionId, String guardToken, String stageId, String expectedHash) {
+        ArtifactStagePO stage = stages.find(userId, stageId);
         if (stage == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "暂存产物不存在或已过期");
         }
-        SandboxExecutionContext context = access.resolve(userId, sessionId, guardToken, "artifact-commit", stageId);
+        SandboxExecutionContextBO context = access.resolve(userId, sessionId, guardToken, "artifact-commit", stageId);
         if (!stage.getScopeId().equals(context.scopeId()) || !stage.getBindingId().equals(context.bindingId())
                 || expectedHash == null || !expectedHash.equals(stage.getSha256())) {
             throw conflict("产物归属或摘要不匹配");
@@ -113,13 +113,13 @@ public class ArtifactDeliveryService {
         if (stages.commit(userId, stageId, artifactId) != 1) {
             throw conflict("产物提交状态已变化");
         }
-        ArtifactResponse published = artifactService.get(userId, artifactId);
+        ArtifactVO published = artifactService.get(userId, artifactId);
         events.publish(scope, "artifact-ready:" + stageId, "artifact.ready", published);
         return published;
     }
 
-    private ArtifactStageView view(ArtifactStageDO row) {
-        return new ArtifactStageView(row.getStageId(), row.getExecutionId(), row.getFileName(), row.getSha256(),
+    private ArtifactStageViewBO view(ArtifactStagePO row) {
+        return new ArtifactStageViewBO(row.getStageId(), row.getExecutionId(), row.getFileName(), row.getSha256(),
                 row.getContent().length, row.getStatus(), row.getArtifactId());
     }
 

@@ -1,10 +1,11 @@
 package com.agentsquad.squad.agent.tool;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.model.WorkerExecutionIdentity;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.bo.WorkerExecutionIdentityBO;
 import com.agentsquad.squad.mapper.WorkerDispatchMapper;
-import com.agentsquad.squad.domain.dto.SandboxExecuteRequest;
+import com.agentsquad.squad.bo.SandboxExecuteRequestBO;
 import com.agentsquad.squad.service.SandboxExecutionService;
 import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -79,7 +80,7 @@ public class SandboxPythonTool implements AgentTool {
                 return ToolResultBlock.error("缺少固定执行身份");
             }
             try {
-                SandboxExecuteRequest request = json.convertValue(param.getInput(), SandboxExecuteRequest.class);
+                SandboxExecuteRequestBO request = json.convertValue(param.getInput(), SandboxExecuteRequestBO.class);
                 var result = sandbox.execute(context.getUserId(), context.getSessionId(), guard(context),
                         context.get(SessionRecorder.TURN_ID_KEY, String.class), param.getToolUseBlock().getId(), request);
                 return ToolResultBlock.text(RuntimePayloads.toJson(json, result));
@@ -98,13 +99,13 @@ public class SandboxPythonTool implements AgentTool {
             return null;
         }
         if (!definitions.requirePublished(worker.getWorkerKey(), worker.getWorkerVersion()).toolAllowlist().contains(getName())) {
-            throw new com.agentsquad.squad.common.exception.RuntimeBusinessException(
-                    com.agentsquad.squad.domain.enums.RuntimeExceptionCode.FORBIDDEN, "该Worker没有沙箱执行权限");
+            throw new com.agentsquad.squad.exceptions.RuntimeBusinessException(
+                    RuntimeExceptionCode.FORBIDDEN, "该Worker没有沙箱执行权限");
         }
-        var identity = context.get(WorkerExecutionIdentity.class);
+        var identity = context.get(WorkerExecutionIdentityBO.class);
         if (identity == null || !bindingId.equals(identity.bindingId())) {
-            throw new com.agentsquad.squad.common.exception.RuntimeBusinessException(
-                    com.agentsquad.squad.domain.enums.RuntimeExceptionCode.FORBIDDEN, "缺少本次Worker领取的固定执行身份");
+            throw new com.agentsquad.squad.exceptions.RuntimeBusinessException(
+                    RuntimeExceptionCode.FORBIDDEN, "缺少本次Worker领取的固定执行身份");
         }
         return identity.guardToken();
     }

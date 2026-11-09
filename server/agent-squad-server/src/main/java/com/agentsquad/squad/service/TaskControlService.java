@@ -1,15 +1,15 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.domain.entity.CommandDO;
-import com.agentsquad.squad.domain.entity.TaskDO;
-import com.agentsquad.squad.domain.enums.GoalTaskStatus;
-import com.agentsquad.squad.domain.enums.RuntimeCommandAction;
-import com.agentsquad.squad.domain.enums.RuntimeCommandStatus;
+import com.agentsquad.squad.po.CommandPO;
+import com.agentsquad.squad.po.TaskPO;
+import com.agentsquad.squad.enums.GoalTaskStatus;
+import com.agentsquad.squad.enums.RuntimeCommandAction;
+import com.agentsquad.squad.enums.RuntimeCommandStatus;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
 
-import com.agentsquad.squad.domain.response.CommandReceiptResponse;
+import com.agentsquad.squad.vo.CommandReceiptVO;
 import com.agentsquad.squad.mapper.BindingMapper;
 import com.agentsquad.squad.mapper.CommandMapper;
 import com.agentsquad.squad.mapper.DeliveryMapper;
@@ -17,8 +17,8 @@ import com.agentsquad.squad.mapper.TaskEventMapper;
 import com.agentsquad.squad.mapper.TaskMapper;
 import com.agentsquad.squad.mapper.ProjectionMapper;
 import com.agentsquad.squad.mapper.WorkerDispatchMapper;
-import com.agentsquad.squad.common.util.ContentDigests;
-import com.agentsquad.squad.common.util.RuntimePayloads;
+import com.agentsquad.squad.utils.ContentDigests;
+import com.agentsquad.squad.utils.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -79,9 +79,9 @@ public class TaskControlService {
      * 提交取消命令：校验归属与版本、按幂等键去重、撤销未送达业务命令并写入 STOP 命令。
      */
     @Transactional
-    public CommandReceiptResponse cancel(String userId, String taskId, String idempotencyKey, long expectedVersion) {
+    public CommandReceiptVO cancel(String userId, String taskId, String idempotencyKey, long expectedVersion) {
         validateIdempotencyKey(idempotencyKey);
-        TaskDO task = taskMapper.lockOwned(userId, taskId);
+        TaskPO task = taskMapper.lockOwned(userId, taskId);
         if (task == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
         }
@@ -89,7 +89,7 @@ public class TaskControlService {
         String payloadJson = RuntimePayloads.toJson(objectMapper,
                 Map.of("action", RuntimeCommandAction.STOP.name(), "expectedVersion", expectedVersion));
         String payloadHash = ContentDigests.sha256(payloadJson);
-        CommandDO prior = commandMapper.findByKey(userId, scopeKey, idempotencyKey);
+        CommandPO prior = commandMapper.findByKey(userId, scopeKey, idempotencyKey);
         if (prior != null) {
             if (!prior.getPayloadHash().equals(payloadHash)) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同幂等键的输入不一致");
@@ -129,16 +129,16 @@ public class TaskControlService {
                 RuntimePayloads.toJson(objectMapper, Map.of("status", GoalTaskStatus.CANCELLING.name(),
                         "version", task.getVersion() + 1)), now);
         log.info("取消命令受理成功 taskId={} commandId={} userId={}", taskId, commandId, userId);
-        return new CommandReceiptResponse(commandId, taskId, RuntimeCommandStatus.PENDING.name(), null, null);
+        return new CommandReceiptVO(commandId, taskId, RuntimeCommandStatus.PENDING.name(), null, null);
     }
 
     /**
      * 提交恢复命令：校验归属、版本与可恢复状态，按幂等键去重并写入 RESUME 命令。
      */
     @Transactional
-    public CommandReceiptResponse resume(String userId, String taskId, String idempotencyKey, long expectedVersion) {
+    public CommandReceiptVO resume(String userId, String taskId, String idempotencyKey, long expectedVersion) {
         validateIdempotencyKey(idempotencyKey);
-        TaskDO task = taskMapper.lockOwned(userId, taskId);
+        TaskPO task = taskMapper.lockOwned(userId, taskId);
         if (task == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
         }
@@ -146,7 +146,7 @@ public class TaskControlService {
         String payloadJson = RuntimePayloads.toJson(objectMapper,
                 Map.of("action", RuntimeCommandAction.RESUME.name(), "expectedVersion", expectedVersion));
         String payloadHash = ContentDigests.sha256(payloadJson);
-        CommandDO prior = commandMapper.findByKey(userId, scopeKey, idempotencyKey);
+        CommandPO prior = commandMapper.findByKey(userId, scopeKey, idempotencyKey);
         if (prior != null) {
             if (!prior.getPayloadHash().equals(payloadHash)) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同幂等键的输入不一致");
@@ -172,7 +172,7 @@ public class TaskControlService {
         commandMapper.insertControl(commandId, userId, scopeKey, idempotencyKey, payloadHash,
                 taskId, bindingId, RuntimeCommandAction.RESUME.name(), payloadJson, now);
         log.info("恢复命令受理成功 taskId={} commandId={} userId={}", taskId, commandId, userId);
-        return new CommandReceiptResponse(commandId, taskId, RuntimeCommandStatus.PENDING.name(), null, null);
+        return new CommandReceiptVO(commandId, taskId, RuntimeCommandStatus.PENDING.name(), null, null);
     }
 
     /**
@@ -200,8 +200,8 @@ public class TaskControlService {
         log.warn("原生恢复命令被阻塞 taskId={} commandId={} errorCode={}", taskId, commandId, errorCode);
     }
 
-    private CommandReceiptResponse toReceipt(CommandDO command) {
-        return new CommandReceiptResponse(command.getCommandId(), command.getTaskId(), command.getStatus(),
+    private CommandReceiptVO toReceipt(CommandPO command) {
+        return new CommandReceiptVO(command.getCommandId(), command.getTaskId(), command.getStatus(),
                 command.getNativeTurnId(), null);
     }
 

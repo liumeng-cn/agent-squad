@@ -1,6 +1,6 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.domain.entity.ConversationDO;
+import com.agentsquad.squad.po.ConversationPO;
 import com.agentsquad.squad.mapper.ConversationMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -29,8 +29,8 @@ public class ConversationCleanupSchedulerService {
      */
     @Scheduled(fixedDelayString = "${agentsquad.conversation.cleanup.delay-ms:2000}")
     public void cleanupDeletingConversations() {
-        List<ConversationDO> deletable = conversationMapper.findDeletable(CLEANUP_BATCH);
-        for (ConversationDO row : deletable) {
+        List<ConversationPO> deletable = conversationMapper.findDeletable(CLEANUP_BATCH);
+        for (ConversationPO row : deletable) {
             if (conversationMapper.markDeleted(row.getUserId(), row.getConversationId()) == 1) {
                 log.info("会话已逻辑删除 conversationId={} userId={}", row.getConversationId(), row.getUserId());
             }

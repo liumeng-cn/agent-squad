@@ -1,15 +1,15 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.mapper.TaskDirectiveMapper;
-import com.agentsquad.squad.common.util.ContentDigests;
-import com.agentsquad.squad.domain.enums.WorkerJobStatus;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.enums.PlanJoinStage;
-import com.agentsquad.squad.domain.enums.RuntimeCommandAction;
+import com.agentsquad.squad.utils.ContentDigests;
+import com.agentsquad.squad.enums.WorkerJobStatus;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.enums.PlanJoinStage;
+import com.agentsquad.squad.enums.RuntimeCommandAction;
 import com.agentsquad.squad.mapper.BindingMapper;
 import com.agentsquad.squad.mapper.CommandMapper;
-import com.agentsquad.squad.domain.entity.PlanDO;
-import com.agentsquad.squad.domain.entity.WorkerJobDO;
+import com.agentsquad.squad.po.PlanPO;
+import com.agentsquad.squad.po.WorkerJobPO;
 import com.agentsquad.squad.mapper.PlanMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -59,7 +59,7 @@ public class MasterSignalService {
     /**
      * 调用方已锁定父 Task 和 Plan；结果、信号版本与命令在同一平台事务内提交。
      */
-    public void onJobStateChanged(PlanDO plan) {
+    public void onJobStateChanged(PlanPO plan) {
         if (planMapper.advanceSignalVersion(plan.getUserId(), plan.getTaskId(), plan.getPlanVersion()) != 1) {
             throw new IllegalStateException("计划汇合版本推进失败");
         }
@@ -78,13 +78,13 @@ public class MasterSignalService {
         if (planVersion == null || planVersion == 0) {
             return;
         }
-        PlanDO plan = planMapper.lockPlan(userId, taskId, planVersion);
+        PlanPO plan = planMapper.lockPlan(userId, taskId, planVersion);
         if (plan != null && "ACTIVE".equals(plan.getStatus())) {
             createIfReady(plan);
         }
     }
 
-    private void createIfReady(PlanDO plan) {
+    private void createIfReady(PlanPO plan) {
         if (!directives.pending(plan.getUserId(), plan.getTaskId()).isEmpty()
                 || directives.pendingControls(plan.getUserId(), plan.getTaskId()) > 0) {
             return;
@@ -92,7 +92,7 @@ public class MasterSignalService {
         if (planMapper.countSignalEligibleTask(plan.getUserId(), plan.getTaskId()) == 0) {
             return;
         }
-        List<WorkerJobDO> jobs = planMapper.lockJobs(plan.getTaskId(), plan.getPlanVersion());
+        List<WorkerJobPO> jobs = planMapper.lockJobs(plan.getTaskId(), plan.getPlanVersion());
         boolean allSucceeded = !jobs.isEmpty() && jobs.stream().allMatch(job -> WorkerJobStatus.SUCCEEDED.name().equals(job.getStatus()));
         var stage = planEvaluation.evaluate(plan.getUserId(), plan.getTaskId(), plan.getPlanVersion(), List.of()).decision().stage();
         if (jobs.isEmpty() || !(stage == PlanJoinStage.READY
@@ -112,7 +112,7 @@ public class MasterSignalService {
         }
         List<Map<String, Object>> results = new ArrayList<>(jobs.size());
         var definition = acceptance.definition(plan);
-        for (WorkerJobDO job : jobs) {
+        for (WorkerJobPO job : jobs) {
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("jobId", job.getJobId());
             result.put("nodeKey", job.getNodeKey());
@@ -153,7 +153,7 @@ public class MasterSignalService {
                 plan.getTaskId(), plan.getPlanVersion(), signalVersion, commandId, jobs.size());
     }
 
-    private JsonNode readResult(WorkerJobDO job) {
+    private JsonNode readResult(WorkerJobPO job) {
         try {
             return RuntimePayloads.readJson(objectMapper, job.getResultJson());
         } catch (Exception exception) {

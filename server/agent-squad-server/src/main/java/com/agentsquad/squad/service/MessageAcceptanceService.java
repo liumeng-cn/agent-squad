@@ -1,13 +1,13 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.common.util.CanonicalJson;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.MessageSubmissionDO;
-import com.agentsquad.squad.domain.enums.ResponseExecutionStatus;
-import com.agentsquad.squad.domain.request.MessageCreateRequest;
-import com.agentsquad.squad.domain.response.MessageReceiptResponse;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.utils.CanonicalJson;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.bo.MessageSubmissionBO;
+import com.agentsquad.squad.enums.ResponseExecutionStatus;
+import com.agentsquad.squad.dto.MessageCreateDTO;
+import com.agentsquad.squad.vo.MessageReceiptVO;
 import com.agentsquad.squad.mapper.MessageAcceptanceMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -45,12 +45,12 @@ public class MessageAcceptanceService {
     /**
      * 先持久消息与回复命令；同键同规范化输入只返回原身份，在途目标不阻断新消息。
      */
-    public MessageReceiptResponse accept(String userId, String conversationId, String key, MessageCreateRequest request) {
+    public MessageReceiptVO accept(String userId, String conversationId, String key, MessageCreateDTO request) {
         userStatus.requireActive(userId);
         if (key == null || key.isBlank() || key.length() > 160) {
             throw invalid("消息幂等键长度必须为1到160");
         }
-        MessageCreateRequest normalized = normalize(request);
+        MessageCreateDTO normalized = normalize(request);
         String scopeKey = conversationId == null ? "message.create:first" : "message.create:" + conversationId;
         String hash = CanonicalJson.sha256(objectMapper, RuntimePayloads.toJson(objectMapper,
                 normalized.modelId() == null && normalized.reasoningMode() == null
@@ -58,7 +58,7 @@ public class MessageAcceptanceService {
                         : Map.of("text", normalized.text(), "artifactIds", normalized.artifactIds(),
                         "modelId", normalized.modelId() == null ? "" : normalized.modelId(),
                         "reasoningMode", normalized.reasoningMode() == null ? "" : normalized.reasoningMode().name())));
-        MessageSubmissionDO row;
+        MessageSubmissionBO row;
         try {
             row = writer.accept(userId, conversationId, scopeKey, key, normalized, hash);
         } catch (DuplicateKeyException duplicate) {
@@ -77,12 +77,12 @@ public class MessageAcceptanceService {
         scopeService.requireReadable(userId, row.getScopeId());
         log.info("消息受理回执 conversationId={} messageId={} executionId={} commandId={}",
                 row.getConversationId(), row.getMessageId(), row.getExecutionId(), row.getCommandId());
-        return new MessageReceiptResponse(row.getConversationId(), row.getMessageId(), row.getExecutionId(), row.getCommandId(),
+        return new MessageReceiptVO(row.getConversationId(), row.getMessageId(), row.getExecutionId(), row.getCommandId(),
                 ResponseExecutionStatus.valueOf(row.getStatus()),
                 row.getConversationId() + ":" + row.getGeneration() + ":" + row.getReceiptSequence());
     }
 
-    private MessageCreateRequest normalize(MessageCreateRequest request) {
+    private MessageCreateDTO normalize(MessageCreateDTO request) {
         if (request == null || request.text() == null || request.text().isBlank() || request.text().length() > 20000) {
             throw invalid("消息内容长度必须为1到20000");
         }
@@ -100,7 +100,7 @@ public class MessageAcceptanceService {
         if (ids.stream().distinct().count() != ids.size()) {
             throw invalid("附件不能重复");
         }
-        return new MessageCreateRequest(request.text(), List.copyOf(ids), request.modelId(), request.reasoningMode());
+        return new MessageCreateDTO(request.text(), List.copyOf(ids), request.modelId(), request.reasoningMode());
     }
 
     private RuntimeBusinessException invalid(String message) {

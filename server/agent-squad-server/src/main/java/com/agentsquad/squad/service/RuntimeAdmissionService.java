@@ -1,8 +1,8 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.domain.entity.RuntimeAdmissionSlotDO;
+import com.agentsquad.squad.po.RuntimeAdmissionSlotPO;
 import com.agentsquad.squad.mapper.RuntimeAdmissionMapper;
-import com.agentsquad.squad.common.exception.RuntimeAdmissionBusyException;
+import com.agentsquad.squad.exceptions.RuntimeAdmissionBusyException;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -72,7 +72,7 @@ public class RuntimeAdmissionService {
 
         Integer total = mapper.lockCounter(GLOBAL_POOL);
         Integer userCount = mapper.lockCounter(userPool);
-        RuntimeAdmissionSlotDO existing = mapper.lockSlot(bindingId);
+        RuntimeAdmissionSlotPO existing = mapper.lockSlot(bindingId);
 
         if (total == null || userCount == null) {
             throw new IllegalStateException("运行容量计数记录不存在");
@@ -112,7 +112,7 @@ public class RuntimeAdmissionService {
 
         String userPool = poolKey(userId);
         lockPools(userPool);
-        RuntimeAdmissionSlotDO slot = mapper.lockSlot(bindingId);
+        RuntimeAdmissionSlotPO slot = mapper.lockSlot(bindingId);
         if (slot == null || !slot.active() || !userId.equals(slot.getUserId())
                 || !commandId.equals(slot.getCommandId())) {
             log.debug("命令回执未命中活动容量占位 commandId={} bindingId={}", commandId, bindingId);
@@ -170,7 +170,7 @@ public class RuntimeAdmissionService {
         String userPool = poolKey(userId);
         lockPools(userPool);
 
-        RuntimeAdmissionSlotDO slot = mapper.lockSlot(bindingId);
+        RuntimeAdmissionSlotPO slot = mapper.lockSlot(bindingId);
         if (slot == null || !slot.active() || !userId.equals(slot.getUserId())) {
             return;
         }
@@ -204,7 +204,7 @@ public class RuntimeAdmissionService {
         String userPool = poolKey(userId);
         lockPools(userPool);
 
-        RuntimeAdmissionSlotDO slot = mapper.lockSlot(bindingId);
+        RuntimeAdmissionSlotPO slot = mapper.lockSlot(bindingId);
         if (slot == null || !slot.active() || !userId.equals(slot.getUserId())
                 || !commandId.equals(slot.getCommandId()) || slot.getTurnId() != null) {
             return;
@@ -228,7 +228,7 @@ public class RuntimeAdmissionService {
         }
     }
 
-    private void releaseSlot(RuntimeAdmissionSlotDO slot, String userPool) {
+    private void releaseSlot(RuntimeAdmissionSlotPO slot, String userPool) {
         if (mapper.releaseSlot(slot.getUserId(), slot.getBindingId(), slot.getCommandId()) != 1
                 || mapper.decrement(userPool) != 1
                 || mapper.decrement(GLOBAL_POOL) != 1) {

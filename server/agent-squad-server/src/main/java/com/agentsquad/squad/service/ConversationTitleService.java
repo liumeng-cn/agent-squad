@@ -1,16 +1,16 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.domain.model.ConversationCommittedSignal;
-import com.agentsquad.squad.domain.response.ConversationViewResponse;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.domain.model.ConversationTitles;
+import com.agentsquad.squad.event.ConversationCommittedSignal;
+import com.agentsquad.squad.vo.ConversationViewVO;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.utils.ConversationTitles;
 import com.agentsquad.squad.mapper.ConversationMapper;
 import com.agentsquad.squad.mapper.MessageAcceptanceMapper;
-import com.agentsquad.squad.domain.request.ConversationTitleUpdateRequest;
-import com.agentsquad.squad.domain.response.ConversationListPageResponse;
+import com.agentsquad.squad.dto.ConversationTitleUpdateDTO;
+import com.agentsquad.squad.vo.ConversationListPageVO;
 import com.agentsquad.squad.mapper.ConversationReadMapper;
-import com.agentsquad.squad.common.util.RuntimePayloads;
+import com.agentsquad.squad.utils.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import org.springframework.context.ApplicationEventPublisher;
@@ -46,7 +46,7 @@ public class ConversationTitleService {
     private ObjectMapper json;
 
     @Transactional
-    public ConversationViewResponse rename(String userId, String conversationId, ConversationTitleUpdateRequest request) {
+    public ConversationViewVO rename(String userId, String conversationId, ConversationTitleUpdateDTO request) {
         String title = ConversationTitles.safe(request.title(), 200);
         if (title.isBlank() || request.expectedTitleVersion() == null || request.expectedTitleVersion() < 0) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "标题不能为空或只含控制字符");
@@ -62,11 +62,11 @@ public class ConversationTitleService {
         events.reserveEvent(userId, conversationId);
         events.insertEvent(userId, conversationId, row.getGeneration(), events.eventSequence(userId, conversationId), "title:" + conversationId + ":" + updated.getTitleVersion(), "conversation.title_updated", RuntimePayloads.toJson(json, Map.of("title", title, "titleVersion", updated.getTitleVersion())), LocalDateTime.now(ZoneOffset.UTC));
         committedEvents.publishEvent(new ConversationCommittedSignal(userId, conversationId));
-        return ConversationViewResponse.from(updated);
+        return ConversationViewVO.from(updated);
     }
 
     @Transactional(readOnly = true)
-    public ConversationListPageResponse list(String userId, String cursor, int limit) {
+    public ConversationListPageVO list(String userId, String cursor, int limit) {
         if (limit < 1 || limit > 100) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "分页大小无效");
         }
@@ -94,6 +94,6 @@ public class ConversationTitleService {
             var last = page.getLast();
             next = Base64.getUrlEncoder().withoutPadding().encodeToString((userId + "|" + last.getLastActivityAt() + "|" + reads.conversationId(userId, last.getConversationId())).getBytes(StandardCharsets.UTF_8));
         }
-        return new ConversationListPageResponse(page.stream().map(ConversationViewResponse::from).toList(), next);
+        return new ConversationListPageVO(page.stream().map(ConversationViewVO::from).toList(), next);
     }
 }

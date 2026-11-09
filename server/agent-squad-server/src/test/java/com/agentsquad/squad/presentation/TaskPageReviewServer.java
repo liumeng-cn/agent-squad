@@ -6,12 +6,12 @@ import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.mapper.InteractionMapper;
 import com.agentsquad.squad.service.InputFormSchemaService;
-import com.agentsquad.squad.domain.dto.PlanNode;
-import com.agentsquad.squad.domain.dto.PlanPublish;
+import com.agentsquad.squad.bo.PlanNodeBO;
+import com.agentsquad.squad.bo.PlanPublishBO;
 import com.agentsquad.squad.service.ContextSnapshotService;
 import com.agentsquad.squad.service.PlanService;
 import com.agentsquad.squad.service.WorkerDefinitionService;
-import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.dto.WorkerDefinitionCreateDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.SpringApplication;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -21,7 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
-import com.agentsquad.squad.domain.enums.AccountRole;
+import com.agentsquad.squad.enums.AccountRole;
 import java.util.UUID;
 
 /**
@@ -51,13 +51,13 @@ public final class TaskPageReviewServer {
         String master = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE task_id = ?", String.class, task.taskId());
         String binding = jdbc.queryForObject("SELECT binding_id FROM sq_runtime_binding WHERE task_id = ?", String.class, task.taskId());
         context.getBean(WorkerDefinitionService.class).publish(new AuthView(userId, "review", List.of(AccountRole.ADMIN), "fixture"),
-                "review-writer", new WorkerDefinitionCreateRequest("writer", "1.0.0", "局部内容写作", json.readTree("{}"), json.readTree("{}"), List.of(), "default", "default"));
+                "review-writer", new WorkerDefinitionCreateDTO("writer", "1.0.0", "局部内容写作", json.readTree("{}"), json.readTree("{}"), List.of(), "default", "default"));
         var snapshots = context.getBean(ContextSnapshotService.class);
         String first = snapshots.prepare(userId, master, "draft", "review-draft").snapshotId();
         String second = snapshots.prepare(userId, master, "review", "review-check").snapshotId();
-        var plan = context.getBean(PlanService.class).publish(userId, master, new PlanPublish("review-plan", 0,
-                List.of(new PlanNode("draft", "writer", "1.0.0", "起草文章", first, List.of(), true, 1),
-                        new PlanNode("review", "writer", "1.0.0", "审阅文章", second, List.of(), true, 1)),
+        var plan = context.getBean(PlanService.class).publish(userId, master, new PlanPublishBO("review-plan", 0,
+                List.of(new PlanNodeBO("draft", "writer", "1.0.0", "起草文章", first, List.of(), true, 1),
+                        new PlanNodeBO("review", "writer", "1.0.0", "审阅文章", second, List.of(), true, 1)),
                 "ALL_REQUIRED", List.of("文章与审阅均完成")));
         jdbc.update("UPDATE sq_command SET status = 'CANCELLED' WHERE task_id = ?", task.taskId());
         jdbc.update("UPDATE sq_worker_job SET status = 'SUCCEEDED', result_json = ? WHERE job_id = ?",

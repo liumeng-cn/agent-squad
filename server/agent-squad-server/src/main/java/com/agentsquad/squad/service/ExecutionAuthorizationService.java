@@ -1,8 +1,8 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
-import com.agentsquad.squad.common.exception.ExecutionContextInvalidatedException;
-import com.agentsquad.squad.domain.dto.ExecutionContextSnapshot;
+import com.agentsquad.squad.exceptions.ExecutionContextInvalidatedException;
+import com.agentsquad.squad.bo.ExecutionContextSnapshotBO;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,14 +32,14 @@ public class ExecutionAuthorizationService {
      * 锁顺序为会话/所有者、技能授权、记忆代际，事务内不调用模型或沙箱。
      */
     @Transactional
-    public ExecutionContextSnapshot prepare(String userId, String scopeId) {
+    public ExecutionContextSnapshotBO prepare(String userId, String scopeId) {
         userStatus.requireActive(userId);
         scopes.lockOwned(userId, scopeId, true);
         validate(userId, scopeId);
         var catalog = skills.freeze(userId, scopeId);
         var memory = memories.freeze(userId, scopeId);
         validate(userId, scopeId);
-        return new ExecutionContextSnapshot(catalog, memory);
+        return new ExecutionContextSnapshotBO(catalog, memory);
     }
 
     /**
@@ -70,7 +70,7 @@ public class ExecutionAuthorizationService {
         try {
             skills.validate(userId, scopeId);
             memories.requireCurrent(userId, scopeId);
-        } catch (com.agentsquad.squad.common.exception.RuntimeBusinessException exception) {
+        } catch (com.agentsquad.squad.exceptions.RuntimeBusinessException exception) {
             throw new ExecutionContextInvalidatedException(exception);
         }
     }

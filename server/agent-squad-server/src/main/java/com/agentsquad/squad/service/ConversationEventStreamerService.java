@@ -1,10 +1,10 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.domain.model.ConversationCommittedSignal;
-import com.agentsquad.squad.domain.model.ConversationStreamKey;
-import com.agentsquad.squad.domain.model.ReplyPreviewSignal;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.event.ConversationCommittedSignal;
+import com.agentsquad.squad.bo.ConversationStreamKeyBO;
+import com.agentsquad.squad.event.ReplyPreviewSignal;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
@@ -50,7 +50,7 @@ public class ConversationEventStreamerService {
     private int maxConnectionsPerUser;
 
     private final ConcurrentHashMap<String, Integer> userConnections = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<ConversationStreamKey, ConversationStreamHubService> hubs = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<ConversationStreamKeyBO, ConversationStreamHubService> hubs = new ConcurrentHashMap<>();
     private ThreadPoolExecutor readers;
     private ThreadPoolExecutor senders;
     private Semaphore slots;
@@ -92,7 +92,7 @@ public class ConversationEventStreamerService {
             throw busy();
         }
 
-        var key = new ConversationStreamKey(userId, conversationId);
+        var key = new ConversationStreamKeyBO(userId, conversationId);
         String id = UUID.randomUUID().toString();
         var emitter = new SseEmitter(0L);
         var subscriber = new ConversationSubscriberService(emitter, after, senders, () -> {
@@ -129,7 +129,7 @@ public class ConversationEventStreamerService {
 
     /** 本地提交和跨实例提示共用读取入口；每批仍由查询服务验证用户及会话归属。 */
     public void wake(ConversationCommittedSignal signal) {
-        var hub = hubs.get(new ConversationStreamKey(signal.userId(), signal.conversationId()));
+        var hub = hubs.get(new ConversationStreamKeyBO(signal.userId(), signal.conversationId()));
         if (hub != null) {
             hub.wake();
         }
@@ -138,7 +138,7 @@ public class ConversationEventStreamerService {
     /** 临时文本只进入订阅队列，不占持久序号，也不触发任务创建或取消。 */
     @org.springframework.context.event.EventListener
     public void preview(ReplyPreviewSignal signal) {
-        var hub = hubs.get(new ConversationStreamKey(signal.userId(), signal.conversationId()));
+        var hub = hubs.get(new ConversationStreamKeyBO(signal.userId(), signal.conversationId()));
         if (hub != null) {
             hub.preview(signal.preview());
         }

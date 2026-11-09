@@ -8,7 +8,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.agentsquad.squad.domain.enums.AccountRole;
+import com.agentsquad.squad.enums.AccountRole;
 import jakarta.servlet.DispatcherType;
 
 import java.util.List;

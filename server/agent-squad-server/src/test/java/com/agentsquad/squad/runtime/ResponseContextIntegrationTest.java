@@ -1,9 +1,9 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.service.ArtifactService;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.model.ResponseContextSnapshot;
-import com.agentsquad.squad.domain.response.MessageReceiptResponse;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.bo.ResponseContextSnapshotBO;
+import com.agentsquad.squad.vo.MessageReceiptVO;
 import com.agentsquad.squad.service.ResponseContextService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -31,16 +31,16 @@ class ResponseContextIntegrationTest {
         String url = url(directory);
         String owner = UUID.randomUUID().toString();
         String binding;
-        ResponseContextSnapshot frozen;
+        ResponseContextSnapshotBO frozen;
         try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url, com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), owner)) {
             MessageTestActor actor = MessageAcceptanceHttpTest.actor(context);
-            MessageReceiptResponse first = MessageAcceptanceHttpTest.send(context, actor, "/api/v1/conversations/messages",
+            MessageReceiptVO first = MessageAcceptanceHttpTest.send(context, actor, "/api/v1/conversations/messages",
                     "first", Map.of("text", "主角叫小明"));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             jdbc.update("UPDATE sq_conversation SET message_seq = 2 WHERE conversation_id = ?", first.conversationId());
             jdbc.update("INSERT INTO sq_message (message_id,user_id,conversation_id,message_seq,role,content,completed,occurred_at) VALUES (?,?,?,2,'ASSISTANT','记住了，小明。',TRUE,CURRENT_TIMESTAMP)",
                     UUID.randomUUID().toString(), owner, first.conversationId());
-            MessageReceiptResponse follow = MessageAcceptanceHttpTest.send(context, actor,
+            MessageReceiptVO follow = MessageAcceptanceHttpTest.send(context, actor,
                     "/api/v1/conversations/" + first.conversationId() + "/messages", "follow", Map.of("text", "他叫什么？"));
             MessageAcceptanceHttpTest.send(context, actor, "/api/v1/conversations/" + first.conversationId() + "/messages",
                     "future", Map.of("text", "未来消息不应进入前一个回复"));
@@ -68,7 +68,7 @@ class ResponseContextIntegrationTest {
         try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), owner)) {
             String file = context.getBean(ArtifactService.class).upload(owner, "input", "facts.txt",
                     "材料".getBytes(StandardCharsets.UTF_8)).artifactId();
-            MessageReceiptResponse receipt = MessageAcceptanceHttpTest.send(context, MessageAcceptanceHttpTest.actor(context),
+            MessageReceiptVO receipt = MessageAcceptanceHttpTest.send(context, MessageAcceptanceHttpTest.actor(context),
                     "/api/v1/conversations/messages", "file", Map.of("text", "分析材料", "artifactIds", List.of(file)));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             String binding = binding(jdbc, receipt);
@@ -83,7 +83,7 @@ class ResponseContextIntegrationTest {
     void overLimitFailsWithoutSilentlyDroppingHistoryOrSavingSnapshot(@TempDir Path directory) throws Exception {
         String owner = UUID.randomUUID().toString();
         try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), owner)) {
-            MessageReceiptResponse receipt = MessageAcceptanceHttpTest.send(context, MessageAcceptanceHttpTest.actor(context),
+            MessageReceiptVO receipt = MessageAcceptanceHttpTest.send(context, MessageAcceptanceHttpTest.actor(context),
                     "/api/v1/conversations/messages", "large", Map.of("text", "开始"));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             jdbc.update("UPDATE sq_message SET content = ? WHERE message_id = ?", "文".repeat(200001), receipt.messageId());
@@ -100,10 +100,10 @@ class ResponseContextIntegrationTest {
         try (ConfigurableApplicationContext context = MessageAcceptanceHttpTest.start(url(directory), com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), owner)) {
             String file = context.getBean(ArtifactService.class).upload(owner, "material", "facts.json",
                     "{\"name\":\"小明\"}".getBytes(StandardCharsets.UTF_8)).artifactId();
-            MessageReceiptResponse receipt = MessageAcceptanceHttpTest.send(context, MessageAcceptanceHttpTest.actor(context),
+            MessageReceiptVO receipt = MessageAcceptanceHttpTest.send(context, MessageAcceptanceHttpTest.actor(context),
                     "/api/v1/conversations/messages", "with-file", Map.of("text", "分析材料", "artifactIds", List.of(file)));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            ResponseContextSnapshot snapshot = context.getBean(ResponseContextService.class).freeze(owner, binding(jdbc, receipt));
+            ResponseContextSnapshotBO snapshot = context.getBean(ResponseContextService.class).freeze(owner, binding(jdbc, receipt));
             var material = snapshot.messages().getFirst().materials().getFirst();
             assertThat(material.artifactId()).isEqualTo(file);
             assertThat(material.fileName()).isEqualTo("facts.json");
@@ -119,10 +119,10 @@ class ResponseContextIntegrationTest {
             String big = "x".repeat(25000);
             String file = context.getBean(ArtifactService.class).upload(owner, "big-material", "large.txt",
                     big.getBytes(StandardCharsets.UTF_8)).artifactId();
-            MessageReceiptResponse receipt = MessageAcceptanceHttpTest.send(context, MessageAcceptanceHttpTest.actor(context),
+            MessageReceiptVO receipt = MessageAcceptanceHttpTest.send(context, MessageAcceptanceHttpTest.actor(context),
                     "/api/v1/conversations/messages", "big-file", Map.of("text", "分析", "artifactIds", List.of(file)));
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            ResponseContextSnapshot snapshot = context.getBean(ResponseContextService.class).freeze(owner, binding(jdbc, receipt));
+            ResponseContextSnapshotBO snapshot = context.getBean(ResponseContextService.class).freeze(owner, binding(jdbc, receipt));
             var material = snapshot.messages().getFirst().materials().getFirst();
             assertThat(material.truncated()).isTrue();
             assertThat(material.content()).contains("已截断");
@@ -130,7 +130,7 @@ class ResponseContextIntegrationTest {
         }
     }
 
-    private String binding(JdbcTemplate jdbc, MessageReceiptResponse receipt) {
+    private String binding(JdbcTemplate jdbc, MessageReceiptVO receipt) {
         return jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id = ?", String.class, receipt.executionId());
     }
 

@@ -1,8 +1,8 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.domain.entity.WorkerLaunchDO;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.bo.WorkerLaunchBO;
 import com.agentsquad.squad.mapper.WorkerDispatchMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -29,7 +29,7 @@ public class WorkerDispatchService {
      * CAS 领取单个 Job，失败说明其他实例持有有效 guard 或计划已失效。
      */
     @Transactional
-    public WorkerLaunchDO claim(String userId, String bindingId) {
+    public WorkerLaunchBO claim(String userId, String bindingId) {
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         String guardToken = UUID.randomUUID().toString();
         if (dispatchMapper.claimGuard(userId, bindingId, guardToken, now,

@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.mapper.SandboxMapper">
 
-    <select id="binding" resultType="com.agentsquad.squad.domain.entity.SandboxBindingDO">
+    <select id="binding" resultType="com.agentsquad.squad.bo.SandboxBindingBO">
         SELECT user_id,
             scope_id,
             binding_id,
@@ -20,7 +20,7 @@
           AND j.status = 'RUNNING' AND j.cancel_requested_at IS NULL AND p.status = 'ACTIVE'
     </select>
 
-    <select id="prior" resultType="com.agentsquad.squad.domain.entity.SandboxRunDO">
+    <select id="prior" resultType="com.agentsquad.squad.po.SandboxRunPO">
         SELECT execution_id,
             user_id,
             scope_id,
@@ -34,7 +34,7 @@
         FOR UPDATE
     </select>
 
-    <select id="find" resultType="com.agentsquad.squad.domain.entity.SandboxRunDO">
+    <select id="find" resultType="com.agentsquad.squad.po.SandboxRunPO">
         SELECT execution_id,
             user_id,
             scope_id,
@@ -81,7 +81,7 @@
         WHERE user_id = #{userId} AND execution_id = #{executionId} AND status = 'IN_FLIGHT'
     </update>
 
-    <select id="expired" resultType="com.agentsquad.squad.domain.entity.SandboxRunDO">
+    <select id="expired" resultType="com.agentsquad.squad.po.SandboxRunPO">
         SELECT execution_id,
             user_id,
             scope_id,

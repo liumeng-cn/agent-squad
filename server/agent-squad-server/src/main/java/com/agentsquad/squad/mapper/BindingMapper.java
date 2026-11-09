@@ -1,5 +1,6 @@
 package com.agentsquad.squad.mapper;
 
+import com.agentsquad.squad.enums.LocalSessionState;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -21,7 +22,7 @@ public interface BindingMapper {
                      @Param("sessionId") String sessionId,
                      @Param("nextProjectionAt") LocalDateTime nextProjectionAt);
 
-    com.agentsquad.squad.domain.enums.LocalSessionState localSessionState(
+    LocalSessionState localSessionState(
             @Param("userId") String userId, @Param("bindingId") String bindingId);
 
     java.util.List<String> taskBindingIds(@Param("userId") String userId, @Param("taskId") String taskId);

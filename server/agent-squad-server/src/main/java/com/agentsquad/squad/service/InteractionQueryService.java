@@ -1,15 +1,15 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.domain.response.InteractionResponse;
-import com.agentsquad.squad.domain.response.InteractionPageResponse;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.InteractionDO;
+import com.agentsquad.squad.vo.InteractionVO;
+import com.agentsquad.squad.vo.InteractionPageVO;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.po.InteractionPO;
 import com.agentsquad.squad.mapper.InteractionMapper;
-import com.agentsquad.squad.domain.entity.OperationDO;
+import com.agentsquad.squad.po.OperationPO;
 import com.agentsquad.squad.mapper.OperationMapper;
-import com.agentsquad.squad.tools.operation.OperationPreview;
+import com.agentsquad.squad.bo.OperationPreviewBO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -43,12 +43,12 @@ public class InteractionQueryService {
     private ObjectMapper objectMapper;
 
     @Resource
-    private OperationPreview operationPreview;
+    private OperationPreviewBO operationPreview;
 
     /**
      * 列出目标的交互存储行；游标为存储主键。
      */
-    public List<InteractionDO> listByTask(String userId, String taskId, String cursor, int limit) {
+    public List<InteractionPO> listByTask(String userId, String taskId, String cursor, int limit) {
         scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         Long cursorId = parseCursor(cursor);
         return interactionMapper.listByTask(userId, taskId, cursorId, Math.min(Math.max(limit, 1), 100));
@@ -57,12 +57,12 @@ public class InteractionQueryService {
     /**
      * 分页读取目标的交互视图；游标取最后一条交互的存储主键。
      */
-    public InteractionPageResponse listPage(String userId, String taskId, String cursor, int limit) {
+    public InteractionPageVO listPage(String userId, String taskId, String cursor, int limit) {
         scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         int pageSize = Math.min(Math.max(limit, 1), 100);
-        List<InteractionDO> rows = interactionMapper.listByTask(userId, taskId, parseCursor(cursor), pageSize + 1);
+        List<InteractionPO> rows = interactionMapper.listByTask(userId, taskId, parseCursor(cursor), pageSize + 1);
         boolean hasMore = rows.size() > pageSize;
-        List<InteractionResponse> items = rows.stream()
+        List<InteractionVO> items = rows.stream()
                 .limit(Math.min(Math.max(limit, 1), 100))
                 .map(row -> viewOf(userId, row))
                 .toList();
@@ -72,14 +72,14 @@ public class InteractionQueryService {
                     rows.get(Math.min(Math.max(limit, 1), 100) - 1).getInteractionId());
             nextCursor = lastCursorId == null ? null : String.valueOf(lastCursorId);
         }
-        return new InteractionPageResponse(items, nextCursor);
+        return new InteractionPageVO(items, nextCursor);
     }
 
     /**
      * 读取当前用户单个交互视图；不存在统一按 NOT_FOUND 处理。
      */
-    public InteractionResponse getOwned(String userId, String interactionId) {
-        InteractionDO row = interactionMapper.findOwned(userId, interactionId);
+    public InteractionVO getOwned(String userId, String interactionId) {
+        InteractionPO row = interactionMapper.findOwned(userId, interactionId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "交互不存在");
         }
@@ -90,7 +90,7 @@ public class InteractionQueryService {
     /**
      * 列出目标仍开放的交互存储行（快照 pending 来源）。
      */
-    public List<InteractionDO> listOpenByTask(String userId, String taskId) {
+    public List<InteractionPO> listOpenByTask(String userId, String taskId) {
         scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         return interactionMapper.findOpenIds(userId, taskId).stream()
                 .map(id -> interactionMapper.findOwned(userId, id))
@@ -98,7 +98,7 @@ public class InteractionQueryService {
                 .toList();
     }
 
-    public List<InteractionDO> listOpenByScope(String userId, String scopeId) {
+    public List<InteractionPO> listOpenByScope(String userId, String scopeId) {
         scopeService.requireReadable(userId, scopeId);
         return interactionMapper.findOpenByScope(userId, scopeId).stream()
                 .map(id -> interactionMapper.findOwned(userId, id))
@@ -109,10 +109,10 @@ public class InteractionQueryService {
     /**
      * 把存储行映射为对外视图；审批卡附带账本操作上下文供核对与确认摘要比对。
      */
-    public InteractionResponse viewOf(String userId, InteractionDO row) {
+    public InteractionVO viewOf(String userId, InteractionPO row) {
         Object approvalContext = null;
         if (KIND_APPROVAL.equals(row.getKind()) && row.getOperationId() != null) {
-            OperationDO operation = operationMapper.findOwned(userId, row.getOperationId());
+            OperationPO operation = operationMapper.findOwned(userId, row.getOperationId());
             if (operation != null) {
                 Map<String, Object> context = new LinkedHashMap<>();
                 context.put("operationId", operation.getOperationId());
@@ -124,7 +124,7 @@ public class InteractionQueryService {
                 approvalContext = context;
             }
         }
-        return new InteractionResponse(row.getInteractionId(), row.getTaskId(), row.getJobId(), row.getKind(),
+        return new InteractionVO(row.getInteractionId(), row.getTaskId(), row.getJobId(), row.getKind(),
                 row.getOrigin(), KIND_APPROVAL.equals(row.getKind()) ? "请确认此操作的影响后决定是否执行" : row.getQuestion(),
                 parseJsonOrNull(row.getAnswerSchemaJson()),
                 row.getRequestHash(), row.getPlanVersion(),

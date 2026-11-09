@@ -32,7 +32,7 @@ public class CancellationSettlementSchedulerService {
     private com.agentsquad.squad.service.ResponseExecutionService responses;
 
     @Resource
-    private com.agentsquad.squad.integration.agentscope.NativeSessionGateway gateway;
+    private com.agentsquad.squad.agent.session.NativeSessionGateway gateway;
 
     @Scheduled(fixedDelayString = "${agentsquad.cancel.settle-delay-ms:3000}")
     public void settle() {

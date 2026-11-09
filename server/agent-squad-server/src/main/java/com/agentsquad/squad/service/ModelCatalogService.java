@@ -1,14 +1,14 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.common.util.ContentDigests;
-import com.agentsquad.squad.model.domain.AcceptedModelChoice;
-import com.agentsquad.squad.domain.enums.ReasoningAdapter;
-import com.agentsquad.squad.domain.enums.ReasoningMode;
-import com.agentsquad.squad.model.dto.ModelOption;
-import com.agentsquad.squad.worker.profile.WorkerModelProfile;
-import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.utils.ContentDigests;
+import com.agentsquad.squad.bo.AcceptedModelChoiceBO;
+import com.agentsquad.squad.enums.ReasoningAdapter;
+import com.agentsquad.squad.enums.ReasoningMode;
+import com.agentsquad.squad.pending.ModelOption;
+import com.agentsquad.squad.properties.WorkerModelProfile;
+import com.agentsquad.squad.properties.WorkerProfileRegistry;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.model.GenerateOptions;
@@ -50,7 +50,7 @@ public class ModelCatalogService {
     /**
      * 只校验受理配置，不在提交事务中调用供应商；未知模型或不支持的模式直接拒绝。
      */
-    public AcceptedModelChoice accept(String requestedId, ReasoningMode requestedMode) {
+    public AcceptedModelChoiceBO accept(String requestedId, ReasoningMode requestedMode) {
         String id = requestedId == null ? "default" : requestedId;
         if (!id.matches("[A-Za-z0-9][A-Za-z0-9._-]{0,99}") || !registry.getModelProfiles().containsKey(id)) {
             throw invalid("所选模型不存在，请重新选择");
@@ -63,13 +63,13 @@ public class ModelCatalogService {
         if (!profile.getReasoningModes().contains(mode) || !supported(profile.getReasoningAdapter(), mode)) {
             throw invalid("所选模型不支持该推理模式");
         }
-        return new AcceptedModelChoice(id, version(profile), mode);
+        return new AcceptedModelChoiceBO(id, version(profile), mode);
     }
 
     /**
      * 页面选择和配置变化都不能重写在途模型；配置已变化时明确失败，不回退另一个模型。
      */
-    public WorkerModelProfile resolve(AcceptedModelChoice choice) {
+    public WorkerModelProfile resolve(AcceptedModelChoiceBO choice) {
         choice = canonicalize(choice);
         var profile = registry.requireExecutableModel(choice.modelId());
         if (!profile.isEnabled() || !version(profile).equals(choice.configurationVersion())) {
@@ -79,7 +79,7 @@ public class ModelCatalogService {
     }
 
     /** 默认模型切换后，旧回复仅能匹配配置指纹完全相同的显式配置，不静默换模。 */
-    public AcceptedModelChoice canonicalize(AcceptedModelChoice choice) {
+    public AcceptedModelChoiceBO canonicalize(AcceptedModelChoiceBO choice) {
         if (!"default".equals(choice.modelId())
                 || version(registry.requirePricedModel("default")).equals(choice.configurationVersion())) {
             return choice;
@@ -88,7 +88,7 @@ public class ModelCatalogService {
                 .filter(entry -> !"default".equals(entry.getKey()) && entry.getValue().isEnabled()
                         && version(entry.getValue()).equals(choice.configurationVersion()))
                 .sorted(Map.Entry.comparingByKey())
-                .map(entry -> new AcceptedModelChoice(entry.getKey(), choice.configurationVersion(), choice.reasoningMode()))
+                .map(entry -> new AcceptedModelChoiceBO(entry.getKey(), choice.configurationVersion(), choice.reasoningMode()))
                 .findFirst().orElse(choice);
     }
 
@@ -115,7 +115,7 @@ public class ModelCatalogService {
         return options;
     }
 
-    public String encode(AcceptedModelChoice choice) {
+    public String encode(AcceptedModelChoiceBO choice) {
         try {
             return json.writeValueAsString(choice);
         } catch (JsonProcessingException failure) {
@@ -123,9 +123,9 @@ public class ModelCatalogService {
         }
     }
 
-    public AcceptedModelChoice decode(String value) {
+    public AcceptedModelChoiceBO decode(String value) {
         try {
-            return json.readValue(value, AcceptedModelChoice.class);
+            return json.readValue(value, AcceptedModelChoiceBO.class);
         } catch (JsonProcessingException failure) {
             throw new IllegalStateException("已受理模型选择无法读取", failure);
         }

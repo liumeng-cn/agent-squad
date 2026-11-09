@@ -1,5 +1,7 @@
 package com.agentsquad.squad.common.observability;
 
+import com.agentsquad.squad.observer.ObservationSupport;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;

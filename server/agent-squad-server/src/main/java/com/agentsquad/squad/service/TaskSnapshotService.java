@@ -1,21 +1,21 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.enums.*;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 
-import com.agentsquad.squad.domain.dto.AcceptanceCheckView;
-import com.agentsquad.squad.domain.entity.EventDO;
-import com.agentsquad.squad.domain.entity.TaskDO;
-import com.agentsquad.squad.domain.dto.AnswerView;
-import com.agentsquad.squad.domain.response.InteractionResponse;
-import com.agentsquad.squad.domain.dto.TaskResponse;
-import com.agentsquad.squad.domain.response.TaskSnapshotResponse;
-import com.agentsquad.squad.domain.dto.WorkerJob;
-import com.agentsquad.squad.domain.response.WorkerJobPageResponse;
+import com.agentsquad.squad.vo.AcceptanceCheckVO;
+import com.agentsquad.squad.po.EventPO;
+import com.agentsquad.squad.po.TaskPO;
+import com.agentsquad.squad.vo.AnswerVO;
+import com.agentsquad.squad.vo.InteractionVO;
+import com.agentsquad.squad.vo.TaskVO;
+import com.agentsquad.squad.vo.TaskSnapshotVO;
+import com.agentsquad.squad.vo.WorkerJobVO;
+import com.agentsquad.squad.vo.WorkerJobPageVO;
 import com.agentsquad.squad.mapper.TaskEventMapper;
 import com.agentsquad.squad.mapper.TaskMapper;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.WorkerJobDO;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.po.WorkerJobPO;
 import com.agentsquad.squad.mapper.PlanMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -63,25 +63,25 @@ public class TaskSnapshotService {
      * pending 取开放的持久交互，供详情页渲染追问卡与审批卡。</p>
      */
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public TaskSnapshotResponse snapshot(String userId, String taskId) {
-        TaskDO task = taskMapper.findOwned(userId, taskId);
+    public TaskSnapshotVO snapshot(String userId, String taskId) {
+        TaskPO task = taskMapper.findOwned(userId, taskId);
         if (task == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
         }
         scopeService.requireReadable(userId, scopeService.scopeForTask(userId, taskId));
         long maxSeq = taskEventMapper.maxSeq(userId, taskId);
-        TaskResponse taskResponse = new TaskResponse(task.getTaskId(), task.getConversationId(), task.getStatus(),
+        TaskVO taskResponse = new TaskVO(task.getTaskId(), task.getConversationId(), task.getStatus(),
                 task.getVersion(), task.getPlanVersion(), task.getAnswerRevision(),
                 formatTime(task.getCancelRequestedAt()), task.getBlockedReason(),
                 formatTime(task.getCreateTime()), formatTime(task.getLastUpdateTime()));
-        AnswerView answer = buildAnswer(userId, taskId, task.getAnswerRevision());
-        List<InteractionResponse> pending = interactionQueryService.listOpenByTask(userId, taskId).stream()
+        AnswerVO answer = buildAnswer(userId, taskId, task.getAnswerRevision());
+        List<InteractionVO> pending = interactionQueryService.listOpenByTask(userId, taskId).stream()
                 .map(row -> interactionQueryService.viewOf(userId, row))
                 .toList();
         String cursor = taskId + ":" + maxSeq;
         log.debug("任务快照生成 userId={} taskId={} seq={} answerCompleted={} pending={}",
                 userId, taskId, maxSeq, answer.completed(), pending.size());
-        return new TaskSnapshotResponse(taskResponse, goalMessage(userId, taskId),
+        return new TaskSnapshotVO(taskResponse, goalMessage(userId, taskId),
                 currentJobs(task), pending, answer, cursor);
     }
 
@@ -90,14 +90,14 @@ public class TaskSnapshotService {
      */
     @org.springframework.transaction.annotation.Transactional(readOnly = true,
             isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
-    public WorkerJobPageResponse listJobs(String userId, String taskId) {
+    public WorkerJobPageVO listJobs(String userId, String taskId) {
         return listJobs(userId, taskId, null);
     }
 
     /** 按真实计划版本读取历史；权限仍以当前会话和目标归属判断，旧节点不混入当前完成数。 */
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public WorkerJobPageResponse listJobs(String userId, String taskId, Long requestedPlanVersion) {
-        TaskDO task = taskMapper.findOwned(userId, taskId);
+    public WorkerJobPageVO listJobs(String userId, String taskId, Long requestedPlanVersion) {
+        TaskPO task = taskMapper.findOwned(userId, taskId);
         if (task == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
         }
@@ -106,13 +106,13 @@ public class TaskSnapshotService {
         if (version < 0 || (requestedPlanVersion != null && version == 0) || version > task.getPlanVersion()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "这版工作安排不存在");
         }
-        var jobs = version == 0 ? List.<WorkerJob>of() : planMapper.listJobs(taskId, version).stream().map(this::jobView).toList();
-        return new WorkerJobPageResponse(jobs, null, version == task.getPlanVersion() ? acceptanceChecks(task) : List.of(),
+        var jobs = version == 0 ? List.<WorkerJobVO>of() : planMapper.listJobs(taskId, version).stream().map(this::jobView).toList();
+        return new WorkerJobPageVO(jobs, null, version == task.getPlanVersion() ? acceptanceChecks(task) : List.of(),
                 version, task.getPlanVersion());
     }
 
     /** 只展示正式结束任务的检查结论；候选检查尚未取得发布资格，不提前显示为已完成。 */
-    private List<AcceptanceCheckView> acceptanceChecks(TaskDO task) {
+    private List<AcceptanceCheckVO> acceptanceChecks(TaskPO task) {
         if (task.getPlanVersion() == 0 || !java.util.Set.of("SUCCEEDED", "PARTIAL", "FAILED").contains(task.getStatus())) {
             return List.of();
         }
@@ -125,15 +125,15 @@ public class TaskSnapshotService {
             if (!checks.isArray() || checks.size() > 20) {
                 return List.of();
             }
-            var views = new java.util.ArrayList<AcceptanceCheckView>();
+            var views = new java.util.ArrayList<AcceptanceCheckVO>();
             for (var check : checks) {
                 if (check.path("planVersion").asLong(-1) != task.getPlanVersion()) {
                     return List.of();
                 }
-                views.add(new AcceptanceCheckView(check.path("criterionId").asText(),
+                views.add(new AcceptanceCheckVO(check.path("criterionId").asText(),
                         check.path("text").asText(), check.path("required").asBoolean(),
-                        com.agentsquad.squad.domain.enums.AcceptanceVerificationType.valueOf(check.path("verificationType").asText()),
-                        com.agentsquad.squad.domain.enums.PlanAcceptanceVerdict.valueOf(check.path("verdict").asText())));
+                        AcceptanceVerificationType.valueOf(check.path("verificationType").asText()),
+                        PlanAcceptanceVerdict.valueOf(check.path("verdict").asText())));
             }
             return List.copyOf(views);
         } catch (java.io.IOException | IllegalArgumentException exception) {
@@ -144,7 +144,7 @@ public class TaskSnapshotService {
     /**
      * 已经完成的节点只公开经终态裁决的结果，候选与固定输入留在运行端。
      */
-    private List<WorkerJob> currentJobs(TaskDO task) {
+    private List<WorkerJobVO> currentJobs(TaskPO task) {
         if (task.getPlanVersion() == 0) {
             return List.of();
         }
@@ -153,7 +153,7 @@ public class TaskSnapshotService {
                 .toList();
     }
 
-    private WorkerJob jobView(WorkerJobDO row) {
+    private WorkerJobVO jobView(WorkerJobPO row) {
         JsonNode result = null;
         if ("SUCCEEDED".equals(row.getStatus()) && row.getResultJson() != null) {
             try {
@@ -163,7 +163,7 @@ public class TaskSnapshotService {
                         row.getTaskId(), row.getJobId(), exception);
             }
         }
-        var state = com.agentsquad.squad.domain.enums.WorkerJobStatus.valueOf(row.getStatus());
+        var state = WorkerJobStatus.valueOf(row.getStatus());
         try {
             var input = RuntimePayloads.readJson(objectMapper, row.getInputJson());
             String goal = input.path("goal").asText(row.getNodeKey());
@@ -172,11 +172,11 @@ public class TaskSnapshotService {
             if (row.getDependsOnJson() != null) {
                 RuntimePayloads.readJson(objectMapper, row.getDependsOnJson()).forEach(name -> dependencies.add(name.asText()));
             }
-            return new WorkerJob(row.getJobId(), row.getTaskId(), row.getNodeKey(), row.getPlanVersion(),
+            return new WorkerJobVO(row.getJobId(), row.getTaskId(), row.getNodeKey(), row.getPlanVersion(),
                     row.getWorkerKey(), row.getWorkerVersion(), state, row.getVersion(),
                     row.getBindingId(), row.getReusedFromJobId(), result, goal.substring(0, end), List.copyOf(dependencies),
-                    state == com.agentsquad.squad.domain.enums.WorkerJobStatus.SKIPPED
-                            ? com.agentsquad.squad.domain.enums.WorkerSkipReason.DEPENDENCY_FAILED : null,
+                    state == WorkerJobStatus.SKIPPED
+                            ? WorkerSkipReason.DEPENDENCY_FAILED : null,
                     input.path("required").isBoolean() ? input.get("required").asBoolean() : null);
         } catch (JsonProcessingException invalid) {
             throw new IllegalStateException("工作步骤说明无法读取", invalid);
@@ -199,19 +199,19 @@ public class TaskSnapshotService {
         }
     }
 
-    private AnswerView buildAnswer(String userId, String taskId, long answerRevision) {
-        EventDO event = taskEventMapper.findLatestAnswerEvent(userId, taskId, answerRevision);
+    private AnswerVO buildAnswer(String userId, String taskId, long answerRevision) {
+        EventPO event = taskEventMapper.findLatestAnswerEvent(userId, taskId, answerRevision);
         if (event == null) {
-            return new AnswerView(answerRevision, "", false);
+            return new AnswerVO(answerRevision, "", false);
         }
         try {
             JsonNode payload = RuntimePayloads.readJson(objectMapper, event.getPayloadJson());
             String text = payload.path("text").asText("");
-            return new AnswerView(payload.path("revision").asLong(answerRevision), text,
+            return new AnswerVO(payload.path("revision").asLong(answerRevision), text,
                     "answer.completed".equals(event.getEventType()));
         } catch (JsonProcessingException exception) {
             log.warn("答案事件载荷无法解析 userId={} taskId={}", userId, taskId, exception);
-            return new AnswerView(answerRevision, "", false);
+            return new AnswerVO(answerRevision, "", false);
         }
     }
 

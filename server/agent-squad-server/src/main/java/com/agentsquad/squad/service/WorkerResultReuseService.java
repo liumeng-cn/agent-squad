@@ -1,12 +1,12 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.util.CanonicalJson;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.ContextSnapshotDO;
-import com.agentsquad.squad.domain.entity.WorkerJobDO;
-import com.agentsquad.squad.domain.dto.PlanNode;
+import com.agentsquad.squad.utils.CanonicalJson;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.po.ContextSnapshotPO;
+import com.agentsquad.squad.po.WorkerJobPO;
+import com.agentsquad.squad.bo.PlanNodeBO;
 import com.agentsquad.squad.mapper.ContextSnapshotMapper;
-import com.agentsquad.squad.domain.dto.WorkerDefinitionResponse;
+import com.agentsquad.squad.vo.WorkerDefinitionVO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -39,24 +39,24 @@ public class WorkerResultReuseService {
      * 只从紧邻前一版计划查找同节点的终态结果；依赖节点必须已从同一旧版复用。
      * 调用方持有 Task 锁，旧结果不会并发变化。
      */
-    public WorkerJobDO reusableNode(String userId, String taskId, PlanNode node,
-                                     List<WorkerJobDO> previousJobs,
-                                     Map<String, WorkerJobDO> reusedDependencies) {
+    public WorkerJobPO reusableNode(String userId, String taskId, PlanNodeBO node,
+                                     List<WorkerJobPO> previousJobs,
+                                     Map<String, WorkerJobPO> reusedDependencies) {
         List<String> dependencies = node.dependsOn() == null ? List.of() : node.dependsOn();
         if (!reusedDependencies.keySet().containsAll(dependencies)) {
             return null;
         }
-        WorkerDefinitionResponse definition = definitionService.requireEnabled(
+        WorkerDefinitionVO definition = definitionService.requireEnabled(
                 node.workerKey(), node.workerVersion());
         if (!definition.toolAllowlist().isEmpty()) {
             return null;
         }
-        ContextSnapshotDO current = snapshotMapper.findOwned(userId, taskId,
+        ContextSnapshotPO current = snapshotMapper.findOwned(userId, taskId,
                 node.contextSnapshotId());
         if (current == null || !immutableUserEvidence(current, taskId)) {
             return null;
         }
-        for (WorkerJobDO old : previousJobs) {
+        for (WorkerJobPO old : previousJobs) {
             if (!node.nodeKey().equals(old.getNodeKey()) || !node.workerKey().equals(old.getWorkerKey())
                     || !node.workerVersion().equals(old.getWorkerVersion())
                     || !"SUCCEEDED".equals(old.getStatus()) || old.getResultJson() == null
@@ -70,7 +70,7 @@ public class WorkerResultReuseService {
                     || hasExternalEvidence(oldResult)) {
                 continue;
             }
-            ContextSnapshotDO previous = snapshotMapper.findOwned(userId, taskId,
+            ContextSnapshotPO previous = snapshotMapper.findOwned(userId, taskId,
                     oldInput.path("contextSnapshotId").asText());
             if (previous == null || !immutableUserEvidence(previous, taskId)
                     || previous.getConversationGeneration() != current.getConversationGeneration()
@@ -84,9 +84,9 @@ public class WorkerResultReuseService {
         return null;
     }
 
-    private boolean sameDependencies(WorkerJobDO old, List<String> dependencies,
-                                     List<WorkerJobDO> previousJobs,
-                                     Map<String, WorkerJobDO> reusedDependencies) {
+    private boolean sameDependencies(WorkerJobPO old, List<String> dependencies,
+                                     List<WorkerJobPO> previousJobs,
+                                     Map<String, WorkerJobPO> reusedDependencies) {
         JsonNode names = read(old.getDependsOnJson());
         if (dependencies.isEmpty()) {
             return names == null || names.isEmpty();
@@ -99,10 +99,10 @@ public class WorkerResultReuseService {
             return false;
         }
         for (String key : dependencies) {
-            WorkerJobDO oldDependency = previousJobs.stream()
+            WorkerJobPO oldDependency = previousJobs.stream()
                     .filter(job -> key.equals(job.getNodeKey()))
                     .findFirst().orElse(null);
-            WorkerJobDO reused = reusedDependencies.get(key);
+            WorkerJobPO reused = reusedDependencies.get(key);
             if (oldDependency == null || reused == null
                     || !oldDependency.getJobId().equals(reused.getJobId())) {
                 return false;
@@ -111,7 +111,7 @@ public class WorkerResultReuseService {
         return true;
     }
 
-    private boolean immutableUserEvidence(ContextSnapshotDO snapshot, String taskId) {
+    private boolean immutableUserEvidence(ContextSnapshotPO snapshot, String taskId) {
         JsonNode items = read(snapshot.getItemsJson());
         if (items == null || !items.isArray() || items.isEmpty()
                 || !snapshot.getContentHash().equals(CanonicalJson.sha256(objectMapper, snapshot.getItemsJson()))) {

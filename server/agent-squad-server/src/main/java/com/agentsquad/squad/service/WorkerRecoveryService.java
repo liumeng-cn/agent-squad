@@ -1,22 +1,22 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.util.ContentDigests;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.enums.RuntimeCommandAction;
+import com.agentsquad.squad.utils.ContentDigests;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.enums.RuntimeCommandAction;
 import com.agentsquad.squad.mapper.CommandMapper;
 import com.agentsquad.squad.mapper.TaskMapper;
 import com.agentsquad.squad.mapper.DeliveryMapper;
 import com.agentsquad.squad.mapper.TaskEventMapper;
-import com.agentsquad.squad.integration.agentscope.NativeSubmissionReceipt;
-import com.agentsquad.squad.domain.entity.PlanDO;
-import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
-import com.agentsquad.squad.domain.entity.WorkerLaunchDO;
-import com.agentsquad.squad.domain.dto.PlanNode;
-import com.agentsquad.squad.domain.dto.PlanPublish;
+import com.agentsquad.squad.bo.NativeSubmissionReceiptBO;
+import com.agentsquad.squad.po.PlanPO;
+import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.bo.WorkerLaunchBO;
+import com.agentsquad.squad.bo.PlanNodeBO;
+import com.agentsquad.squad.bo.PlanPublishBO;
 import com.agentsquad.squad.mapper.PlanMapper;
 import com.agentsquad.squad.mapper.ProjectionMapper;
 import com.agentsquad.squad.mapper.WorkerDispatchMapper;
-import com.agentsquad.squad.worker.profile.WorkerProfileRegistry;
+import com.agentsquad.squad.properties.WorkerProfileRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -77,8 +77,8 @@ public class WorkerRecoveryService {
     /**
      * 投影器仅对当前运行中 Worker 检查原始 SUBMIT 的 SDK 收据。
      */
-    public String originalSubmitCommandId(ProjectionTargetDO target) {
-        WorkerLaunchDO job = dispatchMapper.findByBinding(target.getUserId(), target.getBindingId());
+    public String originalSubmitCommandId(ProjectionTargetBO target) {
+        WorkerLaunchBO job = dispatchMapper.findByBinding(target.getUserId(), target.getBindingId());
         if (job == null || !"RUNNING".equals(job.getJobStatus())
                 || !"ACTIVE".equals(job.getPlanStatus()) || job.getCancelRequestedAt() != null) {
             return null;
@@ -90,14 +90,14 @@ public class WorkerRecoveryService {
      * SDK 收据来自固定 Session 的原 Command；重新锁定 Task/Plan/Job 后幂等写入恢复意图。
      */
     @Transactional
-    public void queueInterrupted(ProjectionTargetDO target, NativeSubmissionReceipt receipt) {
+    public void queueInterrupted(ProjectionTargetBO target, NativeSubmissionReceiptBO receipt) {
         if (receipt == null || !"interrupted".equals(receipt.status())
                 || receipt.turnId() == null || receipt.turnId().isBlank()) {
             return;
         }
         taskMapper.lockOwned(target.getUserId(), target.getTaskId());
         Long currentVersion = planMapper.lockTaskPlanVersion(target.getUserId(), target.getTaskId());
-        WorkerLaunchDO job = dispatchMapper.findByBinding(target.getUserId(), target.getBindingId());
+        WorkerLaunchBO job = dispatchMapper.findByBinding(target.getUserId(), target.getBindingId());
         if (job == null || currentVersion == null || currentVersion != job.getPlanVersion()
                 || planMapper.countSignalEligibleTask(target.getUserId(), target.getTaskId()) == 0
                 || !"RUNNING".equals(job.getJobStatus()) || job.getCancelRequestedAt() != null
@@ -105,7 +105,7 @@ public class WorkerRecoveryService {
                 || !job.getGuardLeaseUntil().isAfter(LocalDateTime.now(ZoneOffset.UTC))) {
             return;
         }
-        PlanDO plan = planMapper.lockPlan(target.getUserId(), target.getTaskId(), job.getPlanVersion());
+        PlanPO plan = planMapper.lockPlan(target.getUserId(), target.getTaskId(), job.getPlanVersion());
         if (plan == null || !"ACTIVE".equals(plan.getStatus())) {
             return;
         }
@@ -115,14 +115,14 @@ public class WorkerRecoveryService {
                 || commandMapper.countPendingWorkerResumes(target.getUserId(), target.getBindingId()) > 0) {
             return;
         }
-        PlanPublish definition;
+        PlanPublishBO definition;
         try {
             definition = objectMapper.treeToValue(RuntimePayloads.readJson(objectMapper, plan.getDefinitionJson()),
-                    PlanPublish.class);
+                    PlanPublishBO.class);
         } catch (Exception exception) {
             throw new IllegalStateException("Worker 恢复计划解析失败，无法读取节点恢复上限");
         }
-        PlanNode node = definition.nodes().stream().filter(item -> item.nodeKey().equals(job.getNodeKey()))
+        PlanNodeBO node = definition.nodes().stream().filter(item -> item.nodeKey().equals(job.getNodeKey()))
                 .findFirst().orElseThrow(() -> new IllegalStateException("Worker 恢复节点不存在"));
         String profileKey = workerDefinitionService.requirePublished(job.getWorkerKey(), job.getWorkerVersion())
                 .runtimeProfileKey();
@@ -164,8 +164,8 @@ public class WorkerRecoveryService {
         if (deliveryMapper.blockRejectedResume(commandId, deliveryToken, errorCode) != 1) {
             return;
         }
-        WorkerLaunchDO job = dispatchMapper.findByBinding(userId, bindingId);
-        PlanDO plan = currentVersion == null ? null : planMapper.lockPlan(userId, taskId, currentVersion);
+        WorkerLaunchBO job = dispatchMapper.findByBinding(userId, bindingId);
+        PlanPO plan = currentVersion == null ? null : planMapper.lockPlan(userId, taskId, currentVersion);
         if (job != null && plan != null && job.getPlanVersion() == currentVersion && "ACTIVE".equals(plan.getStatus())
                 && dispatchMapper.markRecoveryBlocked(userId, bindingId) == 1) {
             masterSignalService.onJobStateChanged(plan);

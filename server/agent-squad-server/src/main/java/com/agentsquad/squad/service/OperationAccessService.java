@@ -1,6 +1,6 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.domain.enums.AccountRole;
+import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.mapper.OperationAccessMapper;
 import jakarta.annotation.Resource;

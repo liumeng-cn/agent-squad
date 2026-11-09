@@ -1,14 +1,14 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.domain.enums.WorkerJobStatus;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.enums.GoalTaskStatus;
+import com.agentsquad.squad.enums.WorkerJobStatus;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.enums.GoalTaskStatus;
 import com.agentsquad.squad.mapper.CommandMapper;
 import com.agentsquad.squad.mapper.TaskDirectiveMapper;
-import com.agentsquad.squad.domain.dto.AbandonFailedJobRequest;
-import com.agentsquad.squad.domain.dto.JobDispositionReceipt;
+import com.agentsquad.squad.bo.AbandonFailedJobRequestBO;
+import com.agentsquad.squad.bo.JobDispositionReceiptBO;
 import com.agentsquad.squad.mapper.CompletionMapper;
 import com.agentsquad.squad.mapper.PlanMapper;
 import com.agentsquad.squad.mapper.ProjectionMapper;
@@ -53,7 +53,7 @@ public class WorkerFailureResolutionService {
     private ObjectMapper json;
 
     @Transactional
-    public JobDispositionReceipt abandon(String userId, String sessionId, AbandonFailedJobRequest request) {
+    public JobDispositionReceiptBO abandon(String userId, String sessionId, AbandonFailedJobRequestBO request) {
         if (request == null || request.jobId() == null || request.expectedPlanVersion() < 1) {
             throw conflict("工作标识或计划版本无效");
         }
@@ -72,7 +72,7 @@ public class WorkerFailureResolutionService {
                 .filter(item -> item.getJobId().equals(request.jobId())).findFirst()
                 .orElseThrow(() -> conflict("这项工作不属于当前计划"));
         if (WorkerJobStatus.FAILED.name().equals(job.getStatus())) {
-            return new JobDispositionReceipt(job.getJobId(), job.getPlanVersion(), WorkerJobStatus.FAILED);
+            return new JobDispositionReceiptBO(job.getJobId(), job.getPlanVersion(), WorkerJobStatus.FAILED);
         }
         if (!WorkerJobStatus.RECOVERY_BLOCKED.name().equals(job.getStatus())
                 || commands.countPendingWorkerResumes(userId, job.getBindingId()) > 0
@@ -95,7 +95,7 @@ public class WorkerFailureResolutionService {
         signals.onJobStateChanged(plan);
         log.info("已明确结束无法继续的工作 taskId={} jobId={} planVersion={} status={}",
                 context.getTaskId(), job.getJobId(), job.getPlanVersion(), WorkerJobStatus.FAILED);
-        return new JobDispositionReceipt(job.getJobId(), job.getPlanVersion(), WorkerJobStatus.FAILED);
+        return new JobDispositionReceiptBO(job.getJobId(), job.getPlanVersion(), WorkerJobStatus.FAILED);
     }
 
     private RuntimeBusinessException conflict(String message) {

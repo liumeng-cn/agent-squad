@@ -1,8 +1,8 @@
 package com.agentsquad.squad.sandbox;
 
-import com.agentsquad.squad.domain.dto.SandboxExecuteRequest;
-import com.agentsquad.squad.domain.dto.SandboxFile;
-import com.agentsquad.squad.sandbox.infrastructure.HarnessDockerSandboxDriver;
+import com.agentsquad.squad.bo.SandboxExecuteRequestBO;
+import com.agentsquad.squad.bo.SandboxFileBO;
+import com.agentsquad.squad.driver.HarnessDockerSandboxDriver;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -53,7 +53,7 @@ class HarnessDockerSandboxDriverTest {
                 pathlib.Path('report.json').write_text(json.dumps(facts))
                 print('isolated')
                 """;
-        var result = driver().execute(new SandboxExecuteRequest("policy", script, List.of(), List.of("report.json"), 10));
+        var result = driver().execute(new SandboxExecuteRequestBO("policy", script, List.of(), List.of("report.json"), 10));
         assertThat(result.exitCode()).isZero();
         assertThat(result.stdout()).contains("isolated");
         String facts = new String(result.outputs().getFirst().content(), StandardCharsets.UTF_8);
@@ -65,13 +65,13 @@ class HarnessDockerSandboxDriverTest {
     @Test
     @EnabledIfEnvironmentVariable(named = "SQUAD_SANDBOX_TEST_IMAGE", matches = "sha256:[0-9a-f]{64}")
     void actualTimeoutAndSymlinkCannotEscapeAndOutputIsBounded() throws Exception {
-        assertThatThrownBy(() -> driver().execute(new SandboxExecuteRequest("timeout", "while True: pass",
+        assertThatThrownBy(() -> driver().execute(new SandboxExecuteRequestBO("timeout", "while True: pass",
                 List.of(), List.of(), 1))).hasMessageContaining("timed out");
-        assertThatThrownBy(() -> driver().execute(new SandboxExecuteRequest("link",
+        assertThatThrownBy(() -> driver().execute(new SandboxExecuteRequestBO("link",
                 "import os; os.symlink('/etc/passwd','result.txt')", List.of(), List.of("result.txt"), 5)))
                 .isInstanceOf(Exception.class);
-        var result = driver().execute(new SandboxExecuteRequest("bounded", "print('x'*100000)",
-                List.of(new SandboxFile("input.txt", "data")), List.of(), 5));
+        var result = driver().execute(new SandboxExecuteRequestBO("bounded", "print('x'*100000)",
+                List.of(new SandboxFileBO("input.txt", "data")), List.of(), 5));
         assertThat(result.stdout().getBytes(StandardCharsets.UTF_8).length).isLessThanOrEqualTo(65536);
         assertThat(result.truncated()).isTrue();
     }
@@ -79,7 +79,7 @@ class HarnessDockerSandboxDriverTest {
     @Test
     @EnabledIfEnvironmentVariable(named = "SQUAD_SANDBOX_TEST_IMAGE", matches = "sha256:[0-9a-f]{64}")
     void actualMemoryAndProcessLimitsAreEnforced() throws Exception {
-        var memory = driver().execute(new SandboxExecuteRequest("memory-limit", "data=bytearray(256*1024*1024)",
+        var memory = driver().execute(new SandboxExecuteRequestBO("memory-limit", "data=bytearray(256*1024*1024)",
                 List.of(), List.of(), 10));
         assertThat(memory.exitCode()).isNotZero();
         String script = """
@@ -101,7 +101,7 @@ class HarnessDockerSandboxDriverTest {
                 print('pids-blocked=' + str(blocked))
                 print('spawned=' + str(len(children)))
                 """;
-        var pids = driver().execute(new SandboxExecuteRequest("pids-limit", script, List.of(), List.of(), 10));
+        var pids = driver().execute(new SandboxExecuteRequestBO("pids-limit", script, List.of(), List.of(), 10));
         assertThat(pids.exitCode()).isZero();
         assertThat(pids.stdout()).contains("pids-blocked=True");
     }
@@ -122,7 +122,7 @@ class HarnessDockerSandboxDriverTest {
                         time.sleep(10)
                     os._exit(0)
                 """;
-        var result = driver().execute(new SandboxExecuteRequest("detached", script, List.of(), List.of("result.txt"), 5));
+        var result = driver().execute(new SandboxExecuteRequestBO("detached", script, List.of(), List.of("result.txt"), 5));
         assertThat(new String(result.outputs().getFirst().content(), StandardCharsets.UTF_8)).isEqualTo("stable");
     }
 
@@ -132,7 +132,7 @@ class HarnessDockerSandboxDriverTest {
         for (String operation : List.of("os.symlink('/dev/zero','__agentsquad_stdout__')",
                 "os.mkfifo('__agentsquad_stdout__')")) {
             String script = "import os; os.unlink('__agentsquad_stdout__'); " + operation;
-            assertThatThrownBy(() -> driver().execute(new SandboxExecuteRequest("log-tamper", script,
+            assertThatThrownBy(() -> driver().execute(new SandboxExecuteRequestBO("log-tamper", script,
                     List.of(), List.of(), 5))).isInstanceOf(Exception.class);
         }
     }

@@ -1,14 +1,16 @@
 package com.agentsquad.squad.service;
 
+import com.agentsquad.squad.enums.ActivityType;
+import com.agentsquad.squad.enums.PlanJoinPolicy;
 import com.agentsquad.squad.mapper.TaskEventMapper;
 import com.agentsquad.squad.mapper.TaskMapper;
 import com.agentsquad.squad.mapper.MessageAcceptanceMapper;
-import com.agentsquad.squad.domain.dto.JobReusedPayload;
-import com.agentsquad.squad.domain.dto.PlanAcceptanceCriterion;
-import com.agentsquad.squad.domain.dto.PlanPublishedPayload;
-import com.agentsquad.squad.domain.model.ActivityBusinessFact;
+import com.agentsquad.squad.bo.JobReusedPayloadBO;
+import com.agentsquad.squad.bo.PlanAcceptanceCriterionBO;
+import com.agentsquad.squad.bo.PlanPublishedPayloadBO;
+import com.agentsquad.squad.bo.ActivityBusinessFactBO;
 import com.agentsquad.squad.mapper.ConversationReadMapper;
-import com.agentsquad.squad.common.util.RuntimePayloads;
+import com.agentsquad.squad.utils.RuntimePayloads;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -92,7 +94,7 @@ public class TaskEventPublishingService {
                     }
                 }
                 events.publish(scope, key, "message.completed", Map.of("messageId", messageId, "revision", revision, "taskId", taskId, "text", text));
-                activities.completed(scope, new ActivityBusinessFact(com.agentsquad.squad.domain.enums.ActivityType.ANSWER_PUBLISH,
+                activities.completed(scope, new ActivityBusinessFactBO(ActivityType.ANSWER_PUBLISH,
                         messageId + ":" + revision));
             } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
                 throw new IllegalStateException("目标公开答案无法读取", exception);
@@ -107,14 +109,14 @@ public class TaskEventPublishingService {
                 if ("plan.published".equals(eventType)) {
                     java.util.List<String> jobIds = json.convertValue(payload.path("jobIds"),
                             json.getTypeFactory().constructCollectionType(java.util.List.class, String.class));
-                    java.util.List<PlanAcceptanceCriterion> criteria = json.convertValue(
+                    java.util.List<PlanAcceptanceCriterionBO> criteria = json.convertValue(
                             payload.path("acceptanceCriteria"), json.getTypeFactory().constructCollectionType(java.util.List.class,
-                                    PlanAcceptanceCriterion.class));
-                    events.publish(scope, key, eventType, new PlanPublishedPayload(2,
-                            taskId, planVersion, jobIds, com.agentsquad.squad.domain.enums.PlanJoinPolicy.valueOf(
+                                    PlanAcceptanceCriterionBO.class));
+                    events.publish(scope, key, eventType, new PlanPublishedPayloadBO(2,
+                            taskId, planVersion, jobIds, PlanJoinPolicy.valueOf(
                             payload.path("joinPolicy").asText()), criteria));
                 } else {
-                    events.publish(scope, key, eventType, new JobReusedPayload(2,
+                    events.publish(scope, key, eventType, new JobReusedPayloadBO(2,
                             taskId, planVersion, payload.path("jobId").asText(), payload.path("reusedFromJobId").asText()));
                 }
             } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {

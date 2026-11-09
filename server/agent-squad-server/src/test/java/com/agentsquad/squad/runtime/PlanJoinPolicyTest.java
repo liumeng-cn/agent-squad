@@ -1,13 +1,13 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.domain.enums.PlanJoinPolicy;
-import com.agentsquad.squad.domain.enums.WorkerJobStatus;
-import com.agentsquad.squad.domain.enums.GoalTaskStatus;
-import com.agentsquad.squad.domain.enums.PlanAcceptanceVerdict;
-import com.agentsquad.squad.domain.model.PlanJoinFacts;
-import com.agentsquad.squad.domain.model.PlanJoinJob;
+import com.agentsquad.squad.enums.PlanJoinPolicy;
+import com.agentsquad.squad.enums.WorkerJobStatus;
+import com.agentsquad.squad.enums.GoalTaskStatus;
+import com.agentsquad.squad.enums.PlanAcceptanceVerdict;
+import com.agentsquad.squad.bo.PlanJoinFactsBO;
+import com.agentsquad.squad.bo.PlanJoinJobBO;
 import com.agentsquad.squad.service.PlanJoinPolicyService;
-import com.agentsquad.squad.domain.enums.PlanJoinStage;
+import com.agentsquad.squad.enums.PlanJoinStage;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -93,20 +93,20 @@ class PlanJoinPolicyTest {
     @ParameterizedTest
     @EnumSource(PlanJoinPolicy.class)
     void rejectsOldDuplicateOrEmptyPlanFacts(PlanJoinPolicy strategy) {
-        for (var jobs : List.of(List.<PlanJoinJob>of(), List.of(job("optional", false, WorkerJobStatus.SUCCEEDED)),
-                List.of(new PlanJoinJob("old", 1, true, WorkerJobStatus.SUCCEEDED)),
+        for (var jobs : List.of(List.<PlanJoinJobBO>of(), List.of(job("optional", false, WorkerJobStatus.SUCCEEDED)),
+                List.of(new PlanJoinJobBO("old", 1, true, WorkerJobStatus.SUCCEEDED)),
                 List.of(job("same", true, WorkerJobStatus.SUCCEEDED), job("same", false, WorkerJobStatus.FAILED)))) {
             assertThatThrownBy(() -> policy.evaluate(facts(strategy, jobs, false, List.of(PlanAcceptanceVerdict.PASS), true)))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }
 
-    private PlanJoinJob job(String id, boolean required, WorkerJobStatus status) {
-        return new PlanJoinJob(id, 2, required, status);
+    private PlanJoinJobBO job(String id, boolean required, WorkerJobStatus status) {
+        return new PlanJoinJobBO(id, 2, required, status);
     }
 
-    private PlanJoinFacts facts(PlanJoinPolicy strategy, List<PlanJoinJob> jobs, boolean effects,
+    private PlanJoinFactsBO facts(PlanJoinPolicy strategy, List<PlanJoinJobBO> jobs, boolean effects,
                                 List<PlanAcceptanceVerdict> verdicts, boolean deliverable) {
-        return new PlanJoinFacts(2, strategy, jobs, effects, verdicts, deliverable);
+        return new PlanJoinFactsBO(2, strategy, jobs, effects, verdicts, deliverable);
     }
 }

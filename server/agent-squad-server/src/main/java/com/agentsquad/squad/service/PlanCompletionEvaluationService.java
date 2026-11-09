@@ -1,11 +1,12 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.domain.model.PlanCompletionEvaluation;
-import com.agentsquad.squad.domain.model.PlanJoinFacts;
-import com.agentsquad.squad.domain.model.PlanJoinJob;
-import com.agentsquad.squad.domain.dto.AcceptanceReview;
+import com.agentsquad.squad.enums.WorkerJobStatus;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.bo.PlanCompletionEvaluationBO;
+import com.agentsquad.squad.bo.PlanJoinFactsBO;
+import com.agentsquad.squad.bo.PlanJoinJobBO;
+import com.agentsquad.squad.bo.AcceptanceReviewBO;
 import com.agentsquad.squad.mapper.CompletionMapper;
 import com.agentsquad.squad.mapper.PlanMapper;
 import jakarta.annotation.Resource;
@@ -29,7 +30,7 @@ public class PlanCompletionEvaluationService {
     @Resource
     private PlanAcceptanceService acceptance;
 
-    public PlanCompletionEvaluation evaluate(String userId, String taskId, long planVersion, List<AcceptanceReview> reviews) {
+    public PlanCompletionEvaluationBO evaluate(String userId, String taskId, long planVersion, List<AcceptanceReviewBO> reviews) {
         var plan = plans.lockPlan(userId, taskId, planVersion);
         if (plan == null || !"ACTIVE".equals(plan.getStatus())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "当前计划已经变化");
@@ -37,13 +38,13 @@ public class PlanCompletionEvaluationService {
         var jobs = plans.lockJobs(taskId, planVersion);
         var definition = acceptance.definition(plan);
         var required = definition.nodes().stream().filter(node -> node.required()).map(node -> node.nodeKey()).toList();
-        var facts = jobs.stream().map(job -> new PlanJoinJob(job.getJobId(), job.getPlanVersion(), required.contains(job.getNodeKey()),
-                com.agentsquad.squad.domain.enums.WorkerJobStatus.valueOf(job.getStatus()))).toList();
+        var facts = jobs.stream().map(job -> new PlanJoinJobBO(job.getJobId(), job.getPlanVersion(), required.contains(job.getNodeKey()),
+                WorkerJobStatus.valueOf(job.getStatus()))).toList();
         var results = acceptance.assess(plan, jobs, reviews);
-        var decision = new PlanJoinPolicyService().evaluate(new PlanJoinFacts(planVersion,
+        var decision = new PlanJoinPolicyService().evaluate(new PlanJoinFactsBO(planVersion,
                 definition.joinPolicy(), facts, completions.countPendingEffects(userId, taskId) > 0,
                 results.stream().filter(result -> result.required()).map(result -> result.verdict()).toList(),
                 jobs.stream().anyMatch(job -> "SUCCEEDED".equals(job.getStatus()) && job.getResultJson() != null)));
-        return new PlanCompletionEvaluation(decision, results);
+        return new PlanCompletionEvaluationBO(decision, results);
     }
 }

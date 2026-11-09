@@ -1,7 +1,7 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.domain.entity.MessageSubmissionDO;
-import com.agentsquad.squad.domain.enums.ResponseCompletionProtocol;
+import com.agentsquad.squad.bo.MessageSubmissionBO;
+import com.agentsquad.squad.enums.ResponseCompletionProtocol;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Mapper
 public interface MessageAcceptanceMapper {
 
-    MessageSubmissionDO findSubmission(@Param("userId") String userId, @Param("scopeKey") String scopeKey,
+    MessageSubmissionBO findSubmission(@Param("userId") String userId, @Param("scopeKey") String scopeKey,
                                         @Param("key") String key);
 
     int reserveMessage(@Param("userId") String userId, @Param("conversationId") String conversationId,

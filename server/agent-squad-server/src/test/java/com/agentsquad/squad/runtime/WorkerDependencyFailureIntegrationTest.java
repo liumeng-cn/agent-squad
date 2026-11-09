@@ -1,22 +1,22 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.domain.enums.AccountRole;
-import com.agentsquad.squad.domain.enums.WorkerJobStatus;
-import com.agentsquad.squad.domain.enums.WorkerSkipReason;
+import com.agentsquad.squad.enums.AccountRole;
+import com.agentsquad.squad.enums.WorkerJobStatus;
+import com.agentsquad.squad.enums.WorkerSkipReason;
 import com.agentsquad.squad.service.GoalTaskService;
-import com.agentsquad.squad.domain.dto.AbandonFailedJobRequest;
+import com.agentsquad.squad.bo.AbandonFailedJobRequestBO;
 import com.agentsquad.squad.identity.AuthView;
 import com.agentsquad.squad.service.TaskSnapshotService;
-import com.agentsquad.squad.domain.dto.PlanNode;
-import com.agentsquad.squad.domain.dto.PlanPublish;
+import com.agentsquad.squad.bo.PlanNodeBO;
+import com.agentsquad.squad.bo.PlanPublishBO;
 import com.agentsquad.squad.service.ContextSnapshotService;
 import com.agentsquad.squad.service.PlanService;
 import com.agentsquad.squad.service.WorkerDispatchService;
 import com.agentsquad.squad.service.WorkerResultService;
 import com.agentsquad.squad.mapper.PlanMapper;
 import com.agentsquad.squad.testsupport.MySqlTestDatabase;
-import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.dto.WorkerDefinitionCreateDTO;
 import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -53,11 +53,11 @@ class WorkerDependencyFailureIntegrationTest {
             var jdbc = context.getBean(JdbcTemplate.class);
             var json = context.getBean(ObjectMapper.class);
             context.getBean(WorkerDefinitionService.class).publish(new AuthView(user, "test", List.of(AccountRole.ADMIN), "csrf"),
-                    "steps-writer", new WorkerDefinitionCreateRequest("steps-writer", "1.0.0", "整理文字",
+                    "steps-writer", new WorkerDefinitionCreateDTO("steps-writer", "1.0.0", "整理文字",
                             json.readTree("{}"), json.readTree("{}"), List.of(), "default", "default"));
             String session = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE task_id=? AND role='MASTER'", String.class, task.taskId());
             var snapshots = context.getBean(ContextSnapshotService.class);
-            var nodes = new ArrayList<PlanNode>();
+            var nodes = new ArrayList<PlanNodeBO>();
             for (String key : List.of("root", "middle", "leaf", "parallel")) {
                 String snapshot = snapshots.prepare(user, session, key, "context-" + key).snapshotId();
                 String title = switch (key) {
@@ -66,20 +66,20 @@ class WorkerDependencyFailureIntegrationTest {
                     case "leaf" -> "生成文章";
                     default -> "检查格式";
                 };
-                nodes.add(new PlanNode(key, "steps-writer", "1.0.0", title, snapshot,
+                nodes.add(new PlanNodeBO(key, "steps-writer", "1.0.0", title, snapshot,
                         key.equals("middle") ? List.of("root") : key.equals("leaf") ? List.of("middle") : List.of(), true, 1));
             }
             context.getBean(PlanService.class).publish(user, session,
-                    new PlanPublish("plan", 0, nodes, "ALL_REQUIRED", List.of("文章整理完成")));
+                    new PlanPublishBO("plan", 0, nodes, "ALL_REQUIRED", List.of("文章整理完成")));
             String binding = jdbc.queryForObject("SELECT binding_id FROM sq_worker_job WHERE node_key='root'", String.class);
             jdbc.update("UPDATE sq_command SET status='DELIVERED' WHERE binding_id=?", binding);
             context.getBean(WorkerDispatchService.class).claim(user, binding);
             var results = context.getBean(WorkerResultService.class);
             var resolutions = context.getBean(com.agentsquad.squad.service.WorkerFailureResolutionService.class);
             String rootJob = jdbc.queryForObject("SELECT job_id FROM sq_worker_job WHERE node_key='root'", String.class);
-            var decision = new AbandonFailedJobRequest(rootJob, 1);
+            var decision = new AbandonFailedJobRequestBO(rootJob, 1);
             assertThatThrownBy(() -> resolutions.abandon(user, session, decision))
-                    .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
+                    .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
             if (!permanentFailure) {
                 results.markRecoveryBlocked(user, binding);
                 var waiting = context.getBean(TaskSnapshotService.class).listJobs(user, task.taskId()).items();
@@ -88,15 +88,15 @@ class WorkerDependencyFailureIntegrationTest {
                 assertThat(context.getBean(PlanMapper.class).countActiveJobs(user, task.taskId(), 1)).isEqualTo(4);
                 assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_task_event WHERE task_id=? AND event_type='job.skipped'", Integer.class, task.taskId())).isZero();
                 assertThatThrownBy(() -> resolutions.abandon(user, session,
-                        new AbandonFailedJobRequest(rootJob, 2)))
-                        .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
+                        new AbandonFailedJobRequestBO(rootJob, 2)))
+                        .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
                 jdbc.update("""
                         INSERT INTO sq_interaction (interaction_id,user_id,task_id,origin,kind,question,
                             answer_schema_json,request_hash,expires_at,status)
                         VALUES ('pending-test',?,?,'BUSINESS','INPUT','test','{}','test',DATE_ADD(NOW(),INTERVAL 1 HOUR),'OPEN')
                         """, user, task.taskId());
                 assertThatThrownBy(() -> resolutions.abandon(user, session, decision))
-                        .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
+                        .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
                 jdbc.update("UPDATE sq_interaction SET status='CANCELLED' WHERE interaction_id='pending-test'");
                 assertThat(resolutions.abandon(user, session, decision).status()).isEqualTo(WorkerJobStatus.FAILED);
                 assertThat(resolutions.abandon(user, session, decision).status()).isEqualTo(WorkerJobStatus.FAILED);
@@ -130,9 +130,9 @@ class WorkerDependencyFailureIntegrationTest {
                 }
             }
             context.getBean(PlanService.class).publish(user, session,
-                    new PlanPublish("replacement", 1, nodes, "ALL_REQUIRED", List.of("文章整理完成")));
+                    new PlanPublishBO("replacement", 1, nodes, "ALL_REQUIRED", List.of("文章整理完成")));
             assertThatThrownBy(() -> resolutions.abandon(user, session, decision))
-                    .isInstanceOf(com.agentsquad.squad.common.exception.RuntimeBusinessException.class);
+                    .isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
             results.markFailed(user, binding);
             var replacement = context.getBean(TaskSnapshotService.class).listJobs(user, task.taskId()).items();
             assertThat(replacement).allMatch(job -> job.planVersion() == 2 && job.status() != WorkerJobStatus.SKIPPED);

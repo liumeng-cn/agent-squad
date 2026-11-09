@@ -1,24 +1,23 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.exception.RuntimeAdmissionBusyException;
-import com.agentsquad.squad.integration.agentscope.NativeSubmissionReceipt;
+import com.agentsquad.squad.exceptions.RuntimeAdmissionBusyException;
+import com.agentsquad.squad.bo.NativeSubmissionReceiptBO;
 
-import com.agentsquad.squad.integration.agentscope.RedisCommandWakeup;
 
-import com.agentsquad.squad.integration.agentscope.NativeSessionGateway;
+import com.agentsquad.squad.agent.session.NativeSessionGateway;
 
-import com.agentsquad.squad.domain.entity.CommandClaimContextDO;
-import com.agentsquad.squad.domain.entity.DeliveryDO;
-import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
-import com.agentsquad.squad.domain.enums.RuntimeCommandAction;
-import com.agentsquad.squad.common.exception.ExecutionContextInvalidatedException;
+import com.agentsquad.squad.bo.CommandClaimContextBO;
+import com.agentsquad.squad.bo.DeliveryBO;
+import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.enums.RuntimeCommandAction;
+import com.agentsquad.squad.exceptions.ExecutionContextInvalidatedException;
 
-import com.agentsquad.squad.domain.model.CommandReadySignal;
+import com.agentsquad.squad.event.CommandReadySignal;
 
-import com.agentsquad.squad.common.observability.ObservationSupport;
+import com.agentsquad.squad.observer.ObservationSupport;
 import com.agentsquad.squad.mapper.DeliveryMapper;
-import com.agentsquad.squad.domain.model.MasterAgentIdentity;
-import com.agentsquad.squad.common.util.RuntimePayloads;
+import com.agentsquad.squad.agent.MasterAgentIdentity;
+import com.agentsquad.squad.utils.RuntimePayloads;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -54,7 +53,7 @@ import java.util.UUID;
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
 public class CommandDeliveryService {
     @Resource
-    private com.agentsquad.squad.common.observability.ExecutionTrace executionTrace;
+    private com.agentsquad.squad.observer.ExecutionTrace executionTrace;
 
     private static final int LEASE_SECONDS = 60;
     private static final String ALREADY_SETTLED = "Only the latest unfinished task can continue";
@@ -192,7 +191,7 @@ public class CommandDeliveryService {
             return;
         }
         try {
-            CommandClaimContextDO context = deliveryMapper.claimContext(commandId);
+            CommandClaimContextBO context = deliveryMapper.claimContext(commandId);
             boolean control = context != null && ("STOP".equals(context.getAction())
                     || "RESPOND".equals(context.getAction()));
             (control ? controlExecutor : deliveryExecutor).execute(() -> {
@@ -237,10 +236,10 @@ public class CommandDeliveryService {
                     commandId, exception.getStatusCode().value());
             return;
         }
-        DeliveryDO delivery = deliveryMapper.findClaimed(commandId, token);
+        DeliveryBO delivery = deliveryMapper.findClaimed(commandId, token);
         if (delivery == null) {
             // 尚未调用原生 SDK，缺失 Binding 不可能产生本次原生运行。
-            CommandClaimContextDO context = deliveryMapper.claimContext(commandId);
+            CommandClaimContextBO context = deliveryMapper.claimContext(commandId);
             if (context != null) {
                 admission.releaseUnsubmitted(context.getUserId(), context.getBindingId(), commandId);
             }
@@ -283,7 +282,7 @@ public class CommandDeliveryService {
         }
     }
 
-    private void deliverSubmit(String commandId, String token, DeliveryDO delivery) throws Exception {
+    private void deliverSubmit(String commandId, String token, DeliveryBO delivery) throws Exception {
         JsonNode payload = RuntimePayloads.readJson(objectMapper, delivery.getPayloadJson());
         String message = payload == null ? null : payload.path("message").textValue();
         if (message == null || message.isBlank()) {
@@ -291,7 +290,7 @@ public class CommandDeliveryService {
             fail(commandId, token, delivery.getAttempts(), "INVALID_PAYLOAD");
             return;
         }
-        NativeSubmissionReceipt receipt = nativeSessionGateway.submit(delivery, message);
+        NativeSubmissionReceiptBO receipt = nativeSessionGateway.submit(delivery, message);
         if (!commandId.equals(receipt.commandId())) {
             throw new IllegalStateException("原生命令收据 ID 不一致");
         }
@@ -301,11 +300,11 @@ public class CommandDeliveryService {
     /**
      * 投递中断意图；原生会话已无活跃运行时就地取消目标，不伪造等待停止。
      */
-    private void deliverStop(String commandId, String token, DeliveryDO delivery) {
+    private void deliverStop(String commandId, String token, DeliveryBO delivery) {
         boolean interrupted = nativeSessionGateway.stop(delivery);
         if (!interrupted) {
             if (delivery.getTaskId() == null) {
-                var target = new ProjectionTargetDO(delivery.getUserId(), null,
+                var target = new ProjectionTargetBO(delivery.getUserId(), null,
                         delivery.getBindingId(), delivery.getAgentId(), delivery.getSessionId(), 0);
                 if (nativeSessionGateway.quiescent(target)) {
                     responses.stopped(delivery.getUserId(), delivery.getBindingId());
@@ -321,7 +320,7 @@ public class CommandDeliveryService {
     /**
      * 投递恢复意图；恢复前必须已存在原生回合，未受理目标先等 SUBMIT 投递成功。
      */
-    private void deliverResume(String commandId, String token, DeliveryDO delivery) {
+    private void deliverResume(String commandId, String token, DeliveryBO delivery) {
         String turnId = deliveryMapper.findSubmitTurnId(delivery.getUserId(), delivery.getTaskId(),
                 delivery.getBindingId());
         if (turnId == null) {
@@ -367,7 +366,7 @@ public class CommandDeliveryService {
      * 投递交互答复；先让目标离开等待态，再注入答案驱动原生回合恢复。
      * 原生请求已消失说明交互已被框架侧解析，按终局受理不再重试。
      */
-    private void deliverRespond(String commandId, String token, DeliveryDO delivery) throws Exception {
+    private void deliverRespond(String commandId, String token, DeliveryBO delivery) throws Exception {
         JsonNode payload = RuntimePayloads.readJson(objectMapper, delivery.getPayloadJson());
         String requestId = payload == null ? null : payload.path("requestId").textValue();
         String answerText = payload == null ? null : payload.path("answerText").textValue();
@@ -383,7 +382,7 @@ public class CommandDeliveryService {
         saveReceipt(commandId, token, delivery, null, null, nativeStatus);
     }
 
-    private void saveReceipt(String commandId, String token, DeliveryDO delivery,
+    private void saveReceipt(String commandId, String token, DeliveryBO delivery,
                              String turnId, String runId, String nativeStatus) {
         int saved = deliveryMapper.saveReceipt(commandId, token, turnId, runId, nativeStatus, now());
         if (saved == 1) {
@@ -406,7 +405,7 @@ public class CommandDeliveryService {
     /**
      * 组装命令投递日志的公共字段；未关联任务的命令不输出空 taskId。
      */
-    private Map<String, Object> commandFields(String commandId, DeliveryDO delivery) {
+    private Map<String, Object> commandFields(String commandId, DeliveryBO delivery) {
         Map<String, Object> fields = new LinkedHashMap<>();
         fields.put("commandId", commandId);
         if (delivery.getTaskId() != null) {

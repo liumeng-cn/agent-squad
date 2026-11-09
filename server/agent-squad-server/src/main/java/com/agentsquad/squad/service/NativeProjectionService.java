@@ -1,23 +1,23 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.domain.model.BindingResult;
-import com.agentsquad.squad.integration.agentscope.NativeProjectionCommitLog;
+import com.agentsquad.squad.bo.BindingResultBO;
+import com.agentsquad.squad.bo.NativeProjectionCommitLogBO;
 
-import com.agentsquad.squad.integration.agentscope.NativeEventView;
+import com.agentsquad.squad.bo.NativeEventViewBO;
 
-import com.agentsquad.squad.domain.model.FailureClassification;
-import com.agentsquad.squad.domain.enums.GoalTaskStatus;
-import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
+import com.agentsquad.squad.bo.FailureClassificationBO;
+import com.agentsquad.squad.enums.GoalTaskStatus;
+import com.agentsquad.squad.po.ExecutionScopePO;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
-import com.agentsquad.squad.domain.enums.NativeRunOutcome;
-import com.agentsquad.squad.domain.model.MasterAgentIdentity;
-import com.agentsquad.squad.domain.entity.WorkerLaunchDO;
-import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
+import com.agentsquad.squad.enums.NativeRunOutcome;
+import com.agentsquad.squad.agent.MasterAgentIdentity;
+import com.agentsquad.squad.bo.WorkerLaunchBO;
+import com.agentsquad.squad.bo.ProjectionTargetBO;
 import com.agentsquad.squad.mapper.ProjectionMapper;
 import com.agentsquad.squad.mapper.WorkerDispatchMapper;
 import com.agentsquad.squad.mapper.TaskEventMapper;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.InteractionDO;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.po.InteractionPO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -98,8 +98,8 @@ public class NativeProjectionService {
      * 重复事件只跳过；缺少前序事件则回滚并等待重新读取完整前缀。
      */
     @Transactional
-    public void accept(ProjectionTargetDO target, NativeEventView event) {
-        ExecutionScopeDO scope = scopeService.lockOwned(target.getUserId(), scopeMapper.findScopeByBinding(target.getUserId(), target.getBindingId()), false);
+    public void accept(ProjectionTargetBO target, NativeEventViewBO event) {
+        ExecutionScopePO scope = scopeService.lockOwned(target.getUserId(), scopeMapper.findScopeByBinding(target.getUserId(), target.getBindingId()), false);
         authorization.requireScopeCurrent(target.getUserId(), scope.getScopeId());
         Long cursor = projectionMapper.lockCursor(target.getUserId(), target.getBindingId());
         if (cursor == null) {
@@ -169,15 +169,15 @@ public class NativeProjectionService {
             throw new IllegalStateException("Agent执行事件处理位置已被其他线程更新");
         }
         if ("run/start".equals(event.type()) || "run/end".equals(event.type())) {
-            TransactionSynchronizationManager.registerSynchronization(new NativeProjectionCommitLog(target, event));
+            TransactionSynchronizationManager.registerSynchronization(new NativeProjectionCommitLogBO(target, event));
         }
     }
 
     /**
      * Worker 一次执行结束只更新自己负责的工作节点，不能直接认定整个用户任务完成。
      */
-    private void acceptWorker(ProjectionTargetDO target, NativeEventView event) {
-        WorkerLaunchDO job = workerDispatchMapper.findByBinding(target.getUserId(), target.getBindingId());
+    private void acceptWorker(ProjectionTargetBO target, NativeEventViewBO event) {
+        WorkerLaunchBO job = workerDispatchMapper.findByBinding(target.getUserId(), target.getBindingId());
         if (job == null || !target.getAgentId().equals(job.getAgentId())) {
             throw new IllegalStateException("Worker 原生日志与固定 Binding 不匹配");
         }
@@ -215,7 +215,7 @@ public class NativeProjectionService {
     /**
      * 挂起回合先按开放交互转入等待态；无受控交互的挂起仍进入恢复阻塞。
      */
-    private void suspendForInteraction(ProjectionTargetDO target, NativeEventView event) {
+    private void suspendForInteraction(ProjectionTargetBO target, NativeEventViewBO event) {
         String waitingStatus = interactionService.waitingStatusOf(target.getUserId(), target.getTaskId());
         if (waitingStatus == null) {
             taskFinalizerService.blockAfterNativeRun(target, event, NativeRunOutcome.SUSPENDED);
@@ -230,7 +230,7 @@ public class NativeProjectionService {
     /**
      * 将 AgentScope 暂停执行时的交互请求关联到已保存的用户交互，并通知页面；未经过平台管理的工具暂停不产生用户交互。
      */
-    private void bindInteraction(ProjectionTargetDO target, NativeEventView event) {
+    private void bindInteraction(ProjectionTargetBO target, NativeEventViewBO event) {
         Map<String, Object> data = event.data() == null ? Map.of() : event.data();
         if (!(data.get("requestId") instanceof String requestId) || requestId.isBlank()) {
             log.warn("暂停请求缺少 requestId，无法关联用户交互 bindingId={} event={}",
@@ -239,7 +239,7 @@ public class NativeProjectionService {
         }
         Map<String, Object> call = data.get("call") instanceof Map<?, ?> rawCall
                 ? (Map<String, Object>) rawCall : Map.of();
-        BindingResult binding = interactionService.bindFrameworkRequest(
+        BindingResultBO binding = interactionService.bindFrameworkRequest(
                 target.getUserId(), target.getTaskId(), target.getBindingId(), null, event.turnId(),
                 requestId, call);
         if (binding == null) {
@@ -248,7 +248,7 @@ public class NativeProjectionService {
         var scope = scopeMapper.findOwned(target.getUserId(), scopeMapper.findScopeByBinding(target.getUserId(), target.getBindingId()));
         boolean approval = "APPROVAL".equals(binding.kind());
         failures.record(scope, target.getBindingId(), "interaction:" + binding.interactionId(),
-                new FailureClassification(approval ? "AUTH_REQUIRED" : "INPUT_REQUIRED",
+                new FailureClassificationBO(approval ? "AUTH_REQUIRED" : "INPUT_REQUIRED",
                         approval ? "USER_CONFIRMATION_REQUIRED" : "USER_INPUT_NEEDED", "USER",
                         approval ? "有一项操作需要你确认影响后决定是否执行。" : "需要你补充一些信息，才能继续。"));
         publish(target, event, "interaction.requested",
@@ -258,12 +258,12 @@ public class NativeProjectionService {
     /**
      * 框架侧解析后发布公开事件；交互行不存在说明该请求未受控。
      */
-    private void resolveInteraction(ProjectionTargetDO target, NativeEventView event) {
+    private void resolveInteraction(ProjectionTargetBO target, NativeEventViewBO event) {
         Map<String, Object> data = event.data() == null ? Map.of() : event.data();
         if (!(data.get("requestId") instanceof String requestId) || requestId.isBlank()) {
             return;
         }
-        InteractionDO row = interactionService.resolveFromFramework(
+        InteractionPO row = interactionService.resolveFromFramework(
                 target.getUserId(), target.getBindingId(), requestId);
         if (row == null) {
             return;
@@ -273,9 +273,9 @@ public class NativeProjectionService {
                 Map.of("interactionId", row.getInteractionId(), "status", row.getStatus()));
     }
 
-    private void publish(ProjectionTargetDO target, NativeEventView event, String eventType, Object payloadExtra) {
+    private void publish(ProjectionTargetBO target, NativeEventViewBO event, String eventType, Object payloadExtra) {
         if (target.getTaskId() == null) {
-            ExecutionScopeDO scope = scopeMapper.findOwned(target.getUserId(), scopeMapper.findScopeByBinding(target.getUserId(), target.getBindingId()));
+            ExecutionScopePO scope = scopeMapper.findOwned(target.getUserId(), scopeMapper.findScopeByBinding(target.getUserId(), target.getBindingId()));
             conversationEvents.publish(scope, "native:" + target.getBindingId() + ":" + event.eventId(), eventType, payloadExtra);
             return;
         }

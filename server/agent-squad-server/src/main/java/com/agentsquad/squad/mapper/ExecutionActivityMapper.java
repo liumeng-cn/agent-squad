@@ -1,7 +1,7 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.domain.entity.ExecutionActivityDO;
-import com.agentsquad.squad.domain.request.ActivityHistoryRequest;
+import com.agentsquad.squad.po.ExecutionActivityPO;
+import com.agentsquad.squad.dto.ActivityHistoryDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -18,20 +18,20 @@ public interface ExecutionActivityMapper {
 
     String sourceMessage(@Param("userId") String userId, @Param("scopeId") String scopeId);
 
-    ExecutionActivityDO find(@Param("userId") String userId, @Param("bindingId") String bindingId,
+    ExecutionActivityPO find(@Param("userId") String userId, @Param("bindingId") String bindingId,
                               @Param("sourceKey") String sourceKey);
 
-    int insert(ExecutionActivityDO row);
+    int insert(ExecutionActivityPO row);
 
-    int update(ExecutionActivityDO row);
+    int update(ExecutionActivityPO row);
 
-    List<ExecutionActivityDO> activeRun(@Param("userId") String userId, @Param("bindingId") String bindingId,
+    List<ExecutionActivityPO> activeRun(@Param("userId") String userId, @Param("bindingId") String bindingId,
                                          @Param("runId") String runId);
 
-    List<ExecutionActivityDO> recent(@Param("userId") String userId, @Param("conversationId") String conversationId,
+    List<ExecutionActivityPO> recent(@Param("userId") String userId, @Param("conversationId") String conversationId,
                                       @Param("generation") long generation, @Param("limit") int limit);
 
-    List<ExecutionActivityDO> history(@Param("userId") String userId, @Param("conversationId") String conversationId,
-                                       @Param("generation") long generation, @Param("query") ActivityHistoryRequest query,
+    List<ExecutionActivityPO> history(@Param("userId") String userId, @Param("conversationId") String conversationId,
+                                       @Param("generation") long generation, @Param("query") ActivityHistoryDTO query,
                                        @Param("limit") int limit);
 }

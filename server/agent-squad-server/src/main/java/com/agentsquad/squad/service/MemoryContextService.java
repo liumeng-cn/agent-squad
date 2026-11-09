@@ -1,13 +1,13 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.common.exception.MemoryContextInvalidatedException;
-import com.agentsquad.squad.domain.entity.MemoryDO;
-import com.agentsquad.squad.domain.model.MemoryRules;
-import com.agentsquad.squad.domain.entity.MemoryScopePinDO;
-import com.agentsquad.squad.domain.dto.MemoryContextSnapshot;
-import com.agentsquad.squad.domain.dto.MemoryReference;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.exceptions.MemoryContextInvalidatedException;
+import com.agentsquad.squad.po.MemoryPO;
+import com.agentsquad.squad.policy.MemoryRules;
+import com.agentsquad.squad.po.MemoryScopePinPO;
+import com.agentsquad.squad.bo.MemoryContextSnapshotBO;
+import com.agentsquad.squad.bo.MemoryReferenceBO;
 import com.agentsquad.squad.mapper.MemoryMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -38,19 +38,19 @@ public class MemoryContextService {
      * 在会话/所有者之后锁用户代际，原子冻结引用；不调用模型，不把正文复制到另一个可复活的存储。
      */
     @Transactional
-    public MemoryContextSnapshot freeze(String userId, String scopeId) {
+    public MemoryContextSnapshotBO freeze(String userId, String scopeId) {
         scopes.lockOwned(userId, scopeId, true);
         long revision = lockRevision(userId);
-        MemoryScopePinDO prior = mapper.pin(userId, scopeId);
+        MemoryScopePinPO prior = mapper.pin(userId, scopeId);
         if (prior != null) {
             return currentSnapshot(userId, scopeId, prior, revision);
         }
-        List<MemoryDO> memories = mapper.active(userId, now(), MAX_REFERENCES);
+        List<MemoryPO> memories = mapper.active(userId, now(), MAX_REFERENCES);
         mapper.pinScope(userId, scopeId, revision);
-        for (MemoryDO memory : memories) {
+        for (MemoryPO memory : memories) {
             mapper.pinItem(userId, scopeId, memory.getMemoryId(), memory.getVersion());
         }
-        return new MemoryContextSnapshot(revision, memories.stream().map(this::reference).toList());
+        return new MemoryContextSnapshotBO(revision, memories.stream().map(this::reference).toList());
     }
 
     /**
@@ -61,7 +61,7 @@ public class MemoryContextService {
     public void requireCurrent(String userId, String scopeId) {
         scopes.requireReadable(userId, scopeId);
         long revision = lockRevision(userId);
-        MemoryScopePinDO pin = mapper.pin(userId, scopeId);
+        MemoryScopePinPO pin = mapper.pin(userId, scopeId);
         if (pin != null) {
             currentSnapshot(userId, scopeId, pin, revision);
         }
@@ -71,10 +71,10 @@ public class MemoryContextService {
      * 返回已经冻结并复验的资料；没有冻结点时拒绝读取，不临时获取新记忆污染旧上下文。
      */
     @Transactional
-    public MemoryContextSnapshot read(String userId, String scopeId) {
+    public MemoryContextSnapshotBO read(String userId, String scopeId) {
         scopes.requireReadable(userId, scopeId);
         long revision = lockRevision(userId);
-        MemoryScopePinDO pin = mapper.pin(userId, scopeId);
+        MemoryScopePinPO pin = mapper.pin(userId, scopeId);
         if (pin == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "执行尚未固定记忆上下文");
         }
@@ -85,19 +85,19 @@ public class MemoryContextService {
      * Worker只取得调用方明确选择的固定引用，不将Master的整个记忆集合默认下发。
      */
     @Transactional
-    public MemoryContextSnapshot select(String userId, String scopeId, List<String> memoryIds) {
+    public MemoryContextSnapshotBO select(String userId, String scopeId, List<String> memoryIds) {
         if (memoryIds == null || memoryIds.size() > MAX_REFERENCES
                 || memoryIds.stream().anyMatch(id -> id == null || id.isBlank())
                 || memoryIds.stream().distinct().count() != memoryIds.size()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "局部记忆引用必须唯一且不超过20条");
         }
-        MemoryContextSnapshot pinned = read(userId, scopeId);
-        List<MemoryReference> selected = pinned.memories().stream()
+        MemoryContextSnapshotBO pinned = read(userId, scopeId);
+        List<MemoryReferenceBO> selected = pinned.memories().stream()
                 .filter(memory -> memoryIds.contains(memory.memoryId())).toList();
         if (selected.size() != memoryIds.size()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "局部记忆不属于该执行的固定授权范围");
         }
-        return new MemoryContextSnapshot(pinned.memoryRevision(), selected);
+        return new MemoryContextSnapshotBO(pinned.memoryRevision(), selected);
     }
 
     /**
@@ -129,13 +129,13 @@ public class MemoryContextService {
         return Set.copyOf(excluded);
     }
 
-    private MemoryContextSnapshot currentSnapshot(String userId, String scopeId, MemoryScopePinDO pin, long revision) {
+    private MemoryContextSnapshotBO currentSnapshot(String userId, String scopeId, MemoryScopePinPO pin, long revision) {
         if (!"CURRENT".equals(pin.getBarrierStatus()) || pin.getMemoryRevision() != revision) {
             throw new MemoryContextInvalidatedException();
         }
         LocalDateTime timestamp = now();
-        List<MemoryReference> memories = mapper.pinnedIds(userId, scopeId).stream().map(id -> {
-            MemoryDO current = mapper.find(userId, id);
+        List<MemoryReferenceBO> memories = mapper.pinnedIds(userId, scopeId).stream().map(id -> {
+            MemoryPO current = mapper.find(userId, id);
             Long expected = mapper.pinnedVersion(userId, scopeId, id);
             if (current == null || expected == null || current.getVersion() != expected
                     || !MemoryRules.active(current, timestamp)) {
@@ -143,7 +143,7 @@ public class MemoryContextService {
             }
             return reference(current);
         }).toList();
-        return new MemoryContextSnapshot(pin.getMemoryRevision(), memories);
+        return new MemoryContextSnapshotBO(pin.getMemoryRevision(), memories);
     }
 
     private long lockRevision(String userId) {
@@ -151,8 +151,8 @@ public class MemoryContextService {
         return mapper.lockRevision(userId);
     }
 
-    private MemoryReference reference(MemoryDO row) {
-        return new MemoryReference(row.getMemoryId(), row.getKey(), row.getContent(), row.getVersion(), row.getExpiresAt());
+    private MemoryReferenceBO reference(MemoryPO row) {
+        return new MemoryReferenceBO(row.getMemoryId(), row.getKey(), row.getContent(), row.getVersion(), row.getExpiresAt());
     }
 
     private LocalDateTime now() {

@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.mapper.DeliveryMapper">
 
-    <resultMap id="claimContextResult" type="com.agentsquad.squad.domain.entity.CommandClaimContextDO">
+    <resultMap id="claimContextResult" type="com.agentsquad.squad.bo.CommandClaimContextBO">
         <constructor>
             <arg column="user_id" javaType="java.lang.String"/>
             <arg column="scope_id" javaType="java.lang.String"/>
@@ -11,7 +11,7 @@
         </constructor>
     </resultMap>
 
-    <resultMap id="findClaimedResult" type="com.agentsquad.squad.domain.entity.DeliveryDO">
+    <resultMap id="findClaimedResult" type="com.agentsquad.squad.bo.DeliveryBO">
         <constructor>
             <arg column="command_id" javaType="java.lang.String"/>
             <arg column="user_id" javaType="java.lang.String"/>

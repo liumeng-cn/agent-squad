@@ -1,23 +1,23 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.mapper.ArtifactMapper;
-import com.agentsquad.squad.domain.enums.TaskDirectiveWaitReason;
-import com.agentsquad.squad.domain.dto.TaskDirectiveView;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.common.util.CanonicalJson;
-import com.agentsquad.squad.common.util.ContentDigests;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.ConversationDO;
-import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
-import com.agentsquad.squad.domain.entity.ResponseRuntimeDO;
-import com.agentsquad.squad.domain.entity.TaskDirectiveDO;
-import com.agentsquad.squad.domain.entity.TaskDirectiveTargetDO;
-import com.agentsquad.squad.domain.entity.TaskGoalStateDO;
-import com.agentsquad.squad.domain.entity.TaskDO;
-import com.agentsquad.squad.domain.dto.TaskDirectiveSubmit;
-import com.agentsquad.squad.domain.dto.TaskDirectiveDecision;
-import com.agentsquad.squad.domain.dto.TaskDirectiveReceipt;
+import com.agentsquad.squad.enums.TaskDirectiveWaitReason;
+import com.agentsquad.squad.vo.TaskDirectiveVO;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.utils.CanonicalJson;
+import com.agentsquad.squad.utils.ContentDigests;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.po.ConversationPO;
+import com.agentsquad.squad.po.ExecutionScopePO;
+import com.agentsquad.squad.po.ResponseRuntimePO;
+import com.agentsquad.squad.po.TaskDirectivePO;
+import com.agentsquad.squad.bo.TaskDirectiveTargetBO;
+import com.agentsquad.squad.bo.TaskGoalStateBO;
+import com.agentsquad.squad.po.TaskPO;
+import com.agentsquad.squad.bo.TaskDirectiveSubmitBO;
+import com.agentsquad.squad.bo.TaskDirectiveDecisionBO;
+import com.agentsquad.squad.bo.TaskDirectiveReceiptBO;
 import com.agentsquad.squad.mapper.BindingMapper;
 import com.agentsquad.squad.mapper.CommandMapper;
 import com.agentsquad.squad.mapper.ConversationMapper;
@@ -25,7 +25,7 @@ import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.mapper.ResponseRuntimeMapper;
 import com.agentsquad.squad.mapper.TaskDirectiveMapper;
 import com.agentsquad.squad.mapper.TaskMapper;
-import com.agentsquad.squad.domain.entity.PlanDO;
+import com.agentsquad.squad.po.PlanPO;
 import com.agentsquad.squad.mapper.PlanMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -101,30 +101,30 @@ public class TaskDirectiveService {
      * 当前消息与目标归属、版本同事务校验；同键重放不重复生成协调命令，受理不代表已经应用。
      */
     @Transactional
-    public TaskDirectiveReceipt submit(String userId, String sessionId, TaskDirectiveSubmit request) {
+    public TaskDirectiveReceiptBO submit(String userId, String sessionId, TaskDirectiveSubmitBO request) {
         validate(request);
-        ExecutionScopeDO source = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), false);
+        ExecutionScopePO source = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), false);
         if (!"RESPONSE".equals(source.getKind())) {
             throw error(RuntimeExceptionCode.FORBIDDEN, "只有消息回复可以提交目标修改");
         }
-        ConversationDO conversation = conversations.lockOwned(userId, source.getConversationId());
+        ConversationPO conversation = conversations.lockOwned(userId, source.getConversationId());
         requireConversation(source, conversation);
         String hash = CanonicalJson.sha256(json, RuntimePayloads.toJson(json, request));
-        TaskDirectiveDO prior = directives.findByKey(userId, source.getScopeId(), request.logicalKey());
+        TaskDirectivePO prior = directives.findByKey(userId, source.getScopeId(), request.logicalKey());
         if (prior != null) {
             if (!hash.equals(prior.getPayloadHash())) {
                 throw error(RuntimeExceptionCode.CONFLICT, "相同修改键的内容不一致");
             }
             return receipt(prior);
         }
-        ResponseRuntimeDO reply = replies.lockByBinding(userId, scopeMapper.findBindingBySession(userId, sessionId));
+        ResponseRuntimePO reply = replies.lockByBinding(userId, scopeMapper.findBindingBySession(userId, sessionId));
         if (reply == null || reply.isCancellationRequested() || !Set.of("QUEUED", "RUNNING", "RECOVERING").contains(reply.getStatus())) {
             throw error(RuntimeExceptionCode.CONFLICT, "当前回复已不能提交修改");
         }
         if (!request.taskId().equals(conversation.getActiveTaskId())) {
             throw error(RuntimeExceptionCode.NOT_FOUND, "目标不是当前会话的在途目标");
         }
-        TaskDO task = tasks.lockOwnedRow(userId, request.taskId());
+        TaskPO task = tasks.lockOwnedRow(userId, request.taskId());
         if (task == null || !source.getConversationId().equals(task.getConversationId()) || task.getCancelRequestedAt() != null || TERMINAL.contains(task.getStatus())) {
             throw error(RuntimeExceptionCode.CONFLICT, "目标已停止或结束");
         }
@@ -132,13 +132,13 @@ public class TaskDirectiveService {
             throw error(RuntimeExceptionCode.CONFLICT, "目标版本已变化，当前版本为" + task.getVersion());
         }
         var snapshot = contexts.freeze(userId, reply.getBindingId());
-        TaskGoalStateDO goal = directives.goalState(userId, task.getTaskId());
+        TaskGoalStateBO goal = directives.goalState(userId, task.getTaskId());
         if (snapshot.activeTask() == null || !task.getTaskId().equals(snapshot.activeTask().taskId())
                 || snapshot.activeTask().goalRevision() != goal.getGoalRevision()) {
             throw error(RuntimeExceptionCode.CONFLICT, "目标内容已变化，请确认当前目标后再提交修改");
         }
         var message = snapshot.messages().getLast();
-        TaskDirectiveDO row = new TaskDirectiveDO(UUID.randomUUID().toString(), userId, source.getConversationId(),
+        TaskDirectivePO row = new TaskDirectivePO(UUID.randomUUID().toString(), userId, source.getConversationId(),
                 source.getConversationGeneration(), message.messageId(), source.getScopeId(), task.getTaskId(), request.logicalKey(), hash,
                 task.getVersion(), goal.getGoalRevision(), request.kind(), request.content(), message.text(),
                 RuntimePayloads.toJson(json, message.artifactIds()), "ACCEPTED", null, null, null, null, null);
@@ -153,21 +153,21 @@ public class TaskDirectiveService {
      * 独立任务Master在当前Turn内应用或拒绝；目标语义变化阻断旧计划，等待中的外部操作须先明确结果。
      */
     @Transactional
-    public TaskDirectiveReceipt decide(String userId, String sessionId, TaskDirectiveDecision request) {
+    public TaskDirectiveReceiptBO decide(String userId, String sessionId, TaskDirectiveDecisionBO request) {
         if (request == null || invalid(request.directiveId(), 36) || request.expectedVersion() < 0
                 || request.reason() != null && request.reason().length() > 500
                 || request.decision() == null || !Set.of("APPLY", "REJECT").contains(request.decision())
                 || ("REJECT".equals(request.decision()) && invalid(request.reason(), 500))) {
             throw error(RuntimeExceptionCode.VALIDATION, "修改决定参数无效");
         }
-        ExecutionScopeDO target = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), false);
+        ExecutionScopePO target = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), false);
         if (!"TASK".equals(target.getKind()) || !scopeMapper.findBindingBySession(userId, sessionId)
                 .equals(bindings.findMasterBindingId(userId, target.getOwnerId()))) {
             throw error(RuntimeExceptionCode.FORBIDDEN, "只有目标协调会话可以应用修改");
         }
         requireConversation(target, conversations.lockOwned(userId, target.getConversationId()));
-        TaskDO task = tasks.lockOwnedRow(userId, target.getOwnerId());
-        TaskDirectiveDO row = directives.lock(userId, request.directiveId());
+        TaskPO task = tasks.lockOwnedRow(userId, target.getOwnerId());
+        TaskDirectivePO row = directives.lock(userId, request.directiveId());
         if (row == null || !task.getTaskId().equals(row.getTaskId()) || row.getGeneration() != target.getConversationGeneration()) {
             throw error(RuntimeExceptionCode.NOT_FOUND, "修改指令不存在或不属于当前目标");
         }
@@ -177,7 +177,7 @@ public class TaskDirectiveService {
         if (task.getCancelRequestedAt() != null || TERMINAL.contains(task.getStatus())) {
             return reject(target, task, row, "TASK_ENDED", "目标已停止，修改未应用");
         }
-        TaskGoalStateDO goal = directives.goalState(userId, task.getTaskId());
+        TaskGoalStateBO goal = directives.goalState(userId, task.getTaskId());
         if (goal.getGoalRevision() != row.getExpectedGoalRevision()) {
             return reject(target, task, row, "GOAL_CHANGED", "目标内容已被其他修改更新，请重新确认本次要求");
         }
@@ -196,7 +196,7 @@ public class TaskDirectiveService {
                 return reject(target, task, row, "MATERIAL_UNAVAILABLE", "补充材料已失效，请重新添加材料");
             }
         }
-        List<TaskDirectiveDO> effective = "REPLACE".equals(row.getKind()) ? List.of() : directives.effectiveApplied(userId, task.getTaskId());
+        List<TaskDirectivePO> effective = "REPLACE".equals(row.getKind()) ? List.of() : directives.effectiveApplied(userId, task.getTaskId());
         long size = original(goal.getInputJson()).length() + row.getSourceText().length()
                 + effective.stream().mapToLong(item -> item.getSourceText().length()).sum();
         if (size > 200000) {
@@ -225,7 +225,7 @@ public class TaskDirectiveService {
                 "taskId", task.getTaskId(), "version", task.getVersion() + 1, "goalRevision", goal.getGoalRevision() + 1,
                 "sourceMessageId", row.getSourceMessageId()));
         for (String pending : directives.pending(userId, task.getTaskId())) {
-            TaskDirectiveDO other = directives.lock(userId, pending);
+            TaskDirectivePO other = directives.lock(userId, pending);
             if (other.getExpectedGoalRevision() != goal.getGoalRevision() + 1) {
                 reject(target, task, other, "GOAL_CHANGED", "目标内容已变化，本次并发修改未应用，请重新确认");
             }
@@ -238,21 +238,21 @@ public class TaskDirectiveService {
      * 在前序任务Turn已投影、无开放效果的安全点排入协调命令；扫描与数据库提交不跨模型等待。
      */
     @Transactional
-    public void dispatch(TaskDirectiveTargetDO candidate) {
+    public void dispatch(TaskDirectiveTargetBO candidate) {
         String userId = candidate.getUserId();
-        ExecutionScopeDO target = scopes.lockOwned(userId, scopes.scopeForTask(userId, candidate.getTaskId()), false);
-        TaskDO task = tasks.lockOwnedRow(userId, candidate.getTaskId());
-        TaskDirectiveDO row = directives.lock(userId, candidate.getDirectiveId());
+        ExecutionScopePO target = scopes.lockOwned(userId, scopes.scopeForTask(userId, candidate.getTaskId()), false);
+        TaskPO task = tasks.lockOwnedRow(userId, candidate.getTaskId());
+        TaskDirectivePO row = directives.lock(userId, candidate.getDirectiveId());
         if (row == null || !"ACCEPTED".equals(row.getStatus())) {
             return;
         }
-        ConversationDO conversation = conversations.lockOwned(userId, target.getConversationId());
+        ConversationPO conversation = conversations.lockOwned(userId, target.getConversationId());
         if (!"ACTIVE".equals(conversation.getStatus()) || conversation.getGeneration() != row.getGeneration()
                 || task.getCancelRequestedAt() != null || TERMINAL.contains(task.getStatus())) {
             reject(target, task, row, "TASK_ENDED", "目标已停止或会话已失效，修改未应用");
             return;
         }
-        TaskGoalStateDO goal = directives.goalState(userId, task.getTaskId());
+        TaskGoalStateBO goal = directives.goalState(userId, task.getTaskId());
         if (goal.getGoalRevision() != row.getExpectedGoalRevision()) {
             reject(target, task, row, "GOAL_CHANGED", "目标内容已变化，请重新确认本次修改");
             return;
@@ -300,22 +300,22 @@ public class TaskDirectiveService {
     }
 
     /** 等待原因只在实际变化时写入并通知；重复扫描不产生重复进度事件。 */
-    private void waiting(ExecutionScopeDO scope, TaskDirectiveDO row, TaskDirectiveWaitReason reason) {
+    private void waiting(ExecutionScopePO scope, TaskDirectivePO row, TaskDirectiveWaitReason reason) {
         if (directives.waiting(scope.getUserId(), row.getDirectiveId(), reason) == 1) {
             publish(scope, row, "ACCEPTED", null, null, reason.name(), null);
         }
     }
 
-    private boolean hasOpenEffects(ExecutionScopeDO scope) {
+    private boolean hasOpenEffects(ExecutionScopePO scope) {
         return !directives.openOperations(scope.getUserId(), scope.getScopeId()).isEmpty()
                 || !directives.openInteractions(scope.getUserId(), scope.getScopeId()).isEmpty();
     }
 
-    private TaskDirectiveReceipt reject(ExecutionScopeDO scope, TaskDO task, TaskDirectiveDO row, String code, String reason) {
+    private TaskDirectiveReceiptBO reject(ExecutionScopePO scope, TaskPO task, TaskDirectivePO row, String code, String reason) {
         directives.finish(scope.getUserId(), row.getDirectiveId(), "REJECTED", null, null, code, reason);
         publish(scope, row, "REJECTED", null, null, code, reason);
         if (task.getCancelRequestedAt() == null && !TERMINAL.contains(task.getStatus()) && task.getPlanVersion() > 0) {
-            PlanDO plan = plans.lockPlan(scope.getUserId(), task.getTaskId(), task.getPlanVersion());
+            PlanPO plan = plans.lockPlan(scope.getUserId(), task.getTaskId(), task.getPlanVersion());
             if (plan != null && "ACTIVE".equals(plan.getStatus())) {
                 signals.onJobStateChanged(plan);
             }
@@ -324,10 +324,10 @@ public class TaskDirectiveService {
         return receipt(directives.lock(scope.getUserId(), row.getDirectiveId()));
     }
 
-    private void publish(ExecutionScopeDO scope, TaskDirectiveDO row, String status, Long version, Long revision, String code, String reason) {
+    private void publish(ExecutionScopePO scope, TaskDirectivePO row, String status, Long version, Long revision, String code, String reason) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("schemaVersion", 2);
-        payload.put("directive", TaskDirectiveView.from(directives.lock(scope.getUserId(), row.getDirectiveId())));
+        payload.put("directive", TaskDirectiveVO.from(directives.lock(scope.getUserId(), row.getDirectiveId())));
         payload.put("directiveId", row.getDirectiveId());
         payload.put("taskId", row.getTaskId());
         payload.put("sourceMessageId", row.getSourceMessageId());
@@ -343,12 +343,12 @@ public class TaskDirectiveService {
         events.publish(scope, "directive:" + row.getDirectiveId() + ":" + status + ":" + UUID.randomUUID(), "directive.status_changed", payload);
     }
 
-    private TaskDirectiveReceipt receipt(TaskDirectiveDO row) {
-        return new TaskDirectiveReceipt(row.getDirectiveId(), row.getTaskId(), row.getSourceMessageId(), row.getStatus(),
+    private TaskDirectiveReceiptBO receipt(TaskDirectivePO row) {
+        return new TaskDirectiveReceiptBO(row.getDirectiveId(), row.getTaskId(), row.getSourceMessageId(), row.getStatus(),
                 row.getAppliedVersion(), row.getAppliedGoalRevision(), row.getReasonCode(), row.getReasonMessage());
     }
 
-    private List<String> artifactIds(TaskDirectiveDO row) {
+    private List<String> artifactIds(TaskDirectivePO row) {
         try {
             return java.util.Arrays.asList(json.treeToValue(RuntimePayloads.readJson(json, row.getArtifactIdsJson()), String[].class));
         } catch (Exception exception) {
@@ -368,13 +368,13 @@ public class TaskDirectiveService {
         return object(value).path("message").asText();
     }
 
-    private void requireConversation(ExecutionScopeDO scope, ConversationDO conversation) {
+    private void requireConversation(ExecutionScopePO scope, ConversationPO conversation) {
         if (!"ACTIVE".equals(conversation.getStatus()) || conversation.getGeneration() != scope.getConversationGeneration()) {
             throw error(RuntimeExceptionCode.NOT_FOUND, "会话已失效");
         }
     }
 
-    private void validate(TaskDirectiveSubmit request) {
+    private void validate(TaskDirectiveSubmitBO request) {
         if (request == null || invalid(request.logicalKey(), 160) || invalid(request.taskId(), 36)
                 || request.expectedVersion() < 0 || request.kind() == null || !Set.of("SUPPLEMENT", "REPLACE").contains(request.kind())
                 || invalid(request.content(), 20000)) {

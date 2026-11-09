@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.agentsquad.squad.gateway.mapper.AdminUserMapper">
+<mapper namespace="com.agentsquad.squad.mapper.AdminUserMapper">
 
-    <resultMap id="userRow" type="com.agentsquad.squad.gateway.admin.UserAccountRow">
+    <resultMap id="userRow" type="com.agentsquad.squad.po.UserAccountPO">
         <constructor>
             <arg column="user_id" javaType="java.lang.String"/>
             <arg column="username" javaType="java.lang.String"/>
             <arg column="display_name" javaType="java.lang.String"/>
             <arg column="password_hash" javaType="java.lang.String"/>
-            <arg column="role" javaType="com.agentsquad.squad.domain.enums.AccountRole"/>
-            <arg column="status" javaType="com.agentsquad.squad.domain.enums.AccountStatus"/>
+            <arg column="role" javaType="com.agentsquad.squad.enums.AccountRole"/>
+            <arg column="status" javaType="com.agentsquad.squad.enums.AccountStatus"/>
             <arg column="auth_version" javaType="_long"/>
             <arg column="must_change_password" javaType="_boolean"/>
             <arg column="version" javaType="_long"/>

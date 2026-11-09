@@ -1,14 +1,14 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.domain.dto.ArtifactStageView;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.domain.model.SandboxExecutionContext;
-import com.agentsquad.squad.domain.entity.SandboxRunDO;
-import com.agentsquad.squad.domain.model.SandboxDispatchClaim;
-import com.agentsquad.squad.domain.dto.SandboxDriverResult;
-import com.agentsquad.squad.domain.dto.SandboxExecuteRequest;
-import com.agentsquad.squad.domain.dto.SandboxExecutionResult;
+import com.agentsquad.squad.bo.ArtifactStageViewBO;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.bo.SandboxExecutionContextBO;
+import com.agentsquad.squad.po.SandboxRunPO;
+import com.agentsquad.squad.bo.SandboxDispatchClaimBO;
+import com.agentsquad.squad.bo.SandboxDriverResultBO;
+import com.agentsquad.squad.bo.SandboxExecuteRequestBO;
+import com.agentsquad.squad.bo.SandboxExecutionResultBO;
 import com.agentsquad.squad.mapper.SandboxMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,15 +47,15 @@ public class SandboxRunTransactionService {
     private ObjectMapper json;
 
     @Transactional
-    public SandboxDispatchClaim begin(SandboxExecutionContext context, SandboxExecuteRequest request, String hash) {
+    public SandboxDispatchClaimBO begin(SandboxExecutionContextBO context, SandboxExecuteRequestBO request, String hash) {
         access.requireCurrent(context);
-        SandboxRunDO prior = mapper.prior(context.userId(), context.bindingId(), request.logicalKey(),
+        SandboxRunPO prior = mapper.prior(context.userId(), context.bindingId(), request.logicalKey(),
                 context.turnId(), context.toolCallId());
         if (prior != null) {
             if (!hash.equals(prior.getRequestHash())) {
                 throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同沙箱调用键的输入不一致");
             }
-            return new SandboxDispatchClaim(prior, false);
+            return new SandboxDispatchClaimBO(prior, false);
         }
         String id = UUID.randomUUID().toString();
         budget.reserve(context.userId(), context.scopeId(), usageKey(id), "SANDBOX",
@@ -63,21 +63,21 @@ public class SandboxRunTransactionService {
         mapper.insert(id, context.userId(), context.scopeId(), context.bindingId(), request.logicalKey(),
                 context.turnId(), context.toolCallId(), hash,
                 LocalDateTime.now(ZoneOffset.UTC).plusSeconds(request.timeoutSeconds() + 120));
-        return new SandboxDispatchClaim(new SandboxRunDO(id, context.userId(), context.scopeId(), context.bindingId(), hash, "IN_FLIGHT", null), true);
+        return new SandboxDispatchClaimBO(new SandboxRunPO(id, context.userId(), context.scopeId(), context.bindingId(), hash, "IN_FLIGHT", null), true);
     }
 
     @Transactional
-    public SandboxExecutionResult finish(SandboxExecutionContext context, String executionId,
-                                         SandboxExecuteRequest request, SandboxDriverResult result) {
+    public SandboxExecutionResultBO finish(SandboxExecutionContextBO context, String executionId,
+                                         SandboxExecuteRequestBO request, SandboxDriverResultBO result) {
         access.requireCurrent(context);
-        List<ArtifactStageView> stages = new ArrayList<>();
+        List<ArtifactStageViewBO> stages = new ArrayList<>();
         if (result.exitCode() == 0) {
             for (var output : result.outputs()) {
                 stages.add(delivery.stage(context, executionId, output.path(), output.content()));
             }
         }
         String status = result.exitCode() == 0 ? "SUCCEEDED" : "FAILED";
-        SandboxExecutionResult outcome = new SandboxExecutionResult(executionId, status, result.exitCode(),
+        SandboxExecutionResultBO outcome = new SandboxExecutionResultBO(executionId, status, result.exitCode(),
                 result.stdout(), result.stderr(), result.truncated(), List.copyOf(stages));
         if (mapper.finish(context.userId(), executionId, status, write(outcome)) != 1) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "沙箱结果已经失效，不能重复发布");
@@ -89,7 +89,7 @@ public class SandboxRunTransactionService {
     }
 
     @Transactional
-    public void unknown(SandboxExecutionContext context, String executionId) {
+    public void unknown(SandboxExecutionContextBO context, String executionId) {
         budget.markUnknown(context.userId(), context.scopeId(), usageKey(executionId));
         mapper.finish(context.userId(), executionId, "UNKNOWN", null);
     }
@@ -99,28 +99,28 @@ public class SandboxRunTransactionService {
      * 已结束执行的预算结算不会被覆盖，也不会通过创建新容器重发。
      */
     @Transactional
-    public int expire(SandboxRunDO candidate) {
+    public int expire(SandboxRunPO candidate) {
         budget.markUnknown(candidate.getUserId(), candidate.getScopeId(), usageKey(candidate.getExecutionId()));
-        SandboxRunDO current = mapper.find(candidate.getUserId(), candidate.getExecutionId());
+        SandboxRunPO current = mapper.find(candidate.getUserId(), candidate.getExecutionId());
         if (current == null || !"IN_FLIGHT".equals(current.getStatus())) {
             return 0;
         }
         return mapper.expireOne(candidate.getUserId(), candidate.getExecutionId());
     }
 
-    public SandboxExecutionResult replay(SandboxRunDO prior) {
+    public SandboxExecutionResultBO replay(SandboxRunPO prior) {
         if (!("SUCCEEDED".equals(prior.getStatus()) || "FAILED".equals(prior.getStatus())) || prior.getResultJson() == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
                     "沙箱执行已受理但结果待核对，不能自动重放");
         }
         try {
-            return json.treeToValue(com.agentsquad.squad.common.util.RuntimePayloads.readJson(json, prior.getResultJson()), SandboxExecutionResult.class);
+            return json.treeToValue(com.agentsquad.squad.utils.RuntimePayloads.readJson(json, prior.getResultJson()), SandboxExecutionResultBO.class);
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("沙箱持久结果损坏", exception);
         }
     }
 
-    private String write(SandboxExecutionResult result) {
+    private String write(SandboxExecutionResultBO result) {
         try {
             return json.writeValueAsString(result);
         } catch (JsonProcessingException exception) {

@@ -1,14 +1,14 @@
 package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.ConnectionDO;
-import com.agentsquad.squad.domain.request.ConnectionCreateRequest;
-import com.agentsquad.squad.domain.response.ConnectionPageResponse;
-import com.agentsquad.squad.domain.dto.ConnectionResponse;
-import com.agentsquad.squad.domain.request.ConnectionUpdateRequest;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.po.ConnectionPO;
+import com.agentsquad.squad.dto.ConnectionCreateDTO;
+import com.agentsquad.squad.vo.ConnectionPageVO;
+import com.agentsquad.squad.vo.ConnectionVO;
+import com.agentsquad.squad.dto.ConnectionUpdateDTO;
 import com.agentsquad.squad.mapper.ConnectionMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -52,15 +52,15 @@ public class ConnectionService {
      * 创建连接并加密密钥；同用户同 Idempotency-Key 复用原连接，不产生重复资源。
      */
     @Transactional
-    public ConnectionResponse create(AuthView actor, String idempotencyKey,
-                                     ConnectionCreateRequest request) {
+    public ConnectionVO create(AuthView actor, String idempotencyKey,
+                                     ConnectionCreateDTO request) {
         requireIdempotencyKey(idempotencyKey);
         validateName(request.name());
         validateCode("provider", request.provider());
         validateCode("environment", request.environment());
         String policyJson = validatePolicy(request.resourcePolicy());
 
-        ConnectionDO prior = connectionMapper.findByIdempotencyKey(actor.userId(), idempotencyKey);
+        ConnectionPO prior = connectionMapper.findByIdempotencyKey(actor.userId(), idempotencyKey);
         if (prior != null) {
             log.info("连接创建幂等复用 userId={} connectionId={}", actor.userId(), prior.getConnectionId());
             return toView(prior);
@@ -78,20 +78,20 @@ public class ConnectionService {
     /**
      * 分页列出当前用户连接；cursor 为存储主键，空表示首页。
      */
-    public ConnectionPageResponse list(String userId, String cursor, int limit) {
+    public ConnectionPageVO list(String userId, String cursor, int limit) {
         Long cursorId = parseCursor(cursor);
-        List<ConnectionDO> rows = connectionMapper.listByOwner(userId, cursorId,
+        List<ConnectionPO> rows = connectionMapper.listByOwner(userId, cursorId,
                 Math.min(Math.max(limit, 1), 100));
         String nextCursor = rows.size() == Math.min(Math.max(limit, 1), 100)
                 ? String.valueOf(rows.get(rows.size() - 1).getId())
                 : null;
-        return new ConnectionPageResponse(rows.stream().map(this::toView).toList(), nextCursor);
+        return new ConnectionPageVO(rows.stream().map(this::toView).toList(), nextCursor);
     }
 
     /**
      * 读取当前用户单个连接视图。
      */
-    public ConnectionResponse get(String userId, String connectionId) {
+    public ConnectionVO get(String userId, String connectionId) {
         return toView(requireOwned(userId, connectionId));
     }
 
@@ -99,10 +99,10 @@ public class ConnectionService {
      * 按 expectedVersion 更新配置或轮换密钥；每次成功更新 revision 加一。
      */
     @Transactional
-    public ConnectionResponse update(AuthView actor, String connectionId, String idempotencyKey,
-                                     ConnectionUpdateRequest request) {
+    public ConnectionVO update(AuthView actor, String connectionId, String idempotencyKey,
+                                     ConnectionUpdateDTO request) {
         requireIdempotencyKey(idempotencyKey);
-        ConnectionDO row = requireOwned(actor.userId(), connectionId);
+        ConnectionPO row = requireOwned(actor.userId(), connectionId);
         if (request.expectedVersion() == null || request.expectedVersion() != row.getRevision()) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "连接版本已变化，请刷新后重试");
         }
@@ -120,8 +120,8 @@ public class ConnectionService {
         return toView(connectionMapper.findOwned(actor.userId(), connectionId));
     }
 
-    private ConnectionDO requireOwned(String userId, String connectionId) {
-        ConnectionDO row = connectionMapper.findOwned(userId, connectionId);
+    private ConnectionPO requireOwned(String userId, String connectionId) {
+        ConnectionPO row = connectionMapper.findOwned(userId, connectionId);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "连接不存在");
         }
@@ -197,7 +197,7 @@ public class ConnectionService {
         return max;
     }
 
-    private ConnectionResponse toView(ConnectionDO row) {
+    private ConnectionVO toView(ConnectionPO row) {
         Map<String, Object> policy;
         try {
             JsonNode node = RuntimePayloads.readJson(objectMapper, row.getResourcePolicyJson());
@@ -206,7 +206,7 @@ public class ConnectionService {
         } catch (Exception exception) {
             throw new IllegalStateException("连接资源策略无法解析", exception);
         }
-        return new ConnectionResponse(row.getConnectionId(), row.getName(), row.getProvider(),
+        return new ConnectionVO(row.getConnectionId(), row.getName(), row.getProvider(),
                 row.getEnvironment(), policy, true, row.getRevision(), row.isEnabled());
     }
 }

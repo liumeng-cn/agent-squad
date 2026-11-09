@@ -4,7 +4,7 @@ import com.agentsquad.squad.testsupport.ApiResultJson;
 import com.agentsquad.squad.testsupport.TestAssertion;
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.service.ArtifactService;
-import com.agentsquad.squad.domain.response.MessageReceiptResponse;
+import com.agentsquad.squad.vo.MessageReceiptVO;
 import com.agentsquad.squad.service.GoalTaskService;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,7 +21,7 @@ import org.springframework.web.context.WebApplicationContext;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
-import com.agentsquad.squad.domain.enums.AccountRole;
+import com.agentsquad.squad.enums.AccountRole;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -64,7 +64,7 @@ class MessageAcceptanceHttpTest {
     void retryAfterRestartReturnsOriginalFirstReceipt(@TempDir Path directory) throws Exception {
         String ownerId = UUID.randomUUID().toString();
         String url = databaseUrl(directory);
-        MessageReceiptResponse original;
+        MessageReceiptVO original;
         try (ConfigurableApplicationContext context = start(url, com.agentsquad.squad.testsupport.MySqlTestDatabase.username(), com.agentsquad.squad.testsupport.MySqlTestDatabase.password(), ownerId)) {
             original = send(context, actor(context), "/api/v1/conversations/messages", "restart-first",
                     Map.of("text", "重启后继续交流"));
@@ -108,7 +108,7 @@ class MessageAcceptanceHttpTest {
 
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
-        MessageReceiptResponse first;
+        MessageReceiptVO first;
         try (var threads = Executors.newFixedThreadPool(2)) {
             var a = threads.submit(() -> concurrentSend(context, actor, ready, start));
             var b = threads.submit(() -> concurrentSend(context, actor, ready, start));
@@ -171,7 +171,7 @@ class MessageAcceptanceHttpTest {
                         .header("Idempotency-Key", "foreign-file").contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(Map.of("text", "分析", "artifactIds", List.of(foreign)))))
                 .andExpect(status().isNotFound());
-        MessageReceiptResponse receipt = send(context, actor, "/api/v1/conversations/messages", "attachment-first",
+        MessageReceiptVO receipt = send(context, actor, "/api/v1/conversations/messages", "attachment-first",
                 Map.of("text", "分析材料", "artifactIds", List.of(file.toUpperCase(java.util.Locale.ROOT))));
         assertThat(send(context, actor, "/api/v1/conversations/messages", "attachment-first",
                 Map.of("text", "分析材料", "artifactIds", List.of(file)))).isEqualTo(receipt);
@@ -188,7 +188,7 @@ class MessageAcceptanceHttpTest {
         String conversation = goals.createConversation(owner, "在途对话").conversationId();
         String task = goals.submit(owner, conversation, "background", "正在处理的目标").taskId();
         String path = "/api/v1/conversations/" + conversation + "/messages";
-        MessageReceiptResponse first = send(context, actor, path, "follow-up", Map.of("text", "补充一句约束"));
+        MessageReceiptVO first = send(context, actor, path, "follow-up", Map.of("text", "补充一句约束"));
         assertThat(send(context, actor, path, "follow-up", Map.of("text", "补充一句约束"))).isEqualTo(first);
         send(context, actor, path, "progress", Map.of("text", "现在进展如何？"));
         assertThat(goals.getConversation(owner, conversation).activeTaskId()).isEqualTo(task);
@@ -204,17 +204,17 @@ class MessageAcceptanceHttpTest {
         return new MessageTestActor(new com.agentsquad.squad.identity.AuthView(userId, "tester", java.util.List.of(AccountRole.USER), null));
     }
 
-    static MessageReceiptResponse send(ConfigurableApplicationContext context, MessageTestActor actor, String path,
+    static MessageReceiptVO send(ConfigurableApplicationContext context, MessageTestActor actor, String path,
                                String key, Map<String, Object> body) throws Exception {
         ObjectMapper json = context.getBean(ObjectMapper.class);
         String response = mvc(context).perform(post(path).with(TestAssertion.as(actor.view().userId(), "USER"))
                         .header("Idempotency-Key", key)
                         .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(body)))
                 .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString();
-        return ApiResultJson.readData(json, response, MessageReceiptResponse.class);
+        return ApiResultJson.readData(json, response, MessageReceiptVO.class);
     }
 
-    private static MessageReceiptResponse concurrentSend(ConfigurableApplicationContext context, MessageTestActor actor,
+    private static MessageReceiptVO concurrentSend(ConfigurableApplicationContext context, MessageTestActor actor,
                                                  CountDownLatch ready, CountDownLatch start) throws Exception {
         ready.countDown();
         if (!start.await(10, TimeUnit.SECONDS)) {

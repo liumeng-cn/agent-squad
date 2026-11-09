@@ -1,17 +1,17 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.domain.request.MessageCreateRequest;
+import com.agentsquad.squad.dto.MessageCreateDTO;
 import com.agentsquad.squad.service.CommandClaimService;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.ResponseContextService;
 import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.mapper.DeliveryMapper;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.service.ContextSnapshotService;
 import com.agentsquad.squad.service.PlanService;
-import com.agentsquad.squad.domain.dto.PlanPublish;
-import com.agentsquad.squad.domain.dto.PlanNode;
+import com.agentsquad.squad.bo.PlanPublishBO;
+import com.agentsquad.squad.bo.PlanNodeBO;
 import com.agentsquad.squad.service.ResponseControlService;
 import com.agentsquad.squad.mapper.InteractionMapper;
 
@@ -56,8 +56,8 @@ class MessageOrderingIntegrationTest {
     static void verifyOrdering(ConfigurableApplicationContext context) {
         String user = UUID.randomUUID().toString();
         var messages = context.getBean(MessageAcceptanceService.class);
-        var first = messages.accept(user, null, "first", new MessageCreateRequest("第一条消息", List.of()));
-        var second = messages.accept(user, first.conversationId(), "second", new MessageCreateRequest("第二条消息", List.of()));
+        var first = messages.accept(user, null, "first", new MessageCreateDTO("第一条消息", List.of()));
+        var second = messages.accept(user, first.conversationId(), "second", new MessageCreateDTO("第二条消息", List.of()));
         JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
         jdbc.update("UPDATE sq_command SET due_at='2000-01-01' WHERE user_id=?", user);
         var claims = context.getBean(CommandClaimService.class);
@@ -76,11 +76,11 @@ class MessageOrderingIntegrationTest {
         assertThat(claims.claim(second.commandId(), UUID.randomUUID().toString(), now, now.plusSeconds(60))).isTrue();
         assertThat(jdbc.queryForObject("SELECT status FROM sq_response_execution WHERE execution_id=?", String.class, first.executionId())).isEqualTo("WAITING_INPUT");
         assertThat(jdbc.queryForObject("SELECT status FROM sq_interaction WHERE interaction_id=?", String.class, interaction)).isEqualTo("OPEN");
-        var other = messages.accept(user, null, "other", new MessageCreateRequest("另一会话", List.of()));
+        var other = messages.accept(user, null, "other", new MessageCreateDTO("另一会话", List.of()));
         jdbc.update("UPDATE sq_command SET due_at='2000-01-01' WHERE command_id=?", other.commandId());
         assertThat(claims.claim(other.commandId(), UUID.randomUUID().toString(), now, now.plusSeconds(60))).isTrue();
         jdbc.update("UPDATE sq_conversation SET generation=generation+1 WHERE conversation_id=?", first.conversationId());
-        var nextGeneration = messages.accept(user, first.conversationId(), "next-generation", new MessageCreateRequest("新授权代际", List.of()));
+        var nextGeneration = messages.accept(user, first.conversationId(), "next-generation", new MessageCreateDTO("新授权代际", List.of()));
         jdbc.update("UPDATE sq_command SET due_at='2000-01-01' WHERE command_id=?", nextGeneration.commandId());
         assertThat(claims.claim(nextGeneration.commandId(), UUID.randomUUID().toString(), now, now.plusSeconds(60))).isTrue();
     }
@@ -94,7 +94,7 @@ class MessageOrderingIntegrationTest {
 
     static void verifyConcurrentCancel(ConfigurableApplicationContext context) throws Exception {
         String user = UUID.randomUUID().toString();
-        var message = context.getBean(MessageAcceptanceService.class).accept(user, null, "cancel-race", new MessageCreateRequest("消息", List.of()));
+        var message = context.getBean(MessageAcceptanceService.class).accept(user, null, "cancel-race", new MessageCreateDTO("消息", List.of()));
         JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
         jdbc.update("UPDATE sq_command SET due_at='2000-01-01' WHERE command_id=?", message.commandId());
         CountDownLatch start = new CountDownLatch(1);
@@ -124,14 +124,14 @@ class MessageOrderingIntegrationTest {
         JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
         jdbc.update("UPDATE sq_goal_task SET status='RUNNING', version=version+1 WHERE task_id=?", task);
         var messages = context.getBean(MessageAcceptanceService.class);
-        var query = messages.accept(user, conversation, "progress", new MessageCreateRequest("目前进展如何", List.of()));
+        var query = messages.accept(user, conversation, "progress", new MessageCreateDTO("目前进展如何", List.of()));
         String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, query.executionId());
         var contexts = context.getBean(ResponseContextService.class);
         var snapshot = contexts.freeze(user, binding);
         String replySession = jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=?", String.class, binding);
         assertThatThrownBy(() -> context.getBean(ContextSnapshotService.class).prepare(user, replySession, "draft", "spoof"))
                 .isInstanceOfSatisfying(RuntimeBusinessException.class, exception -> assertThat(exception.code()).isEqualTo(RuntimeExceptionCode.NOT_FOUND));
-        PlanPublish attempted = new PlanPublish("spoof-plan", 0, List.of(new PlanNode("draft", "writer", "1", "目标",
+        PlanPublishBO attempted = new PlanPublishBO("spoof-plan", 0, List.of(new PlanNodeBO("draft", "writer", "1", "目标",
                 UUID.randomUUID().toString(), List.of(), true, 1)), "ALL_REQUIRED", List.of("完成"));
         assertThatThrownBy(() -> context.getBean(PlanService.class).publish(user, replySession, attempted))
                 .isInstanceOfSatisfying(RuntimeBusinessException.class, exception -> assertThat(exception.code()).isEqualTo(RuntimeExceptionCode.NOT_FOUND));
@@ -140,7 +140,7 @@ class MessageOrderingIntegrationTest {
         jdbc.update("UPDATE sq_goal_task SET status='WAITING_INPUT', version=version+1 WHERE task_id=?", task);
         assertThat(contexts.freeze(user, binding)).isEqualTo(snapshot);
         jdbc.update("UPDATE sq_conversation SET generation=generation+1 WHERE conversation_id=?", conversation);
-        var newMessage = messages.accept(user, conversation, "new-context", new MessageCreateRequest("新代际进展", List.of()));
+        var newMessage = messages.accept(user, conversation, "new-context", new MessageCreateDTO("新代际进展", List.of()));
         String newBinding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, newMessage.executionId());
         assertThat(contexts.freeze(user, newBinding).activeTask()).isNull();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_goal_task WHERE user_id=?", Long.class, user)).isEqualTo(1);

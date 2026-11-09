@@ -1,16 +1,16 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.common.util.CanonicalJson;
-import com.agentsquad.squad.common.util.RuntimePayloads;
-import com.agentsquad.squad.domain.entity.CommandDO;
-import com.agentsquad.squad.domain.entity.ConversationDO;
-import com.agentsquad.squad.domain.entity.ExecutionScopeDO;
-import com.agentsquad.squad.domain.model.ResponseContextMessage;
-import com.agentsquad.squad.domain.entity.ResponseRuntimeDO;
-import com.agentsquad.squad.domain.dto.GoalTaskCreate;
-import com.agentsquad.squad.domain.response.TaskReceiptResponse;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.utils.CanonicalJson;
+import com.agentsquad.squad.utils.RuntimePayloads;
+import com.agentsquad.squad.po.CommandPO;
+import com.agentsquad.squad.po.ConversationPO;
+import com.agentsquad.squad.po.ExecutionScopePO;
+import com.agentsquad.squad.bo.ResponseContextMessageBO;
+import com.agentsquad.squad.po.ResponseRuntimePO;
+import com.agentsquad.squad.bo.GoalTaskCreateBO;
+import com.agentsquad.squad.vo.TaskReceiptVO;
 import com.agentsquad.squad.mapper.BindingMapper;
 import com.agentsquad.squad.mapper.CommandMapper;
 import com.agentsquad.squad.mapper.ConversationMapper;
@@ -19,9 +19,9 @@ import com.agentsquad.squad.mapper.GoalCreationMapper;
 import com.agentsquad.squad.mapper.ResponseRuntimeMapper;
 import com.agentsquad.squad.mapper.TaskEventMapper;
 import com.agentsquad.squad.mapper.TaskMapper;
-import com.agentsquad.squad.domain.entity.BudgetAccountDO;
+import com.agentsquad.squad.bo.BudgetAccountBO;
 import com.agentsquad.squad.mapper.BudgetMapper;
-import com.agentsquad.squad.domain.model.MasterAgentIdentity;
+import com.agentsquad.squad.agent.MasterAgentIdentity;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -95,31 +95,31 @@ public class GoalTaskCreationService {
      * 首次创建检查运行状态；原调用重放仅返回原收据，不重新激活已结束目标或刷新额度。
      */
     @Transactional
-    public TaskReceiptResponse create(String userId, String sessionId, GoalTaskCreate request) {
+    public TaskReceiptVO create(String userId, String sessionId, GoalTaskCreateBO request) {
         validate(request);
         userStatusGuard.requireActive(userId);
-        ExecutionScopeDO source = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), false);
+        ExecutionScopePO source = scopes.lockOwned(userId, scopes.scopeForSession(userId, sessionId), false);
         if (!"RESPONSE".equals(source.getKind())) {
             throw error(RuntimeExceptionCode.FORBIDDEN, "只有消息回复可以建立独立目标");
         }
-        ConversationDO conversation = conversations.lockOwned(userId, source.getConversationId());
+        ConversationPO conversation = conversations.lockOwned(userId, source.getConversationId());
         if (!"ACTIVE".equals(conversation.getStatus()) || conversation.getGeneration() != source.getConversationGeneration()) {
             throw error(RuntimeExceptionCode.NOT_FOUND, "来源会话已失效");
         }
         String sourceBinding = scopeMapper.findBindingBySession(userId, sessionId);
-        ResponseRuntimeDO reply = replies.lockByBinding(userId, sourceBinding);
+        ResponseRuntimePO reply = replies.lockByBinding(userId, sourceBinding);
         if (reply == null || !reply.getSourceMessageId().equals(request.sourceMessageId())) {
             throw error(RuntimeExceptionCode.FORBIDDEN, "目标来源必须是当前受权消息");
         }
         String scopeKey = "goal.create:" + source.getScopeId();
         String requestJson = RuntimePayloads.toJson(json, request);
         String hash = CanonicalJson.sha256(json, requestJson);
-        CommandDO prior = commands.findByKeyCurrent(userId, scopeKey, request.logicalKey());
+        CommandPO prior = commands.findByKeyCurrent(userId, scopeKey, request.logicalKey());
         if (prior != null) {
             if (!hash.equals(prior.getPayloadHash())) {
                 throw error(RuntimeExceptionCode.CONFLICT, "同一目标创建键的内容不一致");
             }
-            return new TaskReceiptResponse(prior.getTaskId(), prior.getCommandId(), "QUEUED");
+            return new TaskReceiptVO(prior.getTaskId(), prior.getCommandId(), "QUEUED");
         }
         if (reply.isCancellationRequested() || !Set.of("QUEUED", "RUNNING", "RECOVERING").contains(reply.getStatus())) {
             throw error(RuntimeExceptionCode.CONFLICT, "当前回复已不能创建目标");
@@ -128,10 +128,10 @@ public class GoalTaskCreationService {
             throw error(RuntimeExceptionCode.CONFLICT, "会话已有未完成目标，请先处理当前目标");
         }
 
-        ResponseContextMessage message = contexts.freeze(userId, sourceBinding).messages().getLast();
+        ResponseContextMessageBO message = contexts.freeze(userId, sourceBinding).messages().getLast();
         budgets.ensureUser(userId);
         budgets.lockUser(userId);
-        BudgetAccountDO account = budgets.lockAccount(userId, source.getScopeId());
+        BudgetAccountBO account = budgets.lockAccount(userId, source.getScopeId());
         if (account == null) {
             throw error(RuntimeExceptionCode.CONFLICT, "来源预算账户已不可用");
         }
@@ -169,10 +169,10 @@ public class GoalTaskCreationService {
                 "title", request.title(), "status", "QUEUED"));
         log.info("Master独立目标创建事实已写入 conversationId={} executionId={} taskId={} commandId={}",
                 source.getConversationId(), reply.getExecutionId(), taskId, commandId);
-        return new TaskReceiptResponse(taskId, commandId, "QUEUED");
+        return new TaskReceiptVO(taskId, commandId, "QUEUED");
     }
 
-    private void validate(GoalTaskCreate request) {
+    private void validate(GoalTaskCreateBO request) {
         if (request == null || invalid(request.logicalKey(), 160) || invalid(request.title(), 200)
                 || invalid(request.objective(), 20000) || invalid(request.sourceMessageId(), 36)) {
             throw error(RuntimeExceptionCode.VALIDATION, "目标创建参数无效");

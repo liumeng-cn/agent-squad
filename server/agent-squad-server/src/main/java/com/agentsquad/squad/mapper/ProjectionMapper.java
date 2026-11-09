@@ -1,6 +1,6 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
+import com.agentsquad.squad.bo.ProjectionTargetBO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -13,11 +13,11 @@ import java.util.List;
 @Mapper
 public interface ProjectionMapper {
 
-    List<ProjectionTargetDO> findDueTargets(@Param("now") LocalDateTime now);
+    List<ProjectionTargetBO> findDueTargets(@Param("now") LocalDateTime now);
 
-    List<ProjectionTargetDO> findReconciliationTargets(@Param("now") LocalDateTime now);
+    List<ProjectionTargetBO> findReconciliationTargets(@Param("now") LocalDateTime now);
 
-    ProjectionTargetDO findTarget(@Param("userId") String userId, @Param("bindingId") String bindingId);
+    ProjectionTargetBO findTarget(@Param("userId") String userId, @Param("bindingId") String bindingId);
 
     Long lockCursor(@Param("userId") String userId, @Param("bindingId") String bindingId);
 

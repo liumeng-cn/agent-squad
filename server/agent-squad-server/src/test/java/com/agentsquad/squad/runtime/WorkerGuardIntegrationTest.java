@@ -1,24 +1,24 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.dto.ConversationResponse;
-import com.agentsquad.squad.domain.response.TaskReceiptResponse;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.vo.ConversationVO;
+import com.agentsquad.squad.vo.TaskReceiptVO;
 import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.identity.AuthView;
-import com.agentsquad.squad.domain.entity.WorkerLaunchDO;
-import com.agentsquad.squad.domain.dto.PlanNode;
-import com.agentsquad.squad.domain.dto.PlanPublish;
-import com.agentsquad.squad.domain.dto.PlanReceipt;
+import com.agentsquad.squad.bo.WorkerLaunchBO;
+import com.agentsquad.squad.bo.PlanNodeBO;
+import com.agentsquad.squad.bo.PlanPublishBO;
+import com.agentsquad.squad.bo.PlanReceiptBO;
 import com.agentsquad.squad.service.ContextSnapshotService;
 import com.agentsquad.squad.service.PlanService;
 import com.agentsquad.squad.service.WorkerDispatchService;
 import com.agentsquad.squad.service.WorkerResultService;
 import com.agentsquad.squad.service.WorkerRecoveryService;
-import com.agentsquad.squad.integration.agentscope.NativeSubmissionReceipt;
-import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
+import com.agentsquad.squad.bo.NativeSubmissionReceiptBO;
+import com.agentsquad.squad.bo.ProjectionTargetBO;
 import com.agentsquad.squad.service.WorkerDefinitionService;
-import com.agentsquad.squad.domain.request.WorkerDefinitionCreateRequest;
+import com.agentsquad.squad.dto.WorkerDefinitionCreateDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -30,7 +30,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import com.agentsquad.squad.domain.enums.AccountRole;
+import com.agentsquad.squad.enums.AccountRole;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,11 +61,11 @@ class WorkerGuardIntegrationTest {
             ObjectMapper json = spring.getBean(ObjectMapper.class);
             JdbcTemplate jdbc = spring.getBean(JdbcTemplate.class);
 
-            ConversationResponse conversation = tasks.createConversation(userId, "Worker guard");
-            TaskReceiptResponse task = tasks.submit(userId, conversation.conversationId(),
+            ConversationVO conversation = tasks.createConversation(userId, "Worker guard");
+            TaskReceiptVO task = tasks.submit(userId, conversation.conversationId(),
                     "worker-guard", "写一段摘要");
             definitions.publish(new AuthView(userId, "admin", List.of(AccountRole.ADMIN), "csrf"),
-                    "guard-definition", new WorkerDefinitionCreateRequest(
+                    "guard-definition", new WorkerDefinitionCreateDTO(
                             "writer", "1.0.0", "写摘要",
                             json.readTree("{}"),
                             json.readTree("{\"type\":\"object\",\"required\":[\"text\"],"
@@ -77,16 +77,16 @@ class WorkerGuardIntegrationTest {
                     """, String.class, task.taskId());
             String snapshotId = snapshots.prepare(userId, masterSession,
                     "write", "guard-snapshot").snapshotId();
-            PlanReceipt plan = plans.publish(userId, masterSession,
-                    new PlanPublish("guard-plan", 0, List.of(
-                            new PlanNode("write", "writer", "1.0.0", "写摘要",
+            PlanReceiptBO plan = plans.publish(userId, masterSession,
+                    new PlanPublishBO("guard-plan", 0, List.of(
+                            new PlanNodeBO("write", "writer", "1.0.0", "写摘要",
                                     snapshotId, List.of(), true, 1)),
                             "ALL_REQUIRED", List.of("文字完成")));
             String bindingId = jdbc.queryForObject(
                     "SELECT binding_id FROM sq_worker_job WHERE job_id = ?",
                     String.class, plan.jobIds().getFirst());
 
-            WorkerLaunchDO claimed = dispatch.claim(userId, bindingId);
+            WorkerLaunchBO claimed = dispatch.claim(userId, bindingId);
             assertThat(claimed.getJobStatus()).isEqualTo("RUNNING");
             assertThatThrownBy(() -> dispatch.claim(userId, bindingId))
                     .isInstanceOf(RuntimeBusinessException.class);
@@ -108,16 +108,16 @@ class WorkerGuardIntegrationTest {
             String finishSnapshot = snapshots.prepare(userId, masterSession,
                     "finish", "finish-snapshot").snapshotId();
 
-            PlanReceipt oldPlan = plans.publish(userId, masterSession,
-                    new PlanPublish("in-flight-plan", 1, List.of(
-                            new PlanNode("write", "writer", "1.0.0", "写新摘要",
+            PlanReceiptBO oldPlan = plans.publish(userId, masterSession,
+                    new PlanPublishBO("in-flight-plan", 1, List.of(
+                            new PlanNodeBO("write", "writer", "1.0.0", "写新摘要",
                                     snapshotId, List.of(), true, 1)),
                             "ALL_REQUIRED", List.of("文字完成")));
             String oldJobId = oldPlan.jobIds().getFirst();
             String oldBindingId = jdbc.queryForObject(
                     "SELECT binding_id FROM sq_worker_job WHERE job_id = ?",
                     String.class, oldJobId);
-            WorkerLaunchDO oldWriter = dispatch.claim(userId, oldBindingId);
+            WorkerLaunchBO oldWriter = dispatch.claim(userId, oldBindingId);
             results.propose(userId, oldBindingId, oldWriter.getGuardToken(), "old-turn",
                     json.readTree("{\"text\":\"旧结果与已发生的副作用证据\"}"));
             try (ConfigurableApplicationContext peer = SpringApplication.run(AgentSquadApplication.class,
@@ -131,7 +131,7 @@ class WorkerGuardIntegrationTest {
                         .isInstanceOf(RuntimeBusinessException.class);
                 jdbc.update("UPDATE sq_worker_job SET guard_lease_until = ? WHERE job_id = ?",
                         LocalDateTime.now(ZoneOffset.UTC).minusSeconds(1), oldJobId);
-                WorkerLaunchDO newWriter = peerDispatch.claim(userId, oldBindingId);
+                WorkerLaunchBO newWriter = peerDispatch.claim(userId, oldBindingId);
                 assertThat(newWriter.getGuardToken()).isNotEqualTo(oldWriter.getGuardToken());
                 assertThatThrownBy(() -> results.propose(userId, oldBindingId,
                         oldWriter.getGuardToken(), "stale-turn",
@@ -151,10 +151,10 @@ class WorkerGuardIntegrationTest {
                 String workerSession = jdbc.queryForObject("""
                         SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id = ?
                         """, String.class, oldBindingId);
-                ProjectionTargetDO target = new ProjectionTargetDO(userId, task.taskId(), oldBindingId,
+                ProjectionTargetBO target = new ProjectionTargetBO(userId, task.taskId(), oldBindingId,
                         newWriter.getAgentId(), workerSession, 0);
                 assertThat(recovery.originalSubmitCommandId(target)).isEqualTo(oldCommandId);
-                NativeSubmissionReceipt interrupted = new NativeSubmissionReceipt(
+                NativeSubmissionReceiptBO interrupted = new NativeSubmissionReceiptBO(
                         oldCommandId, "old-turn", "old-run", "interrupted");
                 recovery.queueInterrupted(target, interrupted);
                 recovery.queueInterrupted(target, interrupted);
@@ -173,11 +173,11 @@ class WorkerGuardIntegrationTest {
                             'WRITE', 'digest', '{}', 'SUCCEEDED', '{"externalId":"test"}')
                     """, operationId, userId, task.taskId(), oldJobId, oldBindingId);
 
-            PlanReceipt newPlan = plans.publish(userId, masterSession,
-                    new PlanPublish("replacement-plan", 2, List.of(
-                            new PlanNode("write", "writer", "1.0.0", "重新写摘要",
+            PlanReceiptBO newPlan = plans.publish(userId, masterSession,
+                    new PlanPublishBO("replacement-plan", 2, List.of(
+                            new PlanNodeBO("write", "writer", "1.0.0", "重新写摘要",
                                     snapshotId, List.of(), true, 1),
-                            new PlanNode("finish", "writer", "1.0.0", "合并结果",
+                            new PlanNodeBO("finish", "writer", "1.0.0", "合并结果",
                                     finishSnapshot, List.of("write"), true, 1)),
                             "ALL_REQUIRED", List.of("文字完成")));
             assertThat(newPlan.planVersion()).isEqualTo(3);
@@ -207,7 +207,7 @@ class WorkerGuardIntegrationTest {
             String limitedJob = newPlan.jobIds().getFirst();
             String limitedBinding = jdbc.queryForObject(
                     "SELECT binding_id FROM sq_worker_job WHERE job_id = ?", String.class, limitedJob);
-            WorkerLaunchDO firstGuard = dispatch.claim(userId, limitedBinding);
+            WorkerLaunchBO firstGuard = dispatch.claim(userId, limitedBinding);
             String limitedCommand = jdbc.queryForObject("""
                     SELECT command_id FROM sq_command WHERE binding_id = ? AND action = 'SUBMIT'
                     """, String.class, limitedBinding);
@@ -216,9 +216,9 @@ class WorkerGuardIntegrationTest {
             String limitedSession = jdbc.queryForObject(
                     "SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id = ?",
                     String.class, limitedBinding);
-            ProjectionTargetDO limitedTarget = new ProjectionTargetDO(userId, task.taskId(), limitedBinding,
+            ProjectionTargetBO limitedTarget = new ProjectionTargetBO(userId, task.taskId(), limitedBinding,
                     firstGuard.getAgentId(), limitedSession, 0);
-            NativeSubmissionReceipt limitedReceipt = new NativeSubmissionReceipt(
+            NativeSubmissionReceiptBO limitedReceipt = new NativeSubmissionReceiptBO(
                     limitedCommand, "limited-turn", "limited-run", "interrupted");
             WorkerRecoveryService recovery = spring.getBean(WorkerRecoveryService.class);
             recovery.queueInterrupted(limitedTarget, limitedReceipt);

@@ -1,9 +1,10 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.domain.entity.TaskDirectiveDO;
-import com.agentsquad.squad.domain.entity.TaskDirectiveTargetDO;
-import com.agentsquad.squad.domain.entity.TaskDirectiveFactDO;
-import com.agentsquad.squad.domain.entity.TaskGoalStateDO;
+import com.agentsquad.squad.enums.TaskDirectiveWaitReason;
+import com.agentsquad.squad.po.TaskDirectivePO;
+import com.agentsquad.squad.bo.TaskDirectiveTargetBO;
+import com.agentsquad.squad.bo.TaskDirectiveFactBO;
+import com.agentsquad.squad.bo.TaskGoalStateBO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -17,26 +18,26 @@ import java.util.List;
  */
 @Mapper
 public interface TaskDirectiveMapper {
-    TaskDirectiveDO lock(@Param("userId") String userId, @Param("directiveId") String directiveId);
+    TaskDirectivePO lock(@Param("userId") String userId, @Param("directiveId") String directiveId);
 
-    TaskDirectiveDO findByKey(@Param("userId") String userId, @Param("scopeId") String scopeId, @Param("key") String key);
+    TaskDirectivePO findByKey(@Param("userId") String userId, @Param("scopeId") String scopeId, @Param("key") String key);
 
-    List<TaskDirectiveDO> applied(@Param("userId") String userId, @Param("taskId") String taskId, @Param("revision") long revision);
+    List<TaskDirectivePO> applied(@Param("userId") String userId, @Param("taskId") String taskId, @Param("revision") long revision);
 
-    int insert(@Param("row") TaskDirectiveDO row, @Param("now") LocalDateTime now);
+    int insert(@Param("row") TaskDirectivePO row, @Param("now") LocalDateTime now);
 
-    TaskGoalStateDO goalState(@Param("userId") String userId, @Param("taskId") String taskId);
+    TaskGoalStateBO goalState(@Param("userId") String userId, @Param("taskId") String taskId);
 
     List<String> pending(@Param("userId") String userId, @Param("taskId") String taskId);
 
-    List<TaskDirectiveTargetDO> due(@Param("now") LocalDateTime now);
+    List<TaskDirectiveTargetBO> due(@Param("now") LocalDateTime now);
 
     int defer(@Param("userId") String userId, @Param("directiveId") String directiveId, @Param("next") LocalDateTime next);
 
     int waiting(@Param("userId") String userId, @Param("directiveId") String directiveId,
-                @Param("reason") com.agentsquad.squad.domain.enums.TaskDirectiveWaitReason reason);
+                @Param("reason") TaskDirectiveWaitReason reason);
 
-    List<TaskDirectiveDO> pageInConversation(@Param("userId") String userId,
+    List<TaskDirectivePO> pageInConversation(@Param("userId") String userId,
                                               @Param("conversationId") String conversationId,
                                               @Param("generation") long generation,
                                               @Param("first") long first, @Param("last") long last);
@@ -56,11 +57,11 @@ public interface TaskDirectiveMapper {
 
     List<String> openInteractions(@Param("userId") String userId, @Param("scopeId") String scopeId);
 
-    List<TaskDirectiveFactDO> latestFacts(@Param("userId") String userId, @Param("taskId") String taskId);
+    List<TaskDirectiveFactBO> latestFacts(@Param("userId") String userId, @Param("taskId") String taskId);
 
     Long lastReplacement(@Param("userId") String userId, @Param("taskId") String taskId);
 
-    default List<TaskDirectiveDO> effectiveApplied(String userId, String taskId) {
+    default List<TaskDirectivePO> effectiveApplied(String userId, String taskId) {
         Long revision = lastReplacement(userId, taskId);
         return applied(userId, taskId, revision == null ? 0 : revision);
     }

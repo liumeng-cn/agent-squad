@@ -1,9 +1,9 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
-import com.agentsquad.squad.domain.entity.ResponseRuntimeDO;
-import com.agentsquad.squad.domain.entity.ReplyPreviewTargetDO;
-import com.agentsquad.squad.domain.enums.ResponseCompletionProtocol;
+import com.agentsquad.squad.bo.ProjectionTargetBO;
+import com.agentsquad.squad.po.ResponseRuntimePO;
+import com.agentsquad.squad.bo.ReplyPreviewTargetBO;
+import com.agentsquad.squad.enums.ResponseCompletionProtocol;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -22,7 +22,7 @@ public interface ResponseRuntimeMapper {
 
     String modelChoiceBySession(@Param("userId") String userId, @Param("sessionId") String sessionId);
 
-    ReplyPreviewTargetDO previewTarget(@Param("userId") String userId, @Param("sessionId") String sessionId);
+    ReplyPreviewTargetBO previewTarget(@Param("userId") String userId, @Param("sessionId") String sessionId);
 
     ResponseCompletionProtocol completionProtocol(
             @Param("userId") String userId, @Param("bindingId") String bindingId);
@@ -30,7 +30,7 @@ public interface ResponseRuntimeMapper {
     ResponseCompletionProtocol completionProtocolBySession(
             @Param("userId") String userId, @Param("sessionId") String sessionId);
 
-    ResponseRuntimeDO lockByBinding(@Param("userId") String userId, @Param("bindingId") String bindingId);
+    ResponseRuntimePO lockByBinding(@Param("userId") String userId, @Param("bindingId") String bindingId);
 
     String bindingForExecution(@Param("userId") String userId, @Param("executionId") String executionId);
 
@@ -72,5 +72,5 @@ public interface ResponseRuntimeMapper {
     String originalCommand(@Param("userId") String userId, @Param("bindingId") String bindingId);
 
     List<String> activeBindings(@Param("userId") String userId, @Param("conversationId") String conversationId);
-    List<ProjectionTargetDO> cancellationTargets(@Param("afterBinding") String afterBinding);
+    List<ProjectionTargetBO> cancellationTargets(@Param("afterBinding") String afterBinding);
 }

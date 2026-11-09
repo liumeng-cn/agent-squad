@@ -1,9 +1,9 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.domain.enums.RuntimeEventFailureCode;
-import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventInboxRow;
-import com.agentsquad.squad.domain.enums.RuntimeEventInboxStatus;
-import com.agentsquad.squad.integration.agentscope.inbox.RuntimeEventSource;
+import com.agentsquad.squad.enums.RuntimeEventFailureCode;
+import com.agentsquad.squad.po.RuntimeEventInboxPO;
+import com.agentsquad.squad.enums.RuntimeEventInboxStatus;
+import com.agentsquad.squad.bo.RuntimeEventSourceBO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -17,27 +17,27 @@ import java.time.LocalDateTime;
  */
 @Mapper
 public interface RuntimeEventInboxMapper {
-    String lockBoundSession(@Param("source") RuntimeEventSource source);
+    String lockBoundSession(@Param("source") RuntimeEventSourceBO source);
 
-    String findBoundSession(@Param("source") RuntimeEventSource source);
+    String findBoundSession(@Param("source") RuntimeEventSourceBO source);
 
-    String findBoundAgent(@Param("source") RuntimeEventSource source);
+    String findBoundAgent(@Param("source") RuntimeEventSourceBO source);
 
-    List<RuntimeEventSource> pendingSources(@Param("now") LocalDateTime now);
+    List<RuntimeEventSourceBO> pendingSources(@Param("now") LocalDateTime now);
 
-    String lockBoundAgent(@Param("source") RuntimeEventSource source);
+    String lockBoundAgent(@Param("source") RuntimeEventSourceBO source);
 
-    int insertIfAbsent(@Param("event") RuntimeEventInboxRow event);
+    int insertIfAbsent(@Param("event") RuntimeEventInboxPO event);
 
-    List<RuntimeEventInboxRow> findCollisions(@Param("event") RuntimeEventInboxRow event);
+    List<RuntimeEventInboxPO> findCollisions(@Param("event") RuntimeEventInboxPO event);
 
-    RuntimeEventInboxRow findBySequence(@Param("source") RuntimeEventSource source, @Param("sequence") long sequence);
+    RuntimeEventInboxPO findBySequence(@Param("source") RuntimeEventSourceBO source, @Param("sequence") long sequence);
 
-    RuntimeEventInboxRow lockBySequence(@Param("source") RuntimeEventSource source, @Param("sequence") long sequence);
+    RuntimeEventInboxPO lockBySequence(@Param("source") RuntimeEventSourceBO source, @Param("sequence") long sequence);
 
-    int markApplied(@Param("source") RuntimeEventSource source, @Param("sequence") long sequence);
+    int markApplied(@Param("source") RuntimeEventSourceBO source, @Param("sequence") long sequence);
 
-    int recordFailure(@Param("source") RuntimeEventSource source, @Param("sequence") long sequence,
+    int recordFailure(@Param("source") RuntimeEventSourceBO source, @Param("sequence") long sequence,
                       @Param("status") RuntimeEventInboxStatus status, @Param("code") RuntimeEventFailureCode code,
                       @Param("nextAttemptAt") LocalDateTime nextAttemptAt);
 }

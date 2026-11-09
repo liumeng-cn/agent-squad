@@ -1,9 +1,9 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.domain.entity.ArtifactDO;
-import com.agentsquad.squad.domain.response.ArtifactResponse;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.po.ArtifactPO;
+import com.agentsquad.squad.vo.ArtifactVO;
 import com.agentsquad.squad.mapper.ArtifactMapper;
 import com.agentsquad.squad.mapper.TaskMapper;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
@@ -55,7 +55,7 @@ public class ArtifactService {
      * 内容校验与摘要完成后原子提交 READY；并发同键重放只返回同一产物。
      */
     @Transactional
-    public ArtifactResponse upload(String userId, String key, String name, byte[] content) {
+    public ArtifactVO upload(String userId, String key, String name, byte[] content) {
         if (key == null || key.isBlank() || key.length() > 160 || name == null || name.isBlank()
                 || name.length() > 240 || name.contains("/") || name.contains("\\")
                 || name.chars().anyMatch(value -> value < 32) || content == null || content.length > MAX_BYTES) {
@@ -72,7 +72,7 @@ public class ArtifactService {
             throw invalid("文件必须采用 UTF-8 编码");
         }
         String hash = digest(content);
-        ArtifactDO prior = mapper.findUpload(userId, key);
+        ArtifactPO prior = mapper.findUpload(userId, key);
         if (prior != null) {
             return sameUpload(userId, prior, name, hash);
         }
@@ -88,15 +88,15 @@ public class ArtifactService {
         return get(userId, id);
     }
 
-    public ArtifactResponse get(String userId, String id) {
+    public ArtifactVO get(String userId, String id) {
         return view(requireOwned(userId, id));
     }
 
     /**
      * 下载前重验资源归属、有效期和存储摘要；不返回未经完整性校验的字节。
      */
-    public ArtifactDO content(String userId, String id) {
-        ArtifactDO row = mapper.findContent(userId, id);
+    public ArtifactPO content(String userId, String id) {
+        ArtifactPO row = mapper.findContent(userId, id);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "产物不存在、已过期或无权访问");
         }
@@ -121,7 +121,7 @@ public class ArtifactService {
         }
     }
 
-    public List<ArtifactResponse> listTask(String userId, String taskId) {
+    public List<ArtifactVO> listTask(String userId, String taskId) {
         if (taskMapper.findOwned(userId, taskId) == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "目标不存在");
         }
@@ -144,7 +144,7 @@ public class ArtifactService {
         }
     }
 
-    public List<ArtifactResponse> listScope(String userId, String scopeId) {
+    public List<ArtifactVO> listScope(String userId, String scopeId) {
         scopeService.requireReadable(userId, scopeId);
         return mapper.listScopeIds(userId, scopeId).stream().map(id -> get(userId, id)).toList();
     }
@@ -157,23 +157,23 @@ public class ArtifactService {
         return mapper.listScopeIds(userId, scopeId).contains(id);
     }
 
-    private ArtifactResponse sameUpload(String userId, ArtifactDO row, String name, String hash) {
+    private ArtifactVO sameUpload(String userId, ArtifactPO row, String name, String hash) {
         if (row == null || !row.getFileName().equals(name) || !row.getSha256().equals(hash)) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "相同上传键的文件不一致");
         }
         return get(userId, row.getArtifactId());
     }
 
-    private ArtifactDO requireOwned(String userId, String id) {
-        ArtifactDO row = mapper.findOwned(userId, id);
+    private ArtifactPO requireOwned(String userId, String id) {
+        ArtifactPO row = mapper.findOwned(userId, id);
         if (row == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "产物不存在、已过期或无权访问");
         }
         return row;
     }
 
-    private ArtifactResponse view(ArtifactDO row) {
-        return new ArtifactResponse(row.getArtifactId(), row.getFileName(), row.getMediaType(), row.getSizeBytes(),
+    private ArtifactVO view(ArtifactPO row) {
+        return new ArtifactVO(row.getArtifactId(), row.getFileName(), row.getMediaType(), row.getSizeBytes(),
                 row.getSha256(), "READY", row.getExpiresAt().atOffset(ZoneOffset.UTC).toString());
     }
 

@@ -1,12 +1,12 @@
 package com.agentsquad.squad.agent.tool;
 
-import com.agentsquad.squad.domain.dto.ArtifactCommitRequest;
+import com.agentsquad.squad.bo.ArtifactCommitRequestBO;
 import com.agentsquad.squad.service.ArtifactDeliveryService;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.common.util.RuntimePayloads;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.utils.RuntimePayloads;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
-import com.agentsquad.squad.domain.model.WorkerExecutionIdentity;
+import com.agentsquad.squad.bo.WorkerExecutionIdentityBO;
 import com.agentsquad.squad.mapper.WorkerDispatchMapper;
 import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -71,7 +71,7 @@ public class CommitArtifactTool implements AgentTool {
                 return ToolResultBlock.error("缺少固定执行身份");
             }
             try {
-                ArtifactCommitRequest request = json.convertValue(param.getInput(), ArtifactCommitRequest.class);
+                ArtifactCommitRequestBO request = json.convertValue(param.getInput(), ArtifactCommitRequestBO.class);
                 String bindingId = bindings.findBindingBySession(context.getUserId(), context.getSessionId());
                 var worker = workers.findByBinding(context.getUserId(), bindingId);
                 String guard = null;
@@ -79,7 +79,7 @@ public class CommitArtifactTool implements AgentTool {
                     if (!definitions.requirePublished(worker.getWorkerKey(), worker.getWorkerVersion()).toolAllowlist().contains(getName())) {
                         throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "该Worker没有产物提交权限");
                     }
-                    var identity = context.get(WorkerExecutionIdentity.class);
+                    var identity = context.get(WorkerExecutionIdentityBO.class);
                     if (identity == null || !bindingId.equals(identity.bindingId())) {
                         throw new RuntimeBusinessException(RuntimeExceptionCode.FORBIDDEN, "缺少本次Worker领取的固定执行身份");
                     }

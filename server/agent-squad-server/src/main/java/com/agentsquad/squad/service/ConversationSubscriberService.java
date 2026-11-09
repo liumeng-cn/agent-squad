@@ -1,6 +1,6 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.domain.dto.ConversationEvent;
+import com.agentsquad.squad.bo.ConversationEventBO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -23,11 +23,11 @@ public final class ConversationSubscriberService {
     private final Executor sender;
     private final Runnable onClosed;
     private final Runnable authorize;
-    private final ArrayBlockingQueue<ConversationEvent> queue = new ArrayBlockingQueue<>(BUFFER_LIMIT);
+    private final ArrayBlockingQueue<ConversationEventBO> queue = new ArrayBlockingQueue<>(BUFFER_LIMIT);
     private final AtomicBoolean closed = new AtomicBoolean();
     private final AtomicBoolean sending = new AtomicBoolean();
     private final AtomicBoolean heartbeatPending = new AtomicBoolean();
-    private final java.util.concurrent.ConcurrentHashMap<String, com.agentsquad.squad.domain.dto.ReplyPreview> previews = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentHashMap<String, com.agentsquad.squad.bo.ReplyPreviewBO> previews = new java.util.concurrent.ConcurrentHashMap<>();
     private volatile String cursor;
 
     public ConversationSubscriberService(SseEmitter emitter, String cursor, Executor sender, Runnable onClosed, Runnable authorize) {
@@ -49,7 +49,7 @@ public final class ConversationSubscriberService {
         return closed.get();
     }
 
-    public synchronized void offer(ConversationEvent event) {
+    public synchronized void offer(ConversationEventBO event) {
         if (closed.get()) {
             return;
         }
@@ -68,7 +68,7 @@ public final class ConversationSubscriberService {
     /**
      * 每个回复只保留最新可替换预览，慢连接不会积累逐token队列。
      */
-    public void preview(com.agentsquad.squad.domain.dto.ReplyPreview preview) {
+    public void preview(com.agentsquad.squad.bo.ReplyPreviewBO preview) {
         if (closed.get()) {
             return;
         }
@@ -103,7 +103,7 @@ public final class ConversationSubscriberService {
     private void drain() {
         try {
             authorize.run();
-            ConversationEvent event;
+            ConversationEventBO event;
             while (!closed.get() && (event = queue.poll()) != null) {
                 emitter.send(SseEmitter.event().name("message")
                         .id(event.conversationId() + ":" + event.generation() + ":" + event.sequence())

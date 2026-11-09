@@ -1,12 +1,12 @@
 package com.agentsquad.squad.governance;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.dto.ConversationResponse;
-import com.agentsquad.squad.domain.response.TaskReceiptResponse;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.vo.ConversationVO;
+import com.agentsquad.squad.vo.TaskReceiptVO;
 import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.service.BudgetService;
-import com.agentsquad.squad.worker.profile.WorkerModelProfile;
+import com.agentsquad.squad.properties.WorkerModelProfile;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
@@ -42,8 +42,8 @@ class BudgetReservationConcurrencyTest {
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             BudgetService budget = context.getBean(BudgetService.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            ConversationResponse conversation = tasks.createConversation(userId, "并发预算");
-            TaskReceiptResponse task = tasks.submit(userId, conversation.conversationId(), "budget-task", "测试预算");
+            ConversationVO conversation = tasks.createConversation(userId, "并发预算");
+            TaskReceiptVO task = tasks.submit(userId, conversation.conversationId(), "budget-task", "测试预算");
 
             WorkerModelProfile profile = new WorkerModelProfile();
             profile.setPricingVersion("concurrent-v1");
@@ -98,8 +98,8 @@ class BudgetReservationConcurrencyTest {
             profile.setMaxInputTokens(50);
             profile.setMaxOutputTokens(20);
 
-            ConversationResponse firstConversation = tasks.createConversation(userId, "模型预算");
-            TaskReceiptResponse firstTask = tasks.submit(userId, firstConversation.conversationId(),
+            ConversationVO firstConversation = tasks.createConversation(userId, "模型预算");
+            TaskReceiptVO firstTask = tasks.submit(userId, firstConversation.conversationId(),
                     "model-task", "预算结算");
             String hash = "a".repeat(64);
             budget.reserveModel(userId, scopeId(jdbc, firstTask.taskId()), "model:first", hash, "default", profile);
@@ -113,8 +113,8 @@ class BudgetReservationConcurrencyTest {
                     + "FROM sq_budget_reservation WHERE task_id = ?", Long.class, firstTask.taskId());
             assertThat(consumed).isEqualTo(100L);
 
-            ConversationResponse secondConversation = tasks.createConversation(userId, "未知计费");
-            TaskReceiptResponse secondTask = tasks.submit(userId, secondConversation.conversationId(),
+            ConversationVO secondConversation = tasks.createConversation(userId, "未知计费");
+            TaskReceiptVO secondTask = tasks.submit(userId, secondConversation.conversationId(),
                     "unknown-task", "未知计费");
             budget.reserveModel(userId, scopeId(jdbc, secondTask.taskId()), "model:unknown", hash, "default", profile);
             budget.markModelUnknown(userId, scopeId(jdbc, secondTask.taskId()), "model:unknown");

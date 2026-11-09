@@ -1,20 +1,20 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.dto.GoalTaskCreate;
-import com.agentsquad.squad.domain.request.MessageCreateRequest;
-import com.agentsquad.squad.domain.response.MessageReceiptResponse;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.bo.GoalTaskCreateBO;
+import com.agentsquad.squad.dto.MessageCreateDTO;
+import com.agentsquad.squad.vo.MessageReceiptVO;
 import com.agentsquad.squad.service.FinalDeliveryService;
 import com.agentsquad.squad.service.GoalTaskCreationService;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.service.ResponseExecutionService;
 import com.agentsquad.squad.mapper.ExecutionScopeMapper;
-import com.agentsquad.squad.domain.model.NaturalReplyEvidence;
-import com.agentsquad.squad.domain.enums.ResponseExecutionStatus;
-import com.agentsquad.squad.integration.agentscope.NativeEventView;
+import com.agentsquad.squad.bo.NaturalReplyEvidenceBO;
+import com.agentsquad.squad.enums.ResponseExecutionStatus;
+import com.agentsquad.squad.bo.NativeEventViewBO;
 import com.agentsquad.squad.service.TaskEventPublishingService;
-import com.agentsquad.squad.domain.model.MasterAgentIdentity;
-import com.agentsquad.squad.domain.entity.ProjectionTargetDO;
+import com.agentsquad.squad.agent.MasterAgentIdentity;
+import com.agentsquad.squad.bo.ProjectionTargetBO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -45,7 +45,7 @@ class FinalDeliveryIntegrationTest {
             var receipt = message(context, user, null, "first");
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             var goals = context.getBean(GoalTaskCreationService.class);
-            var request = new GoalTaskCreate("goal", "两篇作文", "协作写两篇完整作文", receipt.messageId());
+            var request = new GoalTaskCreateBO("goal", "两篇作文", "协作写两篇完整作文", receipt.messageId());
             var task = goals.create(user, session(jdbc, receipt), request);
             assertThat(goals.create(user, session(jdbc, receipt), request).taskId()).isEqualTo(task.taskId());
             complete(context, user, receipt, "不应公开的两篇完整作文");
@@ -80,7 +80,7 @@ class FinalDeliveryIntegrationTest {
             assertThat(answers(jdbc, user)).isEqualTo(1);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_goal_task WHERE user_id=?", Long.class, user)).isZero();
             assertThatThrownBy(() -> context.getBean(GoalTaskCreationService.class).create(user, session(jdbc, receipt),
-                    new GoalTaskCreate("late", "迟到目标", "重复交付", receipt.messageId())))
+                    new GoalTaskCreateBO("late", "迟到目标", "重复交付", receipt.messageId())))
                     .isInstanceOf(RuntimeBusinessException.class);
         }
     }
@@ -125,7 +125,7 @@ class FinalDeliveryIntegrationTest {
                 gate.await();
                 try {
                     return context.getBean(GoalTaskCreationService.class).create(user, session(jdbc, receipt),
-                            new GoalTaskCreate("race-goal", "竞态目标", "任务交付", receipt.messageId())).taskId();
+                            new GoalTaskCreateBO("race-goal", "竞态目标", "任务交付", receipt.messageId())).taskId();
                 } catch (RuntimeBusinessException conflict) {
                     return null;
                 }
@@ -150,7 +150,7 @@ class FinalDeliveryIntegrationTest {
             var receipt = message(context, user, null, "cancelled");
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             String taskId = context.getBean(GoalTaskCreationService.class).create(user, session(jdbc, receipt),
-                    new GoalTaskCreate("cancel-goal", "取消目标", "完成工作", receipt.messageId())).taskId();
+                    new GoalTaskCreateBO("cancel-goal", "取消目标", "完成工作", receipt.messageId())).taskId();
             transaction(context).executeWithoutResult(status -> {
                 jdbc.update("UPDATE sq_goal_task SET status='CANCELLED' WHERE task_id=?", taskId);
                 context.getBean(TaskEventPublishingService.class).insertProjected(user, taskId, 2, "cancel", "task.completed",
@@ -173,7 +173,7 @@ class FinalDeliveryIntegrationTest {
             var receipt = message(context, user, null, "failed");
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             String taskId = context.getBean(GoalTaskCreationService.class).create(user, session(jdbc, receipt),
-                    new GoalTaskCreate("failed-goal", "失败目标", "完成工作", receipt.messageId())).taskId();
+                    new GoalTaskCreateBO("failed-goal", "失败目标", "完成工作", receipt.messageId())).taskId();
             transaction(context).executeWithoutResult(status -> {
                 jdbc.update("UPDATE sq_goal_task SET status='FAILED' WHERE task_id=?", taskId);
                 context.getBean(TaskEventPublishingService.class).insertProjected(user, taskId, 2, "failed-final", "answer.completed",
@@ -198,7 +198,7 @@ class FinalDeliveryIntegrationTest {
             var receipt = message(context, user, null, "revision");
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             String taskId = context.getBean(GoalTaskCreationService.class).create(user, session(jdbc, receipt),
-                    new GoalTaskCreate("revision-goal", "修订目标", "完成工作", receipt.messageId())).taskId();
+                    new GoalTaskCreateBO("revision-goal", "修订目标", "完成工作", receipt.messageId())).taskId();
             var projector = context.getBean(TaskEventPublishingService.class);
             var tx = transaction(context);
             tx.executeWithoutResult(status -> projector.insertProjected(user, taskId, 2, "original", "answer.completed",
@@ -227,7 +227,7 @@ class FinalDeliveryIntegrationTest {
         }
     }
 
-    private void complete(ConfigurableApplicationContext context, String user, MessageReceiptResponse receipt, String answer) {
+    private void complete(ConfigurableApplicationContext context, String user, MessageReceiptVO receipt, String answer) {
         JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
         String binding = jdbc.queryForObject("SELECT binding_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
         String scopeId = jdbc.queryForObject("SELECT scope_id FROM sq_response_execution WHERE execution_id=?", String.class, receipt.executionId());
@@ -235,22 +235,22 @@ class FinalDeliveryIntegrationTest {
         var service = context.getBean(ResponseExecutionService.class);
         String turn = UUID.randomUUID().toString();
         // 此处只验证交付归属竞争，使用自然回复适配器的可信输出；SDK 日志映射由独立集成测试验证。
-        var output = new NaturalReplyEvidence(
+        var output = new NaturalReplyEvidenceBO(
                 ResponseExecutionStatus.SUCCEEDED, answer, null);
-        service.accept(scope, new ProjectionTargetDO(user, null, binding, MasterAgentIdentity.AGENT_ID, session(jdbc, receipt), 0),
-                new NativeEventView(1, "end", "run/end", "run", turn, "completed", 0, java.util.Map.of("naturalOutput", output)));
+        service.accept(scope, new ProjectionTargetBO(user, null, binding, MasterAgentIdentity.AGENT_ID, session(jdbc, receipt), 0),
+                new NativeEventViewBO(1, "end", "run/end", "run", turn, "completed", 0, java.util.Map.of("naturalOutput", output)));
     }
 
-    private MessageReceiptResponse message(ConfigurableApplicationContext context, String user, String conversation, String key) {
+    private MessageReceiptVO message(ConfigurableApplicationContext context, String user, String conversation, String key) {
         return context.getBean(MessageAcceptanceService.class).accept(user, conversation, key,
-                new MessageCreateRequest("写两篇作文", List.of()));
+                new MessageCreateDTO("写两篇作文", List.of()));
     }
 
     private long answers(JdbcTemplate jdbc, String user) {
         return jdbc.queryForObject("SELECT COUNT(*) FROM sq_message WHERE user_id=? AND role='ASSISTANT'", Long.class, user);
     }
 
-    private String session(JdbcTemplate jdbc, MessageReceiptResponse receipt) {
+    private String session(JdbcTemplate jdbc, MessageReceiptVO receipt) {
         return jdbc.queryForObject("SELECT framework_session_id FROM sq_runtime_binding WHERE binding_id=(SELECT binding_id FROM sq_response_execution WHERE execution_id=?)", String.class, receipt.executionId());
     }
 

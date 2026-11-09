@@ -1,10 +1,10 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.domain.dto.ConversationResponse;
-import com.agentsquad.squad.domain.response.TaskReceiptResponse;
+import com.agentsquad.squad.vo.ConversationVO;
+import com.agentsquad.squad.vo.TaskReceiptVO;
 import com.agentsquad.squad.service.GoalTaskService;
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.SpringApplication;
@@ -33,10 +33,10 @@ class GoalTaskPersistenceTest {
         };
         String userId = "00000000-0000-0000-0000-000000000001";
         String otherUser = "00000000-0000-0000-0000-000000000002";
-        TaskReceiptResponse receipt;
+        TaskReceiptVO receipt;
         try (ConfigurableApplicationContext first = SpringApplication.run(AgentSquadApplication.class, properties)) {
             GoalTaskService service = first.getBean(GoalTaskService.class);
-            ConversationResponse conversation = service.createConversation(userId, "服务排障");
+            ConversationVO conversation = service.createConversation(userId, "服务排障");
             receipt = service.submit(userId, conversation.conversationId(), "request-1", "检查错误日志");
             assertThat(service.submit(userId, conversation.conversationId(), "request-1", "检查错误日志"))
                     .isEqualTo(receipt);

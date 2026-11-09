@@ -4,10 +4,10 @@ import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.identity.UserContext;
 import com.agentsquad.squad.service.ConnectionService;
 import jakarta.servlet.http.HttpServletRequest;
-import com.agentsquad.squad.domain.request.ConnectionCreateRequest;
-import com.agentsquad.squad.domain.response.ConnectionPageResponse;
-import com.agentsquad.squad.domain.dto.ConnectionResponse;
-import com.agentsquad.squad.domain.request.ConnectionUpdateRequest;
+import com.agentsquad.squad.dto.ConnectionCreateDTO;
+import com.agentsquad.squad.vo.ConnectionPageVO;
+import com.agentsquad.squad.vo.ConnectionVO;
+import com.agentsquad.squad.dto.ConnectionUpdateDTO;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -28,10 +28,10 @@ public class ConnectionController {
      */
     @PostMapping("/connections")
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResult<ConnectionResponse> create(
+    public ApiResult<ConnectionVO> create(
             HttpServletRequest servletRequest,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
-            @Valid @RequestBody ConnectionCreateRequest request) {
+            @Valid @RequestBody ConnectionCreateDTO request) {
         return ApiResult.success(connectionService.create(UserContext.current(servletRequest),
                 idempotencyKey, request));
     }
@@ -40,7 +40,7 @@ public class ConnectionController {
      * 分页列出当前用户的连接。
      */
     @GetMapping("/connections")
-    public ApiResult<ConnectionPageResponse> list(
+    public ApiResult<ConnectionPageVO> list(
             HttpServletRequest servletRequest,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit) {
@@ -51,7 +51,7 @@ public class ConnectionController {
      * 读取当前用户单个连接视图，仅含 secretPresent。
      */
     @GetMapping("/connections/{connectionId}")
-    public ApiResult<ConnectionResponse> get(
+    public ApiResult<ConnectionVO> get(
             HttpServletRequest servletRequest,
             @PathVariable String connectionId) {
         return ApiResult.success(connectionService.get(UserContext.current(servletRequest).userId(), connectionId));
@@ -61,11 +61,11 @@ public class ConnectionController {
      * 启停或更新策略、轮换密钥；revision 随成功更新递增。
      */
     @PatchMapping("/connections/{connectionId}")
-    public ApiResult<ConnectionResponse> update(
+    public ApiResult<ConnectionVO> update(
             HttpServletRequest servletRequest,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @PathVariable String connectionId,
-            @Valid @RequestBody ConnectionUpdateRequest request) {
+            @Valid @RequestBody ConnectionUpdateDTO request) {
         return ApiResult.success(connectionService.update(UserContext.current(servletRequest),
                 connectionId, idempotencyKey, request));
     }

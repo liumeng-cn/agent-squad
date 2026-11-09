@@ -1,0 +1,12 @@
+package com.agentsquad.squad.bo;
+
+
+import java.util.List;
+
+/**
+ * 执行固定的个人技能目录。
+ * <p>
+ * 只包含可发现描述，正文必须通过受控读取按需取得。
+ */
+public record SkillCatalogBO(String scopeId, List<SkillReferenceBO> skills) {
+}

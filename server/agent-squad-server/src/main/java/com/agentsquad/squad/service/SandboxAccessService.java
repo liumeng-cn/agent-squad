@@ -1,9 +1,9 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.domain.entity.SandboxBindingDO;
-import com.agentsquad.squad.domain.model.SandboxExecutionContext;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.enums.RuntimeExceptionCode;
+import com.agentsquad.squad.bo.SandboxBindingBO;
+import com.agentsquad.squad.bo.SandboxExecutionContextBO;
 import com.agentsquad.squad.mapper.SandboxMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -24,17 +24,17 @@ public class SandboxAccessService {
     @Resource
     private ExecutionAuthorizationService authorization;
 
-    public SandboxExecutionContext resolve(String userId, String sessionId, String guardToken,
+    public SandboxExecutionContextBO resolve(String userId, String sessionId, String guardToken,
                                            String turnId, String toolCallId) {
         if (turnId == null || turnId.isBlank() || toolCallId == null || toolCallId.isBlank()
                 || turnId.length() > 160 || toolCallId.length() > 160) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "缺少稳定原生调用身份");
         }
-        SandboxBindingDO binding = mapper.binding(userId, sessionId);
+        SandboxBindingBO binding = mapper.binding(userId, sessionId);
         if (binding == null) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.NOT_FOUND, "运行绑定不存在");
         }
-        SandboxExecutionContext context = new SandboxExecutionContext(userId, binding.getScopeId(),
+        SandboxExecutionContextBO context = new SandboxExecutionContextBO(userId, binding.getScopeId(),
                 binding.getBindingId(), sessionId, guardToken, turnId, toolCallId);
         requireCurrent(context);
         return context;
@@ -43,10 +43,10 @@ public class SandboxAccessService {
     /**
      * 派发和提交均调用；取消、上下文撤销或旧 Worker 失权后禁止发布迟到产物。
      */
-    public void requireCurrent(SandboxExecutionContext context) {
+    public void requireCurrent(SandboxExecutionContextBO context) {
         scopes.lockOwned(context.userId(), context.scopeId(), true);
         authorization.requireBindingCurrent(context.userId(), context.bindingId());
-        SandboxBindingDO binding = mapper.binding(context.userId(), context.sessionId());
+        SandboxBindingBO binding = mapper.binding(context.userId(), context.sessionId());
         if (binding == null || !context.scopeId().equals(binding.getScopeId())
                 || !context.bindingId().equals(binding.getBindingId())
                 || "WORKER".equals(binding.getRole()) && (context.guardToken() == null

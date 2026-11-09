@@ -1,7 +1,7 @@
 package com.agentsquad.squad.mapper;
 
-import com.agentsquad.squad.domain.entity.ContextPreparationDO;
-import com.agentsquad.squad.domain.entity.ContextSnapshotDO;
+import com.agentsquad.squad.bo.ContextPreparationBO;
+import com.agentsquad.squad.po.ContextSnapshotPO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -13,15 +13,15 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface ContextSnapshotMapper {
 
-    ContextPreparationDO lockPreparation(@Param("userId") String userId,
+    ContextPreparationBO lockPreparation(@Param("userId") String userId,
                                           @Param("sessionId") String sessionId);
 
-    ContextSnapshotDO findByLogicalKey(@Param("userId") String userId,
+    ContextSnapshotPO findByLogicalKey(@Param("userId") String userId,
                                         @Param("taskId") String taskId,
                                         @Param("targetNodeKey") String targetNodeKey,
                                         @Param("logicalKey") String logicalKey);
 
-    ContextSnapshotDO findOwned(@Param("userId") String userId, @Param("taskId") String taskId,
+    ContextSnapshotPO findOwned(@Param("userId") String userId, @Param("taskId") String taskId,
                                  @Param("snapshotId") String snapshotId);
 
     int insert(@Param("snapshotId") String snapshotId, @Param("userId") String userId,

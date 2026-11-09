@@ -1,15 +1,15 @@
 package com.agentsquad.squad.runtime;
 
-import com.agentsquad.squad.common.exception.RuntimeBusinessException;
-import com.agentsquad.squad.domain.entity.TaskDirectiveDO;
-import com.agentsquad.squad.domain.entity.TaskGoalStateDO;
-import com.agentsquad.squad.domain.entity.TaskDO;
+import com.agentsquad.squad.exceptions.RuntimeBusinessException;
+import com.agentsquad.squad.po.TaskDirectivePO;
+import com.agentsquad.squad.bo.TaskGoalStateBO;
+import com.agentsquad.squad.po.TaskPO;
 import com.agentsquad.squad.mapper.TaskDirectiveMapper;
 import com.agentsquad.squad.mapper.TaskMapper;
 import com.agentsquad.squad.service.ExecutionScopeService;
-import com.agentsquad.squad.domain.entity.PlanContextDO;
-import com.agentsquad.squad.domain.dto.PlanNode;
-import com.agentsquad.squad.domain.dto.PlanPublish;
+import com.agentsquad.squad.bo.PlanContextBO;
+import com.agentsquad.squad.bo.PlanNodeBO;
+import com.agentsquad.squad.bo.PlanPublishBO;
 import com.agentsquad.squad.mapper.PlanMapper;
 import com.agentsquad.squad.service.PlanService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,14 +43,14 @@ class PlanPendingDirectiveTest {
         ReflectionTestUtils.setField(service, "executionScopes", scopes);
         ReflectionTestUtils.setField(service, "objectMapper", json);
         when(plans.lockMasterContext("user", "session")).thenReturn(
-                new PlanContextDO("user", "task", "binding", 0, "RUNNING", false, 1, "ACTIVE"));
-        when(directives.goalState("user", "task")).thenReturn(new TaskGoalStateDO(1, "{}"));
+                new PlanContextBO("user", "task", "binding", 0, "RUNNING", false, 1, "ACTIVE"));
+        when(directives.goalState("user", "task")).thenReturn(new TaskGoalStateBO(1, "{}"));
         when(directives.pending("user", "task")).thenReturn(List.of("first", "second"));
-        TaskDO task = mock(TaskDO.class);
+        TaskPO task = mock(TaskPO.class);
         when(task.getVersion()).thenReturn(9L);
         when(tasks.lockOwnedRow("user", "task")).thenReturn(task);
         for (String id : List.of("first", "second")) {
-            TaskDirectiveDO row = mock(TaskDirectiveDO.class);
+            TaskDirectivePO row = mock(TaskDirectivePO.class);
             when(row.getDirectiveId()).thenReturn(id);
             when(row.getTaskId()).thenReturn("task");
             when(row.getStatus()).thenReturn("ACCEPTED");
@@ -59,12 +59,12 @@ class PlanPendingDirectiveTest {
             when(row.getExpectedVersion()).thenReturn(2L);
             when(directives.lock("user", id)).thenReturn(row);
         }
-        PlanPublish request = new PlanPublish("plan", 0,
-                List.of(new PlanNode("node", "worker", "v1", "goal", "snapshot", List.of(), true, 0)),
+        PlanPublishBO request = new PlanPublishBO("plan", 0,
+                List.of(new PlanNodeBO("node", "worker", "v1", "goal", "snapshot", List.of(), true, 0)),
                 "ALL_REQUIRED", List.of("done"));
         RuntimeBusinessException failure = assertThrows(RuntimeBusinessException.class,
                 () -> service.publish("user", "session", request));
-        var pending = (com.agentsquad.squad.common.exception.PendingDirectivesException) failure;
+        var pending = (com.agentsquad.squad.exceptions.PendingDirectivesException) failure;
         assertThat(pending.directives()).hasSize(2);
         assertThat(pending.directives().get(0).directiveId()).isEqualTo("first");
         assertThat(pending.directives().get(1).directiveId()).isEqualTo("second");

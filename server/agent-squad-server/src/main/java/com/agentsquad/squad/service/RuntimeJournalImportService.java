@@ -1,8 +1,8 @@
 package com.agentsquad.squad.service;
 
-import com.agentsquad.squad.integration.agentscope.journal.RuntimeSessionProvider;
+import com.agentsquad.squad.agent.session.RuntimeSessionProvider;
 
-import com.agentsquad.squad.integration.agentscope.journal.RuntimeJournalImportResult;
+import com.agentsquad.squad.bo.RuntimeJournalImportResultBO;
 
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.session.AtomicSessionStorage;
@@ -34,7 +34,7 @@ public class RuntimeJournalImportService {
     /**
      * 调用前必须停止旧服务。逐会话先复制内容、最后复制head，并逐事件核对；部分失败可在来源不变时重跑。
      */
-    public RuntimeJournalImportResult importWorkspace(Path root) throws IOException {
+    public RuntimeJournalImportResultBO importWorkspace(Path root) throws IOException {
         if (!Files.isDirectory(root)) {
             throw new IllegalArgumentException("旧日志目录不存在");
         }
@@ -84,7 +84,7 @@ public class RuntimeJournalImportService {
                 imported++;
             }
         }
-        return new RuntimeJournalImportResult(users, imported, objects, bytes);
+        return new RuntimeJournalImportResultBO(users, imported, objects, bytes);
     }
 
     private void requireStopped(SessionLog log) {
