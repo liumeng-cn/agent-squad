@@ -6,7 +6,7 @@ import com.agentsquad.squad.utils.ContentDigests;
 import com.agentsquad.squad.model.bo.AcceptedModelChoiceBO;
 import com.agentsquad.squad.enums.ReasoningAdapter;
 import com.agentsquad.squad.enums.ReasoningMode;
-import com.agentsquad.squad.pending.ModelOption;
+import com.agentsquad.squad.model.vo.ModelOptionVO;
 import com.agentsquad.squad.config.properties.WorkerModelProfileProperties;
 import com.agentsquad.squad.config.properties.WorkerProfileProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -35,14 +35,14 @@ public class ModelCatalogService {
     @Resource
     private ObjectMapper json;
 
-    public List<ModelOption> list() {
+    public List<ModelOptionVO> list() {
         return registry.getModelProfiles().entrySet().stream()
                 .filter(entry -> entry.getValue().isEnabled() && present(entry.getValue().getApiKey())
                         && present(entry.getValue().getModelName()) && present(entry.getValue().getBaseUrl()))
                 .sorted(Comparator.comparing(entry -> entry.getKey()))
                 .map(entry -> {
                     var profile = registry.requirePricedModel(entry.getKey());
-                    return new ModelOption(entry.getKey(), present(profile.getDisplayName()) ? profile.getDisplayName() : profile.getModelName(),
+                    return new ModelOptionVO(entry.getKey(), present(profile.getDisplayName()) ? profile.getDisplayName() : profile.getModelName(),
                             profile.getModelName(), List.copyOf(profile.getCapabilities()), List.copyOf(profile.getReasoningModes()), profile.getDefaultReasoningMode());
                 }).toList();
     }
