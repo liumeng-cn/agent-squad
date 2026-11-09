@@ -1,23 +1,22 @@
-package com.agentsquad.squad.service;
+package com.agentsquad.squad.scheduler;
+
 
 import com.agentsquad.squad.model.po.ConversationPO;
 import com.agentsquad.squad.mapper.ConversationMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 /**
- * 会话删除异步收尾。把已无在途目标的 DELETING 会话幂等置为 DELETED。
+ * 待删除会话清理定时任务
  *
- * <p>运行中目标须等原生投影终态释放 activeTaskId 后才可被清理；
- * 存在未完成目标时会话保持 DELETING 可见阻塞，不伪装删除成功。</p>
+ * <p>扫描已进入删除流程且没有在途目标的会话，推进清理。</p>
  */
 @Component
 @Slf4j
-public class ConversationCleanupSchedulerService {
+public class ConversationCleanupTask {
 
     private static final int CLEANUP_BATCH = 50;
 
@@ -25,9 +24,8 @@ public class ConversationCleanupSchedulerService {
     private ConversationMapper conversationMapper;
 
     /**
-     * 批量清理无在途目标的删除中会话；CAS 保证并发调度下仅清理一次。
+     * 分批提交可清理会话，使用条件更新协调多个实例并发清理。
      */
-    @Scheduled(fixedDelayString = "${agentsquad.conversation.cleanup.delay-ms:2000}")
     public void cleanupDeletingConversations() {
         List<ConversationPO> deletable = conversationMapper.findDeletable(CLEANUP_BATCH);
         for (ConversationPO row : deletable) {

@@ -1,22 +1,23 @@
-package com.agentsquad.squad.service;
+package com.agentsquad.squad.scheduler;
 
-import com.agentsquad.squad.properties.AuthProperties;
+
+import com.agentsquad.squad.service.AuthRepository;
+
+import com.agentsquad.squad.config.properties.AuthProperties;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 
 /**
- * 过期会话与限流窗口清理。
+ * 认证会话清理定时任务
  *
- * <p>在调度线程分批删除，避免长事务和 event-loop 阻塞；只清理过期或撤销的认证数据，
- * 不触碰业务表和用户账号。</p>
+ * <p>分批清理过期或已撤销的登录会话及陈旧的登录限流记录。</p>
  */
 @Slf4j
 @Component
-public class AuthSessionSweeper {
+public class AuthSessionCleanupTask {
 
     private static final int BATCH_SIZE = 1000;
 
@@ -26,8 +27,9 @@ public class AuthSessionSweeper {
     @Resource
     private AuthProperties authProperties;
 
-    @Scheduled(fixedDelayString = "${agentsquad.auth.cleanup-interval-ms:600000}",
-            initialDelayString = "${agentsquad.auth.cleanup-initial-delay-ms:60000}")
+    /**
+     * 以本轮开始时间为基准清理会话，并按限流窗口与锁定时长计算限流记录的清理边界。
+     */
     public void sweep() {
         LocalDateTime now = LocalDateTime.now();
         int sessions = drain(() -> authRepository.deleteExpiredSessions(now));

@@ -6,7 +6,7 @@ import com.agentsquad.squad.mapper.TaskEventMapper;
 import com.agentsquad.squad.mapper.TaskMapper;
 import com.agentsquad.squad.model.vo.ConversationVO;
 import com.agentsquad.squad.model.vo.TaskReceiptVO;
-import com.agentsquad.squad.service.ConversationCleanupSchedulerService;
+import com.agentsquad.squad.scheduler.ConversationCleanupTask;
 import com.agentsquad.squad.service.ConversationDeletionService;
 import com.agentsquad.squad.service.GoalTaskService;
 import org.junit.jupiter.api.Test;
@@ -38,7 +38,7 @@ class ConversationDeletionTaskSettleTest {
         try (ConfigurableApplicationContext context = SpringApplication.run(AgentSquadApplication.class, properties)) {
             GoalTaskService goalTaskService = context.getBean(GoalTaskService.class);
             ConversationDeletionService deletionService = context.getBean(ConversationDeletionService.class);
-            ConversationCleanupSchedulerService cleanupScheduler = context.getBean(ConversationCleanupSchedulerService.class);
+            ConversationCleanupTask cleanupScheduler = context.getBean(ConversationCleanupTask.class);
 
             ConversationVO conversation = goalTaskService.createConversation(userId, "删除收尾");
             TaskReceiptVO receipt = goalTaskService.submit(userId, conversation.conversationId(),

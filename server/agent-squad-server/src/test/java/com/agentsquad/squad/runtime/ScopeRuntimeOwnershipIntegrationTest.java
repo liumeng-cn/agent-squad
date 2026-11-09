@@ -2,7 +2,7 @@ package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.agent.middleware.ModelBudgetMiddleware;
-import com.agentsquad.squad.config.properties.WorkerProfileRegistry;
+import com.agentsquad.squad.config.properties.WorkerProfileProperties;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.identity.AuthView;
@@ -225,7 +225,7 @@ class ScopeRuntimeOwnershipIntegrationTest {
         assertThatThrownBy(() -> budget.reserve(userId, second.scopeId(), "two", "TOOL", 40, "tester"))
                 .isInstanceOf(RuntimeBusinessException.class);
         budget.reserveModel(userId, second.scopeId(), "unknown-model", "a".repeat(64), "default",
-                context.getBean(WorkerProfileRegistry.class).requireExecutableModel("default"));
+                context.getBean(WorkerProfileProperties.class).requireExecutableModel("default"));
         budget.markModelUnknown(userId, second.scopeId(), "unknown-model");
         assertThatThrownBy(() -> budget.reserve(userId, first.scopeId(), "three", "TOOL", 11, "tester"))
                 .isInstanceOf(RuntimeBusinessException.class);

@@ -1,5 +1,6 @@
 package com.agentsquad.squad.agent;
 
+
 import com.agentsquad.squad.agent.middleware.ExecutionContextMiddleware;
 import com.agentsquad.squad.agent.skill.PlatformSkillVisibility;
 import com.agentsquad.squad.model.bo.WorkerAgentHandleBO;
@@ -23,9 +24,9 @@ import com.agentsquad.squad.service.WorkerDispatchService;
 import com.agentsquad.squad.service.WorkerResultService;
 import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.agentsquad.squad.model.vo.WorkerDefinitionVO;
-import com.agentsquad.squad.config.properties.WorkerModelProfile;
-import com.agentsquad.squad.config.properties.WorkerProfileRegistry;
-import com.agentsquad.squad.config.properties.WorkerRuntimeProfile;
+import com.agentsquad.squad.config.properties.WorkerModelProfileProperties;
+import com.agentsquad.squad.config.properties.WorkerProfileProperties;
+import com.agentsquad.squad.config.properties.WorkerRuntimeProfileProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.RuntimeContext;
@@ -47,7 +48,6 @@ import jakarta.annotation.Resource;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitialization;
 import org.springframework.stereotype.Component;
-import org.springframework.scheduling.annotation.Scheduled;
 
 import javax.sql.DataSource;
 import java.time.Duration;
@@ -88,7 +88,7 @@ public class WorkerFactory {
     private ContextSnapshotMapper snapshotMapper;
 
     @Resource
-    private WorkerProfileRegistry profileRegistry;
+    private WorkerProfileProperties profileRegistry;
 
     @Resource
     private ModelBudgetMiddleware budgetMiddleware;
@@ -133,7 +133,6 @@ public class WorkerFactory {
     /**
      * 完成或失效的 Worker 不再参与投影，定期释放本进程 Agent 资源。
      */
-    @Scheduled(fixedDelayString = "${agentsquad.worker.prune-delay-ms:60000}")
     public void pruneFinished() {
         for (WorkerAgentHandleBO handle : active.values()) {
             WorkerLaunchBO job = dispatchMapper.findByBinding(handle.userId(), handle.bindingId());
@@ -216,8 +215,8 @@ public class WorkerFactory {
                 || !sandboxEnabled && !definition.toolAllowlist().isEmpty()) {
             throw new IllegalStateException("Worker Definition 引用了当前未注册的受控工具");
         }
-        WorkerModelProfile model = profileRegistry.requireExecutableModel(definition.modelProfileKey());
-        WorkerRuntimeProfile runtime = profileRegistry.requireRuntime(definition.runtimeProfileKey());
+        WorkerModelProfileProperties model = profileRegistry.requireExecutableModel(definition.modelProfileKey());
+        WorkerRuntimeProfileProperties runtime = profileRegistry.requireRuntime(definition.runtimeProfileKey());
         JsonNode input;
         try {
             input = RuntimePayloads.readJson(objectMapper, job.getInputJson());

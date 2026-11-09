@@ -1,8 +1,8 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.config.properties.WorkerModelProfile;
-import com.agentsquad.squad.config.properties.WorkerProfileRegistry;
+import com.agentsquad.squad.config.properties.WorkerModelProfileProperties;
+import com.agentsquad.squad.config.properties.WorkerProfileProperties;
 import com.agentsquad.squad.enums.ReasoningAdapter;
 import com.agentsquad.squad.enums.ReasoningMode;
 import com.agentsquad.squad.model.dto.MessageCreateDTO;
@@ -40,7 +40,7 @@ class DynamicReplyModelIntegrationTest {
     @Test
     void translatesQwenThinkingWithoutSparkParameters() {
         var catalog = new ModelCatalogService();
-        var profile = new WorkerModelProfile();
+        var profile = new WorkerModelProfileProperties();
         profile.setReasoningAdapter(ReasoningAdapter.QWEN_THINKING);
         var off = catalog.applyReasoning(io.agentscope.core.model.GenerateOptions.builder(), profile, ReasoningMode.OFF).build();
         var on = catalog.applyReasoning(io.agentscope.core.model.GenerateOptions.builder(), profile, ReasoningMode.ON).build();
@@ -52,8 +52,8 @@ class DynamicReplyModelIntegrationTest {
 
     @Test
     void preservesAcceptedDefaultOnlyWhenExplicitAliasMatchesExactly() {
-        var registry = new WorkerProfileRegistry();
-        var previous = new WorkerModelProfile();
+        var registry = new WorkerProfileProperties();
+        var previous = new WorkerModelProfileProperties();
         previous.setProvider("OPENAI_COMPATIBLE");
         previous.setModelName("previous");
         previous.setBaseUrl("http://localhost/model");
@@ -67,7 +67,7 @@ class DynamicReplyModelIntegrationTest {
         org.springframework.test.util.ReflectionTestUtils.setField(catalog, "json", new ObjectMapper());
         var accepted = catalog.accept(null, ReasoningMode.DEFAULT);
         registry.getModelProfiles().put("previous", previous);
-        var replacement = new ObjectMapper().convertValue(previous, WorkerModelProfile.class);
+        var replacement = new ObjectMapper().convertValue(previous, WorkerModelProfileProperties.class);
         replacement.setModelName("replacement");
         registry.getModelProfiles().put("default", replacement);
         assertThat(catalog.canonicalize(accepted).modelId()).isEqualTo("previous");
@@ -134,7 +134,7 @@ class DynamicReplyModelIntegrationTest {
             assertThatThrownBy(() -> catalog.accept("second", ReasoningMode.HIGH)).isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
             assertThatThrownBy(() -> catalog.accept("missing", ReasoningMode.DEFAULT)).isInstanceOf(com.agentsquad.squad.exceptions.RuntimeBusinessException.class);
             var choice = catalog.accept("second", ReasoningMode.DEFAULT);
-            var registry = context.getBean(WorkerProfileRegistry.class);
+            var registry = context.getBean(WorkerProfileProperties.class);
             registry.getModelProfiles().get("second").setApiKey("rotated-key");
             assertThat(catalog.resolve(choice).getModelName()).isEqualTo("second-model");
             registry.getModelProfiles().get("second").setModelName("silently-replaced");

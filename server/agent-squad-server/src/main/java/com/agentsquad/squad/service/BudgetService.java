@@ -3,7 +3,7 @@ package com.agentsquad.squad.service;
 import com.agentsquad.squad.mapper.BudgetMapper;
 import com.agentsquad.squad.model.bo.BudgetAccountBO;
 import com.agentsquad.squad.model.po.BudgetReservationPO;
-import com.agentsquad.squad.config.properties.WorkerModelProfile;
+import com.agentsquad.squad.config.properties.WorkerModelProfileProperties;
 import com.agentsquad.squad.exceptions.BudgetExceededException;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
@@ -70,7 +70,7 @@ public class BudgetService {
      */
     @Transactional
     public void reserveModel(String userId, String scopeId, String usageKey,
-                             String requestHash, String modelProfileKey, WorkerModelProfile profile) {
+                             String requestHash, String modelProfileKey, WorkerModelProfileProperties profile) {
         if (usageKey == null || usageKey.isBlank() || usageKey.length() > 200
                 || requestHash == null || !requestHash.matches("[0-9a-f]{64}")) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "模型预算请求键或摘要无效");
@@ -102,7 +102,7 @@ public class BudgetService {
      */
     @Transactional
     public void settleModel(String userId, String scopeId, String usageKey,
-                            WorkerModelProfile profile, long inputTokens, long outputTokens) {
+                            WorkerModelProfileProperties profile, long inputTokens, long outputTokens) {
         if (inputTokens < 0 || outputTokens < 0
                 || inputTokens > profile.getMaxInputTokens()
                 || outputTokens > profile.getMaxOutputTokens()) {
@@ -178,7 +178,7 @@ public class BudgetService {
         return account;
     }
 
-    private long cost(long inputTokens, long outputTokens, WorkerModelProfile profile) {
+    private long cost(long inputTokens, long outputTokens, WorkerModelProfileProperties profile) {
         BigInteger total = BigInteger.valueOf(inputTokens)
                 .multiply(BigInteger.valueOf(profile.getInputMicrounitsPerMillionTokens()))
                 .add(BigInteger.valueOf(outputTokens)

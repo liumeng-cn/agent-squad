@@ -1,6 +1,7 @@
 package com.agentsquad.squad.config;
 
-import com.agentsquad.squad.properties.AuthProperties;
+
+import com.agentsquad.squad.config.properties.AuthProperties;
 import jakarta.annotation.Resource;
 import jakarta.annotation.PostConstruct;
 import org.springframework.core.env.Environment;

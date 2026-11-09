@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+
 import com.agentsquad.squad.config.properties.RedisWakeupProperties;
 import com.agentsquad.squad.event.ConversationCommittedSignal;
 import com.agentsquad.squad.model.bo.ConversationWakeupNoticeBO;
@@ -16,7 +17,6 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -184,7 +184,6 @@ public class RedisConversationNotificationsService {
     /**
      * 首次订阅失败允许服务启动，后续重连；断线期间的通知由共享hub独立核对补齐。
      */
-    @Scheduled(fixedDelayString = "${agentsquad.events.redis-reconnect-delay-ms:5000}")
     public void ensureSubscribed() {
         if (listener.isRunning()) {
             return;

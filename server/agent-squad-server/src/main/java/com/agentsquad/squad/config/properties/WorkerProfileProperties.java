@@ -19,11 +19,13 @@ import java.util.Map;
 @ConfigurationProperties(prefix = "agentsquad.worker")
 @Getter
 @Setter
-public class WorkerProfileRegistry {
+public class WorkerProfileProperties {
 
-    private Map<String, WorkerModelProfile> modelProfiles = new HashMap<>();
+    /** 按配置键索引的模型档案 */
+    private Map<String, WorkerModelProfileProperties> modelProfiles = new HashMap<>();
 
-    private Map<String, WorkerRuntimeProfile> runtimeProfiles = new HashMap<>();
+    /** 按配置键索引的运行档案 */
+    private Map<String, WorkerRuntimeProfileProperties> runtimeProfiles = new HashMap<>();
 
     /**
      * 发布阶段检查引用是否已注册，不要求离线环境已填入真实模型密钥。
@@ -38,8 +40,8 @@ public class WorkerProfileRegistry {
     /**
      * 启动时再次解析模型配置，防止配置移除后默默使用其他模型。
      */
-    public WorkerModelProfile requireExecutableModel(String key) {
-        WorkerModelProfile profile = requirePricedModel(key);
+    public WorkerModelProfileProperties requireExecutableModel(String key) {
+        WorkerModelProfileProperties profile = requirePricedModel(key);
         if (!profile.isEnabled() || isBlank(profile.getModelName()) || isBlank(profile.getBaseUrl())
                 || isBlank(profile.getApiKey())) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT,
@@ -51,8 +53,8 @@ public class WorkerProfileRegistry {
     /**
      * 计划发布只校验定价和最大用量；真实密钥由执行时验证。
      */
-    public WorkerModelProfile requirePricedModel(String key) {
-        WorkerModelProfile profile = modelProfiles.get(key);
+    public WorkerModelProfileProperties requirePricedModel(String key) {
+        WorkerModelProfileProperties profile = modelProfiles.get(key);
         if (profile == null || !"OPENAI_COMPATIBLE".equals(profile.getProvider())
                 || isBlank(profile.getPricingVersion())
                 || profile.getMaxInputTokens() <= 0
@@ -68,8 +70,8 @@ public class WorkerProfileRegistry {
     /**
      * 启动时读取运行上限；定义里引用的配置缺失或非法时拒绝创建实例。
      */
-    public WorkerRuntimeProfile requireRuntime(String key) {
-        WorkerRuntimeProfile profile = runtimeProfiles.get(key);
+    public WorkerRuntimeProfileProperties requireRuntime(String key) {
+        WorkerRuntimeProfileProperties profile = runtimeProfiles.get(key);
         if (profile == null || profile.getMaxModelCalls() <= 0 || profile.getMaxToolCalls() < 0
                 || profile.getMaxRecoveryAttempts() < 0 || profile.getMaxRecoveryAttempts() > 3
                 || profile.getModelRequestTimeoutSeconds() <= 0

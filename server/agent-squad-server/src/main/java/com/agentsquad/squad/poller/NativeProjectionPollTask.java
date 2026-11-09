@@ -1,4 +1,15 @@
-package com.agentsquad.squad.service;
+package com.agentsquad.squad.poller;
+
+
+import com.agentsquad.squad.service.ExecutionAuthorizationService;
+import com.agentsquad.squad.service.ExecutionFailureService;
+import com.agentsquad.squad.service.ExecutionRestrictionService;
+import com.agentsquad.squad.service.NaturalReplyOutputReader;
+import com.agentsquad.squad.service.ResponseExecutionService;
+import com.agentsquad.squad.service.RuntimeEventConsumptionService;
+import com.agentsquad.squad.service.RuntimeEventFailureService;
+import com.agentsquad.squad.service.RuntimeEventReceiptService;
+import com.agentsquad.squad.service.WorkerRecoveryService;
 
 import com.agentsquad.squad.agent.session.NativeSessionGateway;
 import com.agentsquad.squad.model.bo.NativeSubmissionReceiptBO;
@@ -14,7 +25,6 @@ import io.agentscope.core.session.SessionEvent;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -24,12 +34,14 @@ import java.util.List;
 import com.agentsquad.squad.exceptions.RuntimeEventConsumptionException;
 
 /**
- * 从上次处理到的事件序号继续读取 AgentScope 执行事件，并依次更新业务状态。
+ * 原生会话事件投影轮询任务
+ *
+ * <p>扫描到期的 AgentScope 会话投影目标，补偿未及时处理的运行事件。</p>
  */
 @Component
 @Slf4j
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
-public class NativeProjectionPoller {
+public class NativeProjectionPollTask {
     @Resource
     private com.agentsquad.squad.observer.ExecutionTrace executionTrace;
 
@@ -73,9 +85,8 @@ public class NativeProjectionPoller {
     private WorkerRecoveryService workerRecoveryService;
 
     /**
-     * 每个 Agent 会话各自处理失败和重试，不影响其他会话。
+     * 逐会话读取并投影已提交事件，单个会话失败时独立记录和重试。
      */
-    @Scheduled(fixedDelayString = "${agentsquad.projection.poll-delay-ms:1000}")
     public void projectDue() {
         for (ProjectionTargetBO target : projectionMapper.findDueTargets(now())) {
             List<SessionEvent> events = List.of();

@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+
 import com.agentsquad.squad.exceptions.RuntimeAdmissionBusyException;
 import com.agentsquad.squad.model.bo.NativeSubmissionReceiptBO;
 
@@ -35,7 +36,6 @@ import java.util.concurrent.RejectedExecutionException;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -162,7 +162,6 @@ public class CommandDeliveryService {
     /**
      * 公平候选扫描后按容量派发；控制命令拥有独立容量，不被慢提交占满。
      */
-    @Scheduled(fixedDelayString = "#{${agentsquad.redis-wakeup.enabled:false} ? ${agentsquad.redis-wakeup.compensation-delay-ms:1000} : ${agentsquad.delivery.poll-delay-ms:1000}}")
     public void deliverDue() {
         LocalDateTime scannedAt = now();
         deliveryMapper.blockUnknownPending(scannedAt);

@@ -1,12 +1,15 @@
-package com.agentsquad.squad.service;
+package com.agentsquad.squad.scheduler;
+
+import com.agentsquad.squad.config.properties.TaskScheduleProperties;
+
+
+import com.agentsquad.squad.service.OperationUnknownService;
 
 
 import com.agentsquad.squad.model.po.OperationPO;
 import com.agentsquad.squad.mapper.OperationMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -14,12 +17,13 @@ import java.time.ZoneOffset;
 import java.util.List;
 
 /**
- * 失联执行器扫描：IN_FLIGHT 超过租约仍未出账的操作统一转 UNKNOWN，
- * 既不判失败也不自动重发，后续只能由核对流程出账。
+ * 外部操作超时扫描定时任务
+ *
+ * <p>识别租约过期且执行结果尚未确认的外部操作。</p>
  */
 @Component
 @Slf4j
-public class OperationUnknownSweeper {
+public class OperationUnknownSweepTask {
 
     @Resource
     private OperationUnknownService unknowns;
@@ -27,16 +31,15 @@ public class OperationUnknownSweeper {
     @Resource
     private OperationMapper operationMapper;
 
-    @Value("${agentsquad.operation.unknown-sweep-batch:50}")
-    private int batchSize;
+    @Resource
+    private TaskScheduleProperties taskScheduleProperties;
 
     /**
-     * 周期扫描租约过期的 IN_FLIGHT 操作并 CAS 转 UNKNOWN；版本竞争时跳过本轮。
+     * 分批扫描租约过期的执行中操作，按版本条件标记为未知，遇到并发状态变更时跳过。
      */
-    @Scheduled(fixedDelayString = "${agentsquad.operation.unknown-sweep-delay-ms:15000}")
     public void sweep() {
         List<OperationPO> expired = operationMapper.findExpiredInFlight(
-                LocalDateTime.now(ZoneOffset.UTC), batchSize);
+                LocalDateTime.now(ZoneOffset.UTC), taskScheduleProperties.getOperationUnknownSweepBatch());
         for (OperationPO row : expired) {
             if (unknowns.mark(row, row.getVersion(), "unknown-sweeper")) {
                 log.warn("IN_FLIGHT 租约过期转 UNKNOWN operationId={} taskId={} owner={}",

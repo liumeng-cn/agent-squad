@@ -1,21 +1,24 @@
-package com.agentsquad.squad.service;
+package com.agentsquad.squad.scheduler;
+
+
+import com.agentsquad.squad.service.ResponseExecutionService;
+import com.agentsquad.squad.service.TaskFinalizerService;
 
 import com.agentsquad.squad.mapper.CompletionMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * 等待任务真正停止后完成取消
- * <p>
- * 原生日志结束或未知操作核对可能晚于停止命令；独立补查避免没有新事件时永久停在取消中。
+ * 取消收尾定时任务
+ *
+ * <p>补查仍在取消中的目标和回复，等待原生执行及在途操作满足收尾条件。</p>
  */
 @Component
 @Slf4j
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
-public class CancellationSettlementSchedulerService {
+public class CancellationSettlementTask {
     private long afterId;
     private String afterBinding = "";
 
@@ -34,7 +37,9 @@ public class CancellationSettlementSchedulerService {
     @Resource
     private com.agentsquad.squad.agent.session.NativeSessionGateway gateway;
 
-    @Scheduled(fixedDelayString = "${agentsquad.cancel.settle-delay-ms:3000}")
+    /**
+     * 按游标分批检查待收尾记录，单条暂未收尾时继续检查本轮其他记录。
+     */
     public void settle() {
         var tasks = mapper.cancellingTasks(afterId);
         if (tasks.isEmpty()) {

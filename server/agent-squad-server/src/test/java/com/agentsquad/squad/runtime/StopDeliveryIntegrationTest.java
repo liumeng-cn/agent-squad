@@ -4,7 +4,7 @@ import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.agent.MasterAgentIdentity;
 import com.agentsquad.squad.mapper.*;
 import com.agentsquad.squad.service.CommandDeliveryService;
-import com.agentsquad.squad.service.ConversationCleanupSchedulerService;
+import com.agentsquad.squad.scheduler.ConversationCleanupTask;
 import com.agentsquad.squad.service.ExecutionScopeService;
 import com.agentsquad.squad.service.GoalTaskService;
 import org.junit.jupiter.api.Test;
@@ -52,7 +52,7 @@ class StopDeliveryIntegrationTest {
             TaskEventMapper taskEventMapper = context.getBean(TaskEventMapper.class);
             CommandDeliveryService deliveryService = context.getBean(CommandDeliveryService.class);
             GoalTaskService goalTaskService = context.getBean(GoalTaskService.class);
-            ConversationCleanupSchedulerService cleanupScheduler = context.getBean(ConversationCleanupSchedulerService.class);
+            ConversationCleanupTask cleanupScheduler = context.getBean(ConversationCleanupTask.class);
 
             String conversationId = UUID.randomUUID().toString();
             String taskId = UUID.randomUUID().toString();

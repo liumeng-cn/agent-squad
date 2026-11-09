@@ -1,7 +1,7 @@
 package com.agentsquad.squad.runtime;
 
 import com.agentsquad.squad.enums.AccountRole;
-import com.agentsquad.squad.service.ConversationCleanupSchedulerService;
+import com.agentsquad.squad.scheduler.ConversationCleanupTask;
 import com.agentsquad.squad.service.ConversationDeletionService;
 import com.agentsquad.squad.service.GoalTaskService;
 import com.agentsquad.squad.service.ResponseExecutionService;
@@ -70,7 +70,7 @@ class ResponseControlHttpTest {
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             context.getBean(ConversationDeletionService.class).delete(user, receipt.conversationId(), "delete",
                     tasks.getConversation(user, receipt.conversationId()).version());
-            ConversationCleanupSchedulerService cleanup = context.getBean(ConversationCleanupSchedulerService.class);
+            ConversationCleanupTask cleanup = context.getBean(ConversationCleanupTask.class);
             cleanup.cleanupDeletingConversations();
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             assertThat(jdbc.queryForObject("SELECT status FROM sq_conversation WHERE conversation_id=?", String.class, receipt.conversationId())).isEqualTo("DELETING");

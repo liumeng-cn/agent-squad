@@ -7,8 +7,8 @@ import com.agentsquad.squad.model.bo.AcceptedModelChoiceBO;
 import com.agentsquad.squad.enums.ReasoningAdapter;
 import com.agentsquad.squad.enums.ReasoningMode;
 import com.agentsquad.squad.pending.ModelOption;
-import com.agentsquad.squad.config.properties.WorkerModelProfile;
-import com.agentsquad.squad.config.properties.WorkerProfileRegistry;
+import com.agentsquad.squad.config.properties.WorkerModelProfileProperties;
+import com.agentsquad.squad.config.properties.WorkerProfileProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.model.GenerateOptions;
@@ -30,7 +30,7 @@ import java.util.Set;
 @Service
 public class ModelCatalogService {
     @Resource
-    private WorkerProfileRegistry registry;
+    private WorkerProfileProperties registry;
 
     @Resource
     private ObjectMapper json;
@@ -69,7 +69,7 @@ public class ModelCatalogService {
     /**
      * 页面选择和配置变化都不能重写在途模型；配置已变化时明确失败，不回退另一个模型。
      */
-    public WorkerModelProfile resolve(AcceptedModelChoiceBO choice) {
+    public WorkerModelProfileProperties resolve(AcceptedModelChoiceBO choice) {
         choice = canonicalize(choice);
         var profile = registry.requireExecutableModel(choice.modelId());
         if (!profile.isEnabled() || !version(profile).equals(choice.configurationVersion())) {
@@ -98,7 +98,7 @@ public class ModelCatalogService {
      * 将目录声明的思考模式翻译成供应商参数；聊天、协调与 Worker 共用，避免模型与参数协议错配。
      */
     public GenerateOptions.Builder applyReasoning(
-            GenerateOptions.Builder options, WorkerModelProfile profile, ReasoningMode mode) {
+            GenerateOptions.Builder options, WorkerModelProfileProperties profile, ReasoningMode mode) {
         if (!supported(profile.getReasoningAdapter(), mode)) {
             throw invalid("模型不支持该思考模式");
         }
@@ -135,7 +135,7 @@ public class ModelCatalogService {
         }
     }
 
-    private String version(WorkerModelProfile profile) {
+    private String version(WorkerModelProfileProperties profile) {
         try {
             return ContentDigests.sha256(json.writeValueAsString(Arrays.asList(profile.getProvider(), profile.getModelName(),
                     profile.getBaseUrl(), profile.getPricingVersion(), profile.getInputMicrounitsPerMillionTokens(),

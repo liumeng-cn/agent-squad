@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+
 import com.agentsquad.squad.config.properties.RedisWakeupProperties;
 import com.agentsquad.squad.model.bo.RuntimeEventSourceBO;
 import com.agentsquad.squad.mapper.ProjectionMapper;
@@ -19,7 +20,6 @@ import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StreamOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -93,7 +93,6 @@ public class RedisProjectionWakeup {
     /**
      * 有界领取与pending接管；业务失败不确认，最终仍由持久收件定位故障和控制重试。
      */
-    @Scheduled(fixedDelayString = "${agentsquad.redis-wakeup.projection-poll-delay-ms:200}")
     public void receive() {
         if (dispatcher.getIfAvailable() == null || backingOff()) {
             return;

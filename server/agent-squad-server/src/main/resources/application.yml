@@ -68,6 +68,25 @@ management:
         enabled: ${SQUAD_OTLP_TRACES_EXPORT_ENABLED:false}
 
 agentsquad:
+  scheduler:
+    artifact-retention-delay-ms: ${agentsquad.artifact.retention.interval-ms:3600000}
+    cancellation-settlement-delay-ms: ${agentsquad.cancel.settle-delay-ms:3000}
+    command-delivery-compensation-delay-ms: ${agentsquad.redis-wakeup.compensation-delay-ms:1000}
+    command-delivery-poll-delay-ms: ${agentsquad.delivery.poll-delay-ms:1000}
+    conversation-cleanup-delay-ms: ${agentsquad.conversation.cleanup.delay-ms:2000}
+    conversation-event-reconcile-delay-ms: ${agentsquad.events.reconcile-delay-ms:15000}
+    local-session-stop-check-delay-ms: ${agentsquad.cancel.local-check-delay-ms:500}
+    native-projection-poll-delay-ms: ${agentsquad.projection.poll-delay-ms:1000}
+    operation-unknown-sweep-batch: ${agentsquad.operation.unknown-sweep-batch:50}
+    operation-unknown-sweep-delay-ms: ${agentsquad.operation.unknown-sweep-delay-ms:15000}
+    projection-wakeup-retry-delay-ms: ${agentsquad.projection.wakeup-retry-delay-ms:15000}
+    redis-command-poll-delay-ms: ${agentsquad.redis-wakeup.poll-delay-ms:200}
+    redis-conversation-reconnect-delay-ms: ${agentsquad.events.redis-reconnect-delay-ms:5000}
+    redis-projection-poll-delay-ms: ${agentsquad.redis-wakeup.projection-poll-delay-ms:200}
+    runtime-admission-audit-delay-ms: ${agentsquad.delivery.admission.audit-delay-ms:60000}
+    sandbox-recovery-delay-ms: ${agentsquad.sandbox.recovery-interval-ms:30000}
+    task-directive-scan-delay-ms: ${agentsquad.directive.poll-delay-ms:1000}
+    worker-prune-delay-ms: ${agentsquad.worker.prune-delay-ms:60000}
   identity:
     hmac-key:
     key-id: local-v1

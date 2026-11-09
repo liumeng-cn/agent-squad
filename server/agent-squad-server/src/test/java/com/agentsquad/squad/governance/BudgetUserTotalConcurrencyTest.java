@@ -1,7 +1,7 @@
 package com.agentsquad.squad.governance;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.config.properties.WorkerModelProfile;
+import com.agentsquad.squad.config.properties.WorkerModelProfileProperties;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.vo.ConversationVO;
 import com.agentsquad.squad.model.vo.TaskReceiptVO;
@@ -50,7 +50,7 @@ class BudgetUserTotalConcurrencyTest {
             ConversationVO second = tasks.createConversation(userId, "跨scope预算二");
             TaskReceiptVO taskTwo = tasks.submit(userId, second.conversationId(), "task-two", "任务二");
 
-            WorkerModelProfile profile = new WorkerModelProfile();
+            WorkerModelProfileProperties profile = new WorkerModelProfileProperties();
             profile.setPricingVersion("user-total-v1");
             profile.setMaxInputTokens(50);
             profile.setMaxOutputTokens(10);
@@ -82,7 +82,7 @@ class BudgetUserTotalConcurrencyTest {
     }
 
     private boolean reserveModel(BudgetService budget, String userId, String scopeId,
-                                 String usageKey, String hash, WorkerModelProfile profile,
+                                 String usageKey, String hash, WorkerModelProfileProperties profile,
                                  CountDownLatch ready, CountDownLatch start) throws InterruptedException {
         ready.countDown();
         start.await();

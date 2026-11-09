@@ -1,6 +1,7 @@
 package com.agentsquad.squad.service;
 
 
+
 import com.agentsquad.squad.config.properties.RedisWakeupProperties;
 import com.agentsquad.squad.model.bo.CommandClaimContextBO;
 import com.agentsquad.squad.enums.RuntimeCommandAction;
@@ -20,7 +21,6 @@ import org.springframework.data.redis.connection.stream.StreamReadOptions;
 import org.springframework.data.redis.core.StreamOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -97,7 +97,6 @@ public class RedisCommandWakeup {
     /**
      * 控制通道先读，每批有界；容量不足的消息保持pending，接管后仍须数据库重新领取。
      */
-    @Scheduled(fixedDelayString = "${agentsquad.redis-wakeup.poll-delay-ms:200}")
     public void receive() {
         if (delivery.getIfAvailable() == null) {
             return;

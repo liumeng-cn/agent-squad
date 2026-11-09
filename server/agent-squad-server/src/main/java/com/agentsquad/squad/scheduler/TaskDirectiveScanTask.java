@@ -1,31 +1,35 @@
-package com.agentsquad.squad.service;
+package com.agentsquad.squad.scheduler;
+
+
+import com.agentsquad.squad.service.TaskDirectiveService;
 
 import com.agentsquad.squad.mapper.TaskDirectiveMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 
 /**
- * 修订协调的公平扫描入口。
- * <p>
- * 每条指令独立事务与退避；等待中的操作不刷日志，不阻塞其他会话。
+ * 目标修订扫描定时任务
+ *
+ * <p>扫描到期的目标修订，逐条交给修订服务协调。</p>
  */
 @Component
 @Slf4j
 @ConditionalOnProperty(prefix = "agentsquad.delivery", name = "enabled", havingValue = "true")
-public class TaskDirectiveSchedulerService {
+public class TaskDirectiveScanTask {
     @Resource
     private TaskDirectiveMapper mapper;
 
     @Resource
     private TaskDirectiveService service;
 
-    @Scheduled(fixedDelayString = "${agentsquad.directive.poll-delay-ms:1000}")
+    /**
+     * 按当前时间查询到期修订，单条协调异常时继续处理本轮其他修订。
+     */
     public void dispatchDue() {
         for (var candidate : mapper.due(LocalDateTime.now(ZoneOffset.UTC))) {
             try {

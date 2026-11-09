@@ -29,8 +29,8 @@ import com.agentsquad.squad.mapper.ProjectionMapper;
 import com.agentsquad.squad.mapper.ContextSnapshotMapper;
 import com.agentsquad.squad.mapper.WorkerDefinitionMapper;
 import com.agentsquad.squad.model.vo.WorkerDefinitionVO;
-import com.agentsquad.squad.config.properties.WorkerModelProfile;
-import com.agentsquad.squad.config.properties.WorkerProfileRegistry;
+import com.agentsquad.squad.config.properties.WorkerModelProfileProperties;
+import com.agentsquad.squad.config.properties.WorkerProfileProperties;
 import com.agentsquad.squad.mapper.TaskMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -102,7 +102,7 @@ public class PlanService {
     private MasterSignalService masterSignalService;
 
     @Resource
-    private WorkerProfileRegistry profileRegistry;
+    private WorkerProfileProperties profileRegistry;
 
     @Resource
     private ExecutionScopeMapper scopeMapper;
@@ -306,7 +306,7 @@ public class PlanService {
             }
             WorkerDefinitionVO definition = workerDefinitionService.requireEnabled(
                     node.workerKey(), node.workerVersion());
-            WorkerModelProfile profile = profileRegistry.requirePricedModel(definition.modelProfileKey());
+            WorkerModelProfileProperties profile = profileRegistry.requirePricedModel(definition.modelProfileKey());
             BigInteger input = BigInteger.valueOf(profile.getMaxInputTokens())
                     .multiply(BigInteger.valueOf(profile.getInputMicrounitsPerMillionTokens()));
             BigInteger output = BigInteger.valueOf(profile.getMaxOutputTokens())

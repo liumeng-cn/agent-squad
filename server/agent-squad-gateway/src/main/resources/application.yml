@@ -19,6 +19,9 @@ gateway:
   business-service-url: http://127.0.0.1:18080
 
 agentsquad:
+  scheduler:
+    auth-cleanup-delay-ms: ${agentsquad.auth.cleanup-interval-ms:600000}
+    auth-cleanup-initial-delay-ms: ${agentsquad.auth.cleanup-initial-delay-ms:60000}
   identity:
     hmac-key: ""
     key-id: local-v1

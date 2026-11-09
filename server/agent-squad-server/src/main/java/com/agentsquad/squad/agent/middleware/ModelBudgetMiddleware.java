@@ -6,8 +6,8 @@ import com.agentsquad.squad.utils.ContentDigests;
 import com.agentsquad.squad.service.BudgetService;
 import com.agentsquad.squad.mapper.BudgetMapper;
 import com.agentsquad.squad.service.UserStatusGuardService;
-import com.agentsquad.squad.config.properties.WorkerModelProfile;
-import com.agentsquad.squad.config.properties.WorkerProfileRegistry;
+import com.agentsquad.squad.config.properties.WorkerModelProfileProperties;
+import com.agentsquad.squad.config.properties.WorkerProfileProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.Agent;
@@ -51,7 +51,7 @@ public class ModelBudgetMiddleware implements MiddlewareBase {
     private BudgetService budgetService;
 
     @Resource
-    private WorkerProfileRegistry profileRegistry;
+    private WorkerProfileProperties profileRegistry;
 
     @Resource
     private ObjectMapper objectMapper;
@@ -88,7 +88,7 @@ public class ModelBudgetMiddleware implements MiddlewareBase {
                 return Flux.error(new IllegalStateException("模型调用缺少固定会话或原生回合"));
             }
             userStatusGuard.requireActive(userId);
-            WorkerModelProfile profile = profileRegistry.requireExecutableModel(profileKey);
+            WorkerModelProfileProperties profile = profileRegistry.requireExecutableModel(profileKey);
             String requestHash = requestHash(input, profileKey);
             return Mono.fromCallable(() -> failures.modelRetrySuffix(userId, sessionId))
                     .subscribeOn(Schedulers.boundedElastic()).flatMapMany(retrySuffix -> {

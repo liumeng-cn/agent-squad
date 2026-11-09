@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+
 import com.agentsquad.squad.agent.session.NativeSessionGateway;
 
 import com.agentsquad.squad.enums.RuntimeEventInboxStatus;
@@ -11,7 +12,6 @@ import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -171,7 +171,6 @@ public class RuntimeProjectionDispatcher {
     /**
      * 队列饱和与失败不立即自旋；低频重试只处理已经提交的事实。
      */
-    @Scheduled(fixedDelayString = "${agentsquad.projection.wakeup-retry-delay-ms:15000}")
     public void retryPending() {
         if (!wakeupEnabled) {
             return;

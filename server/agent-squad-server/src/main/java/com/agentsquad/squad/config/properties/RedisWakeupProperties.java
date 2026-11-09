@@ -13,8 +13,12 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "agentsquad.redis-wakeup")
 public class RedisWakeupProperties {
+    /** 是否启用当前配置项 */
     private boolean enabled;
+    /** Redis 唤醒键使用的命名空间 */
     private String namespace = "squad:local";
+    /** 唤醒队列允许保留的条目上限 */
     private int capacity = 10000;
+    /** 重新领取未确认消息前的最小空闲时间，单位毫秒 */
     private long reclaimIdleMs = 90000;
 }

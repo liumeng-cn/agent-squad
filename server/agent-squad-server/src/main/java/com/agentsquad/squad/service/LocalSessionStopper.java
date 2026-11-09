@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+
 import com.agentsquad.squad.model.bo.LocalSessionHandleBO;
 
 import com.agentsquad.squad.mapper.BindingMapper;
@@ -9,7 +10,6 @@ import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
@@ -50,7 +50,6 @@ public class LocalSessionStopper {
         return session;
     }
 
-    @Scheduled(fixedDelayString = "${agentsquad.cancel.local-check-delay-ms:500}")
     public void stopRequested() {
         for (var handle : sessions.values()) {
             if (closing.contains(handle.key())) {

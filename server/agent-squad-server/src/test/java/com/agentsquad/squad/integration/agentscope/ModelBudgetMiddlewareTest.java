@@ -2,8 +2,8 @@ package com.agentsquad.squad.integration.agentscope;
 
 import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.agent.middleware.ModelBudgetMiddleware;
-import com.agentsquad.squad.config.properties.WorkerModelProfile;
-import com.agentsquad.squad.config.properties.WorkerProfileRegistry;
+import com.agentsquad.squad.config.properties.WorkerModelProfileProperties;
+import com.agentsquad.squad.config.properties.WorkerProfileProperties;
 import com.agentsquad.squad.mapper.BudgetMapper;
 import com.agentsquad.squad.model.vo.ConversationVO;
 import com.agentsquad.squad.model.vo.TaskReceiptVO;
@@ -109,7 +109,7 @@ class ModelBudgetMiddlewareTest {
                 .userId(userId).sessionId(sessionId).build();
         runtime.put(SessionRecorder.TURN_ID_KEY, "turn-model-budget");
 
-        WorkerModelProfile profile = new WorkerModelProfile();
+        WorkerModelProfileProperties profile = new WorkerModelProfileProperties();
         profile.setProvider("OPENAI_COMPATIBLE");
         profile.setModelName("test-model");
         profile.setBaseUrl("http://localhost/test");
@@ -119,7 +119,7 @@ class ModelBudgetMiddlewareTest {
         profile.setMaxOutputTokens(10);
         profile.setInputMicrounitsPerMillionTokens(1000000);
         profile.setOutputMicrounitsPerMillionTokens(1000000);
-        WorkerProfileRegistry profiles = spring.getBean(WorkerProfileRegistry.class);
+        WorkerProfileProperties profiles = spring.getBean(WorkerProfileProperties.class);
         profiles.setModelProfiles(Map.of("default", profile));
 
         ModelBudgetMiddleware middleware = new ModelBudgetMiddleware();

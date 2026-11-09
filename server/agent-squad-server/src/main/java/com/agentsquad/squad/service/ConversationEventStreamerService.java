@@ -1,5 +1,6 @@
 package com.agentsquad.squad.service;
 
+
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
 import com.agentsquad.squad.event.ConversationCommittedSignal;
@@ -9,7 +10,6 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -155,7 +155,6 @@ public class ConversationEventStreamerService {
     /**
      * 低频会话级核对仅补漏；正常更新由提交通知触发，不再每连接500ms查库。
      */
-    @Scheduled(fixedDelayString = "${agentsquad.events.reconcile-delay-ms:15000}")
     public void reconcile() {
         hubs.values().forEach(ConversationStreamHubService::heartbeatAndReconcile);
     }

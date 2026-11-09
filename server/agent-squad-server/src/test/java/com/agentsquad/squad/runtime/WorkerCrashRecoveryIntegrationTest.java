@@ -4,6 +4,7 @@ import com.agentsquad.squad.AgentSquadApplication;
 import com.agentsquad.squad.agent.WorkerFactory;
 import com.agentsquad.squad.enums.AccountRole;
 import com.agentsquad.squad.identity.AuthView;
+import com.agentsquad.squad.poller.NativeProjectionPollTask;
 import com.agentsquad.squad.model.bo.PlanNodeBO;
 import com.agentsquad.squad.model.bo.PlanPublishBO;
 import com.agentsquad.squad.model.bo.PlanReceiptBO;
@@ -141,7 +142,7 @@ class WorkerCrashRecoveryIntegrationTest {
                 for (int attempt = 0; attempt < 100; attempt++) {
                     jdbc.update("UPDATE sq_runtime_binding SET next_projection_at = ? WHERE binding_id = ?",
                             LocalDateTime.now(ZoneOffset.UTC).minusSeconds(1), successfulBinding);
-                    first.getBean(NativeProjectionPoller.class).projectDue();
+                    first.getBean(NativeProjectionPollTask.class).projectDue();
                     if ("SUCCEEDED".equals(jdbc.queryForObject(
                             "SELECT status FROM sq_worker_job WHERE job_id = ?", String.class, successfulJobId))) {
                         break;

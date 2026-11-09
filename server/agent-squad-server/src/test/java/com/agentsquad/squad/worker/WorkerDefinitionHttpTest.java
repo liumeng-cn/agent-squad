@@ -1,7 +1,7 @@
 package com.agentsquad.squad.worker;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.config.properties.WorkerProfileRegistry;
+import com.agentsquad.squad.config.properties.WorkerProfileProperties;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.service.WorkerDefinitionService;
 import com.agentsquad.squad.testsupport.ApiResultJson;
@@ -202,7 +202,7 @@ class WorkerDefinitionHttpTest {
                             .header("Idempotency-Key", "review-profile")
                             .contentType(MediaType.APPLICATION_JSON).content(reviewDefinition))
                     .andExpect(status().isCreated());
-            WorkerProfileRegistry profiles = context.getBean(WorkerProfileRegistry.class);
+            WorkerProfileProperties profiles = context.getBean(WorkerProfileProperties.class);
             assertThat(profiles.requireExecutableModel("review").getModelName())
                     .isEqualTo("review-fixture");
             assertThat(profiles.requireRuntime("review").getMaxModelCalls()).isEqualTo(5);

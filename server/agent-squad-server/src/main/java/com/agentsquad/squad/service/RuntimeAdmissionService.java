@@ -1,11 +1,11 @@
 package com.agentsquad.squad.service;
 
+
 import com.agentsquad.squad.model.po.RuntimeAdmissionSlotPO;
 import com.agentsquad.squad.mapper.RuntimeAdmissionMapper;
 import com.agentsquad.squad.exceptions.RuntimeAdmissionBusyException;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -215,7 +215,6 @@ public class RuntimeAdmissionService {
     /**
      * 周期性只读巡检全局与用户计数；发现漂移只告警，不在原生事实未知时重建或释放占位。
      */
-    @Scheduled(fixedDelayString = "${agentsquad.delivery.admission.audit-delay-ms:60000}")
     public void auditCounters() {
         if (!enabled) {
             return;

@@ -1,7 +1,7 @@
 package com.agentsquad.squad.governance;
 
 import com.agentsquad.squad.AgentSquadApplication;
-import com.agentsquad.squad.config.properties.WorkerModelProfile;
+import com.agentsquad.squad.config.properties.WorkerModelProfileProperties;
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.model.vo.ConversationVO;
 import com.agentsquad.squad.model.vo.TaskReceiptVO;
@@ -45,7 +45,7 @@ class BudgetReservationConcurrencyTest {
             ConversationVO conversation = tasks.createConversation(userId, "并发预算");
             TaskReceiptVO task = tasks.submit(userId, conversation.conversationId(), "budget-task", "测试预算");
 
-            WorkerModelProfile profile = new WorkerModelProfile();
+            WorkerModelProfileProperties profile = new WorkerModelProfileProperties();
             profile.setPricingVersion("concurrent-v1");
             profile.setMaxInputTokens(50);
             profile.setMaxOutputTokens(10);
@@ -91,7 +91,7 @@ class BudgetReservationConcurrencyTest {
             GoalTaskService tasks = context.getBean(GoalTaskService.class);
             BudgetService budget = context.getBean(BudgetService.class);
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
-            WorkerModelProfile profile = new WorkerModelProfile();
+            WorkerModelProfileProperties profile = new WorkerModelProfileProperties();
             profile.setPricingVersion("fixture-v1");
             profile.setInputMicrounitsPerMillionTokens(1000000);
             profile.setOutputMicrounitsPerMillionTokens(1000000);
@@ -126,7 +126,7 @@ class BudgetReservationConcurrencyTest {
 
     private boolean reserveModel(BudgetService budget, String userId, String taskId,
                                  String usageKey, String profileKey, String hash,
-                                 WorkerModelProfile profile, CountDownLatch ready,
+                                 WorkerModelProfileProperties profile, CountDownLatch ready,
                                  CountDownLatch start) throws InterruptedException {
         ready.countDown();
         start.await();

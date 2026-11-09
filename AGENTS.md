@@ -38,6 +38,8 @@
 - 职责暂未确认的类统一放在 `pending` 包，明确用途后迁入对应职责包。
 - PO、BO、DTO、VO 之间需要独立转换时，使用 `converter` 包下的 MapStruct 转换器。业务判断和外部调用由 Service 处理。
 - 工具类、枚举、异常、配置和配置属性分别放在 `utils`、`enums`、`exceptions`、`config`、`properties`。观察器和转换器分别放在所属模块的 `observer` 和 `converter`。
+- 独立定时任务入口放在 `scheduler`，后台轮询入口放在 `poller`，启动任务放在 `runner`。独立的定时触发入口类统一以 `Task` 结尾。 调度配置统一使用 `agentsquad.scheduler` 前缀，配置属性集中维护在 `config.properties.TaskScheduleProperties`，配置属性类统一放在 `config.properties`。业务操作和事务留在对应 Service，组件内部的连接重试和订阅生命周期由所属组件维护。
+- 配置映射类以 `Properties` 结尾，放在所属应用的 `config.properties`，为每个字段写中文备注。使用 Spring Boot 配置绑定和自动注册，避免按 Bean 名引用。应用私有配置由所属应用维护，`common` 用于跨项目共用的类型和工具。仅对运行中可安全重新读取的配置启用刷新。
 - Agent 定义、工具、MCP 和 SDK 扩展归入 `agent` 及其子包。业务流程在所属 Service 中调用 AgentScope 公开 API，SDK 回调和协议转换按职责归属，不设置通用 AgentScope 集成层。
 
 ## 枚举与有限值约定

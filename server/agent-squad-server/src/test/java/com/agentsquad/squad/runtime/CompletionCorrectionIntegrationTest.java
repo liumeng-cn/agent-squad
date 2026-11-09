@@ -315,7 +315,7 @@ class CompletionCorrectionIntegrationTest {
             assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.getTaskId()).getStatus()).isEqualTo("CANCELLING");
             assertThat(jdbc.queryForObject("SELECT status FROM sq_sandbox_execution WHERE execution_id=?", String.class, sandbox)).isEqualTo("UNKNOWN");
             jdbc.update("UPDATE sq_sandbox_execution SET status='SUCCEEDED' WHERE execution_id=?", sandbox);
-            context.getBean(com.agentsquad.squad.service.CancellationSettlementSchedulerService.class).settle();
+            context.getBean(com.agentsquad.squad.scheduler.CancellationSettlementTask.class).settle();
             assertThat(context.getBean(TaskMapper.class).findOwned(USER_ID, target.getTaskId()).getStatus()).isEqualTo("CANCELLED");
             assertThat(jdbc.queryForObject("SELECT status FROM sq_operation WHERE operation_id=?", String.class, operation.getOperationId())).isEqualTo("SUCCEEDED");
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_worker_job WHERE task_id=?", Long.class, target.getTaskId())).isZero();

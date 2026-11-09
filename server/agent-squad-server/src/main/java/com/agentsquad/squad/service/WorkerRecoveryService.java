@@ -16,7 +16,7 @@ import com.agentsquad.squad.model.bo.PlanPublishBO;
 import com.agentsquad.squad.mapper.PlanMapper;
 import com.agentsquad.squad.mapper.ProjectionMapper;
 import com.agentsquad.squad.mapper.WorkerDispatchMapper;
-import com.agentsquad.squad.config.properties.WorkerProfileRegistry;
+import com.agentsquad.squad.config.properties.WorkerProfileProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -69,7 +69,7 @@ public class WorkerRecoveryService {
     private WorkerDefinitionService workerDefinitionService;
 
     @Resource
-    private WorkerProfileRegistry profileRegistry;
+    private WorkerProfileProperties profileRegistry;
 
     @Resource
     private MasterSignalService masterSignalService;

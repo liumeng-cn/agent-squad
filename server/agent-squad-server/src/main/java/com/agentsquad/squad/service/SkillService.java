@@ -2,7 +2,7 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.exceptions.RuntimeBusinessException;
 import com.agentsquad.squad.enums.RuntimeExceptionCode;
-import com.agentsquad.squad.config.properties.SkillPackageLimits;
+import com.agentsquad.squad.config.properties.SkillPackageProperties;
 import com.agentsquad.squad.converter.SkillFileConverter;
 import com.agentsquad.squad.model.po.SkillGrantPO;
 import com.agentsquad.squad.model.bo.SkillPackageBO;
@@ -43,7 +43,7 @@ public class SkillService {
     private SkillFileConverter skillFileConverter;
 
     @Resource
-    private SkillPackageLimits limits;
+    private SkillPackageProperties limits;
 
     @Resource
     private ObjectMapper objectMapper;

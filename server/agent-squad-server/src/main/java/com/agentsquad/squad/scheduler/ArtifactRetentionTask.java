@@ -1,22 +1,26 @@
-package com.agentsquad.squad.service;
+package com.agentsquad.squad.scheduler;
+
+
+import com.agentsquad.squad.service.ArtifactRetentionService;
 
 import jakarta.annotation.Resource;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * 显式启用的产物保留清理调度。
- * <p>
- * 默认不触碰实际数据库内容；到期下载已由读入口拒绝，运维启用后周期回收内容。
+ * 过期产物清理定时任务
+ *
+ * <p>产物保留功能启用后，由产物保留服务执行过期清理。</p>
  */
 @Component
 @ConditionalOnProperty(prefix = "agentsquad.artifact.retention", name = "enabled", havingValue = "true")
-public class ArtifactRetentionSchedulerService {
+public class ArtifactRetentionTask {
     @Resource
     private ArtifactRetentionService retention;
 
-    @Scheduled(fixedDelayString = "${agentsquad.artifact.retention.interval-ms:3600000}")
+    /**
+     * 触发一轮过期产物清理，具体清理范围由产物保留服务确定。
+     */
     public void purgeExpired() {
         retention.purgeExpired();
     }

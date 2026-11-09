@@ -10,15 +10,20 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class WorkerRuntimeProfile {
+public class WorkerRuntimeProfileProperties {
 
+    /** 一次 Worker 执行允许的模型调用次数 */
     private int maxModelCalls;
 
+    /** 一次 Worker 执行允许的工具调用次数 */
     private int maxToolCalls;
 
+    /** 一次 Worker 执行允许的恢复尝试次数 */
     private int maxRecoveryAttempts;
 
+    /** 单次模型请求超时，单位秒 */
     private int modelRequestTimeoutSeconds;
 
+    /** 单次工具调用超时，单位秒 */
     private int toolTimeoutSeconds;
 }

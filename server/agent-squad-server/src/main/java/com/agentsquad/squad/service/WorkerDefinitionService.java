@@ -13,7 +13,7 @@ import com.agentsquad.squad.model.dto.WorkerDefinitionCreateDTO;
 import com.agentsquad.squad.model.vo.WorkerDefinitionPageVO;
 import com.agentsquad.squad.model.vo.WorkerDefinitionVO;
 import com.agentsquad.squad.model.dto.WorkerStatusUpdateDTO;
-import com.agentsquad.squad.config.properties.WorkerProfileRegistry;
+import com.agentsquad.squad.config.properties.WorkerProfileProperties;
 import com.agentsquad.squad.mapper.WorkerDefinitionMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -52,7 +52,7 @@ public class WorkerDefinitionService {
     private ObjectMapper objectMapper;
 
     @Resource
-    private WorkerProfileRegistry profileRegistry;
+    private WorkerProfileProperties profileRegistry;
 
     @Resource
     private JsonSchemaValidator schemaValidator;

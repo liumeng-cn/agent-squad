@@ -4,7 +4,7 @@ import com.agentsquad.squad.vo.AuthVO;
 import com.agentsquad.squad.dto.LoginDTO;
 import com.agentsquad.squad.dto.PasswordChangeDTO;
 import com.agentsquad.squad.utils.SessionRequestSupport;
-import com.agentsquad.squad.properties.AuthProperties;
+import com.agentsquad.squad.config.properties.AuthProperties;
 import com.agentsquad.squad.service.AuthService;
 
 import com.agentsquad.squad.common.model.ApiResult;
