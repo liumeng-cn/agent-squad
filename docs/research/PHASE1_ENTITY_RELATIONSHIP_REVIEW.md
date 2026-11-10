@@ -9,7 +9,7 @@
 1. 产品配置与运行时执行记录分开。产品不重复建立 Session、Turn、Run、Message、Checkpoint、Worker、DAG 等运行事实表。
 2. Agent Definition 是产品级配置，由管理员维护；普通用户只使用已发布的 Agent 创建会话。
 3. Agent Definition 的发布版本不可变；每个 Conversation 固定绑定一个具体 Revision。
-4. Revision 与模型、工具、Skill、知识库采用明确的绑定关系，便于配置页面查询和资源引用校验。
+4. Revision 与模型、工具、Skill、知识库采用明确的引用关系，便于配置页面查询和资源引用校验。
 5. 发布时生成完整运行配置快照，供 AgentScope Builder/Workspace 装配；关系数据是产品配置来源，快照是发布产物，不是第二套可编辑配置。
 6. AgentScope 身份建议直接映射稳定产品 ID：userId = user_account.user_id；agentId = agent_definition.agent_code；sessionId = conversation.conversation_id。实际接入前仍需用当前 SDK 版本做集成验证。
 7. 知识库内容默认可以持续更新；是否要求历史会话固定知识库内容版本，作为单独产品决策，不与 Agent Definition 版本混为一谈。
@@ -23,14 +23,13 @@ erDiagram
     AGENT_DEFINITION ||--o{ CONVERSATION : selected_agent
     AGENT_DEFINITION_REVISION ||--o{ CONVERSATION : pinned_revision
 
-    AGENT_DEFINITION_REVISION ||--o{ AGENT_REVISION_MODEL_BINDING : binds
-    MODEL_PROFILE ||--o{ AGENT_REVISION_MODEL_BINDING : selected_model
-    AGENT_DEFINITION_REVISION ||--o{ AGENT_REVISION_TOOL_BINDING : binds
-    TOOL_DEFINITION ||--o{ AGENT_REVISION_TOOL_BINDING : selected_tool
-    AGENT_DEFINITION_REVISION ||--o{ AGENT_REVISION_SKILL_BINDING : binds
-    SKILL_REVISION ||--o{ AGENT_REVISION_SKILL_BINDING : selected_skill
-    AGENT_DEFINITION_REVISION ||--o{ AGENT_REVISION_KNOWLEDGE_BINDING : binds
-    KNOWLEDGE_BASE ||--o{ AGENT_REVISION_KNOWLEDGE_BINDING : selected_knowledge
+    AGENT_DEFINITION_REVISION }o--|| MODEL_PROFILE : model_ref
+    AGENT_DEFINITION_REVISION ||--o{ AGENT_REVISION_TOOL_REF : tool_refs
+    TOOL_DEFINITION ||--o{ AGENT_REVISION_TOOL_REF : tool_ref
+    AGENT_DEFINITION_REVISION ||--o{ AGENT_REVISION_SKILL_REF : skill_refs
+    SKILL_REVISION ||--o{ AGENT_REVISION_SKILL_REF : skill_revision_ref
+    AGENT_DEFINITION_REVISION ||--o{ AGENT_REVISION_KNOWLEDGE_REF : knowledge_refs
+    KNOWLEDGE_BASE ||--o{ AGENT_REVISION_KNOWLEDGE_REF : knowledge_base_ref
 
     SKILL_DEFINITION ||--o{ SKILL_REVISION : has_revisions
     KNOWLEDGE_BASE ||--o{ KNOWLEDGE_DOCUMENT : contains
@@ -38,7 +37,7 @@ erDiagram
     USER_ACCOUNT ||--o{ FILE_ASSET : created_by
 ~~~
 
-图中绑定表是产品配置关系，不是 AgentScope 运行时表。若评审后决定某类资源不需要独立查询或管理，可以再合并简化。
+图中Ref 关系表是产品配置关系，不是 AgentScope 运行时表。若评审后决定某类资源不需要独立查询或管理，可以再合并简化。
 
 ## 3. 实体职责与关系说明
 
@@ -73,24 +72,24 @@ Agent Definition 是长期稳定身份；Revision 是某次可发布的完整配
 - 被会话引用的 Revision 不允许物理删除。
 - 配置发布必须生成 runtime_config_snapshot 和 config_hash，记录发布人及发布时间。
 
-### 3.3 Revision 与资源绑定
+### 3.3 Revision 与资源引用
 
-建议用明确的绑定关系表达 Agent Revision 使用了哪些资源，而不是只把所有资源 ID 塞进一个不可查询的 JSON。
+建议用明确的引用关系表达 Agent Revision 使用了哪些资源，而不是只把所有资源 ID 塞进一个不可查询的 JSON。
 
-| 绑定实体 | 关系 | 关键职责 | 建议约束 |
+| Ref 关系实体 | 关系 | 关键职责 | 建议约束 |
 |---|---|---|---|
-| AGENT_REVISION_MODEL_BINDING | Revision N:M Model Profile | 指定主模型及其他模型用途 | 同一 Revision + model_role 唯一 |
-| AGENT_REVISION_TOOL_BINDING | Revision N:M Tool Definition | 指定可用工具及启用配置 | 同一 Revision + tool_id 唯一 |
-| AGENT_REVISION_SKILL_BINDING | Revision N:M Skill Revision | 固定使用的 Skill 内容版本 | 同一 Revision + skill_revision_id 唯一 |
-| AGENT_REVISION_KNOWLEDGE_BINDING | Revision N:M Knowledge Base | 指定可检索知识库及检索参数 | 同一 Revision + knowledge_base_id 唯一 |
+| model_ref（Revision 字段） | Revision N:M Model Profile | 指定主模型及其他模型用途 | 同一 Revision + model_role 唯一 |
+| AGENT_REVISION_TOOL_REF | Revision 1:N Tool Definition | 指定可用工具及启用配置 | 同一 Revision + tool_ref 唯一 |
+| AGENT_REVISION_SKILL_REF | Revision 1:N Skill Revision | 固定使用的 Skill 内容版本 | 同一 Revision + skill_revision_ref 唯一 |
+| AGENT_REVISION_KNOWLEDGE_REF | Revision 1:N Knowledge Base | 指定可检索知识库及检索参数 | 同一 Revision + knowledge_base_ref 唯一 |
 
-绑定记录可以包含少量本次 Agent 使用时的覆盖配置，例如工具启用状态、模型角色、知识检索 TopK。不要把模型密钥、MCP 密钥等明文放入绑定记录或快照。
+Ref 记录可以包含少量本次 Agent 使用时的覆盖配置，例如工具启用状态、模型角色、知识检索 TopK。不要把模型密钥、MCP 密钥等明文放入Ref 记录或快照。
 
-**为什么既有绑定表又有运行配置快照？**
+**为什么既有Ref 关系表又有运行配置快照？**
 
-- 绑定表服务于管理页面：查看一个 Agent 用了哪些模型、工具、Skill 和知识库，支持启停、校验和资源反查。
+- Ref 关系表服务于管理页面：查看一个 Agent 用了哪些model_ref、tool_refs、skill_refs 和 knowledge_base_refs，支持启停、校验和资源反查。
 - 发布快照服务于运行：将发布时的配置解析为完整、不可变的装配输入，避免运行时再拼装出不同结果。
-- 快照由绑定数据和 Revision 自身配置生成；不允许管理员直接编辑快照来反向修改绑定关系。
+- 快照由Ref 关系数据和 Revision 自身配置生成；不允许管理员直接编辑快照来反向修改引用关系。
 
 ### 3.4 Skill 与 Skill Revision
 
@@ -135,12 +134,12 @@ Agent Definition 是长期稳定身份；Revision 是某次可发布的完整配
 | 知识 | KNOWLEDGE_BASE | 是 | 知识库目录与检索配置 |
 | 知识 | KNOWLEDGE_DOCUMENT | 是 | 文档来源和处理状态 |
 | 文件 | FILE_ASSET | 视一期上传需求 | 文件元数据；没有上传能力可延后 |
-| 绑定 | AGENT_REVISION_MODEL_BINDING | 是 | Revision 与模型关系 |
-| 绑定 | AGENT_REVISION_TOOL_BINDING | 是 | Revision 与工具关系 |
-| 绑定 | AGENT_REVISION_SKILL_BINDING | 是 | Revision 与 Skill 版本关系 |
-| 绑定 | AGENT_REVISION_KNOWLEDGE_BINDING | 是 | Revision 与知识库关系 |
+| 绑定 | model_ref（Revision 字段） | 是 | Revision 与模型关系 |
+| 绑定 | AGENT_REVISION_TOOL_REF | 是 | Revision 与工具关系 |
+| 绑定 | AGENT_REVISION_SKILL_REF | 是 | Revision 与 Skill 版本关系 |
+| 绑定 | AGENT_REVISION_KNOWLEDGE_REF | 是 | Revision 与知识库关系 |
 
-共 14 个核心逻辑实体（含 4 个绑定实体），FILE_ASSET 可按一期文件能力决定是否进入首批。它们不是最终物理表数量；后续可以根据数据库能力和查询需求合并。
+共 14 个核心逻辑实体（含 4 个Ref 关系实体），FILE_ASSET 可按一期文件能力决定是否进入首批。它们不是最终物理表数量；后续可以根据数据库能力和查询需求合并。
 
 ## 5. 明确不纳入产品核心实体的运行数据
 
@@ -155,7 +154,7 @@ Agent Definition 是长期稳定身份；Revision 是某次可发布的完整配
 
 ## 6. 当前草案中需要修正的三个点
 
-1. **模型、工具和知识库不能只藏在 Revision 的 JSON 里。** 产品需要配置页面、资源反查和发布校验，因此建议增加绑定关系；JSON 仅作为发布后的运行配置快照。
+1. **模型、工具和知识库不能只藏在 Revision 的 JSON 里。** 产品需要配置页面、资源反查和发布校验，因此建议增加引用关系；JSON 仅作为发布后的运行配置快照。
 2. **文件不应一律按个人拥有。** 知识库和 Skill 是产品级资源，建议使用 created_by 表达创建人；用户附件另行建关联。
 3. **Agent Revision 不等于知识内容版本。** Revision 可以固定检索配置和知识库引用，但知识库文档可能继续更新。是否冻结知识内容需要独立决定。
 
@@ -164,7 +163,7 @@ Agent Definition 是长期稳定身份；Revision 是某次可发布的完整配
 | 编号 | 决策问题 | 当前建议 |
 |---|---|---|
 | R1 | 一个 Agent Definition 是否代表一个面向用户的 Master Agent？SubAgent 是否需要可复用预设？ | 一期先把 Master 定义作为产品入口；预设 SubAgent 配置放入 Revision 快照，暂不单独建 SubAgent 表。运行时自主创建的 SubAgent 由 AgentScope 管理。 |
-| R2 | Agent 是否允许配置多个模型用途？ | 允许，通过 model_role 区分主模型、视觉模型等；具体角色以 SDK 能力和产品需求为准。 |
+| R2 | Agent 是否允许配置多个模型用途？ | 一期一个 Revision 配置一个主模型，直接使用 model_ref；确有多模型需求时再增加 agent_revision_model_ref，并通过 model_role 区分用途。 |
 | R3 | 知识库是否需要版本化、历史会话是否固定知识版本？ | 一期先动态知识库；如需历史可复现，再引入 KB Revision。 |
 | R4 | 工具实现升级是否需要版本化？ | 配置快照固定非敏感工具配置；工具代码版本由应用发布版本追踪。若需独立回滚，再引入 Tool Revision。 |
 | R5 | 一期是否支持用户上传聊天附件？ | 未确认前不增加 Conversation-File 关联。 |
