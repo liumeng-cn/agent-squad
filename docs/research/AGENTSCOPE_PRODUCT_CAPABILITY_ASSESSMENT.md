@@ -1,0 +1,440 @@
+# AgentScope Java 产品能力审计与架构选型研究
+
+> 研究状态：第一轮源码审计已完成，架构结论为阶段性结论，尚未批准重构或推翻当前实现。  
+> 审计目标分支：`feat/20261103_log_optimize`  
+> 项目固定候选：AgentScope Java `2.1.0-BETA1`，上游源码基准 commit：`5451c73abe47053340683a1cc6d67b290b056648`  
+> 研究原则：先核对固定版本源码和当前项目真实实现；上游 main 的新能力单独标记，不得直接算作当前依赖已有能力。
+
+## 1. 结论先行
+
+**当前不建议推翻 AgentSquad，也不建议把现有 Worker 调度整体替换成 AgentScope 原生 SubAgent。更合理的候选方向是：保留产品级任务控制面，重新审视并收敛 Agent 运行层，尽可能让 AgentScope Harness 承担 Agent 执行、会话、事件和检查点职责。**
+
+原因：
+
+1. AgentScope Harness 已有相当完整的 Agent 执行底座：ReAct、工具、中间件、模型调用、会话日志、checkpoint、AgentSession、上下文压缩、记忆、Skill、MCP、SubAgent 等。
+2. AgentScope 原生 SubAgent 解决的是“把一个可独立处理的工作委派给另一个 Agent”，并不等同于产品需要的 GoalTask、不可变 DAG 计划、Worker 能力版本、依赖调度、业务授权、预算、结果验收和最终交付权。
+3. AgentScope 的 AgentSession 与 Session Log 能处理持久提交、排队、运行中引导、中断、待办答复、恢复和历史读取。它们比自行维护 Agent 执行状态更值得优先使用。
+4. 当前 AgentSquad 已经把 Master/Worker 的执行建立在 HarnessAgent + AgentSession + 原生 Session Log 上，并且有平台侧 Worker 任务治理、跨进程恢复协调和集成测试。它不是简单的“在 AgentScope 外重新造一套 Agent 引擎”。
+5. 当前项目显式禁用了 Master 和 Worker 的原生 SubAgent，并且 Master/Worker 的 OpenAI 模型都配置了 `.stream(false)`。前者是架构选择，后者与产品实时反馈目标存在明显冲突，必须进一步验证和处理。
+6. 固定依赖是 BETA 版本。上游 main 文档已有的能力、修复和 API 变化不能未经兼容性核查就直接纳入本项目设计。
+
+因此，当前主要问题不是“AgentScope 能不能做”，而是：**哪些属于 AgentScope 执行内核，哪些必须由 AgentSquad 作为产品控制面负责，以及现有接入是否充分使用了原生能力。**
+
+## 2. 产品目标基线
+
+本次评估围绕以下产品目标，不把实现现状反过来当成产品约束。
+
+### 2.1 两种产品入口，共用 Agent 运行底座
+
+- **客服 / 日常聊天**：连续对话、RAG 与业务知识、记忆、自主决策、必要时组织多个 Agent 并行排查；用户可以持续交流、插话、调整要求、停止执行；页面断线不应导致后台任务无故丢失。
+- **复杂任务工作台**：承接长流程调研、分析、文档/表格/演示文稿/多媒体产物等任务；展示阶段进度、执行结果、失败与恢复状态，支持人工介入和产物交付。
+- 两个入口的交互方式不同，但不应因此产生两套互不兼容的 Agent 运行体系。
+
+### 2.2 Master / SubAgent / Worker 的目标
+
+- Master 是用户持续交流的主要对象，负责理解、决策、计划、协调、验收和最终答复。
+- SubAgent 是 Master 为解决问题自主组织的协作者，可以并行调查，也可以按需创建。
+- Worker 是面向复杂任务的受控执行单元，能力、权限、输入输出和运行预算可以由平台管理。
+- 预设协作者与 Master 按任务动态组织协作者都需要评估。
+- 执行过程需要可观测、可持久化、可恢复、可停止；不能把“任务记录还在”误认为“任务已经恢复执行”。
+
+### 2.3 平台级扩展
+
+未来允许不同业务平台通过平台级配置接入：Master 提示词、平台知识、RAG、Tools/API、Skill、权限规则等。它是平台/部署级能力，不等于当前阶段开放普通用户随意创建 Agent 或修改系统提示词。
+
+## 3. 评估范围与证据等级
+
+本报告区分三类证据：
+
+- **固定版本源码/文档确认**：AgentScope Java commit `5451c73abe47053340683a1cc6d67b290b056648`，与项目固定依赖 `2.1.0-BETA1` 对应。
+- **当前项目代码确认**：目标分支 `feat/20261103_log_optimize` 上实际读取的 POM、MasterAgent、WorkerFactory、NativeSessionGateway、WorkerRecoveryService、WorkerCrashRecoveryIntegrationTest、README 和 OpenSpec 配置。
+- **待验证推断**：需要用固定依赖编译运行或故障注入验证，不能只靠文档下结论。
+
+本轮未把 AgentScope Service 作为默认方案。项目 OpenSpec 明确选择嵌入 Harness SDK，不整套引入 AgentScope Service。
+
+## 4. AgentScope 原生能力审计
+
+### 4.1 Agent 执行与 Harness
+
+HarnessAgent 基于 ReAct 执行循环，整合模型、工具、权限、中间件、工作区、Skill、MCP、记忆、上下文压缩、SubAgent 和会话能力。HarnessAgent 文档将其定位为面向持续工作的 Agent 封装；核心 ReActAgent 也可以单独使用，但若自行组合，需要自行承担更多工程集成。
+
+对本产品的意义：
+
+- 日常聊天和单次请求可以用 `call` / `streamEvents`。
+- 需要后台排队、持续执行、补充要求、中断恢复时，优先评估 `agent.session(ctx)`。
+- 不应为了“统一执行入口”把普通聊天也强行变成长任务；也不应为了 SSE 把后台任务绑定到 HTTP 请求订阅生命周期。
+
+结论：**HarnessAgent 适合作为 Agent 执行内核，AgentSquad 不需要重新实现 ReAct、模型/工具调用循环和基础 Agent 生命周期。**
+
+### 4.2 AgentSession：产品长任务的关键原生能力
+
+固定版本 `AgentSession` 源码与文档确认了以下操作：
+
+| 原生能力 | SDK 提供的行为 | 对产品的价值 | 仍需平台负责的部分 |
+|---|---|---|---|
+| `submit` | 持久接收任务，使用幂等键，进入后台队列 | 消息提交与执行解耦 | 用户消息、目标任务、业务命令的归属与权限 |
+| `tasks / await` | 查询任务状态、观察执行结果 | 后台任务状态读取 | 页面业务视图与最终任务状态 |
+| `steer` | 向指定运行中的任务补充/调整要求，在后续推理步骤生效 | 用户执行中插话 | 判断这条用户消息究竟是新任务、补充要求还是闲聊 |
+| `inject` | 保存额外材料供后续推理读取，不单独启动任务 | 补充背景材料 | 资料授权、来源、版本与有效期 |
+| `interrupt` | 请求执行在协作检查点停止 | 用户停止任务 | 取消外部副作用、工具超时和停止结果确认 |
+| `resume` | 从保存的 checkpoint 继续最新未完成任务 | 中断后续做 | 恢复前的业务核对、权限复查、恢复次数与策略 |
+| `pending / respond` | 查看待答交互并把用户答案交回原任务 | 追问、审批、工具确认 | 产品审批页面、用户身份和业务审批规则 |
+| `log / transcript / inspect` | 读取已提交执行历史、消息、待办与不确定工具调用 | 页面恢复、排障与恢复判断 | 将原生事件投影成产品事件和聊天界面模型 |
+
+重要边界：
+
+1. `AgentSession` 持有后台执行订阅，观察 HTTP 请求或 SSE 连接结束，不会自动取消后台任务。
+2. `submit` 返回的是接收回执，不是模型答案。
+3. 页面重连应该读取快照和事件，不应再次 `submit` 或重新调用 `streamEvents`。
+4. `interrupt` 是协作式停止请求，不是强制杀掉正在执行的 Java 线程或外部工具。
+5. checkpoint 能恢复 Agent 的工作状态，但不会恢复原 Java 线程、网络请求或工具内部执行进度，也不会回滚已经产生的外部副作用。
+6. 如果工具调用发生后、结果提交前进程退出，SDK 会暴露不确定工具调用；应用必须查询真实业务系统，再通过结果核对接口补交结果，不能盲目重试。
+7. 重启后使用相同 `agentId`、`userId`、`sessionId` 和日志后端重建 Agent，再调用 `session.start()` 恢复持久队列调度。start 不会自动替业务决定恢复所有 interrupted turn。
+
+**结论：AgentSession 已覆盖我们产品中相当一部分“后台会话运行管理”需求。平台不应再重复实现提交队列、会话级 steer/interrupt/respond/resume 和 Agent 执行订阅管理；但平台仍必须负责业务状态机、权限、恢复策略和副作用核对。**
+
+### 4.3 Session Log 与 checkpoint
+
+固定版本文档明确区分：
+
+- `AgentEvent`：实时执行时产生的事件通知。
+- `SessionEvent`：已经持久保存、可用于历史读取和恢复的记录。
+- `AgentState` checkpoint：继续执行所需的工作状态。
+- `AgentSession`：任务提交、排队、引导、答复、中断和恢复入口。
+
+Session Log 具备顺序号、事件 ID、运行/回合标识、历史扫描和恢复检查能力。默认 Harness 使用 EVENT_LOG 作为原生会话状态恢复依据；配置的 SessionLogStore 必须满足相应的并发写入与 CAS 要求。仅配置旧 AgentStateStore 不等于已经配置好 EVENT_LOG 的日志恢复。
+
+页面恢复仍需要应用层实现：
+
+1. 选定已提交事件位置，生成截至该位置的快照。
+2. 返回快照和 cursor。
+3. 从 cursor 续读事件，按消息 ID / 工具调用 ID 更新已有视图。
+4. 页面刷新丢失内存状态时重新取完整快照；短暂断线可从最后处理位置续读。
+
+**结论：原生日志与 checkpoint 可以作为执行事实和恢复基础；SSE 快照、事件游标、前端消息卡片和业务状态投影仍然属于 AgentSquad。**
+
+### 4.4 原生 SubAgent：有用，但不等于我们的 Worker 平台
+
+固定版本 Harness 提供：
+
+- `agent_spawn`：按声明创建子 Agent，可同步等待或后台运行。
+- `agent_send`：向已有子 Agent 继续发送消息。
+- `agent_list`：列出当前子 Agent。
+- `task_output`、`wait_async_results`、`task_cancel`、`task_list`：管理后台任务结果。
+- 支持工作区 Markdown spec、编程式声明、远程 Agent Protocol 子 Agent。
+- 可通过 `persistSession` 让同一子 Agent 在指定身份组合下复用会话。
+- 支持子 Agent 事件流转发、来源标记、权限继承与递归保护。
+- Toolkit 默认支持同一轮多个工具并行调用，可实现简单 fan-out / fan-in。
+
+但原生 SubAgent 的语义与产品 Worker 有明显差别：
+
+| 比较维度 | AgentScope 原生 SubAgent | AgentSquad 产品 Worker |
+|---|---|---|
+| 核心目的 | Agent 内部委派独立工作 | 受平台治理的业务执行节点 |
+| 创建来源 | 预设声明、工作区 spec、动态 spec 机制 | 已发布 Worker Definition 与 Master 计划 |
+| 并行关系 | 同一轮并行工具调用，或后台任务 | 持久计划节点、dependsOn 依赖关系、调度器控制 |
+| 任务状态 | SubAgent 实例与后台 task 状态 | GoalTask / WorkerJob / Plan / Command 等业务状态 |
+| 输入输出 | Prompt 与 Agent 消息/工具结果 | 冻结上下文、输入约束、输出 Schema、候选结果 |
+| 权限 | Agent 工具配置、权限继承等 | 用户/任务/Worker Definition/工具级平台授权 |
+| 预算 | 模型与执行配置可覆盖 | 模型 Profile、任务预算与平台侧结算 |
+| 故障恢复 | 子任务存储与执行恢复有自身边界，见下文 | 平台识别 interrupted turn，受控写入 RESUME 命令 |
+| 交付 | 返回父 Agent 的结果或后台通知 | Worker 结果候选、平台验收、最终答案交付 |
+
+#### 特别重要：后台 task 持久化不等于本地子 Agent 可跨重启续跑
+
+固定版本 `WorkspaceTaskRepository` 源码写明：
+
+- 任务记录以 Workspace 为权威状态来源，本地 `CompletableFuture` 只是当前节点执行句柄。
+- 执行任务粘在创建它的节点。
+- 其他节点可以读取持久任务状态，但不能接管本地 Future。
+- 本地进程退出后，后台任务不会自动恢复执行；孤儿清理会在心跳超时后把未完成任务标为 FAILED。
+- 远程 Agent Protocol 任务通过远程传输/轮询有不同的恢复路径。
+
+这意味着：**原生 SubAgent 的“后台任务记录持久化”和“SubAgent AgentSession checkpoint 恢复”不是一回事。** 对本产品不能只看 TaskRepository 的任务状态文件就认定具备可靠跨进程恢复。
+
+#### 动态创建能力的边界
+
+Harness 有动态 SubAgent spec 重新加载机制；另有默认关闭的 `agent_generate` 工具，可以让模型生成新的 SubAgent spec。它生成的是可写入工作区、供后续推理加载的声明，不等同于不受约束地在当前任务里临时创建任意权限的执行进程。生产使用还需要审查 spec 写入权限、工具白名单、模型配置、版本和人工审核策略。
+
+固定版本文档还写明递归保护：子 Agent 被限制为叶子角色，并有最大嵌套层数限制。因此不能假设原生 SubAgent 可以无限递归形成任意层级 Agent 树。
+
+**结论：原生 SubAgent 适合 Master 的轻量专家委派、并行调查和短期协作；不应未经验证就取代产品级 Worker DAG 与业务治理。**
+
+### 4.5 实时事件与模型流式
+
+AgentScope 的 `streamEvents` 可以返回细粒度 `AgentEvent`；AgentSession 负责持久后台运行和会话事件读取。两者不是同一个功能：
+
+- `streamEvents` 是当前执行的实时通知流。
+- Session Log 是已提交事件的持久事实。
+- 页面断线后应恢复历史/游标，而不是重启一次模型执行。
+- 如果模型客户端关闭流式输出，就不能期待稳定的逐 token 文本增量。
+
+当前 AgentSquad 的 MasterAgent 与 WorkerFactory 都使用：
+
+```java
+OpenAIChatModel.builder()
+    ...
+    .stream(false)
+    .build()
+```
+
+这项配置是源码确认的。它与产品要求的“像聊天一样持续有回应、实时反馈执行进度”不匹配，至少会限制模型 token 增量。当前平台仍可以通过已提交 Session Log 事件投影阶段状态，但这不能等价于模型 token 流式。
+
+下一步必须在固定 BETA1 版本、当前模型服务和当前 SSE 页面上分别验证：
+
+1. `stream(true)` 时是否产生预期文本 chunk / tool event。
+2. AgentSession 后台执行时，如何订阅实时事件且不让观察者生命周期控制后台任务。
+3. 断开 SSE 后重新连接，如何从 Session Log cursor 补齐事件。
+4. stop / steer 与模型请求、工具执行中的竞态行为。
+5. 事件提交延迟、投影轮询延迟和页面展示延迟分别是多少。
+
+### 4.6 上下文、记忆、RAG、Skill 与 MCP
+
+固定版本 Harness 提供记忆和上下文能力：
+
+- 对话压缩与上下文溢出恢复。
+- 工具大结果卸载，避免超大工具结果长期占用上下文。
+- 双层长期记忆：每日事实流水与长期记忆文件，带 LLM 提炼和合并。
+- 记忆查询、读取、保存、会话搜索工具。
+- Workspace 知识、Skill Repository、MCP 工具接入。
+- 工具权限和工具过滤。
+
+但它不等于完整的企业知识平台：
+
+- 业务 RAG 的数据接入、租户权限、文档生命周期、切片/向量检索/重排、引用证据和知识更新策略，仍要由产品侧提供或集成。
+- Harness Memory 是 Agent 长期记忆机制，不应直接当作企业知识库。
+- 业务资料在模型调用前程序式加载，与模型在执行中通过 Tools 主动查询，是两种互补方式。
+- 记忆提炼与上下文压缩会调用模型，需要单独评估成本、触发频率、数据脱敏和失败补偿。
+- 当前 AgentSquad 的 Master/Worker 显式关闭了 Harness 默认 Memory Tools / Hooks，并使用平台自有记忆、Skill 与上下文工具。这是可以成立的架构选择，但要避免重复建设 SDK 已经能稳定承担的通用能力。
+
+### 4.7 模型选择与权限
+
+Harness 支持 Agent/子 Agent 分别配置模型、生成参数、工具集和权限上下文。它可以承载“Master 用强模型、简单 Worker 用便宜模型”的运行方式。
+
+平台仍需负责：
+
+- 模型 Profile 的凭据管理、启停和用户/平台授权。
+- 按任务复杂度选模的策略、成本预算与实际 token 结算。
+- 模型切换是否影响同一会话恢复兼容性。
+- Worker 能力版本和工具白名单不可由模型自行扩大。
+- 子 Agent 不得因为继承或动态加载绕过父级 DENY 权限和租户隔离。
+
+## 5. 当前 AgentSquad 分支实现审计
+
+### 5.1 当前真实架构不是“完全自研 Agent 引擎”
+
+目标分支 `feat/20261103_log_optimize` 当前 README 将职责划分为：
+
+- GoalTask 是用户目标。
+- WorkerJob 是有界委派节点。
+- AgentScope Session / Turn / Run 是执行事实。
+- 平台命令与 SDK journal 不原子，通过持久 Command、稳定 SDK submit key、原生日志幂等导出和未知结果核对跨越崩溃窗口。
+
+当前代码也确实直接使用 HarnessAgent 与 AgentSession，而不是自己实现模型推理循环：
+
+- MasterAgent 构建长生命周期 `HarnessAgent`。
+- MasterAgent 的 `submit` 使用命令 ID 作为 AgentSession submit 幂等键。
+- `stop` 调用原生 `AgentSession.interrupt`。
+- `resume` 调用原生 `AgentSession.resume(turnId)`。
+- `respond` 调用原生 `AgentSession.respond(requestId, answer)`。
+- MasterAgent 通过 Session Log 读取已提交原生事件。
+- WorkerFactory 为 Worker 构建独立 HarnessAgent，并返回对应 AgentSession。
+- WorkerRecoveryService 根据原生收据检查 interrupted turn，在业务 guard 有效、计划仍有效且恢复次数允许时，创建原 turn 的 RESUME 意图。
+
+### 5.2 当前显式关闭的原生能力
+
+MasterAgent：
+
+- `.disableSubagents()`
+- `.disableMemoryTools()`
+- `.disableMemoryHooks()`
+- 同时关闭默认文件系统、Shell、Web 等工具，并通过平台自有 Toolkit 注册工具。
+
+WorkerFactory：
+
+- `.disableSubagents()`
+- `.disableMemoryTools()`
+- `.disableMemoryHooks()`
+- Worker 使用受控工具集、模型 Profile、输入快照和输出 Schema。
+
+这不是“忘记开启”这么简单：当前 Master 的系统提示词明确要求复杂任务通过 `create_goal_task` 建立产品目标，再通过 `publish_plan` 发布计划；Worker 明确禁止继续委派和结束父目标。说明当前架构刻意把多 Worker 调度放在产品控制面，而不是让 SDK 原生 SubAgent 自主调度。
+
+这一取舍对复杂任务治理是合理的，但对客服聊天里的自主并行调查是否过于受限，还需要做专项决策。
+
+### 5.3 当前 Worker 恢复已经使用原生 AgentSession
+
+当前 WorkerFactory 构建 HarnessAgent 后，通过固定 Binding 对应的 `session(context)` 执行。WorkerRecoveryService 的职责说明及代码显示：
+
+- 只对原命令的 SDK 收据进行检查。
+- 只对 SDK 明确返回 interrupted 且仍满足业务条件的 turn 建立恢复命令。
+- 重新锁定 Task / Plan / Job，核对计划版本、计划状态、取消标记、业务 guard token 和租约。
+- 使用原 turnId 和 guard token 形成恢复幂等依据。
+- 恢复次数受计划节点和 Worker Runtime Profile 双重限制。
+- SDK 拒绝恢复时，平台把节点标记为恢复阻塞，而不是伪装成新 SUBMIT。
+- 原生回合已经结束时，丢弃多余恢复命令，最终状态仍由原生日志投影裁决。
+
+这说明平台并没有替代 AgentScope 的 checkpoint；平台负责决定何时、由谁、在什么业务条件下调用原生 resume。
+
+### 5.4 已有恢复集成测试的意义与边界
+
+分支存在 `WorkerCrashRecoveryIntegrationTest`。该测试用本地 HTTP 模型桩、独立数据库和两个 Spring 应用实例，模拟：
+
+1. Worker 已提交候选结果，但原生回合尚未结束。
+2. 封存旧 Session writer，并让业务 guard 租约过期。
+3. 第二个 Spring 实例接管固定 Binding。
+4. 平台核对原生收据，并为原 turn 写入 RESUME 命令。
+5. 验证同一个 Worker 最终成功、SUBMIT 只有一条、RESUME 只有一条。
+
+这是一项有价值的故障恢复集成测试，但不能外推为所有崩溃窗口、多用户隔离、真实模型流式、生产多副本和高并发已经验收。README 也明确说明当前仍为本地验证阶段，真实 SDK 跨进程接管、完整安全矩阵、真实模型流式、容量压测和灾备演练仍未验收。
+
+### 5.5 当前架构的主要问题与待验证项
+
+| 项目 | 当前观察 | 判断 |
+|---|---|---|
+| Agent 执行循环 | 使用 HarnessAgent | 正确，建议保留 |
+| 长任务提交/恢复 | 使用 AgentSession + 原生 Session Log | 方向正确，继续验证故障边界 |
+| Worker DAG | 平台自有 GoalTask / Plan / WorkerJob | 属于产品治理，不建议直接替换为 SubAgent |
+| Master 聊天自主委派 | 禁用了原生 SubAgent，走平台目标/计划工具 | 可能限制聊天场景的轻量自主协作，需专项设计 |
+| Worker 自主委派 | 禁用 SubAgent | 与 Worker 叶子执行约束一致 |
+| Token 实时输出 | Master / Worker 模型均 `stream(false)` | 与产品体验目标冲突，优先 PoC |
+| SSE 重连 | 平台从已提交日志投影并恢复 | 方向正确，需端到端验证游标与延迟 |
+| Memory | Harness Hooks / Tools 关闭 | 平台自建能力需与 Harness Memory 做成本/能力对比 |
+| RAG | 需要平台业务知识接入 | Harness 不是开箱即用的企业 RAG 平台 |
+| 多副本 | 当前发布边界仍是单业务执行实例 | 不可将 SDK 支持分布式存储等同于项目已具备多副本生产能力 |
+
+## 6. 架构方案比较
+
+### A. 保留当前架构，逐步改造
+
+保留 Master + 产品 Worker DAG + 平台命令/业务状态机；继续使用 HarnessAgent / AgentSession / Session Log。针对聊天场景研究是否增加一个受限的原生 SubAgent 能力入口。
+
+优点：
+- 现有业务治理、恢复测试和持久化基础可复用。
+- 不需要把 GoalTask / WorkerJob / Plan / Binding 等业务语义塞回 AgentScope。
+- 可以分阶段验证原生能力，风险最低。
+
+风险：
+- 目前 Master 的原生 SubAgent 禁用，需要解决聊天协作与复杂任务调度的边界。
+- 当前自有工具与 SDK Memory/Skill/Workspace 能力可能存在重复。
+- SSE 模型流式配置需要改进。
+
+### B. 保留业务控制面，重建 Agent 运行接入层
+
+保留用户、会话、任务、计划、Worker Definition、权限、预算、产物和事件投影；重新设计 AgentScope 接入，使 Master / Worker 统一通过明确的 AgentRuntime、SessionFactory 和事件适配入口使用 SDK 原生能力。
+
+优点：
+- 可减少历史接入方式和适配代码的复杂度。
+- 更容易把 AgentScope API 与产品业务模型隔离。
+- 可以统一流式、持久化、恢复和事件来源。
+
+风险：
+- 当前已有的 AgentSession 接入已较深入，重建需要明确收益。
+- 如果没有先验证 SDK 行为，容易只是换一套抽象名称。
+- 需要防止违反项目约定，额外造通用集成层。
+
+### C. 推翻产品控制面，全部交给 AgentScope 原生能力
+
+用原生 SubAgent / TaskRepository / Workspace / AgentSession 承担几乎全部多 Agent 与任务管理。
+
+优点：
+- 代码表面更接近 SDK 推荐用法。
+- 可以减少部分平台自有调度逻辑。
+
+主要问题：
+- 原生 SubAgent 后台 task 与产品级 WorkerJob/DAG 不等价。
+- Worker 能力版本、冻结输入、业务依赖、结果 Schema、预算、租户授权、最终答案验收等仍需补回。
+- 本地 SubAgent 后台 Future 不具备进程退出后自动续跑语义。
+- 需要重新实现大量已经存在的业务治理和恢复逻辑。
+
+**阶段性判断：C 不推荐。** A 与 B 值得进一步比较，当前更偏向 A；若后续审计发现 AgentScope 接入层分散且难以维护，再评估 B。
+
+## 7. 阶段性建议
+
+### 7.1 不要把 SubAgent 与 Worker 合并成一个概念
+
+建议保留两个层次：
+
+- **SubAgent（AgentScope 原生）**：用于客服聊天场景中的轻量专家协作、并行分析、短期委派。它的产物是供 Master 继续判断的协作结果。
+- **Worker（AgentSquad 产品能力）**：用于用户明确要求持续推进、需要 DAG、任务状态、能力版本、权限、预算、恢复和产物交付的复杂任务。
+
+两者底层都可以使用 HarnessAgent / AgentSession，但生命周期、状态权威和授权入口不同。
+
+这并不意味着必须马上同时启用两套委派能力。需要先设计 Master 的路由规则：何时直接回答、何时调用 SubAgent、何时创建 GoalTask。不能让一个问题同时走 SubAgent 与 Worker DAG，造成重复执行和双重终稿。
+
+### 7.2 先把 AgentScope 原生执行能力用好
+
+优先验证和收敛：
+
+1. AgentSession 作为后台任务的唯一执行调度入口。
+2. Session Log 作为执行事实和 checkpoint 的唯一原生来源。
+3. AgentEvent 用于实时反馈，SessionEvent 用于可靠恢复与重放。
+4. `stream(true)` 的真实模型流式输出与事件转发。
+5. stop / steer / respond / resume 的边界与业务命令状态机。
+6. 不确定工具结果核对，保证恢复不重复外部副作用。
+7. Harness 的 Memory / Context / Skill / MCP 与平台现有实现的职责边界。
+
+### 7.3 现阶段不做
+
+- 不立即打开 Master 的原生 SubAgent。
+- 不将现有 Worker DAG 替换为原生 SubAgent。
+- 不重写当前 AgentSession / Session Log 持久化接入。
+- 不升级 AgentScope 版本。
+- 不以 SDK 文档宣传代替固定版本 PoC。
+- 不把本地测试结果宣称为生产多副本能力。
+
+## 8. 下一轮必须完成的验证清单
+
+| 优先级 | 验证项 | 方法 | 通过标准 |
+|---|---|---|---|
+| P0 | 固定 BETA1 模型流式 | 当前模型服务，`stream(true)`，采集 AgentEvent | 文本增量和工具事件真实产生，异常可识别 |
+| P0 | AgentSession 后台事件观察 | 提交任务后断开/重连观察端 | 观察者退出不取消任务；可按已提交日志补齐 |
+| P0 | Worker 进程退出恢复 | 保留现有测试并补充不同故障窗口 | 同一 turn 恢复，不重复 SUBMIT，不重复外部副作用 |
+| P0 | Master steer / interrupt / resume | 运行中插话、停止、恢复并观察事件 | 不串错 turn，不丢输入，不错误宣告停止 |
+| P1 | SubAgent 动态创建 | 固定声明、动态 spec、agent_generate 分别测试 | 能明确区分声明生成、实例创建、任务执行和持久会话 |
+| P1 | SubAgent 进程崩溃 | 本地后台子任务中途杀进程 | 明确任务记录状态、是否可恢复、不能恢复时的终态 |
+| P1 | SubAgent 结果反馈 Master | 后台并行任务完成与父会话空闲/运行中两种场景 | 结果通知可靠且不会重复注入 |
+| P1 | 子 Agent 权限隔离 | 多用户、不同 Worker 能力、工具白名单与 DENY | 不可越权，用户上下文不串用 |
+| P1 | Skill / MCP / RAG 接入 | 预加载、主动工具检索、结果沉淀三个阶段 | 权限、来源、时延和 token 成本可观察 |
+| P2 | 记忆能力取舍 | Harness Memory 与平台自建记忆做对照 | 明确数据模型、触发策略、成本与数据治理 |
+| P2 | 模型动态选择 | Master 与不同 Worker Profile | 模型切换不破坏会话恢复和预算控制 |
+
+## 9. 当前可以作出的决策
+
+| 决策问题 | 阶段性结论 |
+|---|---|
+| AgentScope Java 能否作为产品 Agent 执行内核？ | **可以，值得继续采用 HarnessAgent / AgentSession。** |
+| 是否需要推翻整个项目？ | **目前没有证据支持。** |
+| 是否应该用原生 SubAgent 替换 Worker？ | **不应该直接替换。两者职责不同。** |
+| 当前 Worker 是否完全脱离 AgentScope？ | **不是，Worker 已使用 HarnessAgent 与 AgentSession，并依赖原生日志恢复。** |
+| 当前是否充分使用 SDK 原生能力？ | **还没有。Master/Worker 都禁用了 SubAgent、Memory Hooks/Tools，模型流式也关闭。** |
+| 最大的近期技术缺口？ | **实时模型流式、SubAgent 与 Worker 的边界、跨进程恢复完整性验证。** |
+| 下一步是否立即改代码？ | **否。先完成 P0/P1 PoC，再决定 A 或 B。** |
+
+## 10. 参考源码与文档
+
+### AgentSquad 当前分支
+
+- `server/pom.xml`：固定 AgentScope `2.1.0-BETA1`。
+- `server/agent-squad-server/pom.xml`：引入 `agentscope-core`、`agentscope-harness`、JDBC 扩展和 OpenAI 模型扩展。
+- `server/agent-squad-server/src/main/java/com/agentsquad/squad/agent/MasterAgent.java`：Master HarnessAgent、Session 提交、停止、恢复、答复、日志读取。
+- `server/agent-squad-server/src/main/java/com/agentsquad/squad/integration/agentscope/WorkerFactory.java`：Worker HarnessAgent 与 AgentSession 创建、能力隔离和模型配置。
+- `server/agent-squad-server/src/main/java/com/agentsquad/squad/runtime/service/WorkerRecoveryService.java`：Worker 原生回合恢复协调。
+- `server/agent-squad-server/src/test/java/com/agentsquad/squad/runtime/WorkerCrashRecoveryIntegrationTest.java`：双 Spring 实例模拟 Worker writer 崩溃接管。
+- `openspec/config.yaml`：固定评估候选 commit、运行权威与 SDK 集成约束。
+- `README.md`：当前功能、部署边界和未验收事项。
+
+### AgentScope Java 固定版本源码
+
+以下链接固定到 commit `5451c73abe47053340683a1cc6d67b290b056648`，用于本轮版本审计：
+
+- [AgentSession 实现](https://github.com/agentscope-ai/agentscope-java/blob/5451c73abe47053340683a1cc6d67b290b056648/agentscope-harness/src/main/java/io/agentscope/harness/agent/session/AgentSession.java)
+- [HarnessAgent 实现](https://github.com/agentscope-ai/agentscope-java/blob/5451c73abe47053340683a1cc6d67b290b056648/agentscope-harness/src/main/java/io/agentscope/harness/agent/HarnessAgent.java)
+- [SubagentsMiddleware 实现](https://github.com/agentscope-ai/agentscope-java/blob/5451c73abe47053340683a1cc6d67b290b056648/agentscope-harness/src/main/java/io/agentscope/harness/agent/middleware/SubagentsMiddleware.java)
+- [WorkspaceTaskRepository 实现](https://github.com/agentscope-ai/agentscope-java/blob/5451c73abe47053340683a1cc6d67b290b056648/agentscope-harness/src/main/java/io/agentscope/harness/agent/subagent/task/WorkspaceTaskRepository.java)
+- [SubAgent 文档](https://github.com/agentscope-ai/agentscope-java/blob/5451c73abe47053340683a1cc6d67b290b056648/docs/v2/zh/docs/harness/subagent.md)
+- [会话操作、事件与恢复文档](https://github.com/agentscope-ai/agentscope-java/blob/5451c73abe47053340683a1cc6d67b290b056648/docs/v2/zh/docs/harness/session-log.md)
+- [Harness 架构文档](https://github.com/agentscope-ai/agentscope-java/blob/5451c73abe47053340683a1cc6d67b290b056648/docs/v2/zh/docs/harness/architecture.md)
+
+### 版本差异提醒
+
+AgentScope 上游 main 在本轮检索时已有更新的 SubAgent、Session Log、Memory 与 Service 文档。它们可用于发现后续演进方向，但不属于项目当前固定依赖的直接能力证据。任何准备接入的新 API，必须先对照固定 commit 的源码、依赖兼容性和实际测试结果。
