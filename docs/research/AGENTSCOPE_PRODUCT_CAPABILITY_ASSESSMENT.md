@@ -438,3 +438,133 @@ WorkerFactory：
 ### 版本差异提醒
 
 AgentScope 上游 main 在本轮检索时已有更新的 SubAgent、Session Log、Memory 与 Service 文档。它们可用于发现后续演进方向，但不属于项目当前固定依赖的直接能力证据。任何准备接入的新 API，必须先对照固定 commit 的源码、依赖兼容性和实际测试结果。
+
+
+---
+
+# 11. 上游 main README 与最新源码补充审计（2026-11-10）
+
+本节根据用户提供的 AgentScope Java 中文 README，进一步对照 GitHub `main` 分支源码和文档。它描述的是**上游当前状态**，不能直接等同于 AgentSquad 当前固定依赖的能力。
+
+## 11.1 一个需要立即修正的版本认知
+
+上游 README 当前展示：
+
+- Maven 快速开始示例使用 `agentscope-harness:2.0.3`。
+- 同一仓库根 `pom.xml` 的开发版本是 `2.1.0-SNAPSHOT`。
+- README 新闻区列出 `v2.0.0 GA`、RC 版本及 AgentScope Service 的后续演进。
+- README 将 AgentScope 2.0 定位为面向企业级、分布式、生产环境的 Agent Harness。
+
+而 AgentSquad 当前分支 POM 仍固定使用 `2.1.0-BETA1`（以项目 POM 为准）。因此，上一节针对固定 BETA1 的源码结论仍然有效，但不能拿它代表上游 main 的全部能力；反过来，也不能把 main 新增能力直接当成项目现有依赖可用。
+
+**后续所有研究必须同时标记：项目实际依赖版本、上游稳定发布版本、上游 main 开发版本。** 在未做升级评估前，不修改项目依赖版本。
+
+## 11.2 README 给出的产品能力地图
+
+README 明确把 2.0 的核心能力归为三类：
+
+1. Harness 工程化：长期任务执行、Skill、分层记忆、SubAgent、上下文压缩、Plan Mode。
+2. 企业级分布式部署：多租户隔离、沙箱、权限管控、会话恢复。
+3. 底层运行机制：类型化消息、事件流、Middleware、HITL。
+
+它还明确区分：
+- 普通问答、多轮对话、工作流节点：从 `call()` / `streamEvents()` 开始。
+- 需要页面关闭后继续执行、任务排队或中断后续做：再引入 `AgentSession`。
+
+这个建议很重要：**不应该把每条普通聊天消息都强制包装成一个长任务 Session。** 应按是否需要后台持续执行、排队、steer/interrupt/resume 决定是否使用 AgentSession。
+
+## 11.3 当前 main 的 SubAgent 已明显增强
+
+与此前固定 BETA1 审计相比，main 文档明确描述了更多产品交互能力：
+
+- 三种声明方式：内置 `general-purpose`、工作区 Markdown spec、编程式声明；另有自定义工厂和远程 Agent。
+- 同步委派与后台委派：`timeout_seconds > 0` 同步等待；`timeout_seconds = 0` 后台执行。
+- 同一轮多个同步 SubAgent 调用可借助 Toolkit 并行执行，形成 fan-out / fan-in。
+- 后台任务完成后，框架会在主 Agent 下一轮推理前自动注入结果提醒；不要求 Master 轮询。
+- `agent_send` 可以向既有子 Agent 追加消息；`persistSession(true)` 可以按用户、父会话、Agent 类型和 label 复用子 Agent 会话。
+- 可以通过 `expose_to_user` 把子 Agent 暴露为用户可直接对话的分支入口，并通过事件流通知前端。
+- 支持为子 Agent 单独配置模型、工具、工作区隔离模式、步骤上限和上下文压缩。
+- 文档特别提醒：有依赖的任务不能简单并行派发，应先明确依赖图；无依赖任务适合并行。
+
+这意味着我们之前把 SubAgent 主要视作“Master 内部轻量专家工具”的描述，需要扩展：**上游 main 已把 SubAgent 做成支持后台运行、跨轮复用、事件回传、用户直接交互的协作单元。** 但它仍然不是自动等价于 AgentSquad 的业务 GoalTask / Worker DAG。
+
+### 对 AgentSquad 的直接启示
+
+未来客服聊天场景可以认真考虑使用原生 SubAgent 处理：
+- 多专家并行排查；
+- Master 等待或后台收集调查结果；
+- 用户需要时直接进入某个专家分支继续交流；
+- 跨轮持续协作的专家角色。
+
+而复杂任务工作台仍需要平台控制：
+- 任务目标和计划版本；
+- 依赖关系和节点调度；
+- Worker Definition 版本、输入输出约束；
+- 用户/租户授权、预算和恢复策略；
+- 产物验收及最终交付。
+
+这支持“聊天自主协作与复杂任务执行共用运行底座、保留不同控制语义”的方向。
+
+## 11.4 最新事件体系把三种事件流分得更清楚
+
+main 的消息与事件文档明确区分：
+
+1. **AgentEvent**：当前运行产生的实时强类型事件，例如文本增量、工具调用、工具进度、HITL、SubAgent 暴露等。
+2. **SessionEvent**：已经提交到原生日志的不可变执行事实，服务于历史读取和恢复。
+3. **Service 公共 SSE**：Service 将底层执行信息投影为面向调用方的 turn / item / action 事件。
+
+三者格式和游标独立。特别需要注意：
+- `streamEvents()` 用来启动执行并实时观察，不提供持久事件游标。
+- 不能在 SSE 断线后重新调用 `streamEvents()` 来补齐断线期间的事件，因为那会重新执行请求。
+- 页面恢复应读取持久日志 / snapshot，再按持久 cursor 续读。
+- 实时事件抵达不代表它已经提交；AgentEvent ID、原生日志 seq 和 Service SSE cursor 不是同一个 ID。
+- 一次逻辑 turn 可以包含多次恢复执行；单次 AgentEndEvent 不代表逻辑 turn 的完整生命周期已经结束。
+
+这进一步验证了我们此前的核心判断：**模型实时输出、后台执行、持久事件、前端 SSE 连接必须分层设计。**
+
+## 11.5 分布式能力：上游已有方案，但要核对项目使用方式
+
+README 声称 2.0 支持 Redis / MySQL / PostgreSQL / OSS / COS 等后端的分布式 Session 与 Memory 管理，以及跨副本 Session 恢复；还强调 Harness 面向无状态水平扩展。
+
+这对项目有很大价值，但不能据此直接认定 AgentSquad 已具备多副本执行能力。必须进一步核对：
+- 当前项目的 SessionLogStore / AgentStateStore / Workspace / Memory 分别使用什么后端；
+- 多副本下同一 session 的并发写入、锁或 CAS、事件顺序和恢复接管如何保证；
+- 子 Agent 的实例路由和后台任务路由是否跨副本；
+- 运行节点宕机后，谁负责重新调度以及如何避免重复副作用；
+- 项目是否仍依赖单业务执行实例。
+
+**SDK 有分布式存储实现，不等于应用已经完成分布式部署设计。**
+
+## 11.6 AgentScope Service：值得调研，但不是现在就替换嵌入式 SDK
+
+README 对 Service 的定位很清晰：Agent 控制面与 Dashboard，面向观测、注册和编排；可以托管 Harness、接入已有 Agent 应用，或复用 Coding Agent；通过 Endpoint / Invocation 提供后台任务、交互式助手或流程节点。
+
+它强调应用仍保留自己的界面、数据授权和验收规则。这与 AgentSquad 的产品定位并不冲突。
+
+需要单独调研的不是“要不要直接改成 Service”，而是：
+- Service 的 Invocation / Snapshot / Event Log 是否能覆盖我们现有的任务执行与事件查询；
+- Service 的 Team / Workflow 与我们产品 Worker DAG 的边界；
+- 自托管 Harness 和接入已有 Agent 应用的模式；
+- Service 是否能作为未来的可选控制面，而不是当前必须依赖的运行内核。
+
+当前阶段仍建议维持嵌入式 Harness，先做能力对照，不引入 Service 依赖。
+
+## 11.7 新增的研究结论
+
+| 议题 | 根据上游 main 更新后的判断 |
+|---|---|
+| 普通聊天是否需要 AgentSession | 不一定；普通问答优先 `call/streamEvents`，长时间后台执行再用 AgentSession |
+| 原生 SubAgent 的定位 | 不只是短期内部工具，已支持后台任务、持久会话、自动反向通知和用户分支对话 |
+| SubAgent 能否替换 Worker DAG | 仍不能直接替换；产品业务计划、权限、预算和验收仍需控制面 |
+| SSE 断线恢复 | 不能重新调用 streamEvents；必须基于持久日志和 snapshot/cursor |
+| 分布式能力 | 上游已有多种后端与跨副本能力，但要核验项目当前实际配置和应用级接管逻辑 |
+| AgentScope Service | 值得做专项对照研究，不建议当前直接替换嵌入式 Harness |
+
+## 11.8 本节上游源码与文档
+
+- [上游中文 README（main）](https://github.com/agentscope-ai/agentscope-java/blob/main/README_zh.md)
+- [上游 main 根 POM](https://github.com/agentscope-ai/agentscope-java/blob/main/pom.xml)
+- [SubAgent 文档（main）](https://github.com/agentscope-ai/agentscope-java/blob/main/docs/v2/zh/docs/harness/subagent.md)
+- [消息与事件文档（main）](https://github.com/agentscope-ai/agentscope-java/blob/main/docs/v2/zh/docs/building-blocks/message-and-event.md)
+- [生产部署文档（main）](https://github.com/agentscope-ai/agentscope-java/blob/main/docs/v2/zh/docs/others/going-to-production.md)
+- [AgentScope Chat 可恢复聊天示例](https://github.com/agentscope-ai/agentscope-java/blob/main/agentscope-examples/agents/agentscope-chat/README_zh.md)
