@@ -12,8 +12,6 @@ import com.agentsquad.squad.mapper.ExecutionScopeMapper;
 import com.agentsquad.squad.service.MessageAcceptanceService;
 import com.agentsquad.squad.model.bo.NativeEventViewBO;
 import com.agentsquad.squad.service.ActivityProjectionService;
-import com.agentsquad.squad.model.dto.ActivityHistoryDTO;
-import com.agentsquad.squad.model.vo.ExecutionActivityVO;
 import com.agentsquad.squad.service.ConversationQueryService;
 import com.agentsquad.squad.model.bo.ProjectionTargetBO;
 import com.agentsquad.squad.testsupport.PostgresTestDatabase;
@@ -149,25 +147,6 @@ class ActivityProjectionIntegrationTest {
             assertThatThrownBy(() -> reads.snapshot(2L, receipt.conversationId(), null, 40))
                     .isInstanceOf(RuntimeBusinessException.class);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sq_execution_activity", Integer.class)).isEqualTo(4);
-            transaction.executeWithoutResult(status -> {
-                for (int i = 10; i <= 50; i++) {
-                    service.accept(scope, target, new NativeEventViewBO(i, "history-" + i, "model/dispatch",
-                            "run", "turn", null, 2000 + i, Map.of("modelCallId", "history-" + i)));
-                }
-            });
-            var first = reads.activityHistory(user, receipt.conversationId(), new ActivityHistoryDTO(receipt.messageId(), null));
-            assertThat(first.items()).hasSize(40);
-            assertThat(first.nextCursor()).isEqualTo(String.valueOf(first.items().getLast().activityId()));
-            var second = reads.activityHistory(user, receipt.conversationId(), new ActivityHistoryDTO(receipt.messageId(), Long.valueOf(first.nextCursor())));
-            assertThat(second.items()).hasSize(5).extracting(ExecutionActivityVO::activityId)
-                    .doesNotContainAnyElementsOf(first.items().stream().map(ExecutionActivityVO::activityId).toList());
-            assertThat(second.nextCursor()).isNull();
-            assertThatThrownBy(() -> reads.activityHistory(user, receipt.conversationId(),
-                    new ActivityHistoryDTO(-1L, Long.valueOf(first.nextCursor()))))
-                    .isInstanceOf(RuntimeBusinessException.class);
-            assertThatThrownBy(() -> reads.activityHistory(2L, receipt.conversationId(),
-                    new ActivityHistoryDTO(receipt.messageId(), null)))
-                    .isInstanceOf(RuntimeBusinessException.class);
         }
     }
 }

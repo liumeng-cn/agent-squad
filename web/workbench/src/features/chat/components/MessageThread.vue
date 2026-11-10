@@ -6,9 +6,8 @@ import InteractionCard from '../../tasks/components/InteractionCard.vue'
 import OperationCard from './OperationCard.vue'
 import TaskSteps from './TaskSteps.vue'
 import ActivityTimeline from './ActivityTimeline.vue'
-import ActivityHistory from './ActivityHistory.vue'
 import { apiDownload, errorMessage } from '../../../shared/api/http'
-import type { TaskDirectiveView, ExecutionFailure } from '../../../shared/api/chatApi'
+import type { ChatMessage, TaskDirectiveView, ExecutionFailure } from '../../../shared/api/chatApi'
 import type { Artifact } from '../../../shared/api/taskDetailsApi'
 import { statusText } from '../../../shared/lib/taskStatus'
 const chat = useConversationsStore()
@@ -109,7 +108,11 @@ onMounted(() => {
     resizeObserver.observe(content)
   }
 })
-onBeforeUnmount(() => { resizeObserver?.disconnect(); if (scrollFrame !== undefined) cancelAnimationFrame(scrollFrame) })
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  if (scrollFrame !== undefined) cancelAnimationFrame(scrollFrame)
+  if (ticker) clearInterval(ticker)
+})
 watch(() => chat.activeConversationId, () => { pinned.value = true; downloadError.value = '' })
 watch(() => [chat.messages.length, chat.snapshot?.cursor, chat.loading], async () => { await nextTick(); followOutput() })
 async function older() {
@@ -135,6 +138,33 @@ function answerStatus(status: string) {
 }
 function sourceActivities(source: string) { return chat.activities.filter(activity => activity.sourceMessageId === source) }
 function answerCompleted(source: string) { return chat.messages.some(message => message.role === 'ASSISTANT' && message.sourceMessageId === source && message.completed) }
+// 计时从提问时间开始，回答完成或中断后停在最终时长。
+const now = ref(Date.now())
+let ticker: ReturnType<typeof setInterval> | undefined
+function askedAt(sourceMessageId: string | null) {
+  if (!sourceMessageId) return 0
+  const time = chat.messages.find(message => message.messageId === sourceMessageId && message.role === 'USER')?.occurredAt
+  return time ? Date.parse(time) : 0
+}
+function durationText(milliseconds: number) {
+  const seconds = Math.max(0, Math.round(milliseconds / 1000))
+  return seconds < 60 ? `${seconds} 秒` : `${Math.floor(seconds / 60)} 分 ${String(seconds % 60).padStart(2, '0')} 秒`
+}
+function elapsedFor(sourceMessageId: string | null) {
+  const start = askedAt(sourceMessageId)
+  return start ? durationText(now.value - start) : ''
+}
+function answerDuration(message: ChatMessage) {
+  const start = askedAt(message.sourceMessageId)
+  const end = Date.parse(message.occurredAt)
+  return start && end && end > start ? durationText(end - start) : ''
+}
+function syncTicker() {
+  const active = (chat.snapshot?.activeExecutions.length ?? 0) > 0 || Object.keys(chat.previews).length > 0
+  if (active && !ticker) ticker = setInterval(() => { now.value = Date.now() }, 1000)
+  if (!active && ticker) { clearInterval(ticker); ticker = undefined }
+}
+watch(() => [chat.snapshot?.activeExecutions.length, Object.keys(chat.previews).length], syncTicker, { immediate: true })
 </script>
 <template>
   <div ref="scroller" class="chat-scroll" tabindex="0" aria-label="对话内容" @scroll="onScroll">
@@ -142,7 +172,7 @@ function answerCompleted(source: string) { return chat.messages.some(message => 
       <button v-if="chat.nextBeforeSeq" class="load-history-button" :disabled="chat.loadingHistory" @click="older">{{ chat.loadingHistory ? '正在读取…' : '查看更早的消息' }}</button>
       <p v-if="chat.loading" class="chat-loading" role="status">正在读取对话…</p>
       <template v-for="message in threadMessages" :key="message.renderKey">
-      <TaskSteps v-for="task in stepTasks.filter(item => item.beforeMessageId === message.messageId)" :key="task.taskId" :task-id="task.taskId" :status="task.status" :answer-completed="task.answerCompleted" :activities="chat.activities.filter(a => a.taskId === task.taskId || a.sourceMessageId === task.sourceMessageId)" :revision="String(chat.stepsVersion)" />
+      <TaskSteps v-for="task in stepTasks.filter(item => item.beforeMessageId === message.messageId)" :key="task.taskId" :task-id="task.taskId" :status="task.status" :answer-completed="task.answerCompleted" :revision="String(chat.stepsVersion)" />
       <article class="chat-message" :class="message.role === 'USER' ? 'from-user' : 'from-assistant'" :aria-label="message.isPreview ? '正在生成回答' : undefined">
         <template v-if="message.role === 'USER'">
           <div class="user-message-text">{{ message.text }}</div>
@@ -157,17 +187,16 @@ function answerCompleted(source: string) { return chat.messages.some(message => 
           </section>
         </template>
         <template v-else>
-          <span class="assistant-avatar" aria-hidden="true">✦</span><div class="assistant-body"><SafeMarkdown :text="message.text" :streaming="message.isPreview" /><small v-if="message.isPreview" class="stopped-note">{{ message.text ? '正在生成…' : '正在思考…' }}</small><button v-else class="copy-answer-button" type="button" :aria-label="copied === message.messageId ? '已复制回答' : '复制回答'" :title="copied === message.messageId ? '已复制' : '复制回答'" @click="copy(message.messageId, message.text)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path v-if="copied === message.messageId" d="m5 12 4 4L19 6" /><template v-else><rect x="4" y="7" width="13" height="14" rx="3" /><path d="M8 7V6a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v9" /></template></svg></button></div>
+          <span class="assistant-avatar" aria-hidden="true">✦</span><div class="assistant-body"><SafeMarkdown :text="message.text" :streaming="message.isPreview" /><small v-if="message.isPreview" class="stopped-note">{{ message.text ? '正在生成…' : '正在思考…' }}<span class="answer-spinner" aria-hidden="true"></span></small><div v-else class="answer-footer"><small v-if="answerDuration(message)" class="answer-duration">用时 {{ answerDuration(message) }}</small><button class="copy-answer-button" type="button" :aria-label="copied === message.messageId ? '已复制回答' : '复制回答'" :title="copied === message.messageId ? '已复制' : '复制回答'" @click="copy(message.messageId, message.text)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path v-if="copied === message.messageId" d="m5 12 4 4L19 6" /><template v-else><rect x="4" y="7" width="13" height="14" rx="3" /><path d="M8 7V6a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v9" /></template></svg></button></div></div>
         </template>
       </article>
       <ActivityTimeline v-if="message.role === 'USER' && !stepTasks.some(t => t.sourceMessageId === message.messageId)" :activities="sourceActivities(message.messageId)" :completed="answerCompleted(message.messageId)" />
-      <TaskSteps v-for="task in stepTasks.filter(item => item.afterMessageId === message.messageId)" :key="task.taskId" :task-id="task.taskId" :status="task.status" :answer-completed="task.answerCompleted" :activities="chat.activities.filter(a => a.taskId === task.taskId || a.sourceMessageId === task.sourceMessageId)" :revision="String(chat.stepsVersion)" />
-      <ActivityHistory v-if="message.role === 'USER' && chat.activeConversationId" :key="`${chat.activeConversationId}:${message.messageId}`" :conversation-id="chat.activeConversationId" :source-message-id="message.messageId" :live="sourceActivities(message.messageId)" />
+      <TaskSteps v-for="task in stepTasks.filter(item => item.afterMessageId === message.messageId)" :key="task.taskId" :task-id="task.taskId" :status="task.status" :answer-completed="task.answerCompleted" :revision="String(chat.stepsVersion)" />
       </template>
-      <div v-for="execution in chat.snapshot?.activeExecutions ?? []" :key="execution.executionId" class="answer-state" role="status"><span class="state-indicator" :class="{ running: ['RUNNING', 'RECOVERING'].includes(execution.status) }"></span>{{ answerStatus(execution.status) }}</div>
+      <div v-for="execution in chat.snapshot?.activeExecutions ?? []" :key="execution.executionId" class="answer-state" role="status"><span class="state-indicator" :class="{ running: ['RUNNING', 'RECOVERING'].includes(execution.status) }"></span>{{ answerStatus(execution.status) }}<span v-if="elapsedFor(execution.sourceMessageId)" class="answer-elapsed" aria-hidden="true">· {{ elapsedFor(execution.sourceMessageId) }}</span><span class="answer-spinner" aria-hidden="true"></span></div>
       <div v-if="working" class="active-work-bar" role="status"><div><span class="work-mark" aria-hidden="true">✦</span><span>{{ workText }}</span><small v-if="!['CANCELLING', 'RECONCILING'].includes(working.status)">你可以继续在这里补充或提问</small></div><button v-if="working.status !== 'CANCELLING'" class="text-button" :disabled="!!chat.controlling" @click="chat.stop('task', working.taskId, working.version)">停止工作</button></div>
       <InteractionCard v-for="interaction in chat.snapshot?.interactions ?? []" :key="`${interaction.interactionId}:${interaction.version}`" :interaction="interaction" @refresh="chat.refreshSnapshot()" />
-      <TaskSteps v-for="task in stepTasks.filter(item => !item.afterMessageId && !item.beforeMessageId)" :key="task.taskId" :task-id="task.taskId" :status="task.status" :answer-completed="task.answerCompleted" :activities="chat.activities.filter(a => a.taskId === task.taskId || a.sourceMessageId === task.sourceMessageId)" :revision="String(chat.stepsVersion)" />
+      <TaskSteps v-for="task in stepTasks.filter(item => !item.afterMessageId && !item.beforeMessageId)" :key="task.taskId" :task-id="task.taskId" :status="task.status" :answer-completed="task.answerCompleted" :revision="String(chat.stepsVersion)" />
       <section v-for="failure in orphanFailures" :key="failure.failureId" class="chat-service-feedback" role="status">
         <p :class="{ 'chat-model-error': modelFailureText(failure) }">{{ failureText(failure) }}</p>
         <button v-if="failure.allowedActions.includes('RETRY') && failure.executionId && failure.expectedVersion !== null" class="text-button" :disabled="!!chat.controlling" @click="chat.retry(failure.executionId, failure.expectedVersion)">{{ chat.controlling === failure.executionId ? '正在重试…' : '重新尝试' }}</button>

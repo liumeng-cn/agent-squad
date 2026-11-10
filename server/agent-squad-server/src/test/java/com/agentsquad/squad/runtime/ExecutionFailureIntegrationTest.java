@@ -61,6 +61,15 @@ class ExecutionFailureIntegrationTest {
         var transportBilling = ModelFailureClassifier.classify(new io.agentscope.core.model.transport.HttpTransportException("transport", 400,
                 "{\"error\":{\"code\":\"Arrearage\",\"message\":\"hidden\"}}"));
         assertThat(transportBilling.code()).isEqualTo("MODEL_BILLING_UNAVAILABLE");
+        // SDK 对 HTTP 错误不填 structured errorCode，只能从响应正文识别欠费。
+        var bodyOnlyArrearage = ModelFailureClassifier.classify(new OpenAIException("private-secret", 400, null,
+                "{\"error\":{\"code\":\"Arrearage\",\"message\":\"hidden\"}}"));
+        assertThat(bodyOnlyArrearage.category()).isEqualTo("ENVIRONMENT");
+        assertThat(bodyOnlyArrearage.code()).isEqualTo("MODEL_BILLING_UNAVAILABLE");
+        assertThat(bodyOnlyArrearage.safeMessage()).doesNotContain("hidden", "余额", "计费");
+        var bodyOnlyUnpurchased = ModelFailureClassifier.classify(new OpenAIException("private-secret", 400, null,
+                "{\"error\":{\"code\":\"AccessDenied.Unpurchased\",\"message\":\"hidden\"}}"));
+        assertThat(bodyOnlyUnpurchased.code()).isEqualTo("MODEL_ACCESS_DENIED");
         assertThat(ModelFailureClassifier.classify(new OpenAIException("x", 400, "unknown-code", "x")).code())
                 .isEqualTo("MODEL_REQUEST_REJECTED");
     }

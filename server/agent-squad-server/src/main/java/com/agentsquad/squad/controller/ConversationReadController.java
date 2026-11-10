@@ -2,9 +2,7 @@ package com.agentsquad.squad.controller;
 
 import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.identity.UserContext;
-import com.agentsquad.squad.model.dto.ActivityHistoryDTO;
 import com.agentsquad.squad.model.dto.ConversationTitleUpdateDTO;
-import com.agentsquad.squad.model.vo.ActivityHistoryPageVO;
 import com.agentsquad.squad.model.vo.ConversationSnapshotVO;
 import com.agentsquad.squad.model.vo.ConversationViewVO;
 import com.agentsquad.squad.service.ConversationEventStreamerService;
@@ -40,12 +38,6 @@ public class ConversationReadController {
                                                       @PathVariable Long conversationId, @RequestParam(required = false) Long beforeMessageSeq,
                                                       @RequestParam(defaultValue = "40") int limit) {
         return ApiResult.success(queries.snapshot(UserContext.current(servletRequest).userId(), conversationId, beforeMessageSeq, limit));
-    }
-
-    @GetMapping("/activities")
-    public ApiResult<ActivityHistoryPageVO> activities(HttpServletRequest request, @PathVariable Long conversationId,
-                                                       @ModelAttribute ActivityHistoryDTO query) {
-        return ApiResult.success(queries.activityHistory(UserContext.current(request).userId(), conversationId, query));
     }
 
     @GetMapping(value = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

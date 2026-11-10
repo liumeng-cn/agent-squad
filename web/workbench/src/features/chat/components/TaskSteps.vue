@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import ActivityTimeline from './ActivityTimeline.vue'
-import type { ExecutionActivity } from '../../../shared/api/activities'
 import { getTaskJobs } from '../../../shared/api/tasksApi'
 import type { AcceptanceCheckView, WorkerJob, WorkerJobStatus } from '../../../shared/api/types'
 import { statusText } from '../../../shared/lib/taskStatus'
-const props = defineProps<{ taskId: string; status: string; revision: string; answerCompleted?: boolean; activities?: ExecutionActivity[] }>()
+const props = defineProps<{ taskId: string; status: string; revision: string; answerCompleted?: boolean }>()
 const expanded = ref(true)
 const jobs = ref<WorkerJob[]>([])
 const checks = ref<AcceptanceCheckView[]>([])
@@ -19,8 +17,6 @@ const latestVersion = ref(0)
 const overallStatus = computed(() => ({
   SUCCEEDED: '整体已完成', PARTIAL: '整体只完成了一部分', FAILED: '整体未完成', CANCELLED: '整体已停止',
 }[props.status] ?? `整体${statusText(props.status)}`))
-const shownActivities = computed(() => (props.activities ?? []).filter(activity =>
-  activity.planVersion === shownVersion.value || (shownVersion.value === latestVersion.value && activity.planVersion === 0)))
 let requestVersion = 0
 const labels: Record<WorkerJobStatus, string> = {
   BLOCKED: '等待前一步完成', READY: '等待开始', RUNNING: '正在执行',
@@ -37,7 +33,7 @@ watch(() => [props.taskId, props.answerCompleted ?? terminal.value] as const, ()
   expanded.value = !(props.answerCompleted ?? terminal.value)
 }, { immediate: true })
 function toggled(event: Event) { expanded.value = (event.currentTarget as HTMLDetailsElement).open }
-const visible = computed(() => loading.value || error.value || !terminal.value || !!jobs.value.length || !!checks.value.length || !!props.activities?.length)
+const visible = computed(() => loading.value || error.value || !terminal.value || !!jobs.value.length || !!checks.value.length)
 async function load() {
   const current = ++requestVersion
   const taskId = props.taskId
@@ -74,11 +70,10 @@ onBeforeUnmount(() => { requestVersion++ })
     <p v-if="error" class="task-steps-note">暂时无法读取进度 <button class="text-button" type="button" @click="load">重新读取</button></p>
     <p v-else-if="!jobs.length" class="task-steps-note">{{ loading ? '正在读取进度…' : (['SUCCEEDED', 'PARTIAL', 'FAILED', 'CANCELLED'].includes(status) ? '这次工作没有拆分步骤' : '正在安排工作…') }}</p>
     <p v-if="running > 1" class="task-steps-note">有 {{ running }} 项工作同时进行</p>
-    <ActivityTimeline :activities="shownActivities.filter(a => !a.jobId)" :completed="answerCompleted ?? terminal" />
     <ol>
       <li v-for="job in jobs" :key="job.jobId" :class="{ finished: job.status === 'SUCCEEDED' }">
         <span class="task-step-dot" aria-hidden="true">{{ job.status === 'SUCCEEDED' ? '✓' : '·' }}</span>
-        <div><span class="task-step-title">{{ job.title || '处理这项工作' }}</span><small><span v-if="job.required === false">可选工作 · </span>{{ labels[job.status] }}<span v-if="job.reusedFromJobId"> · 沿用已有结果</span></small><ActivityTimeline :activities="shownActivities.filter(a => a.jobId === job.jobId)" :completed="['SUCCEEDED', 'FAILED', 'CANCELLED', 'SKIPPED', 'SUPERSEDED'].includes(job.status)" /></div>
+        <div><span class="task-step-title">{{ job.title || '处理这项工作' }}</span><small><span v-if="job.required === false">可选工作 · </span>{{ labels[job.status] }}<span v-if="job.reusedFromJobId"> · 沿用已有结果</span></small></div>
       </li>
     </ol>
     <template v-if="checks.length">

@@ -8,6 +8,7 @@ import com.agentsquad.squad.exceptions.PlanCorrectionExhaustedException;
 import com.agentsquad.squad.exceptions.SkillCapabilityUnavailableException;
 import io.agentscope.core.model.ModelHttpException;
 import io.agentscope.core.model.transport.HttpTransportException;
+import io.agentscope.extensions.model.openai.exception.OpenAIException;
 
 import java.io.IOException;
 
@@ -102,22 +103,26 @@ public final class ModelFailureClassifier {
     }
 
     /**
-     * 取供应商错误码（OpenAI 兼容扩展直接携带；传输异常从响应正文解析），供欠费/未开通归类。
+     * 取供应商错误码（OpenAI 兼容扩展优先取结构化错误码；缺失时从响应正文解析），供欠费/未开通归类。
      */
     private static String vendorErrorCode(Throwable current) {
-        if (current instanceof io.agentscope.extensions.model.openai.exception.OpenAIException openAi) {
-            return bounded(openAi.getErrorCode());
+        if (current instanceof OpenAIException openAi) {
+            String code = bounded(openAi.getErrorCode());
+            // SDK 对 HTTP 错误只传状态码和正文，错误码缺失时正文才是唯一来源。
+            return code != null ? code : codeFromBody(openAi.getResponseBody());
         }
         if (current instanceof HttpTransportException transport) {
-            String body = transport.getResponseBody();
-            if (body != null) {
-                Matcher matcher = BODY_CODE.matcher(body);
-                if (matcher.find()) {
-                    return bounded(matcher.group(1));
-                }
-            }
+            return codeFromBody(transport.getResponseBody());
         }
         return null;
+    }
+
+    private static String codeFromBody(String body) {
+        if (body == null) {
+            return null;
+        }
+        Matcher matcher = BODY_CODE.matcher(body);
+        return matcher.find() ? bounded(matcher.group(1)) : null;
     }
 
     private static String bounded(String code) {

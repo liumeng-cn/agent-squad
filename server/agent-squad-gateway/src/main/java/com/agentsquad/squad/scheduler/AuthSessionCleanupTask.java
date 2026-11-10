@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 /**
  * 认证会话清理定时任务
@@ -31,7 +32,7 @@ public class AuthSessionCleanupTask {
      * 以本轮开始时间为基准清理会话，并按限流窗口与锁定时长计算限流记录的清理边界。
      */
     public void sweep() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         int sessions = drain(() -> authRepository.deleteExpiredSessions(now));
         LocalDateTime bucketBefore = now.minus(authProperties.getFailureWindow().multipliedBy(2))
                 .minus(authProperties.getLockDuration());

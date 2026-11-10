@@ -60,6 +60,8 @@ agentsquad:
         max-input-tokens: 65536
         max-output-tokens: 8192
       "[qwen3.8-flash]": &dashscope-chat
+        # 当前密钥下 400 Arrearage / 403 Unpurchased，账户恢复后再启用
+        enabled: false
         provider: OPENAI_COMPATIBLE
         display-name: Qwen3.8 Flash
         capabilities:
@@ -82,6 +84,7 @@ agentsquad:
         max-output-tokens: 8192
       # 千问系文本模型：支持思考与工具调用，走 QWEN_THINKING 适配
       "[qwen3.8-max]":
+        enabled: false
         <<: *dashscope-chat
         model-name: qwen3.8-max
         display-name: Qwen3.8 Max
@@ -92,6 +95,7 @@ agentsquad:
         input-microunits-per-million-tokens: 12000000
         output-microunits-per-million-tokens: 36000000
       "[qwen3.8-omni-flash]":
+        enabled: true
         <<: *dashscope-chat
         model-name: qwen3.8-omni-flash
         display-name: Qwen3.8 Omni Flash
@@ -102,6 +106,7 @@ agentsquad:
         input-microunits-per-million-tokens: 800000
         output-microunits-per-million-tokens: 2700000
       "[qwen3.8-2.4t-a95b]":
+        enabled: false
         <<: *dashscope-chat
         model-name: qwen3.8-2.4t-a95b
         display-name: Qwen3.8 开源模型
@@ -113,6 +118,7 @@ agentsquad:
         output-microunits-per-million-tokens: 36000000
       # 第三方模型：思考协议未实测，保持保守配置
       "[deepseek-v4.1-flash]":
+        enabled: false
         <<: *dashscope-chat
         model-name: deepseek-v4.1-flash
         display-name: DeepSeek V4.1 Flash
@@ -123,6 +129,7 @@ agentsquad:
         input-microunits-per-million-tokens: 1000000
         output-microunits-per-million-tokens: 4000000
       "[kimi-k3]":
+        enabled: false
         <<: *dashscope-chat
         model-name: kimi-k3
         display-name: Kimi K3
@@ -134,6 +141,7 @@ agentsquad:
         output-microunits-per-million-tokens: 100000000
       # 阶梯计费（标准 2/8、>256K 6/24，限时 8 折），配置取 8 折入口档
       "[qwen3.7-plus]":
+        enabled: false
         <<: *dashscope-chat
         model-name: qwen3.7-plus
         display-name: Qwen3.7 Plus
@@ -144,6 +152,7 @@ agentsquad:
         input-microunits-per-million-tokens: 1600000
         output-microunits-per-million-tokens: 6400000
       "[qwen3.7-max]":
+        enabled: false
         <<: *dashscope-chat
         model-name: qwen3.7-max
         display-name: Qwen3.7 Max
@@ -154,6 +163,7 @@ agentsquad:
         input-microunits-per-million-tokens: 12000000
         output-microunits-per-million-tokens: 36000000
       "[qwen3.7-flash]":
+        enabled: false
         <<: *dashscope-chat
         model-name: qwen3.7-flash
         display-name: Qwen3.7 Flash
@@ -164,6 +174,7 @@ agentsquad:
         input-microunits-per-million-tokens: 200000
         output-microunits-per-million-tokens: 800000
       "[qwen3.5-omni-plus]":
+        enabled: true
         <<: *dashscope-chat
         model-name: qwen3.5-omni-plus
         display-name: Qwen3.5 Omni Plus
@@ -174,6 +185,8 @@ agentsquad:
         input-microunits-per-million-tokens: 7000000
         output-microunits-per-million-tokens: 40000000
       "[spark-x2.6]":
+        # 当前密钥校验失败（apikey not found），恢复后再启用
+        enabled: false
         provider: OPENAI_COMPATIBLE
         model-name: spark-x2.6
         base-url: https://maas-api.cn-huabei-1.xf-yun.com/v2

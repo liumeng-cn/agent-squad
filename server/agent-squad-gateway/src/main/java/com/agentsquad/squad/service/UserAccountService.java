@@ -37,6 +37,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -148,7 +149,7 @@ public class UserAccountService {
             throw new StateConflictException("数据已发生变化，请刷新后重试");
         }
         if (authorizationChanged) {
-            authRepository.revokeUserSessions(userId, LocalDateTime.now());
+            authRepository.revokeUserSessions(userId, LocalDateTime.now(ZoneOffset.UTC));
         }
         authRepository.insertAudit(userId, actor.userId(), "USER_UPDATE", "SUCCESS", requestId);
         log.info("管理员更新账号 actor={} target={} role={} status={} authChanged={} requestId={}",
@@ -170,7 +171,7 @@ public class UserAccountService {
         String temporaryPassword = SessionSecrets.randomToken();
         adminUserMapper.updatePassword(userId, passwordEncoder.encode(temporaryPassword), true,
                 actor.userId(), actor.username());
-        authRepository.revokeUserSessions(userId, LocalDateTime.now());
+        authRepository.revokeUserSessions(userId, LocalDateTime.now(ZoneOffset.UTC));
         authRepository.insertAudit(userId, actor.userId(), "USER_RESET_PASSWORD", "SUCCESS", requestId);
         log.info("管理员重置密码 actor={} target={} requestId={}", actor.userId(), userId, requestId);
         return new ResetPasswordVO(temporaryPassword);
@@ -195,7 +196,7 @@ public class UserAccountService {
         }
         adminUserMapper.updatePassword(actor.userId(), passwordEncoder.encode(request.newPassword()), false,
                 actor.userId(), actor.username());
-        authRepository.revokeUserSessions(actor.userId(), LocalDateTime.now());
+        authRepository.revokeUserSessions(actor.userId(), LocalDateTime.now(ZoneOffset.UTC));
         authRepository.insertAudit(actor.userId(), actor.userId(), "PASSWORD_CHANGE", "SUCCESS", requestId);
         log.info("用户修改密码并撤销全部会话 userId={} requestId={}", actor.userId(), requestId);
     }

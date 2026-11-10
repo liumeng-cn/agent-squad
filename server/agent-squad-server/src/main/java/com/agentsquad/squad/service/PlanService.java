@@ -271,7 +271,7 @@ public class PlanService {
         conversationProjection.insertProjected(context.getUserId(), context.getTaskId(),
                 projectionMapper.eventSequence(context.getUserId(), context.getTaskId()),
                 "plan:" + planId, "plan.published", RuntimePayloads.toJson(objectMapper, eventPayload),
-                LocalDateTime.now());
+                LocalDateTime.now(ZoneOffset.UTC));
         for (Map.Entry<Long, Long> reuse : reusedJobIds.entrySet()) {
             if (projectionMapper.reserveEventSequence(context.getUserId(), context.getTaskId()) != 1) {
                 throw new IllegalStateException("结果复用事件序号预留失败");
@@ -281,7 +281,7 @@ public class PlanService {
                     "job:reused:" + reuse.getKey(), "job.reused",
                     RuntimePayloads.toJson(objectMapper, Map.of(
                             "jobId", reuse.getKey(), "reusedFromJobId", reuse.getValue(),
-                            "planVersion", newVersion)), LocalDateTime.now());
+                            "planVersion", newVersion)), LocalDateTime.now(ZoneOffset.UTC));
         }
 
         log.info("计划已发布 taskId={} planVersion={} planId={} jobCount={}",

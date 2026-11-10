@@ -2,8 +2,6 @@ package com.agentsquad.squad.service;
 
 import com.agentsquad.squad.mapper.ExecutionActivityMapper;
 import com.agentsquad.squad.mapper.TaskDirectiveMapper;
-import com.agentsquad.squad.model.vo.ActivityHistoryPageVO;
-import com.agentsquad.squad.model.dto.ActivityHistoryDTO;
 import com.agentsquad.squad.model.bo.ConversationEventBO;
 import com.agentsquad.squad.model.vo.ConversationSnapshotVO;
 import com.agentsquad.squad.model.vo.ConversationViewVO;
@@ -40,7 +38,6 @@ import java.util.List;
  */
 @Service
 public class ConversationQueryService {
-    private static final int ACTIVITY_HISTORY_PAGE_SIZE = 40;
 
     @Resource
     private ExecutionFailureService failures;
@@ -103,22 +100,6 @@ public class ConversationQueryService {
                 activities.recent(userId, conversationId, header.getGeneration(), 100).stream()
                         .map(ExecutionActivityVO::from).toList(),
                 cursor(header, header.getEventSequence()));
-    }
-
-    /**
-     * 仅查询当前会话代际的来源消息，按固定活动身份向前翻页。
-     */
-    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public ActivityHistoryPageVO activityHistory(Long userId, Long conversationId, ActivityHistoryDTO query) {
-        var header = requireHeader(userId, conversationId);
-        if (query.sourceMessageId() == null || query.sourceMessageId() <= 0
-                || query.beforeActivityId() != null && query.beforeActivityId() <= 0) {
-            throw new RuntimeBusinessException(RuntimeExceptionCode.VALIDATION, "活动历史查询参数无效");
-        }
-        var rows = activities.history(userId, conversationId, header.getGeneration(), query, ACTIVITY_HISTORY_PAGE_SIZE + 1);
-        var items = rows.stream().limit(ACTIVITY_HISTORY_PAGE_SIZE).map(ExecutionActivityVO::from).toList();
-        String nextCursor = rows.size() > ACTIVITY_HISTORY_PAGE_SIZE ? String.valueOf(items.getLast().activityId()) : null;
-        return new ActivityHistoryPageVO(items, nextCursor);
     }
 
     /**

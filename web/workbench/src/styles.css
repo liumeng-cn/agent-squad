@@ -727,6 +727,12 @@ textarea.input {
 .copy-answer-button svg { width: 19px; height: 19px; }
 .copy-answer-button:hover { color: #657084; background: #f2f4f8; }
 .copy-answer-button:focus-visible { outline: 2px solid #7794ed; outline-offset: 2px; }
+.answer-footer { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.answer-duration, .answer-elapsed { color: #9aa1ae; font-size: 12px; font-variant-numeric: tabular-nums; }
+.answer-elapsed { margin-left: -4px; }
+.answer-spinner { display: inline-block; width: 10px; height: 10px; margin-left: 7px; border: 1.5px solid #b7c0cf; border-top-color: transparent; border-radius: 50%; vertical-align: -1px; animation: answer-spin .8s linear infinite; }
+@keyframes answer-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .answer-spinner { animation: none; } }
 .answer-state { display: flex; align-items: center; gap: 9px; color: #8d95a1; font-size: 13px; margin: 16px 0 18px 41px; }
 .state-indicator { display: inline-block; width: 7px; height: 7px; background: #aeb8cd; border-radius: 50%; }
 .state-indicator.running { background: #7794ed; animation: state-breathe 1.6s ease-in-out infinite alternate; }
@@ -804,3 +810,10 @@ textarea.input {
 .task-step-title { overflow-wrap: anywhere; }
 .task-steps li small { display: block; color: #9299a5; margin-top: 3px; font-size: 12px; }
 .task-steps-note { margin: 8px 0; color: #9299a5; font-size: 12px; }
+.activity-timeline-scroll { max-height: 220px; overflow-y: auto; padding-right: 6px; scrollbar-width: thin; overscroll-behavior: contain; }
+.activity-timeline-earlier { margin: 4px 0 0; color: #9aa4b2; font-size: 12px; text-align: center; }
+.activity-timeline-group { margin: 6px 0 0; font-size: 11px; }
+.activity-timeline ol { padding-top: 2px; }
+.activity-timeline li { align-items: baseline; gap: 8px; padding: 2px 0; }
+.activity-timeline .task-step-title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.activity-timeline li small { flex-shrink: 0; margin-top: 0; font-size: 11px; }

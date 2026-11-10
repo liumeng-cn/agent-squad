@@ -19,25 +19,6 @@ describe('真实工作步骤', () => {
     expect(wrapper.text()).toContain('本版步骤：1/1 项已完成')
   })
 
-  it('切换安排版本只展示对应活动，准备阶段只归当前版', async () => {
-    const activity = (id: string, planVersion: number) => ({ activityId: id, planVersion, jobId: null,
-      sourceMessageId: 'source', executionId: null, taskId: 'task', type: 'MODEL_CALL' as const,
-      group: 'EXECUTION' as const, status: 'SUCCEEDED' as const, waitReason: null,
-      summary: id, startedAt: null, endedAt: null, version: 1 })
-    getJobs.mockResolvedValueOnce({ items: [job('new', 'SUCCEEDED', '新结果')], planVersion: 2, currentPlanVersion: 2 })
-    const wrapper = mount(TaskSteps, { props: { taskId: 'task', status: 'PARTIAL', revision: '1',
-      activities: [activity('早期准备', 0), activity('旧版活动', 1), activity('新版活动', 2)] } })
-    await flushPromises()
-    expect(wrapper.text()).toContain('新版活动')
-    expect(wrapper.text()).not.toContain('旧版活动')
-    getJobs.mockResolvedValueOnce({ items: [job('old', 'FAILED', '旧结果')], planVersion: 1, currentPlanVersion: 2 })
-    await wrapper.findAll('button').find(button => button.text() === '查看上一版')!.trigger('click')
-    await flushPromises()
-    expect(wrapper.text()).toContain('旧版活动')
-    expect(wrapper.text()).not.toContain('新版活动')
-    expect(wrapper.text()).not.toContain('早期准备')
-  })
-
   it('最终回答完成后折叠，手动展开后不会被后续进度刷新收回', async () => {
     getJobs.mockResolvedValue({ items: [job('one', 'SUCCEEDED', '整理结果')] })
     const wrapper = mount(TaskSteps, { props: { taskId: 'task', status: 'RUNNING', revision: '1', answerCompleted: false } })

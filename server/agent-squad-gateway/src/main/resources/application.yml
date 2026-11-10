@@ -10,6 +10,9 @@ spring:
     url: jdbc:postgresql://127.0.0.1:15432/agent_squad?stringtype=unspecified
     username: squad
     password: ""
+    hikari:
+      # 统一以 UTC 连接，避免 CURRENT_TIMESTAMP 默认值与 Java 写入的 UTC 时间相差时区偏移
+      connection-init-sql: SET TIME ZONE 'UTC'
 
 server:
   address: 127.0.0.1
@@ -76,6 +79,6 @@ logging:
       console: ${SQUAD_LOG_FORMAT:}
   level:
     root: INFO
-    com.agentsquad.squad: DEBUG
-    # MyBatis 只输出 SQL 模板，绑定值和结果行由日志适配器过滤。
-    com.agentsquad.squad.mapper: DEBUG
+    com.agentsquad.squad: INFO
+    # SQL 默认不打印；排查时临时调成 DEBUG，适配器只输出模板并过滤绑定值和结果行。
+    com.agentsquad.squad.mapper: INFO

@@ -111,6 +111,24 @@ describe('服务异常的用户反馈', () => {
     expect(wrapper.text()).toContain('正式正文')
     expect(wrapper.text()).not.toContain('正在生成…')
   })
+  it('回答进行中显示计时和加载图标，完成后停在最终用时', async () => {
+    const store = fixture()
+    store.snapshot = { messages: [], failures: [], activeExecutions: [{ executionId: 'execution', sourceMessageId: 'user', status: 'RUNNING' }], interactions: [], deliverables: [], operationIds: [] } as unknown as ChatSnapshot
+    store.messages = [{ messageId: 'user', role: 'USER', text: '问题', occurredAt: new Date(Date.now() - 3000).toISOString(), artifacts: [] }] as never
+    const wrapper = mount(MessageThread)
+    try {
+      expect(wrapper.find('.answer-state .answer-spinner').exists()).toBe(true)
+      expect(wrapper.find('.answer-elapsed').text()).toMatch(/\d+ 秒/)
+      store.snapshot.activeExecutions = []
+      store.messages = [
+        { messageId: 'user', role: 'USER', text: '问题', occurredAt: '2026-11-06T12:48:46Z', artifacts: [] },
+        { messageId: 'answer', role: 'ASSISTANT', text: '回答', completed: true, sourceMessageId: 'user', executionId: 'execution', occurredAt: '2026-11-06T12:51:25Z', artifacts: [] },
+      ] as never
+      await wrapper.vm.$nextTick()
+      expect(wrapper.find('.answer-spinner').exists()).toBe(false)
+      expect(wrapper.find('.answer-duration').text()).toBe('用时 2 分 39 秒')
+    } finally { wrapper.unmount() }
+  })
   it('实际内容增长时合并自动滚动，用户向上查看后不抢回位置', async () => {
     fixture()
     let notify!: () => void

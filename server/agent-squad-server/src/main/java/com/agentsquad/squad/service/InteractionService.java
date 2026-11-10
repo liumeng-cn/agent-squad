@@ -128,7 +128,7 @@ public class InteractionService {
             interactionMapper.insert(interactionId, userId, taskId, jobId, bindingId,
                     operation.getOperationId(), "FRAMEWORK", frameworkRequestId, KIND_APPROVAL,
                     question, fixedApprovalSchema(), 0L, operation.getRequestHash(),
-                    operation.getConnectionRevision(), LocalDateTime.now().plusHours(ttlHours),
+                    operation.getConnectionRevision(), LocalDateTime.now(ZoneOffset.UTC).plusHours(ttlHours),
                     userId, "model");
             log.info("审批交互已绑定 interactionId={} operationId={} toolKey={}",
                     interactionId, operation.getOperationId(), operation.getToolKey());
@@ -147,7 +147,7 @@ public class InteractionService {
             interactionMapper.insert(interactionId, userId, taskId, null, bindingId,
                     null, "FRAMEWORK", frameworkRequestId, KIND_INPUT, review.question(), schema,
                     review.planVersion(), review.requestHash(), 0L,
-                    LocalDateTime.now().plusHours(ttlHours), userId, "model");
+                    LocalDateTime.now(ZoneOffset.UTC).plusHours(ttlHours), userId, "model");
             return new BindingResultBO(interactionId, KIND_INPUT);
         }
         if ("request_input".equals(toolName)) {
@@ -157,7 +157,7 @@ public class InteractionService {
                     null, "FRAMEWORK", frameworkRequestId, KIND_INPUT,
                     question, answerSchemaJson, 0L,
                     ContentDigests.sha256(question), 0L,
-                    LocalDateTime.now().plusHours(ttlHours), userId, "model");
+                    LocalDateTime.now(ZoneOffset.UTC).plusHours(ttlHours), userId, "model");
             log.info("追问交互已绑定 interactionId={} bindingId={}", interactionId, bindingId);
             return new BindingResultBO(interactionId, KIND_INPUT);
         }
@@ -273,7 +273,7 @@ public class InteractionService {
         if (row.getVersion() != expectedVersion) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "交互版本已变化，请刷新后重试");
         }
-        if (row.getExpiresAt() != null && row.getExpiresAt().isBefore(LocalDateTime.now())) {
+        if (row.getExpiresAt() != null && row.getExpiresAt().isBefore(LocalDateTime.now(ZoneOffset.UTC))) {
             throw new RuntimeBusinessException(RuntimeExceptionCode.CONFLICT, "交互答复已过期");
         }
 
