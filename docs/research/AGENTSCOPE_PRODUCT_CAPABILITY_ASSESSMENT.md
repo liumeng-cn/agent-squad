@@ -568,3 +568,238 @@ README 对 Service 的定位很清晰：Agent 控制面与 Dashboard，面向观
 - [消息与事件文档（main）](https://github.com/agentscope-ai/agentscope-java/blob/main/docs/v2/zh/docs/building-blocks/message-and-event.md)
 - [生产部署文档（main）](https://github.com/agentscope-ai/agentscope-java/blob/main/docs/v2/zh/docs/others/going-to-production.md)
 - [AgentScope Chat 可恢复聊天示例](https://github.com/agentscope-ai/agentscope-java/blob/main/agentscope-examples/agents/agentscope-chat/README_zh.md)
+
+
+---
+
+# 12. SubAgent 完整生命周期与 AgentSquad 当前实现对照（2026-11-10）
+
+本节进一步阅读上游固定 commit 的 Java 实现，而不只依据 README / 文档；同时读取 AgentSquad `feat/20261103_log_optimize` 分支当前代码。研究范围聚焦：创建、执行、后台任务记录、完成通知、Master 接续、用户交互、持久化和进程恢复。
+
+## 12.1 本轮审计基线
+
+| 项目 | 本轮确认值 |
+|---|---|
+| AgentSquad 分支 | `feat/20261103_log_optimize` |
+| AgentSquad AgentScope 依赖 | `2.1.0-BETA1`，来自 `server/pom.xml` |
+| AgentScope 上游源码 | `main` 搜索命中源码对应 commit `9ab7a4fab7bf610fd0483f599b374fb0930be98a` |
+| 上游 Harness 结构 | `agentscope-harness`，同时有 `AgentSession` 与 SubAgent TaskRepository 两套不同机制 |
+| 本轮限制 | 读取源码和文档；没有修改 AgentSquad 业务代码，也没有运行项目测试 |
+
+**注意：** 本节对上游实现细节的描述以链接所指 commit 为证据；AgentSquad 代码结论以本分支文件为证据。不能将上游 main 的实现直接视为 `2.1.0-BETA1` 已包含的 API。
+
+## 12.2 先区分两条不同的后台执行路径
+
+AgentScope Harness 内存在两种容易被混淆的后台执行机制：
+
+### A. AgentSession：管理一个会话中的任务
+
+`AgentSession` 处理的是用户与某个 Agent 会话之间的任务生命周期：
+
+- `submit`：接收一项新任务，先持久化命令，再安排执行；支持幂等提交。
+- `steer`：给当前运行中的任务补充要求，关联原 turn。
+- `inject`：保存后续推理可用的材料，不主动启动任务。
+- `interrupt`：请求当前执行在协作检查点停止。
+- `respond`：回答挂起的人工确认 / 外部执行请求。
+- `resume`：从已保存 checkpoint 继续最新未完成任务。
+- `transcript / pending / inspect / tasks`：读取完整对话、待办、恢复检查和任务状态。
+
+其核心特点是：**AgentSession 自己拥有后台执行订阅，不依赖 HTTP/SSE 观察连接存活。** 前端断开只影响观察，不会自动取消后台任务。
+
+源码中 `AgentSession.start()` 启动周期 dispatcher（100ms）；dispatcher 从持久 inbox 中选取尚未启动的命令，检查 Session Log 的 owner / lease，再调用 `agent.prepareRun(...)` 启动执行。执行由 `AgentRun` 驱动，结束后释放本地 active 引用。应用重启后重新取得同一身份的 session 并调用 `start()`，可以重新处理持久队列。
+
+它不是单纯的“把 Mono 放进后台线程”，而是“持久命令收件箱 + 日志状态 + 执行租约 + 后台调度器”的组合。
+
+### B. SubAgent TaskRepository：管理 Master 委派出去的子任务
+
+`agent_spawn` 的后台路径管理的是 Master 委派出去的子 Agent 任务：
+
+1. Master 通过 `agent_spawn` 指定子 Agent 类型和任务。
+2. `AgentSpawnTool` 选择同步执行、超时后转后台，或直接后台执行。
+3. 后台任务交给 `TaskRepository.putTask(...)`。
+4. Repository 持久化 `TaskRecord`，同时可能在当前节点持有一个 `CompletableFuture`。
+5. 子 Agent 完成后更新任务状态，触发完成回调。
+6. 回调可以把结果提醒写入父会话 inbox，并发送 wakeup 信号。
+7. Master 下一轮推理读取提醒，整合子任务结果。
+
+这里的 `task_id` 表示一次后台任务；`agent_key` 表示可继续通信的子 Agent 实例句柄。二者不是同一个东西。子 Agent 实例复用由 `persistSession` / manager 负责；后台任务状态与结果由 TaskRepository 负责。
+
+**因此：AgentSession 不会自动替代 SubAgent TaskRepository；TaskRepository 也不负责用户主会话的完整任务队列、steer、HITL 和 checkpoint 恢复。**
+
+## 12.3 上游 SubAgent 的实际执行方式
+
+### 同步执行
+
+`timeout_seconds > 0` 时，Master 在工具调用中等待子 Agent 结果。默认等待 30 秒，最大 600 秒。若普通同步调用超时，当前执行可以被 promote 为后台任务，返回 `task_id`，子任务继续运行。
+
+同一轮多个同步 SubAgent 工具调用，Toolkit 默认并行执行，形成 fan-out / fan-in：一批工具结果全部返回后，Master 才进入下一轮推理。
+
+### 后台执行
+
+`timeout_seconds = 0` 时，工具尽快返回后台任务标识，Master 可以继续处理独立工作。任务状态可以通过 `task_output`、`task_list` 读取；需要等一组结果时用 `wait_async_results(task_ids=...)`，而不是误用默认 inbox-any 模式。
+
+任务完成后是否自动回到 Master，取决于接入的通知路径。上游 `SubagentsMiddleware.wireMessageBus(...)` 的源码显示：完成回调会把结果摘要写入父 session inbox，并 enqueue wakeup，交由 `WakeupDispatcher` 重新触发空闲父会话。文档中的 system-reminder 是结果交付给 Master 的提示形式，不等同于前端 SSE 事件。
+
+### 实时子 Agent 事件
+
+`AgentSpawnTool` 的源码说明：如果当前 Reactor Context 存在 `SubagentEventBus`，子 Agent 的事件会被转发到父事件流，形成层级展平的实时事件；普通 `call()` 模式没有事件总线时，回退到非流式执行路径。
+
+这解决的是“子 Agent 执行时的实时事件可见性”，但它不等同于持久事件日志，也不能单独解决断线后的补发。
+
+## 12.4 上游后台任务的持久化和跨节点限制
+
+上游 `WorkspaceTaskRepository` 的源码注释明确写出了分布式语义：
+
+- 共享 Workspace 存储是 TaskRecord 的权威状态来源。
+- 每个节点只在本地内存保存本节点运行的 `BackgroundTask` / Future。
+- 任务执行 sticky 到发起节点；其它节点可以读取持久任务状态，但没有本地 Future 时，阻塞等待会退化为读取最新持久状态。
+- 取消通过共享记录写入 cancelRequested，由发起节点检查并尽力取消本地执行。
+- 远程任务通过 Agent Protocol HTTP transport 执行，记录远程地址等信息，支持跨节点查询与恢复远端任务状态。
+- 本地任务依赖心跳和 orphan sweep 识别失联执行；默认心跳 30 秒、超过 10 分钟无心跳可被视为 orphan，sweep 周期 5 分钟。
+- 多副本 sweep 可以用 StoreBackedPeriodicGate 去重；若部署了 Control Plane，优先使用由 Control Plane 托管的 TaskRepository。
+
+这意味着不能把“TaskRecord 在共享存储中”误读成“本地 Java Future 可以在任意节点恢复”。**共享任务记录解决状态可见性；真正的执行接管还需要远程执行协议、租约/心跳、orphan 处理或集中控制面。**
+
+上游还提供 `ControlPlaneTaskRepository`，任务状态由 Control Plane 持久化，本地节点保留当前运行的 Future，定期向 Control Plane heartbeat；它不是普通 WorkspaceTaskRepository 的简单换皮，而是将任务权威状态和维护职责放到控制面。
+
+## 12.5 AgentSession 的恢复边界
+
+源码与官方 session-log 文档共同确认：
+
+- 命令先持久化，执行由后台 dispatcher 发起。
+- `AgentSession.await()` 只观察任务状态，不负责启动、重试或取消执行。
+- `interrupt()` 是协作式停止，不是强制杀死任意 Java 线程。
+- `resume()` 恢复 checkpoint，不会恢复原来的 Java 线程、HTTP 请求或工具内部进度。
+- 对于进程崩溃时“工具是否已经产生外部副作用”不确定的情况，框架会要求通过 `inspect().uncertainToolCalls()` 核实真实业务系统结果，再 `reconcileToolOutcomes`，之后才能继续。
+- 进程重启后用相同 agentId / userId / sessionId / 日志后端重新构建 Agent，再调用 `session.start()` 恢复队列调度；已中断任务由应用明确决定是否 resume。
+- 日志 head 中的 owner / lease 用于执行归属和接管判断；旧执行的写入租约未释放或到期时，新执行不能随意抢占。
+
+这套设计没有承诺“任何工具执行到一半都能从字节级现场恢复”。它恢复的是 Agent 的已保存状态；工具的外部副作用必须具备幂等、查询核对或补偿能力。
+
+## 12.6 AgentSquad 当前代码的真实情况
+
+本轮直接读取了 AgentSquad 当前分支的 `MasterAgent.java`、`WorkerFactory.java`、`RuntimeSessionProvider.java` 和两个 POM。
+
+### Master 当前明确禁用了原生 SubAgent
+
+`MasterAgent.initialize()` 中构建 HarnessAgent 时显式调用：
+
+```java
+.disableSubagents()
+```
+
+并且 Master 的系统提示词明确要求：
+- 普通交流、可直接交付的问题直接回答，不为每条消息创建目标；
+- 用户明确要求 Worker、多任务并行或委派协作时，必须创建 GoalTask；
+- 需要独立持续推进的工作由平台创建 GoalTask；
+- 通过平台发布计划、节点依赖和 Worker 结果验收完成复杂任务。
+
+这说明当前产品不是“忘了接入 SubAgent”，而是**有意识地把复杂任务委派交给了自己的业务控制面**。
+
+### Worker 也明确禁用了原生 SubAgent
+
+`WorkerFactory.create()` 构建每个叶子 Worker 时也调用 `.disableSubagents()`。Worker 提示词限定只处理当前节点，不发布计划、不结束父目标、不再委派其他 Agent。
+
+因此当前结构是：
+
+- Master：理解用户意图、决定是否建立 GoalTask、发布任务计划、最终整合并回复。
+- GoalTask / Plan：平台持久化的业务目标、计划和节点依赖。
+- Worker：按已发布 Definition 和输入快照执行单个节点，提交结构化结果。
+- 平台调度：管理节点领取、状态、重试/取消、结果验收和最终汇合。
+- AgentScope Harness：提供 Master / Worker 的模型推理、工具执行、Session Log、checkpoint 和底层运行能力。
+
+### AgentSquad 已经使用 AgentSession，而不是完全自建主会话执行器
+
+`MasterAgent` 通过 `sessionFor(...)` 获取原生 `AgentSession`；`submit` 用平台 commandId 作为幂等键，`stop` 调用原生 `interrupt`，`resume` 调用原生 `resume`，`respond` 调用原生 `respond`。
+
+`WorkerFactory.sessionFor()` 也为 Worker 创建原生 AgentSession，并把业务 Binding、guard token、技能授权等上下文注入 RuntimeContext。
+
+`RuntimeSessionProvider` 用 JDBC DistributedStore 的 baseStore 包装出 SessionLogStore，日志和恢复数据落在数据库后端。它还提供只读的 committed log 读取入口，不因页面读取启动 Agent、领取 Job 或续租。
+
+### 但 AgentSquad 的执行接管仍有自己的业务层
+
+`WorkerFactory` 使用本进程 `ConcurrentHashMap<bindingId, WorkerAgentHandleBO>` 缓存活跃 Worker Agent；首次创建会校验 Binding / Definition / 上下文快照，并通过 `dispatchService.claim(...)` 领取业务 guard；后续调用续租 guard。进程退出时关闭本地 Agent，但注释明确持久 Journal 和固定 Binding 保留供接管。
+
+这意味着 AgentScope Session Log 负责 Agent 执行状态的恢复，AgentSquad 的业务 guard / Binding / 调度负责 Worker 执行权的恢复与业务一致性。两者是互补关系。
+
+## 12.7 两套体系对照
+
+| 维度 | AgentScope 原生 SubAgent | AgentScope AgentSession | AgentSquad 当前 GoalTask / Worker |
+|---|---|---|---|
+| 主要对象 | Master 委派的子 Agent 任务 | 一个 Agent 会话里的用户任务 | 业务目标、计划和节点 |
+| 创建入口 | `agent_spawn` / `agent_send` | `session.submit` | `create_goal_task` 等业务工具 |
+| 并行方式 | 同一轮工具并行、后台子任务 | 同一 Session 命令排队；不同 Session 可并发 | 计划节点按依赖关系调度 |
+| 完成回传 | TaskRepository 回调 / inbox / wakeup | Session Log / task 状态 / 事件 | Worker 结构化结果 + 平台汇合 |
+| 子 Agent 持续对话 | `persistSession` + `agent_send` | 不是它的职责 | Worker 按 Binding / Session 固定身份运行 |
+| 用户直接进入子 Agent | 可选 expose-to-user + Gateway | 用户本来就在主 Session | 当前产品未把 Worker 作为聊天入口 |
+| 中断与恢复 | 任务取消、远程任务状态恢复；不是完整 AgentSession checkpoint 语义 | 原生 interrupt / resume / reconcile | 业务取消/接管 + 原生 Session 恢复 |
+| 依赖 DAG | 不提供完整业务 DAG | 不提供业务 DAG | 平台负责 |
+| 业务权限与预算 | 子 Agent 工具/权限配置 | Session / RuntimeContext 层机制 | 平台 Definition、授权、模型预算与 guard |
+| 结果验收 | Master 自己判断 | 不负责业务验收 | 平台 schema、验收和最终交付 |
+
+## 12.8 对产品设计的影响
+
+当前产品目标分为两个体验入口，但底层能力尽可能共用：
+
+### 客服聊天入口
+
+建议将来研究并接入原生 SubAgent，但不应直接放开所有工具：
+
+- Master 仍然是用户唯一默认对话入口。
+- 对于需要多视角分析、并行调查、专业知识补充的问题，Master 可以自主创建 SubAgent。
+- SubAgent 结果通过原生事件和任务完成通知回到 Master。
+- 只有明确需要用户独立跟某个专家继续沟通时，才考虑 expose-to-user；默认不要把内部 SubAgent 暴露成多个聊天对象。
+- 主会话的长任务后台执行、排队、用户插话、中断恢复，继续由 AgentSession 管理。
+- 前端统一展示事件，但必须区分主 Agent、子 Agent、工具、任务状态和持久日志事实。
+
+### 复杂任务工作台
+
+保留 AgentSquad 当前 GoalTask / Plan / Worker DAG：
+
+- 计划与依赖必须持久化且可审计。
+- Worker 的输入输出必须符合固定契约。
+- 任务重试、取消、超时、预算和幂等由平台统一控制。
+- Worker 不应因模型自主判断而越权创建其他 Worker 或修改父目标。
+- AgentScope 的 Harness / Session / Middleware / Tool 能力作为运行内核，而非取代业务控制面。
+
+## 12.9 当前最值得做的验证，不是立刻重构
+
+上游 main 的 SubAgent 实现值得接入 PoC，但先做一个独立分支 / 示例，不触碰现有 GoalTask 业务链路。验证顺序建议：
+
+1. **版本确认**：检查 `2.1.0-BETA1` 是否包含所需的 SubAgent 声明、后台 TaskRepository、事件总线和 wakeup API。若没有，逐项列出升级差异，不直接升级。
+2. **最小同步委派**：Master 以两个只读工具专家并行执行，验证事件 source / replyId / toolCallId 的关联与最终汇总。
+3. **后台完成通知**：一个短任务 + 一个长任务；Master 先完成当前回复，子任务结束后验证 inbox / wakeup 是否能安全唤醒原会话。
+4. **用户插话**：任务运行时追加要求，验证 steer 的语义是否适合“对主 Agent 的新消息”以及是否会误改子 Agent 当前任务。
+5. **中断和恢复**：分别模拟模型调用中断、工具执行中断、进程退出；核验任务状态、checkpoint、lease、uncertain tool outcomes。
+6. **多副本**：两个应用节点同时启动；在节点 A 创建子任务，在节点 B 查询、取消和接收完成通知；杀掉 A 后验证是否能重新执行或明确失败，而不是任务永久挂起。
+7. **权限隔离**：验证子 Agent 是否继承父权限、是否能获得未授权工具、用户/租户上下文是否贯穿事件与任务记录。
+8. **成本与资源**：限制并发子 Agent 数量、每个子 Agent 的模型预算、最大深度、最大运行时间和后台任务积压。
+
+PoC 的通过标准必须包含“不会重复执行外部副作用”和“不会丢失任务完成通知”，不能只以模型最终回答正确作为通过条件。
+
+## 12.10 本轮阶段性结论
+
+1. **当前 AgentSquad 没有使用原生 SubAgent 是明确的架构选择。** Master 和 Worker 都显式禁用了它；复杂任务由 GoalTask / Worker DAG 管理。
+2. **AgentSquad 已经使用原生 AgentSession。** 主会话和 Worker Session 的任务提交、中断、答复与恢复已接入 Harness；不应把这些能力误判为尚未实现。
+3. **原生 SubAgent 值得用于客服聊天中的自主专家协作。** 但它不应该取代复杂任务工作台的业务 DAG。
+4. **AgentScope 的“持久任务状态”不自动等于“跨节点恢复执行”。** 本地 Future sticky 到发起节点，分布式恢复依赖具体 TaskRepository、远程协议、心跳 / orphan 机制或 Control Plane。
+5. **下一步应先做版本差异和小型 PoC，再决定是否引入 SubAgent。** 不建议此时推翻现有架构或把 GoalTask 改造成 SubAgent。
+
+## 12.11 本节源码与文档索引
+
+### AgentScope 上游（源码 commit `9ab7a4fab7bf610fd0483f599b374fb0930be98a`）
+
+- [AgentSession.java](https://github.com/agentscope-ai/agentscope-java/blob/9ab7a4fab7bf610fd0483f599b374fb0930be98a/agentscope-harness/src/main/java/io/agentscope/harness/agent/session/AgentSession.java)
+- [AgentSpawnTool.java](https://github.com/agentscope-ai/agentscope-java/blob/9ab7a4fab7bf610fd0483f599b374fb0930be98a/agentscope-harness/src/main/java/io/agentscope/harness/agent/tool/AgentSpawnTool.java)
+- [SubagentsMiddleware.java](https://github.com/agentscope-ai/agentscope-java/blob/9ab7a4fab7bf610fd0483f599b374fb0930be98a/agentscope-harness/src/main/java/io/agentscope/harness/agent/middleware/SubagentsMiddleware.java)
+- [WorkspaceTaskRepository.java](https://github.com/agentscope-ai/agentscope-java/blob/9ab7a4fab7bf610fd0483f599b374fb0930be98a/agentscope-harness/src/main/java/io/agentscope/harness/agent/subagent/task/WorkspaceTaskRepository.java)
+- [ControlPlaneTaskRepository.java](https://github.com/agentscope-ai/agentscope-java/blob/9ab7a4fab7bf610fd0483f599b374fb0930be98a/agentscope-extensions/agentscope-extensions-controlplane/src/main/java/io/agentscope/extensions/controlplane/store/ControlPlaneTaskRepository.java)
+- [AgentScope Session Log 文档](https://github.com/agentscope-ai/agentscope-java/blob/main/docs/v2/zh/docs/harness/session-log.md)
+- [AgentScope SubAgent 文档](https://github.com/agentscope-ai/agentscope-java/blob/main/docs/v2/zh/docs/harness/subagent.md)
+
+### AgentSquad 当前分支
+
+- [MasterAgent.java](https://github.com/liumeng-cn/agent-squad/blob/feat/20261103_log_optimize/server/agent-squad-server/src/main/java/com/agentsquad/squad/agent/MasterAgent.java)
+- [WorkerFactory.java](https://github.com/liumeng-cn/agent-squad/blob/feat/20261103_log_optimize/server/agent-squad-server/src/main/java/com/agentsquad/squad/agent/WorkerFactory.java)
+- [RuntimeSessionProvider.java](https://github.com/liumeng-cn/agent-squad/blob/feat/20261103_log_optimize/server/agent-squad-server/src/main/java/com/agentsquad/squad/agent/session/RuntimeSessionProvider.java)
+- [server/pom.xml](https://github.com/liumeng-cn/agent-squad/blob/feat/20261103_log_optimize/server/pom.xml)
