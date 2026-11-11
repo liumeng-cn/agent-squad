@@ -162,7 +162,7 @@ async function send() {
       method: 'POST',
       credentials: base ? 'include' : 'same-origin',
       headers,
-      body: JSON.stringify({ scenario: 'parallel', intervalMillis: 300 }),
+      body: JSON.stringify({ intervalMillis: 300 }),
       signal: controller.signal,
     })
     if (!response.ok || !response.body) throw new Error(`请求失败（HTTP ${response.status}）`)
