@@ -29,6 +29,7 @@ type SquadEvent = {
 type TimelineRow = { key: string; event: SquadEvent; depth: number; agentName: string; isAgentStart: boolean }
 
 const draft = ref('')
+const lastPrompt = ref('')
 const busy = ref(false)
 const error = ref('')
 const status = ref('等待发送消息')
@@ -36,7 +37,7 @@ const rows = ref<TimelineRow[]>([])
 const bottom = ref<HTMLElement | null>(null)
 let controller: AbortController | null = null
 
-const agentNames = new Map<string, string>()
+
 const timeline = computed(() => rows.value)
 const eventCount = computed(() => rows.value.length)
 
@@ -63,12 +64,12 @@ function addEvent(event: SquadEvent) {
   const agent = event.agent || {}
   const instanceId = agent.agentInstanceId || agent.agentId || 'unknown'
   const agentName = agent.agentName || agent.agentId || '未知 Agent'
-  agentNames.set(instanceId, agentName)
+  
 
   if (event.eventType === 'SUBAGENT_EXPOSED') {
     const child = event.payload?.childAgent as AgentRef | undefined
     if (child?.agentInstanceId && child.agentName) {
-      agentNames.set(child.agentInstanceId, child.agentName)
+
     }
   }
 
@@ -102,7 +103,7 @@ async function send() {
   const message = draft.value.trim()
   if (!message || busy.value) return
   rows.value = []
-  agentNames.clear()
+  lastPrompt.value = message
   error.value = ''
   status.value = '正在连接测试事件流…'
   busy.value = true
@@ -190,7 +191,7 @@ onBeforeUnmount(stop)
       <div v-else class="timeline">
         <article class="user-message">
           <span class="avatar user-avatar">U</span>
-          <div><small>YOU</small><p>{{ '已发送测试消息' }}</p></div>
+          <div><small>YOU</small><p>{{ lastPrompt }}</p></div>
         </article>
 
         <div class="timeline-heading">
@@ -258,7 +259,7 @@ onBeforeUnmount(stop)
 .error-message{color:#b42318;text-align:center;font-size:12px;margin:0 20px 8px}
 .composer-wrap{width:min(860px,calc(100% - 40px));margin:0 auto;padding:10px 0 18px;text-align:center;flex:none}
 .composer{display:flex;align-items:flex-end;gap:10px;border:1px solid #d9d9d9;border-radius:18px;padding:10px 11px 10px 16px;box-shadow:0 2px 12px #00000008}
-.composer textarea{flex:1;min-height:25px;max-height:160px;resize:vertical;border:0;outline:0;font:13px/1.6 inherit;color:inherit;background:transparent;padding:3px 0}.composer textarea::placeholder{color:#aaa}
+.composer textarea{flex:1;min-height:25px;max-height:160px;resize:vertical;border:0;outline:0;font-family:inherit;font-size:13px;line-height:1.6;color:inherit;background:transparent;padding:3px 0}.composer textarea::placeholder{color:#aaa}
 .send-button{width:34px;height:34px;flex:none;border:0;border-radius:50%;background:#242424;color:#fff;font-size:20px;line-height:1;cursor:pointer}.send-button:disabled{background:#d7d7d7;cursor:not-allowed}.stop-button{font-size:12px}
 .composer-wrap>small{display:block;color:#aaa;font-size:10px;margin-top:8px}
 @media(max-width:600px){.topbar{padding:0 16px}.conversation,.composer-wrap{width:calc(100% - 28px)}.conversation{padding-top:18px}.event-time{width:100%;margin-left:0}.tree-indent{width:calc(17px + var(--depth)*19px)}.tree-branch{width:19px}.tree-node{left:calc(var(--depth)*19px)}}
