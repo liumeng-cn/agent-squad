@@ -19,7 +19,7 @@ public final class AgentScopeLabSupport {
 
     private static final String AGENT_ID = "agentscope-java-lab";
     private static final String USER_ID = "learning-user";
-    private static final String DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
+    private static final String DEFAULT_BASE_URL = "https://api.deepseek.com/v1";
     private static final String DEFAULT_MODEL = "qwen-plus";
 
     private AgentScopeLabSupport() {
@@ -29,7 +29,7 @@ public final class AgentScopeLabSupport {
      * 创建统一的 HarnessAgent Builder；每个实验请求单独 build 并关闭 Agent。
      */
     public static HarnessAgent.Builder newBuilder() {
-        String apiKey = requiredEnvironment("AGENTSCOPE_API_KEY");
+        String apiKey = environmentOrDefault("AGENTSCOPE_API_KEY","sk-53611088171449239d5f9a7c2ca07007");
         String baseUrl = environmentOrDefault("AGENTSCOPE_BASE_URL", DEFAULT_BASE_URL);
         String modelName = environmentOrDefault("AGENTSCOPE_MODEL", DEFAULT_MODEL);
         Path workspace = Path.of(environmentOrDefault(

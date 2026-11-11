@@ -13,7 +13,7 @@
 
 新增模型时配置provider、model-name、base-url、api-key、pricing-version、输入输出计价单位及Token上限；可选display-name、enabled、capabilities、reasoning-adapter、reasoning-modes、default-reasoning-mode。能力枚举REASONING/TEXT_GENERATION/CODING/TOOL_USE/VISION是管理员声明，不是质量评分。
 
-当前真实可用且已验证为Spark-X2.6。同一密钥请求Spark-X2.6-4b得到403，未将其启用或修改供应商授权。无需为了演示多模型制造两个实际相同模型的假选项。
+当前本地已验证 `qwen3.8-omni-flash`（百炼）与 `deepseek-flash`、`deepseek-v4-pro`（DeepSeek 官方接口，实测对话、工具调用与 reasoning_effort）。同一密钥请求Spark-X2.6-4b得到403，未将其启用或修改供应商授权。无需为了演示多模型制造两个实际相同模型的假选项。
 
 ## 后续Worker策略
 

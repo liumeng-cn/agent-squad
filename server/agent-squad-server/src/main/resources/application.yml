@@ -75,9 +75,9 @@ management:
 
 agentsquad:
   native-chat:
-    api-key: ${DEEPSEEK_API_KEY:}
-    base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
-    model: ${DEEPSEEK_MODEL:deepseek-chat}
+    api-key: ${DEEPSEEK_API_KEY:sk-53611088171449239d5f9a7c2ca07007}
+    base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com/v1}
+    model: ${DEEPSEEK_MODEL:deepseek-flash}
   scheduler:
     # 未知类型命令由低频任务隔离，正常投递扫描继续按原频率运行。
     command-unknown-sweep-delay-ms: 15000

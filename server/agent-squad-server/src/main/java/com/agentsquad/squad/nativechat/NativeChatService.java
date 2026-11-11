@@ -6,6 +6,7 @@ import io.agentscope.core.message.AssistantMessage;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.UserMessage;
 import io.agentscope.extensions.model.openai.OpenAIChatModel;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -26,13 +27,14 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * 无业务持久化的原生事件聊天。一次请求创建一个 Agent；多轮上下文由页面显式传入。
  */
+@Slf4j
 @Service
 public class NativeChatService {
-    @Value("${agentsquad.native-chat.api-key:}")
+    @Value("${agentsquad.native-chat.api-key:sk-53611088171449239d5f9a7c2ca07007}")
     private String apiKey;
-    @Value("${agentsquad.native-chat.base-url:https://api.deepseek.com}")
+    @Value("${agentsquad.native-chat.base-url:https://api.deepseek.com/v1}")
     private String baseUrl;
-    @Value("${agentsquad.native-chat.model:deepseek-chat}")
+    @Value("${agentsquad.native-chat.model:deepseek-flash}")
     private String modelName;
 
     public SseEmitter stream(NativeChatRequest request) {
@@ -75,6 +77,9 @@ public class NativeChatService {
                         ReActAgent::close)
                 .subscribeOn(Schedulers.boundedElastic())
                 .subscribe(event -> send(emitter, event), error -> {
+                    // 异常消息只保留类型和摘要，避免把完整请求或上下文写入日志。
+                    log.warn("原生聊天流失败 errorType={} message={}",
+                            error.getClass().getSimpleName(), error.getMessage());
                     try {
                         emitter.send(SseEmitter.event().name("STREAM_ERROR")
                                 .data(Map.of("message", "模型调用失败，请检查服务端日志和模型配置"),
