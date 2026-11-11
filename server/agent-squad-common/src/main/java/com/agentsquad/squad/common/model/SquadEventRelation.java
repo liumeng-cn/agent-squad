@@ -14,24 +14,38 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SquadEventRelation {
 
-    /** 直接关联的父事件 ID。 */
+    /**
+     * 直接关联的父事件 ID。
+     */
     private String parentEventId;
 
-    /** 导致当前事件发生的事件 ID。 */
+    /**
+     * 导致当前事件发生的事件 ID。
+     */
     private String causedByEventId;
 
-    /** 消息 ID。 */
+    /**
+     * 消息 ID。
+     */
     private String messageId;
 
-    /** 消息内容块 ID。 */
+    /**
+     * 消息内容块 ID。
+     */
     private String blockId;
 
-    /** 工具调用 ID。 */
+    /**
+     * 工具调用 ID。
+     */
     private String toolCallId;
 
-    /** Agent 的一次具体执行 ID。 */
+    /**
+     * Agent 的一次具体执行 ID。
+     */
     private String executionId;
 
-    /** 当前事件关联的目标 Agent 实例 ID。 */
+    /**
+     * 当前事件关联的目标 Agent 实例 ID。
+     */
     private String targetAgentInstanceId;
 }

@@ -16,24 +16,38 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SquadAgentRef {
 
-    /** Agent 定义 ID。 */
+    /**
+     * Agent 定义 ID。
+     */
     private String agentId;
 
-    /** 本次创建的 Agent 实例 ID。 */
+    /**
+     * 本次创建的 Agent 实例 ID。
+     */
     private String agentInstanceId;
 
-    /** Agent 展示名称。 */
+    /**
+     * Agent 展示名称。
+     */
     private String agentName;
 
-    /** Agent 在执行树中的角色。 */
+    /**
+     * Agent 在执行树中的角色。
+     */
     private SquadAgentType agentType;
 
-    /** 父 Agent 实例 ID，根 Agent 为空。 */
+    /**
+     * 父 Agent 实例 ID，根 Agent 为空。
+     */
     private String parentAgentInstanceId;
 
-    /** 根 Agent 实例 ID。 */
+    /**
+     * 根 Agent 实例 ID。
+     */
     private String rootAgentInstanceId;
 
-    /** 当前 Agent 在执行树中的层级，根节点为 0。 */
+    /**
+     * 当前 Agent 在执行树中的层级，根节点为 0。
+     */
     private Integer depth;
 }

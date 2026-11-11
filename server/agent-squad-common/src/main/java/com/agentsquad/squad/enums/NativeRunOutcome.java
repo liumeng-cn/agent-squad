@@ -1,8 +1,8 @@
 package com.agentsquad.squad.enums;
 
-import java.util.Arrays;
-
 import lombok.Getter;
+
+import java.util.Arrays;
 
 /**
  * AgentScope 原生回合的归一化结果。
