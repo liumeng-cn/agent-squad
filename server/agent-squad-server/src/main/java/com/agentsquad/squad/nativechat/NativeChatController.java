@@ -6,6 +6,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /** 原生事件聊天入口：一次 POST 直接返回 SSE，不经过旧版 Conversation/Task 业务链路。 */
@@ -24,8 +26,10 @@ public class NativeChatController {
         return nativeChatService.stream(body);
     }
     @PostMapping(path = "/subagents", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter subagents(HttpServletRequest request, @Valid @RequestBody NativeSubagentController.SubagentRequest body) {
+    public SseEmitter subagents(HttpServletRequest request, @Valid @RequestBody SubagentRequest body) {
         UserContext.current(request);
         return nativeSubagentService.stream(body.task());
     }
+
+    public record SubagentRequest(@NotBlank @Size(max = 8000) String task) {}
 }

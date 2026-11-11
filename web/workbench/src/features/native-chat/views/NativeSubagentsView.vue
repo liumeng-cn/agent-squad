@@ -15,6 +15,7 @@ const agents = ref<Record<AgentName, AgentState>>({
   text_reverser: { started: false, finished: false, text: '', toolCalls: [] },
 })
 let controller: AbortController | null = null
+const forwardedBuffers = new Map<string, string>()
 const agentCards = computed(() => [
   { id: 'calculator' as const, title: '计算子智能体', tool: 'add_numbers', description: '计算两个数字之和' },
   { id: 'word_counter' as const, title: '文本统计子智能体', tool: 'count_words', description: '统计文本中的词数' },
@@ -31,6 +32,24 @@ function finalText(value: unknown): string {
   return (msg.content || []).filter(block => block.type === 'text').map(block => block.text || '').join('\n')
 }
 function receive(raw: Record<string, unknown>) {
+  if (raw.type === 'TOOL_RESULT_TEXT_DELTA' && raw.source == null) {
+    const toolName = String(raw.toolCallName || '')
+    const childId: AgentName | null = toolName === 'call_calculator' ? 'calculator'
+      : toolName === 'call_word_counter' ? 'word_counter'
+      : toolName === 'call_text_reverser' ? 'text_reverser' : null
+    if (childId) {
+      const callId = String(raw.toolCallId || toolName)
+      const buffered = (forwardedBuffers.get(callId) || '') + String(raw.delta || '')
+      forwardedBuffers.set(callId, buffered)
+      try {
+        const childEvent = JSON.parse(buffered) as Record<string, unknown>
+        forwardedBuffers.delete(callId)
+        applyChildEvent(childId, childEvent)
+      } catch {
+        // 子事件 JSON 可能跨多个 SSE 增量分片。
+      }
+    }
+  }
   const type = String(raw.type || 'UNKNOWN'), source = typeof raw.source === 'string' ? raw.source : null
   events.value.push({ id: String(raw.id || crypto.randomUUID()), type, source, data: raw })
   const id = sourceAgent(source)
@@ -51,6 +70,19 @@ function receive(raw: Record<string, unknown>) {
   }
   void nextTick(() => bottom.value?.scrollIntoView({ block: 'end', behavior: 'auto' }))
 }
+function applyChildEvent(id: AgentName, event: Record<string, unknown>) {
+  const agent = agents.value[id]
+  const type = String(event.type || '')
+  if (type === 'AGENT_START') agent.started = true
+  if (type === 'AGENT_END') agent.finished = true
+  if (type === 'TEXT_BLOCK_DELTA') agent.text += String(event.delta || '')
+  if (type === 'TOOL_CALL_START') agent.toolCalls.push(String(event.toolCallName || 'tool'))
+  if (type === 'AGENT_RESULT') {
+    const text = finalText(event.result)
+    if (text) agent.text = text
+  }
+  events.value.push({ id: String(event.id || crypto.randomUUID()), type, source: id, data: event })
+}
 function parseFrame(frame: string) {
   const payload = frame.split('\n').filter(line => line.startsWith('data:'))
     .map(line => line.slice(5).trimStart()).join('\n')
@@ -69,7 +101,7 @@ function reset() {
 }
 async function run() {
   if (busy.value || !task.value.trim()) return
-  error.value = ''; reset(); busy.value = true; controller = new AbortController()
+  error.value = ''; reset(); forwardedBuffers.clear(); busy.value = true; controller = new AbortController()
   try {
     const headers: Record<string, string> = { 'Content-Type': 'application/json', Accept: 'text/event-stream' }
     const csrf = getCsrfToken()
