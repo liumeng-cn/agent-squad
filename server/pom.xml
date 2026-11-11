@@ -22,6 +22,7 @@
         <module>agent-squad-common</module>
         <module>agent-squad-gateway</module>
         <module>agent-squad-server</module>
+        <module>agent-squad-agentscope-lab</module>
     </modules>
 
     <properties>
