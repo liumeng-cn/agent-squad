@@ -1,7 +1,6 @@
 package com.agentsquad.squad.common.model;
 
 import com.agentsquad.squad.enums.SquadEventCategory;
-import com.agentsquad.squad.enums.SquadEventType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,68 +9,52 @@ import java.time.Instant;
 import java.util.Map;
 
 /**
- * Squad 服务向客户端推送的统一事件消息。
+ * Squad SSE 统一事件信封。
  *
- * <p>该模型是 AgentScope 与前端之间的稳定传输协议，不暴露 AgentScope 内部对象。
- * payload 使用开放 Map 承载不同事件的专属数据；固定身份和关联关系使用独立模型。</p>
+ * <p>eventType 原样保留 AgentScope AgentEventType 规范名称；平台自有事件使用独立命名空间。
+ * nativeExecution 与 nativeSource 保留原生执行身份和事件来源，payload 保留原生事件字段。</p>
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class SquadMsg {
 
-    /**
-     * 协议版本。
-     */
+    /** SSE 协议版本。 */
     private String protocolVersion;
 
-    /**
-     * 事件唯一 ID。
-     */
+    /** 原生事件 ID；平台事件使用平台生成的唯一 ID。 */
     private String eventId;
 
-    /**
-     * 当前 Turn 内递增的事件序号。
-     */
+    /** 当前会话事件序号，用于持久化、补发和去重。 */
     private Long sequence;
 
-    /**
-     * 事件类型。
-     */
-    private SquadEventType eventType;
+    /** 原生事件名原样透传；平台事件使用 squad.* 前缀。 */
+    private String eventType;
 
-    /**
-     * 事件展示分类。
-     */
+    /** 前端展示分类，不替代 eventType。 */
     private SquadEventCategory category;
 
-    /**
-     * 所属会话 ID。
-     */
+    /** 所属会话 ID。 */
     private String conversationId;
 
-    /**
-     * 所属用户请求轮次 ID。
-     */
+    /** 所属用户请求轮次 ID。 */
     private String turnId;
 
-    /**
-     * 事件所属 Agent；Turn 级系统事件可以为空。
-     */
+    /** Agent 展示身份；无法从原生事件确定时为空，不推测。 */
     private SquadAgentRef agent;
 
-    /**
-     * 事件关联信息。
-     */
+    /** AgentScope 原生执行身份。 */
+    private SquadExecutionRef nativeExecution;
+
+    /** AgentScope 原生 source 路径；根 Agent 通常为空。 */
+    private String nativeSource;
+
+    /** 平台补充的事件关联信息。 */
     private SquadEventRelation relation;
 
-    /**
-     * 当前事件的专属数据。
-     */
+    /** 原生事件完整字段或平台事件专属数据。 */
     private Map<String, Object> payload;
 
-    /**
-     * 事件发生时间。
-     */
+    /** 事件发生时间。 */
     private Instant timestamp;
 }
