@@ -72,8 +72,10 @@ public class AgentScopeEventAdapter {
     private SquadEventCategory categoryOf(String eventType) {
         String type = eventType.toUpperCase(Locale.ROOT);
         if (type.startsWith("MODEL_CALL_")) return SquadEventCategory.MODEL;
-        if (type.startsWith("TEXT_BLOCK_") || type.equals("AGENT_RESULT")
-                || type.equals("AGENT_START") || type.equals("AGENT_END")) {
+        if (type.equals("AGENT_START") || type.equals("AGENT_END")) {
+            return SquadEventCategory.LIFECYCLE;
+        }
+        if (type.startsWith("TEXT_BLOCK_") || type.equals("AGENT_RESULT")) {
             return SquadEventCategory.MESSAGE;
         }
         if (type.startsWith("THINKING_BLOCK_")) return SquadEventCategory.THINKING;
@@ -82,8 +84,12 @@ public class AgentScopeEventAdapter {
             return SquadEventCategory.TOOL;
         }
         if (type.equals("SUBAGENT_EXPOSED")) return SquadEventCategory.SUBAGENT;
-        if (type.startsWith("REQUIRE_") || type.endsWith("_RESULT")
-                || type.equals("REQUEST_STOP") || type.equals("EXCEED_MAX_ITERS")) {
+        if (type.equals("REQUIRE_USER_CONFIRM") || type.equals("USER_CONFIRM_RESULT")
+                || type.equals("REQUIRE_EXTERNAL_EXECUTION")
+                || type.equals("EXTERNAL_EXECUTION_RESULT")) {
+            return SquadEventCategory.CONFIRMATION;
+        }
+        if (type.equals("REQUEST_STOP") || type.equals("EXCEED_MAX_ITERS")) {
             return SquadEventCategory.CONTROL;
         }
         if (type.equals("HINT_BLOCK")) return SquadEventCategory.HINT;
