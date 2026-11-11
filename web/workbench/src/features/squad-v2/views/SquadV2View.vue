@@ -64,6 +64,7 @@ function contentOf(event: SquadEvent): string {
   if (typeof payload.delta === 'string') return payload.delta
   if (typeof payload.hint === 'string') return payload.hint
   if (typeof payload.toolCallName === 'string') return '调用工具：' + ({ search: '资料检索', add_numbers: '数字计算' }[payload.toolCallName] || '辅助工具')
+  if (typeof payload.result === 'string') return payload.result
   if (payload.result && typeof payload.result === 'object') {
     const result = payload.result as { content?: Array<{ type?: string; text?: string }> }
     return (result.content || []).filter(item => item.type === 'text').map(item => item.text || '').join('')
@@ -97,8 +98,10 @@ function addEvent(event: SquadEvent) {
   if (event.eventType === 'AGENT_END') {
     const startedAt = agentStartedAt.get(instanceId)
     if (startedAt !== undefined) {
+      const durationLabel = formatDuration(Date.now() - startedAt)
       const answerRow = finalAnswerRows.get(instanceId)
-      if (answerRow) answerRow.durationLabel = formatDuration(Date.now() - startedAt)
+      if (answerRow) answerRow.durationLabel = durationLabel
+      else row.durationLabel = durationLabel
       agentStartedAt.delete(instanceId)
     }
   }
