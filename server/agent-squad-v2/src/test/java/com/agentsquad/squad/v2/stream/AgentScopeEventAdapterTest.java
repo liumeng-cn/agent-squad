@@ -39,7 +39,7 @@ class AgentScopeEventAdapterTest {
     }
 
     @Test
-    void shouldPreserveUnknownNativeTypeAsCustomCategory() {
+    void shouldClassifyKnownNativeTypeWithoutRenaming() {
         AgentEvent nativeEvent = new TextBlockDeltaEvent("reply-1", "block-1", "hello");
 
         var message = adapter.adapt(nativeEvent, "conversation-1", 1L, objectMapper);
