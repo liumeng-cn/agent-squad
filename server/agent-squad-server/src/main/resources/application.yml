@@ -74,6 +74,10 @@ management:
         enabled: ${SQUAD_OTLP_TRACES_EXPORT_ENABLED:false}
 
 agentsquad:
+  native-chat:
+    api-key: ${DEEPSEEK_API_KEY:}
+    base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+    model: ${DEEPSEEK_MODEL:deepseek-chat}
   scheduler:
     # 未知类型命令由低频任务隔离，正常投递扫描继续按原频率运行。
     command-unknown-sweep-delay-ms: 15000
