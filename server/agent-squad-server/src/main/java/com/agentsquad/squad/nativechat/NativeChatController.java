@@ -15,9 +15,17 @@ public class NativeChatController {
     @Resource
     private NativeChatService nativeChatService;
 
+    @Resource
+    private NativeSubagentService nativeSubagentService;
+
     @PostMapping(path = "/message", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter message(HttpServletRequest request, @Valid @RequestBody NativeChatRequest body) {
         UserContext.current(request);
         return nativeChatService.stream(body);
+    }
+    @PostMapping(path = "/subagents", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter subagents(HttpServletRequest request, @Valid @RequestBody NativeSubagentController.SubagentRequest body) {
+        UserContext.current(request);
+        return nativeSubagentService.stream(body.task());
     }
 }

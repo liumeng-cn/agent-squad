@@ -24,6 +24,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../features/native-chat/views/NativeChatView.vue'),
   },
   {
+    path: '/app/native-chat/subagents',
+    name: 'native-chat-subagents',
+    component: () => import('../features/native-chat/views/NativeSubagentsView.vue'),
+  },
+  {
     path: '/app/tasks/:taskId',
     name: 'task',
     component: () => import('../features/tasks/views/TaskDetailView.vue'),

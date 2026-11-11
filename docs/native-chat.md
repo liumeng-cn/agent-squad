@@ -33,3 +33,15 @@ HTTP 响应 `text/event-stream`，SSE `event:` 为原生 `AgentEventType`，`id:
 - SSE 中的 `STREAM_ERROR` 是服务端故障提示，不属于 AgentScope 原生事件。
 - 鉴权沿用现有 Gateway + CSRF；请从项目网关访问，不要从浏览器绕过网关直连后端。
 - 每次请求创建并关闭独立 `ReActAgent`，不启用状态存储。当前仅用于验证交互和事件格式。
+
+
+## 多 SubAgent 并行实验
+
+访问 /app/native-chat/subagents，调用 POST /api/v1/native-chat/subagents。Master 暴露三个官方 SubAgentTool：
+- call_calculator → calculator 子智能体 → add_numbers
+- call_word_counter → word_counter 子智能体 → count_words
+- call_text_reverser → text_reverser 子智能体 → reverse_text
+
+每个子智能体有独立 ReActAgent 和 Toolkit，只注册一个工具。子 Agent 事件通过 SubAgentConfig.forwardEvents(true) 转发到 Master 的 streamEvents()。Master Toolkit 显式配置 parallel(true)：模型在同一轮发出三个 SubAgent 工具调用时，工具执行器并行执行它们。Master Prompt 要求一次性发起全部三个调用。
+
+注意：Toolkit 保证同一轮多个工具调用的并行执行；是否在同一轮生成三个工具调用，仍取决于模型遵循指令并返回多个 tool calls。页面展示原生事件的 source，可观察每个子智能体的启动、文本、工具调用和结束事件。
