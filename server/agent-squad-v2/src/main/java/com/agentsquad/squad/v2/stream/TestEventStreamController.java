@@ -12,7 +12,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 /** 仅 local profile 开放的事件测试接口。 */
 @RestController
 @Profile("local")
-@RequestMapping("/test/events")
+@RequestMapping("/api/v2/test/events")
 public class TestEventStreamController {
 
     private final TestEventStreamService eventStreamService;
