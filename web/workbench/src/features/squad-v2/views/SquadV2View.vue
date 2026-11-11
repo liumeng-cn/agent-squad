@@ -129,7 +129,7 @@ async function send() {
       method: 'POST',
       credentials: base ? 'include' : 'same-origin',
       headers,
-      body: JSON.stringify({ scenario: 'parallel', intervalMillis: 300, message }),
+      body: JSON.stringify({ scenario: 'parallel', intervalMillis: 300 }),
       signal: controller.signal,
     })
     if (!response.ok || !response.body) throw new Error(`请求失败（HTTP ${response.status}）`)
@@ -189,10 +189,6 @@ onBeforeUnmount(stop)
         <div class="welcome-mark">✳</div>
         <h1>让 Squad 帮你完成任务</h1>
         <p>输入消息开始测试。当前连接的是本地 SSE 事件发射器，用于验证 Master、SubAgent 及事件归属展示。</p>
-        <div class="suggestions">
-          <button type="button" @click="draft = '请拆分任务，创建三个子 Agent 并行完成，最后汇总结果。'">测试多 Agent 并行协作</button>
-          <button type="button" @click="draft = '请调用工具完成一个简单计算，并解释执行过程。'">测试工具调用事件</button>
-        </div>
       </div>
 
       <div v-else class="timeline">
