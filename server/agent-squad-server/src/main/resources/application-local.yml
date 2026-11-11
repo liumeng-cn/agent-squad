@@ -184,6 +184,39 @@ agentsquad:
         default-reasoning-mode: 'OFF'
         input-microunits-per-million-tokens: 7000000
         output-microunits-per-million-tokens: 40000000
+      # DeepSeek 官方接口：已实测对话、工具调用与 reasoning_effort(low/high)；计价按高峰档
+      deepseek-flash:
+        enabled: true
+        provider: OPENAI_COMPATIBLE
+        display-name: DeepSeek V4.1 Flash
+        capabilities: [ REASONING, TEXT_GENERATION, TOOL_USE, VISION ]
+        reasoning-adapter: OPENAI_EFFORT
+        reasoning-modes: [ 'LOW', 'HIGH' ]
+        default-reasoning-mode: HIGH
+        api-key: sk-53611088171449239d5f9a7c2ca07007
+        base-url: https://api.deepseek.com/v1
+        model-name: deepseek-flash
+        pricing-version: deepseek-usd-v1
+        input-microunits-per-million-tokens: 300000
+        output-microunits-per-million-tokens: 1200000
+        max-input-tokens: 131072
+        max-output-tokens: 32768
+      deepseek-v4-pro:
+        enabled: true
+        provider: OPENAI_COMPATIBLE
+        display-name: DeepSeek V4 Pro
+        capabilities: [ REASONING, TEXT_GENERATION, TOOL_USE ]
+        reasoning-adapter: OPENAI_EFFORT
+        reasoning-modes: [ 'LOW', 'HIGH' ]
+        default-reasoning-mode: HIGH
+        api-key: sk-53611088171449239d5f9a7c2ca07007
+        base-url: https://api.deepseek.com/v1
+        model-name: deepseek-v4-pro
+        pricing-version: deepseek-usd-v1
+        input-microunits-per-million-tokens: 1320000
+        output-microunits-per-million-tokens: 3960000
+        max-input-tokens: 131072
+        max-output-tokens: 32768
       "[spark-x2.6]":
         # 当前密钥校验失败（apikey not found），恢复后再启用
         enabled: false
