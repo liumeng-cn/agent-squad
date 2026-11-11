@@ -70,12 +70,12 @@ public class TestEventStreamService {
         String conversationId = "conversation-test-001";
         String turnId = "turn-test-001";
 
-        SquadAgentRef master = agent("master", "master-instance", "Master", SquadAgentType.MASTER, null, 0);
-        SquadAgentRef researcher = agent("researcher", "researcher-instance", "Researcher",
+        SquadAgentRef master = agent("master", "master-instance", "主协调员", SquadAgentType.MASTER, null, 0);
+        SquadAgentRef researcher = agent("researcher", "researcher-instance", "资料整理员",
                 SquadAgentType.SUBAGENT, master.getAgentInstanceId(), 1);
-        SquadAgentRef calculator = agent("calculator", "calculator-instance", "Calculator",
+        SquadAgentRef calculator = agent("calculator", "calculator-instance", "计算员",
                 SquadAgentType.SUBAGENT, master.getAgentInstanceId(), 1);
-        SquadAgentRef writer = agent("writer", "writer-instance", "Writer",
+        SquadAgentRef writer = agent("writer", "writer-instance", "汇总员",
                 SquadAgentType.SUBAGENT, master.getAgentInstanceId(), 1);
 
         SquadExecutionRef masterRun = execution("master", "session-master", turnId, "run-master");
@@ -84,9 +84,9 @@ public class TestEventStreamService {
         SquadExecutionRef writerRun = execution("writer", "session-writer", turnId, "run-writer");
 
         add(events, conversationId, turnId, "AGENT_START", SquadEventCategory.LIFECYCLE,
-                master, masterRun, null, data("name", "Master"));
+                master, masterRun, null, data("name", "主协调员"));
         add(events, conversationId, turnId, "MODEL_CALL_START", SquadEventCategory.MODEL,
-                master, masterRun, null, data("model", "deepseek-test"));
+                master, masterRun, null, data("model", "测试模型"));
         add(events, conversationId, turnId, "TEXT_BLOCK_DELTA", SquadEventCategory.MESSAGE,
                 master, masterRun, null, data("blockId", "master-plan", "delta", "我将任务拆分为三个并行子任务。"));
 
@@ -101,19 +101,19 @@ public class TestEventStreamService {
                 data("childAgent", writer));
 
         add(events, conversationId, turnId, "AGENT_START", SquadEventCategory.LIFECYCLE,
-                researcher, researcherRun, null, data("name", "Researcher"));
+                researcher, researcherRun, null, data("name", "资料整理员"));
         add(events, conversationId, turnId, "AGENT_START", SquadEventCategory.LIFECYCLE,
-                calculator, calculatorRun, null, data("name", "Calculator"));
+                calculator, calculatorRun, null, data("name", "计算员"));
         add(events, conversationId, turnId, "AGENT_START", SquadEventCategory.LIFECYCLE,
-                writer, writerRun, null, data("name", "Writer"));
+                writer, writerRun, null, data("name", "汇总员"));
 
         // 事件按真实发生顺序交错发射，前端必须依靠 agent.parentAgentInstanceId 建立归属。
         add(events, conversationId, turnId, "TOOL_CALL_START", SquadEventCategory.TOOL,
                 researcher, researcherRun, relation("call-search", null),
-                data("toolCallId", "call-search", "toolCallName", "search"));
+                data("toolCallId", "call-search", "toolCallName", "资料检索"));
         add(events, conversationId, turnId, "TOOL_CALL_START", SquadEventCategory.TOOL,
                 calculator, calculatorRun, relation("call-calculate", null),
-                data("toolCallId", "call-calculate", "toolCallName", "add_numbers"));
+                data("toolCallId", "call-calculate", "toolCallName", "数字计算"));
         add(events, conversationId, turnId, "TEXT_BLOCK_DELTA", SquadEventCategory.MESSAGE,
                 writer, writerRun, null, data("blockId", "writer-text", "delta", "我正在准备汇总结构..."));
         add(events, conversationId, turnId, "TOOL_RESULT_TEXT_DELTA", SquadEventCategory.TOOL,
