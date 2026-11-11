@@ -71,7 +71,7 @@ function contentOf(event: SquadEvent): string {
   }
   if (event.eventType === 'SUBAGENT_EXPOSED') {
     const child = payload.childAgent as AgentRef | undefined
-    return child?.agentName ? '创建子 Agent：' + child.agentName : '创建子 Agent'
+    return child?.agentName ? '新增协作成员：' + child.agentName : '新增协作成员'
   }
   if (typeof payload.name === 'string') return payload.name
   if (typeof payload.model === 'string') return '模型调用中'
