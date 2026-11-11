@@ -36,7 +36,6 @@ public class TestEventStreamService {
     });
 
     public SseEmitter stream(TestEventStreamRequest request) {
-        String scenario = request.normalizedScenario();
         int interval = request.normalizedIntervalMillis();
         List<SquadMsg> events = buildParallelScenario();
         SseEmitter emitter = new SseEmitter(120_000L);
