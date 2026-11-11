@@ -1,65 +1,57 @@
 package com.agentsquad.squad.enums;
 
-import lombok.Getter;
-
 /**
- * SquadMsg 支持的事件类型及其展示分类。
+ * AgentScope 原生事件名及 Squad 平台扩展事件名。
  *
- * <p>该枚举是平台传输协议的一部分。AgentScope 原生事件由转换层映射到这里，
- * Squad 自身产生的生命周期事件也使用同一套类型。</p>
+ * <p>原生事件使用 AgentScope AgentEventType 的规范名称，不做同义改名。
+ * SquadMsg.eventType 使用 String，避免 SDK 新增事件时被本枚举阻断；
+ * 本枚举用于文档、测试和平台事件常量提示。</p>
  */
-@Getter
 public enum SquadEventType {
-    TURN_STARTED(SquadEventCategory.LIFECYCLE),
-    TURN_COMPLETED(SquadEventCategory.LIFECYCLE),
-    TURN_FAILED(SquadEventCategory.LIFECYCLE),
-    TURN_CANCELLED(SquadEventCategory.LIFECYCLE),
+    // AgentScope AgentEventType（固定评估版本 2.1.0-BETA1）
+    AGENT_START,
+    AGENT_END,
+    AGENT_RESULT,
+    MODEL_CALL_START,
+    MODEL_CALL_END,
+    TEXT_BLOCK_START,
+    TEXT_BLOCK_DELTA,
+    TEXT_BLOCK_END,
+    THINKING_BLOCK_START,
+    THINKING_BLOCK_DELTA,
+    THINKING_BLOCK_END,
+    DATA_BLOCK_START,
+    DATA_BLOCK_DELTA,
+    DATA_BLOCK_END,
+    TOOL_CALL_START,
+    TOOL_CALL_DELTA,
+    TOOL_CALL_END,
+    TOOL_RESULT_START,
+    TOOL_RESULT_TEXT_DELTA,
+    TOOL_RESULT_DATA_DELTA,
+    TOOL_RESULT_END,
+    EXCEED_MAX_ITERS,
+    REQUIRE_USER_CONFIRM,
+    REQUIRE_EXTERNAL_EXECUTION,
+    USER_CONFIRM_RESULT,
+    EXTERNAL_EXECUTION_RESULT,
+    REQUEST_STOP,
+    SUBAGENT_EXPOSED,
+    HINT_BLOCK,
+    ALL_TOOLS_DENIED,
+    CUSTOM,
 
-    AGENT_CREATED(SquadEventCategory.LIFECYCLE),
-    AGENT_STARTED(SquadEventCategory.LIFECYCLE),
-    AGENT_COMPLETED(SquadEventCategory.LIFECYCLE),
-    AGENT_FAILED(SquadEventCategory.LIFECYCLE),
-    AGENT_CANCELLED(SquadEventCategory.LIFECYCLE),
-
-    MODEL_CALL_STARTED(SquadEventCategory.MODEL),
-    MODEL_CALL_COMPLETED(SquadEventCategory.MODEL),
-    MODEL_CALL_FAILED(SquadEventCategory.MODEL),
-
-    MESSAGE_STARTED(SquadEventCategory.MESSAGE),
-    TEXT_BLOCK_STARTED(SquadEventCategory.MESSAGE),
-    TEXT_BLOCK_DELTA(SquadEventCategory.MESSAGE),
-    TEXT_BLOCK_COMPLETED(SquadEventCategory.MESSAGE),
-    MESSAGE_COMPLETED(SquadEventCategory.MESSAGE),
-
-    THINKING_BLOCK_STARTED(SquadEventCategory.THINKING),
-    THINKING_BLOCK_DELTA(SquadEventCategory.THINKING),
-    THINKING_BLOCK_COMPLETED(SquadEventCategory.THINKING),
-
-    TOOL_CALL_STARTED(SquadEventCategory.TOOL),
-    TOOL_CALL_DELTA(SquadEventCategory.TOOL),
-    TOOL_CALL_COMPLETED(SquadEventCategory.TOOL),
-    TOOL_EXECUTION_STARTED(SquadEventCategory.TOOL),
-    TOOL_RESULT_DELTA(SquadEventCategory.TOOL),
-    TOOL_EXECUTION_COMPLETED(SquadEventCategory.TOOL),
-    TOOL_EXECUTION_FAILED(SquadEventCategory.TOOL),
-
-    SUBAGENT_CREATED(SquadEventCategory.SUBAGENT),
-    SUBAGENT_STARTED(SquadEventCategory.SUBAGENT),
-    SUBAGENT_COMPLETED(SquadEventCategory.SUBAGENT),
-    SUBAGENT_FAILED(SquadEventCategory.SUBAGENT),
-
-    EXECUTION_INTERRUPTED(SquadEventCategory.CONTROL),
-    EXECUTION_RESUMED(SquadEventCategory.CONTROL),
-
-    CONFIRMATION_REQUIRED(SquadEventCategory.CONFIRMATION),
-    CONFIRMATION_RESOLVED(SquadEventCategory.CONFIRMATION),
-
-    ERROR(SquadEventCategory.ERROR),
-    CUSTOM(SquadEventCategory.CUSTOM);
-
-    private final SquadEventCategory category;
-
-    SquadEventType(SquadEventCategory category) {
-        this.category = category;
-    }
+    // Squad 平台扩展事件，不属于 AgentScope 原生事件
+    TURN_STARTED,
+    TURN_COMPLETED,
+    TURN_FAILED,
+    TURN_CANCELLED,
+    AGENT_CREATED,
+    AGENT_FAILED,
+    AGENT_CANCELLED,
+    EXECUTION_INTERRUPTED,
+    EXECUTION_RESUMED,
+    CONFIRMATION_RESOLVED,
+    ERROR,
+    PLATFORM_CUSTOM
 }
