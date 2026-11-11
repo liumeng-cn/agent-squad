@@ -1,14 +1,12 @@
 package com.agentsquad.squad.enums;
 
 /**
- * AgentScope 原生事件名及 Squad 平台扩展事件名。
+ * AgentScope Java 2.1.0-BETA1 的原生 AgentEventType 名称清单。
  *
- * <p>原生事件使用 AgentScope AgentEventType 的规范名称，不做同义改名。
- * SquadMsg.eventType 使用 String，避免 SDK 新增事件时被本枚举阻断；
- * 本枚举用于文档、测试和平台事件常量提示。</p>
+ * <p>SquadMsg.eventType 使用 String 原样承载 SDK 类型，避免 SDK 新增事件时
+ * 被平台枚举限制。Squad 自有事件使用 squad.* 字符串命名空间，不放入本枚举。</p>
  */
 public enum SquadEventType {
-    // AgentScope AgentEventType（固定评估版本 2.1.0-BETA1）
     AGENT_START,
     AGENT_END,
     AGENT_RESULT,
@@ -39,19 +37,5 @@ public enum SquadEventType {
     SUBAGENT_EXPOSED,
     HINT_BLOCK,
     ALL_TOOLS_DENIED,
-    CUSTOM,
-
-    // Squad 平台扩展事件，不属于 AgentScope 原生事件
-    TURN_STARTED,
-    TURN_COMPLETED,
-    TURN_FAILED,
-    TURN_CANCELLED,
-    AGENT_CREATED,
-    AGENT_FAILED,
-    AGENT_CANCELLED,
-    EXECUTION_INTERRUPTED,
-    EXECUTION_RESUMED,
-    CONFIRMATION_RESOLVED,
-    ERROR,
-    PLATFORM_CUSTOM
+    CUSTOM
 }
