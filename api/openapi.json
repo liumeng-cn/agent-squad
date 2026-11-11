@@ -177,6 +177,31 @@
         ],
         "x-design-status": "planned-v0.2",
         "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "$ref": "#/components/schemas/ApiCode"
+                    },
+                    "data": {},
+                    "msg": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
+                }
+              }
+            }
+          },
           "400": {
             "description": "错误语义见 contracts/README.md",
             "content": {
@@ -253,31 +278,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiResult"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "$ref": "#/components/schemas/ApiCode"
-                    },
-                    "data": {},
-                    "msg": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "data",
-                    "msg"
-                  ]
                 }
               }
             }
@@ -7021,9 +7021,6 @@
           }
         },
         "responses": {
-          "401": {
-            "description": "无效凭据或会话"
-          },
           "200": {
             "description": "成功",
             "content": {
@@ -7048,6 +7045,9 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "无效凭据或会话"
           }
         }
       }
@@ -7195,12 +7195,6 @@
           }
         },
         "responses": {
-          "403": {
-            "description": "权限不足"
-          },
-          "409": {
-            "description": "版本冲突"
-          },
           "200": {
             "description": "更新后的账号摘要",
             "content": {
@@ -7227,6 +7221,12 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "权限不足"
+          },
+          "409": {
+            "description": "版本冲突"
           }
         }
       }
@@ -12573,6 +12573,215 @@
             }
           }
         ]
+      },
+      "SquadAgentType": {
+        "type": "string",
+        "enum": [
+          "MASTER",
+          "SUBAGENT"
+        ],
+        "description": "Agent 实例在执行树中的角色"
+      },
+      "SquadEventCategory": {
+        "type": "string",
+        "enum": [
+          "LIFECYCLE",
+          "MODEL",
+          "MESSAGE",
+          "THINKING",
+          "TOOL",
+          "SUBAGENT",
+          "CONTROL",
+          "CONFIRMATION",
+          "ERROR",
+          "CUSTOM"
+        ],
+        "description": "SquadMsg 事件展示分类"
+      },
+      "SquadEventType": {
+        "type": "string",
+        "enum": [
+          "TURN_STARTED",
+          "TURN_COMPLETED",
+          "TURN_FAILED",
+          "TURN_CANCELLED",
+          "AGENT_CREATED",
+          "AGENT_STARTED",
+          "AGENT_COMPLETED",
+          "AGENT_FAILED",
+          "AGENT_CANCELLED",
+          "MODEL_CALL_STARTED",
+          "MODEL_CALL_COMPLETED",
+          "MODEL_CALL_FAILED",
+          "MESSAGE_STARTED",
+          "TEXT_BLOCK_STARTED",
+          "TEXT_BLOCK_DELTA",
+          "TEXT_BLOCK_COMPLETED",
+          "MESSAGE_COMPLETED",
+          "THINKING_BLOCK_STARTED",
+          "THINKING_BLOCK_DELTA",
+          "THINKING_BLOCK_COMPLETED",
+          "TOOL_CALL_STARTED",
+          "TOOL_CALL_DELTA",
+          "TOOL_CALL_COMPLETED",
+          "TOOL_EXECUTION_STARTED",
+          "TOOL_RESULT_DELTA",
+          "TOOL_EXECUTION_COMPLETED",
+          "TOOL_EXECUTION_FAILED",
+          "SUBAGENT_CREATED",
+          "SUBAGENT_STARTED",
+          "SUBAGENT_COMPLETED",
+          "SUBAGENT_FAILED",
+          "EXECUTION_INTERRUPTED",
+          "EXECUTION_RESUMED",
+          "CONFIRMATION_REQUIRED",
+          "CONFIRMATION_RESOLVED",
+          "ERROR",
+          "CUSTOM"
+        ],
+        "description": "SquadMsg 事件类型"
+      },
+      "SquadAgentRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "agentId": {
+            "type": "string",
+            "description": "Agent 定义 ID"
+          },
+          "agentInstanceId": {
+            "type": "string",
+            "description": "本次创建的 Agent 实例 ID"
+          },
+          "agentName": {
+            "type": "string",
+            "description": "Agent 展示名称"
+          },
+          "agentType": {
+            "$ref": "#/components/schemas/SquadAgentType"
+          },
+          "parentAgentInstanceId": {
+            "type": "string",
+            "nullable": true,
+            "description": "父 Agent 实例 ID，根 Agent 为空"
+          },
+          "rootAgentInstanceId": {
+            "type": "string",
+            "description": "根 Agent 实例 ID"
+          },
+          "depth": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "执行树层级，根节点为 0"
+          }
+        },
+        "required": [
+          "agentId",
+          "agentInstanceId",
+          "agentName",
+          "agentType",
+          "parentAgentInstanceId",
+          "rootAgentInstanceId",
+          "depth"
+        ]
+      },
+      "SquadEventRelation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "parentEventId": {
+            "type": "string"
+          },
+          "causedByEventId": {
+            "type": "string"
+          },
+          "messageId": {
+            "type": "string"
+          },
+          "blockId": {
+            "type": "string"
+          },
+          "toolCallId": {
+            "type": "string"
+          },
+          "executionId": {
+            "type": "string"
+          },
+          "targetAgentInstanceId": {
+            "type": "string"
+          }
+        },
+        "description": "事件之间的关联信息，按事件需要填写"
+      },
+      "SquadMsg": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "protocolVersion": {
+            "type": "string",
+            "example": "1.0"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "eventType": {
+            "$ref": "#/components/schemas/SquadEventType"
+          },
+          "category": {
+            "$ref": "#/components/schemas/SquadEventCategory"
+          },
+          "conversationId": {
+            "type": "string"
+          },
+          "turnId": {
+            "type": "string"
+          },
+          "agent": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SquadAgentRef"
+              }
+            ],
+            "nullable": true,
+            "description": "Turn 级系统事件允许为空"
+          },
+          "relation": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SquadEventRelation"
+              }
+            ],
+            "nullable": true
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "事件专属数据"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "protocolVersion",
+          "eventId",
+          "sequence",
+          "eventType",
+          "category",
+          "conversationId",
+          "turnId",
+          "agent",
+          "relation",
+          "payload",
+          "timestamp"
+        ],
+        "description": "Squad SSE 统一事件结构"
       }
     }
   }
