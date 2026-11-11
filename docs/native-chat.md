@@ -24,24 +24,31 @@
 
 HTTP 响应 `text/event-stream`，SSE `event:` 为原生 `AgentEventType`，`id:` 是 AgentEvent 原生 ID，`data:` 是原生对象 JSON（包括 type、source、replyId/blockId 和增量字段）。服务只做 HTTP/SSE 封装，不另造事件枚举。
 
-前端展示根 Agent 的 `TEXT_BLOCK_DELTA`，`AGENT_RESULT` 用完整 Msg 替换增量预览（不重复追加）。其余事件保留在可折叠事件列表。当前没有注册工具或 SubAgent，后续可在此接口扩展同一原生事件通道。
+前端展示根 Agent 的 `TEXT_BLOCK_DELTA`，`AGENT_RESULT` 用完整 Msg 替换增量预览（不重复追加）。其余事件保留在可折叠事件列表。
+
+## 多 SubAgent 并行实验
+
+访问 `/app/native-chat/subagents`，调用 POST `/api/v1/native-chat/subagents`。Master 暴露三个官方 SubAgentTool：
+- call_calculator → calculator 子智能体 → add_numbers
+- call_word_counter → word_counter 子智能体 → count_words
+- call_text_reverser → text_reverser 子智能体 → reverse_text
+
+每个子智能体有独立 ReActAgent 和 Toolkit，只注册一个工具。子 Agent 事件通过 SubAgentConfig.forwardEvents(true) 转发到 Master 的 streamEvents()。Master Toolkit 显式配置 parallel(true)。
+
+## 全事件测试工作台
+
+访问 `/app/native-chat/events`。工作台按官方 `AgentEventType` 列出 31 种事件，提供分类筛选、事件说明、触发方式、模拟事件、真实 SSE 接收、原始 JSON 检查和来源/接收时间记录。
+
+必须区分两类记录：
+- **真实事件**：由现有 `/message` 或 `/subagents` 接口实际执行 AgentScope 后收到。
+- **模拟事件**：前端根据事件样例构造，仅验证前端 JSON 解析、展示和检查能力，不能证明 SDK 能触发该事件。
+
+目录中“有真实触发路径”只表示可以设计对应 SDK 执行场景，不代表当前已经成功触发。思考块取决于模型能力；数据块取决于模型/工具实际返回多模态 ContentBlock；人工确认、外部执行、停止和权限事件需要后续单独接入对应 SDK 机制。当前真实测试入口只复用已有聊天与 SubAgent 接口，未增加后端事件伪造接口。
 
 ## 已知限制
 
 - 不持久化：页面刷新后历史消失；浏览器每次带最近最多 30 条 USER/ASSISTANT 文本以实现页面内多轮聊天。
 - 单次 POST 的 SSE 断开/停止会取消当前 Agent Flux；没有跨请求续流、断线回放或运行恢复。
 - SSE 中的 `STREAM_ERROR` 是服务端故障提示，不属于 AgentScope 原生事件。
-- 鉴权沿用现有 Gateway + CSRF；请从项目网关访问，不要从浏览器绕过网关直连后端。
+- 鉴权沿用现有 Gateway + CSRF；请从项目网关访问。
 - 每次请求创建并关闭独立 `ReActAgent`，不启用状态存储。当前仅用于验证交互和事件格式。
-
-
-## 多 SubAgent 并行实验
-
-访问 /app/native-chat/subagents，调用 POST /api/v1/native-chat/subagents。Master 暴露三个官方 SubAgentTool：
-- call_calculator → calculator 子智能体 → add_numbers
-- call_word_counter → word_counter 子智能体 → count_words
-- call_text_reverser → text_reverser 子智能体 → reverse_text
-
-每个子智能体有独立 ReActAgent 和 Toolkit，只注册一个工具。子 Agent 事件通过 SubAgentConfig.forwardEvents(true) 转发到 Master 的 streamEvents()。Master Toolkit 显式配置 parallel(true)：模型在同一轮发出三个 SubAgent 工具调用时，工具执行器并行执行它们。Master Prompt 要求一次性发起全部三个调用。
-
-注意：Toolkit 保证同一轮多个工具调用的并行执行；是否在同一轮生成三个工具调用，仍取决于模型遵循指令并返回多个 tool calls。页面展示原生事件的 source，可观察每个子智能体的启动、文本、工具调用和结束事件。
