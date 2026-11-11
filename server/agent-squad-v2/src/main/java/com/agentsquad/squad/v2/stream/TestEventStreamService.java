@@ -118,7 +118,7 @@ public class TestEventStreamService {
                 writer, writerRun, null, data("blockId", "writer-text", "delta", "我正在准备汇总结构..."));
         add(events, conversationId, turnId, "TOOL_RESULT_TEXT_DELTA", SquadEventCategory.TOOL,
                 researcher, researcherRun, relation("call-search", null),
-                data("toolCallId", "call-search", "delta", "找到 AgentScope Java 的 AgentEvent 事件机制。"));
+                data("toolCallId", "call-search", "delta", "已找到智能体事件处理机制。"));
         add(events, conversationId, turnId, "TOOL_RESULT_TEXT_DELTA", SquadEventCategory.TOOL,
                 calculator, calculatorRun, relation("call-calculate", null),
                 data("toolCallId", "call-calculate", "delta", "结果：42"));
@@ -133,9 +133,9 @@ public class TestEventStreamService {
                 master, masterRun, null, data("blockId", "master-answer", "delta", "三个子任务均已完成，汇总如下..."));
         add(events, conversationId, turnId, "AGENT_RESULT", SquadEventCategory.MESSAGE,
                 master, masterRun, null, data("result", Map.of("content", List.of(
-                        Map.of("type", "text", "text", "测试完成：三个 SubAgent 均已执行并返回结果。")))));
+                        Map.of("type", "text", "text", "测试完成：三位协作成员均已执行并返回结果。")))));
         add(events, conversationId, turnId, "AGENT_END", SquadEventCategory.LIFECYCLE,
-                master, masterRun, null, data("name", "Master"));
+                master, masterRun, null, data("name", "主协调员"));
         return events;
     }
 
