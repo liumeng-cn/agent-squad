@@ -6,6 +6,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/', redirect: { name: 'workspace' } },
   { path: '/login', name: 'login', component: () => import('../features/auth/views/LoginView.vue'), meta: { public: true } },
   { path: '/app/conversations/:conversationId?', name: 'workspace', component: () => import('../features/chat/views/WorkspaceView.vue') },
+  { path: '/app/squad-v2', name: 'squad-v2', component: () => import('../features/squad-v2/views/SquadV2View.vue') },
   { path: '/app/native-chat', name: 'native-chat', component: () => import('../features/native-chat/views/NativeChatView.vue') },
   { path: '/app/native-chat/subagents', name: 'native-chat-subagents', component: () => import('../features/native-chat/views/NativeSubagentsView.vue') },
   { path: '/app/native-chat/events', name: 'native-chat-events', component: () => import('../features/native-chat/views/NativeEventWorkbenchView.vue') },
