@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="03 - AgentScope 会话延续" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="com.agentsquad.squad.lab.agentscope.SessionPersistenceLesson" />
+    <option name="PROGRAM_PARAMETERS" value="session-debug-001" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <module name="agent-squad-agentscope-lab" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
