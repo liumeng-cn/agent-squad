@@ -16,7 +16,7 @@ let controller: AbortController | null = null
 function textFromResult(value: unknown): string {
   if (!value || typeof value !== 'object') return ''
   const msg = value as { content?: Array<{ type?: string; text?: string }> }
-  return (msg.content || []).filter(block => block.type === 'text').map(block => block.text || '').join('\n')
+  return (msg.content || []).filter(block => block.type === 'text').map(block => block.text || '').join('\\n')
 }
 function dispatch(raw: Record<string, unknown>) {
   const type = String(raw.type || 'UNKNOWN')
@@ -31,8 +31,8 @@ function dispatch(raw: Record<string, unknown>) {
   void nextTick(() => bottom.value?.scrollIntoView({ block: 'end', behavior: 'auto' }))
 }
 function parseFrame(frame: string) {
-  const lines = frame.split('\n')
-  const payload = lines.filter(line => line.startsWith('data:')).map(line => line.slice(5).trimStart()).join('\n')
+  const lines = frame.split('\\n')
+  const payload = lines.filter(line => line.startsWith('data:')).map(line => line.slice(5).trimStart()).join('\\n')
   if (!payload) return
   try {
     const json = JSON.parse(payload) as Record<string, unknown>
@@ -62,9 +62,9 @@ async function send() {
     while (true) {
       const { value, done } = await reader.read()
       if (done) break
-      pending += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n')
+      pending += decoder.decode(value, { stream: true }).replace(/\\r\\n/g, '\\n')
       let boundary: number
-      while ((boundary = pending.indexOf('\n\n')) !== -1) {
+      while ((boundary = pending.indexOf('\\n\\n')) !== -1) {
         parseFrame(pending.slice(0, boundary)); pending = pending.slice(boundary + 2)
       }
     }
@@ -89,7 +89,11 @@ onBeforeUnmount(stop)
   <main class="native-chat">
     <header class="native-header">
       <div><router-link to="/app/conversations">← 返回工作台</router-link><h1>AgentScope 原生聊天</h1><p>DeepSeek · POST /message · SSE · AgentEvent</p></div>
-      <button type="button" :disabled="busy" @click="clear">清空当前页面</button>
+      <div class="header-actions">
+        <router-link class="tool-link" to="/app/native-chat/subagents">SubAgent 实验</router-link>
+        <router-link class="tool-link" to="/app/native-chat/events">事件测试工作台</router-link>
+        <button type="button" :disabled="busy" @click="clear">清空当前页面</button>
+      </div>
     </header>
     <section class="native-body" aria-label="聊天内容">
       <article v-for="(item, index) in history" :key="index" :class="['native-bubble', item.role === 'USER' ? 'mine' : 'assistant']">
@@ -123,6 +127,7 @@ onBeforeUnmount(stop)
 .native-header h1{font-size:22px;margin:8px 0 2px}.native-header p{margin:0;color:#777;font-size:13px}
 .native-header a{color:#4f6fec;text-decoration:none;font-size:13px}
 .native-header button,.native-composer button{border:1px solid #bbb;background:#fff;color:#333;border-radius:8px;padding:9px 16px;cursor:pointer}
+.header-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.header-actions .tool-link{border:1px solid #cbd5ef;border-radius:8px;padding:8px 11px;color:#3458a5;background:#f7f9ff}
 .native-body{flex:1;min-height:0;overflow:auto;padding:28px;display:flex;flex-direction:column;gap:16px}
 .native-bubble{max-width:82%;padding:14px 18px;border-radius:14px;background:#f4f5f8;white-space:pre-wrap;overflow-wrap:anywhere}
 .native-bubble.mine{align-self:flex-end;background:#e9efff}.native-bubble.assistant{align-self:flex-start}
