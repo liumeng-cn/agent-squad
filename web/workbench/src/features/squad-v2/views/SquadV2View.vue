@@ -26,7 +26,7 @@ type SquadEvent = {
   payload?: Record<string, unknown>
   timestamp?: string
 }
-type TimelineRow = { key: string; event: SquadEvent; depth: number; agentName: string; isAgentStart: boolean }
+type TimelineRow = { key: string; event: SquadEvent; depth: number; agentName: string; isAgentStart: boolean; durationLabel?: string }
 
 const draft = ref('')
 const lastPrompt = ref('')
@@ -35,12 +35,29 @@ const error = ref('')
 const status = ref('等待发送消息')
 const rows = ref<TimelineRow[]>([])
 const agentsByInstance = new Map<string, AgentRef>()
+const agentStartedAt = new Map<string, number>()
+const finalAnswerRows = new Map<string, TimelineRow>()
 const bottom = ref<HTMLElement | null>(null)
 let controller: AbortController | null = null
 
 
 const timeline = computed(() => rows.value)
 const eventCount = computed(() => rows.value.length)
+
+const eventLabels: Record<string, string> = {
+  AGENT_START: '开始执行', AGENT_END: '执行完成', AGENT_RESULT: '最终回答',
+  MODEL_CALL_START: '开始调用模型', MODEL_CALL_END: '模型调用完成',
+  TEXT_BLOCK_START: '开始输出文本', TEXT_BLOCK_DELTA: '文本输出', TEXT_BLOCK_END: '文本输出完成',
+  THINKING_BLOCK_START: '开始整理思路', THINKING_BLOCK_DELTA: '思路更新', THINKING_BLOCK_END: '思路整理完成',
+  DATA_BLOCK_START: '开始输出数据', DATA_BLOCK_DELTA: '数据更新', DATA_BLOCK_END: '数据输出完成',
+  TOOL_CALL_START: '准备调用工具', TOOL_CALL_DELTA: '生成工具参数', TOOL_CALL_END: '工具参数准备完成',
+  TOOL_RESULT_START: '工具开始执行', TOOL_RESULT_TEXT_DELTA: '工具返回结果', TOOL_RESULT_DATA_DELTA: '工具返回数据', TOOL_RESULT_END: '工具执行完成',
+  EXCEED_MAX_ITERS: '执行轮数达到上限', REQUIRE_USER_CONFIRM: '等待用户确认', REQUIRE_EXTERNAL_EXECUTION: '等待外部执行',
+  USER_CONFIRM_RESULT: '收到确认结果', EXTERNAL_EXECUTION_RESULT: '收到外部执行结果', REQUEST_STOP: '请求停止',
+  SUBAGENT_EXPOSED: '创建协作成员', HINT_BLOCK: '收到提示', ALL_TOOLS_DENIED: '工具调用被拒绝', CUSTOM: '自定义事件'
+}
+function eventLabel(type?: string) { return type ? (eventLabels[type] || '执行事件') : '执行事件' }
+function formatDuration(ms: number) { return ms < 1000 ? `${Math.max(0, ms)} 毫秒` : `${(ms / 1000).toFixed(1)} 秒` }
 
 function contentOf(event: SquadEvent): string {
   const payload = event.payload || {}
@@ -73,8 +90,18 @@ function resolveDepth(agent: AgentRef, visited = new Set<string>()): number {
 
 function addEvent(event: SquadEvent) {
   const agent = event.agent || {}
-  const agentName = agent.agentName || agent.agentId || '未知 Agent'
+  const agentName = agent.agentName || '协作成员'
+  const instanceId = agent.agentInstanceId || agent.agentId || 'unknown'
   if (agent.agentInstanceId) agentsByInstance.set(agent.agentInstanceId, agent)
+  if (event.eventType === 'AGENT_START') agentStartedAt.set(instanceId, Date.now())
+  if (event.eventType === 'AGENT_END') {
+    const startedAt = agentStartedAt.get(instanceId)
+    if (startedAt !== undefined) {
+      const answerRow = finalAnswerRows.get(instanceId)
+      if (answerRow) answerRow.durationLabel = formatDuration(Date.now() - startedAt)
+      agentStartedAt.delete(instanceId)
+    }
+  }
   if (event.eventType === 'SUBAGENT_EXPOSED') {
     const child = event.payload?.childAgent as AgentRef | undefined
     if (child?.agentInstanceId) agentsByInstance.set(child.agentInstanceId, child)
@@ -87,6 +114,7 @@ function addEvent(event: SquadEvent) {
     isAgentStart: event.eventType === 'AGENT_START',
   }
   rows.value.push(row)
+  if (event.eventType === 'AGENT_RESULT') finalAnswerRows.set(instanceId, row)
   rows.value.sort((a, b) => Number(a.event.sequence || 0) - Number(b.event.sequence || 0))
 }
 
@@ -110,6 +138,8 @@ async function send() {
   if (!message || busy.value) return
   rows.value = []
   agentsByInstance.clear()
+  agentStartedAt.clear()
+  finalAnswerRows.clear()
   lastPrompt.value = message
   error.value = ''
   status.value = '正在连接测试事件流…'
@@ -181,25 +211,25 @@ onBeforeUnmount(stop)
   <main class="squad-v2-page">
     <header class="topbar">
       <div class="brand"><span class="brand-mark">S</span><div><strong>Squad</strong><small>Agent Runtime</small></div></div>
-      <div class="run-status"><span :class="['status-dot', { live: busy }]" />{{ status }}<span class="event-count">{{ eventCount }} events</span></div>
+      <div class="run-status"><span :class="['status-dot', { live: busy }]" />{{ status }}<span class="event-count">{{ eventCount }} 条事件</span></div>
     </header>
 
     <section class="conversation">
       <div v-if="!timeline.length" class="welcome">
         <div class="welcome-mark">✳</div>
-        <h1>让 Squad 帮你完成任务</h1>
-        <p>输入消息开始测试。当前连接的是本地 SSE 事件发射器，用于验证 Master、SubAgent 及事件归属展示。</p>
+        <h1>让我们一起完成任务</h1>
+        <p>输入消息开始体验。当前使用本地模拟事件，展示多个协作成员的执行过程与从属关系。</p>
       </div>
 
       <div v-else class="timeline">
         <article class="user-message">
           <span class="avatar user-avatar">U</span>
-          <div><small>YOU</small><p>{{ lastPrompt }}</p></div>
+          <div><small>我</small><p>{{ lastPrompt }}</p></div>
         </article>
 
         <div class="timeline-heading">
           <span class="assistant-avatar">✳</span>
-          <div><strong>Squad</strong><small>执行事件 · 按发生顺序排列 · 保留 Agent 父子归属</small></div>
+          <div><strong>执行过程</strong><small>按发生顺序展示 · 保留成员从属关系</small></div>
         </div>
 
         <div class="event-stream">
@@ -213,10 +243,11 @@ onBeforeUnmount(stop)
             <div class="event-content">
               <div class="event-meta">
                 <span class="agent-name">{{ row.agentName }}</span>
-                <span class="event-type">{{ row.event.eventType }}</span>
+                <span class="event-type">{{ eventLabel(row.event.eventType) }}</span>
                 <span class="event-time">{{ displayTime(row.event.timestamp) }}</span>
               </div>
               <p v-if="contentOf(row.event)" class="event-text">{{ contentOf(row.event) }}</p>
+              <div v-if="row.durationLabel" class="answer-duration">用时 {{ row.durationLabel }}</div>
               <details v-if="row.event.payload && Object.keys(row.event.payload).length" class="event-details">
                 <summary>事件数据</summary>
                 <pre>{{ JSON.stringify(row.event.payload, null, 2) }}</pre>
@@ -233,11 +264,11 @@ onBeforeUnmount(stop)
     <footer class="composer-wrap">
       <form class="composer" @submit.prevent="send">
         <textarea v-model="draft" :disabled="busy" rows="1" maxlength="12000"
-          placeholder="向 Squad 发送消息…" @keydown.enter.exact.prevent="send" />
+          placeholder="输入你想完成的任务…" @keydown.enter.exact.prevent="send" />
         <button v-if="busy" type="button" class="send-button stop-button" @click="stop" aria-label="停止">■</button>
         <button v-else type="submit" class="send-button" :disabled="!draft.trim()" aria-label="发送">↑</button>
       </form>
-      <small>当前为事件展示测试页面 · 暂不连接真实模型</small>
+      <small>当前为测试页面 · 使用模拟执行数据</small>
     </footer>
   </main>
 </template>
@@ -258,7 +289,7 @@ onBeforeUnmount(stop)
 .event-stream{position:relative;margin-left:14px}.event-row{display:flex;position:relative;min-height:43px;padding:5px 0 7px;gap:0}.tree-indent{width:calc(22px + var(--depth)*25px);flex:none;position:relative;display:flex;align-items:stretch}.tree-branch{width:25px;position:relative;flex:none;border-left:1px solid #dedede}.tree-branch:last-of-type:after{content:"";position:absolute;left:-1px;top:0;bottom:50%;border-left:1px solid #dedede}.tree-node{position:absolute;left:calc(var(--depth)*25px);top:15px;width:7px;height:7px;border-radius:50%;background:#aaa;border:2px solid white;box-shadow:0 0 0 1px #ccc}.tree-node:before{content:'';position:absolute;right:100%;top:3px;width:12px;border-top:1px solid #dedede}
 .event-row.agent-start .tree-node{background:#303030;box-shadow:0 0 0 1px #303030}
 .event-content{min-width:0;flex:1;border-bottom:1px solid #f0f0f0;padding:3px 0 8px}.event-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.agent-name{font-size:11px;font-weight:600;color:#555}.event-type{font:10px ui-monospace,SFMono-Regular,monospace;color:#858585;background:#f6f6f6;padding:3px 6px;border-radius:4px}.event-time{font-size:10px;color:#aaa;margin-left:auto}
-.event-text{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.65;color:#333;margin:6px 0 0}.event-details{margin-top:5px;font-size:10px;color:#888}.event-details summary{cursor:pointer}.event-details pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:9px;border-radius:6px;font-size:10px}
+.event-text{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.65;color:#333;margin:6px 0 0}.answer-duration{margin-top:7px;font-size:10px;color:#999;display:flex;align-items:center;gap:4px}.answer-duration:before{content:'◷';font-size:12px}.event-details{margin-top:5px;font-size:10px;color:#888}.event-details summary{cursor:pointer}.event-details pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:9px;border-radius:6px;font-size:10px}
 .error-message{color:#b42318;text-align:center;font-size:12px;margin:0 20px 8px}
 .composer-wrap{width:min(860px,calc(100% - 40px));margin:0 auto;padding:10px 0 18px;text-align:center;flex:none}
 .composer{display:flex;align-items:flex-end;gap:10px;border:1px solid #d9d9d9;border-radius:18px;padding:10px 11px 10px 16px;box-shadow:0 2px 12px #00000008}
