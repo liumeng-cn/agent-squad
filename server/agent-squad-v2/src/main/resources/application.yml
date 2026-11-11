@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: agent-squad-v2
+  profiles:
+    default: local
+  main:
+    web-application-type: servlet
+
+server:
+  address: 127.0.0.1
+  port: 18082
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    root: INFO
+    com.agentsquad.squad: INFO

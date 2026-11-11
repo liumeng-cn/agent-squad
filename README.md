@@ -143,6 +143,7 @@ python3 tools/audit_test_reports.py
 server/
   agent-squad-gateway/   认证、账号管理与业务代理
   agent-squad-server/    会话、任务、Worker、工具及运行恢复
+  agent-squad-v2/        V2 独立服务应用
 web/workbench/          Web 工作台
 openspec/specs/         R01–R12 能力与行为规格
 openspec/changes/       当前未完成变更、任务与验证证据
