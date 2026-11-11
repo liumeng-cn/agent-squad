@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.ExecutionIdentity;
 import io.agentscope.core.event.AgentEvent;
+
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Map;
@@ -26,15 +27,8 @@ public class AgentScopeEventAdapter {
      */
     public SquadMsg adapt(AgentEvent event, String conversationId, Long sequence,
                           ObjectMapper objectMapper) {
-        if (event == null) {
-            throw new IllegalArgumentException("AgentScope 原生事件不能为空");
-        }
-        if (objectMapper == null) {
-            throw new IllegalArgumentException("ObjectMapper 不能为空");
-        }
 
-        Map<String, Object> payload = objectMapper.convertValue(
-                event, new TypeReference<Map<String, Object>>() {});
+        Map<String, Object> payload = objectMapper.convertValue(event, new TypeReference<>() {});
 
         ExecutionIdentity identity = event.getExecution();
         SquadExecutionRef execution = identity == null ? null : new SquadExecutionRef(
