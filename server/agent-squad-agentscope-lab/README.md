@@ -25,7 +25,68 @@ export AGENTSCOPE_MODEL='qwen-plus'
 
 也可以使用其他 OpenAI 兼容模型服务，分别设置 API Key、Base URL 和模型名称。密钥只从环境变量读取，不写入代码或配置文件。
 
-## 2. 运行课程
+## 2. IntelliJ IDEA 调试（推荐）
+
+本模块已经提交了 3 个共享 Run Configuration，拉取分支并在 IDEA 中重新加载 Maven 后即可使用：
+
+- `01 - AgentScope 快速开始`
+- `02 - AgentScope 工具调用`
+- `03 - AgentScope 会话延续`
+
+### 第一次导入
+
+1. 用 IDEA 打开仓库根目录。
+2. 打开 Maven 工具窗口，找到 `server/pom.xml`，点击 Reload All Maven Projects。
+3. 确认 Project SDK 和模块 SDK 使用 JDK 21（File → Project Structure → Project）。
+4. 等待 Maven 依赖下载完成。
+5. 打开右上角运行配置下拉框，选择上述任意一个 `AgentScope` 配置。
+
+### 配置模型 API Key
+
+共享运行配置不会保存密钥。第一次运行前，在 IDEA 中打开 Run → Edit Configurations，分别选中这三个配置，在 Environment variables 中添加：
+
+```text
+AGENTSCOPE_API_KEY=你的模型API_KEY
+AGENTSCOPE_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+AGENTSCOPE_MODEL=qwen-plus
+```
+
+如果使用其他 OpenAI 兼容模型服务，替换 Base URL、模型名和 API Key 即可。不要把真实 API Key 提交到 Git。
+
+### 开始调试
+
+1. 打开对应课程的 Java 文件。
+2. 在下面列出的断点位置点击行号左侧，打上红色断点。
+3. 选择对应的运行配置，点击 Debug（小虫子图标），不要点击普通 Run。
+4. 程序停住后，使用 Step Over（F8）、Step Into（F7）、Resume（F9），在 Variables 查看局部变量。
+
+推荐断点：
+
+| 课程 | 建议断点 | 重点观察 |
+|---|---|---|
+| 快速开始 | `QuickstartLesson.main()` 中 `build()` 前后 | Builder 如何构造 Agent，Agent 实例何时创建和关闭 |
+| 快速开始 | `AgentScopeLabSupport.stream()` 的 `streamEvents()` 和 `doOnNext()` | 事件流何时订阅、每个事件的类型和内容 |
+| 工具调用 | `ToolCallingLesson.main()` 的 `registerTool()` | 工具如何注册到 Toolkit |
+| 工具调用 | `CalculatorTools.addNumbers()` 方法第一行 | 模型发起工具调用后，Java 方法如何被执行、参数是什么 |
+| 会话延续 | `SessionPersistenceLesson.runTurn()` 的 Agent 创建处 | 两轮是否创建了不同 Agent 实例，sessionId 是否相同 |
+
+### 调试 AgentScope 框架源码
+
+1. 在 IDEA 的 Maven 工具窗口中确认依赖已下载。
+2. 在 External Libraries 中找到 `agentscope-harness` 或 `agentscope-core`。
+3. 展开对应类，打开 `HarnessAgent`、`ReActAgent`、`Toolkit` 等源码。
+4. 如果当前只有反编译视图，在 Maven 工具窗口执行 Download Sources（或在依赖上选择 Download Sources）。
+5. 从本模块调用处按住 Ctrl / Cmd 点击方法名，进入 AgentScope 源码；也可以在源码中直接打断点。
+
+### 关于流式调试
+
+`streamEvents()` 返回的是 Reactor 流。调用 `blockLast()` 后当前线程会等待事件流完成；事件处理逻辑在 `doOnNext()` 回调中执行。断点可能在回调执行时命中，而不一定紧挨着调用语句。调试时重点看事件对象的 `getType()`，以及文本增量、工具调用开始等不同事件。
+
+如果程序停在网络请求上，先检查 API Key、Base URL、模型名称和网络连接；不要把等待模型响应误认为 IDEA 卡死。
+
+---
+
+## 3. 运行课程
 
 在仓库根目录执行。
 
@@ -79,7 +140,7 @@ mvn -f server/pom.xml -pl agent-squad-agentscope-lab compile exec:java \
 
 注意：这个实验验证的是同一会话的历史延续，不等同于完整验证进程崩溃恢复、跨机器接管或长期记忆提取。
 
-## 3. 先建立几个关键概念
+## 4. 先建立几个关键概念
 
 ### Agent、ReActAgent、HarnessAgent
 
@@ -114,7 +175,7 @@ Workspace 是 Agent 使用的一组逻辑工作目录和能力资源，不等于
 - 长期记忆解决“哪些信息值得跨会话保留，并在后续调用时重新提供给 Agent”。
 - 不要把旧版 `Memory` 接口、会话历史和 Harness 的长期记忆机制混为一谈；先确认当前依赖版本的默认行为和扩展点。
 
-## 4. 后续学习顺序
+## 5. 后续学习顺序
 
 | 顺序 | 主题 | 要回答的问题 |
 |---|---|---|
@@ -129,7 +190,7 @@ Workspace 是 Agent 使用的一组逻辑工作目录和能力资源，不等于
 
 每一课先阅读官方实现和文档，再补一个能运行的小实验。没有核对过的能力不提前写成项目架构结论。
 
-## 5. 官方资料
+## 6. 官方资料
 
 - [AgentScope Java 2.0 中文文档](https://github.com/agentscope-ai/agentscope-java/tree/main/docs/v2/zh/docs)
 - [快速开始](https://github.com/agentscope-ai/agentscope-java/blob/main/docs/v2/zh/docs/quickstart.md)
