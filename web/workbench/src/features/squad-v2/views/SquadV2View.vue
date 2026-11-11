@@ -63,7 +63,7 @@ function contentOf(event: SquadEvent): string {
   const payload = event.payload || {}
   if (typeof payload.delta === 'string') return payload.delta
   if (typeof payload.hint === 'string') return payload.hint
-  if (typeof payload.toolCallName === 'string') return '调用工具：' + payload.toolCallName
+  if (typeof payload.toolCallName === 'string') return '调用工具：' + ({ search: '资料检索', add_numbers: '数字计算' }[payload.toolCallName] || '辅助工具')
   if (payload.result && typeof payload.result === 'object') {
     const result = payload.result as { content?: Array<{ type?: string; text?: string }> }
     return (result.content || []).filter(item => item.type === 'text').map(item => item.text || '').join('')
@@ -73,7 +73,7 @@ function contentOf(event: SquadEvent): string {
     return child?.agentName ? '创建子 Agent：' + child.agentName : '创建子 Agent'
   }
   if (typeof payload.name === 'string') return payload.name
-  if (typeof payload.model === 'string') return '模型：' + payload.model
+  if (typeof payload.model === 'string') return '模型调用中'
   if (payload.usage) return '模型调用完成'
   return ''
 }
@@ -210,7 +210,7 @@ onBeforeUnmount(stop)
 <template>
   <main class="squad-v2-page">
     <header class="topbar">
-      <div class="brand"><span class="brand-mark">S</span><div><strong>Squad</strong><small>Agent Runtime</small></div></div>
+      <div class="brand"><span class="brand-mark">S</span><div><strong>智能协作</strong><small>任务执行工作台</small></div></div>
       <div class="run-status"><span :class="['status-dot', { live: busy }]" />{{ status }}<span class="event-count">{{ eventCount }} 条事件</span></div>
     </header>
 
@@ -248,10 +248,6 @@ onBeforeUnmount(stop)
               </div>
               <p v-if="contentOf(row.event)" class="event-text">{{ contentOf(row.event) }}</p>
               <div v-if="row.durationLabel" class="answer-duration">用时 {{ row.durationLabel }}</div>
-              <details v-if="row.event.payload && Object.keys(row.event.payload).length" class="event-details">
-                <summary>事件数据</summary>
-                <pre>{{ JSON.stringify(row.event.payload, null, 2) }}</pre>
-              </details>
             </div>
           </article>
         </div>
