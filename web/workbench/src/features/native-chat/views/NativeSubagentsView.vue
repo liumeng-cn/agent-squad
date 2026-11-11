@@ -73,6 +73,8 @@ function receive(raw: Record<string, unknown>) {
 function applyChildEvent(id: AgentName, event: Record<string, unknown>) {
   const agent = agents.value[id]
   const type = String(event.type || '')
+  // Core SubAgentTool 当前转发的是兼容层 Event（REASONING / TOOL_RESULT），
+  // 不是根 Agent streamEvents() 的 AgentEvent；其 source 是 EventSource 对象。
   if (type === 'AGENT_START') agent.started = true
   if (type === 'AGENT_END') agent.finished = true
   if (type === 'TEXT_BLOCK_DELTA') agent.text += String(event.delta || '')
@@ -80,6 +82,14 @@ function applyChildEvent(id: AgentName, event: Record<string, unknown>) {
   if (type === 'AGENT_RESULT') {
     const text = finalText(event.result)
     if (text) agent.text = text
+  }
+  if (type === 'REASONING' || type === 'TOOL_RESULT') {
+    agent.started = true
+    const message = event.message as { content?: Array<{ type?: string; text?: string }> } | undefined
+    const chunk = (message?.content || []).filter(block => block.type === 'text')
+      .map(block => block.text || '').join('')
+    if (chunk) agent.text += chunk
+    if (event.isLast === true) agent.finished = true
   }
   events.value.push({ id: String(event.id || crypto.randomUUID()), type, source: id, data: event })
 }
