@@ -34,6 +34,7 @@ const busy = ref(false)
 const error = ref('')
 const status = ref('等待发送消息')
 const rows = ref<TimelineRow[]>([])
+const agentsByInstance = new Map<string, AgentRef>()
 const bottom = ref<HTMLElement | null>(null)
 let controller: AbortController | null = null
 
@@ -60,23 +61,28 @@ function contentOf(event: SquadEvent): string {
   return ''
 }
 
+function resolveDepth(agent: AgentRef, visited = new Set<string>()): number {
+  const instanceId = agent.agentInstanceId
+  if (!instanceId || visited.has(instanceId)) return Math.max(0, Number(agent.depth || 0))
+  visited.add(instanceId)
+  const parentId = agent.parentAgentInstanceId
+  if (!parentId) return 0
+  const parent = agentsByInstance.get(parentId)
+  return parent ? resolveDepth(parent, visited) + 1 : Math.max(1, Number(agent.depth || 1))
+}
+
 function addEvent(event: SquadEvent) {
   const agent = event.agent || {}
-  const instanceId = agent.agentInstanceId || agent.agentId || 'unknown'
   const agentName = agent.agentName || agent.agentId || '未知 Agent'
-  
-
+  if (agent.agentInstanceId) agentsByInstance.set(agent.agentInstanceId, agent)
   if (event.eventType === 'SUBAGENT_EXPOSED') {
     const child = event.payload?.childAgent as AgentRef | undefined
-    if (child?.agentInstanceId && child.agentName) {
-
-    }
+    if (child?.agentInstanceId) agentsByInstance.set(child.agentInstanceId, child)
   }
-
   const row: TimelineRow = {
     key: event.eventId || String(event.sequence || crypto.randomUUID()),
     event,
-    depth: Math.max(0, Number(agent.depth || 0)),
+    depth: resolveDepth(agent),
     agentName,
     isAgentStart: event.eventType === 'AGENT_START',
   }
@@ -103,6 +109,7 @@ async function send() {
   const message = draft.value.trim()
   if (!message || busy.value) return
   rows.value = []
+  agentsByInstance.clear()
   lastPrompt.value = message
   error.value = ''
   status.value = '正在连接测试事件流…'
@@ -252,7 +259,7 @@ onBeforeUnmount(stop)
 .suggestions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px}.suggestions button{border:1px solid #e2e2e2;background:white;border-radius:18px;padding:8px 12px;font-size:12px;color:#555;cursor:pointer}
 .user-message{display:flex;justify-content:flex-end;gap:10px;margin-bottom:30px}.user-message>div{background:#f3f3f3;padding:11px 15px;border-radius:16px;max-width:70%}.user-message small,.timeline-heading small{display:block;font-size:10px;color:#888}.user-message p{font-size:13px;margin:5px 0 0}.avatar{width:27px;height:27px;display:grid;place-items:center;border-radius:50%;font-size:11px}.user-avatar{background:#dedede}
 .timeline-heading{display:flex;align-items:center;gap:10px;margin-bottom:15px}.assistant-avatar{border-radius:50%;font-size:15px}.timeline-heading strong{font-size:13px}.timeline-heading small{margin-top:3px}
-.event-stream{position:relative;margin-left:14px}.event-row{display:flex;position:relative;min-height:43px;padding:5px 0 7px;gap:0}.tree-indent{width:calc(22px + var(--depth)*25px);flex:none;position:relative;display:flex;align-items:stretch}.tree-branch{width:25px;position:relative;flex:none;border-left:1px solid #dedede}.tree-branch:last-of-type:after{content:"";position:absolute;left:-1px;top:0;bottom:50%;border-left:1px solid #dedede}.tree-node{position:absolute;left:calc(var(--depth)*25px);top:15px;width:7px;height:7px;border-radius:50%;background:#aaa;border:2px solid white;box-shadow:0 0 0 1px #ccc}
+.event-stream{position:relative;margin-left:14px}.event-row{display:flex;position:relative;min-height:43px;padding:5px 0 7px;gap:0}.tree-indent{width:calc(22px + var(--depth)*25px);flex:none;position:relative;display:flex;align-items:stretch}.tree-branch{width:25px;position:relative;flex:none;border-left:1px solid #dedede}.tree-branch:last-of-type:after{content:"";position:absolute;left:-1px;top:0;bottom:50%;border-left:1px solid #dedede}.tree-node{position:absolute;left:calc(var(--depth)*25px);top:15px;width:7px;height:7px;border-radius:50%;background:#aaa;border:2px solid white;box-shadow:0 0 0 1px #ccc}.tree-node:before{content:'';position:absolute;right:100%;top:3px;width:12px;border-top:1px solid #dedede}
 .event-row.agent-start .tree-node{background:#303030;box-shadow:0 0 0 1px #303030}
 .event-content{min-width:0;flex:1;border-bottom:1px solid #f0f0f0;padding:3px 0 8px}.event-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.agent-name{font-size:11px;font-weight:600;color:#555}.event-type{font:10px ui-monospace,SFMono-Regular,monospace;color:#858585;background:#f6f6f6;padding:3px 6px;border-radius:4px}.event-time{font-size:10px;color:#aaa;margin-left:auto}
 .event-text{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.65;color:#333;margin:6px 0 0}.event-details{margin-top:5px;font-size:10px;color:#888}.event-details summary{cursor:pointer}.event-details pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:9px;border-radius:6px;font-size:10px}
