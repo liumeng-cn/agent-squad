@@ -38,7 +38,7 @@ public class TestEventStreamService {
     public SseEmitter stream(TestEventStreamRequest request) {
         String scenario = request.normalizedScenario();
         int interval = request.normalizedIntervalMillis();
-        List<SquadMsg> events = buildParallelScenario(scenario);
+        List<SquadMsg> events = buildParallelScenario();
         SseEmitter emitter = new SseEmitter(120_000L);
 
         executor.execute(() -> {
@@ -46,14 +46,13 @@ public class TestEventStreamService {
                 for (SquadMsg event : events) {
                     emitter.send(SseEmitter.event()
                             .id(String.valueOf(event.getSequence()))
-                            .name(event.getEventType())
+                            .name("squad")
                             .data(event));
                     if (interval > 0) {
                         Thread.sleep(interval);
                     }
                 }
-                emitter.send(SseEmitter.event().name("squad.test.completed")
-                        .data(Map.of("scenario", scenario, "eventCount", events.size())));
+                // SSE 流正常结束即代表本次测试完成，不额外发送非 SquadMsg 控制事件。
                 emitter.complete();
             } catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
@@ -65,7 +64,7 @@ public class TestEventStreamService {
         return emitter;
     }
 
-    private List<SquadMsg> buildParallelScenario(String scenario) {
+    private List<SquadMsg> buildParallelScenario() {
         List<SquadMsg> events = new ArrayList<>();
         String conversationId = "conversation-test-001";
         String turnId = "turn-test-001";
