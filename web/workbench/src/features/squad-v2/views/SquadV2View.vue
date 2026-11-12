@@ -27,7 +27,7 @@ type SquadEvent = {
   payload?: Record<string, unknown>
   timestamp?: string
 }
-type TimelineRow = { key: string; event: SquadEvent; agentName: string; durationLabel?: string }
+type TimelineRow = { key: string; event: SquadEvent; agentName: string }
 type AnswerBlock = {
   key: string
   agentInstanceId: string
@@ -42,8 +42,9 @@ type AgentGroup = {
   rows: TimelineRow[]
   children: AgentGroup[]
   depth: number
+  started: boolean
   completed: boolean
-  durationLabel?: string
+  timerLabel: string
 }
 
 const draft = ref('')
@@ -56,16 +57,13 @@ const rows = ref<TimelineRow[]>([])
 const answerBlocks = ref<AnswerBlock[]>([])
 const executionExpanded = ref(true)
 const executionState = ref('等待开始')
-const executionStartedAt = ref<number | null>(null)
-const executionFinishedAt = ref<number | null>(null)
 const executionClock = ref(Date.now())
 const conversationScroller = ref<HTMLElement | null>(null)
 const conversationContent = ref<HTMLElement | null>(null)
 const followLatest = ref(true)
 const showJumpToLatest = computed(() => !followLatest.value && (timeline.value.length > 0 || answerBlocks.value.length > 0))
-const agentsByInstance = new Map<string, AgentRef>()
 const agentStartedAt = new Map<string, number>()
-const finalAnswerRows = new Map<string, TimelineRow>()
+const agentFinishedDuration = new Map<string, number>()
 let controller: AbortController | null = null
 let executionTicker: ReturnType<typeof setInterval> | undefined
 let conversationResizeObserver: ResizeObserver | undefined
@@ -73,7 +71,6 @@ let followFrame: number | undefined
 
 
 const timeline = computed(() => rows.value)
-const eventCount = computed(() => rows.value.length)
 const groupedTimeline = computed<AgentGroup[]>(() => {
   const agentRefs = new Map<string, AgentRef>()
   const agentKey = (agent?: AgentRef | null) =>
@@ -99,7 +96,9 @@ const groupedTimeline = computed<AgentGroup[]>(() => {
       rows: [],
       children: [],
       depth: 0,
+      started: false,
       completed: false,
+      timerLabel: '等待开始',
     })
   }
 
@@ -111,21 +110,17 @@ const groupedTimeline = computed<AgentGroup[]>(() => {
 
   const roots: AgentGroup[] = []
   for (const group of groups.values()) {
-    const parentId = group.agent.parentAgentInstanceId
-    const parent = parentId ? groups.get(parentId) : undefined
-    if (parent && parent !== group) parent.children.push(group)
-    else roots.push(group)
-  }
-
-  const firstSequence = (group: AgentGroup) =>
-    group.rows.length ? Math.min(...group.rows.map(row => Number(row.event.sequence || 0))) : Number.MAX_SAFE_INTEGER
-
-  for (const group of groups.values()) {
     group.rows.sort((a, b) => Number(a.event.sequence || 0) - Number(b.event.sequence || 0))
     group.children.sort((a, b) => firstSequence(a) - firstSequence(b))
-    const endRow = [...group.rows].reverse().find(row => row.event.eventType === 'AGENT_END')
-    group.completed = Boolean(endRow)
-    group.durationLabel = endRow?.durationLabel
+    group.completed = group.rows.some(row => row.event.eventType === 'AGENT_END')
+    const startedAt = agentStartedAt.get(group.key)
+    const finishedDuration = agentFinishedDuration.get(group.key)
+    group.started = startedAt !== undefined || finishedDuration !== undefined
+    group.timerLabel = finishedDuration !== undefined
+      ? formatExecutionTime(finishedDuration)
+      : startedAt !== undefined
+        ? formatExecutionTime(Math.max(0, executionClock.value - startedAt))
+        : '等待开始'
   }
 
   roots.sort((a, b) => {
@@ -161,31 +156,6 @@ const eventLabels: Record<string, string> = {
   SUBAGENT_EXPOSED: '创建协作成员', HINT_BLOCK: '收到提示', ALL_TOOLS_DENIED: '工具调用被拒绝', CUSTOM: '自定义事件'
 }
 function eventLabel(type?: string) { return type ? (eventLabels[type] || '执行事件') : '执行事件' }
-function isThinkingEvent(row: TimelineRow) {
-  return row.event.category === 'THINKING' || row.event.eventType?.startsWith('THINKING_BLOCK_')
-}
-function isRootAgent(agent?: AgentRef | null) {
-  return Boolean(agent && (agent.agentType === 'MASTER' || (!agent.agentType && !agent.parentAgentInstanceId)))
-}
-function isRootAnswerEvent(row: TimelineRow) {
-  if (!isRootAgent(row.event.agent)) return false
-  const type = row.event.eventType || ''
-  return type.startsWith('TEXT_BLOCK_') || type.startsWith('DATA_BLOCK_') || type === 'AGENT_RESULT'
-}
-function visibleRows(source: TimelineRow[]) {
-  return source.filter(row => !isThinkingEvent(row) && !isRootAnswerEvent(row))
-}
-function thinkingRows(source: TimelineRow[]) {
-  return source.filter(isThinkingEvent)
-}
-
-function latestNotification(group: AgentGroup): TimelineRow | undefined {
-  return visibleRows(group.rows).at(-1)
-}
-
-
-function formatDuration(ms: number) { return ms < 1000 ? `${Math.max(0, ms)} 毫秒` : `${(ms / 1000).toFixed(1)} 秒` }
-
 function formatExecutionTime(ms: number) {
   const seconds = Math.max(0, Math.floor(ms / 1000))
   const hours = Math.floor(seconds / 3600)
@@ -196,25 +166,16 @@ function formatExecutionTime(ms: number) {
     : `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`
 }
 
-const executionElapsed = computed(() => {
-  if (executionStartedAt.value === null) return '00:00'
-  const end = busy.value ? executionClock.value : (executionFinishedAt.value ?? executionClock.value)
-  return formatExecutionTime(end - executionStartedAt.value)
-})
-
 function startExecutionTimer() {
   if (executionTicker) clearInterval(executionTicker)
   const startedAt = Date.now()
-  executionStartedAt.value = startedAt
-  executionFinishedAt.value = null
   executionClock.value = startedAt
   executionState.value = '执行中'
   executionTicker = setInterval(() => { executionClock.value = Date.now() }, 1000)
 }
 
 function finishExecutionTimer(state: string) {
-  executionFinishedAt.value = Date.now()
-  executionClock.value = executionFinishedAt.value
+  executionClock.value = Date.now()
   executionState.value = state
   if (executionTicker) clearInterval(executionTicker)
   executionTicker = undefined
@@ -245,14 +206,6 @@ function scheduleFollowLatest() {
       }
     })
   })
-}
-
-function toggleEventHistory(groupKey: string) {
-  const expanded = !expandedGroups.value[groupKey]
-  expandedGroups.value = { ...expandedGroups.value, [groupKey]: expanded }
-  if (expanded) {
-    eventHistoryFollowing.value = { ...eventHistoryFollowing.value, [groupKey]: true }
-    }
 }
 
 function resultTextOf(result: unknown): string {
@@ -337,35 +290,12 @@ function prettyAnswerJson(block: AnswerBlock): string {
   try { return JSON.stringify(JSON.parse(block.text), null, 2) } catch { return block.text }
 }
 
-function contentOf(event: SquadEvent): string {
-  const payload = event.payload || {}
-  if (typeof payload.delta === 'string') return payload.delta
-  if (typeof payload.hint === 'string') return payload.hint
-  if (typeof payload.toolCallName === 'string') return '调用工具：' + ({ search: '资料检索', add_numbers: '数字计算' }[payload.toolCallName] || '辅助工具')
-  if (typeof payload.result === 'string') return payload.result
-  if (payload.result && typeof payload.result === 'object') {
-    const result = payload.result as { content?: Array<{ type?: string; text?: string }> }
-    return (result.content || []).filter(item => item.type === 'text').map(item => item.text || '').join('')
-  }
-  if (event.eventType === 'SUBAGENT_EXPOSED') {
-    const child = payload.childAgent as AgentRef | undefined
-    return child?.agentName ? '新增协作成员：' + child.agentName : '新增协作成员'
-  }
-  if (typeof payload.name === 'string') return payload.name
-  if (typeof payload.model === 'string') return '模型调用中'
-  if (payload.usage) return '模型调用完成'
-  return ''
-}
+
 
 function addEvent(event: SquadEvent) {
   const agent = event.agent || {}
   const agentName = agent.agentName || '协作成员'
   const instanceId = agent.agentInstanceId || agent.agentId || 'unknown'
-  if (agent.agentInstanceId) agentsByInstance.set(agent.agentInstanceId, agent)
-  if (event.eventType === 'SUBAGENT_EXPOSED') {
-    const child = event.payload?.childAgent as AgentRef | undefined
-    if (child?.agentInstanceId) agentsByInstance.set(child.agentInstanceId, child)
-  }
 
   const row: TimelineRow = {
     key: event.eventId || String(event.sequence || crypto.randomUUID()),
@@ -378,22 +308,17 @@ function addEvent(event: SquadEvent) {
 
   if (event.eventType === 'AGENT_START') {
     agentStartedAt.set(instanceId, Date.now())
-  } else if (event.eventType === 'AGENT_RESULT') {
-    finalAnswerRows.set(instanceId, row)
+    agentFinishedDuration.delete(instanceId)
   } else if (event.eventType === 'AGENT_END') {
     const startedAt = agentStartedAt.get(instanceId)
     if (startedAt !== undefined) {
-      const durationLabel = formatDuration(Date.now() - startedAt)
-      const answerRow = finalAnswerRows.get(instanceId)
-      if (answerRow) answerRow.durationLabel = durationLabel
-      else row.durationLabel = durationLabel
+      agentFinishedDuration.set(instanceId, Math.max(0, Date.now() - startedAt))
       agentStartedAt.delete(instanceId)
     }
   }
-  scrollExpandedEventHistory()
+
   scheduleFollowLatest()
 }
-
 function parseFrame(frame: string) {
   const lines = frame.split('\n')
   const eventName = lines.find(line => line.startsWith('event:'))?.slice(6).trim()
@@ -416,9 +341,8 @@ async function send() {
   answerBlocks.value = []
   followLatest.value = true
   executionExpanded.value = true
-  agentsByInstance.clear()
   agentStartedAt.clear()
-  finalAnswerRows.clear()
+  agentFinishedDuration.clear()
   lastPrompt.value = message
   error.value = ''
   status.value = '正在连接测试事件流…'
@@ -500,11 +424,7 @@ function stop() {
   controller?.abort()
 }
 
-function displayTime(value?: string) {
-  if (!value) return ''
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? '' : date.toLocaleTimeString()
-}
+
 
 onMounted(() => {
   if (conversationContent.value && typeof ResizeObserver !== 'undefined') {
@@ -525,7 +445,7 @@ onBeforeUnmount(() => {
   <main class="squad-v2-page">
     <header class="topbar">
       <div class="brand"><span class="brand-mark">S</span><div><strong>智能协作</strong><small>任务执行工作台</small></div></div>
-      <div class="run-status"><span :class="['status-dot', { live: busy }]" />{{ status }}<span class="event-count">{{ eventCount }} 条事件</span></div>
+      <div class="run-status"><span :class="['status-dot', { live: busy }]" />{{ status }}</div>
     </header>
 
     <section ref="conversationScroller" class="conversation" @scroll="onConversationScroll">
@@ -552,7 +472,6 @@ onBeforeUnmount(() => {
               <span class="execution-heading-left">
                 <span class="execution-mark" :class="{ running: busy }"></span>
                 <strong>执行过程</strong>
-                <span class="execution-timer">{{ executionElapsed }}</span>
                 <span class="execution-state">{{ busy ? '进行中' : executionState }}</span>
               </span>
               <span class="execution-heading-right">
@@ -575,16 +494,11 @@ onBeforeUnmount(() => {
                       {{ group.agent.agentName || (group.depth === 0 ? '主协调员' : '协作成员') }}
                     </strong>
                     <span :class="['member-status', { completed: group.completed }]">
-                      {{ group.completed ? '已完成' : '执行中' }}
+                      {{ group.completed ? '已完成' : group.started ? '执行中' : '等待开始' }}
                     </span>
-                    <template v-if="latestNotification(group)">
-                      <span class="event-type">{{ eventLabel(latestNotification(group)?.event.eventType) }}</span>
-                      <span class="agent-row-event" :title="contentOf(latestNotification(group)!.event)">
-                        {{ contentOf(latestNotification(group)!.event) || '事件已更新' }}
-                      </span>
-                      <time class="event-time">{{ displayTime(latestNotification(group)?.event.timestamp) }}</time>
-                    </template>
-                    <span v-else class="event-notice-empty">等待事件</span>
+                    <time class="agent-row-timer" :aria-label="'执行用时 ' + group.timerLabel">
+                      <span class="timer-icon">◷</span>{{ group.timerLabel }}
+                    </time>
                   </article>
                 </div>
               </div>
@@ -666,7 +580,7 @@ onBeforeUnmount(() => {
 .topbar{height:62px;flex:none;border-bottom:1px solid var(--border,#e7e7e7);display:flex;align-items:center;justify-content:space-between;padding:0 28px}
 .brand{display:flex;align-items:center;gap:10px}.brand-mark,.assistant-avatar{width:30px;height:30px;border-radius:10px;background:#242424;color:white;display:grid;place-items:center;font-weight:700}
 .brand strong{display:block;font-size:14px}.brand small{display:block;color:#888;font-size:10px;margin-top:2px}
-.run-status{display:flex;align-items:center;gap:8px;color:#777;font-size:12px}.status-dot{width:7px;height:7px;border-radius:50%;background:#aaa}.status-dot.live{background:#16a36a;box-shadow:0 0 0 3px #16a36a22}.event-count{border-left:1px solid #ddd;padding-left:10px}
+.run-status{display:flex;align-items:center;gap:8px;color:#777;font-size:12px}.status-dot{width:7px;height:7px;border-radius:50%;background:#aaa}.status-dot.live{background:#16a36a;box-shadow:0 0 0 3px #16a36a22}
 .conversation{position:relative;width:min(860px,calc(100% - 40px));margin:0 auto;flex:1;min-height:0;overflow:auto;padding:26px 0 24px;box-sizing:border-box;overscroll-behavior:contain}
 .conversation-content{min-height:100%;display:flex;flex-direction:column}
 .timeline{display:flex;flex-direction:column;gap:18px}
@@ -680,7 +594,7 @@ onBeforeUnmount(() => {
 .execution-header{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
 .execution-heading-left,.execution-heading-right{display:flex;align-items:center;gap:9px;min-width:0}
 .execution-heading-left strong{font-size:12px;font-weight:600;color:#555}
-.execution-timer{font-size:11px;font-variant-numeric:tabular-nums;color:#777;background:#f6f6f6;border-radius:6px;padding:3px 7px}
+
 .execution-state{font-size:10px;color:#999}
 .execution-mark{width:7px;height:7px;border-radius:50%;background:#b9b9b9;flex:none}
 .execution-mark.running{background:#6d9d83;box-shadow:0 0 0 3px #6d9d8318}
@@ -691,15 +605,13 @@ onBeforeUnmount(() => {
 .execution-fold-enter-active,.execution-fold-leave-active{transition:opacity .16s ease,transform .16s ease;transform-origin:top}
 .execution-fold-enter-from,.execution-fold-leave-to{opacity:0;transform:translateY(-4px)}
 .grouped-execution{display:flex;flex-direction:column;gap:5px}
-.agent-row{display:flex;align-items:center;gap:8px;min-width:0;padding:8px 9px;border:1px solid #ededed;border-radius:8px;background:#fff}
+.agent-row{display:flex;align-items:center;gap:9px;min-width:0;padding:8px 10px;border:1px solid #ededed;border-radius:8px;background:#fff}
 .agent-row.nested-agent-row{margin-left:calc(var(--group-depth)*18px);border-left:2px solid #e5e5e5}
-.agent-row-name{flex:none;max-width:116px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:600;color:#555}
+.agent-row-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:600;color:#555}
 .member-status{font-size:10px;flex:none;color:#9a7a35;background:#faf5e8;padding:3px 7px;border-radius:5px}
 .member-status.completed{color:#56856c;background:#f0f6f2}
-.event-type{flex:none;font-size:10px;color:#777;background:#f6f6f6;padding:3px 6px;border-radius:4px;white-space:nowrap}
-.agent-row-event{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;line-height:1.4;color:#666}
-.event-notice-empty{flex:1;min-width:0;font-size:11px;color:#aaa}
-.event-time{flex:none;font-size:10px;color:#aaa;white-space:nowrap}
+.agent-row-timer{display:inline-flex;align-items:center;gap:5px;flex:none;min-width:66px;justify-content:flex-end;font-size:11px;font-variant-numeric:tabular-nums;color:#777}
+.timer-icon{font-size:12px;color:#aaa}
 .answer-duration{margin-top:5px;font-size:10px;color:#999}
 .answer-section{padding:2px 1px 8px}
 .answer-heading{display:flex;align-items:center;gap:9px;margin-bottom:10px}
@@ -732,5 +644,5 @@ onBeforeUnmount(() => {
 .send-button:disabled{background:#e4e4e4;color:#fff;cursor:not-allowed}
 .stop-button{font-size:12px;background:#555}
 .composer-wrap>small{display:block;color:#aaa;font-size:10px;margin-top:8px}
-@media(max-width:600px){.topbar{padding:0 16px}.conversation,.composer-wrap{width:calc(100% - 28px)}.conversation{padding-top:18px}.event-time{font-size:9px}.agent-row{gap:5px;padding:8px 7px}.agent-row.nested-agent-row{margin-left:calc(var(--group-depth)*10px)}.agent-row-name{max-width:74px}.execution-header{padding:10px}.execution-panel-content{padding:0 8px 8px}.composer{padding:11px 11px 9px 13px}.composer textarea{font-size:14px}.composer-hints{font-size:9px}}
+@media(max-width:600px){.topbar{padding:0 16px}.conversation,.composer-wrap{width:calc(100% - 28px)}.conversation{padding-top:18px}.agent-row{gap:7px;padding:8px 7px}.agent-row.nested-agent-row{margin-left:calc(var(--group-depth)*10px)}.agent-row-name{font-size:10px}.agent-row-timer{min-width:60px;font-size:10px}.execution-header{padding:10px}.execution-panel-content{padding:0 8px 8px}.composer{padding:11px 11px 9px 13px}.composer textarea{font-size:14px}.composer-hints{font-size:9px}}
 </style>
