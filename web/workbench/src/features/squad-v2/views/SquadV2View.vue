@@ -26,7 +26,7 @@ type SquadEvent = {
   payload?: Record<string, unknown>
   timestamp?: string
 }
-type TimelineRow = { key: string; event: SquadEvent; depth: number; agentName: string; isAgentStart: boolean; durationLabel?: string }
+type TimelineRow = { key: string; event: SquadEvent; agentName: string; durationLabel?: string }
 
 const draft = ref('')
 const lastPrompt = ref('')
@@ -104,11 +104,14 @@ const groupedTimeline = computed(() => {
     }
   })
 
+  const childSequences = [...groups.values()].flat().map(row => Number(row.event.sequence || 0))
+  const firstChildSequence = childSequences.length ? Math.min(...childSequences) : Number.POSITIVE_INFINITY
+
   return {
     rootAgent,
-    rootIntro: rootRows.filter(row => !['AGENT_RESULT', 'AGENT_END'].includes(row.event.eventType || '')),
+    rootIntro: rootRows.filter(row => Number(row.event.sequence || 0) < firstChildSequence),
     children,
-    rootConclusion: rootRows.filter(row => ['AGENT_RESULT', 'AGENT_END'].includes(row.event.eventType || '')),
+    rootConclusion: rootRows.filter(row => Number(row.event.sequence || 0) >= firstChildSequence),
   }
 })
 
@@ -125,6 +128,15 @@ const eventLabels: Record<string, string> = {
   SUBAGENT_EXPOSED: '创建协作成员', HINT_BLOCK: '收到提示', ALL_TOOLS_DENIED: '工具调用被拒绝', CUSTOM: '自定义事件'
 }
 function eventLabel(type?: string) { return type ? (eventLabels[type] || '执行事件') : '执行事件' }
+function isThinkingEvent(row: TimelineRow) {
+  return row.event.category === 'THINKING' || row.event.eventType?.startsWith('THINKING_BLOCK_')
+}
+function visibleRows(source: TimelineRow[]) {
+  return source.filter(row => !isThinkingEvent(row))
+}
+function thinkingRows(source: TimelineRow[]) {
+  return source.filter(isThinkingEvent)
+}
 function formatDuration(ms: number) { return ms < 1000 ? `${Math.max(0, ms)} 毫秒` : `${(ms / 1000).toFixed(1)} 秒` }
 
 function contentOf(event: SquadEvent): string {
@@ -147,16 +159,6 @@ function contentOf(event: SquadEvent): string {
   return ''
 }
 
-function resolveDepth(agent: AgentRef, visited = new Set<string>()): number {
-  const instanceId = agent.agentInstanceId
-  if (!instanceId || visited.has(instanceId)) return Math.max(0, Number(agent.depth || 0))
-  visited.add(instanceId)
-  const parentId = agent.parentAgentInstanceId
-  if (!parentId) return 0
-  const parent = agentsByInstance.get(parentId)
-  return parent ? resolveDepth(parent, visited) + 1 : Math.max(1, Number(agent.depth || 1))
-}
-
 function addEvent(event: SquadEvent) {
   const agent = event.agent || {}
   const agentName = agent.agentName || '协作成员'
@@ -170,9 +172,7 @@ function addEvent(event: SquadEvent) {
   const row: TimelineRow = {
     key: event.eventId || String(event.sequence || crypto.randomUUID()),
     event,
-    depth: resolveDepth(agent),
     agentName,
-    isAgentStart: event.eventType === 'AGENT_START',
   }
   rows.value.push(row)
   rows.value.sort((a, b) => Number(a.event.sequence || 0) - Number(b.event.sequence || 0))
@@ -304,7 +304,7 @@ onBeforeUnmount(stop)
 
         <div class="timeline-heading">
           <span class="assistant-avatar">✳</span>
-          <div><strong>执行过程</strong><small>按所属关系分组展示 · 成员内部保留事件顺序</small></div>
+          <div><strong>执行过程</strong><small>按所属关系分组展示 · 思考过程单独收纳</small></div>
         </div>
 
         <div class="grouped-execution">
@@ -314,7 +314,7 @@ onBeforeUnmount(stop)
               <span>任务规划与最终汇总</span>
             </div>
             <div class="member-events">
-              <article v-for="row in groupedTimeline.rootIntro" :key="row.key" class="event-row">
+              <article v-for="row in visibleRows(groupedTimeline.rootIntro)" :key="row.key" class="event-row">
                 <div class="event-content">
                   <div class="event-meta">
                     <span class="event-type">{{ eventLabel(row.event.eventType) }}</span>
@@ -323,6 +323,13 @@ onBeforeUnmount(stop)
                   <p v-if="contentOf(row.event)" class="event-text">{{ contentOf(row.event) }}</p>
                 </div>
               </article>
+              <details v-if="thinkingRows(groupedTimeline.rootIntro).length" class="thinking-panel">
+                <summary>思考过程（{{ thinkingRows(groupedTimeline.rootIntro).length }} 条）</summary>
+                <article v-for="row in thinkingRows(groupedTimeline.rootIntro)" :key="row.key" class="thinking-row">
+                  <span class="thinking-label">{{ eventLabel(row.event.eventType) }}</span>
+                  <p v-if="contentOf(row.event)">{{ contentOf(row.event) }}</p>
+                </article>
+              </details>
             </div>
           </section>
 
@@ -339,7 +346,7 @@ onBeforeUnmount(stop)
                 </span>
               </header>
               <div class="member-events">
-                <article v-for="row in group.rows" :key="row.key" class="event-row">
+                <article v-for="row in visibleRows(group.rows)" :key="row.key" class="event-row">
                   <div class="event-content">
                     <div class="event-meta">
                       <span class="event-type">{{ eventLabel(row.event.eventType) }}</span>
@@ -349,6 +356,13 @@ onBeforeUnmount(stop)
                     <div v-if="row.durationLabel" class="answer-duration">用时 {{ row.durationLabel }}</div>
                   </div>
                 </article>
+                <details v-if="thinkingRows(group.rows).length" class="thinking-panel">
+                  <summary>思考过程（{{ thinkingRows(group.rows).length }} 条）</summary>
+                  <article v-for="row in thinkingRows(group.rows)" :key="row.key" class="thinking-row">
+                    <span class="thinking-label">{{ eventLabel(row.event.eventType) }}</span>
+                    <p v-if="contentOf(row.event)">{{ contentOf(row.event) }}</p>
+                  </article>
+                </details>
               </div>
             </article>
           </section>
@@ -356,7 +370,7 @@ onBeforeUnmount(stop)
           <section v-if="groupedTimeline.rootConclusion.length" class="agent-section root-section conclusion-section">
             <div class="section-title"><strong>主协调员 · 汇总与回答</strong></div>
             <div class="member-events">
-              <article v-for="row in groupedTimeline.rootConclusion" :key="row.key" class="event-row">
+              <article v-for="row in visibleRows(groupedTimeline.rootConclusion)" :key="row.key" class="event-row">
                 <div class="event-content">
                   <div class="event-meta">
                     <span class="event-type">{{ eventLabel(row.event.eventType) }}</span>
@@ -366,6 +380,13 @@ onBeforeUnmount(stop)
                   <div v-if="row.durationLabel" class="answer-duration">用时 {{ row.durationLabel }}</div>
                 </div>
               </article>
+              <details v-if="thinkingRows(groupedTimeline.rootConclusion).length" class="thinking-panel">
+                <summary>思考过程（{{ thinkingRows(groupedTimeline.rootConclusion).length }} 条）</summary>
+                <article v-for="row in thinkingRows(groupedTimeline.rootConclusion)" :key="row.key" class="thinking-row">
+                  <span class="thinking-label">{{ eventLabel(row.event.eventType) }}</span>
+                  <p v-if="contentOf(row.event)">{{ contentOf(row.event) }}</p>
+                </article>
+              </details>
             </div>
           </section>
         </div>
@@ -410,6 +431,11 @@ onBeforeUnmount(stop)
 .member-status{font-size:10px;color:#9a7a35;background:#faf5e8;padding:4px 7px;border-radius:5px}
 .member-status.completed{color:#23845b;background:#edf7f1}
 .member-events{padding-left:10px}
+.thinking-panel{margin:8px 0 2px;padding:9px 11px;background:#f8f8f8;border-radius:8px;color:#777;font-size:11px}
+.thinking-panel summary{cursor:pointer;user-select:none}
+.thinking-row{padding:7px 0 0;color:#666}
+.thinking-label{font-size:10px;color:#999}
+.thinking-row p{margin:4px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;font-size:12px;color:#555}
 .member-events .event-row{padding:5px 0 8px}
 .member-events .event-row:last-child .event-content{border-bottom:0}
 .conclusion-section{padding-top:4px;border-top:1px solid #eee}.event-row{display:flex;position:relative;min-height:43px;padding:5px 0 7px;gap:0}.tree-indent{width:calc(22px + var(--depth)*25px);flex:none;position:relative;display:flex;align-items:stretch}.tree-branch{width:25px;position:relative;flex:none;border-left:1px solid #dedede}.tree-branch:last-of-type:after{content:"";position:absolute;left:-1px;top:0;bottom:50%;border-left:1px solid #dedede}.tree-node{position:absolute;left:calc(var(--depth)*25px);top:15px;width:7px;height:7px;border-radius:50%;background:#aaa;border:2px solid white;box-shadow:0 0 0 1px #ccc}.tree-node:before{content:'';position:absolute;right:100%;top:3px;width:12px;border-top:1px solid #dedede}
