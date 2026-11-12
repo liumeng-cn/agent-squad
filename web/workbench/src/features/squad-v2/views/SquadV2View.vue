@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import SafeMarkdown from '../../../shared/ui/SafeMarkdown.vue'
 import { getCsrfToken } from '../../../shared/api/csrf'
 
@@ -12,6 +12,7 @@ type AgentRef = {
   rootAgentInstanceId?: string
   depth?: number
 }
+
 type SquadEvent = {
   protocolVersion?: string
   eventId?: string
@@ -27,25 +28,35 @@ type SquadEvent = {
   payload?: Record<string, unknown>
   timestamp?: string
 }
-type TimelineRow = { key: string; event: SquadEvent; agentName: string }
-type AnswerBlock = {
+
+type StreamBlockKind = 'TEXT' | 'THINKING' | 'DATA' | 'TOOL_CALL' | 'TOOL_RESULT'
+type StreamBlock = {
   key: string
-  agentInstanceId: string
-  blockId: string
-  kind: 'TEXT' | 'DATA' | 'RESULT'
+  kind: StreamBlockKind
+  label: string
   text: string
   completed: boolean
+  timestamp?: string
 }
-type AgentGroup = {
+type AgentActivity =
+  | { key: string; kind: 'event'; event: SquadEvent }
+  | { key: string; kind: 'block'; block: StreamBlock }
+type AgentNode = {
   key: string
   agent: AgentRef
-  rows: TimelineRow[]
-  children: AgentGroup[]
-  depth: number
-  started: boolean
+  parentKey: string | null
+  children: AgentNode[]
+  activities: AgentActivity[]
+  startedAt: number | null
+  durationMs: number | null
+}
+type AgentRow = { node: AgentNode; depth: number }
+type AnswerBlock = {
+  key: string
+  blockId: string
+  kind: 'TEXT' | 'DATA'
+  text: string
   completed: boolean
-  timerLabel: string
-  latestEvent?: TimelineRow
 }
 
 const draft = ref('')
@@ -53,169 +64,280 @@ const composerInput = ref<HTMLTextAreaElement | null>(null)
 const lastPrompt = ref('')
 const busy = ref(false)
 const error = ref('')
-const status = ref('等待发送消息')
-const rows = ref<TimelineRow[]>([])
+const agentRoots = ref<AgentNode[]>([])
 const answerBlocks = ref<AnswerBlock[]>([])
+const answerFallback = ref('')
 const executionExpanded = ref(true)
-const executionState = ref('等待开始')
 const executionClock = ref(Date.now())
 const conversationScroller = ref<HTMLElement | null>(null)
 const conversationContent = ref<HTMLElement | null>(null)
 const followLatest = ref(true)
-const showJumpToLatest = computed(() => !followLatest.value && (timeline.value.length > 0 || answerBlocks.value.length > 0))
-const agentStartedAt = new Map<string, number>()
-const agentFinishedDuration = new Map<string, number>()
 const expandedGroups = ref<Record<string, boolean>>({})
-const eventHistoryElements = new Map<string, HTMLElement>()
-const eventHistoryFollowing = ref<Record<string, boolean>>({})
+const showJumpToLatest = computed(() =>
+  !followLatest.value && (visibleAgents.value.length > 0 || hasAnswerContent.value || busy.value),
+)
+const hasAnswerContent = computed(() => answerBlocks.value.some(block => block.text.length > 0))
+const visibleAnswerFallback = computed(() => hasAnswerContent.value ? '' : answerFallback.value)
+const showAnswer = computed(() => busy.value || hasAnswerContent.value || Boolean(answerFallback.value))
+
+const agentIndex = new Map<string, AgentNode>()
+const pendingChildren = new Map<string, AgentNode[]>()
+const streamBlockIndex = new Map<string, StreamBlock>()
+const answerBlockIndex = new Map<string, AnswerBlock>()
+const seenEventIds = new Set<string>()
+
 let controller: AbortController | null = null
 let executionTicker: ReturnType<typeof setInterval> | undefined
 let conversationResizeObserver: ResizeObserver | undefined
 let followFrame: number | undefined
 
-
-const timeline = computed(() => rows.value)
-const groupedTimeline = computed<AgentGroup[]>(() => {
-  const agentRefs = new Map<string, AgentRef>()
-  const agentKey = (agent?: AgentRef | null) =>
-    agent?.agentInstanceId || agent?.agentId || ''
-
-  // Agent references may arrive with their own events or in SUBAGENT_EXPOSED.
-  for (const row of rows.value) {
-    const agent = row.event.agent
-    const key = agentKey(agent)
-    if (agent && key) agentRefs.set(key, agent)
-
-    if (row.event.eventType === 'SUBAGENT_EXPOSED') {
-      const child = row.event.payload?.childAgent as AgentRef | undefined
-      const childKey = agentKey(child)
-      if (child && childKey) agentRefs.set(childKey, child)
-    }
-  }
-
-  const groups = new Map<string, AgentGroup>()
-  for (const [key, agent] of agentRefs) {
-    groups.set(key, {
-      key,
-      agent,
-      rows: [],
-      children: [],
-      depth: 0,
-      started: false,
-      completed: false,
-      timerLabel: '等待开始',
-    })
-  }
-
-  for (const row of rows.value) {
-    const key = agentKey(row.event.agent)
-    const group = groups.get(key)
-    if (group) group.rows.push(row)
-  }
-
-  const firstSequence = (group: AgentGroup) =>
-    group.rows.length
-      ? Math.min(...group.rows.map(row => Number(row.event.sequence || 0)))
-      : Number.MAX_SAFE_INTEGER
-
-  const roots: AgentGroup[] = []
-  for (const group of groups.values()) {
-    group.rows.sort((left, right) => Number(left.event.sequence || 0) - Number(right.event.sequence || 0))
-    group.latestEvent = visibleRows(group.rows).at(-1)
-
-    const parentId = group.agent.parentAgentInstanceId
-    const parent = parentId ? groups.get(parentId) : undefined
-    if (parent && parent !== group) parent.children.push(group)
-    else roots.push(group)
-
-    group.completed = group.rows.some(row => row.event.eventType === 'AGENT_END')
-    const startedAt = agentStartedAt.get(group.key)
-    const finishedDuration = agentFinishedDuration.get(group.key)
-    group.started = startedAt !== undefined || finishedDuration !== undefined
-    group.timerLabel = finishedDuration !== undefined
-      ? formatExecutionTime(finishedDuration)
-      : startedAt !== undefined
-        ? formatExecutionTime(Math.max(0, executionClock.value - startedAt))
-        : '等待开始'
-  }
-
-  for (const group of groups.values()) {
-    group.children.sort((left, right) => firstSequence(left) - firstSequence(right))
-  }
-  roots.sort((left, right) => {
-    if (left.agent.agentType === 'MASTER') return -1
-    if (right.agent.agentType === 'MASTER') return 1
-    return firstSequence(left) - firstSequence(right)
-  })
-
-  // Flatten only for rendering; depth retains the full parent-child hierarchy.
-  const flattened: AgentGroup[] = []
-  const append = (group: AgentGroup, depth: number, ancestors = new Set<string>()) => {
-    if (ancestors.has(group.key)) return
+const visibleAgents = computed<AgentRow[]>(() => {
+  const result: AgentRow[] = []
+  const visit = (node: AgentNode, depth: number, ancestors: Set<string>) => {
+    if (ancestors.has(node.key)) return
     const nextAncestors = new Set(ancestors)
-    nextAncestors.add(group.key)
-    group.depth = depth
-    flattened.push(group)
-    for (const child of group.children) append(child, depth + 1, nextAncestors)
+    nextAncestors.add(node.key)
+    result.push({ node, depth })
+    for (const child of node.children) visit(child, depth + 1, nextAncestors)
   }
-  for (const root of roots) append(root, 0)
-
-  return flattened
+  for (const root of agentRoots.value) visit(root, 0, new Set<string>())
+  return result
 })
 
 const eventLabels: Record<string, string> = {
-  AGENT_START: '开始执行', AGENT_END: '执行完成', AGENT_RESULT: '最终回答',
-  MODEL_CALL_START: '开始调用模型', MODEL_CALL_END: '模型调用完成',
-  TEXT_BLOCK_START: '开始输出文本', TEXT_BLOCK_DELTA: '文本输出', TEXT_BLOCK_END: '文本输出完成',
-  THINKING_BLOCK_START: '开始整理思路', THINKING_BLOCK_DELTA: '思路更新', THINKING_BLOCK_END: '思路整理完成',
-  DATA_BLOCK_START: '开始输出数据', DATA_BLOCK_DELTA: '数据更新', DATA_BLOCK_END: '数据输出完成',
-  TOOL_CALL_START: '准备调用工具', TOOL_CALL_DELTA: '生成工具参数', TOOL_CALL_END: '工具参数准备完成',
-  TOOL_RESULT_START: '工具开始执行', TOOL_RESULT_TEXT_DELTA: '工具返回结果', TOOL_RESULT_DATA_DELTA: '工具返回数据', TOOL_RESULT_END: '工具执行完成',
-  EXCEED_MAX_ITERS: '执行轮数达到上限', REQUIRE_USER_CONFIRM: '等待用户确认', REQUIRE_EXTERNAL_EXECUTION: '等待外部执行',
-  USER_CONFIRM_RESULT: '收到确认结果', EXTERNAL_EXECUTION_RESULT: '收到外部执行结果', REQUEST_STOP: '请求停止',
-  SUBAGENT_EXPOSED: '创建协作成员', HINT_BLOCK: '收到提示', ALL_TOOLS_DENIED: '工具调用被拒绝', CUSTOM: '自定义事件'
+  AGENT_START: '开始执行',
+  AGENT_END: '执行完成',
+  AGENT_RESULT: '返回结果',
+  MODEL_CALL_START: '调用模型',
+  MODEL_CALL_END: '模型调用完成',
+  TEXT_BLOCK_START: '文本开始',
+  TEXT_BLOCK_DELTA: '文本输出',
+  TEXT_BLOCK_END: '文本完成',
+  THINKING_BLOCK_START: '思考内容开始',
+  THINKING_BLOCK_DELTA: '思考内容',
+  THINKING_BLOCK_END: '思考内容完成',
+  DATA_BLOCK_START: '数据开始',
+  DATA_BLOCK_DELTA: '数据输出',
+  DATA_BLOCK_END: '数据完成',
+  TOOL_CALL_START: '工具调用',
+  TOOL_CALL_DELTA: '工具参数',
+  TOOL_CALL_END: '工具调用参数完成',
+  TOOL_RESULT_START: '工具返回',
+  TOOL_RESULT_TEXT_DELTA: '工具返回内容',
+  TOOL_RESULT_DATA_DELTA: '工具返回数据',
+  TOOL_RESULT_END: '工具返回完成',
+  EXCEED_MAX_ITERS: '达到执行轮数上限',
+  REQUIRE_USER_CONFIRM: '需要用户确认',
+  REQUIRE_EXTERNAL_EXECUTION: '需要外部执行',
+  USER_CONFIRM_RESULT: '收到确认结果',
+  EXTERNAL_EXECUTION_RESULT: '收到外部执行结果',
+  REQUEST_STOP: '收到停止请求',
+  SUBAGENT_EXPOSED: '创建协作成员',
+  HINT_BLOCK: '进度消息',
+  ALL_TOOLS_DENIED: '工具调用被拒绝',
+  CUSTOM: '自定义事件',
 }
-function eventLabel(type?: string) { return type ? (eventLabels[type] || '执行事件') : '执行事件' }
 
-function isRootAgent(agent?: AgentRef | null) {
-  return Boolean(agent && (agent.agentType === 'MASTER' || (!agent.agentType && !agent.parentAgentInstanceId)))
+function eventLabel(type?: string) {
+  return type ? (eventLabels[type] || '执行事件') : '执行事件'
 }
 
-function isThinkingEvent(row: TimelineRow) {
-  return row.event.category === 'THINKING' || row.event.eventType?.startsWith('THINKING_BLOCK_')
+function agentInstanceKey(agent?: AgentRef | null) {
+  return agent?.agentInstanceId || agent?.agentId || ''
 }
 
-function visibleRows(source: TimelineRow[]) {
-  return source.filter(row => !isThinkingEvent(row))
+function isMasterAgent(agent?: AgentRef | null) {
+  if (!agent) return false
+  if (agent.agentType === 'MASTER') return true
+  const id = agentInstanceKey(agent)
+  return Boolean(id && !agent.parentAgentInstanceId && agent.rootAgentInstanceId === id)
 }
 
-function thinkingRows(source: TimelineRow[]) {
-  return source.filter(isThinkingEvent)
+function agentName(node: AgentNode) {
+  if (node.agent.agentName) return node.agent.agentName
+  return isMasterAgent(node.agent) ? '主协调员' : '协作成员'
 }
 
-function latestNotification(group: AgentGroup): TimelineRow | undefined {
-  return group.latestEvent
+function canAttach(node: AgentNode, parent: AgentNode) {
+  let current: AgentNode | undefined = parent
+  while (current) {
+    if (current.key === node.key) return false
+    current = current.parentKey ? agentIndex.get(current.parentKey) : undefined
+  }
+  return true
+}
+
+function removePendingNode(node: AgentNode) {
+  for (const [parentKey, children] of pendingChildren) {
+    const next = children.filter(child => child.key !== node.key)
+    if (next.length) pendingChildren.set(parentKey, next)
+    else pendingChildren.delete(parentKey)
+  }
+}
+
+function detachNode(node: AgentNode) {
+  if (node.parentKey) {
+    const parent = agentIndex.get(node.parentKey)
+    if (parent) parent.children = parent.children.filter(child => child.key !== node.key)
+  }
+  agentRoots.value = agentRoots.value.filter(root => root.key !== node.key)
+  removePendingNode(node)
+}
+
+function attachNode(node: AgentNode) {
+  const parent = node.parentKey ? agentIndex.get(node.parentKey) : undefined
+  if (parent && canAttach(node, parent)) {
+    if (!parent.children.some(child => child.key === node.key)) parent.children.push(node)
+  } else if (node.parentKey) {
+    const waiting = pendingChildren.get(node.parentKey) || []
+    if (!waiting.some(child => child.key === node.key)) waiting.push(node)
+    pendingChildren.set(node.parentKey, waiting)
+  } else if (!agentRoots.value.some(root => root.key === node.key)) {
+    agentRoots.value.push(node)
+  }
+
+  const waitingForThisNode = pendingChildren.get(node.key) || []
+  if (waitingForThisNode.length) {
+    pendingChildren.delete(node.key)
+    for (const child of waitingForThisNode) {
+      if (child.parentKey === node.key && canAttach(child, node)
+        && !node.children.some(existing => existing.key === child.key)) {
+        node.children.push(child)
+      }
+    }
+  }
+
+  agentRoots.value.sort((left, right) => Number(isMasterAgent(right.agent)) - Number(isMasterAgent(left.agent)))
+}
+
+function ensureAgent(agent: AgentRef, fallbackParentKey?: string): AgentNode | null {
+  const key = agentInstanceKey(agent)
+  if (!key) return null
+
+  let node = agentIndex.get(key)
+  const incomingParent = agent.parentAgentInstanceId || fallbackParentKey || null
+
+  if (!node) {
+    node = reactive<AgentNode>({
+      key,
+      agent: { ...agent },
+      parentKey: incomingParent,
+      children: [],
+      activities: [],
+      startedAt: null,
+      durationMs: null,
+    })
+    agentIndex.set(key, node)
+    attachNode(node)
+    return node
+  }
+
+  node.agent = { ...node.agent, ...agent }
+  if (incomingParent && incomingParent !== node.parentKey) {
+    detachNode(node)
+    node.parentKey = incomingParent
+    attachNode(node)
+  } else if (!node.parentKey && incomingParent) {
+    node.parentKey = incomingParent
+    detachNode(node)
+    attachNode(node)
+  }
+  return node
+}
+
+function promoteUnattachedAgents() {
+  for (const children of pendingChildren.values()) {
+    for (const child of children) {
+      if (!agentRoots.value.some(root => root.key === child.key)) agentRoots.value.push(child)
+    }
+  }
+  pendingChildren.clear()
+}
+
+function formatExecutionTime(ms: number) {
+  const seconds = Math.max(0, Math.floor(ms / 1000))
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const remainder = seconds % 60
+  return hours > 0
+    ? String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(remainder).padStart(2, '0')
+    : String(minutes).padStart(2, '0') + ':' + String(remainder).padStart(2, '0')
+}
+
+function timerText(node: AgentNode) {
+  if (node.durationMs !== null) return formatExecutionTime(node.durationMs)
+  if (node.startedAt !== null) return formatExecutionTime(executionClock.value - node.startedAt)
+  return '00:00'
+}
+
+function startExecutionTimer() {
+  if (executionTicker) clearInterval(executionTicker)
+  executionClock.value = Date.now()
+  executionTicker = setInterval(() => { executionClock.value = Date.now() }, 1000)
+}
+
+function finishExecutionTimer() {
+  const finishedAt = Date.now()
+  executionClock.value = finishedAt
+  for (const node of agentIndex.values()) {
+    if (node.startedAt !== null) {
+      node.durationMs = Math.max(0, finishedAt - node.startedAt)
+      node.startedAt = null
+    }
+  }
+  if (executionTicker) clearInterval(executionTicker)
+  executionTicker = undefined
 }
 
 function eventContent(event: SquadEvent): string {
   const payload = event.payload || {}
   if (typeof payload.hint === 'string' && payload.hint) return payload.hint
   if (typeof payload.delta === 'string' && payload.delta) return payload.delta
-  if (typeof payload.toolCallName === 'string') return `调用工具：${payload.toolCallName}`
-  if (typeof payload.toolName === 'string') return `调用工具：${payload.toolName}`
+  if (typeof payload.toolCallName === 'string') return '调用工具：' + payload.toolCallName
+  if (typeof payload.toolName === 'string') return '调用工具：' + payload.toolName
   if (event.eventType === 'SUBAGENT_EXPOSED') {
     const child = payload.childAgent as AgentRef | undefined
-    return child?.agentName ? `新增协作成员：${child.agentName}` : '新增协作成员'
+    return child?.agentName ? '创建协作成员：' + child.agentName : '创建协作成员'
   }
   if (payload.result !== undefined) return resultTextOf(payload.result)
   if (payload.data !== undefined) {
-    return typeof payload.data === 'string' ? payload.data : (JSON.stringify(payload.data) ?? '')
+    return typeof payload.data === 'string' ? payload.data : (JSON.stringify(payload.data, null, 2) ?? '')
   }
-  if (typeof payload.name === 'string') return payload.name
-  if (typeof payload.model === 'string') return '模型调用中'
-  if (payload.usage !== undefined) return '模型调用完成'
+  if (typeof payload.model === 'string') return '模型：' + payload.model
+  if (payload.usage !== undefined) return '用量：' + (JSON.stringify(payload.usage) ?? '')
   if (typeof payload.error === 'string') return payload.error
+  if (typeof payload.reason === 'string') return payload.reason
+  if (typeof payload.name === 'string') return payload.name
+  if (payload.value !== undefined) {
+    return typeof payload.value === 'string' ? payload.value : (JSON.stringify(payload.value, null, 2) ?? '')
+  }
   return ''
+}
+
+function resultTextOf(result: unknown): string {
+  if (typeof result === 'string') return result
+  if (!result || typeof result !== 'object') return ''
+  const value = result as { content?: unknown[] }
+  if (Array.isArray(value.content)) {
+    const texts = value.content
+      .filter((item): item is { type?: string; text?: string } => Boolean(item && typeof item === 'object'))
+      .filter(item => item.type === 'text' && typeof item.text === 'string')
+      .map(item => item.text || '')
+    if (texts.length) return texts.join('\n')
+  }
+  try { return JSON.stringify(result, null, 2) ?? '' } catch { return String(result) }
+}
+
+function isJsonText(value: string) {
+  try { JSON.parse(value); return true } catch { return false }
+}
+
+function prettyJsonText(value: string) {
+  try { return JSON.stringify(JSON.parse(value), null, 2) ?? value } catch { return value }
+}
+
+function eventTime(event: SquadEvent) {
+  return displayTime(event.timestamp)
 }
 
 function displayTime(value?: string) {
@@ -226,65 +348,227 @@ function displayTime(value?: string) {
     : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
-function setEventHistoryRef(groupKey: string, element: unknown) {
-  if (element instanceof HTMLElement) eventHistoryElements.set(groupKey, element)
-  else eventHistoryElements.delete(groupKey)
+function addActivityEvent(node: AgentNode, event: SquadEvent, key: string) {
+  node.activities.push({ key, kind: 'event', event })
 }
 
-function onEventHistoryScroll(groupKey: string, event: Event) {
-  const element = event.target as HTMLElement
-  const atLatest = element.scrollHeight - element.scrollTop - element.clientHeight < 28
-  eventHistoryFollowing.value = { ...eventHistoryFollowing.value, [groupKey]: atLatest }
+function blockIdentity(node: AgentNode, event: SquadEvent, kind: StreamBlockKind) {
+  const payload = event.payload || {}
+  const rawId = kind === 'TOOL_CALL' || kind === 'TOOL_RESULT'
+    ? payload.toolCallId
+    : payload.blockId
+  const id = typeof rawId === 'string' && rawId
+    ? rawId
+    : event.eventId || String(event.sequence || kind)
+  return node.key + ':' + kind + ':' + id
 }
 
-function jumpEventHistoryToLatest(groupKey: string) {
-  const element = eventHistoryElements.get(groupKey)
-  if (!element) return
-  eventHistoryFollowing.value = { ...eventHistoryFollowing.value, [groupKey]: true }
-  element.scrollTo({ top: element.scrollHeight, behavior: 'smooth' })
+function blockLabel(kind: StreamBlockKind, payload: Record<string, unknown>) {
+  const name = typeof payload.toolCallName === 'string'
+    ? payload.toolCallName
+    : typeof payload.toolName === 'string' ? payload.toolName : ''
+  if (kind === 'THINKING') return '思考内容'
+  if (kind === 'DATA') return '数据输出'
+  if (kind === 'TOOL_CALL') return name ? '工具调用：' + name : '工具调用'
+  if (kind === 'TOOL_RESULT') return name ? '工具返回：' + name : '工具返回'
+  return '文本输出'
 }
 
-function scrollExpandedEventHistory() {
-  void nextTick(() => {
-    for (const [key, element] of eventHistoryElements) {
-      if (expandedGroups.value[key] && eventHistoryFollowing.value[key] !== false) {
-        element.scrollTop = element.scrollHeight
+function appendAgentBlock(node: AgentNode, event: SquadEvent, kind: StreamBlockKind) {
+  const payload = event.payload || {}
+  const key = blockIdentity(node, event, kind)
+  let block = streamBlockIndex.get(key)
+  if (!block) {
+    block = reactive<StreamBlock>({
+      key,
+      kind,
+      label: blockLabel(kind, payload),
+      text: '',
+      completed: false,
+      timestamp: event.timestamp,
+    })
+    streamBlockIndex.set(key, block)
+    node.activities.push({ key, kind: 'block', block })
+  }
+
+  if ((kind === 'TOOL_CALL' || kind === 'TOOL_RESULT') && block.label.endsWith('工具调用') === false) {
+    block.label = blockLabel(kind, payload)
+  } else if (kind === 'TOOL_CALL' || kind === 'TOOL_RESULT') {
+    block.label = blockLabel(kind, payload)
+  }
+
+  if (typeof payload.delta === 'string') {
+    block.text += payload.delta
+  } else if (payload.data !== undefined) {
+    const value = typeof payload.data === 'string'
+      ? payload.data
+      : (JSON.stringify(payload.data, null, 2) ?? '')
+    block.text += value
+  } else if (payload.result !== undefined && !block.text) {
+    block.text = resultTextOf(payload.result)
+  }
+
+  if (event.eventType?.endsWith('_END')) block.completed = true
+}
+
+function ensureAnswerBlock(agentKey: string, event: SquadEvent, kind: AnswerBlock['kind']) {
+  const payload = event.payload || {}
+  const rawId = typeof payload.blockId === 'string' && payload.blockId
+    ? payload.blockId
+    : event.eventId || String(event.sequence || 'answer')
+  const key = agentKey + ':' + kind + ':' + rawId
+  let block = answerBlockIndex.get(key)
+  if (!block) {
+    block = reactive<AnswerBlock>({
+      key,
+      blockId: rawId,
+      kind,
+      text: '',
+      completed: false,
+    })
+    answerBlockIndex.set(key, block)
+    answerBlocks.value.push(block)
+  }
+  return block
+}
+
+function appendAnswerEvent(event: SquadEvent, agentKey: string) {
+  const type = event.eventType || ''
+  const payload = event.payload || {}
+
+  if (type.startsWith('TEXT_BLOCK_')) {
+    const block = ensureAnswerBlock(agentKey, event, 'TEXT')
+    if (type === 'TEXT_BLOCK_DELTA' && typeof payload.delta === 'string') block.text += payload.delta
+    if (type === 'TEXT_BLOCK_END') block.completed = true
+    return
+  }
+
+  if (type.startsWith('DATA_BLOCK_')) {
+    const block = ensureAnswerBlock(agentKey, event, 'DATA')
+    if (type === 'DATA_BLOCK_DELTA') {
+      if (typeof payload.delta === 'string') block.text += payload.delta
+      else if (payload.data !== undefined) {
+        const value = typeof payload.data === 'string'
+          ? payload.data
+          : (JSON.stringify(payload.data, null, 2) ?? '')
+        block.text += value
       }
     }
-  })
-}
+    if (type === 'DATA_BLOCK_END') block.completed = true
+    return
+  }
 
-function toggleEventHistory(groupKey: string) {
-  const expanded = !expandedGroups.value[groupKey]
-  expandedGroups.value = { ...expandedGroups.value, [groupKey]: expanded }
-  if (expanded) {
-    eventHistoryFollowing.value = { ...eventHistoryFollowing.value, [groupKey]: true }
-    scrollExpandedEventHistory()
+  if (type === 'AGENT_RESULT') {
+    const result = resultTextOf(payload.result)
+    if (result && !hasAnswerContent.value) answerFallback.value = result
+    return
+  }
+
+  if (type === 'AGENT_END') {
+    for (const block of answerBlocks.value) block.completed = true
   }
 }
-function formatExecutionTime(ms: number) {
-  const seconds = Math.max(0, Math.floor(ms / 1000))
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  const remainder = seconds % 60
-  return hours > 0
-    ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`
-    : `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`
+
+function appendEvent(event: SquadEvent) {
+  const identity = event.eventId || (event.sequence !== undefined ? 'sequence:' + event.sequence : '')
+  if (identity && seenEventIds.has(identity)) return
+  if (identity) seenEventIds.add(identity)
+
+  const agent = event.agent || null
+  const node = agent ? ensureAgent(agent) : null
+  if (!node) return
+
+  const type = event.eventType || ''
+  const key = identity || crypto.randomUUID()
+
+  if (type === 'AGENT_START') {
+    node.startedAt = Date.now()
+    node.durationMs = null
+  } else if (type === 'AGENT_END' && node.startedAt !== null) {
+    node.durationMs = Math.max(0, Date.now() - node.startedAt)
+    node.startedAt = null
+  }
+
+  if (type === 'SUBAGENT_EXPOSED') {
+    const child = event.payload?.childAgent as AgentRef | undefined
+    if (child) ensureAgent({
+      ...child,
+      parentAgentInstanceId: child.parentAgentInstanceId || node.key,
+    }, node.key)
+  }
+
+  const master = isMasterAgent(agent)
+  if (master && (type.startsWith('TEXT_BLOCK_') || type.startsWith('DATA_BLOCK_')
+    || type === 'AGENT_RESULT' || type === 'AGENT_END')) {
+    appendAnswerEvent(event, node.key)
+    if (type === 'AGENT_END') addActivityEvent(node, event, key)
+  } else if (type.startsWith('TEXT_BLOCK_')) {
+    appendAgentBlock(node, event, 'TEXT')
+  } else if (type.startsWith('THINKING_BLOCK_')) {
+    appendAgentBlock(node, event, 'THINKING')
+  } else if (type.startsWith('DATA_BLOCK_')) {
+    appendAgentBlock(node, event, 'DATA')
+  } else if (type.startsWith('TOOL_CALL_')) {
+    appendAgentBlock(node, event, 'TOOL_CALL')
+  } else if (type.startsWith('TOOL_RESULT_')) {
+    appendAgentBlock(node, event, 'TOOL_RESULT')
+  } else {
+    addActivityEvent(node, event, key)
+  }
+
+  scheduleFollowLatest()
 }
 
-function startExecutionTimer() {
-  if (executionTicker) clearInterval(executionTicker)
-  const startedAt = Date.now()
-  executionClock.value = startedAt
-  executionState.value = '执行中'
-  executionTicker = setInterval(() => { executionClock.value = Date.now() }, 1000)
+function latestActivity(node: AgentNode): AgentActivity | undefined {
+  return node.activities[node.activities.length - 1]
 }
 
-function finishExecutionTimer(state: string) {
-  executionClock.value = Date.now()
-  executionState.value = state
-  if (executionTicker) clearInterval(executionTicker)
-  executionTicker = undefined
+function activityLabel(activity: AgentActivity) {
+  if (activity.kind === 'event') return eventLabel(activity.event.eventType)
+  return activity.block.label
+}
+
+function activityContent(activity: AgentActivity) {
+  return activity.kind === 'event' ? eventContent(activity.event) : activity.block.text
+}
+
+function activityPreview(activity: AgentActivity) {
+  return activityContent(activity).replace(/\s+/g, ' ').trim()
+}
+
+function activityTime(activity: AgentActivity) {
+  return activity.kind === 'event' ? eventTime(activity.event) : displayTime(activity.block.timestamp)
+}
+
+function isJsonBlock(block: StreamBlock) {
+  if (block.kind === 'DATA') return true
+  if (!block.text.trim()) return false
+  return isJsonText(block.text)
+}
+
+function prettyBlockContent(block: StreamBlock) {
+  return isJsonBlock(block) ? prettyJsonText(block.text) : block.text
+}
+
+function isJsonAnswer(block: AnswerBlock) {
+  if (block.kind === 'DATA') return true
+  return block.completed && isJsonText(block.text)
+}
+
+function prettyAnswerContent(block: AnswerBlock) {
+  return isJsonAnswer(block) ? prettyJsonText(block.text) : block.text
+}
+
+function resetRun() {
+  agentRoots.value = []
+  answerBlocks.value = []
+  answerFallback.value = ''
+  expandedGroups.value = {}
+  agentIndex.clear()
+  pendingChildren.clear()
+  streamBlockIndex.clear()
+  answerBlockIndex.clear()
+  seenEventIds.clear()
 }
 
 function onConversationScroll() {
@@ -304,138 +588,33 @@ function scrollConversationToLatest(smooth = false) {
 function scheduleFollowLatest() {
   if (!followLatest.value || followFrame !== undefined) return
   void nextTick(() => {
-    if (followFrame !== undefined || typeof requestAnimationFrame === 'undefined') return
+    if (followFrame !== undefined) return
+    if (typeof requestAnimationFrame === 'undefined') {
+      const element = conversationScroller.value
+      if (element && followLatest.value) element.scrollTop = element.scrollHeight
+      return
+    }
     followFrame = requestAnimationFrame(() => {
       followFrame = undefined
-      if (followLatest.value && conversationScroller.value) {
-        conversationScroller.value.scrollTop = conversationScroller.value.scrollHeight
-      }
+      const element = conversationScroller.value
+      if (followLatest.value && element) element.scrollTop = element.scrollHeight
     })
   })
 }
 
-function resultTextOf(result: unknown): string {
-  if (typeof result === 'string') return result
-  if (!result || typeof result !== 'object') return ''
-  const value = result as { content?: unknown[] }
-  if (Array.isArray(value.content)) {
-    const texts = value.content
-      .filter((item): item is { type?: string; text?: string } => Boolean(item && typeof item === 'object'))
-      .filter(item => item.type === 'text' && typeof item.text === 'string')
-      .map(item => item.text || '')
-    if (texts.length) return texts.join('\n')
-  }
-  try { return JSON.stringify(result, null, 2) } catch { return String(result) }
-}
-
-function answerBlock(agentInstanceId: string, blockId: string, kind: AnswerBlock['kind']): AnswerBlock {
-  const key = `${agentInstanceId}:${kind}:${blockId}`
-  let block = answerBlocks.value.find(item => item.key === key)
-  if (!block) {
-    block = { key, agentInstanceId, blockId, kind, text: '', completed: false }
-    answerBlocks.value.push(block)
-  }
-  return block
-}
-
-function appendAnswerEvent(event: SquadEvent) {
-  const agent = event.agent
-  if (!isRootAgent(agent)) return
-  const agentInstanceId = agent?.agentInstanceId || agent?.agentId || 'root'
-  const payload = event.payload || {}
-  const blockId = typeof payload.blockId === 'string'
-    ? payload.blockId
-    : typeof payload.replyId === 'string' ? payload.replyId : 'default'
-  const type = event.eventType || ''
-
-  if (type.startsWith('TEXT_BLOCK_')) {
-    const block = answerBlock(agentInstanceId, blockId, 'TEXT')
-    if (type === 'TEXT_BLOCK_DELTA' && typeof payload.delta === 'string') block.text += payload.delta
-    if (type === 'TEXT_BLOCK_END') block.completed = true
-    return
-  }
-
-  if (type.startsWith('DATA_BLOCK_')) {
-    const block = answerBlock(agentInstanceId, blockId, 'DATA')
-    if (type === 'DATA_BLOCK_DELTA') {
-      if (typeof payload.delta === 'string') block.text += payload.delta
-      else if (payload.data !== undefined) {
-        const value = typeof payload.data === 'string' ? payload.data : JSON.stringify(payload.data, null, 2)
-        block.text += value || ''
-      }
-    }
-    if (type === 'DATA_BLOCK_END') block.completed = true
-    return
-  }
-
-  if (type === 'AGENT_RESULT') {
-    const finalText = resultTextOf(payload.result)
-    if (!finalText) return
-    const streamedText = answerBlocks.value
-      .filter(block => block.agentInstanceId === agentInstanceId && block.kind !== 'RESULT')
-      .map(block => block.text).join('')
-    if (streamedText === finalText || streamedText.includes(finalText)) return
-    const resultBlock = answerBlock(agentInstanceId, `result-${event.eventId || event.sequence || 'final'}`, 'RESULT')
-    resultBlock.text = finalText
-    resultBlock.completed = true
-    return
-  }
-
-  if (type === 'AGENT_END') {
-    for (const block of answerBlocks.value) {
-      if (block.agentInstanceId === agentInstanceId) block.completed = true
-    }
-  }
-}
-
-function isJsonAnswer(block: AnswerBlock): boolean {
-  if (block.kind === 'DATA') return true
-  try { JSON.parse(block.text); return true } catch { return false }
-}
-function prettyAnswerJson(block: AnswerBlock): string {
-  try { return JSON.stringify(JSON.parse(block.text), null, 2) } catch { return block.text }
-}
-
-
-
-function addEvent(event: SquadEvent) {
-  const agent = event.agent || {}
-  const agentName = agent.agentName || '协作成员'
-  const instanceId = agent.agentInstanceId || agent.agentId || 'unknown'
-
-  const row: TimelineRow = {
-    key: event.eventId || String(event.sequence || crypto.randomUUID()),
-    event,
-    agentName,
-  }
-  rows.value.push(row)
-  rows.value.sort((a, b) => Number(a.event.sequence || 0) - Number(b.event.sequence || 0))
-  appendAnswerEvent(event)
-
-  if (event.eventType === 'AGENT_START') {
-    agentStartedAt.set(instanceId, Date.now())
-    agentFinishedDuration.delete(instanceId)
-  } else if (event.eventType === 'AGENT_END') {
-    const startedAt = agentStartedAt.get(instanceId)
-    if (startedAt !== undefined) {
-      agentFinishedDuration.set(instanceId, Math.max(0, Date.now() - startedAt))
-      agentStartedAt.delete(instanceId)
-    }
-  }
-
-  scrollExpandedEventHistory()
-  scheduleFollowLatest()
-}
 function parseFrame(frame: string) {
   const lines = frame.split('\n')
   const eventName = lines.find(line => line.startsWith('event:'))?.slice(6).trim()
+  const sseId = lines.find(line => line.startsWith('id:'))?.slice(3).trim()
   const payload = lines.filter(line => line.startsWith('data:'))
     .map(line => line.slice(5).trimStart()).join('\n')
   if (!payload) return
+
   try {
-    const value = JSON.parse(payload) as SquadEvent
-    if (value.eventType) addEvent(value)
-    else if (eventName === 'squad.test.completed') status.value = '测试事件已全部发送'
+    const event = JSON.parse(payload) as SquadEvent
+    if (!event.eventId && sseId) event.eventId = sseId
+    if (event.eventType) appendEvent(event)
+    else if (eventName === 'squad.test.completed') scheduleFollowLatest()
   } catch {
     error.value = '收到无法解析的 SSE 数据'
   }
@@ -444,22 +623,18 @@ function parseFrame(frame: string) {
 async function send() {
   const message = draft.value.trim()
   if (!message || busy.value) return
-  rows.value = []
-  answerBlocks.value = []
-  followLatest.value = true
-  executionExpanded.value = true
-  agentStartedAt.clear()
-  agentFinishedDuration.clear()
-  expandedGroups.value = {}
-  eventHistoryFollowing.value = {}
-  eventHistoryElements.clear()
+
+  resetRun()
   lastPrompt.value = message
   error.value = ''
-  status.value = '正在连接测试事件流…'
+  followLatest.value = true
+  executionExpanded.value = true
   busy.value = true
   startExecutionTimer()
-  controller = new AbortController()
+  const activeController = new AbortController()
+  controller = activeController
   draft.value = ''
+
   await nextTick()
   resizeComposer()
   scheduleFollowLatest()
@@ -472,16 +647,15 @@ async function send() {
     const csrf = getCsrfToken()
     if (csrf) headers['X-CSRF-Token'] = csrf
     const base = import.meta.env.VITE_API_BASE_URL || ''
-    const response = await fetch(`${base}/api/v2/test/events/stream`, {
+    const response = await fetch(base + '/api/v2/test/events/stream', {
       method: 'POST',
       credentials: base ? 'include' : 'same-origin',
       headers,
-      body: JSON.stringify({ intervalMillis: 300 }),
-      signal: controller.signal,
+      body: JSON.stringify({ scenario: 'parallel', intervalMillis: 300 }),
+      signal: activeController.signal,
     })
-    if (!response.ok || !response.body) throw new Error(`请求失败（HTTP ${response.status}）`)
+    if (!response.ok || !response.body) throw new Error('请求失败（HTTP ' + response.status + '）')
 
-    status.value = '正在接收事件'
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
     let pending = ''
@@ -497,20 +671,18 @@ async function send() {
     }
     pending += decoder.decode()
     if (pending.trim()) parseFrame(pending)
-    status.value = '事件流已结束'
   } catch (cause) {
-    if (!controller.signal.aborted) {
+    if (!activeController.signal.aborted) {
       error.value = cause instanceof Error ? cause.message : '事件流连接失败'
-      status.value = '连接异常'
-    } else {
-      status.value = '已停止接收'
     }
   } finally {
-    const wasAborted = controller?.signal.aborted ?? false
+    finishExecutionTimer()
+    promoteUnattachedAgents()
     busy.value = false
-    finishExecutionTimer(error.value ? '执行异常' : wasAborted ? '已停止' : '已完成')
     executionExpanded.value = false
-    controller = null
+    if (controller === activeController) controller = null
+    await nextTick()
+    composerInput.value?.focus()
     scheduleFollowLatest()
   }
 }
@@ -520,7 +692,7 @@ function resizeComposer() {
   if (!input) return
   input.style.height = 'auto'
   const maxHeight = 180
-  input.style.height = `${Math.min(input.scrollHeight, maxHeight)}px`
+  input.style.height = Math.min(input.scrollHeight, maxHeight) + 'px'
   input.style.overflowY = input.scrollHeight > maxHeight ? 'auto' : 'hidden'
 }
 
@@ -534,13 +706,12 @@ function stop() {
   controller?.abort()
 }
 
-
-
 onMounted(() => {
   if (conversationContent.value && typeof ResizeObserver !== 'undefined') {
     conversationResizeObserver = new ResizeObserver(scheduleFollowLatest)
     conversationResizeObserver.observe(conversationContent.value)
   }
+  composerInput.value?.focus()
 })
 
 onBeforeUnmount(() => {
@@ -554,25 +725,33 @@ onBeforeUnmount(() => {
 <template>
   <main class="squad-v2-page">
     <header class="topbar">
-      <div class="brand"><span class="brand-mark">S</span><div><strong>智能协作</strong><small>任务执行工作台</small></div></div>
-      <div class="run-status"><span :class="['status-dot', { live: busy }]" />{{ status }}</div>
+      <div class="brand">
+        <span class="brand-mark">S</span>
+        <div>
+          <strong>智能协作</strong>
+          <small>任务执行工作台</small>
+        </div>
+      </div>
     </header>
 
     <section ref="conversationScroller" class="conversation" @scroll="onConversationScroll">
       <div ref="conversationContent" class="conversation-content">
-        <div v-if="!lastPrompt && !busy && !timeline.length" class="welcome">
+        <div v-if="!lastPrompt && !busy && !visibleAgents.length" class="welcome">
           <div class="welcome-mark">✳</div>
           <h1>让我们一起完成任务</h1>
-          <p>输入消息开始体验。当前使用本地模拟事件，展示多个协作成员的执行过程与从属关系。</p>
+          <p>输入消息开始体验。当前使用模拟事件，展示多个协作成员的实时执行过程与所属关系。</p>
         </div>
 
         <div v-else class="timeline">
           <article v-if="lastPrompt" class="user-message">
             <span class="avatar user-avatar">U</span>
-            <div><small>我</small><p>{{ lastPrompt }}</p></div>
+            <div>
+              <small>我</small>
+              <p>{{ lastPrompt }}</p>
+            </div>
           </article>
 
-          <section v-if="busy || groupedTimeline.length" class="execution-panel">
+          <section v-if="busy || visibleAgents.length" class="execution-panel">
             <button
               type="button"
               class="execution-header"
@@ -582,7 +761,6 @@ onBeforeUnmount(() => {
               <span class="execution-heading-left">
                 <span class="execution-mark" :class="{ running: busy }"></span>
                 <strong>执行过程</strong>
-                <span class="execution-state">{{ busy ? '进行中' : executionState }}</span>
               </span>
               <span class="execution-heading-right">
                 <span>{{ executionExpanded ? '收起' : '展开' }}</span>
@@ -592,95 +770,90 @@ onBeforeUnmount(() => {
 
             <Transition name="execution-fold">
               <div v-show="executionExpanded" class="execution-panel-content">
-                <div class="grouped-execution">
+                <div class="agent-tree">
                   <article
-                    v-for="group in groupedTimeline"
-                    :key="group.key"
+                    v-for="item in visibleAgents"
+                    :key="item.node.key"
                     class="agent-card"
-                    :class="{ 'nested-agent-card': group.depth > 0 }"
-                    :style="{ '--group-depth': group.depth }"
+                    :class="{ 'nested-agent-card': item.depth > 0 }"
+                    :style="{ '--agent-depth': item.depth }"
                   >
-                    <div class="agent-row">
-                      <strong class="agent-row-name">
-                        {{ group.agent.agentName || (group.depth === 0 ? '主协调员' : '协作成员') }}
-                      </strong>
-                      <span :class="['member-status', { completed: group.completed }]">
-                        {{ group.completed ? '已完成' : group.started ? '执行中' : '等待开始' }}
-                      </span>
-                      <template v-if="latestNotification(group)">
-                        <span class="event-type">{{ eventLabel(latestNotification(group)?.event.eventType) }}</span>
-                        <span
-                          class="agent-row-event"
-                          :title="eventContent(latestNotification(group)!.event) || eventLabel(latestNotification(group)!.event.eventType)"
-                        >
-                          {{ eventContent(latestNotification(group)!.event) || '事件已更新' }}
-                        </span>
-                        <time class="event-time">{{ displayTime(latestNotification(group)?.event.timestamp) }}</time>
-                      </template>
-                      <span v-else class="agent-row-event event-waiting">等待事件</span>
-                      <time class="agent-row-timer" :aria-label="'执行用时 ' + group.timerLabel">
-                        <span class="timer-icon">◷</span>{{ group.timerLabel }}
+                    <header class="agent-heading">
+                      <strong class="agent-name">{{ agentName(item.node) }}</strong>
+                      <time class="agent-timer" :aria-label="'执行耗时 ' + timerText(item.node)">
+                        <span class="timer-icon">◷</span>{{ timerText(item.node) }}
                       </time>
-                      <button
-                        v-if="visibleRows(group.rows).length > 1"
-                        type="button"
-                        class="event-expand-button"
-                        :aria-expanded="Boolean(expandedGroups[group.key])"
-                        @click="toggleEventHistory(group.key)"
-                      >
-                        {{ expandedGroups[group.key] ? '收起' : `展开（${visibleRows(group.rows).length}）` }}
-                        <span :class="['expand-chevron', { expanded: expandedGroups[group.key] }]">⌄</span>
-                      </button>
+                    </header>
+
+                    <div v-if="latestActivity(item.node) && !expandedGroups[item.node.key]" class="agent-preview">
+                      <span class="activity-kind">{{ activityLabel(latestActivity(item.node)!) }}</span>
+                      <span class="activity-preview-content">{{ activityPreview(latestActivity(item.node)!) || ' ' }}</span>
                     </div>
 
-                    <div
-                      v-if="expandedGroups[group.key]"
-                      :ref="element => setEventHistoryRef(group.key, element)"
-                      class="event-history"
-                      @scroll="onEventHistoryScroll(group.key, $event)"
+                    <button
+                      v-if="item.node.activities.length"
+                      type="button"
+                      class="activity-expand-button"
+                      :aria-expanded="Boolean(expandedGroups[item.node.key])"
+                      @click="expandedGroups[item.node.key] = !expandedGroups[item.node.key]"
                     >
-                      <div v-for="row in visibleRows(group.rows)" :key="row.key" class="event-history-row">
-                        <span class="event-type">{{ eventLabel(row.event.eventType) }}</span>
-                        <span class="event-history-content" :title="eventContent(row.event)">
-                          {{ eventContent(row.event) || '—' }}
-                        </span>
-                        <time class="event-time">{{ displayTime(row.event.timestamp) }}</time>
-                      </div>
-                      <button
-                        v-if="eventHistoryFollowing[group.key] === false"
-                        type="button"
-                        class="history-jump-latest"
-                        @click="jumpEventHistoryToLatest(group.key)"
-                      >回到最新 ↓</button>
-                    </div>
+                      {{ expandedGroups[item.node.key] ? '收起记录' : '展开记录（' + item.node.activities.length + '）' }}
+                      <span :class="['expand-chevron', { expanded: expandedGroups[item.node.key] }]">⌄</span>
+                    </button>
 
-                    <details v-if="thinkingRows(group.rows).length" class="thinking-panel">
-                      <summary>思考过程（{{ thinkingRows(group.rows).length }} 条）</summary>
-                      <article v-for="row in thinkingRows(group.rows)" :key="row.key" class="thinking-row">
-                        <span class="thinking-label">{{ eventLabel(row.event.eventType) }}</span>
-                        <p v-if="eventContent(row.event)">{{ eventContent(row.event) }}</p>
-                      </article>
-                    </details>
+                    <Transition name="activity-expand">
+                      <div v-if="expandedGroups[item.node.key]" class="agent-history">
+                        <article
+                          v-for="activity in item.node.activities"
+                          :key="activity.key"
+                          class="activity-item"
+                          :class="activity.kind === 'block' ? 'activity-' + activity.block.kind.toLowerCase() : 'activity-event'"
+                        >
+                          <div class="activity-meta">
+                            <span class="activity-kind">{{ activityLabel(activity) }}</span>
+                            <time>{{ activityTime(activity) }}</time>
+                          </div>
+
+                          <template v-if="activity.kind === 'block'">
+                            <SafeMarkdown
+                              v-if="activity.block.kind === 'TEXT' || activity.block.kind === 'THINKING'"
+                              :text="activity.block.text"
+                              :streaming="busy && !activity.block.completed"
+                            />
+                            <pre v-else-if="activity.block.text" class="activity-code">{{ prettyBlockContent(activity.block) }}</pre>
+                          </template>
+                          <p v-else-if="eventContent(activity.event)" class="activity-event-content">
+                            {{ eventContent(activity.event) }}
+                          </p>
+                        </article>
+                      </div>
+                    </Transition>
                   </article>
                 </div>
               </div>
             </Transition>
           </section>
 
-          <section v-if="answerBlocks.length || busy" class="answer-section">
+          <section v-if="showAnswer" class="answer-section">
             <div class="answer-heading">
               <strong>回答</strong>
-              <span v-if="busy" class="answer-live"><i></i>正在生成</span>
             </div>
-            <div v-if="answerBlocks.length" class="answer-blocks">
+
+            <div v-if="hasAnswerContent" class="answer-blocks">
               <article v-for="block in answerBlocks" :key="block.key" class="answer-block">
-                <small v-if="block.kind === 'RESULT'" class="answer-block-label">最终回答</small>
-                <pre v-if="isJsonAnswer(block)" class="answer-json"><code>{{ prettyAnswerJson(block) }}</code></pre>
-                <SafeMarkdown v-else :text="block.text" :streaming="busy && !block.completed" />
-                <span v-if="busy && !block.completed && !block.text" class="answer-placeholder">正在生成内容…</span>
+                <pre v-if="isJsonAnswer(block)" class="answer-json"><code>{{ prettyAnswerContent(block) }}</code></pre>
+                <SafeMarkdown
+                  v-else
+                  :text="block.text"
+                  :streaming="busy && !block.completed"
+                />
               </article>
             </div>
-            <div v-else class="answer-placeholder">正在等待正文输出…</div>
+            <template v-else-if="visibleAnswerFallback">
+              <pre v-if="isJsonText(visibleAnswerFallback)" class="answer-json"><code>{{ prettyJsonText(visibleAnswerFallback) }}</code></pre>
+              <SafeMarkdown v-else :text="visibleAnswerFallback" :streaming="busy" />
+            </template>
+            <div v-else class="answer-placeholder">正文输出后会显示在这里。</div>
           </section>
         </div>
       </div>
@@ -738,79 +911,76 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.squad-v2-page{height:100vh;min-height:560px;display:flex;flex-direction:column;background:var(--surface,#fff);color:var(--text-primary,#202124)}
-.topbar{height:62px;flex:none;border-bottom:1px solid var(--border,#e7e7e7);display:flex;align-items:center;justify-content:space-between;padding:0 28px}
-.brand{display:flex;align-items:center;gap:10px}.brand-mark,.assistant-avatar{width:30px;height:30px;border-radius:10px;background:#242424;color:white;display:grid;place-items:center;font-weight:700}
-.brand strong{display:block;font-size:14px}.brand small{display:block;color:#888;font-size:10px;margin-top:2px}
-.run-status{display:flex;align-items:center;gap:8px;color:#777;font-size:12px}.status-dot{width:7px;height:7px;border-radius:50%;background:#aaa}.status-dot.live{background:#16a36a;box-shadow:0 0 0 3px #16a36a22}
-.conversation{position:relative;width:min(860px,calc(100% - 40px));margin:0 auto;flex:1;min-height:0;overflow:auto;padding:26px 0 24px;box-sizing:border-box;overscroll-behavior:contain}
+.squad-v2-page{height:100vh;height:100dvh;min-height:560px;display:flex;flex-direction:column;background:var(--surface,#fff);color:var(--text-primary,#202124)}
+.topbar{height:60px;flex:none;border-bottom:1px solid var(--border,#e9e9e9);display:flex;align-items:center;padding:0 28px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-mark{width:29px;height:29px;border-radius:9px;background:#242424;color:#fff;display:grid;place-items:center;font-size:13px;font-weight:700}
+.brand strong{display:block;font-size:13px;font-weight:650}
+.brand small{display:block;color:#999;font-size:10px;margin-top:2px}
+.conversation{position:relative;width:min(900px,calc(100% - 40px));margin:0 auto;flex:1;min-height:0;overflow:auto;padding:26px 0 24px;box-sizing:border-box;overscroll-behavior:contain;scrollbar-gutter:stable}
 .conversation-content{min-height:100%;display:flex;flex-direction:column}
-.timeline{display:flex;flex-direction:column;gap:18px}
+.timeline{display:flex;flex-direction:column;gap:16px}
 .welcome{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;box-sizing:border-box}
-.welcome-mark{font-size:32px;width:58px;height:58px;border-radius:20px;background:#f2f2f2;display:grid;place-items:center}
-.welcome h1{font-size:25px;font-weight:600;margin:20px 0 8px}.welcome p{max-width:540px;color:#858585;font-size:13px;line-height:1.8}
-.suggestions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px}.suggestions button{border:1px solid #e2e2e2;background:white;border-radius:18px;padding:8px 12px;font-size:12px;color:#555;cursor:pointer}
-.user-message{display:flex;justify-content:flex-end;gap:10px;margin-bottom:4px}.user-message>div{background:#f3f3f3;padding:11px 15px;border-radius:16px;max-width:70%}.user-message small,.timeline-heading small{display:block;font-size:10px;color:#888}.user-message p{font-size:13px;margin:5px 0 0}.avatar{width:27px;height:27px;display:grid;place-items:center;border-radius:50%;font-size:11px}.user-avatar{background:#dedede}
-.assistant-avatar{border-radius:50%;font-size:15px}
+.welcome-mark{font-size:31px;width:58px;height:58px;border-radius:19px;background:#f2f2f2;display:grid;place-items:center}
+.welcome h1{font-size:24px;font-weight:600;margin:19px 0 8px;letter-spacing:-.4px}
+.welcome p{max-width:540px;color:#858585;font-size:13px;line-height:1.8}
+.user-message{display:flex;justify-content:flex-end;gap:10px;margin-bottom:2px}
+.user-message>div{background:#f3f3f3;padding:10px 14px;border-radius:15px;max-width:72%}
+.user-message small{display:block;font-size:10px;color:#888}
+.user-message p{font-size:13px;line-height:1.6;margin:4px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.avatar{width:27px;height:27px;display:grid;place-items:center;border-radius:50%;font-size:11px;flex:none}
+.user-avatar{background:#dedede}
 .execution-panel{border:1px solid #ececec;border-radius:13px;background:#fff;overflow:hidden}
 .execution-header{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
 .execution-heading-left,.execution-heading-right{display:flex;align-items:center;gap:9px;min-width:0}
 .execution-heading-left strong{font-size:12px;font-weight:600;color:#555}
-
-.execution-state{font-size:10px;color:#999}
 .execution-mark{width:7px;height:7px;border-radius:50%;background:#b9b9b9;flex:none}
 .execution-mark.running{background:#6d9d83;box-shadow:0 0 0 3px #6d9d8318}
 .execution-heading-right{font-size:10px;color:#999;flex:none}
-.execution-chevron{font-size:13px;transition:transform .18s ease}
+.execution-chevron{font-size:13px;transition:transform .2s cubic-bezier(.2,.7,.2,1)}
 .execution-chevron.expanded{transform:rotate(180deg)}
 .execution-panel-content{padding:0 11px 11px}
-.execution-fold-enter-active,.execution-fold-leave-active{transition:opacity .16s ease,transform .16s ease;transform-origin:top}
-.execution-fold-enter-from,.execution-fold-leave-to{opacity:0;transform:translateY(-4px)}
-.grouped-execution{display:flex;flex-direction:column;gap:6px}
-.agent-card{min-width:0;border:1px solid #ededed;border-radius:9px;background:#fff;overflow:hidden}
-.agent-card.nested-agent-card{margin-left:calc(var(--group-depth)*18px);border-left:2px solid #e5e5e5}
-.agent-row{display:flex;align-items:center;gap:8px;min-width:0;padding:8px 9px}
-.agent-row-name{flex:none;max-width:104px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:600;color:#555}
-.member-status{font-size:10px;flex:none;color:#9a7a35;background:#faf5e8;padding:3px 7px;border-radius:5px}
-.member-status.completed{color:#56856c;background:#f0f6f2}
-.event-type{flex:none;font-size:10px;color:#777;background:#f6f6f6;padding:3px 6px;border-radius:4px;white-space:nowrap}
-.agent-row-event{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;line-height:1.4;color:#666}
-.agent-row-event.event-waiting{color:#aaa}
-.event-time{flex:none;font-size:10px;color:#aaa;white-space:nowrap}
-.agent-row-timer{display:inline-flex;align-items:center;gap:5px;flex:none;min-width:62px;justify-content:flex-end;font-size:11px;font-variant-numeric:tabular-nums;color:#777}
+.execution-fold-enter-active,.execution-fold-leave-active{transition:opacity .2s ease,transform .2s cubic-bezier(.2,.7,.2,1);transform-origin:top}
+.execution-fold-enter-from,.execution-fold-leave-to{opacity:0;transform:translateY(-5px)}
+.agent-tree{display:flex;flex-direction:column;gap:7px}
+.agent-card{min-width:0;border:1px solid #ededed;border-radius:10px;background:#fff;overflow:hidden}
+.agent-card.nested-agent-card{margin-left:calc(var(--agent-depth)*18px);border-left:2px solid #e1e5e2}
+.agent-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:9px 11px;background:#fbfbfb}
+.agent-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:650;color:#4e4e4e}
+.agent-timer{display:inline-flex;align-items:center;gap:5px;flex:none;font-size:11px;font-variant-numeric:tabular-nums;color:#888}
 .timer-icon{font-size:12px;color:#aaa}
-.event-expand-button{flex:none;display:inline-flex;align-items:center;gap:3px;border:0;background:transparent;color:#999;font-size:10px;padding:3px 1px;cursor:pointer;white-space:nowrap}
-.event-expand-button:hover{color:#555}
-.expand-chevron{display:inline-block;font-size:12px;transition:transform .16s ease}
+.agent-preview{display:flex;align-items:center;gap:8px;min-width:0;padding:8px 11px}
+.activity-kind{flex:none;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#858585;background:#f6f6f6;border-radius:4px;padding:3px 6px}
+.activity-preview-content{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;line-height:1.5;color:#666}
+.activity-expand-button{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;padding:5px 10px;border:0;border-top:1px solid #f3f3f3;background:#fff;color:#999;font-size:10px;cursor:pointer;transition:background .16s ease,color .16s ease}
+.activity-expand-button:hover{background:#fafafa;color:#555}
+.expand-chevron{display:inline-block;font-size:12px;transition:transform .18s ease}
 .expand-chevron.expanded{transform:rotate(180deg)}
-.event-history{position:relative;max-height:190px;overflow-y:auto;overscroll-behavior:contain;border-top:1px solid #f2f2f2;padding:3px 9px;scrollbar-width:thin}
-.event-history-row{display:flex;align-items:center;gap:8px;min-width:0;min-height:27px;border-bottom:1px solid #f6f6f6}
-.event-history-row:last-of-type{border-bottom:0}
-.event-history-content{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#777}
-.history-jump-latest{position:sticky;bottom:3px;display:block;margin:4px 4px 3px auto;border:1px solid #e8e8e8;border-radius:12px;padding:3px 8px;background:#ffffffed;color:#888;font-size:10px;cursor:pointer}
-.thinking-panel{margin:0 9px 8px;padding:6px 8px;background:#fafafa;border-radius:7px;color:#888;font-size:10px}
-.thinking-panel summary{cursor:pointer;user-select:none}
-.thinking-row{padding:6px 0 0;color:#666}
-.thinking-label{font-size:10px;color:#999}
-.thinking-row p{margin:3px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;font-size:11px;color:#555}
-.answer-duration{margin-top:5px;font-size:10px;color:#999}
+.agent-history{padding:2px 11px 7px;border-top:1px solid #f1f1f1}
+.activity-item{min-width:0;padding:8px 0;border-bottom:1px solid #f5f5f5}
+.activity-item:last-child{border-bottom:0}
+.activity-meta{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.activity-meta time{margin-left:auto;flex:none;font-size:10px;color:#aaa}
+.activity-item .answer-markdown,.activity-item :deep(.answer-markdown){font-size:12px;line-height:1.65;color:#555;overflow-wrap:anywhere}
+.activity-item :deep(.answer-markdown p){margin:2px 0 5px}
+.activity-item :deep(.answer-markdown p:last-child){margin-bottom:0}
+.activity-event-content{margin:0;color:#666;font-size:11px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.activity-code{max-width:100%;margin:0;padding:9px 10px;border-radius:7px;background:#f7f7f7;color:#555;font:11px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+.activity-thinking{border-bottom-color:#efede7}
+.activity-thinking .activity-kind{background:#f7f5ef;color:#897e62}
 .answer-section{padding:2px 1px 8px}
 .answer-heading{display:flex;align-items:center;gap:9px;margin-bottom:10px}
 .answer-heading strong{font-size:13px;font-weight:600;color:#555}
-.answer-live{display:inline-flex;align-items:center;gap:5px;color:#999;font-size:10px}
-.answer-live i{width:5px;height:5px;border-radius:50%;background:#8baa98;animation:answer-pulse 1.8s ease-in-out infinite}
-@keyframes answer-pulse{50%{opacity:.35}}
-.answer-blocks{display:flex;flex-direction:column;gap:16px}
+.answer-blocks{display:flex;flex-direction:column;gap:13px}
 .answer-block{min-width:0;color:var(--text-primary,#202124);font-size:14px;line-height:1.75;overflow-wrap:anywhere}
-.answer-block-label{display:block;margin-bottom:7px;color:#888;font-size:10px}
-.answer-json{max-width:100%;overflow:auto;padding:13px 15px;border:1px solid #ededed;border-radius:10px;background:#fafafa;color:#444;font-size:12px;line-height:1.6;white-space:pre}
-.answer-json code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.answer-block :deep(.answer-markdown){font-size:14px;line-height:1.75}
+.answer-json{max-width:100%;overflow:auto;margin:0;padding:13px 15px;border:1px solid #ededed;border-radius:10px;background:#fafafa;color:#444;font:12px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
 .answer-placeholder{display:inline-flex;align-items:center;min-height:24px;color:#aaa;font-size:12px}
 .jump-latest{position:sticky;bottom:12px;align-self:center;display:flex;align-items:center;gap:7px;margin:10px auto 0;border:1px solid #e8e8e8;border-radius:18px;padding:7px 12px;background:#ffffffed;color:#777;font-size:11px;box-shadow:0 2px 10px #0000000a;cursor:pointer;backdrop-filter:blur(8px)}
 .jump-latest:hover{color:#444;border-color:#dcdcdc}
 .error-message{color:#b42318;text-align:center;font-size:12px;margin:0 20px 8px}
-.composer-wrap{width:min(860px,calc(100% - 40px));margin:0 auto;padding:10px 0 18px;text-align:center;flex:none}
-.composer{display:flex;flex-direction:column;gap:8px;border:1px solid #d9d9d9;border-radius:20px;padding:13px 13px 11px 17px;background:#fff;box-shadow:0 3px 14px #00000008;transition:border-color .16s ease,box-shadow .16s ease}
+.composer-wrap{width:min(900px,calc(100% - 40px));margin:0 auto;padding:10px 0 17px;text-align:center;flex:none}
+.composer{display:flex;flex-direction:column;gap:8px;border:1px solid #d9d9d9;border-radius:19px;padding:12px 12px 10px 16px;background:#fff;box-shadow:0 3px 14px #00000008;transition:border-color .18s ease,box-shadow .18s ease}
 .composer:focus-within{border-color:#b8b8b8;box-shadow:0 3px 16px #0000000d}
 .composer textarea{display:block;width:100%;min-height:28px;max-height:180px;resize:none;overflow-y:hidden;border:0;outline:0;font-family:inherit;font-size:14px;line-height:1.65;color:inherit;background:transparent;padding:2px 0;box-sizing:border-box}
 .composer textarea::placeholder{color:#aaa}
@@ -819,11 +989,26 @@ onBeforeUnmount(() => {
 .composer-hints{display:flex;align-items:center;gap:6px;min-width:0;color:#a0a0a0;font-size:10px}
 .hint-separator{color:#ccc}
 .character-count{margin-left:8px;color:#aaa;font-variant-numeric:tabular-nums}
-.send-button{width:35px;height:35px;flex:none;border:0;border-radius:50%;background:#242424;color:#fff;font-size:21px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:background .15s ease,transform .15s ease}
+.send-button{width:35px;height:35px;flex:none;border:0;border-radius:50%;background:#242424;color:#fff;font-size:21px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:background .16s ease,transform .16s ease}
 .send-button:not(:disabled):hover{background:#444;transform:translateY(-1px)}
 .send-button:focus-visible{outline:2px solid #777;outline-offset:3px}
 .send-button:disabled{background:#e4e4e4;color:#fff;cursor:not-allowed}
 .stop-button{font-size:12px;background:#555}
 .composer-wrap>small{display:block;color:#aaa;font-size:10px;margin-top:8px}
-@media(max-width:600px){.topbar{padding:0 16px}.conversation,.composer-wrap{width:calc(100% - 28px)}.conversation{padding-top:18px}.agent-card.nested-agent-card{margin-left:calc(var(--group-depth)*10px)}.agent-row{gap:5px;padding:8px 7px;flex-wrap:wrap}.agent-row-name{max-width:80px;font-size:10px}.agent-row-timer{min-width:58px;font-size:10px}.event-time{display:none}.agent-row-event{flex-basis:100%;order:5;padding-left:2px}.execution-header{padding:10px}.execution-panel-content{padding:0 8px 8px}.composer{padding:11px 11px 9px 13px}.composer textarea{font-size:14px}.composer-hints{font-size:9px}}
+@media(max-width:600px){
+  .topbar{padding:0 16px}
+  .conversation,.composer-wrap{width:calc(100% - 28px)}
+  .conversation{padding-top:18px}
+  .agent-card.nested-agent-card{margin-left:calc(var(--agent-depth)*10px)}
+  .agent-heading{padding:8px 9px}
+  .agent-preview{gap:5px;padding:7px 9px}
+  .activity-kind{max-width:95px;font-size:9px}
+  .activity-preview-content{font-size:10px}
+  .agent-history{padding:2px 9px 6px}
+  .execution-header{padding:10px}
+  .execution-panel-content{padding:0 8px 8px}
+  .composer{padding:10px 10px 9px 13px}
+  .composer textarea{font-size:14px}
+  .composer-hints{font-size:9px}
+}
 </style>
