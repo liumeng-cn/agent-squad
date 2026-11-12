@@ -90,11 +90,6 @@ const groupedTimeline = computed(() => {
     if (ownerId && groups.has(ownerId)) groups.get(ownerId)!.push(row)
   }
 
-  const childRows = [...groups.values()].flat()
-  const childSequences = childRows.map(row => Number(row.event.sequence || 0))
-  const firstChildSequence = childSequences.length ? Math.min(...childSequences) : Number.POSITIVE_INFINITY
-  const lastChildSequence = childSequences.length ? Math.max(...childSequences) : Number.NEGATIVE_INFINITY
-
   const children = directChildren.map(agent => {
     const key = agent.agentInstanceId || agent.agentId || ''
     const agentRows = (groups.get(key) || []).sort((a, b) =>
@@ -111,9 +106,9 @@ const groupedTimeline = computed(() => {
 
   return {
     rootAgent,
-    rootIntro: rootRows.filter(row => Number(row.event.sequence || 0) < firstChildSequence),
+    rootIntro: rootRows.filter(row => !['AGENT_RESULT', 'AGENT_END'].includes(row.event.eventType || '')),
     children,
-    rootConclusion: rootRows.filter(row => Number(row.event.sequence || 0) > lastChildSequence),
+    rootConclusion: rootRows.filter(row => ['AGENT_RESULT', 'AGENT_END'].includes(row.event.eventType || '')),
   }
 })
 
