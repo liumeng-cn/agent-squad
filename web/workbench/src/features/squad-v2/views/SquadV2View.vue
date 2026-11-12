@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 import { getCsrfToken } from '../../../shared/api/csrf'
 
 type AgentRef = {
@@ -29,6 +29,7 @@ type SquadEvent = {
 type TimelineRow = { key: string; event: SquadEvent; agentName: string; durationLabel?: string }
 
 const draft = ref('')
+const composerInput = ref<HTMLTextAreaElement | null>(null)
 const lastPrompt = ref('')
 const busy = ref(false)
 const error = ref('')
@@ -221,6 +222,8 @@ async function send() {
   busy.value = true
   controller = new AbortController()
   draft.value = ''
+  await nextTick()
+  resizeComposer()
 
   try {
     const headers: Record<string, string> = {
@@ -267,6 +270,21 @@ async function send() {
     busy.value = false
     controller = null
   }
+}
+
+function resizeComposer() {
+  const input = composerInput.value
+  if (!input) return
+  input.style.height = 'auto'
+  const maxHeight = 180
+  input.style.height = `${Math.min(input.scrollHeight, maxHeight)}px`
+  input.style.overflowY = input.scrollHeight > maxHeight ? 'auto' : 'hidden'
+}
+
+function handleComposerKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Enter' || event.shiftKey || event.isComposing || event.keyCode === 229 || busy.value) return
+  event.preventDefault()
+  send()
 }
 
 function stop() {
@@ -398,10 +416,40 @@ onBeforeUnmount(stop)
 
     <footer class="composer-wrap">
       <form class="composer" @submit.prevent="send">
-        <textarea v-model="draft" :disabled="busy" rows="1" maxlength="12000"
-          placeholder="输入你想完成的任务…" @keydown.enter.exact.prevent="send" />
-        <button v-if="busy" type="button" class="send-button stop-button" @click="stop" aria-label="停止">■</button>
-        <button v-else type="submit" class="send-button" :disabled="!draft.trim()" aria-label="发送">↑</button>
+        <textarea
+          ref="composerInput"
+          v-model="draft"
+          :disabled="busy"
+          rows="1"
+          maxlength="12000"
+          :placeholder="busy ? '正在执行任务…' : '输入消息，描述你希望完成的任务…'"
+          @input="resizeComposer"
+          @keydown="handleComposerKeydown"
+        />
+        <div class="composer-toolbar">
+          <div class="composer-hints">
+            <span>Enter 发送</span>
+            <span class="hint-separator">·</span>
+            <span>Shift + Enter 换行</span>
+            <span v-if="draft.length" class="character-count">{{ draft.length.toLocaleString() }} / 12,000</span>
+          </div>
+          <button
+            v-if="busy"
+            type="button"
+            class="send-button stop-button"
+            @click="stop"
+            aria-label="停止执行"
+            title="停止执行"
+          >■</button>
+          <button
+            v-else
+            type="submit"
+            class="send-button"
+            :disabled="!draft.trim()"
+            aria-label="发送消息"
+            title="发送消息"
+          >↑</button>
+        </div>
       </form>
       <small>当前为测试页面 · 使用模拟执行数据</small>
     </footer>
@@ -444,9 +492,20 @@ onBeforeUnmount(stop)
 .event-text{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.65;color:#333;margin:6px 0 0}.answer-duration{margin-top:7px;font-size:10px;color:#999;display:flex;align-items:center;gap:4px}.answer-duration:before{content:'◷';font-size:12px}.event-details{margin-top:5px;font-size:10px;color:#888}.event-details summary{cursor:pointer}.event-details pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:9px;border-radius:6px;font-size:10px}
 .error-message{color:#b42318;text-align:center;font-size:12px;margin:0 20px 8px}
 .composer-wrap{width:min(860px,calc(100% - 40px));margin:0 auto;padding:10px 0 18px;text-align:center;flex:none}
-.composer{display:flex;align-items:flex-end;gap:10px;border:1px solid #d9d9d9;border-radius:18px;padding:10px 11px 10px 16px;box-shadow:0 2px 12px #00000008}
-.composer textarea{flex:1;min-height:25px;max-height:160px;resize:vertical;border:0;outline:0;font-family:inherit;font-size:13px;line-height:1.6;color:inherit;background:transparent;padding:3px 0}.composer textarea::placeholder{color:#aaa}
-.send-button{width:34px;height:34px;flex:none;border:0;border-radius:50%;background:#242424;color:#fff;font-size:20px;line-height:1;cursor:pointer}.send-button:disabled{background:#d7d7d7;cursor:not-allowed}.stop-button{font-size:12px}
+.composer{display:flex;flex-direction:column;gap:8px;border:1px solid #d9d9d9;border-radius:20px;padding:13px 13px 11px 17px;background:#fff;box-shadow:0 3px 14px #00000008;transition:border-color .16s ease,box-shadow .16s ease}
+.composer:focus-within{border-color:#b8b8b8;box-shadow:0 3px 16px #0000000d}
+.composer textarea{display:block;width:100%;min-height:28px;max-height:180px;resize:none;overflow-y:hidden;border:0;outline:0;font-family:inherit;font-size:14px;line-height:1.65;color:inherit;background:transparent;padding:2px 0;box-sizing:border-box}
+.composer textarea::placeholder{color:#aaa}
+.composer textarea:disabled{opacity:.65;cursor:wait}
+.composer-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:34px}
+.composer-hints{display:flex;align-items:center;gap:6px;min-width:0;color:#a0a0a0;font-size:10px}
+.hint-separator{color:#ccc}
+.character-count{margin-left:8px;color:#aaa;font-variant-numeric:tabular-nums}
+.send-button{width:35px;height:35px;flex:none;border:0;border-radius:50%;background:#242424;color:#fff;font-size:21px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:background .15s ease,transform .15s ease}
+.send-button:not(:disabled):hover{background:#444;transform:translateY(-1px)}
+.send-button:focus-visible{outline:2px solid #777;outline-offset:3px}
+.send-button:disabled{background:#e4e4e4;color:#fff;cursor:not-allowed}
+.stop-button{font-size:12px;background:#555}
 .composer-wrap>small{display:block;color:#aaa;font-size:10px;margin-top:8px}
-@media(max-width:600px){.topbar{padding:0 16px}.conversation,.composer-wrap{width:calc(100% - 28px)}.conversation{padding-top:18px}.event-time{width:100%;margin-left:0}.tree-indent{width:calc(17px + var(--depth)*19px)}.tree-branch{width:19px}.tree-node{left:calc(var(--depth)*19px)}}
+@media(max-width:600px){.topbar{padding:0 16px}.conversation,.composer-wrap{width:calc(100% - 28px)}.conversation{padding-top:18px}.event-time{width:100%;margin-left:0}.tree-indent{width:calc(17px + var(--depth)*19px)}.tree-branch{width:19px}.tree-node{left:calc(var(--depth)*19px)}.composer{padding:11px 11px 9px 13px}.composer textarea{font-size:14px}.composer-hints{font-size:9px}}
 </style>
