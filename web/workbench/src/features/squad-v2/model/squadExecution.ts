@@ -207,8 +207,9 @@ function appendBlockEvent(
   const payload = event.payload || {}
   const activeKey = agentInstanceId + ':' + blockType
   const providedBlockId = stringValue(payload.blockId) || stringValue(event.relation?.blockId)
+  const activeBlockId = state.activeBlocks.get(activeKey)
   const blockId = providedBlockId
-    || state.activeBlocks.get(activeKey)
+    || activeBlockId
     || ('implicit:' + activeKey + ':' + String(event.sequence ?? order))
   const key = agentInstanceId + ':' + blockType + ':' + blockId
   let block = state.blocksByKey.get(key)
@@ -245,10 +246,9 @@ function appendBlockEvent(
     if (state.activeBlocks.get(activeKey) === blockId) state.activeBlocks.delete(activeKey)
   }
 
-  if (type.endsWith('_START') && !providedBlockId) {
+  if (type.endsWith('_START')) {
     state.activeBlocks.set(activeKey, blockId)
-  }
-  if (!providedBlockId && type.endsWith('_DELTA') && !state.activeBlocks.has(activeKey)) {
+  } else if (type.endsWith('_DELTA') && !activeBlockId && !providedBlockId) {
     state.activeBlocks.set(activeKey, blockId)
   }
 }
