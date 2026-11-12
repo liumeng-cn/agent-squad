@@ -45,6 +45,7 @@ type AgentGroup = {
   started: boolean
   completed: boolean
   timerLabel: string
+  latestEvent?: TimelineRow
 }
 
 const draft = ref('')
@@ -64,6 +65,9 @@ const followLatest = ref(true)
 const showJumpToLatest = computed(() => !followLatest.value && (timeline.value.length > 0 || answerBlocks.value.length > 0))
 const agentStartedAt = new Map<string, number>()
 const agentFinishedDuration = new Map<string, number>()
+const expandedGroups = ref<Record<string, boolean>>({})
+const eventHistoryElements = new Map<string, HTMLElement>()
+const eventHistoryFollowing = ref<Record<string, boolean>>({})
 let controller: AbortController | null = null
 let executionTicker: ReturnType<typeof setInterval> | undefined
 let conversationResizeObserver: ResizeObserver | undefined
@@ -76,6 +80,7 @@ const groupedTimeline = computed<AgentGroup[]>(() => {
   const agentKey = (agent?: AgentRef | null) =>
     agent?.agentInstanceId || agent?.agentId || ''
 
+  // Agent references may arrive with their own events or in SUBAGENT_EXPOSED.
   for (const row of rows.value) {
     const agent = row.event.agent
     const key = agentKey(agent)
@@ -108,10 +113,21 @@ const groupedTimeline = computed<AgentGroup[]>(() => {
     if (group) group.rows.push(row)
   }
 
+  const firstSequence = (group: AgentGroup) =>
+    group.rows.length
+      ? Math.min(...group.rows.map(row => Number(row.event.sequence || 0)))
+      : Number.MAX_SAFE_INTEGER
+
   const roots: AgentGroup[] = []
   for (const group of groups.values()) {
-    group.rows.sort((a, b) => Number(a.event.sequence || 0) - Number(b.event.sequence || 0))
-    group.children.sort((a, b) => firstSequence(a) - firstSequence(b))
+    group.rows.sort((left, right) => Number(left.event.sequence || 0) - Number(right.event.sequence || 0))
+    group.latestEvent = visibleRows(group.rows).at(-1)
+
+    const parentId = group.agent.parentAgentInstanceId
+    const parent = parentId ? groups.get(parentId) : undefined
+    if (parent && parent !== group) parent.children.push(group)
+    else roots.push(group)
+
     group.completed = group.rows.some(row => row.event.eventType === 'AGENT_END')
     const startedAt = agentStartedAt.get(group.key)
     const finishedDuration = agentFinishedDuration.get(group.key)
@@ -123,12 +139,16 @@ const groupedTimeline = computed<AgentGroup[]>(() => {
         : '等待开始'
   }
 
-  roots.sort((a, b) => {
-    if (a.agent.agentType === 'MASTER') return -1
-    if (b.agent.agentType === 'MASTER') return 1
-    return firstSequence(a) - firstSequence(b)
+  for (const group of groups.values()) {
+    group.children.sort((left, right) => firstSequence(left) - firstSequence(right))
+  }
+  roots.sort((left, right) => {
+    if (left.agent.agentType === 'MASTER') return -1
+    if (right.agent.agentType === 'MASTER') return 1
+    return firstSequence(left) - firstSequence(right)
   })
 
+  // Flatten only for rendering; depth retains the full parent-child hierarchy.
   const flattened: AgentGroup[] = []
   const append = (group: AgentGroup, depth: number, ancestors = new Set<string>()) => {
     if (ancestors.has(group.key)) return
@@ -156,6 +176,92 @@ const eventLabels: Record<string, string> = {
   SUBAGENT_EXPOSED: '创建协作成员', HINT_BLOCK: '收到提示', ALL_TOOLS_DENIED: '工具调用被拒绝', CUSTOM: '自定义事件'
 }
 function eventLabel(type?: string) { return type ? (eventLabels[type] || '执行事件') : '执行事件' }
+
+function isRootAgent(agent?: AgentRef | null) {
+  return Boolean(agent && (agent.agentType === 'MASTER' || (!agent.agentType && !agent.parentAgentInstanceId)))
+}
+
+function isThinkingEvent(row: TimelineRow) {
+  return row.event.category === 'THINKING' || row.event.eventType?.startsWith('THINKING_BLOCK_')
+}
+
+function visibleRows(source: TimelineRow[]) {
+  return source.filter(row => !isThinkingEvent(row))
+}
+
+function thinkingRows(source: TimelineRow[]) {
+  return source.filter(isThinkingEvent)
+}
+
+function latestNotification(group: AgentGroup): TimelineRow | undefined {
+  return group.latestEvent
+}
+
+function eventContent(event: SquadEvent): string {
+  const payload = event.payload || {}
+  if (typeof payload.hint === 'string' && payload.hint) return payload.hint
+  if (typeof payload.delta === 'string' && payload.delta) return payload.delta
+  if (typeof payload.toolCallName === 'string') return `调用工具：${payload.toolCallName}`
+  if (typeof payload.toolName === 'string') return `调用工具：${payload.toolName}`
+  if (event.eventType === 'SUBAGENT_EXPOSED') {
+    const child = payload.childAgent as AgentRef | undefined
+    return child?.agentName ? `新增协作成员：${child.agentName}` : '新增协作成员'
+  }
+  if (payload.result !== undefined) return resultTextOf(payload.result)
+  if (payload.data !== undefined) {
+    return typeof payload.data === 'string' ? payload.data : JSON.stringify(payload.data)
+  }
+  if (typeof payload.name === 'string') return payload.name
+  if (typeof payload.model === 'string') return '模型调用中'
+  if (payload.usage !== undefined) return '模型调用完成'
+  if (typeof payload.error === 'string') return payload.error
+  return ''
+}
+
+function displayTime(value?: string) {
+  if (!value) return ''
+  const date = new Date(value)
+  return Number.isNaN(date.getTime())
+    ? ''
+    : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
+function setEventHistoryRef(groupKey: string, element: unknown) {
+  if (element instanceof HTMLElement) eventHistoryElements.set(groupKey, element)
+  else eventHistoryElements.delete(groupKey)
+}
+
+function onEventHistoryScroll(groupKey: string, event: Event) {
+  const element = event.target as HTMLElement
+  const atLatest = element.scrollHeight - element.scrollTop - element.clientHeight < 28
+  eventHistoryFollowing.value = { ...eventHistoryFollowing.value, [groupKey]: atLatest }
+}
+
+function jumpEventHistoryToLatest(groupKey: string) {
+  const element = eventHistoryElements.get(groupKey)
+  if (!element) return
+  eventHistoryFollowing.value = { ...eventHistoryFollowing.value, [groupKey]: true }
+  element.scrollTo({ top: element.scrollHeight, behavior: 'smooth' })
+}
+
+function scrollExpandedEventHistory() {
+  void nextTick(() => {
+    for (const [key, element] of eventHistoryElements) {
+      if (expandedGroups.value[key] && eventHistoryFollowing.value[key] !== false) {
+        element.scrollTop = element.scrollHeight
+      }
+    }
+  })
+}
+
+function toggleEventHistory(groupKey: string) {
+  const expanded = !expandedGroups.value[groupKey]
+  expandedGroups.value = { ...expandedGroups.value, [groupKey]: expanded }
+  if (expanded) {
+    eventHistoryFollowing.value = { ...eventHistoryFollowing.value, [groupKey]: true }
+    scrollExpandedEventHistory()
+  }
+}
 function formatExecutionTime(ms: number) {
   const seconds = Math.max(0, Math.floor(ms / 1000))
   const hours = Math.floor(seconds / 3600)
@@ -317,6 +423,7 @@ function addEvent(event: SquadEvent) {
     }
   }
 
+  scrollExpandedEventHistory()
   scheduleFollowLatest()
 }
 function parseFrame(frame: string) {
@@ -343,6 +450,9 @@ async function send() {
   executionExpanded.value = true
   agentStartedAt.clear()
   agentFinishedDuration.clear()
+  expandedGroups.value = {}
+  eventHistoryFollowing.value = {}
+  eventHistoryElements.clear()
   lastPrompt.value = message
   error.value = ''
   status.value = '正在连接测试事件流…'
@@ -486,19 +596,71 @@ onBeforeUnmount(() => {
                   <article
                     v-for="group in groupedTimeline"
                     :key="group.key"
-                    class="agent-row"
-                    :class="{ 'nested-agent-row': group.depth > 0 }"
+                    class="agent-card"
+                    :class="{ 'nested-agent-card': group.depth > 0 }"
                     :style="{ '--group-depth': group.depth }"
                   >
-                    <strong class="agent-row-name">
-                      {{ group.agent.agentName || (group.depth === 0 ? '主协调员' : '协作成员') }}
-                    </strong>
-                    <span :class="['member-status', { completed: group.completed }]">
-                      {{ group.completed ? '已完成' : group.started ? '执行中' : '等待开始' }}
-                    </span>
-                    <time class="agent-row-timer" :aria-label="'执行用时 ' + group.timerLabel">
-                      <span class="timer-icon">◷</span>{{ group.timerLabel }}
-                    </time>
+                    <div class="agent-row">
+                      <strong class="agent-row-name">
+                        {{ group.agent.agentName || (group.depth === 0 ? '主协调员' : '协作成员') }}
+                      </strong>
+                      <span :class="['member-status', { completed: group.completed }]">
+                        {{ group.completed ? '已完成' : group.started ? '执行中' : '等待开始' }}
+                      </span>
+                      <template v-if="latestNotification(group)">
+                        <span class="event-type">{{ eventLabel(latestNotification(group)?.event.eventType) }}</span>
+                        <span
+                          class="agent-row-event"
+                          :title="eventContent(latestNotification(group)!.event) || eventLabel(latestNotification(group)!.event.eventType)"
+                        >
+                          {{ eventContent(latestNotification(group)!.event) || '事件已更新' }}
+                        </span>
+                        <time class="event-time">{{ displayTime(latestNotification(group)?.event.timestamp) }}</time>
+                      </template>
+                      <span v-else class="agent-row-event event-waiting">等待事件</span>
+                      <time class="agent-row-timer" :aria-label="'执行用时 ' + group.timerLabel">
+                        <span class="timer-icon">◷</span>{{ group.timerLabel }}
+                      </time>
+                      <button
+                        v-if="visibleRows(group.rows).length > 1"
+                        type="button"
+                        class="event-expand-button"
+                        :aria-expanded="Boolean(expandedGroups[group.key])"
+                        @click="toggleEventHistory(group.key)"
+                      >
+                        {{ expandedGroups[group.key] ? '收起' : `展开（${visibleRows(group.rows).length}）` }}
+                        <span :class="['expand-chevron', { expanded: expandedGroups[group.key] }]">⌄</span>
+                      </button>
+                    </div>
+
+                    <div
+                      v-if="expandedGroups[group.key]"
+                      :ref="element => setEventHistoryRef(group.key, element)"
+                      class="event-history"
+                      @scroll="onEventHistoryScroll(group.key, $event)"
+                    >
+                      <div v-for="row in visibleRows(group.rows)" :key="row.key" class="event-history-row">
+                        <span class="event-type">{{ eventLabel(row.event.eventType) }}</span>
+                        <span class="event-history-content" :title="eventContent(row.event)">
+                          {{ eventContent(row.event) || '—' }}
+                        </span>
+                        <time class="event-time">{{ displayTime(row.event.timestamp) }}</time>
+                      </div>
+                      <button
+                        v-if="eventHistoryFollowing[group.key] === false"
+                        type="button"
+                        class="history-jump-latest"
+                        @click="jumpEventHistoryToLatest(group.key)"
+                      >回到最新 ↓</button>
+                    </div>
+
+                    <details v-if="thinkingRows(group.rows).length" class="thinking-panel">
+                      <summary>思考过程（{{ thinkingRows(group.rows).length }} 条）</summary>
+                      <article v-for="row in thinkingRows(group.rows)" :key="row.key" class="thinking-row">
+                        <span class="thinking-label">{{ eventLabel(row.event.eventType) }}</span>
+                        <p v-if="eventContent(row.event)">{{ eventContent(row.event) }}</p>
+                      </article>
+                    </details>
                   </article>
                 </div>
               </div>
@@ -604,14 +766,33 @@ onBeforeUnmount(() => {
 .execution-panel-content{padding:0 11px 11px}
 .execution-fold-enter-active,.execution-fold-leave-active{transition:opacity .16s ease,transform .16s ease;transform-origin:top}
 .execution-fold-enter-from,.execution-fold-leave-to{opacity:0;transform:translateY(-4px)}
-.grouped-execution{display:flex;flex-direction:column;gap:5px}
-.agent-row{display:flex;align-items:center;gap:9px;min-width:0;padding:8px 10px;border:1px solid #ededed;border-radius:8px;background:#fff}
-.agent-row.nested-agent-row{margin-left:calc(var(--group-depth)*18px);border-left:2px solid #e5e5e5}
-.agent-row-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:600;color:#555}
+.grouped-execution{display:flex;flex-direction:column;gap:6px}
+.agent-card{min-width:0;border:1px solid #ededed;border-radius:9px;background:#fff;overflow:hidden}
+.agent-card.nested-agent-card{margin-left:calc(var(--group-depth)*18px);border-left:2px solid #e5e5e5}
+.agent-row{display:flex;align-items:center;gap:8px;min-width:0;padding:8px 9px}
+.agent-row-name{flex:none;max-width:104px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:600;color:#555}
 .member-status{font-size:10px;flex:none;color:#9a7a35;background:#faf5e8;padding:3px 7px;border-radius:5px}
 .member-status.completed{color:#56856c;background:#f0f6f2}
-.agent-row-timer{display:inline-flex;align-items:center;gap:5px;flex:none;min-width:66px;justify-content:flex-end;font-size:11px;font-variant-numeric:tabular-nums;color:#777}
+.event-type{flex:none;font-size:10px;color:#777;background:#f6f6f6;padding:3px 6px;border-radius:4px;white-space:nowrap}
+.agent-row-event{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;line-height:1.4;color:#666}
+.agent-row-event.event-waiting{color:#aaa}
+.event-time{flex:none;font-size:10px;color:#aaa;white-space:nowrap}
+.agent-row-timer{display:inline-flex;align-items:center;gap:5px;flex:none;min-width:62px;justify-content:flex-end;font-size:11px;font-variant-numeric:tabular-nums;color:#777}
 .timer-icon{font-size:12px;color:#aaa}
+.event-expand-button{flex:none;display:inline-flex;align-items:center;gap:3px;border:0;background:transparent;color:#999;font-size:10px;padding:3px 1px;cursor:pointer;white-space:nowrap}
+.event-expand-button:hover{color:#555}
+.expand-chevron{display:inline-block;font-size:12px;transition:transform .16s ease}
+.expand-chevron.expanded{transform:rotate(180deg)}
+.event-history{position:relative;max-height:190px;overflow-y:auto;overscroll-behavior:contain;border-top:1px solid #f2f2f2;padding:3px 9px;scrollbar-width:thin}
+.event-history-row{display:flex;align-items:center;gap:8px;min-width:0;min-height:27px;border-bottom:1px solid #f6f6f6}
+.event-history-row:last-of-type{border-bottom:0}
+.event-history-content{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#777}
+.history-jump-latest{position:sticky;bottom:3px;display:block;margin:4px 4px 3px auto;border:1px solid #e8e8e8;border-radius:12px;padding:3px 8px;background:#ffffffed;color:#888;font-size:10px;cursor:pointer}
+.thinking-panel{margin:0 9px 8px;padding:6px 8px;background:#fafafa;border-radius:7px;color:#888;font-size:10px}
+.thinking-panel summary{cursor:pointer;user-select:none}
+.thinking-row{padding:6px 0 0;color:#666}
+.thinking-label{font-size:10px;color:#999}
+.thinking-row p{margin:3px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;font-size:11px;color:#555}
 .answer-duration{margin-top:5px;font-size:10px;color:#999}
 .answer-section{padding:2px 1px 8px}
 .answer-heading{display:flex;align-items:center;gap:9px;margin-bottom:10px}
@@ -644,5 +825,5 @@ onBeforeUnmount(() => {
 .send-button:disabled{background:#e4e4e4;color:#fff;cursor:not-allowed}
 .stop-button{font-size:12px;background:#555}
 .composer-wrap>small{display:block;color:#aaa;font-size:10px;margin-top:8px}
-@media(max-width:600px){.topbar{padding:0 16px}.conversation,.composer-wrap{width:calc(100% - 28px)}.conversation{padding-top:18px}.agent-row{gap:7px;padding:8px 7px}.agent-row.nested-agent-row{margin-left:calc(var(--group-depth)*10px)}.agent-row-name{font-size:10px}.agent-row-timer{min-width:60px;font-size:10px}.execution-header{padding:10px}.execution-panel-content{padding:0 8px 8px}.composer{padding:11px 11px 9px 13px}.composer textarea{font-size:14px}.composer-hints{font-size:9px}}
+@media(max-width:600px){.topbar{padding:0 16px}.conversation,.composer-wrap{width:calc(100% - 28px)}.conversation{padding-top:18px}.agent-card.nested-agent-card{margin-left:calc(var(--group-depth)*10px)}.agent-row{gap:5px;padding:8px 7px;flex-wrap:wrap}.agent-row-name{max-width:80px;font-size:10px}.agent-row-timer{min-width:58px;font-size:10px}.event-time{display:none}.agent-row-event{flex-basis:100%;order:5;padding-left:2px}.execution-header{padding:10px}.execution-panel-content{padding:0 8px 8px}.composer{padding:11px 11px 9px 13px}.composer textarea{font-size:14px}.composer-hints{font-size:9px}}
 </style>
