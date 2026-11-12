@@ -27,6 +27,15 @@ type SquadEvent = {
   timestamp?: string
 }
 type TimelineRow = { key: string; event: SquadEvent; agentName: string; durationLabel?: string }
+type AgentGroup = {
+  key: string
+  agent: AgentRef
+  rows: TimelineRow[]
+  children: AgentGroup[]
+  depth: number
+  completed: boolean
+  durationLabel?: string
+}
 
 const draft = ref('')
 const composerInput = ref<HTMLTextAreaElement | null>(null)
@@ -38,82 +47,88 @@ const rows = ref<TimelineRow[]>([])
 const agentsByInstance = new Map<string, AgentRef>()
 const agentStartedAt = new Map<string, number>()
 const finalAnswerRows = new Map<string, TimelineRow>()
+const expandedGroups = ref<Record<string, boolean>>({})
+const eventHistoryElements = new Map<string, HTMLElement>()
 const bottom = ref<HTMLElement | null>(null)
 let controller: AbortController | null = null
 
 
 const timeline = computed(() => rows.value)
 const eventCount = computed(() => rows.value.length)
-const groupedTimeline = computed(() => {
-  const agentMap = new Map<string, AgentRef>()
-  for (const row of rows.value) {
-    const current = row.event.agent
-    if (current?.agentInstanceId) agentMap.set(current.agentInstanceId, current)
-    if (row.event.eventType === 'SUBAGENT_EXPOSED') {
-      const child = row.event.payload?.childAgent as AgentRef | undefined
-      if (child?.agentInstanceId) agentMap.set(child.agentInstanceId, child)
-    }
-  }
+const groupedTimeline = computed<AgentGroup[]>(() => {
+  const agentRefs = new Map<string, AgentRef>()
+  const groupRows = new Map<string, TimelineRow[]>()
 
-  const rootAgent = [...agentMap.values()].find(agent =>
-    agent.agentType === 'MASTER' || !agent.parentAgentInstanceId) || null
-  if (!rootAgent) return { rootAgent: null, rootIntro: rows.value, children: [], rootConclusion: [] }
+  const agentKey = (agent?: AgentRef | null) =>
+    agent?.agentInstanceId || agent?.agentId || ''
 
-  const rootId = rootAgent.agentInstanceId || rootAgent.agentId || ''
-  const directChildren = [...agentMap.values()].filter(agent => agent.parentAgentInstanceId === rootId)
-  const groups = new Map<string, TimelineRow[]>(directChildren.map(agent => [
-    agent.agentInstanceId || agent.agentId || '', []
-  ]))
-
-  function topLevelOwner(agent: AgentRef | null | undefined): string | null {
-    if (!agent) return null
-    let current: AgentRef | undefined = agent
-    const visited = new Set<string>()
-    while (current?.parentAgentInstanceId) {
-      const parentId = current.parentAgentInstanceId
-      if (parentId === rootId) return current.agentInstanceId || current.agentId || null
-      if (visited.has(parentId)) return null
-      visited.add(parentId)
-      current = agentMap.get(parentId)
-    }
-    return null
-  }
-
-  const rootRows: TimelineRow[] = []
   for (const row of rows.value) {
     const agent = row.event.agent
-    const instanceId = agent?.agentInstanceId || agent?.agentId || ''
-    if (instanceId === rootId) {
-      rootRows.push(row)
-      continue
+    const key = agentKey(agent)
+    if (agent && key) agentRefs.set(key, agent)
+
+    if (row.event.eventType === 'SUBAGENT_EXPOSED') {
+      const child = row.event.payload?.childAgent as AgentRef | undefined
+      const childKey = agentKey(child)
+      if (child && childKey) agentRefs.set(childKey, child)
     }
-    const ownerId = topLevelOwner(agent)
-    if (ownerId && groups.has(ownerId)) groups.get(ownerId)!.push(row)
   }
 
-  const children = directChildren.map(agent => {
-    const key = agent.agentInstanceId || agent.agentId || ''
-    const agentRows = (groups.get(key) || []).sort((a, b) =>
-      Number(a.event.sequence || 0) - Number(b.event.sequence || 0))
-    const endRow = [...agentRows].reverse().find(row => row.event.eventType === 'AGENT_END')
-    return {
+  const groups = new Map<string, AgentGroup>()
+  for (const [key, agent] of agentRefs) {
+    groups.set(key, {
       key,
       agent,
-      rows: agentRows,
-      durationLabel: endRow?.durationLabel,
-      completed: Boolean(endRow),
-    }
+      rows: [],
+      children: [],
+      depth: 0,
+      completed: false,
+    })
+  }
+
+  for (const row of rows.value) {
+    const key = agentKey(row.event.agent)
+    const group = groups.get(key)
+    if (group) group.rows.push(row)
+  }
+
+  const roots: AgentGroup[] = []
+  for (const group of groups.values()) {
+    const parentId = group.agent.parentAgentInstanceId
+    const parent = parentId ? groups.get(parentId) : undefined
+    if (parent && parent !== group) parent.children.push(group)
+    else roots.push(group)
+  }
+
+  const firstSequence = (group: AgentGroup) =>
+    group.rows.length ? Math.min(...group.rows.map(row => Number(row.event.sequence || 0))) : Number.MAX_SAFE_INTEGER
+
+  for (const group of groups.values()) {
+    group.rows.sort((a, b) => Number(a.event.sequence || 0) - Number(b.event.sequence || 0))
+    group.children.sort((a, b) => firstSequence(a) - firstSequence(b))
+    const endRow = [...group.rows].reverse().find(row => row.event.eventType === 'AGENT_END')
+    group.completed = Boolean(endRow)
+    group.durationLabel = endRow?.durationLabel
+  }
+
+  roots.sort((a, b) => {
+    if (a.agent.agentType === 'MASTER') return -1
+    if (b.agent.agentType === 'MASTER') return 1
+    return firstSequence(a) - firstSequence(b)
   })
 
-  const childSequences = [...groups.values()].flat().map(row => Number(row.event.sequence || 0))
-  const firstChildSequence = childSequences.length ? Math.min(...childSequences) : Number.POSITIVE_INFINITY
-
-  return {
-    rootAgent,
-    rootIntro: rootRows.filter(row => Number(row.event.sequence || 0) < firstChildSequence),
-    children,
-    rootConclusion: rootRows.filter(row => Number(row.event.sequence || 0) >= firstChildSequence),
+  const flattened: AgentGroup[] = []
+  const append = (group: AgentGroup, depth: number, ancestors = new Set<string>()) => {
+    if (ancestors.has(group.key)) return
+    const nextAncestors = new Set(ancestors)
+    nextAncestors.add(group.key)
+    group.depth = depth
+    flattened.push(group)
+    for (const child of group.children) append(child, depth + 1, nextAncestors)
   }
+  for (const root of roots) append(root, 0)
+
+  return flattened
 })
 
 const eventLabels: Record<string, string> = {
@@ -137,6 +152,30 @@ function visibleRows(source: TimelineRow[]) {
 }
 function thinkingRows(source: TimelineRow[]) {
   return source.filter(isThinkingEvent)
+}
+
+function latestNotification(group: AgentGroup): TimelineRow | undefined {
+  const notifications = visibleRows(group.rows)
+  return notifications[notifications.length - 1]
+}
+
+function toggleEventHistory(groupKey: string) {
+  const expanded = !expandedGroups.value[groupKey]
+  expandedGroups.value = { ...expandedGroups.value, [groupKey]: expanded }
+  if (expanded) scrollExpandedEventHistory()
+}
+
+function setEventHistoryRef(groupKey: string, element: unknown) {
+  if (element instanceof HTMLElement) eventHistoryElements.set(groupKey, element)
+  else eventHistoryElements.delete(groupKey)
+}
+
+function scrollExpandedEventHistory() {
+  void nextTick(() => {
+    for (const [key, element] of eventHistoryElements) {
+      if (expandedGroups.value[key]) element.scrollTop = element.scrollHeight
+    }
+  })
 }
 function formatDuration(ms: number) { return ms < 1000 ? `${Math.max(0, ms)} 毫秒` : `${(ms / 1000).toFixed(1)} 秒` }
 
@@ -192,6 +231,7 @@ function addEvent(event: SquadEvent) {
       agentStartedAt.delete(instanceId)
     }
   }
+  scrollExpandedEventHistory()
 }
 
 function parseFrame(frame: string) {
@@ -216,6 +256,8 @@ async function send() {
   agentsByInstance.clear()
   agentStartedAt.clear()
   finalAnswerRows.clear()
+  expandedGroups.value = {}
+  eventHistoryElements.clear()
   lastPrompt.value = message
   error.value = ''
   status.value = '正在连接测试事件流…'
@@ -326,87 +368,68 @@ onBeforeUnmount(stop)
         </div>
 
         <div class="grouped-execution">
-          <section v-if="groupedTimeline.rootAgent" class="agent-section root-section">
-            <div class="section-title">
-              <strong>{{ groupedTimeline.rootAgent.agentName || '主协调员' }}</strong>
-              <span>任务规划与最终汇总</span>
-            </div>
-            <div class="member-events">
-              <article v-for="row in visibleRows(groupedTimeline.rootIntro)" :key="row.key" class="event-row">
-                <div class="event-content">
-                  <div class="event-meta">
-                    <span class="event-type">{{ eventLabel(row.event.eventType) }}</span>
-                    <span class="event-time">{{ displayTime(row.event.timestamp) }}</span>
-                  </div>
-                  <p v-if="contentOf(row.event)" class="event-text">{{ contentOf(row.event) }}</p>
-                </div>
-              </article>
-              <details v-if="thinkingRows(groupedTimeline.rootIntro).length" class="thinking-panel">
-                <summary>思考过程（{{ thinkingRows(groupedTimeline.rootIntro).length }} 条）</summary>
-                <article v-for="row in thinkingRows(groupedTimeline.rootIntro)" :key="row.key" class="thinking-row">
-                  <span class="thinking-label">{{ eventLabel(row.event.eventType) }}</span>
-                  <p v-if="contentOf(row.event)">{{ contentOf(row.event) }}</p>
-                </article>
-              </details>
-            </div>
-          </section>
-
-          <section v-if="groupedTimeline.children.length" class="agent-section child-section">
-            <div class="section-title">
-              <strong>协作成员</strong>
-              <span>{{ groupedTimeline.children.length }} 位</span>
-            </div>
-            <article v-for="group in groupedTimeline.children" :key="group.key" class="member-card">
-              <header class="member-header">
-                <strong>{{ group.agent.agentName || '协作成员' }}</strong>
-                <span :class="['member-status', { completed: group.completed }]">
-                  {{ group.completed ? '已完成' : '执行中' }}
-                </span>
-              </header>
-              <div class="member-events">
-                <article v-for="row in visibleRows(group.rows)" :key="row.key" class="event-row">
-                  <div class="event-content">
-                    <div class="event-meta">
-                      <span class="event-type">{{ eventLabel(row.event.eventType) }}</span>
-                      <span class="event-time">{{ displayTime(row.event.timestamp) }}</span>
-                    </div>
-                    <p v-if="contentOf(row.event)" class="event-text">{{ contentOf(row.event) }}</p>
-                    <div v-if="row.durationLabel" class="answer-duration">用时 {{ row.durationLabel }}</div>
-                  </div>
-                </article>
-                <details v-if="thinkingRows(group.rows).length" class="thinking-panel">
-                  <summary>思考过程（{{ thinkingRows(group.rows).length }} 条）</summary>
-                  <article v-for="row in thinkingRows(group.rows)" :key="row.key" class="thinking-row">
-                    <span class="thinking-label">{{ eventLabel(row.event.eventType) }}</span>
-                    <p v-if="contentOf(row.event)">{{ contentOf(row.event) }}</p>
-                  </article>
-                </details>
+          <article
+            v-for="group in groupedTimeline"
+            :key="group.key"
+            class="member-card agent-group-card"
+            :class="{ 'nested-agent-group': group.depth > 0 }"
+            :style="{ '--group-depth': group.depth }"
+          >
+            <header class="member-header">
+              <div class="member-title">
+                <strong>{{ group.agent.agentName || (group.depth === 0 ? '主协调员' : '协作成员') }}</strong>
+                <span v-if="group.depth > 0" class="member-parent">所属成员：{{ group.agent.parentAgentInstanceId }}</span>
               </div>
-            </article>
-          </section>
+              <span :class="['member-status', { completed: group.completed }]">
+                {{ group.completed ? '已完成' : '执行中' }}
+              </span>
+            </header>
 
-          <section v-if="groupedTimeline.rootConclusion.length" class="agent-section root-section conclusion-section">
-            <div class="section-title"><strong>主协调员 · 汇总与回答</strong></div>
-            <div class="member-events">
-              <article v-for="row in visibleRows(groupedTimeline.rootConclusion)" :key="row.key" class="event-row">
-                <div class="event-content">
-                  <div class="event-meta">
-                    <span class="event-type">{{ eventLabel(row.event.eventType) }}</span>
-                    <span class="event-time">{{ displayTime(row.event.timestamp) }}</span>
-                  </div>
-                  <p v-if="contentOf(row.event)" class="event-text">{{ contentOf(row.event) }}</p>
-                  <div v-if="row.durationLabel" class="answer-duration">用时 {{ row.durationLabel }}</div>
+            <div class="event-notice">
+              <div class="event-notice-line">
+                <template v-if="latestNotification(group)">
+                  <span class="event-type">{{ eventLabel(latestNotification(group)?.event.eventType) }}</span>
+                  <span class="event-notice-content" :title="contentOf(latestNotification(group)!.event)">
+                    {{ contentOf(latestNotification(group)!.event) || '事件已更新' }}
+                  </span>
+                  <time class="event-time">{{ displayTime(latestNotification(group)?.event.timestamp) }}</time>
+                </template>
+                <span v-else class="event-notice-empty">等待事件</span>
+                <button
+                  v-if="visibleRows(group.rows).length > 1"
+                  type="button"
+                  class="event-expand-button"
+                  @click="toggleEventHistory(group.key)"
+                >
+                  {{ expandedGroups[group.key] ? '收起' : `展开全部（${visibleRows(group.rows).length}）` }}
+                  <span :class="['expand-chevron', { expanded: expandedGroups[group.key] }]">⌄</span>
+                </button>
+              </div>
+
+              <div
+                v-if="expandedGroups[group.key]"
+                :ref="element => setEventHistoryRef(group.key, element)"
+                class="event-history"
+              >
+                <div v-for="row in visibleRows(group.rows)" :key="row.key" class="event-notice-line history-line">
+                  <span class="event-type">{{ eventLabel(row.event.eventType) }}</span>
+                  <span class="event-notice-content" :title="contentOf(row.event)">
+                    {{ contentOf(row.event) || '—' }}
+                  </span>
+                  <time class="event-time">{{ displayTime(row.event.timestamp) }}</time>
                 </div>
-              </article>
-              <details v-if="thinkingRows(groupedTimeline.rootConclusion).length" class="thinking-panel">
-                <summary>思考过程（{{ thinkingRows(groupedTimeline.rootConclusion).length }} 条）</summary>
-                <article v-for="row in thinkingRows(groupedTimeline.rootConclusion)" :key="row.key" class="thinking-row">
-                  <span class="thinking-label">{{ eventLabel(row.event.eventType) }}</span>
-                  <p v-if="contentOf(row.event)">{{ contentOf(row.event) }}</p>
-                </article>
-              </details>
+              </div>
             </div>
-          </section>
+
+            <details v-if="thinkingRows(group.rows).length" class="thinking-panel">
+              <summary>思考过程（{{ thinkingRows(group.rows).length }} 条）</summary>
+              <article v-for="row in thinkingRows(group.rows)" :key="row.key" class="thinking-row">
+                <span class="thinking-label">{{ eventLabel(row.event.eventType) }}</span>
+                <p v-if="contentOf(row.event)">{{ contentOf(row.event) }}</p>
+              </article>
+            </details>
+            <div v-if="group.durationLabel" class="answer-duration">总用时 {{ group.durationLabel }}</div>
+          </article>
         </div>
         <div ref="bottom" />
       </div>
@@ -469,27 +492,35 @@ onBeforeUnmount(stop)
 .suggestions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px}.suggestions button{border:1px solid #e2e2e2;background:white;border-radius:18px;padding:8px 12px;font-size:12px;color:#555;cursor:pointer}
 .user-message{display:flex;justify-content:flex-end;gap:10px;margin-bottom:30px}.user-message>div{background:#f3f3f3;padding:11px 15px;border-radius:16px;max-width:70%}.user-message small,.timeline-heading small{display:block;font-size:10px;color:#888}.user-message p{font-size:13px;margin:5px 0 0}.avatar{width:27px;height:27px;display:grid;place-items:center;border-radius:50%;font-size:11px}.user-avatar{background:#dedede}
 .timeline-heading{display:flex;align-items:center;gap:10px;margin-bottom:15px}.assistant-avatar{border-radius:50%;font-size:15px}.timeline-heading strong{font-size:13px}.timeline-heading small{margin-top:3px}
-.grouped-execution{display:flex;flex-direction:column;gap:18px}
-.agent-section{display:flex;flex-direction:column;gap:9px}
-.section-title{display:flex;align-items:center;gap:9px;font-size:13px;color:#444}
-.section-title span{font-size:11px;color:#999;font-weight:400}
-.member-card{border:1px solid #e9e9e9;border-radius:12px;padding:13px 15px;background:#fff}
-.member-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.member-header strong{font-size:13px;color:#444}
-.member-status{font-size:10px;color:#9a7a35;background:#faf5e8;padding:4px 7px;border-radius:5px}
+.grouped-execution{display:flex;flex-direction:column;gap:9px}
+.member-card{border:1px solid #e9e9e9;border-radius:11px;padding:9px 12px;background:#fff;min-width:0}
+.agent-group-card{margin-left:calc(var(--group-depth)*20px);position:relative}
+.agent-group-card.nested-agent-group{border-left:2px solid #e3e3e3}
+.member-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;min-width:0}
+.member-title{display:flex;align-items:center;gap:8px;min-width:0}
+.member-header strong{font-size:12px;color:#444;white-space:nowrap}
+.member-parent{font-size:10px;color:#aaa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.member-status{font-size:10px;flex:none;color:#9a7a35;background:#faf5e8;padding:3px 7px;border-radius:5px}
 .member-status.completed{color:#23845b;background:#edf7f1}
-.member-events{padding-left:10px}
-.thinking-panel{margin:8px 0 2px;padding:9px 11px;background:#f8f8f8;border-radius:8px;color:#777;font-size:11px}
+.event-notice{min-width:0}
+.event-notice-line{display:flex;align-items:center;gap:8px;min-width:0;height:29px;overflow:hidden}
+.event-type{flex:none;font-size:10px;color:#777;background:#f5f5f5;padding:3px 6px;border-radius:4px;white-space:nowrap}
+.event-notice-content{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;line-height:1.4;color:#555}
+.event-notice-empty{flex:1;min-width:0;font-size:11px;color:#aaa}
+.event-time{flex:none;font-size:10px;color:#aaa;white-space:nowrap}
+.event-expand-button{flex:none;display:flex;align-items:center;gap:4px;border:0;background:transparent;color:#777;font-size:10px;padding:4px 2px;cursor:pointer;white-space:nowrap}
+.event-expand-button:hover{color:#222}
+.expand-chevron{display:inline-block;font-size:13px;transition:transform .16s ease}
+.expand-chevron.expanded{transform:rotate(180deg)}
+.event-history{max-height:190px;overflow-y:auto;overscroll-behavior:contain;border-top:1px solid #f0f0f0;margin-top:4px;padding-top:3px;scrollbar-width:thin}
+.history-line{height:27px;border-bottom:1px solid #f5f5f5}
+.history-line:last-child{border-bottom:0}
+.thinking-panel{margin-top:5px;padding:6px 8px;background:#f8f8f8;border-radius:7px;color:#777;font-size:10px}
 .thinking-panel summary{cursor:pointer;user-select:none}
-.thinking-row{padding:7px 0 0;color:#666}
+.thinking-row{padding:6px 0 0;color:#666}
 .thinking-label{font-size:10px;color:#999}
-.thinking-row p{margin:4px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;font-size:12px;color:#555}
-.member-events .event-row{padding:5px 0 8px}
-.member-events .event-row:last-child .event-content{border-bottom:0}
-.conclusion-section{padding-top:4px;border-top:1px solid #eee}.event-row{display:flex;position:relative;min-height:43px;padding:5px 0 7px;gap:0}.tree-indent{width:calc(22px + var(--depth)*25px);flex:none;position:relative;display:flex;align-items:stretch}.tree-branch{width:25px;position:relative;flex:none;border-left:1px solid #dedede}.tree-branch:last-of-type:after{content:"";position:absolute;left:-1px;top:0;bottom:50%;border-left:1px solid #dedede}.tree-node{position:absolute;left:calc(var(--depth)*25px);top:15px;width:7px;height:7px;border-radius:50%;background:#aaa;border:2px solid white;box-shadow:0 0 0 1px #ccc}.tree-node:before{content:'';position:absolute;right:100%;top:3px;width:12px;border-top:1px solid #dedede}
-.event-row.agent-start .tree-node{background:#303030;box-shadow:0 0 0 1px #303030}
-.event-content{min-width:0;flex:1;border-bottom:1px solid #f0f0f0;padding:3px 0 8px}.event-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.agent-name{font-size:11px;font-weight:600;color:#555}.event-type{font:10px ui-monospace,SFMono-Regular,monospace;color:#858585;background:#f6f6f6;padding:3px 6px;border-radius:4px}.event-time{font-size:10px;color:#aaa;margin-left:auto}
-.event-text{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.65;color:#333;margin:6px 0 0}.answer-duration{margin-top:7px;font-size:10px;color:#999;display:flex;align-items:center;gap:4px}.answer-duration:before{content:'◷';font-size:12px}.event-details{margin-top:5px;font-size:10px;color:#888}.event-details summary{cursor:pointer}.event-details pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:9px;border-radius:6px;font-size:10px}
+.thinking-row p{margin:3px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;font-size:11px;color:#555}
+.answer-duration{margin-top:5px;font-size:10px;color:#999}
 .error-message{color:#b42318;text-align:center;font-size:12px;margin:0 20px 8px}
 .composer-wrap{width:min(860px,calc(100% - 40px));margin:0 auto;padding:10px 0 18px;text-align:center;flex:none}
 .composer{display:flex;flex-direction:column;gap:8px;border:1px solid #d9d9d9;border-radius:20px;padding:13px 13px 11px 17px;background:#fff;box-shadow:0 3px 14px #00000008;transition:border-color .16s ease,box-shadow .16s ease}
