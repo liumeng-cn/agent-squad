@@ -77,6 +77,18 @@ describe('Squad 执行事件模型', () => {
     expect(getSquadAnswerText(state)).toBe('Hello world')
   })
 
+  it('事件未携带 blockId 时，增量仍归属到最近开始的内容块', () => {
+    const state = createSquadExecutionState()
+    applySquadEvent(state, squadEvent('TEXT_BLOCK_START', 1, master))
+    applySquadEvent(state, squadEvent('TEXT_BLOCK_DELTA', 2, master, { delta: '第一段' }))
+    applySquadEvent(state, squadEvent('TEXT_BLOCK_DELTA', 3, master, { delta: '继续' }))
+    applySquadEvent(state, squadEvent('TEXT_BLOCK_END', 4, master))
+
+    expect(state.answerBlocks).toHaveLength(1)
+    expect(state.answerBlocks[0]?.text).toBe('第一段继续')
+    expect(state.answerBlocks[0]?.completed).toBe(true)
+  })
+
   it('AGENT_RESULT 覆盖流式预览，避免最终结果被提前输出的文本吞掉', () => {
     const state = createSquadExecutionState()
     applySquadEvent(state, squadEvent('TEXT_BLOCK_DELTA', 1, master, {
