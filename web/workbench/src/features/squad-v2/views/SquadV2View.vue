@@ -209,7 +209,7 @@ function eventContent(event: SquadEvent): string {
   }
   if (payload.result !== undefined) return resultTextOf(payload.result)
   if (payload.data !== undefined) {
-    return typeof payload.data === 'string' ? payload.data : JSON.stringify(payload.data)
+    return typeof payload.data === 'string' ? payload.data : (JSON.stringify(payload.data) ?? '')
   }
   if (typeof payload.name === 'string') return payload.name
   if (typeof payload.model === 'string') return '模型调用中'
