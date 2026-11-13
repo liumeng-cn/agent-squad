@@ -62,6 +62,8 @@ type AnswerBlock = {
 const draft = ref('')
 const composerInput = ref<HTMLTextAreaElement | null>(null)
 const lastPrompt = ref('')
+const executionId = ref('')
+const lastSequence = ref(0)
 const busy = ref(false)
 const error = ref('')
 const agentRoots = ref<AgentNode[]>([])
@@ -473,6 +475,10 @@ function appendEvent(event: SquadEvent) {
   const identity = event.eventId || (event.sequence !== undefined ? 'sequence:' + event.sequence : '')
   if (identity && seenEventIds.has(identity)) return
   if (identity) seenEventIds.add(identity)
+  if (typeof event.sequence === 'number') lastSequence.value = Math.max(lastSequence.value, event.sequence)
+  if (event.eventType === 'squad.turn.started' && typeof event.payload?.executionId === 'string') {
+    executionId.value = event.payload.executionId
+  }
 
   const agent = event.agent || null
   const node = agent ? ensureAgent(agent) : null
@@ -563,6 +569,8 @@ function resetRun() {
   agentRoots.value = []
   answerBlocks.value = []
   answerFallback.value = ''
+  executionId.value = ''
+  lastSequence.value = 0
   expandedGroups.value = {}
   agentIndex.clear()
   pendingChildren.clear()
@@ -647,11 +655,11 @@ async function send() {
     const csrf = getCsrfToken()
     if (csrf) headers['X-CSRF-Token'] = csrf
     const base = import.meta.env.VITE_API_BASE_URL || ''
-    const response = await fetch(base + '/api/v2/test/events/stream', {
+    const response = await fetch(base + '/api/v2/msg', {
       method: 'POST',
       credentials: base ? 'include' : 'same-origin',
       headers,
-      body: JSON.stringify({ scenario: 'parallel', intervalMillis: 300 }),
+      body: JSON.stringify({ message }),
       signal: activeController.signal,
     })
     if (!response.ok || !response.body) throw new Error('请求失败（HTTP ' + response.status + '）')
