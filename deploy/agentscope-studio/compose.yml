@@ -1,0 +1,15 @@
+# 基于官方 agentscope-ai/agentscope-studio docker/docker-compose.yml。
+services:
+  studio:
+    image: agentscope/studio:latest
+    ports:
+      - "127.0.0.1:13001:3000"
+    volumes:
+      - studio_data:/app/data
+    environment:
+      LOG_LEVEL: warn
+      PORT: "3000"
+      HOME: /app/data
+    restart: unless-stopped
+volumes:
+  studio_data:

@@ -1,0 +1,21 @@
+# 官方 v4.79.0 样例的本机覆盖，不修改应用源码，不复用 Squad 数据库。
+services:
+  langfuse-web:
+    ports: !override ["127.0.0.1:13000:3000"]
+    environment:
+      TELEMETRY_ENABLED: "false"
+  langfuse-worker:
+    ports: !reset []
+    environment:
+      TELEMETRY_ENABLED: "false"
+  langfuse-ai-gateway:
+    profiles: ["ai-gateway"]
+    ports: !reset []
+  postgres:
+    ports: !reset []
+  redis:
+    ports: !reset []
+  clickhouse:
+    ports: !reset []
+  minio:
+    ports: !override ["127.0.0.1:19090:9000"]

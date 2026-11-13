@@ -13,7 +13,23 @@
     <packaging>jar</packaging>
     <name>agent-squad-v2</name>
     <description>Agent Squad V2 服务</description>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-bom</artifactId>
+                <version>1.61.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     <dependencies>
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-extensions-agui</artifactId>
+            <version>${agentscope.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.agentsquad</groupId>
             <artifactId>agent-squad-common</artifactId>
@@ -43,18 +59,8 @@
         </dependency>
         <dependency>
             <groupId>io.agentscope</groupId>
-            <artifactId>agentscope-extensions-jdbc</artifactId>
-            <version>${agentscope.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.agentscope</groupId>
             <artifactId>agentscope-extensions-model-openai</artifactId>
             <version>${agentscope.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-core</artifactId>
-            <version>${mybatis-plus.version}</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -64,6 +70,19 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-exporter-otlp</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk-testing</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

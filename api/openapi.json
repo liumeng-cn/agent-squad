@@ -7338,6 +7338,44 @@
           }
         }
       }
+    },
+    "/api/v2/chat/messages": {
+      "post": {
+        "operationId": "sendChatMessage",
+        "summary": "提交聊天输入并流式观察当前轮次",
+        "description": "使用官方 AguiAgentAdapter 调用 HarnessAgent.streamEvents。SSE event 为 chat，data 为 AG-UI 事件。按服务端用户身份及 threadId 隔离会话；不承诺请求幂等、断开继续执行或事件补收。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatMessageDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "AG-UI SSE 事件流",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/AguiEvent"
+                },
+                "x-event-schema": {
+                  "$ref": "#/components/schemas/AguiEvent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求格式或参数错误"
+          },
+          "401": {
+            "description": "缺少有效网关身份"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -12782,6 +12820,82 @@
           "timestamp"
         ],
         "description": "Squad SSE 统一事件结构"
+      },
+      "ChatMessageDTO": {
+        "type": "object",
+        "required": [
+          "sessionId",
+          "requestId",
+          "message"
+        ],
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9-]{1,64}$"
+          },
+          "requestId": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9-]{1,64}$"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000
+          }
+        }
+      },
+      "AguiEvent": {
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "RUN_STARTED",
+              "RUN_FINISHED",
+              "RUN_ERROR",
+              "TEXT_MESSAGE_START",
+              "TEXT_MESSAGE_CONTENT",
+              "TEXT_MESSAGE_END",
+              "TOOL_CALL_START",
+              "TOOL_CALL_ARGS",
+              "TOOL_CALL_END",
+              "TOOL_CALL_RESULT",
+              "CUSTOM",
+              "STATE_SNAPSHOT",
+              "STATE_DELTA",
+              "REASONING_START",
+              "REASONING_MESSAGE_START",
+              "REASONING_MESSAGE_CONTENT",
+              "REASONING_MESSAGE_END",
+              "REASONING_END"
+            ]
+          },
+          "threadId": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "messageId": {
+            "type": "string"
+          },
+          "delta": {
+            "type": "string"
+          },
+          "toolCallId": {
+            "type": "string"
+          },
+          "toolCallName": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
       }
     }
   }

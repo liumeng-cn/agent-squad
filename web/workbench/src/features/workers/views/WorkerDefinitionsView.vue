@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AgentObservationLink from '../../../shared/ui/AgentObservationLink.vue'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
@@ -100,6 +101,7 @@ async function changeStatus(definition: WorkerDefinition, status: WorkerDefiniti
   <main class="detail-page">
     <div class="detail-card">
       <button class="btn btn-sm" @click="router.push({ name: 'workspace' })">返回工作台</button>
+      <AgentObservationLink />
       <h1>Worker 能力管理</h1>
       <p>发布后的能力正文不可修改；停用会阻止新任务选择，撤销后不能恢复。</p>
       <p v-if="error" class="form-error" role="alert">{{ error }}</p>

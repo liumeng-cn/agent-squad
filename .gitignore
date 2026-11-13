@@ -17,3 +17,7 @@ web/workbench/.vite
 .codegraph
 .qoder
 .dsh
+
+# 本地独立观测服务与接入凭据
+.local/
+server/agent-squad-v2/src/main/resources/application-local.yml

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AgentObservationLink from '../../../shared/ui/AgentObservationLink.vue'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
@@ -128,6 +129,7 @@ function formatTime(value: string): string {
   <main class="detail-page">
     <div class="detail-card">
       <button class="btn btn-sm" @click="router.push({ name: 'workspace' })">返回工作台</button>
+      <AgentObservationLink />
       <h1>账号管理</h1>
       <p>账号只能由管理员创建，没有公开注册入口。停用或重置密码会立即撤销该账号的全部登录状态。</p>
       <p v-if="error" class="form-error" role="alert">{{ error }}</p>
