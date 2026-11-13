@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-/** 仅 local profile 开放的 Squad SSE 测试接口。 */
+/**
+ * 仅 local profile 开放的 Squad SSE 测试接口。
+ */
 @RestController
 @Profile("local")
 @RequestMapping("/api/v2/test/events")

@@ -13,14 +13,20 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-/** V2 消息 SSE 入口。 */
+/**
+ * V2 消息 SSE 入口。
+ */
 @RestController
 @RequestMapping("/api/v2")
 public class SquadMessageController {
-    @Resource private SquadMessageService messageService;
-    @Resource private SquadUserIdentityResolver identityResolver;
+    @Resource
+    private SquadMessageService messageService;
+    @Resource
+    private SquadUserIdentityResolver identityResolver;
 
-    /** POST /api/v2/msg；新消息与断线补收共用该接口。 */
+    /**
+     * POST /api/v2/msg；新消息与断线补收共用该接口。
+     */
     @PostMapping(value = "/msg", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter message(@Valid @RequestBody SquadMessageRequestDTO request,
                               HttpServletRequest servletRequest) {

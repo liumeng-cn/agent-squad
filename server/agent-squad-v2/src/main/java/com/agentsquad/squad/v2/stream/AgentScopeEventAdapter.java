@@ -28,7 +28,8 @@ public class AgentScopeEventAdapter {
     public SquadMsg adapt(AgentEvent event, String conversationId, Long sequence,
                           ObjectMapper objectMapper) {
 
-        Map<String, Object> payload = objectMapper.convertValue(event, new TypeReference<>() {});
+        Map<String, Object> payload = objectMapper.convertValue(event, new TypeReference<>() {
+        });
 
         ExecutionIdentity identity = event.getExecution();
         SquadExecutionRef execution = identity == null ? null : new SquadExecutionRef(

@@ -10,7 +10,9 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-/** 验证原生事件适配时不改名、不丢执行身份和原始载荷。 */
+/**
+ * 验证原生事件适配时不改名、不丢执行身份和原始载荷。
+ */
 class AgentScopeEventAdapterTest {
 
     private final AgentScopeEventAdapter adapter = new AgentScopeEventAdapter();

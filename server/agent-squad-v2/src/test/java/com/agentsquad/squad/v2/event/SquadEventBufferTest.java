@@ -1,14 +1,20 @@
 package com.agentsquad.squad.v2.event;
 
-import static org.junit.jupiter.api.Assertions.*;
 import com.agentsquad.squad.common.model.SquadMsg;
 import com.agentsquad.squad.v2.exceptions.EventBufferExpiredException;
-import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
-/** V2 事件缓冲与断线补收测试。 */
+import java.time.Duration;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+/**
+ * V2 事件缓冲与断线补收测试。
+ */
 class SquadEventBufferTest {
-    @Test void shouldReplayEventsAfterLastReceivedSequence() {
+    @Test
+    void shouldReplayEventsAfterLastReceivedSequence() {
         SquadEventBuffer buffer = new SquadEventBuffer(100);
         for (long i = 1; i <= 3; i++) {
             SquadMsg msg = new SquadMsg();
@@ -21,7 +27,9 @@ class SquadEventBufferTest {
         assertEquals(2L, events.get(0).getSequence());
         assertEquals(3L, events.get(1).getSequence());
     }
-    @Test void shouldRejectExpiredCursor() {
+
+    @Test
+    void shouldRejectExpiredCursor() {
         SquadEventBuffer buffer = new SquadEventBuffer(100);
         for (long i = 1; i <= 101; i++) {
             SquadMsg msg = new SquadMsg();
