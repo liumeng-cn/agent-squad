@@ -10,6 +10,22 @@ server:
   address: 127.0.0.1
   port: 18082
 
+agentsquad:
+  v2:
+    agent:
+      enabled: false
+      api-key: ""
+      base-url: https://api.deepseek.com/v1
+      model-name: deepseek-chat
+      agent-id: squad-master
+      agent-name: 主协调员
+      system-prompt: 你是 Agent Squad 的主协调员。直接完成用户请求；执行过程通过原生事件实时输出。
+      workspace: ./.agentscope/v2
+    execution:
+      event-buffer-capacity: 5000
+      completed-retention-minutes: 30
+      local-user-id: 1
+
 management:
   endpoints:
     web:
