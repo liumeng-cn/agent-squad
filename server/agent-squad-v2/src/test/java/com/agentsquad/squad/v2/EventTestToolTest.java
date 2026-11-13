@@ -55,14 +55,15 @@ class EventTestToolTest {
             beans.registerSingleton("agent", agent);
             var service = new com.agentsquad.squad.v2.service.ChatService();
             ReflectionTestUtils.setField(service, "agentProvider", beans.getBeanProvider(HarnessAgent.class));
+            ReflectionTestUtils.setField(service, "eventConverter", new com.agentsquad.squad.v2.converter.ChatEventConverter());
             var request = new ChatMessageDTO();
             request.setSessionId("tool-session");
             request.setRequestId("tool-request");
             request.setMessage("调用测试工具");
-            var events = service.sendAgui(request, "1").collectList().block(Duration.ofSeconds(20));
-            assertThat(events).anyMatch(event -> event instanceof io.agentscope.core.agui.event.AguiEvent.ToolCallStart);
-            assertThat(events).anyMatch(event -> event instanceof io.agentscope.core.agui.event.AguiEvent.ToolCallResult);
-            assertThat(events.getLast()).isInstanceOf(io.agentscope.core.agui.event.AguiEvent.RunFinished.class);
+            var events = service.send(request, "1").collectList().block(Duration.ofSeconds(20));
+            assertThat(events).anyMatch(event -> event.getType().name().equals("TOOL_CALL_START"));
+            assertThat(events).anyMatch(event -> event.getType().name().equals("TOOL_CALL_RESULT"));
+            assertThat(events.getLast().getType().name()).isEqualTo("RUN_FINISHED");
         }
     }
 }

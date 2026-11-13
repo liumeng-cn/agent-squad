@@ -2,7 +2,6 @@ package com.agentsquad.squad.v2;
 
 import com.agentsquad.squad.v2.dto.ChatMessageDTO;
 import com.agentsquad.squad.v2.service.ChatService;
-import io.agentscope.core.agui.event.AguiEvent;
 import io.agentscope.harness.agent.HarnessAgent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -32,18 +31,17 @@ class AguiSessionTest {
             beans.registerSingleton("agent", agent);
             var service = new ChatService();
             ReflectionTestUtils.setField(service, "agentProvider", beans.getBeanProvider(HarnessAgent.class));
+            ReflectionTestUtils.setField(service, "eventConverter", new com.agentsquad.squad.v2.converter.ChatEventConverter());
             for (int i = 0; i < 2; i++) {
                 var request = new ChatMessageDTO();
                 request.setSessionId("agui-conversation");
                 request.setRequestId("request-" + i);
                 request.setMessage("问题" + i);
-                var events = service.sendAgui(request, "1").collectList().block(Duration.ofSeconds(30));
+                var events = service.send(request, "1").collectList().block(Duration.ofSeconds(30));
                 assertThat(events).isNotEmpty();
-                assertThat(events.getLast()).isInstanceOf(AguiEvent.RunFinished.class);
-                assertThat(events).anyMatch(event -> event instanceof AguiEvent.TextMessageContent);
-                assertThat(events).noneMatch(event -> event instanceof AguiEvent.Raw);
-                assertThat(events).filteredOn(event -> event instanceof AguiEvent.RunStarted)
-                        .allMatch(event -> ((AguiEvent.RunStarted) event).input() == null);
+                assertThat(events.getLast().getType().name()).isEqualTo("RUN_FINISHED");
+                assertThat(events).anyMatch(event -> event.getType().name().equals("TEXT_MESSAGE_CONTENT"));
+
             }
             assertThat(model.inputs).anyMatch(messages -> messages.stream()
                     .filter(message -> message.getRole() == io.agentscope.core.message.MsgRole.USER).count() == 2);

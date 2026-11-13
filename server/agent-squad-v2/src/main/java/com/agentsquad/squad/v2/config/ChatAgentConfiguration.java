@@ -2,6 +2,7 @@ package com.agentsquad.squad.v2.config;
 
 import com.agentsquad.squad.v2.agent.observer.AgentTracingMiddleware;
 import com.agentsquad.squad.v2.agent.tool.EventTestTool;
+import com.agentsquad.squad.v2.agent.subagent.TestSubagentDefinitions;
 import com.agentsquad.squad.v2.config.properties.ChatAgentProperties;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.tool.Toolkit;
@@ -62,6 +63,7 @@ public class ChatAgentConfiguration {
                 .model(model)
                 .toolkit(toolkit)
                 .workspace(Path.of(properties.getWorkspace()));
+        TestSubagentDefinitions.configure(agent, Path.of(properties.getWorkspace()));
         tracingProvider.ifAvailable(agent::middleware);
         return agent.build();
     }

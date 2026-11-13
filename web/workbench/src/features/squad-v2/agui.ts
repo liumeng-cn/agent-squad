@@ -10,13 +10,14 @@ export interface AguiEvent {
   toolCallId?: string
   toolCallName?: string
   message?: string
-  outcome?: { type?: string }
+  waiting?: boolean
+  timestamp?: number
 }
 
 /** 标准事件适配现有页面状态，页面布局和组件无需改变。 */
 export function projectAgui(event: AguiEvent, request: ChatRequest): ChatEvent[] {
   const base = { sessionId: request.sessionId, requestId: request.requestId,
-    messageId: request.requestId, timestamp: Date.now() }
+    messageId: request.requestId, timestamp: event.timestamp ?? Date.now() }
   if ((event.threadId && event.threadId !== request.sessionId)
     || (event.runId && event.runId !== request.requestId)) return []
   switch (event.type) {
@@ -30,8 +31,8 @@ export function projectAgui(event: AguiEvent, request: ChatRequest): ChatEvent[]
     case 'TOOL_CALL_RESULT': return [{ ...base, type: 'ACTIVITY_UPDATED',
       activityId: event.toolCallId!, kind: 'TOOL', title: '工具调用', status: 'COMPLETED' }]
     case 'RUN_FINISHED': return [{ ...base, type: 'MESSAGE_COMPLETED',
-      status: event.outcome?.type === 'interrupt' ? 'WAITING' : 'COMPLETED',
-      message: event.outcome?.type === 'interrupt' ? '执行等待交互，当前页面暂不支持恢复' : undefined }]
+      status: event.waiting ? 'WAITING' : 'COMPLETED',
+      message: event.waiting ? '执行等待交互，当前页面暂不支持恢复' : undefined }]
     case 'RUN_ERROR': return [{ ...base, type: 'MESSAGE_FAILED', status: 'FAILED',
       message: event.message ?? '执行失败' }]
     default: return []

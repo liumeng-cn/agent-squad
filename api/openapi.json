@@ -7343,7 +7343,7 @@
       "post": {
         "operationId": "sendChatMessage",
         "summary": "提交聊天输入并流式观察当前轮次",
-        "description": "使用官方 AguiAgentAdapter 调用 HarnessAgent.streamEvents。SSE event 为 chat，data 为 AG-UI 事件。按服务端用户身份及 threadId 隔离会话；不承诺请求幂等、断开继续执行或事件补收。",
+        "description": "使用官方 AguiAgentAdapter 调用 HarnessAgent.streamEvents。SSE 使用默认事件名，data 为自有 ChatEventVO 事件。按服务端用户身份及 threadId 隔离会话；不承诺请求幂等、断开继续执行或事件补收。",
         "requestBody": {
           "required": true,
           "content": {
@@ -7360,10 +7360,10 @@
             "content": {
               "text/event-stream": {
                 "schema": {
-                  "$ref": "#/components/schemas/AguiEvent"
+                  "$ref": "#/components/schemas/ChatEventVO"
                 },
                 "x-event-schema": {
-                  "$ref": "#/components/schemas/AguiEvent"
+                  "$ref": "#/components/schemas/ChatEventVO"
                 }
               }
             }
@@ -12844,7 +12844,7 @@
           }
         }
       },
-      "AguiEvent": {
+      "ChatEventVO": {
         "type": "object",
         "required": [
           "type"
@@ -12856,21 +12856,10 @@
               "RUN_STARTED",
               "RUN_FINISHED",
               "RUN_ERROR",
-              "TEXT_MESSAGE_START",
               "TEXT_MESSAGE_CONTENT",
-              "TEXT_MESSAGE_END",
-              "TOOL_CALL_START",
-              "TOOL_CALL_ARGS",
-              "TOOL_CALL_END",
-              "TOOL_CALL_RESULT",
-              "CUSTOM",
-              "STATE_SNAPSHOT",
-              "STATE_DELTA",
-              "REASONING_START",
-              "REASONING_MESSAGE_START",
               "REASONING_MESSAGE_CONTENT",
-              "REASONING_MESSAGE_END",
-              "REASONING_END"
+              "TOOL_CALL_START",
+              "TOOL_CALL_RESULT"
             ]
           },
           "threadId": {
@@ -12893,9 +12882,15 @@
           },
           "message": {
             "type": "string"
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "waiting": {
+            "type": "boolean"
           }
-        },
-        "additionalProperties": true
+        }
       }
     }
   }

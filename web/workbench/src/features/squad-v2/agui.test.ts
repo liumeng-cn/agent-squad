@@ -9,7 +9,7 @@ describe('AG-UI 页面投影', () => {
   })
   it('隔离运行并区分等待与成功', () => {
     expect(projectAgui({ type: 'RUN_FINISHED', runId: 'other' }, request)).toEqual([])
-    expect(projectAgui({ type: 'RUN_FINISHED', outcome: { type: 'interrupt' } }, request)[0])
+    expect(projectAgui({ type: 'RUN_FINISHED', waiting: true }, request)[0])
       .toMatchObject({ status: 'WAITING' })
     expect(projectAgui({ type: 'RUN_ERROR', message: '失败' }, request)[0])
       .toMatchObject({ type: 'MESSAGE_FAILED', status: 'FAILED' })

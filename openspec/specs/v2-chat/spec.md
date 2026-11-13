@@ -17,7 +17,7 @@
 
 ### Requirement: 单接口事件流
 
-系统 SHALL 使用 POST /api/v2/chat/messages 返回 SSE，事件名为 chat，数据结构由 api/openapi.json 定义。
+系统 SHALL 使用 POST /api/v2/chat/messages 返回 SSE，使用默认 SSE 事件名，数据结构由 api/openapi.json 定义。
 
 #### Scenario: 正文与过程更新
 
