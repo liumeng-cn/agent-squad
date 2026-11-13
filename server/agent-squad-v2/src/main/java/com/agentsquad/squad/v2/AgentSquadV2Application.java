@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
  * Squad 聊天应用
- *
+ * <p>
  * 提供基于原生 AgentSession 的持续对话与实时执行过程。
  */
 @SpringBootApplication

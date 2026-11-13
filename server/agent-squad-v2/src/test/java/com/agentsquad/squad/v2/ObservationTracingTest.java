@@ -1,7 +1,7 @@
 package com.agentsquad.squad.v2;
 
-import com.agentsquad.squad.v2.agent.observer.TraceContextSpanProcessor;
 import com.agentsquad.squad.v2.agent.observer.AgentTracingMiddleware;
+import com.agentsquad.squad.v2.agent.observer.TraceContextSpanProcessor;
 import com.agentsquad.squad.v2.agent.tool.EventTestTool;
 import com.agentsquad.squad.v2.config.ObservationConfiguration;
 import com.agentsquad.squad.v2.config.properties.ObservationProperties;

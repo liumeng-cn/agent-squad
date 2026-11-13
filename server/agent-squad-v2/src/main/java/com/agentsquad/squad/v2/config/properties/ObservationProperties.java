@@ -23,10 +23,14 @@ public class ObservationProperties {
      */
     private String endpoint = "http://127.0.0.1:13001/v1/traces";
 
-    /** Langfuse 项目公钥，Studio 模式为空。 */
+    /**
+     * Langfuse 项目公钥，Studio 模式为空。
+     */
     private String publicKey;
 
-    /** Langfuse 项目密钥，Studio 模式为空。 */
+    /**
+     * Langfuse 项目密钥，Studio 模式为空。
+     */
     private String secretKey;
 
     /**

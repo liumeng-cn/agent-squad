@@ -1,29 +1,24 @@
 package com.agentsquad.squad.v2.agent.observer;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.agent.Agent;
 import io.agentscope.core.agent.RuntimeContext;
-import io.agentscope.core.event.AgentEvent;
-import io.agentscope.core.event.ModelCallEndEvent;
-import io.agentscope.core.event.TextBlockDeltaEvent;
-import io.agentscope.core.event.ThinkingBlockDeltaEvent;
-import io.agentscope.core.event.ToolResultEndEvent;
-import io.agentscope.core.event.ToolResultTextDeltaEvent;
-import io.agentscope.core.middleware.AgentInput;
+import io.agentscope.core.event.*;
 import io.agentscope.core.middleware.ActingInput;
+import io.agentscope.core.middleware.AgentInput;
 import io.agentscope.core.middleware.ModelCallInput;
 import io.agentscope.core.session.SessionRecorder;
 import io.agentscope.core.tracing.OtelTracingMiddleware;
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.baggage.Baggage;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.api.baggage.Baggage;
 import io.opentelemetry.context.Context;
-import reactor.util.context.ContextView;
 import io.opentelemetry.instrumentation.reactor.v3_1.ContextPropagationOperator;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import reactor.core.publisher.Flux;
+import reactor.util.context.ContextView;
 
 import java.util.function.Function;
 
@@ -166,7 +161,9 @@ public class AgentTracingMiddleware extends OtelTracingMiddleware {
         return value.length() <= MAX_CONTENT_LENGTH ? value : value.substring(0, MAX_CONTENT_LENGTH) + "…";
     }
 
-    /** 将观测内容编码为标准 JSON；序列化失败时保留可读的降级值。 */
+    /**
+     * 将观测内容编码为标准 JSON；序列化失败时保留可读的降级值。
+     */
     private String serialize(Object value) {
         try {
             return limit(new ObjectMapper().writeValueAsString(value));
@@ -175,7 +172,9 @@ public class AgentTracingMiddleware extends OtelTracingMiddleware {
         }
     }
 
-    /** 从 Reactor 链路上下文取回 AgentScope 原生 Span，避免线程切换后写入错误 Span。 */
+    /**
+     * 从 Reactor 链路上下文取回 AgentScope 原生 Span，避免线程切换后写入错误 Span。
+     */
     private Span span(Context context) {
         return Span.fromContext(context);
     }

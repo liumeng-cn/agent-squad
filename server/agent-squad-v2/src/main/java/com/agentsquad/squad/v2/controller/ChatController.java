@@ -35,7 +35,7 @@ public class ChatController {
      */
     @PostMapping(value = "/api/v2/chat/messages", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<AguiEvent>> send(@Valid @RequestBody ChatMessageDTO request,
-                                                   HttpServletRequest httpRequest) {
+                                                 HttpServletRequest httpRequest) {
         String userId = httpRequest.getHeader("X-User-Id");
         if (userId == null && environment.acceptsProfiles(Profiles.of("local"))) {
             userId = "1";

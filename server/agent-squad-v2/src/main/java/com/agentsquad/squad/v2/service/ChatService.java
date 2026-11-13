@@ -1,15 +1,13 @@
 package com.agentsquad.squad.v2.service;
 
-import io.agentscope.core.agui.event.AguiEvent;
-import io.agentscope.core.agui.event.AguiEventType;
-import io.agentscope.core.agui.model.RunAgentInput;
-import io.agentscope.core.agui.model.AguiMessage;
-import io.agentscope.core.agui.adapter.AguiAdapterConfig;
-import io.agentscope.core.agui.adapter.AguiAgentAdapter;
-import java.util.List;
-
 import com.agentsquad.squad.v2.dto.ChatMessageDTO;
 import io.agentscope.core.agent.RuntimeContext;
+import io.agentscope.core.agui.adapter.AguiAdapterConfig;
+import io.agentscope.core.agui.adapter.AguiAgentAdapter;
+import io.agentscope.core.agui.event.AguiEvent;
+import io.agentscope.core.agui.event.AguiEventType;
+import io.agentscope.core.agui.model.AguiMessage;
+import io.agentscope.core.agui.model.RunAgentInput;
 import io.agentscope.harness.agent.HarnessAgent;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +15,8 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
+
+import java.util.List;
 
 /**
  * 持续对话服务

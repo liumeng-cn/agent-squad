@@ -1,21 +1,21 @@
 package com.agentsquad.squad.v2.config;
 
-import com.agentsquad.squad.v2.config.properties.ChatAgentProperties;
-import com.agentsquad.squad.v2.agent.tool.EventTestTool;
-import io.agentscope.core.tool.Toolkit;
-import io.agentscope.core.model.GenerateOptions;
-import java.util.Map;
-import org.springframework.beans.factory.ObjectProvider;
 import com.agentsquad.squad.v2.agent.observer.AgentTracingMiddleware;
+import com.agentsquad.squad.v2.agent.tool.EventTestTool;
+import com.agentsquad.squad.v2.config.properties.ChatAgentProperties;
+import io.agentscope.core.model.GenerateOptions;
+import io.agentscope.core.tool.Toolkit;
 import io.agentscope.extensions.model.openai.OpenAIChatModel;
 import io.agentscope.harness.agent.HarnessAgent;
 import jakarta.annotation.Resource;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.nio.file.Path;
+import java.util.Map;
 
 /**
  * 聊天 Agent 装配

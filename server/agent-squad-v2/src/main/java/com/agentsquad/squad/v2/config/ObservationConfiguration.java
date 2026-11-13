@@ -1,10 +1,10 @@
 package com.agentsquad.squad.v2.config;
 
-import com.agentsquad.squad.v2.agent.observer.TraceContextSpanProcessor;
 import com.agentsquad.squad.v2.agent.observer.AgentTracingMiddleware;
+import com.agentsquad.squad.v2.agent.observer.TraceContextSpanProcessor;
 import com.agentsquad.squad.v2.config.properties.ObservationProperties;
-import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.resources.Resource;
@@ -15,8 +15,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.time.Duration;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Base64;
 
 /**
@@ -57,7 +57,7 @@ public class ObservationConfiguration {
     }
 
     /**
- * 复用原生生命周期埋点，并补充 Langfuse 与 AgentScope 官方字段。
+     * 复用原生生命周期埋点，并补充 Langfuse 与 AgentScope 官方字段。
      */
     @Bean
     public AgentTracingMiddleware agentTracingMiddleware(OpenTelemetrySdk observationSdk) {

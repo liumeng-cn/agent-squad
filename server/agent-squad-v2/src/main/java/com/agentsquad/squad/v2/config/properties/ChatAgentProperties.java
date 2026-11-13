@@ -1,7 +1,7 @@
 package com.agentsquad.squad.v2.config.properties;
 
-import lombok.Data;
 import com.agentsquad.squad.v2.enums.SparkThinkingMode;
+import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -32,7 +32,9 @@ public class ChatAgentProperties {
      */
     private String modelName = "deepseek-chat";
 
-    /** 星火思考模式；未配置时不额外传入讯飞专用参数。 */
+    /**
+     * 星火思考模式；未配置时不额外传入讯飞专用参数。
+     */
     private SparkThinkingMode sparkThinkingMode;
 
     /**
