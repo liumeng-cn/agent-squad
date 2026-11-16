@@ -8,7 +8,10 @@ const expanded = computed(() => preference.value ?? props.message.status === 'RU
 const labels: Record<ChatStatus, string> = {
   RUNNING: '执行中', COMPLETED: '已完成', FAILED: '失败', WAITING: '等待交互', INTERRUPTED: '已中断',
 }
-const duration = computed(() => Math.max(0, ((props.message.finishedAt ?? props.now) - props.message.startedAt) / 1000).toFixed(1))
+const duration = computed(() => {
+  const end = props.message.status === 'RUNNING' ? props.now : props.message.finishedAt
+  return end == null ? '—' : Math.max(0, (end - props.message.startedAt) / 1000).toFixed(1)
+})
 const current = computed(() => [...props.message.activities].reverse().find(item => item.status === 'RUNNING'))
 </script>
 

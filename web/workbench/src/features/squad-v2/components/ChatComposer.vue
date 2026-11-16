@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue'
-defineProps<{ busy: boolean }>()
-const emit = defineEmits<{ send: [text: string] }>()
+const props = defineProps<{ busy: boolean; stopping: boolean; disabled: boolean; sendMessage: (text: string) => Promise<boolean> }>()
+const emit = defineEmits<{ stop: [] }>()
+const submitting = ref(false)
 const draft = ref('')
 const input = ref<HTMLTextAreaElement>()
 function resize() {
@@ -10,30 +11,36 @@ function resize() {
   input.value.style.height = `${Math.min(input.value.scrollHeight, 180)}px`
 }
 async function submit() {
-  if (!draft.value.trim()) return
-  emit('send', draft.value)
-  draft.value = ''
+  if (!draft.value.trim() || submitting.value || props.disabled || props.stopping) return
+  submitting.value = true
+  const sent = draft.value
+  try {
+    if (await props.sendMessage(sent) && draft.value === sent) draft.value = ''
+  } finally { submitting.value = false }
   await nextTick()
   resize()
   input.value?.focus()
 }
-function keydown(event: KeyboardEvent, busy: boolean) {
+function keydown(event: KeyboardEvent) {
   if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && event.keyCode !== 229) {
     event.preventDefault()
-    if (!busy) submit()
+    void submit()
   }
 }
 </script>
 
 <template>
-  <form class="composer" @submit.prevent="!busy && submit()">
+  <form class="composer" @submit.prevent="submit()">
     <textarea ref="input" v-model="draft" aria-label="输入消息" placeholder="有问题，尽管问"
-      rows="1" maxlength="20000" @input="resize" @keydown="keydown($event, busy)" />
+      rows="1" maxlength="20000" @input="resize" @keydown="keydown($event)" />
     <div class="composer-footer">
-      <span>{{ busy ? '正在回复，你可以先准备下一条消息' : 'Enter 发送 · Shift + Enter 换行' }}</span>
-      <button type="submit" aria-label="发送消息" :disabled="busy || !draft.trim()">
+      <span>{{ stopping ? '正在停止，已生成内容会保留' : busy ? '运行中发送，将作为补充要求' : 'Enter 发送 · Shift + Enter 换行' }}</span>
+      <div class="composer-actions">
+      <button v-if="busy" type="button" aria-label="停止执行" :disabled="stopping" @click="emit('stop')">■</button>
+      <button type="submit" :aria-label="busy ? '补充要求' : '发送消息'" :disabled="disabled || stopping || submitting || !draft.trim()">
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6" /></svg>
       </button>
+      </div>
     </div>
   </form>
 </template>
@@ -43,6 +50,7 @@ function keydown(event: KeyboardEvent, busy: boolean) {
 textarea { display: block; width: 100%; resize: none; border: 0; outline: 0; background: transparent; font: inherit; line-height: 1.6; max-height: 180px; color: #272824; }
 textarea::placeholder { color: #a3a39d; }
 .composer-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; }
+.composer-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
 .composer-footer span { font-size: 12px; color: #a0a098; }
 button { display: inline-flex; align-items: center; justify-content: center; padding: 0; width: 36px; height: 36px; flex-shrink: 0; border: 0; border-radius: 50%; background: #30332e; color: white; cursor: pointer; }
 button svg { display: block; width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }

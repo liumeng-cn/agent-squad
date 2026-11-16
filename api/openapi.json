@@ -7341,9 +7341,8 @@
     },
     "/api/v2/chat/messages": {
       "post": {
-        "operationId": "sendChatMessage",
-        "summary": "提交聊天输入并流式观察当前轮次",
-        "description": "使用官方 AguiAgentAdapter 调用 HarnessAgent.streamEvents。SSE 使用默认事件名，data 为自有 ChatEventVO 事件。按服务端用户身份及 threadId 隔离会话；不承诺请求幂等、断开继续执行或事件补收。",
+        "operationId": "submitV2Chat",
+        "summary": "使用原生 submit 或 steer 接收输入，不等待模型完成",
         "requestBody": {
           "required": true,
           "content": {
@@ -7356,23 +7355,191 @@
         },
         "responses": {
           "200": {
-            "description": "AG-UI SSE 事件流",
+            "description": "业务响应，成功 code=0",
             "content": {
-              "text/event-stream": {
+              "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ChatEventVO"
-                },
-                "x-event-schema": {
-                  "$ref": "#/components/schemas/ChatEventVO"
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ChatReceiptVO"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
                 }
               }
             }
-          },
-          "400": {
-            "description": "请求格式或参数错误"
-          },
-          "401": {
-            "description": "缺少有效网关身份"
+          }
+        }
+      }
+    },
+    "/api/v2/chat/interruptions": {
+      "post": {
+        "operationId": "interruptV2Chat",
+        "summary": "请求停止指定执行，接收不等于已停止",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatInterruptDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "业务响应，成功 code=0",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/chat/resumptions": {
+      "post": {
+        "operationId": "resumeV2Chat",
+        "summary": "显式继续未完成轮次，返回原生继续命令标识",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatResumeDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "业务响应，成功 code=0",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/chat/sessions/{sessionId}": {
+      "get": {
+        "operationId": "readV2ChatSession",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9-]{1,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务响应，成功 code=0",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ChatSessionVO"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/chat/sessions/{sessionId}/events": {
+      "get": {
+        "operationId": "observeV2ChatSession",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9-]{1,64}$"
+            }
+          }
+        ],
+        "description": "SSE data 为完整公开快照，id 为执行游标:输入游标。重连返回完整快照，不重新执行输入。",
+        "responses": {
+          "200": {
+            "description": "公开快照事件流",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatSessionVO"
+                }
+              }
+            }
           }
         }
       }
@@ -12823,26 +12990,32 @@
       },
       "ChatMessageDTO": {
         "type": "object",
-        "required": [
-          "sessionId",
-          "requestId",
-          "message"
-        ],
         "properties": {
           "sessionId": {
             "type": "string",
             "pattern": "^[a-zA-Z0-9-]{1,64}$"
           },
-          "requestId": {
+          "interactionId": {
             "type": "string",
-            "pattern": "^[a-zA-Z0-9-]{1,64}$"
+            "pattern": "^[a-zA-Z0-9-]{1,64}$",
+            "description": "本次发送身份；首次提交重试保持一致；插话暂不承诺网络重试幂等"
+          },
+          "observedTurnId": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9-]{1,64}$",
+            "description": "页面观察到的目标轮次；明确已结束时转为下一轮"
           },
           "message": {
             "type": "string",
             "minLength": 1,
             "maxLength": 20000
           }
-        }
+        },
+        "required": [
+          "sessionId",
+          "interactionId",
+          "message"
+        ]
       },
       "ChatEventVO": {
         "type": "object",
@@ -12891,6 +13064,254 @@
             "type": "boolean"
           }
         }
+      },
+      "ChatExecutionStatus": {
+        "type": "string",
+        "enum": [
+          "IDLE",
+          "QUEUED",
+          "RUNNING",
+          "COMPLETED",
+          "FAILED",
+          "WAITING",
+          "INTERRUPTED"
+        ],
+        "description": "聊天执行状态；已中断不等于已完成"
+      },
+      "ChatReceiptVO": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "description": "会话标识"
+          },
+          "interactionId": {
+            "type": "string",
+            "description": "本次交互标识"
+          },
+          "turnId": {
+            "type": "string",
+            "description": "实际归属轮次"
+          },
+          "inputId": {
+            "type": "string",
+            "description": "原生输入命令标识"
+          },
+          "disposition": {
+            "type": "string",
+            "enum": [
+              "NEW_TURN",
+              "STEERING"
+            ]
+          }
+        },
+        "required": [
+          "sessionId",
+          "interactionId",
+          "turnId",
+          "inputId",
+          "disposition"
+        ]
+      },
+      "ChatActivityVO": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "工具调用标识"
+          },
+          "title": {
+            "type": "string",
+            "description": "工具名称"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ChatExecutionStatus"
+          },
+          "startedAt": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "finishedAt": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true,
+            "description": "原生日志确认的结束时间，未确认时为空"
+          }
+        },
+        "required": []
+      },
+      "ChatThinkingVO": {
+        "type": "object",
+        "properties": {
+          "modelCallId": {
+            "type": "string",
+            "description": "主执行模型调用标识"
+          },
+          "content": {
+            "type": "string",
+            "description": "供应商明确返回的思考文本，不含加密元数据"
+          }
+        },
+        "required": []
+      },
+      "ChatHistoryMessageVO": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "用户消息或模型回复段的稳定标识；插话和继续执行只追加新段，不覆盖旧段"
+          },
+          "turnId": {
+            "type": "string",
+            "description": "任务轮次"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "USER",
+              "ASSISTANT"
+            ]
+          },
+          "content": {
+            "type": "string",
+            "description": "公开正文"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ChatExecutionStatus"
+          },
+          "startedAt": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "activities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatActivityVO"
+            }
+          },
+          "thinkingBlocks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatThinkingVO"
+            }
+          },
+          "finishedAt": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true,
+            "description": "原生日志确认的结束时间，未确认时为空"
+          }
+        },
+        "required": []
+      },
+      "ChatInputVO": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "原生插话标识"
+          },
+          "turnId": {
+            "type": "string",
+            "description": "目标轮次"
+          },
+          "content": {
+            "type": "string",
+            "description": "用户补充要求"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACCEPTED",
+              "APPLIED",
+              "UNAPPLIED"
+            ]
+          },
+          "messageIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "原生输入消息标识，用于关联用户气泡"
+          }
+        },
+        "required": []
+      },
+      "ChatSessionVO": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "description": "持续会话标识"
+          },
+          "cursor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "inputCursor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "turnId": {
+            "type": "string",
+            "description": "当前任务轮次"
+          },
+          "runId": {
+            "type": "string",
+            "description": "当前执行标识"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ChatExecutionStatus"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatHistoryMessageVO"
+            }
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatInputVO"
+            }
+          }
+        },
+        "required": []
+      },
+      "ChatInterruptDTO": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9-]{1,64}$"
+          },
+          "runId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "sessionId",
+          "runId"
+        ]
+      },
+      "ChatResumeDTO": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9-]{1,64}$"
+          },
+          "turnId": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9-]{1,64}$"
+          }
+        },
+        "required": [
+          "sessionId",
+          "turnId"
+        ]
       }
     }
   }

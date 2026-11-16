@@ -27,7 +27,7 @@ import static org.mockito.Mockito.when;
 /**
  * 测试工具原生事件验收
  * <p>
- * 使用可控模型真实执行工具，验证官方 AG-UI 工具调用及结果事件。
+ * 使用可控模型真实执行工具，验证原生工具调用及公开状态投影。
  */
 class EventTestToolTest {
     @TempDir
@@ -51,19 +51,31 @@ class EventTestToolTest {
         toolkit.registerTool(new EventTestTool());
         try (var agent = HarnessAgent.builder().agentId("tool-test").name("tool-test")
                 .model(model).toolkit(toolkit).workspace(workspace).build()) {
-            var beans = new org.springframework.beans.factory.support.DefaultListableBeanFactory();
-            beans.registerSingleton("agent", agent);
-            var service = new com.agentsquad.squad.v2.service.ChatService();
-            ReflectionTestUtils.setField(service, "agentProvider", beans.getBeanProvider(HarnessAgent.class));
-            ReflectionTestUtils.setField(service, "eventConverter", new com.agentsquad.squad.v2.converter.ChatEventConverter());
-            var request = new ChatMessageDTO();
-            request.setSessionId("tool-session");
-            request.setRequestId("tool-request");
-            request.setMessage("调用测试工具");
-            var events = service.send(request, "1").collectList().block(Duration.ofSeconds(20));
-            assertThat(events).anyMatch(event -> event.getType().name().equals("TOOL_CALL_START"));
-            assertThat(events).anyMatch(event -> event.getType().name().equals("TOOL_CALL_RESULT"));
-            assertThat(events.getLast().getType().name()).isEqualTo("RUN_FINISHED");
+            var sessions = AguiSessionTest.sessions(agent);
+            var service = AguiSessionTest.service(sessions);
+            var request = AguiSessionTest.input("tool-request", "调用测试工具");
+            var receipt = service.send(request, "1");
+            var session = sessions.open("conversation", "1");
+            assertThat(Flux.interval(Duration.ofMillis(25))
+                    .filter(tick -> sessions.read("conversation", "1").getMessages().stream()
+                            .flatMap(message -> message.getActivities().stream())
+                            .anyMatch(activity -> activity.getStatus()
+                                    == com.agentsquad.squad.v2.enums.ChatExecutionStatus.RUNNING))
+                    .next().block(Duration.ofSeconds(10))).isNotNull();
+            var supplement = AguiSessionTest.input("tool-supplement", "工具完成后只回复完成");
+            supplement.setObservedTurnId(receipt.getTurnId());
+            assertThat(service.send(supplement, "1").getDisposition())
+                    .isEqualTo(com.agentsquad.squad.v2.enums.ChatDisposition.STEERING);
+            assertThat(session.await(session.task(receipt.getInputId())).block(Duration.ofSeconds(20)).status())
+                    .isEqualTo("completed");
+            var snapshot = sessions.read("conversation", "1");
+            assertThat(snapshot.getInputs().getFirst().getStatus())
+                    .isEqualTo(com.agentsquad.squad.v2.enums.ChatInputStatus.APPLIED);
+            var activities = snapshot.getMessages().stream().flatMap(message -> message.getActivities().stream()).toList();
+            assertThat(activities).hasSize(1);
+            assertThat(activities.getFirst().getStatus())
+                    .isEqualTo(com.agentsquad.squad.v2.enums.ChatExecutionStatus.COMPLETED);
+
         }
     }
 }

@@ -8,7 +8,7 @@ import lombok.Data;
 /**
  * 聊天输入
  * <p>
- * 会话标识由页面创建并在连续对话中复用，请求标识对应原生提交幂等键。
+ * 会话标识跨轮次复用，交互标识只标识本次发送；目标轮次用于插话准入。
  */
 @Data
 public class ChatMessageDTO {
@@ -20,11 +20,17 @@ public class ChatMessageDTO {
     private String sessionId;
 
     /**
-     * 本次发送标识，同一次提交重试时保持一致。
+     * 本次用户交互标识；新任务重试保持一致，插话暂不承诺网络重试幂等。
      */
     @NotBlank
     @Pattern(regexp = "[a-zA-Z0-9-]{1,64}")
-    private String requestId;
+    private String interactionId;
+
+    /**
+     * 页面观察到的任务轮次；为空时直接提交新任务。
+     */
+    @Pattern(regexp = "[a-zA-Z0-9-]{1,64}")
+    private String observedTurnId;
 
     /**
      * 用户输入的正文。

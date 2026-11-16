@@ -6,10 +6,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.hamcrest.Matchers.containsString;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * 聊天 HTTP 验证
@@ -23,20 +22,18 @@ class ChatHttpTest {
     private MockMvc mvc;
 
     @Test
-    void returnsSseFailureWhenModelIsDisabled() throws Exception {
-        var result = mvc.perform(post("/api/v2/chat/messages")
-                        .contentType("application/json").accept("text/event-stream")
-                        .content("{\"sessionId\":\"session\",\"requestId\":\"request\",\"message\":\"你好\"}"))
-                .andExpect(request().asyncStarted()).andReturn();
-        mvc.perform(asyncDispatch(result)).andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith("text/event-stream"))
-                .andExpect(content().string(containsString("RUN_ERROR")));
+    void returnsBusinessFailureWhenModelIsDisabled() throws Exception {
+        mvc.perform(post("/api/v2/chat/messages")
+                        .contentType("application/json")
+                        .content("{\"sessionId\":\"session\",\"interactionId\":\"request\",\"message\":\"你好\"}"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value(503));
     }
 
     @Test
     void rejectsEmptyMessageBeforeStartingStream() throws Exception {
         mvc.perform(post("/api/v2/chat/messages").contentType("application/json")
-                        .content("{\"sessionId\":\"session\",\"requestId\":\"request\",\"message\":\" \"}"))
+                        .content("{\"sessionId\":\"session\",\"interactionId\":\"request\",\"message\":\" \"}"))
                 .andExpect(status().isBadRequest());
     }
 }

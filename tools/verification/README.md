@@ -2,6 +2,19 @@
 
 从仓库根目录执行。这里的脚本只服务测试，不是正常开发或部署配置。
 
+## V2 原生对话交互
+
+先启动正式 v2 服务，确认当前配置为本地模型，再选择一个简单场景执行：
+
+```sh
+python3 tools/verification/verify_chat_interactions.py --scene master
+python3 tools/verification/verify_chat_interactions.py --scene tool
+python3 tools/verification/verify_chat_interactions.py --scene subagent
+python3 tools/verification/verify_chat_interactions.py --scene stop
+```
+
+脚本直接调用正式提交、历史与停止接口，不建立替代 Agent；测试会话保留在原生存储中。历史的 `record_native_store.py` 对应改造前的 POST SSE 协议，复核新交互使用上述入口。
+
 ## 后端业务验证
 
 ```sh

@@ -1,0 +1,163 @@
+{
+  "sessionHeader": {
+    "formatVersion": 1,
+    "authority": "event_log",
+    "replayCoverage": "adapter_chunks",
+    "createdAt": 1794822324204
+  },
+  "head": {
+    "seq": 181,
+    "epoch": 5,
+    "owner": null,
+    "leaseUntil": 0,
+    "commitId": "54b396fd97f06c61e4f6f2942b202876edaffe46ad669fdc23f7589b98e96edb"
+  },
+  "eventEnvelope": {
+    "schemaVersion": 1,
+    "eventId": "338e82f9-8f09-4a2b-bd75-ecc1d909b170",
+    "seq": 8,
+    "occurredAt": 1794822324320,
+    "type": "message/user",
+    "executionRunId": "a31980aff0934fa7bb2fcaeb0d0e2ef0",
+    "turnId": "f410b491-d827-4ebd-ac56-18da34c6306c",
+    "required": true
+  },
+  "examples": {
+    "userMessage": {
+      "id": "remember-1",
+      "role": "USER",
+      "content": [
+        {
+          "type": "text",
+          "text": "这次持久化验证编号是 PERSIST-4997d9516a。请记住它，只回复已记住，不调用工具。"
+        }
+      ]
+    },
+    "latestCheckpoint": {
+      "seq": 177,
+      "reason": "state_save",
+      "fields": [
+        "session_id",
+        "user_id",
+        "summary",
+        "context",
+        "reply_id",
+        "cur_iter",
+        "shutdown_interrupted",
+        "permission_context",
+        "tool_context",
+        "tasks_context",
+        "plan_mode_context"
+      ],
+      "session_id": "store-00c8c5d52a864ae7",
+      "user_id": "1",
+      "contextMessageCount": 13,
+      "contextRoles": {
+        "USER": 4,
+        "ASSISTANT": 7,
+        "TOOL": 2
+      },
+      "summaryLength": 0,
+      "cur_iter": 0,
+      "shutdown_interrupted": false
+    },
+    "modelRequest": {
+      "model": "spark-x2.6",
+      "purpose": "REASONING",
+      "messageCount": 2,
+      "toolCount": 24,
+      "optionsFields": [
+        "apiKey",
+        "baseUrl",
+        "endpointPath",
+        "modelName",
+        "stream",
+        "temperature",
+        "topP",
+        "maxTokens",
+        "maxCompletionTokens",
+        "frequencyPenalty",
+        "presencePenalty",
+        "thinkingBudget",
+        "reasoningEffort",
+        "executionConfig",
+        "toolChoice",
+        "topK",
+        "seed",
+        "cacheControl",
+        "parallelToolCalls",
+        "responseFormat",
+        "additionalHeaders",
+        "additionalBodyParams",
+        "additionalQueryParams"
+      ]
+    },
+    "toolRequest": {
+      "toolCallId": "call_eba6393ef84641ffbeab32eb",
+      "name": "test_event_tool",
+      "inputFields": []
+    },
+    "childSpawn": {
+      "childLogAgentId": "java-tester",
+      "agentKey": "agent:java-tester:33264e4d-0e99-4739-919a-cdaf491b5e4c",
+      "childAgentId": "java-tester",
+      "childSessionId": "sub-7bcb5c1e-197a-476c-940c-95b3e661c8b4"
+    },
+    "childCompleted": {
+      "status": "completed",
+      "childSessionId": "sub-7bcb5c1e-197a-476c-940c-95b3e661c8b4",
+      "childAgentId": "java-tester"
+    }
+  },
+  "children": [
+    {
+      "path": "server/agent-squad-v2/.agentscope/v2/agents/java-tester/workspace/1/.agentscope-runtime/agents/s_amF2YS10ZXN0ZXI/sessions/s_MQ/s_c3ViLTdiY2I1YzFlLTE5N2EtNDc2Yy05NDBjLTk1YjNlNjYxYzhiNA/head.json",
+      "head": {
+        "seq": 28,
+        "epoch": 1,
+        "owner": null,
+        "leaseUntil": 0,
+        "commitId": "255b850dccab8bb7ea60a6187cf7dfd21eb3ef7be4f2fe61310ba11ff41921b9"
+      }
+    }
+  ],
+  "storage": {
+    "objects": 42,
+    "bytes": 523668,
+    "commits": 40,
+    "eventCounts": {
+      "migration/baseline": 1,
+      "run/start": 5,
+      "turn/start": 5,
+      "input/received": 5,
+      "step/start": 7,
+      "context/build": 7,
+      "input/applied": 4,
+      "message/user": 4,
+      "task/changed": 1,
+      "plan/changed": 1,
+      "permission/changed": 1,
+      "state/checkpoint": 14,
+      "request/prepared": 7,
+      "model/dispatch": 7,
+      "model/chunk": 62,
+      "model/end": 7,
+      "message/assistant": 7,
+      "turn/output": 5,
+      "step/end": 7,
+      "turn/completed": 5,
+      "run/end": 5,
+      "action/start": 2,
+      "tool/requested": 2,
+      "tool/decision": 2,
+      "tool/dispatch": 2,
+      "action/end": 2,
+      "tool/result": 2,
+      "subagent/spawned": 1,
+      "subagent/completed": 1
+    },
+    "contiguous": true,
+    "inboxPresent": false,
+    "exportsPresent": false
+  }
+}

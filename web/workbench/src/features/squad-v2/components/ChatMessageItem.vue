@@ -3,12 +3,13 @@ import SafeMarkdown from '../../../shared/ui/SafeMarkdown.vue'
 import ChatExecution from './ChatExecution.vue'
 import ChatThinking from './ChatThinking.vue'
 import type { ChatMessage } from '../chatTypes'
+import { inputStatusDescriptions } from '../chatTypes'
 defineProps<{ message: ChatMessage; now: number }>()
 </script>
 
 <template>
   <article :class="['message', message.role]">
-    <div v-if="message.role === 'user'" class="user-bubble">{{ message.content }}</div>
+    <div v-if="message.role === 'user'" class="user-bubble">{{ message.content }}<small v-if="message.inputStatus && message.inputStatus !== 'APPLIED'" class="input-state">{{ inputStatusDescriptions[message.inputStatus] }}</small></div>
     <template v-else>
       <div class="agent-name">Squad</div>
       <ChatExecution :message="message" :now="now" />
@@ -26,6 +27,7 @@ defineProps<{ message: ChatMessage; now: number }>()
 .message { margin-bottom: 44px; }
 .user { display: flex; justify-content: flex-end; }
 .user-bubble { max-width: 82%; padding: 12px 18px; border-radius: 16px; background: #f3f3f0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
+.input-state { display: block; margin-top: 6px; color: #74796b; font-size: 11px; }
 .agent-name { color: #60635a; font-size: 16px; font-weight: 600; letter-spacing: -.3px; }
 .answer { font-size: 16px; line-height: 1.85; color: #242720; overflow-wrap: anywhere; }
 .answer :deep(pre) { overflow-x: auto; }

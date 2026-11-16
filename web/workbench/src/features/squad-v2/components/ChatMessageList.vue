@@ -21,13 +21,18 @@ function toLatest() {
 function follow() {
   if (following.value) toLatest()
 }
-watch(() => props.messages.length, async () => {
-  following.value = true
+watch(() => props.messages.length, async count => {
+  if (count === 0) following.value = true
   await nextTick()
   follow()
 })
+watch(() => props.messages.some(message => message.status === 'RUNNING'), running => {
+  if (timer) clearInterval(timer)
+  timer = undefined
+  now.value = Date.now()
+  if (running) timer = setInterval(() => { now.value = Date.now() }, 100)
+}, { immediate: true })
 onMounted(() => {
-  timer = setInterval(() => { now.value = Date.now() }, 100)
   observer = new ResizeObserver(follow)
   if (content.value) observer.observe(content.value)
 })

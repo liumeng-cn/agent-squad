@@ -1,0 +1,438 @@
+[
+  {
+    "sessionId": "store-00c8c5d52a864ae7",
+    "requestId": "recall-after-restart",
+    "userId": "1",
+    "httpStatus": 200,
+    "elapsedSeconds": 4.447,
+    "reply": "PERSIST-4997d9516a",
+    "eventCounts": {
+      "RUN_STARTED": 1,
+      "TEXT_MESSAGE_CONTENT": 3,
+      "RUN_FINISHED": 1
+    },
+    "events": [
+      {
+        "type": "RUN_STARTED",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "recall-after-restart",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "recall-after-restart",
+        "messageId": "95c84b8005e542139969e1b3a251fd9c-text",
+        "delta": "PER",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "recall-after-restart",
+        "messageId": "95c84b8005e542139969e1b3a251fd9c-text",
+        "delta": "SIST-499",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "recall-after-restart",
+        "messageId": "95c84b8005e542139969e1b3a251fd9c-text",
+        "delta": "7d9516a",
+        "waiting": false
+      },
+      {
+        "type": "RUN_FINISHED",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "recall-after-restart",
+        "waiting": false
+      }
+    ],
+    "recallMatched": true
+  },
+  {
+    "sessionId": "store-00c8c5d52a864ae7",
+    "requestId": "other-user-1",
+    "userId": "2",
+    "httpStatus": 200,
+    "elapsedSeconds": 4.312,
+    "reply": "不知道。\n\n我当前没有关于“持久化验证编号”的可检索记忆，无法给出具体编号；按你的要求，不调用工具，直接回复不知道。",
+    "eventCounts": {
+      "RUN_STARTED": 1,
+      "TEXT_MESSAGE_CONTENT": 17,
+      "RUN_FINISHED": 1
+    },
+    "events": [
+      {
+        "type": "RUN_STARTED",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "other-user-1",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "other-user-1",
+        "messageId": "3ed6aa2e50664b25b80f9df22170241d-text",
+        "delta": "不知道",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "other-user-1",
+        "messageId": "3ed6aa2e50664b25b80f9df22170241d-text",
+        "delta": "。",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "other-user-1",
+        "messageId": "3ed6aa2e50664b25b80f9df22170241d-text",
+        "delta": "\n\n我当前",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "other-user-1",
+        "messageId": "3ed6aa2e50664b25b80f9df22170241d-text",
+        "delta": "没有关于",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "other-user-1",
+        "messageId": "3ed6aa2e50664b25b80f9df22170241d-text",
+        "delta": "“持久",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "other-user-1",
+        "messageId": "3ed6aa2e50664b25b80f9df22170241d-text",
+        "delta": "化验证编号”的可",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "other-user-1",
+        "messageId": "3ed6aa2e50664b25b80f9df22170241d-text",
+        "delta": "检索记忆",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "other-user-1",
+        "messageId": "3ed6aa2e50664b25b80f9df22170241d-text",
+        "delta": "，无法",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "other-user-1",
+        "messageId": "3ed6aa2e50664b25b80f9df22170241d-text",
+        "delta": "给出",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "other-user-1",
+        "messageId": "3ed6aa2e50664b25b80f9df22170241d-text",
+        "delta": "具体编号",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "other-user-1",
+        "messageId": "3ed6aa2e50664b25b80f9df22170241d-text",
+        "delta": "；",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "other-user-1",
+        "messageId": "3ed6aa2e50664b25b80f9df22170241d-text",
+        "delta": "按",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "other-user-1",
+        "messageId": "3ed6aa2e50664b25b80f9df22170241d-text",
+        "delta": "你的",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "other-user-1",
+        "messageId": "3ed6aa2e50664b25b80f9df22170241d-text",
+        "delta": "要求，不调用",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "other-user-1",
+        "messageId": "3ed6aa2e50664b25b80f9df22170241d-text",
+        "delta": "工具，直接回复",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "other-user-1",
+        "messageId": "3ed6aa2e50664b25b80f9df22170241d-text",
+        "delta": "不知道",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "other-user-1",
+        "messageId": "3ed6aa2e50664b25b80f9df22170241d-text",
+        "delta": "。",
+        "waiting": false
+      },
+      {
+        "type": "RUN_FINISHED",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "other-user-1",
+        "waiting": false
+      }
+    ],
+    "leakedMarker": false
+  },
+  {
+    "sessionId": "store-00c8c5d52a864ae7-new",
+    "requestId": "new-session-1",
+    "userId": "1",
+    "httpStatus": 200,
+    "elapsedSeconds": 4.933,
+    "reply": "不知道。\n\n我当前对话上下文中没有你之前告知的“持久化验证编号”相关信息，且按照要求未调用工具进行检索，因此无法给出该编号。如果你能重新提供，我可以帮你记录或后续使用。",
+    "eventCounts": {
+      "RUN_STARTED": 1,
+      "TEXT_MESSAGE_CONTENT": 24,
+      "RUN_FINISHED": 1
+    },
+    "events": [
+      {
+        "type": "RUN_STARTED",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "不知道",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "。",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "\n",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "\n我当前",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "对话",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "上下文",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "中没有你",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "之前",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "告知",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "的“",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "持久化验证编号”相关信息，且",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "按照",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "要求未",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "调用工具进行",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "检索，",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "因此无法给出",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "该",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "编号。如果你",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "能重新",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "提供",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "，我可以",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "帮你记录",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "或后续使用",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "messageId": "77e197847b6b4e2594daef213161b9a7-text",
+        "delta": "。",
+        "waiting": false
+      },
+      {
+        "type": "RUN_FINISHED",
+        "threadId": "store-00c8c5d52a864ae7-new",
+        "runId": "new-session-1",
+        "waiting": false
+      }
+    ],
+    "leakedMarker": false
+  }
+]

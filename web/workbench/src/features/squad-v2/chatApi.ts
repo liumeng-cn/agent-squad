@@ -1,11 +1,11 @@
-import { projectAgui, type AguiEvent } from './agui'
-import { getCsrfToken } from '../../shared/api/csrf'
-import type { ChatEvent, ChatRequest } from './chatTypes'
+import type { AguiEvent } from './agui'
+import type { ChatReceipt, ChatSession, SubmitChatInput } from './chatTypes'
+import { apiGet, apiPost } from '../../shared/api/http'
 
 /** 按 SSE 行协议解析，兼容跨块 CRLF、中文字符及多行 data。 */
-export async function consumeChatStream(
+export async function consumeChatStream<T = AguiEvent>(
   body: ReadableStream<Uint8Array>,
-  onEvent: (event: AguiEvent) => void,
+  onEvent: (event: T) => void,
 ) {
   const reader = body.getReader()
   const decoder = new TextDecoder()
@@ -13,7 +13,7 @@ export async function consumeChatStream(
   let data: string[] = []
   const line = (value: string) => {
     if (!value) {
-      if (data.length) onEvent(JSON.parse(data.join('\n')) as AguiEvent)
+      if (data.length) onEvent(JSON.parse(data.join('\n')) as T)
       data = []
     } else if (value.startsWith('data:')) {
       data.push(value.slice(5).replace(/^ /, ''))
@@ -37,19 +37,27 @@ export async function consumeChatStream(
   }
 }
 
-/** 一次 POST 返回当前轮次的 SSE；不自动重发用户输入。 */
-export async function sendChat(request: ChatRequest, signal: AbortSignal, onEvent: (event: ChatEvent) => void) {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json', Accept: 'text/event-stream' }
-  const csrf = getCsrfToken()
-  if (csrf) headers['X-CSRF-Token'] = csrf
+/** 提交与观察分离，订阅重连不会重新执行用户输入。 */
+export function submitChat(input: SubmitChatInput): Promise<ChatReceipt> {
+  return apiPost('/api/v2/chat/messages', input)
+}
+export function readSession(sessionId: string): Promise<ChatSession> {
+  return apiGet(`/api/v2/chat/sessions/${encodeURIComponent(sessionId)}`)
+}
+export function interruptChat(sessionId: string, runId: string): Promise<boolean> {
+  return apiPost('/api/v2/chat/interruptions', { sessionId, runId })
+}
+export async function subscribeSession(sessionId: string, signal: AbortSignal, receive: (state: ChatSession) => void) {
   const base = import.meta.env.VITE_API_BASE_URL || ''
-  const response = await fetch(base + '/api/v2/chat/messages', {
-    method: 'POST', credentials: base ? 'include' : 'same-origin',
-    headers, body: JSON.stringify(request), signal,
+  const response = await fetch(`${base}/api/v2/chat/sessions/${encodeURIComponent(sessionId)}/events`, {
+    credentials: base ? 'include' : 'same-origin', signal, headers: { Accept: 'text/event-stream' },
   })
-  if (!response.ok || !response.body) throw new Error(`连接失败（HTTP ${response.status}）`)
-  if (!response.headers.get('content-type')?.includes('text/event-stream')) throw new Error('服务未返回聊天事件流')
-  await consumeChatStream(response.body, event => {
-    for (const projected of projectAgui(event, request)) onEvent(projected)
-  })
+  if (!response.ok || !response.body || !response.headers.get('content-type')?.includes('text/event-stream')) {
+    throw new Error('会话订阅暂不可用')
+  }
+  await consumeChatStream<ChatSession>(response.body, receive)
+}
+
+export function resumeChat(sessionId: string, turnId: string): Promise<string> {
+  return apiPost('/api/v2/chat/resumptions', { sessionId, turnId })
 }

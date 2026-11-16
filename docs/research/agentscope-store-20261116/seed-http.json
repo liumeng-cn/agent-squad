@@ -1,0 +1,354 @@
+[
+  {
+    "sessionId": "store-00c8c5d52a864ae7",
+    "requestId": "remember-1",
+    "userId": "1",
+    "httpStatus": 200,
+    "elapsedSeconds": 8.25,
+    "reply": "已记住",
+    "eventCounts": {
+      "RUN_STARTED": 1,
+      "TEXT_MESSAGE_CONTENT": 2,
+      "RUN_FINISHED": 1
+    },
+    "events": [
+      {
+        "type": "RUN_STARTED",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "remember-1",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "remember-1",
+        "messageId": "caa1926d37d549fd99a7f95899b6ad08-text",
+        "delta": "已",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "remember-1",
+        "messageId": "caa1926d37d549fd99a7f95899b6ad08-text",
+        "delta": "记住",
+        "waiting": false
+      },
+      {
+        "type": "RUN_FINISHED",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "remember-1",
+        "waiting": false
+      }
+    ]
+  },
+  {
+    "sessionId": "store-00c8c5d52a864ae7",
+    "requestId": "tool-1",
+    "userId": "1",
+    "httpStatus": 200,
+    "elapsedSeconds": 9.957,
+    "reply": "测试工具已实际调用一次，返回结果：**测试工具执行完成，等待三秒后确认工具调用事件链路正常**，无异常。",
+    "eventCounts": {
+      "RUN_STARTED": 1,
+      "TOOL_CALL_START": 1,
+      "TOOL_CALL_RESULT": 1,
+      "TEXT_MESSAGE_CONTENT": 12,
+      "RUN_FINISHED": 1
+    },
+    "events": [
+      {
+        "type": "RUN_STARTED",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "waiting": false
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "toolCallId": "call_eba6393ef84641ffbeab32eb",
+        "toolCallName": "test_event_tool",
+        "waiting": false
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "messageId": "bc5f2d6de1a64c5ea7c697cbd4861f7c:call_eba6393ef84641ffbeab32eb",
+        "toolCallId": "call_eba6393ef84641ffbeab32eb",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "messageId": "bae72b9eebf54af39d7e87d31242442c-text",
+        "delta": "测试",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "messageId": "bae72b9eebf54af39d7e87d31242442c-text",
+        "delta": "工具已实际",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "messageId": "bae72b9eebf54af39d7e87d31242442c-text",
+        "delta": "调用一次",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "messageId": "bae72b9eebf54af39d7e87d31242442c-text",
+        "delta": "，返回",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "messageId": "bae72b9eebf54af39d7e87d31242442c-text",
+        "delta": "结果：**",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "messageId": "bae72b9eebf54af39d7e87d31242442c-text",
+        "delta": "测试",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "messageId": "bae72b9eebf54af39d7e87d31242442c-text",
+        "delta": "工具执行完成，",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "messageId": "bae72b9eebf54af39d7e87d31242442c-text",
+        "delta": "等待",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "messageId": "bae72b9eebf54af39d7e87d31242442c-text",
+        "delta": "三秒后确认",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "messageId": "bae72b9eebf54af39d7e87d31242442c-text",
+        "delta": "工具调用事件链路",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "messageId": "bae72b9eebf54af39d7e87d31242442c-text",
+        "delta": "正常**，",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "messageId": "bae72b9eebf54af39d7e87d31242442c-text",
+        "delta": "无异常。",
+        "waiting": false
+      },
+      {
+        "type": "RUN_FINISHED",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "waiting": false
+      }
+    ]
+  },
+  {
+    "sessionId": "store-00c8c5d52a864ae7",
+    "requestId": "tool-1",
+    "userId": "1",
+    "httpStatus": 200,
+    "elapsedSeconds": 2.743,
+    "reply": "测试工具已实际调用一次，返回结果：**测试工具执行完成，等待三秒后确认工具调用事件链路正常**，无异常。",
+    "eventCounts": {
+      "RUN_STARTED": 1,
+      "TEXT_MESSAGE_CONTENT": 5,
+      "RUN_FINISHED": 1
+    },
+    "events": [
+      {
+        "type": "RUN_STARTED",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "messageId": "7380222c93a44758965ec27f4b0d9b5c-text",
+        "delta": "测试",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "messageId": "7380222c93a44758965ec27f4b0d9b5c-text",
+        "delta": "工具已实际调用一次，返回",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "messageId": "7380222c93a44758965ec27f4b0d9b5c-text",
+        "delta": "结果：**测试工具执行完成，等待",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "messageId": "7380222c93a44758965ec27f4b0d9b5c-text",
+        "delta": "三秒后确认工具调用事件链路正常",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "messageId": "7380222c93a44758965ec27f4b0d9b5c-text",
+        "delta": "**，无异常。",
+        "waiting": false
+      },
+      {
+        "type": "RUN_FINISHED",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "tool-1",
+        "waiting": false
+      }
+    ]
+  },
+  {
+    "sessionId": "store-00c8c5d52a864ae7",
+    "requestId": "child-1",
+    "userId": "1",
+    "httpStatus": 200,
+    "elapsedSeconds": 9.662,
+    "reply": "已委派给 java-tester 子Agent，其回复为：**子Agent持久化验证完成。**",
+    "eventCounts": {
+      "RUN_STARTED": 1,
+      "TOOL_CALL_START": 1,
+      "TOOL_CALL_RESULT": 1,
+      "TEXT_MESSAGE_CONTENT": 7,
+      "RUN_FINISHED": 1
+    },
+    "events": [
+      {
+        "type": "RUN_STARTED",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "child-1",
+        "waiting": false
+      },
+      {
+        "type": "TOOL_CALL_START",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "child-1",
+        "toolCallId": "call_0894c1bc680e450fbeeeaa39",
+        "toolCallName": "agent_spawn",
+        "waiting": false
+      },
+      {
+        "type": "TOOL_CALL_RESULT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "child-1",
+        "messageId": "de056c4fff194674add502b34afdc49e:call_0894c1bc680e450fbeeeaa39",
+        "toolCallId": "call_0894c1bc680e450fbeeeaa39",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "child-1",
+        "messageId": "ce7546e2c5524a0b87ba908728a75b0a-text",
+        "delta": "已",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "child-1",
+        "messageId": "ce7546e2c5524a0b87ba908728a75b0a-text",
+        "delta": "委派给",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "child-1",
+        "messageId": "ce7546e2c5524a0b87ba908728a75b0a-text",
+        "delta": " java",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "child-1",
+        "messageId": "ce7546e2c5524a0b87ba908728a75b0a-text",
+        "delta": "-tester 子Agent，其回复",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "child-1",
+        "messageId": "ce7546e2c5524a0b87ba908728a75b0a-text",
+        "delta": "为：**",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "child-1",
+        "messageId": "ce7546e2c5524a0b87ba908728a75b0a-text",
+        "delta": "子Agent持久化验证完成。",
+        "waiting": false
+      },
+      {
+        "type": "TEXT_MESSAGE_CONTENT",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "child-1",
+        "messageId": "ce7546e2c5524a0b87ba908728a75b0a-text",
+        "delta": "**",
+        "waiting": false
+      },
+      {
+        "type": "RUN_FINISHED",
+        "threadId": "store-00c8c5d52a864ae7",
+        "runId": "child-1",
+        "waiting": false
+      }
+    ]
+  }
+]
