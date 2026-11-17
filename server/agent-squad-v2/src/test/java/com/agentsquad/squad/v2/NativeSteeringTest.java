@@ -118,11 +118,35 @@ class NativeSteeringTest {
             request.setSessionId("conversation");
             request.setRunId(sessions.open("conversation", "1").log().head().owner());
             assertThat(service.interrupt(request, "1")).isTrue();
+            // 等分发器实际处理停止命令，再释放模型，固定原生协作中断边界。
+            var inbox = new io.agentscope.core.session.SessionInbox(sessions.open("conversation", "1").log());
+            Flux.interval(Duration.ofMillis(10))
+                    .filter(tick -> {
+                        var view = inbox.snapshot();
+                        return view.commands().stream().anyMatch(command -> command.kind().equals("interrupt")
+                                && view.handled().contains(command.id()));
+                    }).next().block(Duration.ofSeconds(5));
             finish.tryEmitValue(text("中断边界返回"));
             var session = sessions.open("conversation", "1");
             assertThat(session.await(session.task(receipt.getInputId())).block(Duration.ofSeconds(20))).isNotNull();
             // 原生中断可能需要模型到达协作边界；收据不能被当成已停止的断言。
             assertThat(sessions.open("conversation", "1").tasks()).hasSize(1);
+            assertThat(io.agentscope.core.session.SessionTurns.read(session.log()).latest().status())
+                    .isEqualTo("interrupted");
+            // 重试旧请求不能取消可继续的轮次。
+            service.send(AguiSessionTest.input("initial", "执行任务"), "1");
+            assertThat(io.agentscope.core.session.SessionTurns.read(session.log()).latest().status())
+                    .isEqualTo("interrupted");
+            when(model.stream(any(), any(), any())).thenReturn(Flux.just(text("新问题的回答")));
+            var next = service.send(AguiSessionTest.input("next", "你好"), "1");
+            assertThat(next.getTurnId()).isNotEqualTo(receipt.getTurnId());
+            assertThat(session.await(session.task(next.getInputId())).block(Duration.ofSeconds(20)).status())
+                    .isEqualTo("completed");
+            assertThat(io.agentscope.core.session.SessionTurns.read(session.log()).turns().getFirst().status())
+                    .isEqualTo("cancelled");
+            assertThat(sessions.read("conversation", "1").getMessages())
+                    .anyMatch(message -> message.getContent().equals("执行任务"))
+                    .anyMatch(message -> message.getContent().equals("新问题的回答"));
             assertThat(receipt.getDisposition()).isEqualTo(ChatDisposition.NEW_TURN);
         }
     }

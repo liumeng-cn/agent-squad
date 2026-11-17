@@ -15,16 +15,19 @@ const { messages, busy, inputs, error, connected, stopping, unresolvedInput, can
     <footer class="composer-area">
       <p v-if="!connected" class="connection" role="status">正在连接会话，恢复执行状态…</p>
       <p v-for="input in inputs" :key="input.id" class="input-status">补充：{{ input.content }} · {{ input.label }}</p>
-      <p v-if="canResume" class="connection">本轮执行未完成 <button type="button" @click="resume">继续本轮</button></p>
+      <p v-if="canResume" class="connection">本轮已停止，可直接发送新消息 <button class="resume-turn" type="button" @click="resume">继续本轮</button></p>
       <p v-if="waiting" class="connection">执行正在等待交互，补充消息不会自动代替确认操作。</p>
       <p v-if="error" class="error" role="alert">{{ error }}</p>
-      <ChatComposer :busy="busy" :stopping="stopping" :disabled="unresolvedInput || canResume || waiting" :send-message="send" @stop="stop" />
+      <ChatComposer :busy="busy" :stopping="stopping" :disabled="unresolvedInput || waiting" :send-message="send" @stop="stop" />
     </footer>
   </main>
 </template>
 
 <style scoped>
 .connection, .input-status { font-size: 12px; color: #74796b; }
+.resume-turn { margin-left: 8px; padding: 4px 10px; border: 1px solid #e5e7e1; border-radius: 14px; background: #f7f8f5; color: #656b5d; font: inherit; cursor: pointer; transition: background .15s; }
+.resume-turn:hover { background: #ecefe7; }
+.resume-turn:focus-visible { outline: 2px solid #858a7d; outline-offset: 2px; }
 .error { font-size: 13px; color: #a6564d; }
 .chat-page { position: relative; display: flex; flex-direction: column; height: 100dvh; min-height: 360px; background: #fff; color: #292c25; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif; }
 .page-header { display: flex; align-items: center; gap: 16px; flex-shrink: 0; height: 64px; padding: 0 32px; font-weight: 600; font-size: 17px; }

@@ -33,6 +33,24 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 describe('会话执行与观察分离', () => {
+  it('停止后允许发送新问题，接收后旧继续按钮不被迟到快照恢复', async () => {
+    const wrapper = mountChat()
+    await flushPromises()
+    const stopped: ChatSession = { ...snapshot, status: 'INTERRUPTED' }
+    receive(stopped)
+    expect(chat.canResume.value).toBe(true)
+    api.submitChat.mockResolvedValue({ disposition: 'NEW_TURN', turnId: 'turn-two' })
+    api.readSession.mockResolvedValue(stopped)
+    expect(await chat.send('你好')).toBe(true)
+    expect(api.submitChat.mock.calls[0]![0].observedTurnId).toBeUndefined()
+    expect(chat.canResume.value).toBe(false)
+    receive(stopped)
+    expect(chat.canResume.value).toBe(false)
+    receive({ ...snapshot, cursor: 3, turnId: 'turn-two', status: 'INTERRUPTED' })
+    expect(chat.canResume.value).toBe(true)
+    wrapper.unmount()
+  })
+
   it('刷新复用会话，取消订阅不发停止或重提请求', async () => {
     const wrapper = mountChat()
     await flushPromises()

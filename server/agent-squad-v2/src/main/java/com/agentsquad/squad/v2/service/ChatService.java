@@ -5,8 +5,10 @@ import com.agentsquad.squad.v2.dto.ChatMessageDTO;
 import com.agentsquad.squad.v2.dto.ChatResumeDTO;
 import com.agentsquad.squad.v2.enums.ChatDisposition;
 import com.agentsquad.squad.v2.enums.NativeSteeringRejection;
+import com.agentsquad.squad.v2.enums.NativeChatStatus;
 import com.agentsquad.squad.v2.vo.ChatReceiptVO;
 import io.agentscope.core.session.SessionTurns;
+import io.agentscope.core.session.SessionRecovery;
 import io.agentscope.harness.agent.session.AgentSession;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +26,7 @@ public class ChatService {
     private ChatSessionService sessionService;
 
     /**
-     * 优先向页面指定的轮次插话；仅在确认该轮已结束时提交下一轮。
+     * 优先向页面指定的运行轮次插话；停止后发送新问题时，通过原生恢复接口结束旧轮次。
      * 网络或存储失败不转为提交，防止不确定结果导致重复执行。
      */
     public ChatReceiptVO send(ChatMessageDTO request, String userId) {
@@ -43,8 +45,21 @@ public class ChatService {
                 }
             }
         }
-        var task = session.submit(request.getInteractionId(), request.getMessage().trim());
-        return receipt(request, task.turnId(), task.commandId(), ChatDisposition.NEW_TURN);
+        synchronized (session) {
+            // 已接收的请求重试交给 SDK 校验，不取消重试期间产生的其他轮次。
+            boolean accepted = session.tasks().stream()
+                    .anyMatch(task -> task.commandId().equals(request.getInteractionId()));
+            var latest = SessionTurns.read(session.log()).latest();
+            if (!accepted && latest != null) {
+                var status = NativeChatStatus.fromValue(latest.status());
+                if (status == NativeChatStatus.INTERRUPTED || status == NativeChatStatus.FAILED) {
+                    // SDK 获取写租约并拒绝结果未知的工具；保留旧轮次历史，显式结束后再提交。
+                    SessionRecovery.cancelPending(session.log(), latest.turnId());
+                }
+            }
+            var task = session.submit(request.getInteractionId(), request.getMessage().trim());
+            return receipt(request, task.turnId(), task.commandId(), ChatDisposition.NEW_TURN);
+        }
     }
 
     /**
@@ -61,7 +76,10 @@ public class ChatService {
      * 显式继续原轮次；不自动恢复结果未知的工具调用。
      */
     public String resume(ChatResumeDTO request, String userId) {
-        return sessionService.open(request.getSessionId(), userId).resume(request.getTurnId()).commandId();
+        var session = sessionService.open(request.getSessionId(), userId);
+        synchronized (session) {
+            return session.resume(request.getTurnId()).commandId();
+        }
     }
 
     private boolean ended(AgentSession session, String turnId) {

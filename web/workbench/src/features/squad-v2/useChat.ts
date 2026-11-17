@@ -20,7 +20,9 @@ export function useChat() {
   const unresolvedInput = ref(false)
   const busy = computed(() => state.value?.status === 'RUNNING' || state.value?.status === 'QUEUED')
   const canClear = computed(() => !busy.value && !stopping.value && !sending.value && !unresolvedInput.value)
-  const canResume = computed(() => state.value?.status === 'INTERRUPTED' || state.value?.status === 'FAILED')
+  const replacedTurnId = ref<string>()
+  const canResume = computed(() => !sending.value && state.value?.turnId !== replacedTurnId.value
+    && (state.value?.status === 'INTERRUPTED' || state.value?.status === 'FAILED'))
   const waiting = computed(() => state.value?.status === 'WAITING')
   const inputs = computed(() => (state.value?.inputs ?? []).filter(item => item.status !== 'APPLIED' && !state.value?.messages.some(message => item.messageIds.includes(message.id)))
     .map(item => ({ ...item, label: inputStatusDescriptions[item.status] })))
@@ -89,8 +91,10 @@ export function useChat() {
       sessionId, interactionId: crypto.randomUUID(), observedTurnId: busy.value ? state.value?.turnId : undefined, message,
     }
     pending = request
+    const previousTurnId = state.value?.turnId
     try {
-      await submitChat(request)
+      const receipt = await submitChat(request)
+      if (receipt?.disposition === 'NEW_TURN') replacedTurnId.value = previousTurnId
       pending = undefined
       // 发送后立即读一次快照；随后由共享 SSE 接管，快照失败不否认已经接收的输入。
       try { apply(await readSession(sessionId)) } catch { /* 已接收的输入由后续订阅核对，不重新提交。 */ }
