@@ -1,8 +1,8 @@
 package com.agentsquad.squad.v2.config;
 
 import com.agentsquad.squad.v2.agent.observer.AgentTracingMiddleware;
-import com.agentsquad.squad.v2.agent.tool.EventTestTool;
 import com.agentsquad.squad.v2.agent.subagent.TestSubagentDefinitions;
+import com.agentsquad.squad.v2.agent.tool.EventTestTool;
 import com.agentsquad.squad.v2.config.properties.ChatAgentProperties;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.tool.Toolkit;
