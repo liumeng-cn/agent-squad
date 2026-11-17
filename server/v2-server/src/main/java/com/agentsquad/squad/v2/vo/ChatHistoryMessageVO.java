@@ -2,11 +2,10 @@ package com.agentsquad.squad.v2.vo;
 
 import com.agentsquad.squad.v2.enums.ChatExecutionStatus;
 import com.agentsquad.squad.v2.enums.ChatMessageRole;
+import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import lombok.Data;
 
 /**
  * 聊天公开历史消息

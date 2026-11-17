@@ -4,19 +4,15 @@ import com.agentsquad.squad.v2.dto.ChatInterruptDTO;
 import com.agentsquad.squad.v2.enums.ChatDisposition;
 import com.agentsquad.squad.v2.enums.ChatInputStatus;
 import com.agentsquad.squad.v2.service.ChatEventStreamService;
-import io.agentscope.core.message.Msg;
-import io.agentscope.core.message.ToolUseBlock;
-import io.agentscope.harness.agent.subagent.SubagentDeclaration;
 import com.agentsquad.squad.v2.service.ChatSessionService;
-import io.agentscope.harness.agent.session.AgentSession;
-
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-
+import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.TextBlock;
+import io.agentscope.core.message.ToolUseBlock;
 import io.agentscope.core.model.ChatResponse;
 import io.agentscope.core.model.Model;
 import io.agentscope.harness.agent.HarnessAgent;
+import io.agentscope.harness.agent.session.AgentSession;
+import io.agentscope.harness.agent.subagent.SubagentDeclaration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -26,19 +22,18 @@ import reactor.core.publisher.Sinks;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.never;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * 原生运行中插话与观察隔离验证

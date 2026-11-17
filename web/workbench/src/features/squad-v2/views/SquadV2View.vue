@@ -1,16 +1,18 @@
 <script setup lang="ts">
+import { useV2Auth } from '../auth'
+import UserProfile from '../components/UserProfile.vue'
 import AgentObservationLink from '../../../shared/ui/AgentObservationLink.vue'
 import ChatComposer from '../components/ChatComposer.vue'
 import ChatMessageList from '../components/ChatMessageList.vue'
 import { useChat } from '../useChat'
-const { messages, busy, inputs, error, connected, stopping, unresolvedInput, canResume, waiting, canClear, clear, send, stop, resume } = useChat()
+const { messages, busy, inputs, error, connected, stopping, unresolvedInput, canResume, waiting, canClear, clear, send, stop, resume } = useChat(useV2Auth().user?.userId)
 </script>
 
 <template>
   <main class="chat-page">
     <header class="page-header"><span>Squad</span><span class="subtitle">一起把事情做好</span><button class="clear-session" type="button" aria-label="清空当前会话" :disabled="!canClear" title="清空页面并开启新会话" @click="clear">
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m15 4 5 5-10 10H5l-3-3L15 4Zm-8 7 6 6M10 19h11" /></svg><span>清空</span>
-      </button><AgentObservationLink class="observation-link" /></header>
+      </button><UserProfile /><AgentObservationLink class="observation-link" /></header>
     <ChatMessageList :messages="messages" />
     <footer class="composer-area">
       <p v-if="!connected" class="connection" role="status">正在连接会话，恢复执行状态…</p>

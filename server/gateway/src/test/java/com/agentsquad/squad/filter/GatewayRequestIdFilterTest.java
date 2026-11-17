@@ -1,6 +1,7 @@
 package com.agentsquad.squad.filter;
 
 
+import com.agentsquad.squad.gateway.filter.GatewayRequestIdFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
@@ -9,9 +10,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * 网关请求标识过滤器的复用、重建与 Reactor 上下文写入验证。

@@ -4,11 +4,11 @@ import { ApiError, errorMessage } from '../../shared/api/http'
 import type { ChatMessage, ChatSession, ChatStatus, SubmitChatInput } from './chatTypes'
 import { inputStatusDescriptions } from './chatTypes'
 
-const SESSION_KEY = 'squad-v2.sessionId'
 const RECONNECT_DELAY_MS = 1500
 
 /** 会话身份跨刷新保存；后台执行不依赖页面订阅，连接失败不伪装为任务失败。 */
-export function useChat() {
+export function useChat(userId = 'anonymous') {
+  const SESSION_KEY = userId === 'anonymous' ? 'squad-v2.sessionId' : `squad-v2.${userId}.sessionId`
   let sessionId = sessionStorage.getItem(SESSION_KEY) || crypto.randomUUID()
   sessionStorage.setItem(SESSION_KEY, sessionId)
   const state = ref<ChatSession>()

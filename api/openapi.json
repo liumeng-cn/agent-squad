@@ -7543,6 +7543,334 @@
           }
         }
       }
+    },
+    "/api/v2/users/register": {
+      "post": {
+        "summary": "手机号注册，成功后单独登录",
+        "tags": [
+          "V2用户认证"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "业务结果，code为0成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/V2User"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "依赖服务不可用"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/V2PhoneCredentials"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/auth/login": {
+      "post": {
+        "summary": "验证码登录，签发JWT Cookie",
+        "tags": [
+          "V2用户认证"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "业务结果，code为0成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/V2Login"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "依赖服务不可用"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/V2PhoneCredentials"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/auth/me": {
+      "get": {
+        "summary": "查询当前登录态",
+        "tags": [
+          "V2用户认证"
+        ],
+        "security": [
+          {
+            "V2Session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务结果，code为0成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/V2Login"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "依赖服务不可用"
+          },
+          "401": {
+            "description": "未登录或登录失效"
+          },
+          "403": {
+            "description": "CSRF或权限校验失败"
+          }
+        }
+      }
+    },
+    "/api/v2/auth/logout": {
+      "post": {
+        "summary": "退出当前登录会话",
+        "tags": [
+          "V2用户认证"
+        ],
+        "security": [
+          {
+            "V2Session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务结果，code为0成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "nullable": true
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "依赖服务不可用"
+          },
+          "401": {
+            "description": "未登录或登录失效"
+          },
+          "403": {
+            "description": "CSRF或权限校验失败"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v2/users/me": {
+      "get": {
+        "summary": "获取本人资料",
+        "tags": [
+          "V2用户认证"
+        ],
+        "security": [
+          {
+            "V2Session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务结果，code为0成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/V2User"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "依赖服务不可用"
+          },
+          "401": {
+            "description": "未登录或登录失效"
+          },
+          "403": {
+            "description": "CSRF或权限校验失败"
+          }
+        }
+      },
+      "patch": {
+        "summary": "编辑本人昵称",
+        "tags": [
+          "V2用户认证"
+        ],
+        "security": [
+          {
+            "V2Session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务结果，code为0成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/V2User"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "依赖服务不可用"
+          },
+          "401": {
+            "description": "未登录或登录失效"
+          },
+          "403": {
+            "description": "CSRF或权限校验失败"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/V2UserUpdate"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -7551,6 +7879,12 @@
         "type": "apiKey",
         "in": "cookie",
         "name": "squad_session"
+      },
+      "V2Session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "SQUAD_SESSION",
+        "description": "RS256 JWT，HttpOnly Cookie；同时校验Redis会话"
       }
     },
     "schemas": {
@@ -13311,6 +13645,106 @@
         "required": [
           "sessionId",
           "turnId"
+        ]
+      },
+      "V2PhoneCredentials": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "pattern": "^1[3-9][0-9]{9}$"
+          },
+          "verificationCode": {
+            "type": "string",
+            "description": "当前测试验证码8888"
+          }
+        },
+        "required": [
+          "phone",
+          "verificationCode"
+        ]
+      },
+      "V2UserUpdate": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "displayName",
+          "version"
+        ]
+      },
+      "V2User": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "effectiveDisplayName": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "DISABLED"
+            ]
+          },
+          "authVersion": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "userId",
+          "userName",
+          "phone",
+          "displayName",
+          "effectiveDisplayName",
+          "status",
+          "version"
+        ]
+      },
+      "V2Login": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/V2User"
+          },
+          "csrfToken": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "user",
+          "csrfToken",
+          "expiresAt"
         ]
       }
     }

@@ -13,8 +13,6 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
@@ -40,8 +38,6 @@ public class ChatController {
     @Resource
     private ChatEventStreamService streamService;
 
-    @Resource
-    private Environment environment;
 
     /**
      * 接收消息并返回原生收据，不等待模型完成。
@@ -86,13 +82,11 @@ public class ChatController {
     }
 
     private String userId(HttpServletRequest request) {
-        String userId = request.getHeader("X-User-Id");
-        if (userId == null && environment.acceptsProfiles(Profiles.of("local"))) {
-            userId = "1";
-        }
-        if (userId == null || !userId.matches("[1-9][0-9]{0,18}")) {
+        var user = (com.agentsquad.squad.common.bo.CurrentUserBO) request.getAttribute(
+                com.agentsquad.squad.common.utils.IdentityAssertion.ATTRIBUTE);
+        if (user == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "缺少有效用户身份");
         }
-        return userId;
+        return user.getUserId();
     }
 }

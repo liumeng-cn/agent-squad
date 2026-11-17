@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * 原生会话提交和历史验证
- *
+ * <p>
  * 使用真实 Harness 执行、幂等提交及纯读公开投影，验证订阅之外的会话行为。
  */
 class AguiSessionTest {

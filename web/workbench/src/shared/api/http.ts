@@ -105,7 +105,9 @@ async function request<T>(method: string, path: string, options: RequestOptions 
     if (result.code !== 0) {
       if (result.code === 401) {
         clearCsrfToken()
-        unauthorizedHandler?.()
+        if (path.startsWith('/api/v2/')) {
+          if (!window.location.pathname.startsWith('/v2/')) window.location.assign('/v2/login')
+        } else { unauthorizedHandler?.() }
       }
       throw new ApiError(result.code, result.msg || `操作失败（${result.code}）`, response.status)
     }

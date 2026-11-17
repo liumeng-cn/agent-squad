@@ -1,19 +1,8 @@
 package com.agentsquad.squad.v2.converter;
 
-import com.agentsquad.squad.v2.enums.ChatExecutionStatus;
 import com.agentsquad.squad.v2.bo.ChatProjectionBO;
-import com.agentsquad.squad.v2.enums.ChatInputStatus;
-import com.agentsquad.squad.v2.enums.NativeChatContentType;
-import com.agentsquad.squad.v2.enums.NativeChatEventType;
-import com.agentsquad.squad.v2.enums.NativeChatCommandType;
-import com.agentsquad.squad.v2.enums.NativeChatStatus;
-import com.agentsquad.squad.v2.enums.NativeChatModelPurpose;
-import com.agentsquad.squad.v2.enums.ChatMessageRole;
-import com.agentsquad.squad.v2.vo.ChatActivityVO;
-import com.agentsquad.squad.v2.vo.ChatHistoryMessageVO;
-import com.agentsquad.squad.v2.vo.ChatInputVO;
-import com.agentsquad.squad.v2.vo.ChatSessionVO;
-import com.agentsquad.squad.v2.vo.ChatThinkingVO;
+import com.agentsquad.squad.v2.enums.*;
+import com.agentsquad.squad.v2.vo.*;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.ToolResultState;
 import io.agentscope.core.observation.ActionObservation;
@@ -208,7 +197,9 @@ public class ChatSessionConverter {
         }
     }
 
-    /** 新模型回复独立追加；已显示的正文和思考不因插话或下一次推理而清空。 */
+    /**
+     * 新模型回复独立追加；已显示的正文和思考不因插话或下一次推理而清空。
+     */
     private void startModelReply(SessionEvent event, ChatProjectionBO projection, String callId) {
         var previous = projection.getActiveReplies().get(event.turnId());
         var id = modelReplyId(event.turnId(), callId);

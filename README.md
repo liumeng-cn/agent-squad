@@ -1,5 +1,7 @@
 # Agent Squad
 
+当前用户注册、JWT + Redis 认证与一键启停见 [用户服务与网关认证](docs/user-auth.md)。旧版账号说明仅供归档参考。
+
 Agent Squad 是以 Web 会话为入口的多智能体运行底座。Master 可以直接回答，也可以创建目标任务、发布执行计划并委派 Worker。平台负责持久受理、权限隔离、工具授权、预算、执行恢复和产物交付；AgentScope Harness 提供原生 Session、Turn、Run 执行事实。
 
 ## 日志追踪与 Agent 测评设计

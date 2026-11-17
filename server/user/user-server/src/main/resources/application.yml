@@ -1,20 +1,24 @@
 spring:
   application:
-    name: user
-  main:
-    web-application-type: servlet
-
+    name: user-server
+  datasource:
+    url: ${SQUAD_PG_URL:jdbc:postgresql://127.0.0.1:15432/agent_squad}
+    username: ${SQUAD_PG_USER:squad}
+    password: ${SQUAD_PG_PASSWORD:squad}
+  sql:
+    init:
+      mode: never
 server:
   address: 127.0.0.1
-  port: 18083
-
+  port: ${SQUAD_USER_PORT:18083}
+mybatis-plus:
+  mapper-locations: classpath:/mapper/*.xml
+agentsquad:
+  user:
+    verification-code: '8888'
+    identity-key: ${SQUAD_IDENTITY_KEY}
 management:
   endpoints:
     web:
       exposure:
         include: health,info
-
-logging:
-  level:
-    root: INFO
-    com.agentsquad.squad: INFO

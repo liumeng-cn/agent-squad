@@ -8,7 +8,7 @@ spring:
 
 server:
   address: 127.0.0.1
-  port: 18082
+  port: ${SQUAD_V2_PORT:18082}
 
 management:
   endpoints:
@@ -21,3 +21,7 @@ logging:
     root: INFO
     com.agentsquad.squad: INFO
     io.agentscope.harness.agent.middleware.AgentTraceMiddleware: "OFF"
+
+agentsquad:
+  identity:
+    identity-key: ${SQUAD_IDENTITY_KEY}

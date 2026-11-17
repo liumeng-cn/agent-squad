@@ -1,16 +1,65 @@
 spring:
   application:
-    name: agent-squad-gateway
-  profiles:
-    default: local
-
-
+    name: gateway
+  main:
+    web-application-type: reactive
+  data:
+    redis:
+      host: ${SQUAD_REDIS_HOST:127.0.0.1}
+      port: ${SQUAD_REDIS_PORT:16379}
+      password: ${SQUAD_REDIS_PASSWORD:}
+      timeout: 2s
+  cloud:
+    openfeign:
+      client:
+        config:
+          user-server:
+            connectTimeout: 2000
+            readTimeout: 3000
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: user-register
+              uri: ${services.user-server.url}
+              predicates:
+                - Path=/api/v2/users/register
+                - Method=POST
+              metadata:
+                anonymous: true
+            - id: user-profile
+              uri: ${services.user-server.url}
+              predicates:
+                - Path=/api/v2/users/me
+                - Method=GET,PATCH
+              metadata:
+                audience: user-server
+            - id: chat
+              uri: ${services.v2-server.url}
+              predicates:
+                - Path=/api/v2/chat/**
+                - Method=GET,POST
+              metadata:
+                audience: v2-server
+          httpclient:
+            connect-timeout: 2000
+services:
+  user-server:
+    url: ${SQUAD_USER_URL:http://127.0.0.1:18083}
+  v2-server:
+    url: ${SQUAD_V2_URL:http://127.0.0.1:18082}
 server:
   address: 127.0.0.1
-  port: 18081
-
-
-logging:
-  level:
-    root: INFO
-    com.agentsquad.squad: INFO
+  port: ${SQUAD_GATEWAY_PORT:18081}
+agentsquad:
+  auth:
+    private-key: ${SQUAD_JWT_PRIVATE_KEY}
+    public-key: ${SQUAD_JWT_PUBLIC_KEY}
+    identity-key: ${SQUAD_IDENTITY_KEY}
+    verification-code: '8888'
+    secure-cookie: false
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

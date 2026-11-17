@@ -1,7 +1,6 @@
 package com.agentsquad.squad.v2;
 
 import com.agentsquad.squad.v2.agent.tool.EventTestTool;
-import com.agentsquad.squad.v2.dto.ChatMessageDTO;
 import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.message.ToolUseBlock;
 import io.agentscope.core.model.ChatResponse;
@@ -10,7 +9,6 @@ import io.agentscope.core.tool.Toolkit;
 import io.agentscope.harness.agent.HarnessAgent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.springframework.test.util.ReflectionTestUtils;
 import reactor.core.publisher.Flux;
 
 import java.nio.file.Path;

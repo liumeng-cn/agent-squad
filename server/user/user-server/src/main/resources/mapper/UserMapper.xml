@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.user.server.mapper.UserMapper">
+    <select id="nextUserId" resultType="java.lang.Long">
+        SELECT nextval('squad_user.user_business_id_seq')
+    </select>
+    <update id="updateDisplayName">
+        UPDATE squad_user.sq_user
+        SET display_name = #{displayName},
+        version = version + 1,
+        last_updater_id = #{userId},
+        last_update_time = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+        AND version = #{version}
+        AND status = 'ACTIVE'
+        AND del_flag = '0'
+    </update>
+</mapper>

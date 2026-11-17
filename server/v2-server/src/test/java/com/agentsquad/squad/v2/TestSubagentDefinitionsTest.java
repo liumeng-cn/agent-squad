@@ -1,27 +1,22 @@
 package com.agentsquad.squad.v2;
 
-import org.mockito.Mockito;
-import org.mockito.ArgumentMatchers;
-import reactor.core.publisher.Flux;
-import io.agentscope.core.model.ChatResponse;
-import io.agentscope.core.message.TextBlock;
-
-import java.util.List;
-
-import io.agentscope.core.agent.RuntimeContext;
-
-import java.time.Duration;
-
-import io.agentscope.core.event.AgentEndEvent;
-
 import com.agentsquad.squad.v2.agent.subagent.TestSubagentDefinitions;
+import io.agentscope.core.agent.RuntimeContext;
+import io.agentscope.core.event.AgentEndEvent;
+import io.agentscope.core.message.TextBlock;
+import io.agentscope.core.model.ChatResponse;
 import io.agentscope.core.model.Model;
 import io.agentscope.harness.agent.HarnessAgent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
+import reactor.core.publisher.Flux;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;

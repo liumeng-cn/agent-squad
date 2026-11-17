@@ -1,12 +1,15 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '../features/auth/stores/auth'
+import { useV2Auth } from '../features/squad-v2/auth'
 import type { AccountRole } from '../shared/api/types'
 
 const routes: RouteRecordRaw[] = [
-  { path: '/', redirect: { name: 'workspace' } },
+  { path: '/v2/login', name: 'v2-login', component: () => import('../features/squad-v2/views/AuthView.vue'), meta: { v2: true, public: true } },
+  { path: '/v2/register', name: 'v2-register', component: () => import('../features/squad-v2/views/AuthView.vue'), meta: { v2: true, public: true } },
+  { path: '/', redirect: { name: 'squad-v2' } },
   { path: '/login', name: 'login', component: () => import('../features/auth/views/LoginView.vue'), meta: { public: true } },
   { path: '/app/conversations/:conversationId?', name: 'workspace', component: () => import('../features/chat/views/WorkspaceView.vue') },
-  { path: '/app/squad-v2', name: 'squad-v2', component: () => import('../features/squad-v2/views/SquadV2View.vue') },
+  { path: '/app/squad-v2', name: 'squad-v2', component: () => import('../features/squad-v2/views/SquadV2View.vue'), meta: { v2: true } },
   { path: '/app/native-chat', name: 'native-chat', component: () => import('../features/native-chat/views/NativeChatView.vue') },
   { path: '/app/native-chat/subagents', name: 'native-chat-subagents', component: () => import('../features/native-chat/views/NativeSubagentsView.vue') },
   { path: '/app/native-chat/events', name: 'native-chat-events', component: () => import('../features/native-chat/views/NativeEventWorkbenchView.vue') },
@@ -23,6 +26,13 @@ const routes: RouteRecordRaw[] = [
 export const router = createRouter({ history: createWebHistory(), routes })
 
 router.beforeEach(async (to) => {
+  if (to.meta.v2) {
+    const auth = useV2Auth()
+    if (to.meta.public) return true
+    const loggedIn = await auth.ensureSession()
+    if (!loggedIn) return { name: 'v2-login' }
+    return true
+  }
   const auth = useAuthStore()
   // 给 ensureSession 加超时，避免 API 挂起阻塞导航
   const loggedIn = await Promise.race([
