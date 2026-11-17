@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { shouldSendOnEnter } from '../src/shared/lib/chatKeyboard.ts'
+import { shouldSendOnEnter } from '../src/features/chat/model/chatKeyboard.ts'
 
 test('候选确认、旧浏览器 229 与 composition 期间不发送', () => {
   assert.equal(shouldSendOnEnter({ isComposing: true, keyCode: 13, shiftKey: false }, false), false)

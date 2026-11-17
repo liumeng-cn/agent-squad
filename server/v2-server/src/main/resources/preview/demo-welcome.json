@@ -1,0 +1,48 @@
+{
+  "sessionId": "preview-session",
+  "summary": {
+    "sessionId": "demo-welcome",
+    "title": "开始一次新的协作",
+    "titleSource": "AUTO",
+    "version": 0,
+    "hasMessages": true,
+    "createdAt": "2026-11-17T06:00:00Z",
+    "lastActivityAt": "2026-11-17T06:00:00Z",
+    "execution": {
+      "status": "COMPLETED",
+      "observedAt": "2026-11-17T06:00:00Z",
+      "stale": false
+    }
+  },
+  "cursor": 1,
+  "inputCursor": 1,
+  "turnId": "preview-turn",
+  "runId": null,
+  "status": "COMPLETED",
+  "messages": [
+    {
+      "id": "preview-question",
+      "turnId": "preview-turn",
+      "role": "USER",
+      "content": "介绍一下这个页面",
+      "status": "COMPLETED",
+      "startedAt": 1794895200000,
+      "finishedAt": 1794895201000,
+      "activities": [],
+      "thinkingBlocks": []
+    },
+    {
+      "id": "preview-answer",
+      "turnId": "preview-turn",
+      "role": "ASSISTANT",
+      "content": "这里是 Squad 的页面预览。你可以切换左侧会话、查看个人信息，以及编辑昵称。",
+      "status": "COMPLETED",
+      "startedAt": 1794895201000,
+      "finishedAt": 1794895202000,
+      "activities": [],
+      "thinkingBlocks": []
+    }
+  ],
+  "inputs": [],
+  "acceptedInputIds": []
+}

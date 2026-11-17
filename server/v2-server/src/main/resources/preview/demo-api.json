@@ -1,0 +1,48 @@
+{
+  "sessionId": "demo-api",
+  "summary": {
+    "sessionId": "demo-api",
+    "title": "接口设计思路",
+    "titleSource": "AUTO",
+    "version": 0,
+    "hasMessages": true,
+    "createdAt": "2026-11-16T06:00:00Z",
+    "lastActivityAt": "2026-11-16T06:00:00Z",
+    "execution": {
+      "status": "COMPLETED",
+      "observedAt": "2026-11-17T06:00:00Z",
+      "stale": false
+    }
+  },
+  "cursor": 1,
+  "inputCursor": 1,
+  "turnId": "preview-turn",
+  "runId": null,
+  "status": "COMPLETED",
+  "messages": [
+    {
+      "id": "preview-question",
+      "turnId": "preview-turn",
+      "role": "USER",
+      "content": "接口设计需要关注什么",
+      "status": "COMPLETED",
+      "startedAt": 1794895200000,
+      "finishedAt": 1794895201000,
+      "activities": [],
+      "thinkingBlocks": []
+    },
+    {
+      "id": "preview-answer",
+      "turnId": "preview-turn",
+      "role": "ASSISTANT",
+      "content": "可以先明确请求与响应、参数校验和异常处理，再确定实现方案。\n\n这段内容来自固定 JSON，仅用于页面展示。",
+      "status": "COMPLETED",
+      "startedAt": 1794895201000,
+      "finishedAt": 1794895202000,
+      "activities": [],
+      "thinkingBlocks": []
+    }
+  ],
+  "inputs": [],
+  "acceptedInputIds": []
+}

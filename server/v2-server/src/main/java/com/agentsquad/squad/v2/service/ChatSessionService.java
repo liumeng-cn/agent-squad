@@ -1,42 +1,62 @@
 package com.agentsquad.squad.v2.service;
 
-import com.agentsquad.squad.v2.converter.ChatSessionConverter;
+import com.agentsquad.squad.v2.dto.SessionRenameDTO;
+import com.agentsquad.squad.v2.enums.SessionTitleSource;
 import com.agentsquad.squad.v2.vo.ChatSessionVO;
-import io.agentscope.core.agent.RuntimeContext;
-import io.agentscope.harness.agent.HarnessAgent;
-import io.agentscope.harness.agent.session.AgentSession;
+import com.agentsquad.squad.v2.vo.SessionPageVO;
+import com.agentsquad.squad.v2.vo.SessionSummaryVO;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
-import org.springframework.beans.factory.ObjectProvider;
+import java.io.IOException;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 /**
- * 原生聊天会话访问
- * <p>
- * 使用服务端用户身份和固定 Agent 定位原生会话；读取不启动执行，不领取执行租约。
+ * 会话页面数据
+ *
+ * 暂时读取固定JSON展示页面，只回显写请求，不维护模拟状态或执行真实任务。
  */
 @Service
 public class ChatSessionService {
     @Resource
-    private ObjectProvider<HarnessAgent> agentProvider;
+    private ObjectMapper mapper;
 
-    @Resource
-    private ChatSessionConverter converter;
-
-    /**
-     * 打开有身份隔离的原生句柄，不创建第二套执行注册表。
-     */
-    public AgentSession open(String sessionId, String userId) {
-        var agent = agentProvider.getIfAvailable();
-        if (agent == null) {
-            throw new IllegalStateException("聊天模型尚未启用");
-        }
-        return agent.session(RuntimeContext.builder().userId(userId).sessionId(sessionId).build());
+    public SessionPageVO list(String userId, int limit, String cursor) {
+        return readJson("sessions", SessionPageVO.class);
     }
 
-    /**
-     * 在已提交前缀上构造公开会话，不恢复执行、不调用模型和工具。
-     */
+    public SessionSummaryVO create(String sessionId, String userId) {
+        var result = readJson("session-summary", SessionSummaryVO.class);
+        result.setSessionId(sessionId);
+        return result;
+    }
+
     public ChatSessionVO read(String sessionId, String userId) {
-        return converter.snapshot(open(sessionId, userId), sessionId);
+        String fixture = switch (sessionId) {
+            case "demo-welcome", "demo-api", "demo-plan" -> sessionId;
+            default -> "session";
+        };
+        var result = readJson(fixture, ChatSessionVO.class);
+        result.setSessionId(sessionId);
+        if (result.getSummary() != null) {
+            result.getSummary().setSessionId(sessionId);
+        }
+        return result;
+    }
+
+    public SessionSummaryVO rename(String sessionId, String userId, SessionRenameDTO request) {
+        var result = create(sessionId, userId);
+        result.setTitle(request.getTitle());
+        result.setTitleSource(SessionTitleSource.MANUAL);
+        result.setVersion(request.getVersion() + 1);
+        return result;
+    }
+
+    private <T> T readJson(String name, Class<T> type) {
+        try (var input = new ClassPathResource("preview/" + name + ".json").getInputStream()) {
+            return mapper.readValue(input, type);
+        } catch (IOException exception) {
+            throw new IllegalStateException("页面JSON数据加载失败", exception);
+        }
     }
 }

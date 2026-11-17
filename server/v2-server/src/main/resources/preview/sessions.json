@@ -1,0 +1,49 @@
+{
+  "items": [
+    {
+      "sessionId": "demo-welcome",
+      "title": "开始一次新的协作",
+      "titleSource": "AUTO",
+      "version": 0,
+      "hasMessages": true,
+      "createdAt": "2026-11-17T06:00:00Z",
+      "lastActivityAt": "2026-11-17T06:00:00Z",
+      "execution": {
+        "status": "COMPLETED",
+        "observedAt": "2026-11-17T06:00:00Z",
+        "stale": false
+      }
+    },
+    {
+      "sessionId": "demo-api",
+      "title": "接口设计思路",
+      "titleSource": "AUTO",
+      "version": 0,
+      "hasMessages": true,
+      "createdAt": "2026-11-16T06:00:00Z",
+      "lastActivityAt": "2026-11-16T06:00:00Z",
+      "execution": {
+        "status": "COMPLETED",
+        "observedAt": "2026-11-17T06:00:00Z",
+        "stale": false
+      }
+    },
+    {
+      "sessionId": "demo-plan",
+      "title": "整理工作计划",
+      "titleSource": "AUTO",
+      "version": 0,
+      "hasMessages": true,
+      "createdAt": "2026-11-09T06:00:00Z",
+      "lastActivityAt": "2026-11-09T06:00:00Z",
+      "execution": {
+        "status": "COMPLETED",
+        "observedAt": "2026-11-17T06:00:00Z",
+        "stale": false
+      }
+    }
+  ],
+  "nextCursor": null,
+  "hasMore": false,
+  "serverTime": "2026-11-17T06:00:00Z"
+}

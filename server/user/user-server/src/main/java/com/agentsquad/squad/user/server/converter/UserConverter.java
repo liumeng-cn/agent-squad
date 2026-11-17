@@ -12,6 +12,7 @@ import org.mapstruct.Mapping;
  */
 @Mapper(componentModel = "spring")
 public interface UserConverter {
+    @Mapping(target = "avatar", expression = "java(com.agentsquad.squad.user.server.utils.AvatarGenerator.generate(String.valueOf(user.getUserId())))")
     @Mapping(target = "userName", source = "username")
     @Mapping(target = "effectiveDisplayName", expression = "java(user.getDisplayName().isBlank() ? user.getUsername() : user.getDisplayName())")
     UserAccountVO toAccount(UserPO user);

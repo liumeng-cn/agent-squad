@@ -14,6 +14,14 @@ import java.util.List;
 @Data
 public class ChatSessionVO {
     /**
+     * 已受理的用户输入标识，用于核对提交结果，不用于重新发送
+     */
+    private List<String> acceptedInputIds = new ArrayList<>();
+    /**
+     * 页面首次读取时携带会话列表信息，SSE无需依赖标题变化
+     */
+    private SessionSummaryVO summary;
+    /**
      * 持续对话标识。
      */
     private String sessionId;

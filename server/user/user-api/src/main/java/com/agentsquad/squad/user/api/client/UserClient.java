@@ -16,9 +16,15 @@ import org.springframework.web.bind.annotation.RequestBody;
  */
 @FeignClient(name = "user-server", url = "${services.user-server.url:http://127.0.0.1:18083}")
 public interface UserClient {
+    /**
+     * 查询用户账号
+     */
     @PostMapping("/internal/users/account-query")
     ApiResult<UserAccountVO> query(@RequestBody AccountQueryDTO request);
 
+    /**
+     * 获取用户信息
+     */
     @GetMapping("/internal/users/{userId}/auth")
     ApiResult<UserAccountVO> auth(@PathVariable("userId") String userId);
 }

@@ -1,8 +1,20 @@
 package com.agentsquad.squad.v2.converter;
 
 import com.agentsquad.squad.v2.bo.ChatProjectionBO;
-import com.agentsquad.squad.v2.enums.*;
-import com.agentsquad.squad.v2.vo.*;
+import com.agentsquad.squad.v2.enums.ChatEventType;
+import com.agentsquad.squad.v2.enums.ChatExecutionStatus;
+import com.agentsquad.squad.v2.enums.ChatInputStatus;
+import com.agentsquad.squad.v2.enums.ChatMessageRole;
+import com.agentsquad.squad.v2.enums.NativeChatCommandType;
+import com.agentsquad.squad.v2.enums.NativeChatContentType;
+import com.agentsquad.squad.v2.enums.NativeChatEventType;
+import com.agentsquad.squad.v2.enums.NativeChatModelPurpose;
+import com.agentsquad.squad.v2.enums.NativeChatStatus;
+import com.agentsquad.squad.v2.vo.ChatActivityVO;
+import com.agentsquad.squad.v2.vo.ChatHistoryMessageVO;
+import com.agentsquad.squad.v2.vo.ChatInputVO;
+import com.agentsquad.squad.v2.vo.ChatSessionVO;
+import com.agentsquad.squad.v2.vo.ChatThinkingVO;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.ToolResultState;
 import io.agentscope.core.observation.ActionObservation;
@@ -43,6 +55,7 @@ public class ChatSessionConverter {
         result.setInputCursor(log.inbox().head().seq());
         var inbox = new SessionInbox(log).snapshot();
         for (var command : inbox.commands()) {
+            result.getAcceptedInputIds().add(command.id());
             if (NativeChatCommandType.fromValue(command.kind()) == NativeChatCommandType.SUBMIT) {
                 addUserMessages(command.messages(), command.turnId(), messages);
                 if (!projection.getStartedCommands().contains(command.id())

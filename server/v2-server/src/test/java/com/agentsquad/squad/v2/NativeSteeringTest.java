@@ -4,7 +4,7 @@ import com.agentsquad.squad.v2.dto.ChatInterruptDTO;
 import com.agentsquad.squad.v2.enums.ChatDisposition;
 import com.agentsquad.squad.v2.enums.ChatInputStatus;
 import com.agentsquad.squad.v2.service.ChatEventStreamService;
-import com.agentsquad.squad.v2.service.ChatSessionService;
+import com.agentsquad.squad.v2.service.ChatRuntimeService;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.message.ToolUseBlock;
@@ -204,7 +204,7 @@ class NativeSteeringTest {
 
     @Test
     void uncertainSteeringFailureNeverFallsBackToNewSubmission() {
-        var sessions = mock(ChatSessionService.class);
+        var sessions = mock(ChatRuntimeService.class);
         var session = mock(AgentSession.class);
         when(sessions.open("conversation", "1")).thenReturn(session);
         when(session.steer(any(AgentSession.Task.class), anyString()))

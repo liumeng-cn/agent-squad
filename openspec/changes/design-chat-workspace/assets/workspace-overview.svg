@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="780" viewBox="0 0 1280 780">
+<title>Squad聊天工作区设计示意</title>
+<desc>左侧历史目录，右侧欢迎语和输入框，底部稳定几何头像与用户名称。</desc>
+<defs><style>text{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;fill:#202630}.muted{fill:#566170}.small{font-size:13px}.label{font-size:15px}.title{font-size:20px;font-weight:600}.blue{fill:#315efb}</style></defs>
+<rect width="1280" height="780" rx="16" fill="#ffffff"/>
+<path d="M16 0H272V780H16A16 16 0 0 1 0 764V16A16 16 0 0 1 16 0Z" fill="#f7f8fa"/>
+<path d="M272 0V780" stroke="#d5dae1"/>
+<rect x="22" y="25" width="34" height="34" rx="10" fill="#315efb"/>
+<path d="M31 34h16v11H39l-5 4v-4h-3Z" fill="#fff"/>
+<text x="67" y="49" class="title">Squad</text>
+<rect x="232" y="33" width="18" height="18" rx="3" fill="none" stroke="#566170" stroke-width="1.8"/><path d="M238 33V51" stroke="#566170" stroke-width="1.8"/>
+<rect x="16" y="87" width="240" height="45" rx="13" fill="#fff" stroke="#b8c2cf"/>
+<text x="53" y="115" class="label">＋</text><text x="84" y="115" class="label">开启新对话</text>
+<text x="23" y="178" class="muted small">今天</text>
+<text x="27" y="216" class="label">设计用户注册与登录</text><circle cx="244" cy="211" r="4" fill="#315efb"/>
+<text x="27" y="259" class="label">梳理多智能体运行流程</text>
+<text x="23" y="318" class="muted small">昨天</text>
+<text x="27" y="356" class="label">PostgreSQL 查询优化</text>
+<text x="27" y="399" class="label">Java 并发控制思路</text>
+<text x="23" y="458" class="muted small">近 7 天</text>
+<text x="27" y="496" class="label">项目结构与职责整理</text>
+<text x="27" y="539" class="label">Agent 会话恢复方案</text>
+<path d="M16 706H256" stroke="#d5dae1"/>
+<rect x="22" y="725" width="36" height="36" rx="10" fill="#edf2ff"/>
+<g fill="#315efb"><path d="M29 731h5v5h-5zM39 731h5v5h-5zM49 731h3v5h-3zM34 736h5v5h-5zM44 736h5v5h-5zM29 741h5v5h-5zM39 741h5v5h-5zM49 741h3v5h-3zM34 746h15v5H34z"/></g>
+<text x="70" y="739" class="label">刘孟</text><text x="70" y="758" class="muted small">user_100000</text><text x="235" y="748" class="muted label">···</text>
+<text x="307" y="39" class="muted label">新对话</text>
+<text x="776" y="282" text-anchor="middle" font-size="31" font-weight="600">你好，刘孟</text>
+<text x="776" y="317" text-anchor="middle" class="muted label">从一个问题开始，一起把事情做好</text>
+<rect x="386" y="352" width="780" height="150" rx="22" fill="#fff" stroke="#b8c2cf" stroke-width="1.4"/>
+<text x="412" y="391" class="muted label">有什么想一起完成的？</text>
+<text x="412" y="477" class="muted small">Enter 发送 · Shift + Enter 换行</text>
+<circle cx="1129" cy="467" r="20" fill="#315efb"/>
+<path d="M1129 477V457m-7 7 7-7 7 7" stroke="#fff" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="776" y="555" text-anchor="middle" class="muted small">发送后，消息区独立滚动，输入框固定在主区底部</text>
+<text x="1248" y="753" text-anchor="end" class="muted small">布局示意 · 待实现</text>
+</svg>

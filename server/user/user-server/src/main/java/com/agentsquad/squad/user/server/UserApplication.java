@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * 提供手机号注册、用户资料及跨服务账号查询，数据库访问统一经过Mapper
  */
 @org.springframework.boot.context.properties.EnableConfigurationProperties(com.agentsquad.squad.user.server.config.properties.UserProperties.class)
+@org.springframework.context.annotation.Import(com.agentsquad.squad.common.web.GlobalExceptionHandler.class)
 @SpringBootApplication
 @org.mybatis.spring.annotation.MapperScan("com.agentsquad.squad.user.server.mapper")
 public class UserApplication {

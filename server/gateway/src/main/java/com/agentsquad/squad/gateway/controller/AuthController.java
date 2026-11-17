@@ -27,6 +27,9 @@ public class AuthController {
     @Resource
     private AuthProperties properties;
 
+    /**
+     * 用户登录
+     */
     @PostMapping("/login")
     public Mono<ApiResult<LoginVO>> login(@Valid @RequestBody LoginDTO request, ServerWebExchange exchange) {
         noStore(exchange);
@@ -36,12 +39,18 @@ public class AuthController {
         });
     }
 
+    /**
+     * 获取登录信息
+     */
     @GetMapping("/me")
     public Mono<ApiResult<LoginVO>> me(ServerWebExchange exchange) {
         noStore(exchange);
         return authService.authenticate(token(exchange), false, null).map(actor -> ApiResult.success(authService.view(actor)));
     }
 
+    /**
+     * 退出登录
+     */
     @PostMapping("/logout")
     public Mono<ApiResult<Void>> logout(ServerWebExchange exchange) {
         noStore(exchange);

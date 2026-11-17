@@ -1,51 +1,17 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '../features/auth/stores/auth'
-import { useV2Auth } from '../features/squad-v2/auth'
-import type { AccountRole } from '../shared/api/types'
 
 const routes: RouteRecordRaw[] = [
-  { path: '/v2/login', name: 'v2-login', component: () => import('../features/squad-v2/views/AuthView.vue'), meta: { v2: true, public: true } },
-  { path: '/v2/register', name: 'v2-register', component: () => import('../features/squad-v2/views/AuthView.vue'), meta: { v2: true, public: true } },
-  { path: '/', redirect: { name: 'squad-v2' } },
-  { path: '/login', name: 'login', component: () => import('../features/auth/views/LoginView.vue'), meta: { public: true } },
-  { path: '/app/conversations/:conversationId?', name: 'workspace', component: () => import('../features/chat/views/WorkspaceView.vue') },
-  { path: '/app/squad-v2', name: 'squad-v2', component: () => import('../features/squad-v2/views/SquadV2View.vue'), meta: { v2: true } },
-  { path: '/app/native-chat', name: 'native-chat', component: () => import('../features/native-chat/views/NativeChatView.vue') },
-  { path: '/app/native-chat/subagents', name: 'native-chat-subagents', component: () => import('../features/native-chat/views/NativeSubagentsView.vue') },
-  { path: '/app/native-chat/events', name: 'native-chat-events', component: () => import('../features/native-chat/views/NativeEventWorkbenchView.vue') },
-  { path: '/app/tasks/:taskId', name: 'task', component: () => import('../features/tasks/views/TaskDetailView.vue') },
-  { path: '/app/skills', name: 'skills', component: () => import('../features/skills/views/SkillsView.vue') },
-  { path: '/app/settings/connections', name: 'connections', component: () => import('../features/connections/views/ConnectionsView.vue') },
-  { path: '/app/settings/memory', name: 'memory', component: () => import('../features/memory/views/MemorySettingsView.vue') },
-  { path: '/app/account/password', name: 'changePassword', component: () => import('../features/auth/views/ChangePasswordView.vue') },
-  { path: '/app/admin/users', name: 'adminUsers', component: () => import('../features/admin/views/AdminUsersView.vue'), meta: { role: 'ADMIN' } },
-  { path: '/app/admin/workers', name: 'workers', component: () => import('../features/workers/views/WorkerDefinitionsView.vue'), meta: { role: 'ADMIN' } },
-  { path: '/:pathMatch(.*)*', name: 'catchAll', redirect: { name: 'workspace' } },
+  { path: '/', redirect: { name: 'chat' } },
+  { path: '/login', alias: '/v2/login', name: 'login', component: () => import('../features/auth/views/AuthView.vue'), meta: { public: true } },
+  { path: '/register', alias: '/v2/register', name: 'register', component: () => import('../features/auth/views/AuthView.vue'), meta: { public: true } },
+  { path: '/chat/:sessionId', name: 'chat-session', component: () => import('../features/chat/views/ChatView.vue') },
+  { path: '/chat', alias: '/app/squad-v2', name: 'chat', component: () => import('../features/chat/views/ChatView.vue') },
+  { path: '/:pathMatch(.*)*', redirect: { name: 'chat' } },
 ]
-
 export const router = createRouter({ history: createWebHistory(), routes })
-
 router.beforeEach(async (to) => {
-  if (to.meta.v2) {
-    const auth = useV2Auth()
-    if (to.meta.public) return true
-    const loggedIn = await auth.ensureSession()
-    if (!loggedIn) return { name: 'v2-login' }
-    return true
-  }
-  const auth = useAuthStore()
-  // 给 ensureSession 加超时，避免 API 挂起阻塞导航
-  const loggedIn = await Promise.race([
-    auth.ensureSession(),
-    new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
-  ])
-  if (!loggedIn && !(to.meta as { public?: boolean }).public) {
-    return { name: 'login', query: to.fullPath === '/' ? {} : { redirect: to.fullPath } }
-  }
-  // 临时密码状态下除改密页外一律回到改密流程，避免进入业务页面受 403 拦截。
-  if (loggedIn && auth.mustChangePassword && to.name !== 'changePassword') return { name: 'changePassword' }
-  if (loggedIn && to.name === 'login') return { name: 'workspace' }
-  const requiredRole = to.meta.role as AccountRole | undefined
-  if (loggedIn && requiredRole && !auth.user?.roles.includes(requiredRole)) return { name: 'workspace' }
+  if (to.meta.public) { document.title = `${to.name === 'register' ? '注册' : '登录'} · Squad`; return true }
+  if (!await useAuthStore().ensureSession()) return { name: 'login' }
   return true
 })

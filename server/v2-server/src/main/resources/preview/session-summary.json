@@ -1,0 +1,14 @@
+{
+  "sessionId": "preview-session",
+  "title": "新对话",
+  "titleSource": "AUTO",
+  "version": 0,
+  "hasMessages": false,
+  "createdAt": "2026-11-17T06:00:00Z",
+  "lastActivityAt": "2026-11-17T06:00:00Z",
+  "execution": {
+    "status": "IDLE",
+    "observedAt": null,
+    "stale": false
+  }
+}

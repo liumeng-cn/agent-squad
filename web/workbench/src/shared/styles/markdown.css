@@ -1,0 +1,16 @@
+.answer-markdown { overflow-wrap: anywhere; }
+.answer-markdown p { margin: 0 0 14px; white-space: pre-wrap; }
+.answer-markdown h2, .answer-markdown h3, .answer-markdown h4, .answer-markdown h5 { margin: 22px 0 10px; line-height: 1.5; color: #212b3a; }
+.answer-markdown h2 { font-size: 22px; }.answer-markdown h3 { font-size: 19px; }.answer-markdown h4, .answer-markdown h5 { font-size: 17px; }
+.answer-markdown ul, .answer-markdown ol { padding-left: 24px; margin: 10px 0 18px; }
+.answer-markdown li { padding-left: 3px; margin-bottom: 7px; }
+.answer-markdown pre { padding: 15px 17px; background: #f5f7fa; border: 1px solid #eceff4; border-radius: 11px; overflow: auto; font-size: 13px; line-height: 1.65; }
+.answer-markdown code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .86em; background: #f0f3f7; border-radius: 4px; padding: 2px 5px; }
+.answer-markdown pre code { background: transparent; padding: 0; }
+.markdown-code-block { margin: 14px 0 18px; overflow: hidden; border: 1px solid #eceff4; border-radius: 11px; background: #f5f7fa; }
+.markdown-code-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 12px; border-bottom: 1px solid #eceff4; color: #8b94a2; font-size: 11px; line-height: 1.5; }
+.markdown-code-copy { flex-shrink: 0; border: 0; border-radius: 5px; padding: 3px 6px; background: transparent; color: #8b94a2; font: inherit; cursor: pointer; }
+.markdown-code-copy:hover { color: #525e70; background: #e9edf3; }
+.markdown-code-copy:focus-visible { outline: 2px solid #7794ed; outline-offset: 2px; }
+.answer-markdown .markdown-code-block pre { margin: 0; border: 0; border-radius: 0; }
+.answer-markdown a { color: #3d65c9; text-decoration: underline; text-underline-offset: 3px; }

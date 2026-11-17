@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<rect x="0" y="0" width="512" height="512" rx="104" fill="#F2F7FF"/><g transform="translate(-82,-82) scale(1.32)">
+
+
+      <path d="M 112 214 C 94 235 97 273 122 296" fill="none"
+            stroke="#A9C8FF" stroke-width="9" stroke-linecap="round"/>
+      <path d="M 400 214 C 418 235 415 273 390 296" fill="none"
+            stroke="#A9C8FF" stroke-width="9" stroke-linecap="round"/>
+      <path d="M 184 374 Q 256 414 328 374" fill="none"
+            stroke="#A9C8FF" stroke-width="9" stroke-linecap="round"/>
+    <path d="M 256 125.0 V 109.0" fill="none" stroke="#1F57D2" stroke-width="7.0" stroke-linecap="round"/>
+<circle cx="256" cy="100.0" r="8.0" fill="#FFFFFF" stroke="#2468F2" stroke-width="6.0"/>
+<rect x="191.0" y="157.0" width="17.0" height="25.0" rx="8.0" fill="#2468F2"/>
+<rect x="304.0" y="157.0" width="17.0" height="25.0" rx="8.0" fill="#2468F2"/>
+<rect x="198.0" y="124.0" width="116.0" height="86.0" rx="29.0" fill="#FFFFFF" stroke="#1F57D2" stroke-width="10.0"/>
+<rect x="236.0" y="158.0" width="10.0" height="21.0" rx="5.0" fill="#202B3A"/>
+<rect x="266.0" y="158.0" width="10.0" height="21.0" rx="5.0" fill="#202B3A"/>
+<path d="M 142.0 273.0 Q 122.0 242.0 108.0 266.0 Q 121.0 284.0 141.0 283.0 Z" fill="#2468F2"/>
+<path d="M 124.0 267.0 Q 132.0 260.0 139.0 269.0" fill="none" stroke="#FFFFFF" stroke-width="3.0" stroke-linecap="round"/>
+<rect x="119.0" y="286.0" width="17.0" height="25.0" rx="8.0" fill="#2468F2"/>
+<rect x="232.0" y="286.0" width="17.0" height="25.0" rx="8.0" fill="#2468F2"/>
+<rect x="126.0" y="253.0" width="116.0" height="86.0" rx="29.0" fill="#FFFFFF" stroke="#1F57D2" stroke-width="10.0"/>
+<rect x="164.0" y="287.0" width="10.0" height="21.0" rx="5.0" fill="#202B3A"/>
+<rect x="194.0" y="287.0" width="10.0" height="21.0" rx="5.0" fill="#202B3A"/>
+<path d="M 284.0 279.0 Q 273.0 247.0 304.0 243.0" fill="none" stroke="#2468F2" stroke-width="7.0" stroke-linecap="round"/>
+<circle cx="385.0" cy="297.0" r="12.0" fill="#2468F2"/>
+<circle cx="385.0" cy="297.0" r="5.0" fill="#FFFFFF"/>
+<rect x="263.0" y="286.0" width="17.0" height="25.0" rx="8.0" fill="#2468F2"/>
+<rect x="270.0" y="253.0" width="116.0" height="86.0" rx="29.0" fill="#FFFFFF" stroke="#1F57D2" stroke-width="10.0"/>
+<rect x="308.0" y="287.0" width="10.0" height="21.0" rx="5.0" fill="#202B3A"/>
+<rect x="338.0" y="287.0" width="10.0" height="21.0" rx="5.0" fill="#202B3A"/><circle cx="390" cy="297" r="11" fill="#2468F2"/><circle cx="390" cy="297" r="4.5" fill="#FFFFFF"/>
+      <path d="M 112 214 C 94 235 97 273 122 296" fill="none" stroke="#5F96FF" stroke-width="4.2"
+            stroke-linecap="round" stroke-dasharray="0.16 0.84" pathLength="1"
+            opacity="0.68">
+        <animate attributeName="stroke-dashoffset" from="0" to="-1"
+                 dur="3.2s" begin="0s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0;0.68;0.68;0"
+                 keyTimes="0;0.12;0.88;1" dur="3.2s"
+                 begin="0s" repeatCount="indefinite"/>
+      </path>
+      <circle r="3.5" fill="#2468F2" opacity="0">
+        <animate attributeName="opacity" values="0;0.96;0.96;0"
+                 keyTimes="0;0.12;0.88;1" dur="3.2s"
+                 begin="0s" repeatCount="indefinite"/>
+        <animateMotion dur="3.2s" begin="0s" repeatCount="indefinite"
+                       keyPoints="0;0;1;1" keyTimes="0;0.12;0.88;1"
+                       calcMode="linear" path="M 112 214 C 94 235 97 273 122 296"/>
+      </circle>
+
+
+      <path d="M 184 374 C 232 400.67 280 400.67 328 374" fill="none" stroke="#5F96FF" stroke-width="4.2"
+            stroke-linecap="round" stroke-dasharray="0.16 0.84" pathLength="1"
+            opacity="0.68">
+        <animate attributeName="stroke-dashoffset" from="0" to="-1"
+                 dur="3.2s" begin="1.066s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0;0.68;0.68;0"
+                 keyTimes="0;0.12;0.88;1" dur="3.2s"
+                 begin="1.066s" repeatCount="indefinite"/>
+      </path>
+      <circle r="3.5" fill="#2468F2" opacity="0">
+        <animate attributeName="opacity" values="0;0.96;0.96;0"
+                 keyTimes="0;0.12;0.88;1" dur="3.2s"
+                 begin="1.066s" repeatCount="indefinite"/>
+        <animateMotion dur="3.2s" begin="1.066s" repeatCount="indefinite"
+                       keyPoints="0;0;1;1" keyTimes="0;0.12;0.88;1"
+                       calcMode="linear" path="M 184 374 C 232 400.67 280 400.67 328 374"/>
+      </circle>
+
+
+      <path d="M 400 214 C 418 235 415 273 390 296" fill="none" stroke="#5F96FF" stroke-width="4.2"
+            stroke-linecap="round" stroke-dasharray="0.16 0.84" pathLength="1"
+            opacity="0.68">
+        <animate attributeName="stroke-dashoffset" from="0" to="-1"
+                 dur="3.2s" begin="2.133s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0;0.68;0.68;0"
+                 keyTimes="0;0.12;0.88;1" dur="3.2s"
+                 begin="2.133s" repeatCount="indefinite"/>
+      </path>
+      <circle r="3.5" fill="#2468F2" opacity="0">
+        <animate attributeName="opacity" values="0;0.96;0.96;0"
+                 keyTimes="0;0.12;0.88;1" dur="3.2s"
+                 begin="2.133s" repeatCount="indefinite"/>
+        <animateMotion dur="3.2s" begin="2.133s" repeatCount="indefinite"
+                       keyPoints="0;0;1;1" keyTimes="0;0.12;0.88;1"
+                       calcMode="linear" path="M 400 214 C 418 235 415 273 390 296"/>
+      </circle>
+
+
+    <circle cx="256" cy="231" r="9" fill="#2468F2">
+      <animate attributeName="r" values="9;10.15;9"
+               keyTimes="0;0.5;1" dur="3.2s" repeatCount="indefinite"/>
+    </circle>
+
+</g>
+</svg>

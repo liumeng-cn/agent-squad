@@ -6,7 +6,7 @@ import com.agentsquad.squad.v2.enums.ChatDisposition;
 import com.agentsquad.squad.v2.enums.ChatExecutionStatus;
 import com.agentsquad.squad.v2.enums.ChatMessageRole;
 import com.agentsquad.squad.v2.service.ChatService;
-import com.agentsquad.squad.v2.service.ChatSessionService;
+import com.agentsquad.squad.v2.service.ChatRuntimeService;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.harness.agent.HarnessAgent;
 import org.junit.jupiter.api.Test;
@@ -65,16 +65,16 @@ class AguiSessionTest {
         }
     }
 
-    static ChatSessionService sessions(HarnessAgent agent) {
+    static ChatRuntimeService sessions(HarnessAgent agent) {
         var beans = new DefaultListableBeanFactory();
         beans.registerSingleton("agent", agent);
-        var sessions = new ChatSessionService();
+        var sessions = new ChatRuntimeService();
         ReflectionTestUtils.setField(sessions, "agentProvider", beans.getBeanProvider(HarnessAgent.class));
         ReflectionTestUtils.setField(sessions, "converter", new ChatSessionConverter());
         return sessions;
     }
 
-    static ChatService service(ChatSessionService sessions) {
+    static ChatService service(ChatRuntimeService sessions) {
         var service = new ChatService();
         ReflectionTestUtils.setField(service, "sessionService", sessions);
         return service;

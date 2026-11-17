@@ -23,13 +23,17 @@ import org.springframework.stereotype.Service;
 @Service
 public class ChatService {
     @Resource
-    private ChatSessionService sessionService;
+    private ChatRuntimeService sessionService;
 
     /**
      * 优先向页面指定的运行轮次插话；停止后发送新问题时，通过原生恢复接口结束旧轮次。
      * 网络或存储失败不转为提交，防止不确定结果导致重复执行。
      */
     public ChatReceiptVO send(ChatMessageDTO request, String userId) {
+        if (sessionService.isPreview(request.getSessionId())) {
+            throw new com.agentsquad.squad.common.exceptions.BusinessException(
+                    com.agentsquad.squad.common.enums.ApiCode.BAD_REQUEST, "示例会话仅供展示，请开启新对话");
+        }
         var session = sessionService.open(request.getSessionId(), userId);
         if (request.getObservedTurnId() != null) {
             // 固定 SDK 的 steer(Task, String) 只使用 turnId；不先查当前任务替代客户端的明确目标。

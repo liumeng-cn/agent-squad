@@ -22,6 +22,9 @@ public class TrustedIdentityFilter extends OncePerRequestFilter {
     @Resource
     private Environment environment;
 
+    @Resource
+    private com.agentsquad.squad.common.web.GlobalExceptionHandler exceptions;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
@@ -33,9 +36,8 @@ public class TrustedIdentityFilter extends OncePerRequestFilter {
                         environment.getRequiredProperty("agentsquad.user.identity-key")));
             }
         } catch (IllegalArgumentException exception) {
-            response.setStatus(401);
-            response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"code\":401,\"data\":null,\"msg\":\"缺少有效身份\"}");
+            exceptions.write(response, new com.agentsquad.squad.common.exceptions.BusinessException(
+                    com.agentsquad.squad.common.enums.ApiCode.UNAUTHORIZED, "缺少有效身份"));
             return;
         }
         chain.doFilter(request, response);

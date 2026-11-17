@@ -11,6 +11,10 @@ import lombok.Data;
 @Data
 public class UserAccountVO {
     /**
+     * 稳定生成的几何头像
+     */
+    private AvatarVO avatar;
+    /**
      * 稳定用户业务ID，按字符串传输
      */
     private String userId;

@@ -23,13 +23,17 @@ public class ChatEventStreamService {
     private final ConcurrentMap<String, Flux<ChatSessionVO>> streams = new ConcurrentHashMap<>();
 
     @Resource
-    private ChatSessionService sessionService;
+    private ChatRuntimeService sessionService;
 
     /**
      * 每次连接先获得完整快照，后续快照携带双游标，断线后无需重新提交原输入。
      * 原始日志读取只发生在提交位置或执行租约有效性变化后。
      */
     public Flux<ServerSentEvent<ChatSessionVO>> subscribe(String sessionId, String userId) {
+        if (sessionService.isPreview(sessionId)) {
+            return Flux.just(ServerSentEvent.builder(sessionService.read(sessionId, userId)).build())
+                    .concatWith(Flux.never());
+        }
         String key = userId + ":" + sessionId;
         Flux<ServerSentEvent<ChatSessionVO>> snapshots = Flux.defer(() -> streams.computeIfAbsent(key, ignored -> Flux.defer(() -> {
                             var session = sessionService.open(sessionId, userId);

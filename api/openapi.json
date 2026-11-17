@@ -7380,7 +7380,8 @@
               }
             }
           }
-        }
+        },
+        "description": "当前返回后端mock演示数据 会话存储方案待确认 不读取历史文件"
       }
     },
     "/api/v2/chat/interruptions": {
@@ -7424,7 +7425,8 @@
               }
             }
           }
-        }
+        },
+        "description": "当前返回后端mock演示数据 会话存储方案待确认 不读取历史文件"
       }
     },
     "/api/v2/chat/resumptions": {
@@ -7468,7 +7470,8 @@
               }
             }
           }
-        }
+        },
+        "description": "当前返回后端mock演示数据 会话存储方案待确认 不读取历史文件"
       }
     },
     "/api/v2/chat/sessions/{sessionId}": {
@@ -7512,7 +7515,86 @@
               }
             }
           }
-        }
+        },
+        "description": "当前返回后端mock演示数据 会话存储方案待确认 不读取历史文件"
+      },
+      "patch": {
+        "summary": "修改会话名称",
+        "tags": [
+          "会话接口"
+        ],
+        "security": [
+          {
+            "V2Session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务结果，code=0成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SessionSummary"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录"
+          },
+          "403": {
+            "description": "无权限或CSRF无效"
+          },
+          "503": {
+            "description": "目录或原生存储暂不可用"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9-]{1,64}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionRename"
+              }
+            }
+          }
+        },
+        "description": "当前返回后端mock演示数据 会话存储方案待确认 不读取历史文件"
       }
     },
     "/api/v2/chat/sessions/{sessionId}/events": {
@@ -7529,7 +7611,7 @@
             }
           }
         ],
-        "description": "SSE data 为完整公开快照，id 为执行游标:输入游标。重连返回完整快照，不重新执行输入。",
+        "description": "当前返回后端mock演示数据 会话存储方案待确认 不读取历史文件",
         "responses": {
           "200": {
             "description": "公开快照事件流",
@@ -7870,6 +7952,146 @@
             }
           }
         ]
+      }
+    },
+    "/api/v2/chat/sessions": {
+      "post": {
+        "summary": "创建会话",
+        "tags": [
+          "会话接口"
+        ],
+        "security": [
+          {
+            "V2Session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务结果，code=0成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SessionSummary"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录"
+          },
+          "403": {
+            "description": "无权限或CSRF无效"
+          },
+          "503": {
+            "description": "目录或原生存储暂不可用"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionCreate"
+              }
+            }
+          }
+        },
+        "description": "当前返回后端mock演示数据 会话存储方案待确认 不读取历史文件"
+      },
+      "get": {
+        "summary": "获取会话列表",
+        "tags": [
+          "会话接口"
+        ],
+        "security": [
+          {
+            "V2Session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务结果，code=0成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SessionPage"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录"
+          },
+          "403": {
+            "description": "无权限或CSRF无效"
+          },
+          "503": {
+            "description": "目录或原生存储暂不可用"
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 30
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 512
+            }
+          }
+        ],
+        "description": "当前返回后端mock演示数据 会话存储方案待确认 不读取历史文件"
       }
     }
   },
@@ -13608,6 +13830,15 @@
             "items": {
               "$ref": "#/components/schemas/ChatInputVO"
             }
+          },
+          "summary": {
+            "$ref": "#/components/schemas/SessionSummary"
+          },
+          "acceptedInputIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": []
@@ -13715,6 +13946,9 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "avatar": {
+            "$ref": "#/components/schemas/Avatar"
           }
         },
         "required": [
@@ -13745,6 +13979,175 @@
           "user",
           "csrfToken",
           "expiresAt"
+        ]
+      },
+      "Avatar": {
+        "type": "object",
+        "properties": {
+          "style": {
+            "type": "string",
+            "enum": [
+              "GEOMETRIC_V1"
+            ]
+          },
+          "pattern": {
+            "type": "string",
+            "pattern": "^[01]{15}$"
+          },
+          "paletteKey": {
+            "type": "string",
+            "enum": [
+              "BLUE",
+              "TEAL",
+              "VIOLET",
+              "AMBER",
+              "ROSE",
+              "CYAN",
+              "GREEN",
+              "INDIGO"
+            ]
+          }
+        },
+        "required": [
+          "style",
+          "pattern",
+          "paletteKey"
+        ]
+      },
+      "SessionCreate": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9-]{1,64}$"
+          }
+        },
+        "required": [
+          "sessionId"
+        ]
+      },
+      "SessionRename": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "title",
+          "version"
+        ]
+      },
+      "SessionSummary": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9-]{1,64}$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "titleSource": {
+            "type": "string",
+            "enum": [
+              "AUTO",
+              "MANUAL"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "hasMessages": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastActivityAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "execution": {
+            "$ref": "#/components/schemas/SessionExecution"
+          }
+        },
+        "required": [
+          "sessionId",
+          "title",
+          "titleSource",
+          "version",
+          "hasMessages",
+          "createdAt",
+          "lastActivityAt",
+          "execution"
+        ]
+      },
+      "SessionPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionSummary"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "serverTime": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "items",
+          "hasMore",
+          "serverTime"
+        ]
+      },
+      "SessionExecution": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "UNKNOWN",
+              "IDLE",
+              "QUEUED",
+              "RUNNING",
+              "COMPLETED",
+              "FAILED",
+              "WAITING",
+              "INTERRUPTED"
+            ]
+          },
+          "observedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "stale": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "status",
+          "stale"
         ]
       }
     }

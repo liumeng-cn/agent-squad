@@ -1,0 +1,7 @@
+{
+  "sessionId": "preview-session",
+  "interactionId": "preview-input",
+  "turnId": "preview-turn",
+  "inputId": "preview-input",
+  "disposition": "NEW_TURN"
+}

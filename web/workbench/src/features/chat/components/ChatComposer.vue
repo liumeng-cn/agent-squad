@@ -1,162 +1,60 @@
 <script setup lang="ts">
-import ModelSelector from './ModelSelector.vue'
-import type { ModelSelection } from '../../../shared/api/modelsApi'
-import { shouldSendOnEnter } from '../../../shared/lib/chatKeyboard'
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
-import { useConversationsStore } from '../stores/conversations'
-import { useAuthStore } from '../../auth/stores/auth'
-import { uploadArtifact, type Artifact } from '../../../shared/api/taskDetailsApi'
-import { ApiError, errorMessage } from '../../../shared/api/http'
-import { newIdempotencyKey } from '../../../shared/lib/idempotency'
-import type { MessageReceipt } from '../../../shared/api/chatApi'
-
-const props = defineProps<{ conversationId: string | null; draftRevision: number }>()
-const emit = defineEmits<{ accepted: [receipt: MessageReceipt] }>()
-const chat = useConversationsStore()
-const auth = useAuthStore()
-interface Upload { id: string; file: File; key: string; status: 'uploading' | 'ready' | 'failed'; artifact?: Artifact; error?: string }
-const selectedModel = ref<ModelSelection | null>(null)
-const draft = ref('')
-const uploads = ref<Upload[]>([])
-const error = ref('')
-const uncertain = ref(false)
-const composing = ref(false)
-const input = ref<HTMLInputElement | null>(null)
-const textarea = ref<HTMLTextAreaElement | null>(null)
-let generation = 0
-let attempt: { text: string; files: string[]; key: string; selection?: ModelSelection } | null = null
-const blocked = computed(() => chat.submitting || chat.unavailable || uploads.value.some(item => item.status !== 'ready'))
-const canSend = computed(() => !blocked.value && !!draft.value.trim() && draft.value.length <= 20000)
-const activeAnswer = computed(() => chat.latestExecution)
-const canStop = computed(() => activeAnswer.value?.allowedActions.includes('STOP'))
-// 草稿按 userId+conversationId 分区；仅保存文本/幂等键，不把浏览器 File 或凭据持久化。
-function draftKey(conversationId: string | null): string {
-  return 'agentsquad:draft:' + (auth.user?.userId || 'anonymous') + ':' + (conversationId || 'new')
+import { computed, nextTick, ref } from 'vue'
+const props = defineProps<{ modelValue?: string; busy: boolean; stopping: boolean; disabled: boolean; sendMessage: (text: string) => Promise<boolean> }>()
+const emit = defineEmits<{ stop: []; 'update:modelValue': [value: string] }>()
+const submitting = ref(false)
+const localDraft = ref('')
+const draft = computed({ get: () => props.modelValue ?? localDraft.value, set: value => { localDraft.value = value; emit('update:modelValue', value) } })
+const input = ref<HTMLTextAreaElement>()
+function resize() {
+  if (!input.value) return
+  input.value.style.height = 'auto'
+  input.value.style.height = `${Math.min(input.value.scrollHeight, 180)}px`
 }
-function saveDraft(key: string) {
+async function submit() {
+  if (!draft.value.trim() || submitting.value || props.disabled || props.stopping) return
+  submitting.value = true
+  const sent = draft.value
   try {
-    if (draft.value || attempt) {
-      sessionStorage.setItem(key, JSON.stringify({ text: draft.value, attempt: uploads.value.length ? null : attempt }))
-    } else {
-      sessionStorage.removeItem(key)
-    }
-  } catch { /* 隐私模式或容量不足时仅保存在组件内存 */ }
+    if (await props.sendMessage(sent) && draft.value === sent) draft.value = ''
+  } finally { submitting.value = false }
+  await nextTick()
+  resize()
+  input.value?.focus()
 }
-function restoreDraft(key: string) {
-  draft.value = ''; attempt = null; uncertain.value = false; selectedModel.value = null
-  try {
-    const choice = JSON.parse(sessionStorage.getItem(key + ':model') ?? 'null') as ModelSelection | null
-    if (choice && typeof choice.modelId === 'string' && ['DEFAULT', 'OFF', 'AUTO', 'ON', 'LOW', 'MEDIUM', 'HIGH'].includes(choice.reasoningMode)) selectedModel.value = choice
-  } catch { /* 模型目录加载后重新选择默认项 */ }
-  try {
-    const raw = sessionStorage.getItem(key)
-    if (!raw) return
-    const saved = JSON.parse(raw) as { text?: unknown; attempt?: { text: string; files: string[]; key: string; selection?: ModelSelection } }
-    if (typeof saved.text === 'string') draft.value = saved.text.slice(0, 20000)
-    if (saved.attempt && typeof saved.attempt.key === 'string' && saved.attempt.text === draft.value
-        && Array.isArray(saved.attempt.files) && saved.attempt.files.length === 0) {
-      attempt = saved.attempt
-      if (attempt.selection) selectedModel.value = attempt.selection
-      uncertain.value = true
-    }
-  } catch { /* 无效草稿记录不阻断聊天 */ }
-}
-let previousKey = draftKey(props.conversationId)
-restoreDraft(previousKey)
-watch(() => [props.conversationId, props.draftRevision, auth.user?.userId], () => {
-  if (auth.user?.userId && previousKey.startsWith('agentsquad:draft:' + auth.user.userId + ':')) saveDraft(previousKey)
-  generation++; uploads.value = []; error.value = ''
-  previousKey = draftKey(props.conversationId)
-  restoreDraft(previousKey)
-  void nextTick(resize)
-})
-watch(draft, () => saveDraft(previousKey))
-watch(selectedModel, selection => {
-  try { if (selection) sessionStorage.setItem(previousKey + ':model', JSON.stringify(selection)) } catch { /* 不影响当前发送 */ }
-}, { deep: true })
-
-function resize() { if (textarea.value) { textarea.value.style.height = 'auto'; textarea.value.style.height = `${Math.min(240, textarea.value.scrollHeight)}px` } }
-async function upload(id: string) {
-  const current = generation
-  const item = uploads.value.find(file => file.id === id)
-  if (!item) return
-  item.status = 'uploading'; item.error = ''
-  try {
-    const artifact = await uploadArtifact(item.file, item.key)
-    if (current !== generation || !uploads.value.some(file => file.id === id)) return
-    item.artifact = artifact; item.status = 'ready'
-  } catch (cause) {
-    if (current === generation && uploads.value.some(file => file.id === id)) { item.status = 'failed'; item.error = errorMessage(cause) }
+function keydown(event: KeyboardEvent) {
+  if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && event.keyCode !== 229) {
+    event.preventDefault()
+    void submit()
   }
 }
-async function selectFiles(event: Event) {
-  const files = [...((event.target as HTMLInputElement).files ?? [])]
-  if (input.value) input.value.value = ''
-  error.value = ''
-  if (files.length + uploads.value.length > 20) { error.value = '一次最多添加 20 个附件'; return }
-  const valid: string[] = []
-  for (const file of files) {
-    if (file.size > 10 * 1024 * 1024 || !/\.(txt|md|json|csv)$/i.test(file.name)) { error.value = '支持 txt、md、json、csv，每个文件最大 10 MiB'; continue }
-    const item: Upload = { id: newIdempotencyKey(), file, key: newIdempotencyKey(), status: 'uploading' }
-    uploads.value.push(item); valid.push(item.id)
-  }
-  for (const id of valid) await upload(id)
-}
-async function send() {
-  if (!canSend.value) return
-  const current = generation
-  error.value = ''
-  const text = draft.value.trim()
-  const files = uploads.value.flatMap(item => item.artifact ? [item.artifact.artifactId] : [])
-  const changed = attempt?.text !== text || JSON.stringify(attempt?.files) !== JSON.stringify(files) || JSON.stringify(attempt?.selection) !== JSON.stringify(selectedModel.value ?? undefined)
-  if (!attempt || (!uncertain.value && changed)) attempt = { text, files, key: newIdempotencyKey(), selection: selectedModel.value ?? undefined }
-  try {
-    const receipt = await chat.send(attempt.text, attempt.files, attempt.key, attempt.selection)
-    if (current !== generation) return
-    try { if (attempt.selection) sessionStorage.setItem(draftKey(receipt.conversationId) + ':model', JSON.stringify(attempt.selection)) } catch { /* 不影响持久受理 */ }
-    draft.value = ''; uploads.value = []; uncertain.value = false; attempt = null
-    try { sessionStorage.removeItem(previousKey) } catch { /* 私密模式 */ }
-    resize(); emit('accepted', receipt)
-  } catch (cause) {
-    if (current !== generation) return
-    uncertain.value = cause instanceof ApiError && (cause.code === 0 || cause.code >= 500)
-    saveDraft(previousKey)
-    error.value = uncertain.value ? '暂时还未确认是否收到。内容已保留，请点击发送按钮确认，重复确认不会重复发送。' : errorMessage(cause)
-  }
-}
-function enter(event: KeyboardEvent) {
-  if (!shouldSendOnEnter(event, composing.value)) return
-  event.preventDefault(); void send()
-}
-onBeforeUnmount(() => {
-  if (auth.user?.userId && previousKey.startsWith('agentsquad:draft:' + auth.user.userId + ':')) saveDraft(previousKey)
-  generation++
-})
 </script>
 
 <template>
-  <div class="chat-composer-area">
-    <p v-if="error" class="composer-error" role="alert">{{ error }}</p>
-    <div class="chat-composer" :class="{ 'is-sending': chat.submitting }">
-      <ul v-if="uploads.length" class="composer-files">
-        <li v-for="item in uploads" :key="item.id" class="composer-file" :class="{ failed: item.status === 'failed' }">
-          <span class="file-icon" aria-hidden="true">▤</span><div><strong :title="item.file.name">{{ item.file.name }}</strong><small>{{ item.status === 'uploading' ? '正在上传…' : item.status === 'failed' ? item.error || '上传失败' : `${Math.max(1, Math.ceil(item.file.size / 1024))} KB · 已就绪` }}</small></div>
-          <button v-if="item.status === 'failed'" class="text-button" :disabled="chat.submitting || uncertain" @click="upload(item.id)">重试</button>
-          <button class="icon-button file-remove" :aria-label="`移除附件 ${item.file.name}`" :disabled="chat.submitting || uncertain" @click="uploads = uploads.filter(file => file.id !== item.id)">×</button>
-        </li>
-      </ul>
-      <textarea ref="textarea" v-model="draft" class="chat-textarea" rows="2" maxlength="20000" aria-label="发送消息" placeholder="发消息，或一起完成一项工作…" :disabled="chat.submitting || chat.unavailable" :readonly="uncertain" @input="resize" @keydown.enter="enter" @compositionstart="composing = true" @compositionend="composing = false"></textarea>
-      <div class="chat-composer-toolbar">
-        <input ref="input" class="visually-hidden" type="file" accept=".txt,.md,.json,.csv" multiple tabindex="-1" aria-hidden="true" @change="selectFiles" />
-        <button class="icon-button attach-button" type="button" title="添加附件" aria-label="添加附件" :disabled="chat.submitting || uncertain || chat.unavailable || uploads.length >= 20" @click="input?.click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m8 12 6-6a3 3 0 0 1 4 4l-8 8a5 5 0 0 1-7-7l8-8"/><path d="m7 13 7-7"/></svg></button>
-        <ModelSelector v-model="selectedModel" :disabled="chat.submitting || uncertain || chat.unavailable" />
-        <span v-if="draft.length > 18000" class="composer-count">{{ draft.length }}/20000</span>
-        <span v-if="chat.submitting" class="composer-sending" role="status">正在确认接收…</span>
-        <span class="spacer"></span>
-        <button v-if="canStop && activeAnswer" class="stop-answer-button" :disabled="!!chat.controlling" @click="chat.stop('answer', activeAnswer.executionId, activeAnswer.version)"><span class="stop-square" aria-hidden="true"></span>停止回答</button>
-        <button class="send-message-button" :aria-label="uncertain ? '确认发送结果' : '发送消息'" :title="uncertain ? '确认发送结果' : '发送消息'" :disabled="!canSend" @click="send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
+  <form class="composer" @submit.prevent="submit()">
+    <textarea ref="input" v-model="draft" aria-label="输入消息" placeholder="有问题，尽管问"
+      rows="1" maxlength="20000" @input="resize" @keydown="keydown($event)" />
+    <div class="composer-footer">
+      <span>{{ stopping ? '正在停止，已生成内容会保留' : busy ? '运行中发送，将作为补充要求' : 'Enter 发送 · Shift + Enter 换行' }}</span>
+      <div class="composer-actions">
+      <button v-if="busy" type="button" aria-label="停止执行" :disabled="stopping" @click="emit('stop')">■</button>
+      <button type="submit" :aria-label="busy ? '补充要求' : '发送消息'" :disabled="disabled || stopping || submitting || !draft.trim()">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6" /></svg>
+      </button>
       </div>
     </div>
-    <p class="chat-input-note">{{ uploads.some(item => item.status === 'uploading') ? '附件就绪后即可发送' : 'Enter 发送 · Shift + Enter 换行' }}</p>
-  </div>
+  </form>
 </template>
+
+<style scoped>
+.composer { padding: 20px 22px 14px; min-height: 144px; border: 1px solid #b8c2cf; border-radius: 24px; background: #fff; box-shadow: 0 8px 32px #22222208; }
+.composer:focus-within { border-color: #315efb; box-shadow: 0 0 0 2px #315efb24, 0 8px 32px #22222208; }
+textarea { display: block; width: 100%; resize: none; border: 0; outline: 0; background: transparent; font: inherit; line-height: 1.6; max-height: 180px; color: #202630; }
+textarea::placeholder { color: #687587; }
+.composer-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; }
+.composer-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
+.composer-footer span { font-size: 12px; color: #687587; }
+button { display: inline-flex; align-items: center; justify-content: center; padding: 0; width: 36px; height: 36px; flex-shrink: 0; border: 0; border-radius: 50%; background: #315efb; color: white; cursor: pointer; }
+button svg { display: block; width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+button:disabled { background: #d4d5d0; cursor: default; }
+</style>
