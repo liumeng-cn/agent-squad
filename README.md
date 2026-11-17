@@ -145,7 +145,9 @@ python3 tools/audit_test_reports.py
 server/
   common/    跨模块共享类型与工具
   gateway/   网关基础架构（认证与账号业务待迁入用户服务）
-  user/      用户服务（骨架，业务待设计）
+  user/
+    user-api/    用户服务契约（Feign 接口与 DTO/VO）
+    user-server/ 用户服务启动与实现（骨架）
   v2-server/ V2 独立服务应用
 archive/server/         旧业务服务归档，不参与默认构建
 web/workbench/          Web 工作台

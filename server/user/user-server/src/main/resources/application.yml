@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: user
+  main:
+    web-application-type: servlet
+
+server:
+  address: 127.0.0.1
+  port: 18083
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    root: INFO
+    com.agentsquad.squad: INFO

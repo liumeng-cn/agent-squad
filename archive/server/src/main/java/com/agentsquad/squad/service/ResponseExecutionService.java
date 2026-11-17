@@ -2,7 +2,6 @@ package com.agentsquad.squad.service;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.agentsquad.squad.mapper.GoalCreationMapper;
-import com.agentsquad.squad.enums.*;
 import com.agentsquad.squad.model.bo.*;
 import com.agentsquad.squad.model.po.ConversationPO;
 import com.agentsquad.squad.model.po.ExecutionScopePO;

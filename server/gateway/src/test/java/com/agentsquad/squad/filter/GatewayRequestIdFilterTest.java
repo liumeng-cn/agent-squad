@@ -1,7 +1,6 @@
 package com.agentsquad.squad.filter;
 
 
-import com.agentsquad.squad.gateway.filter.GatewayRequestIdFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;

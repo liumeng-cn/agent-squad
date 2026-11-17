@@ -1,6 +1,6 @@
 package com.agentsquad.squad.gateway.exceptions;
 
-import com.agentsquad.squad.enums.ApiCode;
+import com.agentsquad.squad.common.enums.ApiCode;
 import com.agentsquad.squad.common.model.ApiResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.CacheControl;

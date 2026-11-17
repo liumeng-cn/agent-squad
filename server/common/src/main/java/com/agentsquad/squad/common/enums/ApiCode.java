@@ -1,4 +1,4 @@
-package com.agentsquad.squad.enums;
+package com.agentsquad.squad.common.enums;
 
 import lombok.Getter;
 
