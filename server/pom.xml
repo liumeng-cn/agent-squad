@@ -19,10 +19,10 @@
     <description>Agent Squad multi-agent runtime foundation (parent pom)</description>
 
     <modules>
-        <module>agent-squad-common</module>
-        <module>agent-squad-gateway</module>
-        <module>agent-squad-server</module>
-        <module>agent-squad-v2</module>
+        <module>common</module>
+        <module>gateway</module>
+        <module>user</module>
+        <module>v2-server</module>
     </modules>
 
     <properties>

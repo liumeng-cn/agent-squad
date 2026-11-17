@@ -61,7 +61,7 @@ import static org.mockito.Mockito.spy;
 @EnabledIfEnvironmentVariable(named = "SQUAD_PROBE_MYSQL_URL", matches = ".*/squad_sdk_probe\\?.*")
 class RuntimeEventReceiptMySqlTest {
     private static final Path REPO = findRepository();
-    private static final Path RESOURCES = REPO.resolve("server/agent-squad-server/src/main/resources");
+    private static final Path RESOURCES = REPO.resolve("archive/server/src/main/resources");
     private static MysqlDataSource source;
     private static JdbcTemplate jdbc;
     private static RuntimeEventInboxMapper mapper;
@@ -480,7 +480,7 @@ class RuntimeEventReceiptMySqlTest {
     private static Path findRepository() {
         Path current = Path.of("").toAbsolutePath();
         while (current != null) {
-            if (Files.isDirectory(current.resolve("server/agent-squad-server"))) {
+            if (Files.isDirectory(current.resolve("archive/server"))) {
                 return current;
             }
             current = current.getParent();

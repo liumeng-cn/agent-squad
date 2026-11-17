@@ -9,7 +9,7 @@
 - 消息提交增加 `modelId` / `reasoningMode`。受理事务将模型引用、非敏感配置指纹与模式写入 `sq_response_execution.model_selection_json`；选择同时计入幂等摘要。SDK路由与预算都使用该选择，不能只改变页面名称。
 - Spark支持快速OFF、自动AUTO、深入ON；实际分别发送thinking.type的disabled/auto/enabled。OpenAI Effort适配仅开放声明的LOW/MEDIUM/HIGH；无此能力的模型不显示强度滑块。不会展示或保存用户可见的模型内部推理。
 - 配置指纹排除密钥，允许凭据轮换；模型、地址、定价或额度改变时阻止旧执行隐式换模，不自动回退另一个模型。
-- 本地配置直接位于既有 `server/agent-squad-server/src/main/resources/application-local.yml`，注册新Profile后重启加载；已注册模型在页面切换不需重启。只有启用且必要配置齐全的模型进入目录。
+- 本地配置直接位于既有 `archive/server/src/main/resources/application-local.yml`，注册新Profile后重启加载；已注册模型在页面切换不需重启。只有启用且必要配置齐全的模型进入目录。
 
 新增模型时配置provider、model-name、base-url、api-key、pricing-version、输入输出计价单位及Token上限；可选display-name、enabled、capabilities、reasoning-adapter、reasoning-modes、default-reasoning-mode。能力枚举REASONING/TEXT_GENERATION/CODING/TOOL_USE/VISION是管理员声明，不是质量评分。
 
@@ -26,7 +26,7 @@ Worker目前仍按已发布Definition的modelProfileKey选择，不会自动按�
 JAR不包含含凭据的application-local.yml。本地以源配置启动：
 
 ```bash
-java -jar server/agent-squad-server/target/agent-squad-server-0.1.0-SNAPSHOT.jar --spring.profiles.active=local --spring.config.additional-location=file:./server/agent-squad-server/src/main/resources/application-local.yml
+java -jar archive/server/target/server-0.1.0-SNAPSHOT.jar --spring.profiles.active=local --spring.config.additional-location=file:./archive/server/src/main/resources/application-local.yml
 ```
 
 Java服务运行JDK27。Maven开发运行与IDE仍可按原有方式加载local配置；不要将本地凭据提交仓库。

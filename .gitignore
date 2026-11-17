@@ -20,4 +20,4 @@ web/workbench/.vite
 
 # 本地独立观测服务与接入凭据
 .local/
-server/agent-squad-v2/src/main/resources/application-local.yml
+server/v2-server/src/main/resources/application-local.yml

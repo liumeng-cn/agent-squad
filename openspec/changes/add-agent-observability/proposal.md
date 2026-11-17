@@ -26,7 +26,7 @@
 
 ## Impact
 
-- 代码：`server/agent-squad-gateway` 的过滤器与路由配置；`server/agent-squad-server` 的 `RequestCorrelationFilter`、命令投递、Agent 执行、模型预算、计划、事件投影、操作账本和最终发布服务。
+- 代码：`server/gateway` 的过滤器与路由配置；`server/server` 的 `RequestCorrelationFilter`、命令投递、Agent 执行、模型预算、计划、事件投影、操作账本和最终发布服务。
 - 配置：两个模块的 `pom.xml` 与 `application*.yml`；新增 OTLP/采样/日志限额配置。
 - 存储：仅在评审通过后新增 `sq_observability_link`，并同步 `V1__baseline.sql`、Mapper XML 与迁移链；不自动修改真实数据库。
 - 测试：追踪头伪造、网关转发、异步线程、长日志/大集合、观测服务不可用、重复提交、重试、重启、多 Worker、取消、审批和 `UNKNOWN`。

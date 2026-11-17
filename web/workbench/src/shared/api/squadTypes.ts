@@ -1,7 +1,7 @@
 /**
  * SquadMsg SSE 协议类型。
  *
- * 与 server/agent-squad-common 中的 Java 枚举和模型保持一致。
+ * 与 server/common 中的 Java 枚举和模型保持一致。
  */
 
 export type SquadAgentType = 'MASTER' | 'SUBAGENT'

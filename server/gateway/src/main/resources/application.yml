@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: agent-squad-gateway
+  profiles:
+    default: local
+
+
+server:
+  address: 127.0.0.1
+  port: 18081
+
+
+logging:
+  level:
+    root: INFO
+    com.agentsquad.squad: INFO

@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PRIVATE = ROOT / ".local/store-research-20261116"
 REPORT = ROOT / "docs/research/agentscope-store-20261116"
-WORKSPACE = ROOT / "server/agent-squad-v2/.agentscope/v2"
+WORKSPACE = ROOT / "server/v2-server/.agentscope/v2"
 
 
 def write(path, value):

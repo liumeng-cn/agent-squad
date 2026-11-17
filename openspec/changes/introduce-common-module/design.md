@@ -2,7 +2,7 @@
 
 ## Context
 
-当前 Maven 结构在 `server/pom.xml` 下只有两个子模块：`agent-squad-gateway` 与 `agent-squad-server`。两者都需要表达账号角色、账号状态等基础概念，且即将统一使用的 `ApiResult<T>` 响应包装类不应隶属于某个业务模块，否则会导致循环依赖或重复定义。参见 `proposal.md` 中的变更动机。
+当前 Maven 结构在 `server/pom.xml` 下只有两个子模块：`gateway` 与 `server`。两者都需要表达账号角色、账号状态等基础概念，且即将统一使用的 `ApiResult<T>` 响应包装类不应隶属于某个业务模块，否则会导致循环依赖或重复定义。参见 `proposal.md` 中的变更动机。
 
 ## Goals / Non-Goals
 
@@ -18,8 +18,8 @@
 
 ## Decisions
 
-### 模块命名为 `agent-squad-common`
-- **理由**：与现有 `agent-squad-gateway`、`agent-squad-server` 命名风格一致，语义清晰。
+### 模块命名为 `common`
+- **理由**：与现有 `gateway`、`server` 命名风格一致，语义清晰。
 - **替代方案**：`agent-squad-shared`。保留原命名，因为 `common` 在 Maven 多模块中更常见，且能明确表示“通用基础”。
 
 ### common 模块不依赖 Spring Boot 起步器
@@ -42,9 +42,9 @@
 
 ## Migration Plan
 
-1. 在 `server/agent-squad-common` 创建模块目录与 `pom.xml`。
-2. 在 `server/pom.xml` 的 `<modules>` 中加入 `agent-squad-common`。
-3. `agent-squad-gateway` 与 `agent-squad-server` 的 `pom.xml` 添加对 `agent-squad-common` 的依赖。
+1. 在 `server/common` 创建模块目录与 `pom.xml`。
+2. 在 `server/pom.xml` 的 `<modules>` 中加入 `common`。
+3. `gateway` 与 `server` 的 `pom.xml` 添加对 `common` 的依赖。
 4. 将 `AccountRole`、`AccountStatus`（若存在）与 `ApiResult<T>` 移入 common 对应包。
 5. 批量修改引用类的 `import` 路径。
 6. 运行 `mvn clean compile` 验证模块依赖与编译。

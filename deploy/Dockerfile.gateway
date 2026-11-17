@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --system --uid 10001 squad
 WORKDIR /srv
-COPY server/agent-squad-gateway/target/agent-squad-gateway-0.1.0-SNAPSHOT.jar app.jar
+COPY server/gateway/target/gateway-0.1.0-SNAPSHOT.jar app.jar
 USER 10001
 EXPOSE 18081
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75"

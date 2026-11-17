@@ -1,6 +1,6 @@
 DROP TABLE IF EXISTS sq_execution_activity;
 -- 本地验证库重建脚本：仅供用户手动执行，会删除当前库内下列51张项目表及其数据。
--- 来源：server/agent-squad-server/src/main/resources/db/migration/V1__baseline.sql。
+-- 来源：archive/server/src/main/resources/db/migration/V1__baseline.sql。
 -- 不包含模型密钥、数据库密码或生产凭据；不要对生产/共享数据库执行。
 -- 请先确认目标库及备份。执行前停止Server和Gateway，执行后重新启动。
 CREATE DATABASE IF NOT EXISTS `agent_squad` CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;

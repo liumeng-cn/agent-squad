@@ -18,7 +18,7 @@ Master、Worker、停止控制、已提交日志读取及恢复均显式使用�
 使用与当前业务库相同的配置，显式运行一次：
 
 ```sh
-java -jar /path/to/agent-squad-server.jar \
+java -jar /path/to/server.jar \
   --spring.profiles.active=local \
   --spring.config.additional-location=file:/path/to/application-local.yml \
   --spring.main.web-application-type=none \

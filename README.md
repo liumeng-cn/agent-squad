@@ -42,8 +42,8 @@ Java 服务和页面可在本机运行，Docker 提供 MySQL 与受控沙箱依�
 
 准备 JDK 27、Maven、Node.js 22 和 MySQL 8.4。本机验证参数已直接填写在两个模块的 `src/main/resources/application-local.yml`：数据库连接账号密码、内部身份密钥和模型参数，不使用环境变量占位表达式。
 
-- [Server 本地配置](server/agent-squad-server/src/main/resources/application-local.yml)：数据库、模型、Worker、密钥保险库与投递开关。
-- [Gateway 本地配置](server/agent-squad-gateway/src/main/resources/application-local.yml)：数据库连接和内部身份配置。
+- [Server 本地配置](archive/server/src/main/resources/application-local.yml)：数据库、模型、Worker、密钥保险库与投递开关。
+- [Gateway 本地配置](server/gateway/src/main/resources/application-local.yml)：数据库连接与认证 Cookie 配置。
 - `deploy/compose.local.yml`：本机 MySQL 参数，仅本地保存。
 
 两个服务默认使用 `local` profile，直接执行下方启动命令即可，不需要加载 `.env.local`。已有数据库不得为启动应用而清空或重建。测试使用独立配置；其他环境后续再配置 Nacos 或其他来源。
@@ -77,8 +77,10 @@ docker compose -f deploy/compose.local.yml up -d db
 以上密码在执行重建 SQL 后生效，原库现有账号不会被服务启动自动重置。密码在数据库中以 BCrypt 摘要存储。
 
 ```bash
-mvn -f server/agent-squad-server/pom.xml -B -ntp spring-boot:run
+mvn -f archive/server/pom.xml -B -ntp spring-boot:run
 ```
+
+旧业务服务 `server` 已归档到 `archive/server`，不再参与 `server/pom.xml` 的默认构建；上述命令仅作归档模块的独立启动入口，当前业务服务为 `v2-server`。
 
 开发环境启动时重放最终 baseline，补齐缺失表，不更新已有表的结构。已有本地表需要显式调整并同步 baseline；生产环境禁止应用启动执行 DDL。
 
@@ -91,7 +93,7 @@ mvn -f server/agent-squad-server/pom.xml -B -ntp spring-boot:run
 网关终端：
 
 ```bash
-mvn -f server/agent-squad-gateway/pom.xml -B -ntp spring-boot:run
+mvn -f server/gateway/pom.xml -B -ntp spring-boot:run
 ```
 
 前端终端：
@@ -101,7 +103,7 @@ npm --prefix web/workbench ci
 npm --prefix web/workbench run dev
 ```
 
-访问 [本地登录页](http://127.0.0.1:5173/login)。默认链路为页面 `5173` → Gateway `18081` → Server `18080`。前端代理目标直接修改 `web/workbench/vite.config.ts`，业务服务地址直接修改网关的 `application-local.yml` 中 `gateway.business-service-url`。
+访问 [本地登录页](http://127.0.0.1:5173/login)。默认链路为页面 `5173`：`/api/v2` 直达 V2 服务 `18082`，其余 `/api` 走 Gateway `18081`（当前仅基础架构，登录与账号接口待用户服务承接）。前端代理目标直接修改 `web/workbench/vite.config.ts`。
 
 ### 停止本地服务
 
@@ -141,9 +143,11 @@ python3 tools/audit_test_reports.py
 
 ```text
 server/
-  agent-squad-gateway/   认证、账号管理与业务代理
-  agent-squad-server/    会话、任务、Worker、工具及运行恢复
-  agent-squad-v2/        V2 独立服务应用
+  common/    跨模块共享类型与工具
+  gateway/   网关基础架构（认证与账号业务待迁入用户服务）
+  user/      用户服务（骨架，业务待设计）
+  v2-server/ V2 独立服务应用
+archive/server/         旧业务服务归档，不参与默认构建
 web/workbench/          Web 工作台
 openspec/specs/         R01–R12 能力与行为规格
 openspec/changes/       当前未完成变更、任务与验证证据
@@ -154,14 +158,14 @@ tools/verification/     持续使用的隔离数据库、浏览器验证入口
 tools/research-archive/ SDK、Redis 调研代码归档，不参与业务构建
 ```
 
-传输结构以 [OpenAPI](api/openapi.json) 为准；最终数据库结构以 [V1 baseline](server/agent-squad-server/src/main/resources/db/migration/V1__baseline.sql) 为准。生产迁移链位于 [deploy/db/migrations](deploy/db/migrations/)，必须与 baseline 通过结构一致性校验。
+传输结构以 [OpenAPI](api/openapi.json) 为准；最终数据库结构以 [V1 baseline](archive/server/src/main/resources/db/migration/V1__baseline.sql) 为准。生产迁移链位于 [deploy/db/migrations](deploy/db/migrations/)，必须与 baseline 通过结构一致性校验。
 
 Java 修改遵循 [项目约定](AGENTS.md)：Controller → Service → Mapper 分层、DTO 与持久对象分离、`@Resource` 字段注入、中文职责注释和简体中文提交信息。
 
 ## 部署
 
-Mapper XML 按能力放在 `server/agent-squad-server/src/main/resources/mapper/<模块>/` 下，不增加 `repository/` 中间目录；XML namespace 对应 Java Mapper 接口的完整包名。
-传输结构以 [OpenAPI](api/openapi.json) 为准；最终数据库结构以 [V1 baseline](server/agent-squad-server/src/main/resources/db/migration/V1__baseline.sql) 为准。生产迁移链位于 [deploy/db/migrations](deploy/db/migrations/)，必须与 baseline 通过结构一致性校验。
+Mapper XML 按能力放在 `archive/server/src/main/resources/mapper/<模块>/` 下，不增加 `repository/` 中间目录；XML namespace 对应 Java Mapper 接口的完整包名。
+传输结构以 [OpenAPI](api/openapi.json) 为准；最终数据库结构以 [V1 baseline](archive/server/src/main/resources/db/migration/V1__baseline.sql) 为准。生产迁移链位于 [deploy/db/migrations](deploy/db/migrations/)，必须与 baseline 通过结构一致性校验。
 
 [Staging 手册](deploy/runbooks/staging.md) 与 [发布验证及回退](deploy/runbooks/release-verification.md) 描述部署边界。生产必须使用 HTTPS、安全 Cookie、可信网关及私网业务端口；密钥从部署环境注入，业务账号不具备 DDL 权限。
 

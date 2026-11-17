@@ -117,7 +117,7 @@ NativeProjectionPoller现在只走一条路径：明确启动获授权绑定 →
 
 ## 2026-11-04：停止原因丢失适配修复
 
-任务1.4a已完成。生产源码位于 `server/agent-squad-server/src/main/java/com/agentsquad/squad/integration/agentscope/completion/`，为无数据库、日志或发布副作用的纯适配器，不启用v2运行或preview。
+任务1.4a已完成。生产源码位于 `server/server/src/main/java/com/agentsquad/squad/integration/agentscope/completion/`，为无数据库、日志或发布副作用的纯适配器，不启用v2运行或preview。
 
 - 按同一绑定的连续已提交区间、Run/Turn/modelCallId核对dispatch、chunk和end，停止原因与用量分别保存来源序号。
 - stop后usage-only覆盖原生end原因时，适配器取已提交chunk的stop和end的真实用量，不修改原始SDK日志。
@@ -315,7 +315,7 @@ actual: null
 
 ### 本地模型配置位置更正
 
-按用户明确要求，将讯飞Master/Worker的API Key、base-url和模型名直接写入既有server/agent-squad-server/src/main/resources/application-local.yml；删除单独的application-spark-local.yml及其忽略规则。当前业务服务已重启并显式读取既有源配置文件，健康检查UP。密钥未写入文档、日志或提交，未重新打包该密钥。
+按用户明确要求，将讯飞Master/Worker的API Key、base-url和模型名直接写入既有server/server/src/main/resources/application-local.yml；删除单独的application-spark-local.yml及其忽略规则。当前业务服务已重启并显式读取既有源配置文件，健康检查UP。密钥未写入文档、日志或提交，未重新打包该密钥。
 
 
 ### 2026-11-05 模型选择交付与回归边界

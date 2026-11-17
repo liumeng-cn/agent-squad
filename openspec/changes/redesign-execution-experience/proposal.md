@@ -59,7 +59,7 @@
 | R11 | B：`SessionRecorder` 每 1s flush 并尝试导出；finish 写结束事实并 flush 后关闭 heartbeat；导出失败只告警。`ReActAgent` 直接返回会把成功工具结果合成为 assistant 正文并产生文本事件 | 运行结束后的末次导出失败不能靠下一次 heartbeat 保证恢复；不能把当前“候选已保存”回执直接变成正式答案；已提交事件也不等于逐 token 低延迟 |
 | R12 | A：Master 的 submit/resume/respond 经 sessionFor，而 readEvents/inspectTask 另建 RuntimeContext；WorkerFactory.sessionFor 也创建上下文并查材料、续租 guard | sink/trace 注入必须统一会话获取入口，不能只覆盖首发；查询与启动恢复目前混合，需拆分无副作用读取和显式恢复，避免观测读取影响执行 |
 
-项目源码入口相对仓库根：`server/agent-squad-server/src/main/java/com/agentsquad/squad/`；涉及文件以上表类名定位。SDK 证据来自 `~/.m2/repository/io/agentscope/agentscope-{core,harness}/2.1.0-BETA1/*-sources.jar`，主要为 `AgentSession`、`AgentTool`、`ReActAgent`、`SessionRecorder`、`SessionExportSink`、`SessionLogExporter`。
+项目源码入口相对仓库根：`server/server/src/main/java/com/agentsquad/squad/`；涉及文件以上表类名定位。SDK 证据来自 `~/.m2/repository/io/agentscope/agentscope-{core,harness}/2.1.0-BETA1/*-sources.jar`，主要为 `AgentSession`、`AgentTool`、`ReActAgent`、`SessionRecorder`、`SessionExportSink`、`SessionLogExporter`。
 
 ### 方案取舍记录
 

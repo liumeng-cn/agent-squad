@@ -43,7 +43,7 @@
 
 ## Migration Plan
 
-1. 在 `agent-squad-server` 与 `agent-squad-gateway` 的测试依赖中加入 ArchUnit。
+1. 在 `server` 与 `gateway` 的测试依赖中加入 ArchUnit。
 2. 编写 `MyBatisOnlyAccessTest`，断言生产包（`com.agentsquad.squad..`）不依赖 `java.sql.Connection`、`java.sql.Statement`、`java.sql.ResultSet`、`org.springframework.jdbc.core.JdbcTemplate`、`org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate`。
 3. 允许 `javax.sql.DataSource`、MyBatis 类型处理器及 SDK 公开接口的依赖。
 4. 运行测试确认当前代码通过。
