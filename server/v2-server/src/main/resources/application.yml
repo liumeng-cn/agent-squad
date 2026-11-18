@@ -8,7 +8,7 @@ spring:
 
 server:
   address: 127.0.0.1
-  port: ${SQUAD_V2_PORT:18082}
+  port: 18082
 
 management:
   endpoints:
@@ -24,4 +24,4 @@ logging:
 
 agentsquad:
   identity:
-    identity-key: ${SQUAD_IDENTITY_KEY}
+    identity-key: '05584e456dbd98d1fdbeed4972133d1d12b7d5576cfef4a4e595fad2d03b0e6f'

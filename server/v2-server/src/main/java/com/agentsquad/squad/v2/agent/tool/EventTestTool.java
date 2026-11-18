@@ -19,6 +19,6 @@ public class EventTestTool {
     @Tool(name = "test_event_tool", description = "测试工具执行事件。用户要求验证工具事件或调用测试工具时使用，等待三秒后返回固定测试结果。", readOnly = true)
     public Mono<String> execute() {
         return Mono.delay(Duration.ofSeconds(3))
-                .map(ignored -> "测试工具执行完成：已等待三秒，工具调用事件链路正常。");
+                .thenReturn("测试工具执行完成：已等待三秒，工具调用事件链路正常。");
     }
 }

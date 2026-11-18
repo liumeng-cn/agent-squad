@@ -1,6 +1,8 @@
 package com.agentsquad.squad.gateway.filter;
 
 import com.agentsquad.squad.common.bo.CurrentUserBO;
+import com.agentsquad.squad.gateway.bo.AuthUserBO;
+import org.springframework.http.HttpHeaders;
 import com.agentsquad.squad.common.enums.ApiCode;
 import com.agentsquad.squad.common.exceptions.BusinessException;
 import com.agentsquad.squad.common.utils.IdentityAssertion;
@@ -44,18 +46,24 @@ public class GatewayAuthenticationFilter implements GlobalFilter, Ordered {
         String method = exchange.getRequest().getMethod().name();
         boolean write = !Set.of("GET", "HEAD", "OPTIONS").contains(method);
         return authService.authenticate(AuthController.token(exchange), write,
-                exchange.getRequest().getHeaders().getFirst("X-CSRF-Token")).flatMap(actor -> {
-            CurrentUserBO user = new CurrentUserBO();
-            user.setUserId(actor.getUser().getUserId());
-            user.setSessionId(actor.getSession().getSessionId());
-            String assertion = IdentityAssertion.sign(user, audience, method,
-                    exchange.getRequest().getURI().getRawPath(), properties.getIdentityKey());
-            return chain.filter(exchange.mutate().request(exchange.getRequest().mutate().headers(headers -> {
-                headers.set(IdentityAssertion.HEADER, assertion);
-                headers.remove("Cookie");
-                headers.remove("X-CSRF-Token");
-            }).build()).build());
-        });
+                exchange.getRequest().getHeaders().getFirst("X-CSRF-Token")).flatMap(actor -> forwardAuthenticated(exchange, chain, audience, method, actor));
+    }
+
+    /** 签发内部身份并移除浏览器认证凭据 */
+    private Mono<Void> forwardAuthenticated(ServerWebExchange exchange, GatewayFilterChain chain,
+                                          String audience, String method, AuthUserBO actor) {
+        CurrentUserBO user = new CurrentUserBO();
+        user.setUserId(actor.getUser().getUserId());
+        user.setSessionId(actor.getSession().getSessionId());
+        String assertion = IdentityAssertion.sign(user, audience, method,
+                exchange.getRequest().getURI().getRawPath(), properties.getIdentityKey());
+        return chain.filter(exchange.mutate().request(exchange.getRequest().mutate().headers(headers -> setIdentityHeaders(headers, assertion)).build()).build());
+    }
+
+    private void setIdentityHeaders(HttpHeaders headers, String assertion) {
+        headers.set(IdentityAssertion.HEADER, assertion);
+        headers.remove("Cookie");
+        headers.remove("X-CSRF-Token");
     }
 
     @Override

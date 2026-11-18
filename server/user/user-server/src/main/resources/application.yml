@@ -2,21 +2,21 @@ spring:
   application:
     name: user-server
   datasource:
-    url: ${SQUAD_PG_URL:jdbc:postgresql://127.0.0.1:15432/agent_squad}
-    username: ${SQUAD_PG_USER:squad}
-    password: ${SQUAD_PG_PASSWORD:squad}
+    url: 'jdbc:postgresql://127.0.0.1:15432/agent_squad'
+    username: 'squad'
+    password: '4e59485ceda19845fac6833a19bdd53953f8756f1dd5a934'
   sql:
     init:
       mode: never
 server:
   address: 127.0.0.1
-  port: ${SQUAD_USER_PORT:18083}
+  port: 18083
 mybatis-plus:
   mapper-locations: classpath:/mapper/*.xml
 agentsquad:
   user:
     verification-code: '8888'
-    identity-key: ${SQUAD_IDENTITY_KEY}
+    identity-key: '05584e456dbd98d1fdbeed4972133d1d12b7d5576cfef4a4e595fad2d03b0e6f'
 management:
   endpoints:
     web:

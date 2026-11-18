@@ -9,7 +9,6 @@ import io.agentscope.core.tool.Toolkit;
 import io.agentscope.extensions.model.openai.OpenAIChatModel;
 import io.agentscope.harness.agent.HarnessAgent;
 import jakarta.annotation.Resource;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -30,7 +29,7 @@ public class ChatAgentConfiguration {
     private ChatAgentProperties properties;
 
     @Resource
-    private ObjectProvider<AgentTracingMiddleware> tracingProvider;
+    private AgentTracingMiddleware tracingMiddleware;
 
     /**
      * 创建框架 Agent；应用关闭时由框架释放会话与运行资源。
@@ -64,7 +63,7 @@ public class ChatAgentConfiguration {
                 .toolkit(toolkit)
                 .workspace(Path.of(properties.getWorkspace()));
         TestSubagentDefinitions.configure(agent, Path.of(properties.getWorkspace()));
-        tracingProvider.ifAvailable(agent::middleware);
+        agent.middleware(tracingMiddleware);
         return agent.build();
     }
 }

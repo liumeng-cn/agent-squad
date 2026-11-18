@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """本地服务启停；不清库、不覆盖本地配置、不终止未知进程。"""
 import argparse
-import json
 import os
 from pathlib import Path
-import secrets
+import shlex
 import signal
 import socket
 import subprocess
@@ -14,36 +13,15 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / os.environ.get('SQUAD_STATE_DIR', '.local/auth')
-SERVICES = [('user-server', int(os.environ.get('SQUAD_USER_PORT', '18083')), 'user/user-server'), ('v2-server', int(os.environ.get('SQUAD_V2_PORT', '18082')), 'v2-server'), ('gateway', int(os.environ.get('SQUAD_GATEWAY_PORT', '18081')), 'gateway'), ('web', int(os.environ.get('SQUAD_WEB_PORT', '5173')), None)]
+SERVICES = [('user-server', 18083, 'user/user-server'), ('v2-server', 18082, 'v2-server'), ('gateway', 18081, 'gateway'), ('web', 5173, None)]
 
 def run(args, **kwargs):
     return subprocess.run(args, cwd=ROOT, check=True, **kwargs)
 
 def config():
+    # 应用参数统一由各服务 application.yml 提供，此处只准备运行日志目录。
     STATE.mkdir(parents=True, exist_ok=True)
-    path = STATE / 'config.json'
-    if not path.exists():
-        path.write_text(json.dumps({'pgUser': 'squad', 'pgPassword': 'squad', 'redisPassword': ''}, indent=2))
-        path.chmod(0o600)
-    cfg = json.loads(path.read_text())
-    for key in ['identityKey']:
-        if key not in cfg:
-            cfg[key] = secrets.token_hex(32)
-    path.write_text(json.dumps(cfg, indent=2))
-    path.chmod(0o600)
-    private = STATE / 'jwt-private.pem'
-    public = STATE / 'jwt-public.pem'
-    if not private.exists():
-        run(['openssl', 'genpkey', '-algorithm', 'RSA', '-pkeyopt', 'rsa_keygen_bits:2048', '-out', str(private)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        private.chmod(0o600)
-    if not public.exists():
-        run(['openssl', 'pkey', '-in', str(private), '-pubout', '-out', str(public)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    env = dict(os.environ)
-    env.update(SQUAD_PG_USER=cfg['pgUser'], SQUAD_PG_PASSWORD=cfg['pgPassword'], SQUAD_REDIS_PASSWORD=cfg.get('redisPassword', ''), SQUAD_IDENTITY_KEY=cfg['identityKey'], SQUAD_JWT_PRIVATE_KEY=str(private), SQUAD_JWT_PUBLIC_KEY=str(public))
-    env['SQUAD_USER_URL'] = f"http://127.0.0.1:{SERVICES[0][1]}"
-    env['SQUAD_V2_URL'] = f"http://127.0.0.1:{SERVICES[1][1]}"
-    env['SQUAD_GATEWAY_URL'] = f"http://127.0.0.1:{SERVICES[2][1]}"
-    return env
+    return dict(os.environ)
 
 def listening(port):
     with socket.socket() as sock:
@@ -85,6 +63,26 @@ def stop():
                 time.sleep(.1)
             else: raise RuntimeError(f'{name} 未退出，请查看日志；未强制终止')
             print(f'已停止 {name}')
+
+def tail_backend_logs():
+    """启动完成后在 iTerm2 新窗口持续查看后端日志。"""
+    if sys.platform != 'darwin':
+        return
+    logs = [str((STATE / f'{name}.log').resolve()) for name, _, module in SERVICES if module]
+    command = shlex.join(['tail', '-n', '100', '-F', *logs])
+    script = '''on run argv
+    tell application "iTerm2"
+        activate
+        set logWindow to (create window with default profile)
+        tell current session of logWindow
+            write text (item 1 of argv)
+        end tell
+    end tell
+end run'''
+    try:
+        subprocess.run(['osascript', '-e', script, command], check=True, capture_output=True, text=True, timeout=15)
+    except (OSError, subprocess.SubprocessError):
+        print(f'无法自动打开 iTerm2，后端已启动，可手动执行：{command}', file=sys.stderr)
 
 def start(skip_build):
     env = config()
@@ -129,13 +127,14 @@ def start(skip_build):
             (STATE / f'{name}.pid').unlink(missing_ok=True)
         raise
     print(f'访问 http://127.0.0.1:{SERVICES[3][1]}/v2/login；测试验证码 8888')
+    tail_backend_logs()
 
 def init_db():
     env = config(); dependencies()
     # 只创建用户模块schema/table，不删除或重建现有对象。
     sql = ROOT / 'server/user/user-server/src/main/resources/db/schema.sql'
     with sql.open('rb') as data:
-        run(['docker', 'exec', '-i', 'squad-postgres', 'psql', '-v', 'ON_ERROR_STOP=1', '-U', env['SQUAD_PG_USER'], '-d', 'agent_squad'], stdin=data)
+        run(['docker', 'exec', '-i', 'squad-postgres', 'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'squad', '-d', 'agent_squad'], stdin=data)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)

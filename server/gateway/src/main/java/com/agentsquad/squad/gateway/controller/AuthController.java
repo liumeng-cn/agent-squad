@@ -1,6 +1,8 @@
 package com.agentsquad.squad.gateway.controller;
 
 import com.agentsquad.squad.common.model.ApiResult;
+import com.agentsquad.squad.gateway.bo.AuthUserBO;
+import com.agentsquad.squad.gateway.bo.LoginResultBO;
 import com.agentsquad.squad.gateway.config.properties.AuthProperties;
 import com.agentsquad.squad.gateway.dto.LoginDTO;
 import com.agentsquad.squad.gateway.service.AuthService;
@@ -33,10 +35,12 @@ public class AuthController {
     @PostMapping("/login")
     public Mono<ApiResult<LoginVO>> login(@Valid @RequestBody LoginDTO request, ServerWebExchange exchange) {
         noStore(exchange);
-        return authService.login(request).map(result -> {
-            exchange.getResponse().addCookie(cookie(result.getToken(), properties.getLifetime().toSeconds()));
-            return ApiResult.success(result.getView());
-        });
+        return authService.login(request).map(result -> loginResponse(result, exchange));
+    }
+
+    private ApiResult<LoginVO> loginResponse(LoginResultBO result, ServerWebExchange exchange) {
+        exchange.getResponse().addCookie(cookie(result.getToken(), properties.getLifetime().toSeconds()));
+        return ApiResult.success(result.getView());
     }
 
     /**
@@ -45,7 +49,7 @@ public class AuthController {
     @GetMapping("/me")
     public Mono<ApiResult<LoginVO>> me(ServerWebExchange exchange) {
         noStore(exchange);
-        return authService.authenticate(token(exchange), false, null).map(actor -> ApiResult.success(authService.view(actor)));
+        return authService.authenticate(token(exchange), false, null).map(this::userResponse);
     }
 
     /**
@@ -55,10 +59,16 @@ public class AuthController {
     public Mono<ApiResult<Void>> logout(ServerWebExchange exchange) {
         noStore(exchange);
         return authService.logout(token(exchange), exchange.getRequest().getHeaders().getFirst("X-CSRF-Token"))
-                .then(Mono.fromSupplier(() -> {
-                    exchange.getResponse().addCookie(cookie("", 0));
-                    return ApiResult.<Void>success(null);
-                }));
+                .then(Mono.fromSupplier(() -> logoutResponse(exchange)));
+    }
+
+    private ApiResult<LoginVO> userResponse(AuthUserBO actor) {
+        return ApiResult.success(authService.view(actor));
+    }
+
+    private ApiResult<Void> logoutResponse(ServerWebExchange exchange) {
+        exchange.getResponse().addCookie(cookie("", 0));
+        return ApiResult.success(null);
     }
 
     public static String token(ServerWebExchange exchange) {

@@ -11,7 +11,6 @@ import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.harness.agent.HarnessAgent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.nio.file.Path;
@@ -66,10 +65,8 @@ class AguiSessionTest {
     }
 
     static ChatRuntimeService sessions(HarnessAgent agent) {
-        var beans = new DefaultListableBeanFactory();
-        beans.registerSingleton("agent", agent);
         var sessions = new ChatRuntimeService();
-        ReflectionTestUtils.setField(sessions, "agentProvider", beans.getBeanProvider(HarnessAgent.class));
+        ReflectionTestUtils.setField(sessions, "agent", agent);
         ReflectionTestUtils.setField(sessions, "converter", new ChatSessionConverter());
         return sessions;
     }

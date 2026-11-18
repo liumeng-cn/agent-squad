@@ -26,6 +26,6 @@ public class GatewayRequestIdFilter implements WebFilter {
         exchange.getResponse().getHeaders().set(REQUEST_ID_HEADER, requestId);
         return chain.filter(exchange.mutate().request(exchange.getRequest().mutate()
                         .header(REQUEST_ID_HEADER, requestId).build()).build())
-                .contextWrite(context -> context.put(REQUEST_ID_CONTEXT_KEY, requestId));
+                .contextWrite(reactor.util.context.Context.of(REQUEST_ID_CONTEXT_KEY, requestId));
     }
 }

@@ -24,6 +24,7 @@ import io.agentscope.core.util.JsonUtils;
 import io.agentscope.harness.agent.session.AgentSession;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.Map;
 
 /**
@@ -67,13 +68,23 @@ public class ChatSessionConverter {
             } else if (NativeChatCommandType.fromValue(command.kind()) == NativeChatCommandType.STEER) {
                 var input = new ChatInputVO();
                 input.setId(command.id());
-                input.setMessageIds(command.messages().stream().map(Msg::getId).toList());
+                var messageIds = new ArrayList<String>();
+                StringBuilder content = new StringBuilder();
+                for (var message : command.messages()) {
+                    messageIds.add(message.getId());
+                    content.append(message.getTextContent());
+                }
+                input.setMessageIds(messageIds);
                 input.setTurnId(command.turnId());
-                input.setContent(command.messages().stream().map(Msg::getTextContent)
-                        .reduce("", (left, right) -> left + right));
-                input.setStatus(projection.getAppliedInputs().contains(command.id()) ? ChatInputStatus.APPLIED
-                        : projection.getFinishedTurns().contains(command.turnId()) || inbox.rejected().containsKey(command.id())
-                        ? ChatInputStatus.UNAPPLIED : ChatInputStatus.ACCEPTED);
+                input.setContent(content.toString());
+                if (projection.getAppliedInputs().contains(command.id())) {
+                    input.setStatus(ChatInputStatus.APPLIED);
+                } else if (projection.getFinishedTurns().contains(command.turnId())
+                        || inbox.rejected().containsKey(command.id())) {
+                    input.setStatus(ChatInputStatus.UNAPPLIED);
+                } else {
+                    input.setStatus(ChatInputStatus.ACCEPTED);
+                }
                 result.getInputs().add(input);
                 addUserMessages(command.messages(), command.turnId(), messages);
             }
@@ -97,7 +108,9 @@ public class ChatSessionConverter {
         }
         var data = event.data();
         if (eventType == NativeChatEventType.INPUT_APPLIED && data.get("commandIds") instanceof Iterable<?> ids) {
-            ids.forEach(id -> projection.getAppliedInputs().add(String.valueOf(id)));
+            for (var id : ids) {
+                projection.getAppliedInputs().add(String.valueOf(id));
+            }
         }
         if (NativeChatEventType.fromValue(event.type()) == NativeChatEventType.USER_MESSAGE && data.get("message") != null) {
             var message = JsonUtils.getJsonCodec().convertValue(data.get("message"), Msg.class);
@@ -137,22 +150,23 @@ public class ChatSessionConverter {
             }
             case ACTION_END -> {
                 var id = String.valueOf(data.get("toolCallId"));
-                reply(event, projection).getActivities().stream().filter(item -> item.getId().equals(id))
-                        .forEach(item -> {
-                            item.setStatus(toolStatus(data));
-                            item.setFinishedAt(event.occurredAt());
-                        });
+                for (var activity : reply(event, projection).getActivities()) {
+                    if (activity.getId().equals(id)) {
+                        activity.setStatus(toolStatus(data));
+                        activity.setFinishedAt(event.occurredAt());
+                    }
+                }
             }
             case RUN_END, TURN_CANCELLED -> {
                 var status = status(String.valueOf(data.get("status")));
                 reply(event, projection).setStatus(status);
                 reply(event, projection).setFinishedAt(event.occurredAt());
-                reply(event, projection).getActivities().stream()
-                        .filter(item -> item.getStatus() == ChatExecutionStatus.RUNNING)
-                        .forEach(item -> {
-                            item.setStatus(ChatExecutionStatus.INTERRUPTED);
-                            item.setFinishedAt(event.occurredAt());
-                        });
+                for (var activity : reply(event, projection).getActivities()) {
+                    if (activity.getStatus() == ChatExecutionStatus.RUNNING) {
+                        activity.setStatus(ChatExecutionStatus.INTERRUPTED);
+                        activity.setFinishedAt(event.occurredAt());
+                    }
+                }
                 projection.getFinishedTurns().add(event.turnId());
                 if (event.turnId().equals(session.getTurnId())) {
                     session.setStatus(status);
@@ -183,16 +197,22 @@ public class ChatSessionConverter {
             } else if (type == NativeChatContentType.THINKING
                     && block.get("thinking") instanceof String thinking && !thinking.isEmpty()) {
                 var callId = String.valueOf(data.get("modelCallId"));
-                var target = reply.getThinkingBlocks().stream()
-                        .filter(item -> item.getModelCallId().equals(callId)).findFirst().orElseGet(() -> {
-                            var item = new ChatThinkingVO();
-                            item.setModelCallId(callId);
-                            reply.getThinkingBlocks().add(item);
-                            return item;
-                        });
+                var target = thinkingBlock(reply, callId);
                 target.setContent(target.getContent() + thinking);
             }
         }
+    }
+
+    private ChatThinkingVO thinkingBlock(ChatHistoryMessageVO reply, String callId) {
+        for (var block : reply.getThinkingBlocks()) {
+            if (block.getModelCallId().equals(callId)) {
+                return block;
+            }
+        }
+        var block = new ChatThinkingVO();
+        block.setModelCallId(callId);
+        reply.getThinkingBlocks().add(block);
+        return block;
     }
 
     private void addUserMessages(Iterable<Msg> inputs, String turnId, Map<String, ChatHistoryMessageVO> messages) {
@@ -226,7 +246,11 @@ public class ChatSessionConverter {
 
     private ChatHistoryMessageVO modelReply(SessionEvent event, ChatProjectionBO projection, String callId) {
         var id = modelReplyId(event.turnId(), callId);
-        var message = projection.getMessages().computeIfAbsent(id, ignored -> createReply(event, id));
+        var message = projection.getMessages().get(id);
+        if (message == null) {
+            message = createReply(event, id);
+            projection.getMessages().put(id, message);
+        }
         projection.getActiveReplies().put(event.turnId(), message);
         return message;
     }
@@ -236,12 +260,14 @@ public class ChatSessionConverter {
     }
 
     private ChatHistoryMessageVO reply(SessionEvent event, ChatProjectionBO projection) {
-        return projection.getActiveReplies().computeIfAbsent(event.turnId(), turn -> {
-            var id = "assistant:" + turn + ":" + event.executionRunId();
-            var message = createReply(event, id);
+        var message = projection.getActiveReplies().get(event.turnId());
+        if (message == null) {
+            var id = "assistant:" + event.turnId() + ":" + event.executionRunId();
+            message = createReply(event, id);
             projection.getMessages().put(id, message);
-            return message;
-        });
+            projection.getActiveReplies().put(event.turnId(), message);
+        }
+        return message;
     }
 
     private ChatHistoryMessageVO createReply(SessionEvent event, String id) {

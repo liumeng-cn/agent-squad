@@ -14,11 +14,11 @@ import java.time.Duration;
 @ConfigurationProperties("agentsquad.auth")
 public class AuthProperties {
     /**
-     * JWT私钥PEM文件路径
+     * JWT私钥PEM内容
      */
     private String privateKey;
     /**
-     * JWT公钥PEM文件路径
+     * JWT公钥PEM内容
      */
     private String publicKey;
     /**

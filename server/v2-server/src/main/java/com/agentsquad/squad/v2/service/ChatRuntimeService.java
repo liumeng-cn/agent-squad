@@ -6,7 +6,6 @@ import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.harness.agent.HarnessAgent;
 import io.agentscope.harness.agent.session.AgentSession;
 import jakarta.annotation.Resource;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 /**
@@ -17,7 +16,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class ChatRuntimeService {
     @Resource
-    private ObjectProvider<HarnessAgent> agentProvider;
+    private HarnessAgent agent;
 
     @Resource
     private ChatSessionConverter converter;
@@ -29,11 +28,13 @@ public class ChatRuntimeService {
      * 打开有身份隔离的原生句柄，不创建第二套执行注册表。
      */
     public AgentSession open(String sessionId, String userId) {
-        var agent = agentProvider.getIfAvailable();
-        if (agent == null) {
-            throw new IllegalStateException("聊天模型尚未启用");
-        }
-        return agent.session(RuntimeContext.builder().userId(userId).sessionId(sessionId).build());
+
+        return agent.session(
+                RuntimeContext.builder()
+                        .userId(userId)
+                        .sessionId(sessionId)
+                        .build()
+        );
     }
 
     public boolean isPreview(String sessionId) {

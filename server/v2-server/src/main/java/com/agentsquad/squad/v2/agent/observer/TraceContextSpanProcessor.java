@@ -22,11 +22,11 @@ public class TraceContextSpanProcessor implements SpanProcessor {
 
     @Override
     public void onStart(Context parentContext, ReadWriteSpan span) {
-        Baggage.fromContext(parentContext).forEach((key, entry) -> {
-            if (CONTEXT_KEYS.contains(key)) {
-                span.setAttribute(key, entry.getValue());
+        for (var entry : Baggage.fromContext(parentContext).asMap().entrySet()) {
+            if (CONTEXT_KEYS.contains(entry.getKey())) {
+                span.setAttribute(entry.getKey(), entry.getValue().getValue());
             }
-        });
+        }
 
     }
 

@@ -55,5 +55,5 @@ public class ChatAgentProperties {
     /**
      * 框架工作区路径。
      */
-    private String workspace = "./.agentscope/v2";
+    private String workspace = "/Users/liumeng/work/pWork/workspace";
 }

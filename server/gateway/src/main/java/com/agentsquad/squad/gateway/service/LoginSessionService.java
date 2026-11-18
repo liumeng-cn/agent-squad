@@ -26,14 +26,29 @@ public class LoginSessionService {
      * 一次SET同时保存会话及TTL，Redis失败不返回登录成功。
      */
     public Mono<Void> create(LoginSessionBO session) {
-        return Mono.fromCallable(() -> mapper.writeValueAsString(session)).flatMap(value ->
-                        redis.opsForValue().set(key(session.getSessionId()), value, Duration.between(Instant.now(), session.getExpiresAt())))
-                .flatMap(saved -> saved ? Mono.empty() : Mono.error(new IllegalStateException("登录态保存失败")));
+        return Mono.fromCallable(() -> mapper.writeValueAsString(session))
+                .flatMap(value -> save(session, value))
+                .flatMap(this::checkSaved);
     }
 
     public Mono<LoginSessionBO> read(String sessionId) {
-        return redis.opsForValue().get(key(sessionId))
-                .flatMap(value -> Mono.fromCallable(() -> mapper.readValue(value, LoginSessionBO.class)));
+        return redis.opsForValue().get(key(sessionId)).flatMap(this::deserialize);
+    }
+
+    private Mono<Boolean> save(LoginSessionBO session, String value) {
+        return redis.opsForValue().set(key(session.getSessionId()), value,
+                Duration.between(Instant.now(), session.getExpiresAt()));
+    }
+
+    private Mono<Void> checkSaved(Boolean saved) {
+        if (Boolean.TRUE.equals(saved)) {
+            return Mono.empty();
+        }
+        return Mono.error(new IllegalStateException("登录态保存失败"));
+    }
+
+    private Mono<LoginSessionBO> deserialize(String value) {
+        return Mono.fromCallable(() -> mapper.readValue(value, LoginSessionBO.class));
     }
 
     public Mono<Void> revoke(String sessionId) {

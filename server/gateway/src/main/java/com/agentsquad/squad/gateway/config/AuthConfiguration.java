@@ -9,10 +9,12 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
-import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.KeyFactory;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
@@ -31,20 +33,10 @@ public class AuthConfiguration {
     @Resource
     private AuthProperties properties;
 
-    /**
-     * Feign为阻塞HTTP客户端，WebFlux应用需显式提供JSON消息转换器。
-     */
-    @Bean
-    public org.springframework.boot.autoconfigure.http.HttpMessageConverters feignMessageConverters(
-            com.fasterxml.jackson.databind.ObjectMapper mapper) {
-        return new org.springframework.boot.autoconfigure.http.HttpMessageConverters(
-                new org.springframework.http.converter.json.MappingJackson2HttpMessageConverter(mapper));
-    }
-
     @Bean
     public JwtEncoder jwtEncoder() throws Exception {
         KeyFactory factory = KeyFactory.getInstance("RSA");
-        RSAPrivateKey privateKey = (RSAPrivateKey) factory.generatePrivate(new PKCS8EncodedKeySpec(read(properties.getPrivateKey())));
+        RSAPrivateKey privateKey = (RSAPrivateKey) factory.generatePrivate(new PKCS8EncodedKeySpec(decodePem(properties.getPrivateKey())));
         RSAPublicKey publicKey = publicKey();
         RSAKey rsa = new RSAKey.Builder(publicKey).privateKey(privateKey).keyID("squad-auth-v1").build();
         return new NimbusJwtEncoder(new ImmutableJWKSet<>(new JWKSet(rsa)));
@@ -58,10 +50,10 @@ public class AuthConfiguration {
     }
 
     private RSAPublicKey publicKey() throws Exception {
-        return (RSAPublicKey) KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(read(properties.getPublicKey())));
+        return (RSAPublicKey) KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(decodePem(properties.getPublicKey())));
     }
 
-    private byte[] read(String path) throws Exception {
-        return Base64.getMimeDecoder().decode(Files.readString(Path.of(path)).replaceAll("-----[^-]+-----", ""));
+    private byte[] decodePem(String pem) {
+        return Base64.getMimeDecoder().decode(pem.replaceAll("-----[^-]+-----", ""));
     }
 }

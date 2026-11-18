@@ -23,6 +23,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "agentsquad.identity.identity-key=test-internal-identity-key-long-enough"})
 @AutoConfigureMockMvc
 class ChatHttpTest {
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private io.agentscope.harness.agent.HarnessAgent agent;
+
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.agentsquad.squad.v2.agent.observer.AgentTracingMiddleware tracingMiddleware;
+
     @Autowired
     private MockMvc mvc;
 

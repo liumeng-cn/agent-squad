@@ -5,9 +5,9 @@ spring:
     web-application-type: reactive
   data:
     redis:
-      host: ${SQUAD_REDIS_HOST:127.0.0.1}
-      port: ${SQUAD_REDIS_PORT:16379}
-      password: ${SQUAD_REDIS_PASSWORD:}
+      host: '127.0.0.1'
+      port: 16379
+      password: 'abedcad54f9956c8ebfc446add9bf67e5eb010fe8e8647be'
       timeout: 2s
   cloud:
     openfeign:
@@ -45,17 +45,54 @@ spring:
             connect-timeout: 2000
 services:
   user-server:
-    url: ${SQUAD_USER_URL:http://127.0.0.1:18083}
+    url: 'http://127.0.0.1:18083'
   v2-server:
-    url: ${SQUAD_V2_URL:http://127.0.0.1:18082}
+    url: 'http://127.0.0.1:18082'
 server:
   address: 127.0.0.1
-  port: ${SQUAD_GATEWAY_PORT:18081}
+  port: 18081
 agentsquad:
   auth:
-    private-key: ${SQUAD_JWT_PRIVATE_KEY}
-    public-key: ${SQUAD_JWT_PUBLIC_KEY}
-    identity-key: ${SQUAD_IDENTITY_KEY}
+    private-key: |
+      -----BEGIN PRIVATE KEY-----
+      MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCxw2TtWHbrRyTi
+      lv+BG6D8cCtJY4R3zDI3+2phaO6y/Y5ci9ftCaB3YW5rZZvnOZVyn8l05pleI4oP
+      OWpc0klZeMoiLJUldxkGbRRq+tNQgpHh5dX/H/delTQyQWxtM1wObf7K6lzmSVFD
+      5uUnsv9UCiCcm0AZLkQSOPTrxlwQ3V2yT256WlRw2pUekAZ5G1Yts3qT1xkZ6eV3
+      dGASKGlNAjzDEiEIdI8u94FHNtDhnBnFS7fchmMsR7LiSvYgkEZYvbg3m6tG6myh
+      9sDVevjBrIqK/MvDt7HyxXUsR8OVf9ecwWg0SWc9gTO6pbC51v5pDbmvAD27wL/X
+      ZEkMB/VvAgMBAAECggEBAKbMuMx5IQT+Od8gXtmPykx1GDkB14/tnAWptRV4N9re
+      TxIJ6m+yg87hLpI5wsOB5firdIZrxudto6NLdcFpVIhO7iSI/t4r1eCQxALqHxTB
+      oA9+8YE2RpCKonKxrwL8mVm03ssahFdV3po/czEAJdN+uUEZ8FhwcFFE/pSqCUOM
+      UqB4lF2+FZ2pbB7ewqdOHcV7zJnnWrJXID+83GsL1vCuQOCu4qtuqkEBTAtPSyCz
+      CHOFcTxVGMrN384Qr4eGerhY36w5F6DxIVFE4wdfno6nVX5qvkHHIvP7wh/OKW94
+      8ogVhv9tV7DW/eEZgwEa9+Q+wWA+Jv+R+BgF+W1bdCkCgYEA4/hur2f8cqdOtbjg
+      Hp++jXlVdnHMUJVvoQk4oyXMnqAoM0R3tBuFGH6yBEIVrTyNGNZjZlQWVJGPWZcY
+      BFN5RPw6Cd7oai5z4QVKsnj1WlU58OBw8BC0W89Q4gJoCLN43RRoFjt+ysoirN6D
+      xg/7FzJia06qGFHDWO6fB+uHnr0CgYEAx56lsy1ITMA85f6HrD5rNEBqHQDtFiY2
+      dXmKGKqiC6gSZIR6ZgWlLWFsTawh+WMEXeB7vM8G/gP165m8KB9ZemZLeRKsFhiu
+      OC07xrUyvTldWy1mJtJO8eYISsv9eSSuwwLn1o649KM7XRWby2wX9B83dRABl3ed
+      g6RTzMecTZsCgYA3cLlqSv2n3GxV4UoP6IVs3m8cSPyJNG5bWWS+uHiUsxpTrXj3
+      AiJSHK2qP3AKG0mtGqY9woFTu7qC7S3YD3zUfAqZT+5xtC5WMPVDhgsVFtjqbYrJ
+      tyZFlZtz+2XVh+AC0+2kSn/BTXs1Uz/0sPo9X/Fza0QOegPp4s4mHO90eQKBgBP9
+      hDR8TWg6PB8ALVAHdC7oYHgFFrkIHJ4JDNZJiC7Ipwbf6W38FL2FqxXgLgrOaqqI
+      B3wx805O0TrFy3ztHsXOJrK6NveDgzbm+Lx+etVOQFYYJsmud+9rjNsIsJqIHOQ0
+      j0kCQ+1jx1ccCd0GNyPgWGplrvMfLGv5cdbpCnMPAoGBANmMySvOZBAox58sfiyu
+      79KMOqL+3a9YcNvYeJE+PgYrMgbGsLQsD50nhcpROE7i9WCTpYaroZMPyXB8WakR
+      0xDs+40NJ0Gt/f51YFliz08jXMCyTxGQFr6p+ILZxI4nUC0/kN77P0CcVYEImI3x
+      s0tSVPZNprwZy+ufTz33cxOW
+      -----END PRIVATE KEY-----
+    public-key: |
+      -----BEGIN PUBLIC KEY-----
+      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAscNk7Vh260ck4pb/gRug
+      /HArSWOEd8wyN/tqYWjusv2OXIvX7Qmgd2Fua2Wb5zmVcp/JdOaZXiOKDzlqXNJJ
+      WXjKIiyVJXcZBm0UavrTUIKR4eXV/x/3XpU0MkFsbTNcDm3+yupc5klRQ+blJ7L/
+      VAognJtAGS5EEjj068ZcEN1dsk9uelpUcNqVHpAGeRtWLbN6k9cZGenld3RgEihp
+      TQI8wxIhCHSPLveBRzbQ4ZwZxUu33IZjLEey4kr2IJBGWL24N5urRupsofbA1Xr4
+      wayKivzLw7ex8sV1LEfDlX/XnMFoNElnPYEzuqWwudb+aQ25rwA9u8C/12RJDAf1
+      bwIDAQAB
+      -----END PUBLIC KEY-----
+    identity-key: '05584e456dbd98d1fdbeed4972133d1d12b7d5576cfef4a4e595fad2d03b0e6f'
     verification-code: '8888'
     secure-cookie: false
 management:
