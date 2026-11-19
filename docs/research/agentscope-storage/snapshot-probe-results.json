@@ -1,0 +1,13 @@
+{
+  "descriptor": {
+    "type": "local",
+    "basePath": "/tmp/storage-official-test-run/snapshots",
+    "id": "research-snapshot"
+  },
+  "result": "SNAPSHOT_ROUNDTRIP_OK",
+  "archiveBytes": 10240,
+  "tarEntries": [
+    "memory/research.txt"
+  ],
+  "scope": "LocalSandboxSnapshot persist+JSON descriptor deserialize+restore byte equality; not sandbox runtime lifecycle"
+}

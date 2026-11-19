@@ -6,14 +6,17 @@ import com.agentsquad.squad.v2.agent.tool.EventTestTool;
 import com.agentsquad.squad.v2.config.properties.ChatAgentProperties;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.tool.Toolkit;
+import io.agentscope.extensions.jdbc.JdbcDistributedStore;
 import io.agentscope.extensions.model.openai.OpenAIChatModel;
 import io.agentscope.harness.agent.HarnessAgent;
+import io.agentscope.harness.agent.filesystem.spec.RemoteFilesystemSpec;
 import jakarta.annotation.Resource;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import javax.sql.DataSource;
 import java.nio.file.Path;
 import java.util.Map;
 
@@ -30,6 +33,9 @@ public class ChatAgentConfiguration {
 
     @Resource
     private AgentTracingMiddleware tracingMiddleware;
+
+    @Resource
+    private DataSource dataSource;
 
     /**
      * 创建框架 Agent；应用关闭时由框架释放会话与运行资源。
@@ -62,6 +68,8 @@ public class ChatAgentConfiguration {
                 .model(model)
                 .toolkit(toolkit)
                 .workspace(Path.of(properties.getWorkspace()));
+//                .distributedStore(JdbcDistributedStore.create(dataSource))
+//                .filesystem(new RemoteFilesystemSpec().addSharedPrefix("agents/"));
         TestSubagentDefinitions.configure(agent, Path.of(properties.getWorkspace()));
         agent.middleware(tracingMiddleware);
         return agent.build();

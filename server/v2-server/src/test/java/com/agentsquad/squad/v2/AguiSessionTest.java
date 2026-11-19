@@ -9,11 +9,19 @@ import com.agentsquad.squad.v2.service.ChatService;
 import com.agentsquad.squad.v2.service.ChatRuntimeService;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.harness.agent.HarnessAgent;
+import io.agentscope.extensions.jdbc.JdbcDistributedStore;
+import io.agentscope.harness.agent.filesystem.spec.RemoteFilesystemSpec;
+import com.zaxxer.hikari.HikariDataSource;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
+import org.springframework.core.io.ClassPathResource;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.nio.file.Path;
+import java.nio.file.Files;
+import java.util.UUID;
 import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,6 +69,55 @@ class AguiSessionTest {
             assertThat(receipt.getTurnId()).isNotEqualTo(first.getTurnId());
             assertThat(nativeSession.await(nativeSession.task(receipt.getInputId())).block(Duration.ofSeconds(20)).status())
                     .isEqualTo("completed");
+        }
+    }
+
+    /**
+     * 验证日志入库
+     *
+     * 使用本地 PG 和脚本模型，跨工作区恢复历史，避免本地文件掩盖存储路由错误。
+     */
+    @Test
+    @EnabledIfSystemProperty(named = "agentsquad.test.postgres", matches = "true")
+    void restoresPostgresJournalWithoutLocalWorkspace() throws Exception {
+        var yaml = new YamlPropertiesFactoryBean();
+        yaml.setResources(new ClassPathResource("application-local.yml"));
+        var configuration = yaml.getObject();
+        String userId = "pg-storage-probe-" + UUID.randomUUID();
+        Path firstWorkspace = workspace.resolve("first");
+        Path restoredWorkspace = workspace.resolve("restored");
+
+        try (var dataSource = new HikariDataSource()) {
+            dataSource.setJdbcUrl(configuration.getProperty("spring.datasource.url"));
+            dataSource.setUsername(configuration.getProperty("spring.datasource.username"));
+            dataSource.setPassword(configuration.getProperty("spring.datasource.password"));
+            var store = JdbcDistributedStore.create(dataSource);
+            try (var agent = HarnessAgent.builder().name("pg-probe").agentId("pg-probe")
+                    .model(new ScriptedChatModel()).disableMemoryHooks().workspace(firstWorkspace)
+                    .distributedStore(store)
+                    .filesystem(new RemoteFilesystemSpec().addSharedPrefix("agents/")).build()) {
+                var receipt = service(sessions(agent)).send(input("pg-first", "存储验证"), userId);
+                var session = agent.session(RuntimeContext.builder()
+                        .userId(userId).sessionId("conversation").build());
+                assertThat(session.await(session.task(receipt.getInputId()))
+                        .block(Duration.ofSeconds(20)).status()).isEqualTo("completed");
+                assertThat(store.baseStore().search(java.util.List.of(
+                                "agents", "pg-probe", "users", userId, "agents",
+                                "__agentscope_session_log_v1__"), 10000, 0))
+                        .anyMatch(item -> item.key().contains("commits/"));
+            }
+
+            try (var paths = Files.walk(firstWorkspace)) {
+                assertThat(paths.filter(path -> path.toString().contains(".agentscope-runtime"))
+                        .filter(Files::isRegularFile).toList()).isEmpty();
+            }
+            try (var restored = HarnessAgent.builder().name("pg-probe").agentId("pg-probe")
+                    .model(new ScriptedChatModel()).disableMemoryHooks().workspace(restoredWorkspace)
+                    .distributedStore(JdbcDistributedStore.create(dataSource))
+                    .filesystem(new RemoteFilesystemSpec().addSharedPrefix("agents/")).build()) {
+                assertThat(sessions(restored).read("conversation", userId).getMessages()).hasSize(2);
+                assertThat(sessions(restored).read("conversation", userId + "-other").getMessages()).isEmpty();
+            }
         }
     }
 

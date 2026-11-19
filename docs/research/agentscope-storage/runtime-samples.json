@@ -1,0 +1,83 @@
+{
+  "probeOutput": "idempotentSeq=1\nreopenedEvents=1\n",
+  "agentState": {
+    "session_id": "research-session",
+    "user_id": "research-user",
+    "summary": "",
+    "context": [],
+    "reply_id": "research-reply",
+    "cur_iter": 0,
+    "shutdown_interrupted": false,
+    "permission_context": {
+      "mode": "default",
+      "working_directories": {},
+      "allow_rules": {},
+      "deny_rules": {},
+      "ask_rules": {}
+    },
+    "tool_context": {
+      "max_cache_files": 100,
+      "max_cache_bytes": 25000.0,
+      "activated_groups": [],
+      "spawn_registry": {}
+    },
+    "tasks_context": {
+      "tasks": [],
+      "requirements": [],
+      "revision": 0,
+      "scope": null,
+      "contractVersion": 0,
+      "subjectVersion": null,
+      "verifications": []
+    },
+    "plan_mode_context": {
+      "plan_active": false,
+      "current_plan_file": null
+    }
+  },
+  "journalObjects": {
+    "research/session.json": {
+      "storageVersion": 1,
+      "value": {
+        "formatVersion": 1,
+        "authority": "event_log",
+        "replayCoverage": "adapter_chunks",
+        "createdAt": 1794920882548
+      }
+    },
+    "research/head.json": {
+      "storageVersion": 3,
+      "value": {
+        "seq": 1,
+        "epoch": 1,
+        "owner": null,
+        "leaseUntil": 0,
+        "commitId": "26099ade12d8c1e167b16fa00ee67ad319b7a29ea3f5d432a105a82e3c7d78af"
+      }
+    },
+    "research/commits/26099ade12d8c1e167b16fa00ee67ad319b7a29ea3f5d432a105a82e3c7d78af.json": {
+      "storageVersion": 1,
+      "value": {
+        "batchId": "research-batch",
+        "parent": null,
+        "firstSeq": 1,
+        "lastSeq": 1,
+        "hash": "128f6c604aa5c26a773fa8927ee6a4f54a424d9add7e8adebc18948a4562c32b",
+        "events": [
+          {
+            "schemaVersion": 1,
+            "eventId": "event-1",
+            "seq": 1,
+            "occurredAt": 1,
+            "type": "run/start",
+            "executionRunId": "research-run",
+            "turnId": "research-turn",
+            "required": true,
+            "payloadJson": "{}"
+          }
+        ],
+        "payloadBlobs": {}
+      }
+    }
+  }
+}

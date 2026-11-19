@@ -2,7 +2,6 @@ package com.agentsquad.squad.v2.service;
 
 import com.agentsquad.squad.common.enums.ApiCode;
 import com.agentsquad.squad.common.exceptions.BusinessException;
-
 import com.agentsquad.squad.v2.dto.ChatInterruptDTO;
 import com.agentsquad.squad.v2.dto.ChatMessageDTO;
 import com.agentsquad.squad.v2.dto.ChatResumeDTO;
@@ -33,22 +32,19 @@ public class ChatService {
      * 网络或存储失败不转为提交，防止不确定结果导致重复执行。
      */
     public ChatReceiptVO send(ChatMessageDTO request, String userId) {
-
         if (sessionService.isPreview(request.getSessionId())) {
             throw new BusinessException(ApiCode.BAD_REQUEST, "示例会话仅供展示，请开启新对话");
         }
 
         var session = sessionService.open(request.getSessionId(), userId);
-        if (request.getObservedTurnId() != null) {
 
-            // 插话
+        // 优先补充页面观察到的轮次，成功后不再提交新任务
+        if (request.getObservedTurnId() != null) {
             var target = new AgentSession.Task(null, request.getObservedTurnId(), null, null, null);
             try {
                 var input = session.steer(target, request.getMessage().trim());
                 return receipt(request, input.turnId(), input.inputId(), ChatDisposition.STEERING);
-
             } catch (IllegalStateException e) {
-
                 log.warn("插话失败，sessionId:{}, msg:{}", request.getSessionId(), e.getMessage());
 
                 var rejection = SteeringRejection.fromMessage(e.getMessage());
@@ -58,6 +54,7 @@ public class ChatService {
             }
         }
 
+        // 本进程内串行处理旧轮次收尾和新任务提交，重试沿用原交互标识
         synchronized (session) {
             boolean accepted = hasAcceptedTask(session, request.getInteractionId());
             var latest = SessionTurns.read(session.log()).latest();
@@ -67,10 +64,10 @@ public class ChatService {
                     SessionRecovery.cancelPending(session.log(), latest.turnId());
                 }
             }
+
             var task = session.submit(request.getInteractionId(), request.getMessage().trim());
             return receipt(request, task.turnId(), task.commandId(), ChatDisposition.NEW_TURN);
         }
-
     }
 
     /**
@@ -108,6 +105,9 @@ public class ChatService {
         return false;
     }
 
+    /**
+     * 从日志确认目标轮次已经结束，未知状态不转为新任务
+     */
     private boolean ended(AgentSession session, String turnId) {
         for (var turn : SessionTurns.read(session.log()).turns()) {
             if (turn.turnId().equals(turnId) && turn.ended()) {

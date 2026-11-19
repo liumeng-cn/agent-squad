@@ -1,0 +1,9 @@
+{
+  "source": "ProcessJournalProbe.java",
+  "processA": "READY seq=1 epoch=1",
+  "competingProcess": "COMPETITOR_REJECTED",
+  "processAExit": -9,
+  "recoveryProcess": "STALE_WRITER_FENCED\nRECOVERED seq=2 epoch=2",
+  "leaseWaitSeconds": 3.2,
+  "note": "Three independent JVMs sharing the same local POSIX filesystem; not cross-host or remote-store failover"
+}

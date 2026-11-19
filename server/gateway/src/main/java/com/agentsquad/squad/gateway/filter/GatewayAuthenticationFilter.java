@@ -30,6 +30,7 @@ import java.util.Set;
 public class GatewayAuthenticationFilter implements GlobalFilter, Ordered {
     @Resource
     private AuthService authService;
+
     @Resource
     private AuthProperties properties;
 

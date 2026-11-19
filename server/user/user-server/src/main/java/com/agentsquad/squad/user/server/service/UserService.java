@@ -27,8 +27,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
     @Resource
     private UserMapper userMapper;
+
     @Resource
     private UserConverter converter;
+
     @Resource
     private UserProperties properties;
 
@@ -37,9 +39,12 @@ public class UserService {
      */
     @Transactional
     public UserAccountVO register(UserRegisterDTO request) {
+        // 校验注册验证码
         if (!properties.getVerificationCode().equals(request.getVerificationCode())) {
             throw new BusinessException(ApiCode.BAD_REQUEST, "验证码错误");
         }
+
+        // 初始化账号资料和版本
         UserPO user = new UserPO();
         user.setUserId(userMapper.nextUserId());
         user.setUsername("user_" + user.getUserId());
@@ -49,26 +54,42 @@ public class UserService {
         user.setAuthVersion(0L);
         user.setVersion(0L);
         user.setDelFlag("0");
+
+        // 保存账号，重复手机号由数据库唯一约束裁决
         try {
             userMapper.insert(user);
         } catch (DuplicateKeyException exception) {
             throw new BusinessException(ApiCode.CONFLICT, "该手机号已注册，请登录");
         }
+
         log.info("用户注册完成 userId={}", user.getUserId());
         return converter.toAccount(user);
     }
 
+    /**
+     * 查询手机账号
+     */
     public UserAccountVO byPhone(String phone) {
-        return account(userMapper.selectOne(Wrappers.<UserPO>lambdaQuery()
-                .eq(UserPO::getPhone, phone).eq(UserPO::getDelFlag, "0")));
+        UserPO user = userMapper.selectOne(Wrappers.<UserPO>lambdaQuery()
+                .eq(UserPO::getPhone, phone)
+                .eq(UserPO::getDelFlag, "0"));
+
+        return account(user);
     }
 
+    /**
+     * 查询用户账号
+     */
     public UserAccountVO byId(String userId) {
         if (userId == null || !userId.matches("[1-9][0-9]{0,18}")) {
             throw new BusinessException(ApiCode.BAD_REQUEST, "用户标识无效");
         }
-        return account(userMapper.selectOne(Wrappers.<UserPO>lambdaQuery()
-                .eq(UserPO::getUserId, Long.valueOf(userId)).eq(UserPO::getDelFlag, "0")));
+
+        UserPO user = userMapper.selectOne(Wrappers.<UserPO>lambdaQuery()
+                .eq(UserPO::getUserId, Long.valueOf(userId))
+                .eq(UserPO::getDelFlag, "0"));
+
+        return account(user);
     }
 
     /**
@@ -76,9 +97,14 @@ public class UserService {
      */
     @Transactional
     public UserAccountVO update(String userId, UserUpdateDTO request) {
-        if (userMapper.updateDisplayName(Long.valueOf(userId), request.getDisplayName().strip(), request.getVersion()) != 1) {
+        // 按页面版本更新昵称，避免覆盖其他请求已保存的资料
+        Long accountId = Long.valueOf(userId);
+        String displayName = request.getDisplayName().strip();
+        int updatedRows = userMapper.updateDisplayName(accountId, displayName, request.getVersion());
+        if (updatedRows != 1) {
             throw new BusinessException(ApiCode.CONFLICT, "资料已变更，请刷新后重试");
         }
+
         log.info("用户昵称更新完成 userId={}", userId);
         return byId(userId);
     }

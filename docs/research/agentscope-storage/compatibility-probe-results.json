@@ -1,0 +1,8 @@
+{
+  "checks": [
+    "UNKNOWN_STATE_PROPERTY_IGNORED",
+    "UNKNOWN_CONTENT_TYPE_REJECTED",
+    "EVENT_SCHEMA_2_REJECTED"
+  ],
+  "scope": "Target-version parser boundary only; not cross-version execution compatibility"
+}

@@ -13,7 +13,13 @@ import com.agentsquad.squad.gateway.vo.LoginVO;
 import com.agentsquad.squad.user.api.vo.UserAccountVO;
 import jakarta.annotation.Resource;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
-import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -32,12 +38,16 @@ import java.util.UUID;
 public class AuthService {
     @Resource
     private AuthProperties properties;
+
     @Resource
     private UserAccountClient users;
+
     @Resource
     private LoginSessionService sessions;
+
     @Resource
     private JwtEncoder encoder;
+
     @Resource
     private JwtDecoder decoder;
 
@@ -48,28 +58,8 @@ public class AuthService {
         if (!properties.getVerificationCode().equals(request.getVerificationCode())) {
             return Mono.error(new BusinessException(ApiCode.BAD_REQUEST, "验证码错误"));
         }
-        return users.byPhone(request.getPhone()).flatMap(this::createLoginSession);
-    }
 
-    /** 创建会话并在持久化成功后交付登录结果 */
-    private Mono<LoginResultBO> createLoginSession(UserAccountVO user) {
-        requireActive(user);
-        LoginSessionBO session = new LoginSessionBO();
-        session.setSessionId(UUID.randomUUID().toString());
-        session.setUserId(user.getUserId());
-        session.setAuthVersion(user.getAuthVersion());
-        session.setCsrfToken(UUID.randomUUID().toString() + UUID.randomUUID());
-        session.setCreatedAt(Instant.now());
-        session.setExpiresAt(session.getCreatedAt().plus(properties.getLifetime()));
-        JwtClaimsSet claims = JwtClaimsSet.builder().issuer(properties.getIssuer())
-                .audience(List.of(properties.getAudience())).subject(user.getUserId()).id(session.getSessionId())
-                .issuedAt(session.getCreatedAt()).expiresAt(session.getExpiresAt())
-                .claim("authVersion", user.getAuthVersion()).build();
-        String token = encoder.encode(JwtEncoderParameters.from(JwsHeader.with(SignatureAlgorithm.RS256).build(), claims)).getTokenValue();
-        LoginResultBO result = new LoginResultBO();
-        result.setToken(token);
-        result.setView(view(user, session));
-        return sessions.create(session).thenReturn(result);
+        return users.byPhone(request.getPhone()).flatMap(this::createLoginSession);
     }
 
     /**
@@ -80,7 +70,60 @@ public class AuthService {
                 .flatMap(jwt -> authenticateSession(jwt, write, csrf));
     }
 
-    /** 校验令牌关联的会话及写请求凭据 */
+    /**
+     * 获取登录视图
+     */
+    public LoginVO view(AuthUserBO actor) {
+        return view(actor.getUser(), actor.getSession());
+    }
+
+    /**
+     * 注销登录会话
+     */
+    public Mono<Void> logout(String token, String csrf) {
+        return authenticate(token, true, csrf).flatMap(this::revokeSession)
+                .onErrorResume(BusinessException.class, this::handleLogoutError);
+    }
+
+    /**
+     * 创建会话并在持久化成功后交付登录结果
+     */
+    private Mono<LoginResultBO> createLoginSession(UserAccountVO user) {
+        requireActive(user);
+
+        // 初始化登录会话，绑定账号认证版本和有效期
+        LoginSessionBO session = new LoginSessionBO();
+        session.setSessionId(UUID.randomUUID().toString());
+        session.setUserId(user.getUserId());
+        session.setAuthVersion(user.getAuthVersion());
+        session.setCsrfToken(UUID.randomUUID().toString() + UUID.randomUUID());
+        session.setCreatedAt(Instant.now());
+        session.setExpiresAt(session.getCreatedAt().plus(properties.getLifetime()));
+
+        // 签发令牌，令牌与 Redis 会话共同决定登录是否有效
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .issuer(properties.getIssuer())
+                .audience(List.of(properties.getAudience()))
+                .subject(user.getUserId())
+                .id(session.getSessionId())
+                .issuedAt(session.getCreatedAt())
+                .expiresAt(session.getExpiresAt())
+                .claim("authVersion", user.getAuthVersion())
+                .build();
+        JwsHeader header = JwsHeader.with(SignatureAlgorithm.RS256).build();
+        JwtEncoderParameters parameters = JwtEncoderParameters.from(header, claims);
+        String token = encoder.encode(parameters).getTokenValue();
+
+        // 只有会话保存成功，才向调用方交付登录结果
+        LoginResultBO result = new LoginResultBO();
+        result.setToken(token);
+        result.setView(view(user, session));
+        return sessions.create(session).thenReturn(result);
+    }
+
+    /**
+     * 校验令牌关联的会话及写请求凭据
+     */
     private Mono<AuthUserBO> authenticateSession(Jwt jwt, boolean write, String csrf) {
         return sessions.read(jwt.getId())
                 .switchIfEmpty(Mono.error(unauthorized()))
@@ -93,10 +136,14 @@ public class AuthService {
                 || version == null || session.getAuthVersion() != version.longValue()) {
             return Mono.error(unauthorized());
         }
+
+        // 写请求额外验证 CSRF 凭据
         if (write && (csrf == null || !MessageDigest.isEqual(csrf.getBytes(StandardCharsets.UTF_8),
                 session.getCsrfToken().getBytes(StandardCharsets.UTF_8)))) {
             return Mono.error(new BusinessException(ApiCode.FORBIDDEN, "请求校验失败，请刷新后重试"));
         }
+
+        // 重新读取账号，停用及认证版本变更立即生效
         return users.byId(session.getUserId())
                 .onErrorMap(BusinessException.class, this::mapAccountError)
                 .map(user -> createActor(user, session));
@@ -118,15 +165,6 @@ public class AuthService {
         actor.setUser(user);
         actor.setSession(session);
         return actor;
-    }
-
-    public LoginVO view(AuthUserBO actor) {
-        return view(actor.getUser(), actor.getSession());
-    }
-
-    public Mono<Void> logout(String token, String csrf) {
-        return authenticate(token, true, csrf).flatMap(this::revokeSession)
-                .onErrorResume(BusinessException.class, this::handleLogoutError);
     }
 
     private Mono<Void> revokeSession(AuthUserBO actor) {

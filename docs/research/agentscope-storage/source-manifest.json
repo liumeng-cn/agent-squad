@@ -1,0 +1,47 @@
+{
+  "officialTag": "v2.1.0-BETA1",
+  "tagObject": "887c88196018ff5ad09ee0e850c74013bd939e3f",
+  "commit": "5451c73abe47053340683a1cc6d67b290b056648",
+  "sourceJarComparison": {
+    "matchedJavaFiles": 642,
+    "differentFiles": 0
+  },
+  "artifacts": [
+    {
+      "artifact": "agentscope-extensions-model-dashscope",
+      "version": "2.1.0-BETA1",
+      "sha256": "9aec2497a3970193b95b232cc2aa15b274ce499e4cb6571e9f38a1cce1e1c632"
+    },
+    {
+      "artifact": "agentscope-harness",
+      "version": "2.1.0-BETA1",
+      "sha256": "aaef6ae10b504ef25e667ae4502d9d0999831c6df438fe1bdda2321b54b71289"
+    },
+    {
+      "artifact": "agentscope-extensions-jdbc",
+      "version": "2.1.0-BETA1",
+      "sha256": "8ddff4fd017b7a766882c2070af15980b80afc22e6c8deb448c0acc030b6fd73"
+    },
+    {
+      "artifact": "agentscope-extensions-agui",
+      "version": "2.1.0-BETA1",
+      "sha256": "c516e20b2cea718af26fea1074ef6e334af94d06a5d127bafea14f047da90aab"
+    },
+    {
+      "artifact": "agentscope-core",
+      "version": "2.1.0-BETA1",
+      "sha256": "ed1bbba07a1d619e5cc8a485928364fb0ee41c971885399eeacd2f885f4782af"
+    },
+    {
+      "artifact": "agentscope-extensions-model-openai",
+      "version": "2.1.0-BETA1",
+      "sha256": "f7cac0e9f6f11e15d08f921ab2178116f06a43f9ed02128823ca3f43b7682ff5"
+    }
+  ],
+  "fullSourceComparison": {
+    "source": "local repository git archive v2.1.0-BETA1",
+    "matchedJavaFiles": 803,
+    "differentFiles": [],
+    "unmappedFiles": []
+  }
+}

@@ -19,6 +19,7 @@ import java.time.Instant;
 public class LoginSessionService {
     @Resource
     private ReactiveStringRedisTemplate redis;
+
     @Resource
     private ObjectMapper mapper;
 

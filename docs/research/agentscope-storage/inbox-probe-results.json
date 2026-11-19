@@ -1,0 +1,81 @@
+{
+  "snapshot": {
+    "commands": [
+      {
+        "id": "synthetic-command",
+        "kind": "submit",
+        "turnId": "synthetic-turn",
+        "messages": [
+          {
+            "id": "d9b17f09-60e9-4d30-bfb1-5fe29bef9d9a",
+            "name": null,
+            "content": [
+              {
+                "type": "text",
+                "text": "你好"
+              }
+            ],
+            "metadata": {},
+            "timestamp": "2026-11-17 21:20:07.244",
+            "usage": null,
+            "role": "USER"
+          }
+        ],
+        "requestIds": [
+          "synthetic-request"
+        ]
+      }
+    ],
+    "turnId": null,
+    "runId": null,
+    "rejected": {},
+    "handled": []
+  },
+  "result": "INBOX_REOPEN_AND_IDEMPOTENCY_OK",
+  "scope": "Synthetic command accepted twice, persisted once; reopened journal snapshot",
+  "journalObjects": {
+    "probe/inbox/session.json": {
+      "storageVersion": 1,
+      "value": {
+        "formatVersion": 1,
+        "authority": "event_log",
+        "replayCoverage": "adapter_chunks",
+        "createdAt": 1794921607255
+      }
+    },
+    "probe/inbox/head.json": {
+      "storageVersion": 5,
+      "value": {
+        "seq": 1,
+        "epoch": 2,
+        "owner": null,
+        "leaseUntil": 0,
+        "commitId": "e64430ae25952d3b2de7f95a334eaea1169c640f1bfa038ef3fca4193cc9d82f"
+      }
+    },
+    "probe/inbox/commits/e64430ae25952d3b2de7f95a334eaea1169c640f1bfa038ef3fca4193cc9d82f.json": {
+      "storageVersion": 1,
+      "value": {
+        "batchId": "ac08609f-35d4-4c7d-8f17-e1fa24da0aa5",
+        "parent": null,
+        "firstSeq": 1,
+        "lastSeq": 1,
+        "hash": "6bc30a30f042e393882f1c565d1a3b23c6c8ce5b24c351bf1f37cbe7c74b5b26",
+        "events": [
+          {
+            "schemaVersion": 1,
+            "eventId": "4aac7edc-b6d9-4ada-8fb4-6cbaf87321b7",
+            "seq": 1,
+            "occurredAt": 1794921607379,
+            "type": "inbox/accepted",
+            "executionRunId": null,
+            "turnId": "synthetic-turn",
+            "required": true,
+            "payloadJson": "{\"id\":\"synthetic-command\",\"kind\":\"submit\",\"turnId\":\"synthetic-turn\",\"messages\":[{\"id\":\"d9b17f09-60e9-4d30-bfb1-5fe29bef9d9a\",\"name\":null,\"role\":\"USER\",\"content\":[{\"type\":\"text\",\"text\":\"你好\"}],\"metadata\":{},\"timestamp\":\"2026-11-17 21:20:07.244\",\"usage\":null}],\"requestIds\":[\"synthetic-request\"]}"
+          }
+        ],
+        "payloadBlobs": {}
+      }
+    }
+  }
+}

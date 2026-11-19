@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * 聊天 Agent 配置
  * <p>
- * 由聊天应用维护模型与工作区配置，持久化沿用框架默认实现。
+ * 由聊天应用维护模型与工作区配置，持久化使用官方 PostgreSQL 存储。
  */
 @Data
 @ConfigurationProperties("agentsquad.v2.agent")
