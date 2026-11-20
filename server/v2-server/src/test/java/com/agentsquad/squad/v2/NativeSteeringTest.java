@@ -75,15 +75,15 @@ class NativeSteeringTest {
             var accepted = service.send(supplement, "1");
             assertThat(accepted.getDisposition()).isEqualTo(ChatDisposition.STEERING);
             assertThat(accepted.getTurnId()).isEqualTo(receipt.getTurnId());
-            assertThat(sessions.read("conversation", "1").getInputs().getFirst().getStatus())
+            assertThat(sessions.read("native-conversation", "1").getInputs().getFirst().getStatus())
                     .isEqualTo(ChatInputStatus.ACCEPTED);
             gate.tryEmitValue(text("旧条件生成的初稿"));
-            var nativeSession = sessions.open("conversation", "1");
+            var nativeSession = sessions.open("native-conversation", "1");
             assertThat(nativeSession.await(nativeSession.task(receipt.getInputId()))
                     .block(Duration.ofSeconds(20)).status()).isEqualTo("completed");
             assertThat(calls).hasValue(2);
             assertThat(observed.getLast()).anyMatch(message -> message.getTextContent().contains("只统计华东地区"));
-            var result = sessions.read("conversation", "1");
+            var result = sessions.read("native-conversation", "1");
             assertThat(result.getInputs().getFirst().getStatus()).isEqualTo(ChatInputStatus.APPLIED);
             assertThat(result.getMessages().getLast().getContent()).isEqualTo("已采用补充要求");
             assertThat(result.getMessages()).extracting(message -> message.getContent())
@@ -110,11 +110,11 @@ class NativeSteeringTest {
             var receipt = service.send(AguiSessionTest.input("initial", "执行任务"), "1");
             assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
             var request = new ChatInterruptDTO();
-            request.setSessionId("conversation");
-            request.setRunId(sessions.open("conversation", "1").log().head().owner());
+            request.setSessionId("native-conversation");
+            request.setRunId(sessions.open("native-conversation", "1").log().head().owner());
             assertThat(service.interrupt(request, "1")).isTrue();
             // 等分发器实际处理停止命令，再释放模型，固定原生协作中断边界。
-            var inbox = new io.agentscope.core.session.SessionInbox(sessions.open("conversation", "1").log());
+            var inbox = new io.agentscope.core.session.SessionInbox(sessions.open("native-conversation", "1").log());
             Flux.interval(Duration.ofMillis(10))
                     .filter(tick -> {
                         var view = inbox.snapshot();
@@ -122,10 +122,10 @@ class NativeSteeringTest {
                                 && view.handled().contains(command.id()));
                     }).next().block(Duration.ofSeconds(5));
             finish.tryEmitValue(text("中断边界返回"));
-            var session = sessions.open("conversation", "1");
+            var session = sessions.open("native-conversation", "1");
             assertThat(session.await(session.task(receipt.getInputId())).block(Duration.ofSeconds(20))).isNotNull();
             // 原生中断可能需要模型到达协作边界；收据不能被当成已停止的断言。
-            assertThat(sessions.open("conversation", "1").tasks()).hasSize(1);
+            assertThat(sessions.open("native-conversation", "1").tasks()).hasSize(1);
             assertThat(io.agentscope.core.session.SessionTurns.read(session.log()).latest().status())
                     .isEqualTo("interrupted");
             // 重试旧请求不能取消可继续的轮次。
@@ -139,7 +139,7 @@ class NativeSteeringTest {
                     .isEqualTo("completed");
             assertThat(io.agentscope.core.session.SessionTurns.read(session.log()).turns().getFirst().status())
                     .isEqualTo("cancelled");
-            assertThat(sessions.read("conversation", "1").getMessages())
+            assertThat(sessions.read("native-conversation", "1").getMessages())
                     .anyMatch(message -> message.getContent().equals("执行任务"))
                     .anyMatch(message -> message.getContent().equals("新问题的回答"));
             assertThat(receipt.getDisposition()).isEqualTo(ChatDisposition.NEW_TURN);
@@ -182,7 +182,7 @@ class NativeSteeringTest {
             var initial = service.send(AguiSessionTest.input("parent", "启动子任务"), "1");
             boolean enteredChild = childEntered.await(10, TimeUnit.SECONDS);
             assertThat(enteredChild).withFailMessage("child entry absent: parentCalls=%s, state=%s, toolResults=%s",
-                    parentInputs.size(), sessions.read("conversation", "1").getStatus(),
+                    parentInputs.size(), sessions.read("native-conversation", "1").getStatus(),
                     parentInputs.stream().flatMap(java.util.Collection::stream)
                             .flatMap(message -> message.getContentBlocks(io.agentscope.core.message.ToolResultBlock.class).stream())
                             .flatMap(result -> result.getOutput().stream()).filter(TextBlock.class::isInstance)
@@ -191,13 +191,13 @@ class NativeSteeringTest {
             extra.setObservedTurnId(initial.getTurnId());
             assertThat(service.send(extra, "1").getDisposition()).isEqualTo(ChatDisposition.STEERING);
             childGate.tryEmitValue(text("子任务完成"));
-            var session = sessions.open("conversation", "1");
+            var session = sessions.open("native-conversation", "1");
             assertThat(session.await(session.task(initial.getInputId())).block(Duration.ofSeconds(20)).status())
                     .isEqualTo("completed");
             assertThat(childInputs).allSatisfy(messages -> assertThat(messages)
                     .noneMatch(message -> message.getTextContent().contains("主任务只统计本月")));
             assertThat(parentInputs.getLast()).anyMatch(message -> message.getTextContent().contains("主任务只统计本月"));
-            assertThat(sessions.read("conversation", "1").getInputs().getFirst().getStatus())
+            assertThat(sessions.read("native-conversation", "1").getInputs().getFirst().getStatus())
                     .isEqualTo(ChatInputStatus.APPLIED);
         }
     }
@@ -206,7 +206,7 @@ class NativeSteeringTest {
     void uncertainSteeringFailureNeverFallsBackToNewSubmission() {
         var sessions = mock(ChatRuntimeService.class);
         var session = mock(AgentSession.class);
-        when(sessions.open("conversation", "1")).thenReturn(session);
+        when(sessions.open("native-conversation", "1")).thenReturn(session);
         when(session.steer(any(AgentSession.Task.class), anyString()))
                 .thenThrow(new IllegalStateException("storage result unknown"));
         var request = AguiSessionTest.input("extra", "补充要求");

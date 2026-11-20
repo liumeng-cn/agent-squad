@@ -22,7 +22,7 @@ function mountChat() {
 beforeEach(() => {
   vi.resetAllMocks()
   sessionStorage.clear()
-  sessionStorage.setItem('squad-v2.sessionId', 'stable-session')
+  sessionStorage.setItem('squad-v2.convId', 'stable-session')
   api.readSession.mockResolvedValue(snapshot)
   api.subscribeSession.mockImplementation((_id: string, signal: AbortSignal, callback: typeof receive) => {
     receive = callback
@@ -60,7 +60,7 @@ describe('会话执行与观察分离', () => {
     expect(observedSignal.aborted).toBe(true)
     expect(api.submitChat).not.toHaveBeenCalled()
     expect(api.interruptChat).not.toHaveBeenCalled()
-    expect(sessionStorage.getItem('squad-v2.sessionId')).toBe('stable-session')
+    expect(sessionStorage.getItem('squad-v2.convId')).toBe('stable-session')
   })
 
   it('快照的结束时间传给页面，重复快照不会重新计时', async () => {
@@ -107,7 +107,7 @@ describe('会话执行与观察分离', () => {
     const oldSignal = observedSignal
     receive({ ...snapshot, status: 'COMPLETED' })
     chat.clear()
-    expect(sessionStorage.getItem('squad-v2.sessionId')).not.toBe('stable-session')
+    expect(sessionStorage.getItem('squad-v2.convId')).not.toBe('stable-session')
     expect(oldSignal.aborted).toBe(true)
     oldReceive({ ...snapshot, messages: [{ id: 'old', turnId: 'turn-one', role: 'ASSISTANT',
       content: '旧内容', status: 'COMPLETED', startedAt: 1000, activities: [], thinkingBlocks: [] }] })
@@ -122,7 +122,7 @@ describe('会话执行与观察分离', () => {
     await flushPromises()
     receive(snapshot)
     chat.clear()
-    expect(sessionStorage.getItem('squad-v2.sessionId')).toBe('stable-session')
+    expect(sessionStorage.getItem('squad-v2.convId')).toBe('stable-session')
     wrapper.unmount()
   })
 

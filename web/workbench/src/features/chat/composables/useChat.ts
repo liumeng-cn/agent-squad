@@ -3,12 +3,12 @@ import { interruptChat, readSession, resumeChat, submitChat, subscribeSession } 
 import { ApiError, errorMessage } from '../../../shared/http/http'
 import type { ChatMessage, ChatSession, ChatStatus, SubmitChatInput } from '../model/chatTypes'
 import { useAuthStore } from '../../auth/stores/auth'
-import { createSession } from '../api/sessionApi'
-import { useSessionsStore } from '../stores/sessions'
+import { readConv } from '../api/convApi'
+import { useConvsStore } from '../stores/convs'
 import { inputStatusDescriptions } from '../model/chatTypes'
 
 const RECONNECT_DELAY_MS = 1500
-interface ChatOptions { fresh?: boolean; onCreated?: (id: string) => void }
+interface ChatOptions { fresh?: boolean; sessionId?: string; onCreated?: (id: string) => void }
 const controllers = new Map<string, ReturnType<typeof createController>>()
 export function resetChatSessions() {
   for (const controller of controllers.values()) controller.detach()
@@ -29,14 +29,15 @@ export function useChat(userId = 'anonymous', selectedId?: string, options: Chat
 
 /** 会话身份跨刷新保存；后台执行不依赖页面订阅，连接失败不伪装为任务失败。 */
 function createController(userId: string, selectedId?: string, options: ChatOptions = {}) {
-  const SESSION_KEY = userId === 'anonymous' ? 'squad-v2.sessionId' : `squad-v2.${userId}.sessionId`
-  let sessionId = selectedId || sessionStorage.getItem(SESSION_KEY) || crypto.randomUUID()
-  sessionStorage.setItem(SESSION_KEY, sessionId)
-  const draftKey = `squad.chat.${userId}.${sessionId}.draft`
-  const pendingKey = `squad.chat.${userId}.${sessionId}.pending`
+  const SESSION_KEY = userId === 'anonymous' ? 'squad-v2.convId' : `squad-v2.${userId}.convId`
+  let convId = selectedId || sessionStorage.getItem(SESSION_KEY) || crypto.randomUUID()
+  sessionStorage.setItem(SESSION_KEY, convId)
+  const draftKey = `squad.chat.${userId}.${convId}.draft`
+  const pendingKey = `squad.chat.${userId}.${convId}.pending`
   const draft = ref(sessionStorage.getItem(draftKey) || '')
   const scrollTop = ref(0)
-  const registered = ref(!options.fresh)
+  let sessionId = options.sessionId ?? (selectedId ? undefined : convId)
+  const registered = ref(Boolean(sessionId))
   const state = ref<ChatSession>()
   const messages = ref<ChatMessage[]>([])
   const error = ref('')
@@ -104,20 +105,25 @@ function createController(userId: string, selectedId?: string, options: ChatOpti
   }
 
   async function connect() {
-    if (disposed || !registered.value) return
+    if (disposed || !sessionId) return
     const current = new AbortController()
     controller = current
+    let retry = true
     try {
       await subscribeSession(sessionId, current.signal, snapshot => {
         connected.value = true
         apply(snapshot)
       })
-    } catch {
+    } catch (cause) {
+      if (cause instanceof ApiError && cause.code >= 400 && cause.code < 500) {
+        retry = false
+        error.value = errorMessage(cause)
+      }
       // 观察失败不改变原生执行状态，不重发消息。
     } finally {
       if (controller === current) {
         connected.value = false
-        if (!disposed) reconnectTimer = setTimeout(connect, RECONNECT_DELAY_MS)
+        if (!disposed && retry) reconnectTimer = setTimeout(connect, RECONNECT_DELAY_MS)
       }
     }
   }
@@ -127,30 +133,37 @@ function createController(userId: string, selectedId?: string, options: ChatOpti
     if (!message || sending.value || unresolvedInput.value || stopping.value) return false
     error.value = ''
     sending.value = true
-    const request = pending?.message === message ? pending : {
-      sessionId, interactionId: crypto.randomUUID(), observedTurnId: busy.value ? state.value?.turnId : undefined, message,
-    }
-    pending = request
     const previousTurnId = state.value?.turnId
     let submitted = false
     try {
-      if (selectedId && !registered.value) {
-        const summary = await createSession(sessionId)
-        if (useAuthStore().user?.userId !== userId) throw new Error('登录用户已变化')
-        registered.value = true
-        useSessionsStore().upsert(summary)
-        options.onCreated?.(sessionId)
-        if (!disposed) void connect()
+      const request = pending?.message === message ? pending : {
+        convId: registered.value ? convId : undefined,
+        sessionId, interactionId: crypto.randomUUID(),
+        observedTurnId: busy.value ? state.value?.turnId : undefined, message,
       }
       savePending(request)
       submitted = true
       const receipt = await submitChat(request)
+      if (userId !== 'anonymous' && useAuthStore().user?.userId !== userId) return false
+      if (!registered.value) {
+        convId = receipt.convId
+        sessionId = receipt.sessionId
+        registered.value = true
+        controllers.delete(`${userId}:${selectedId}`)
+        controllers.set(`${userId}:${convId}`, api)
+        options.onCreated?.(convId)
+        if (!disposed) void connect()
+      }
+      if (receipt.convId) {
+        const summary = await readConv(receipt.convId).catch(() => undefined)
+        if (summary && !disposed) useConvsStore().upsert(summary)
+      }
       if (receipt?.disposition === 'NEW_TURN') replacedTurnId.value = previousTurnId
       savePending()
       unresolvedInput.value = false
       if (draft.value.trim() === message) saveDraft('')
       // 发送后立即读一次快照；随后由共享 SSE 接管，快照失败不否认已经接收的输入。
-      try { apply(await readSession(sessionId)) } catch { /* 已接收的输入由后续订阅核对，不重新提交。 */ }
+      try { if (sessionId) apply(await readSession(sessionId)) } catch { /* 已接收的输入由后续订阅核对，不重新提交。 */ }
       return true
     } catch (cause) {
       error.value = errorMessage(cause)
@@ -167,7 +180,7 @@ function createController(userId: string, selectedId?: string, options: ChatOpti
 
   async function stop() {
     const runId = state.value?.runId
-    if (!runId || stopping.value) return
+    if (!sessionId || !runId || stopping.value) return
     stopping.value = true
     error.value = ''
     try {
@@ -181,7 +194,7 @@ function createController(userId: string, selectedId?: string, options: ChatOpti
 
   async function resume() {
     const turnId = state.value?.turnId
-    if (!turnId || sending.value) return
+    if (!sessionId || !turnId || sending.value) return
     sending.value = true
     try {
       await resumeChat(sessionId, turnId)
@@ -194,8 +207,10 @@ function createController(userId: string, selectedId?: string, options: ChatOpti
     if (!canClear.value) return
     controller?.abort()
     if (reconnectTimer) clearTimeout(reconnectTimer)
-    sessionId = crypto.randomUUID()
-    sessionStorage.setItem(SESSION_KEY, sessionId)
+    convId = crypto.randomUUID()
+    sessionId = selectedId ? undefined : convId
+    registered.value = Boolean(sessionId)
+    sessionStorage.setItem(SESSION_KEY, convId)
     state.value = undefined
     messages.value = []
     pending = undefined
@@ -210,5 +225,6 @@ function createController(userId: string, selectedId?: string, options: ChatOpti
     if (reconnectTimer) clearTimeout(reconnectTimer)
     controller?.abort()
   }
-  return { attach, detach, state, draft, saveDraft, scrollTop, registered, messages, busy, inputs, error, connected, stopping, unresolvedInput, canResume, waiting, canClear, clear, send, stop, resume }
+  const api = { attach, detach, apply, state, draft, saveDraft, scrollTop, registered, messages, busy, inputs, error, connected, stopping, unresolvedInput, canResume, waiting, canClear, clear, send, stop, resume }
+  return api
 }

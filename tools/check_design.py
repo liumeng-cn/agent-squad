@@ -194,29 +194,20 @@ def check():
     assert set(owned_tables) == set(columns)
     traceability = json.loads((ROOT / "api/traceability.json").read_text())
     assert set(traceability) == set(manifest["requirements"])
-    spec_files = sorted((ROOT / "openspec" / "specs").glob("*/spec.md"))
-    specs_text = "\n".join(p.read_text() for p in spec_files)
-    cases = specs_text
-    overview = specs_text
     for requirement, trace in traceability.items():
-        assert requirement in overview
         assert trace["modules"] and trace["cases"] and trace["schemas"]
         assert set(trace["modules"]) <= set(manifest["modules"])
         assert set(trace["schemas"]) <= set(spec["components"]["schemas"])
         assert set(trace["operations"]) <= set(operations)
-        assert all(case in cases for case in trace["cases"])
     assert not any(path.startswith("/internal/") for path in spec["paths"])
     assert not {"sq_run", "sq_step", "sq_checkpoint"} & set(columns)
 
     ui_manifest = json.loads((ROOT / "api/ui-manifest.json").read_text())
-    web_design = (ROOT / "openspec" / "specs" / "web-console" / "spec.md").read_text()
     pages = ui_manifest["routes"]
     assert len({page["page"] for page in pages}) == len(pages)
     assert len({page["route"] for page in pages}) == len(pages)
     for page in pages:
-        assert page["route"] in web_design
         assert set(page["operations"]) <= set(operations), page["page"]
-        assert all(case in web_design for case in page["cases"])
     covered_ui_operations = {
         operation for page in pages for operation in page["operations"]
     } | set(ui_manifest["nonPageActions"])

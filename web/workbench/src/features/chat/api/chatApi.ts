@@ -1,6 +1,6 @@
 import type { AguiEvent } from '../model/agui'
 import type { ChatReceipt, ChatSession, SubmitChatInput } from '../model/chatTypes'
-import { apiGet, apiPost } from '../../../shared/http/http'
+import { ApiError, apiGet, apiPost } from '../../../shared/http/http'
 
 /** 按 SSE 行协议解析，兼容跨块 CRLF、中文字符及多行 data。 */
 export async function consumeChatStream<T = AguiEvent>(
@@ -52,8 +52,13 @@ export async function subscribeSession(sessionId: string, signal: AbortSignal, r
   const response = await fetch(`${base}/api/v2/chat/sessions/${encodeURIComponent(sessionId)}/events`, {
     credentials: base ? 'include' : 'same-origin', signal, headers: { Accept: 'text/event-stream' },
   })
-  if (!response.ok || !response.body || !response.headers.get('content-type')?.includes('text/event-stream')) {
-    throw new Error('会话订阅暂不可用')
+  const contentType = response.headers.get('content-type') ?? ''
+  if (contentType.includes('application/json')) {
+    const result = await response.json() as { code: number; msg: string }
+    throw new ApiError(result.code, result.msg, response.status)
+  }
+  if (!response.ok || !response.body || !contentType.includes('text/event-stream')) {
+    throw new ApiError(response.status, '对话订阅暂不可用', response.status)
   }
   await consumeChatStream<ChatSession>(response.body, receive)
 }

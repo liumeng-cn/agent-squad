@@ -1,11 +1,10 @@
 package com.agentsquad.squad.gateway.filter;
 
 import com.agentsquad.squad.common.bo.CurrentUserBO;
-import com.agentsquad.squad.gateway.bo.AuthUserBO;
-import org.springframework.http.HttpHeaders;
 import com.agentsquad.squad.common.enums.ApiCode;
 import com.agentsquad.squad.common.exceptions.BusinessException;
 import com.agentsquad.squad.common.utils.IdentityAssertion;
+import com.agentsquad.squad.gateway.bo.AuthUserBO;
 import com.agentsquad.squad.gateway.config.properties.AuthProperties;
 import com.agentsquad.squad.gateway.controller.AuthController;
 import com.agentsquad.squad.gateway.service.AuthService;
@@ -15,6 +14,7 @@ import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.cloud.gateway.route.Route;
 import org.springframework.cloud.gateway.support.ServerWebExchangeUtils;
 import org.springframework.core.Ordered;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
@@ -50,9 +50,11 @@ public class GatewayAuthenticationFilter implements GlobalFilter, Ordered {
                 exchange.getRequest().getHeaders().getFirst("X-CSRF-Token")).flatMap(actor -> forwardAuthenticated(exchange, chain, audience, method, actor));
     }
 
-    /** 签发内部身份并移除浏览器认证凭据 */
+    /**
+     * 签发内部身份并移除浏览器认证凭据
+     */
     private Mono<Void> forwardAuthenticated(ServerWebExchange exchange, GatewayFilterChain chain,
-                                          String audience, String method, AuthUserBO actor) {
+                                            String audience, String method, AuthUserBO actor) {
         CurrentUserBO user = new CurrentUserBO();
         user.setUserId(actor.getUser().getUserId());
         user.setSessionId(actor.getSession().getSessionId());

@@ -1,7 +1,7 @@
 {
-  "sessionId": "preview-session",
+  "convId": "preview-session",
   "summary": {
-    "sessionId": "demo-welcome",
+    "convId": "demo-welcome",
     "title": "开始一次新的协作",
     "titleSource": "AUTO",
     "version": 0,

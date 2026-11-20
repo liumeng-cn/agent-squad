@@ -1,7 +1,7 @@
 {
-  "sessionId": "demo-api",
+  "convId": "demo-api",
   "summary": {
-    "sessionId": "demo-api",
+    "convId": "demo-api",
     "title": "接口设计思路",
     "titleSource": "AUTO",
     "version": 0,

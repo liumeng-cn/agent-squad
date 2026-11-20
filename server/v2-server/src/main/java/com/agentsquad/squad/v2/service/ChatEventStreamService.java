@@ -30,10 +30,7 @@ public class ChatEventStreamService {
      * 原始日志读取只发生在提交位置或执行租约有效性变化后。
      */
     public Flux<ServerSentEvent<ChatSessionVO>> subscribe(String sessionId, String userId) {
-        if (sessionService.isPreview(sessionId)) {
-            return Flux.just(ServerSentEvent.builder(sessionService.read(sessionId, userId)).build())
-                    .concatWith(Flux.never());
-        }
+        sessionService.verifyAccess(sessionId, userId);
         String key = userId + ":" + sessionId;
         Flux<ServerSentEvent<ChatSessionVO>> snapshots = Flux.defer(() -> sharedStream(key, sessionId, userId))
                 .map(this::snapshotEvent);
@@ -43,7 +40,9 @@ public class ChatEventStreamService {
                 .onBackpressureLatest();
     }
 
-    /** 同一会话共享轮询和最近快照，最后一个订阅退出时释放 */
+    /**
+     * 同一会话共享轮询和最近快照，最后一个订阅退出时释放
+     */
     private Flux<ChatSessionVO> sharedStream(String key, String sessionId, String userId) {
         return streams.computeIfAbsent(key, ignored -> createStream(key, sessionId, userId));
     }
@@ -55,7 +54,9 @@ public class ChatEventStreamService {
                 .refCount(1, DISCONNECT_GRACE);
     }
 
-    /** 在订阅时取得句柄，游标变化后才重建快照 */
+    /**
+     * 在订阅时取得句柄，游标变化后才重建快照
+     */
     private Flux<ChatSessionVO> pollSnapshots(String sessionId, String userId) {
         var session = sessionService.open(sessionId, userId);
         return Flux.interval(Duration.ZERO, POLL_INTERVAL)

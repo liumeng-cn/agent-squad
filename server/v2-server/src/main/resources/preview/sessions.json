@@ -1,7 +1,7 @@
 {
   "items": [
     {
-      "sessionId": "demo-welcome",
+      "convId": "demo-welcome",
       "title": "开始一次新的协作",
       "titleSource": "AUTO",
       "version": 0,
@@ -15,7 +15,7 @@
       }
     },
     {
-      "sessionId": "demo-api",
+      "convId": "demo-api",
       "title": "接口设计思路",
       "titleSource": "AUTO",
       "version": 0,
@@ -29,7 +29,7 @@
       }
     },
     {
-      "sessionId": "demo-plan",
+      "convId": "demo-plan",
       "title": "整理工作计划",
       "titleSource": "AUTO",
       "version": 0,

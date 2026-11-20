@@ -5,6 +5,7 @@ import com.agentsquad.squad.common.model.ApiResult;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -27,7 +28,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResult<Void>> handle(Exception exception) {
         var error = ExceptionResolver.resolve(exception);
-        return ResponseEntity.status(error.getStatus()).header("Cache-Control", "no-store")
+        return ResponseEntity.status(error.getStatus())
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Cache-Control", "no-store")
                 .body(ApiResult.error(error.getCode(), error.getMessage()));
     }
 

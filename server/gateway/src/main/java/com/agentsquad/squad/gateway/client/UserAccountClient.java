@@ -6,11 +6,11 @@ import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.user.api.dto.AccountQueryDTO;
 import com.agentsquad.squad.user.api.vo.UserAccountVO;
 import jakarta.annotation.Resource;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 /**
  * 用户事实远程查询适配

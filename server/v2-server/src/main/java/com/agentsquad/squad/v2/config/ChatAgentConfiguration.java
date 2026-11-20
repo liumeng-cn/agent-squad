@@ -7,9 +7,16 @@ import com.agentsquad.squad.v2.config.properties.ChatAgentProperties;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.tool.Toolkit;
 import io.agentscope.extensions.jdbc.JdbcDistributedStore;
+import io.agentscope.extensions.jdbc.dialect.AbstractJdbcDialect;
 import io.agentscope.extensions.model.openai.OpenAIChatModel;
 import io.agentscope.harness.agent.HarnessAgent;
-import io.agentscope.harness.agent.filesystem.spec.RemoteFilesystemSpec;
+import io.agentscope.harness.agent.bus.WorkspaceMessageBus;
+import io.agentscope.harness.agent.filesystem.remote.RemoteFilesystem;
+import io.agentscope.harness.agent.middleware.SubagentsMiddleware;
+import io.agentscope.harness.agent.session.WorkspaceSessionLogStore;
+import io.agentscope.harness.agent.subagent.task.WorkspaceTaskRepository;
+import io.agentscope.harness.agent.workspace.WorkspaceManager;
+import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -18,7 +25,9 @@ import org.springframework.context.annotation.Configuration;
 
 import javax.sql.DataSource;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * 聊天 Agent 装配
@@ -36,6 +45,8 @@ public class ChatAgentConfiguration {
 
     @Resource
     private DataSource dataSource;
+
+    private WorkspaceTaskRepository subagentTasks;
 
     /**
      * 创建框架 Agent；应用关闭时由框架释放会话与运行资源。
@@ -61,17 +72,50 @@ public class ChatAgentConfiguration {
         var toolkit = new Toolkit();
         toolkit.registerTool(new EventTestTool());
 
+        var dialect = AbstractJdbcDialect.from(dataSource).autoCreateTable(false).build();
+        var store = JdbcDistributedStore.create(dataSource, dialect);
+        var journal = new RemoteFilesystem(store.baseStore(), context -> List.of(
+                "squad", "chat", "journal-v1", "users",
+                Objects.requireNonNullElse(context.getUserId(), "")));
+        var workspace = new RemoteFilesystem(store.baseStore(), context -> List.of(
+                "squad", "chat", "workspace-v1",
+                Objects.requireNonNullElse(context.getUserId(), ""),
+                properties.getAgentId(), Objects.requireNonNullElse(context.getSessionId(), "")));
+
+        Path workspacePath = Path.of(properties.getWorkspace());
+        var entries = TestSubagentDefinitions.entries(model, toolkit.copy(), workspacePath, store.baseStore());
+        var workspaceManager = new WorkspaceManager(workspacePath, workspace);
+        var bus = new WorkspaceMessageBus(workspace, "bus");
+        subagentTasks = new WorkspaceTaskRepository(workspaceManager, properties.getAgentId());
+        var subagents = new SubagentsMiddleware(entries, subagentTasks, workspaceManager);
+        subagents.wireMessageBus(bus, properties.getAgentId());
+        for (var tool : subagents.getTools()) {
+            toolkit.registerTool(tool);
+        }
+
         var agent = HarnessAgent.builder()
                 .agentId(properties.getAgentId())
                 .name(properties.getAgentName())
                 .sysPrompt(properties.getSystemPrompt())
                 .model(model)
                 .toolkit(toolkit)
-                .workspace(Path.of(properties.getWorkspace()));
-//                .distributedStore(JdbcDistributedStore.create(dataSource))
-//                .filesystem(new RemoteFilesystemSpec().addSharedPrefix("agents/"));
-        TestSubagentDefinitions.configure(agent, Path.of(properties.getWorkspace()));
+                .workspace(workspacePath)
+                .abstractFilesystem(workspace)
+                .sessionLogStore(new WorkspaceSessionLogStore(journal))
+                .messageBus(bus)
+                .disableSubagents()
+                .middleware(subagents);
         agent.middleware(tracingMiddleware);
         return agent.build();
+    }
+
+    /**
+     * 关闭子任务资源
+     */
+    @PreDestroy
+    public void closeSubagentTasks() {
+        if (subagentTasks != null) {
+            subagentTasks.shutdown();
+        }
     }
 }

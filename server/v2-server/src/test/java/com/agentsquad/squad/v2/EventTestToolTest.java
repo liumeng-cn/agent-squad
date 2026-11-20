@@ -53,9 +53,9 @@ class EventTestToolTest {
             var service = AguiSessionTest.service(sessions);
             var request = AguiSessionTest.input("tool-request", "调用测试工具");
             var receipt = service.send(request, "1");
-            var session = sessions.open("conversation", "1");
+            var session = sessions.open("native-conversation", "1");
             assertThat(Flux.interval(Duration.ofMillis(25))
-                    .filter(tick -> sessions.read("conversation", "1").getMessages().stream()
+                    .filter(tick -> sessions.read("native-conversation", "1").getMessages().stream()
                             .flatMap(message -> message.getActivities().stream())
                             .anyMatch(activity -> activity.getStatus()
                                     == com.agentsquad.squad.v2.enums.ChatExecutionStatus.RUNNING))
@@ -66,7 +66,7 @@ class EventTestToolTest {
                     .isEqualTo(com.agentsquad.squad.v2.enums.ChatDisposition.STEERING);
             assertThat(session.await(session.task(receipt.getInputId())).block(Duration.ofSeconds(20)).status())
                     .isEqualTo("completed");
-            var snapshot = sessions.read("conversation", "1");
+            var snapshot = sessions.read("native-conversation", "1");
             assertThat(snapshot.getInputs().getFirst().getStatus())
                     .isEqualTo(com.agentsquad.squad.v2.enums.ChatInputStatus.APPLIED);
             var activities = snapshot.getMessages().stream().flatMap(message -> message.getActivities().stream()).toList();

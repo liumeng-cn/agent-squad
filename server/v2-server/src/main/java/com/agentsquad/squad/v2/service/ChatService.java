@@ -13,6 +13,7 @@ import io.agentscope.core.session.SessionRecovery;
 import io.agentscope.core.session.SessionTurns;
 import io.agentscope.harness.agent.session.AgentSession;
 import jakarta.annotation.Resource;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -27,15 +28,23 @@ public class ChatService {
     @Resource
     private ChatRuntimeService sessionService;
 
+    @Resource
+    private ChatConvService convs;
+
     /**
      * 优先向页面指定的运行轮次插话；停止后发送新问题时，通过原生恢复接口结束旧轮次。
      * 网络或存储失败不转为提交，防止不确定结果导致重复执行。
      */
     public ChatReceiptVO send(ChatMessageDTO request, String userId) {
-        if (sessionService.isPreview(request.getSessionId())) {
-            throw new BusinessException(ApiCode.BAD_REQUEST, "示例会话仅供展示，请开启新对话");
+        // 首次发送保存目录关联，后续消息沿用客户端持有的原生会话标识。
+        if (request.getConvId() == null) {
+            var conv = convs.create(userId);
+            request.setConvId(conv.getConvId());
+            request.setSessionId(conv.getSessionId());
         }
-
+        if (request.getSessionId() == null) {
+            throw new BusinessException(ApiCode.BAD_REQUEST, "缺少会话标识");
+        }
         var session = sessionService.open(request.getSessionId(), userId);
 
         // 优先补充页面观察到的轮次，成功后不再提交新任务
@@ -119,6 +128,7 @@ public class ChatService {
 
     private ChatReceiptVO receipt(ChatMessageDTO request, String turnId, String inputId, ChatDisposition disposition) {
         var receipt = new ChatReceiptVO();
+        receipt.setConvId(request.getConvId());
         receipt.setSessionId(request.getSessionId());
         receipt.setInteractionId(request.getInteractionId());
         receipt.setTurnId(turnId);

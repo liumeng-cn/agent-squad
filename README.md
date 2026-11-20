@@ -22,7 +22,6 @@ Agent Squad 是以 Web 会话为入口的多智能体运行底座。Master 可�
 
 当前仍为本地验证阶段，**尚未批准生产发布**。持久运行容量控制默认关闭；真实 SDK 跨进程接管、完整多用户安全矩阵、真实模型流式、容量压测及完整灾备演练仍未验收。当前支持的部署边界为单业务执行实例，不能把本地测试通过视为多副本或生产可用证明。
 
-在途工作见 [OpenSpec 变更](openspec/changes/)，发布验证范围见 [发布验证及回退](deploy/runbooks/release-verification.md)。已归档的 OpenSpec 文档已从工作区删除，历史内容可通过 Git 查阅。
 
 ## 技术栈
 
@@ -153,8 +152,6 @@ server/
   v2-server/ V2 独立服务应用
 archive/server/         旧业务服务归档，不参与默认构建
 web/workbench/          Web 工作台
-openspec/specs/         R01–R12 能力与行为规格
-openspec/changes/       当前未完成变更、任务与验证证据
 api/                    OpenAPI、JSON Schema 和界面映射
 deploy/                 镜像、staging、受控迁移与操作手册
 tools/                  设计、运行安全与测试报告检查

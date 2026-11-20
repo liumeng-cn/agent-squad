@@ -46,6 +46,7 @@ export type ExecutionStatus = 'IDLE' | 'QUEUED' | ChatStatus
 export type InputStatus = 'ACCEPTED' | 'APPLIED' | 'UNAPPLIED'
 export type InputDisposition = 'NEW_TURN' | 'STEERING'
 export interface ChatReceipt {
+  convId: string
   sessionId: string
   interactionId: string
   turnId: string
@@ -72,7 +73,7 @@ export interface SessionMessage {
 }
 export interface ChatSession {
   acceptedInputIds?: string[]
-  summary?: import('./session').SessionSummary
+  summary?: import('./conv').ConvSummary
   sessionId: string
   cursor: number
   inputCursor: number
@@ -83,7 +84,8 @@ export interface ChatSession {
   inputs: ConversationInput[]
 }
 export interface SubmitChatInput {
-  sessionId: string
+  sessionId?: string
+  convId?: string
   interactionId: string
   observedTurnId?: string
   message: string

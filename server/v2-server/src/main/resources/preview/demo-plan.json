@@ -1,7 +1,7 @@
 {
-  "sessionId": "demo-plan",
+  "convId": "demo-plan",
   "summary": {
-    "sessionId": "demo-plan",
+    "convId": "demo-plan",
     "title": "整理工作计划",
     "titleSource": "AUTO",
     "version": 0,

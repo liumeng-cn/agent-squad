@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""本地服务启停；不清库、不覆盖本地配置、不终止未知进程。"""
+"""管理本地服务，支持显式重建开发库聊天表。"""
 import argparse
 import os
 from pathlib import Path
@@ -130,21 +130,38 @@ def start(skip_build):
     tail_backend_logs()
 
 def init_db():
-    env = config(); dependencies()
-    # 只创建用户模块schema/table，不删除或重建现有对象。
+    config()
+    dependencies()
+    # 用户和聊天各自初始化所属 schema。
     sql = ROOT / 'server/user/user-server/src/main/resources/db/schema.sql'
     with sql.open('rb') as data:
         run(['docker', 'exec', '-i', 'squad-postgres', 'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'squad', '-d', 'agent_squad'], stdin=data)
 
+
+def rebuild_chat_db():
+    # 仅重建开发库的聊天表。使用默认 RESTRICT，外部依赖存在时整笔回滚。
+    baseline = ROOT / 'server/v2-server/src/main/resources/db/migration/V1__baseline.sql'
+    drops = '''DROP TABLE IF EXISTS
+    squad_chat.sq_chat_session,
+    squad_chat.sq_chat_conv,
+    squad_chat.agentscope_store,
+    squad_chat.agentscope_sessions,
+    squad_chat.agentscope_snapshots;
+'''
+    run(['docker', 'exec', '-i', 'squad-postgres', 'psql', '-X', '-v', 'ON_ERROR_STOP=1',
+         '--single-transaction', '-U', 'squad', '-d', 'agent_squad'],
+        input=drops + baseline.read_text(), text=True)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['start', 'stop', 'restart', 'status', 'init-db'])
+    parser.add_argument('action', choices=['start', 'stop', 'restart', 'status', 'init-db', 'rebuild-chat-db'])
     parser.add_argument('--skip-build', action='store_true')
     args = parser.parse_args()
     try:
         if args.action in ['stop', 'restart']: stop()
         if args.action in ['start', 'restart']: start(args.skip_build)
         if args.action == 'init-db': init_db()
+        elif args.action == 'rebuild-chat-db': rebuild_chat_db()
         if args.action == 'status':
             for name, port, _ in SERVICES: print(f'{name}: PID={owned(name) or "未启动"}, 端口={"监听" if listening(port) else "关闭"}')
     except (RuntimeError, subprocess.CalledProcessError) as error:

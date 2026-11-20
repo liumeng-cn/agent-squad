@@ -39,3 +39,6 @@ V8新增sq_response_execution.model_selection_json可空列，保存已受理的
 
 V10 在执行范围保存可空的 W3C `traceparent` 与 `tracestate`。旧执行无需回填，目标继承来源回复的追踪上下文。既有库应在启动新版本前应用 V10，完整基线已包含新增字段。
 
+v2 开发库以应用内的 `db/migration/V1__baseline.sql` 为唯一建表基线。
+显式执行 `python3 tools/services.py rebuild-chat-db` 会清空并重建本地聊天表。
+用户库仍由 `init-db` 单独初始化。应用正常启动只校验 SDK 表结构。

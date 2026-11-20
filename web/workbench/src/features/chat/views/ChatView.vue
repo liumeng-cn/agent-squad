@@ -1,27 +1,28 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '../../auth/stores/auth'
-import { useSessionsStore } from '../stores/sessions'
+import { useConvsStore } from '../stores/convs'
+import type { ChatSession } from '../model/chatTypes'
+import { readConv } from '../api/convApi'
 import { readSession } from '../api/chatApi'
 import { ApiError, errorMessage } from '../../../shared/http/http'
 import ChatIcon from '../components/ChatIcon.vue'
 import ChatSidebar from '../components/ChatSidebar.vue'
-import ChatConversationPanel from '../components/ChatConversationPanel.vue'
+import ChatConvPanel from '../components/ChatConvPanel.vue'
 const route = useRoute()
 const router = useRouter()
-const auth = useAuthStore()
-const sessions = useSessionsStore()
+const sessions = useConvsStore()
 const draftSession = ref(crypto.randomUUID())
-const routeId = computed(() => typeof route.params.sessionId === 'string' ? route.params.sessionId : undefined)
+const routeId = computed(() => typeof route.params.convId === 'string' ? route.params.convId : undefined)
 const activeId = computed(() => routeId.value || draftSession.value)
-const selected = computed(() => sessions.items.find(item => item.sessionId === routeId.value))
+const selected = computed(() => sessions.items.find(item => item.convId === routeId.value))
 const compact = ref(window.innerWidth < 1024 || localStorage.getItem('squad.sidebar.collapsed') === 'true')
 const drawer = ref(false)
 const narrow = ref(window.innerWidth < 1024)
 const toggle = ref<HTMLButtonElement>()
 const error = ref('')
 const ready = ref(!routeId.value)
+const initialSnapshot = ref<ChatSession>()
 let selectionEpoch = 0
 function resize() { narrow.value = window.innerWidth < 1024; if (!narrow.value) drawer.value = false }
 async function closeDrawer() { drawer.value = false; await nextTick(); toggle.value?.focus() }
@@ -29,38 +30,45 @@ function toggleSidebar() {
   if (narrow.value) drawer.value = !drawer.value
   else { compact.value = !compact.value; localStorage.setItem('squad.sidebar.collapsed', String(compact.value)) }
 }
-function select(id: string) { void router.push({ name: 'chat-session', params: { sessionId: id } }); void closeDrawer() }
+function select(id: string) { void router.push({ name: 'chat-session', params: { convId: id } }); void closeDrawer() }
 function create() { draftSession.value = crypto.randomUUID(); void router.push({ name: 'chat' }); void closeDrawer() }
-function created(id: string) { if (activeId.value === id) void router.replace({ name: 'chat-session', params: { sessionId: id } }) }
+function created(id: string) { void router.replace({ name: 'chat-session', params: { convId: id } }) }
+function removed(id: string) { if (routeId.value === id) create() }
 function keyboard(event: KeyboardEvent) { if (event.key === 'Escape' && drawer.value) void closeDrawer() }
 watch(() => selected.value?.title, title => { document.title = `${title || (routeId.value ? '会话' : '新对话')} · Squad` }, { immediate: true })
 watch(routeId, async id => {
   const epoch = ++selectionEpoch
+  const generation = sessions.generation
+  error.value = ''
+  initialSnapshot.value = undefined
   if (!id) { ready.value = true; return }
-  ready.value = false
+  ready.value = id === draftSession.value
   try {
-    const snapshot = await readSession(id)
-    if (epoch !== selectionEpoch) return
+    const summary = await readConv(id)
+    if (epoch !== selectionEpoch || generation !== sessions.generation) return
+    sessions.upsert(summary)
+    const snapshot = await readSession(summary.sessionId)
+    if (epoch !== selectionEpoch || generation !== sessions.generation) return
+    initialSnapshot.value = snapshot
     if (snapshot.summary) sessions.upsert(snapshot.summary)
     ready.value = true
-    localStorage.setItem(`squad.chat.${auth.user?.userId}.lastSession`, id)
   } catch (reason) {
-    if (epoch !== selectionEpoch) return
+    if (epoch !== selectionEpoch || generation !== sessions.generation) return
     error.value = errorMessage(reason)
     if (reason instanceof ApiError && reason.code === 404) await router.replace({ name: 'chat' })
   }
 }, { immediate: true })
 onMounted(() => { void sessions.load(); window.addEventListener('resize', resize); document.addEventListener('keydown', keyboard) })
-onBeforeUnmount(() => { window.removeEventListener('resize', resize); document.removeEventListener('keydown', keyboard) })
+onBeforeUnmount(() => { selectionEpoch++; window.removeEventListener('resize', resize); document.removeEventListener('keydown', keyboard) })
 </script>
 <template>
   <main class="chat-workspace" :class="{ 'drawer-open': drawer, 'sidebar-hidden': compact || narrow }">
     <button v-if="drawer" class="drawer-backdrop" aria-label="关闭会话侧栏" @click="closeDrawer" />
-    <div class="sidebar-shell" :class="{ 'drawer-visible': drawer }"><ChatSidebar :selected-id="routeId" :collapsed="drawer ? false : compact" @toggle="toggleSidebar" @create="create" @select="select" /></div>
+    <div class="sidebar-shell" :class="{ 'drawer-visible': drawer }"><ChatSidebar :selected-id="routeId" :collapsed="drawer ? false : compact" @toggle="toggleSidebar" @create="create" @select="select" @removed="removed" /></div>
     <div class="workspace-main">
-      <header class="chat-header"><div v-if="compact || narrow" class="header-navigation"><img src="/brand/squad-symbol.svg" alt="Squad" width="36" height="36" /><div class="header-tools"><button ref="toggle" type="button" class="sidebar-toggle" aria-label="展开会话侧栏" :aria-expanded="drawer" @click="toggleSidebar"><ChatIcon name="sidebar" /></button><button type="button" class="sidebar-toggle" aria-label="开启新对话" @click="create"><ChatIcon name="new" /></button></div></div><span>{{ selected?.title || '新对话' }}</span><small class="demo-label">{{ routeId?.startsWith('demo-') ? '示例会话' : '' }}</small></header>
+      <header class="chat-header"><div v-if="compact || narrow" class="header-navigation"><img src="/brand/squad-symbol.svg" alt="Squad" width="36" height="36" /><div class="header-tools"><button ref="toggle" type="button" class="sidebar-toggle" aria-label="展开会话侧栏" :aria-expanded="drawer" @click="toggleSidebar"><ChatIcon name="sidebar" /></button><button type="button" class="sidebar-toggle" aria-label="开启新对话" @click="create"><ChatIcon name="new" /></button></div></div><span>{{ selected?.title || '新对话' }}</span></header>
       <p v-if="error" class="page-error" role="alert">{{ error }}</p>
-      <ChatConversationPanel v-if="ready" :key="activeId" :session-id="activeId" :fresh="!routeId" @created="created" />
+      <ChatConvPanel v-if="ready" :key="activeId" :conv-id="activeId" :fresh="!routeId" :initial-snapshot="initialSnapshot" @created="created" />
     </div>
   </main>
 </template>

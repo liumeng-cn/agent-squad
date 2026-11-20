@@ -20,7 +20,7 @@ public class ChatSessionVO {
     /**
      * 页面首次读取时携带会话列表信息，SSE无需依赖标题变化
      */
-    private SessionSummaryVO summary;
+    private ConvSummaryVO summary;
     /**
      * 持续对话标识。
      */

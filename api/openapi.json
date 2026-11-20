@@ -7381,7 +7381,7 @@
             }
           }
         },
-        "description": "当前返回后端mock演示数据 会话存储方案待确认 不读取历史文件"
+        "description": "提交消息前校验当前用户的对话归属。未建档或不可访问返回业务 404。"
       }
     },
     "/api/v2/chat/interruptions": {
@@ -7426,7 +7426,7 @@
             }
           }
         },
-        "description": "当前返回后端mock演示数据 会话存储方案待确认 不读取历史文件"
+        "description": "停止前校验当前用户的对话归属。未建档或不可访问返回业务 404。"
       }
     },
     "/api/v2/chat/resumptions": {
@@ -7471,7 +7471,148 @@
             }
           }
         },
-        "description": "当前返回后端mock演示数据 会话存储方案待确认 不读取历史文件"
+        "description": "继续前校验当前用户的对话归属。未建档或不可访问返回业务 404，并遵循原生恢复准入。"
+      }
+    },
+    "/api/v2/chat/convs/{convId}": {
+      "get": {
+        "operationId": "readV2ChatConv",
+        "parameters": [
+          {
+            "name": "convId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9-]{1,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务响应，成功 code=0",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ConvSummary"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "按 convId 读取当前用户的对话目录详情，返回关联的 sessionId。"
+      },
+      "patch": {
+        "summary": "修改会话名称",
+        "tags": [
+          "会话接口"
+        ],
+        "security": [
+          {
+            "V2Session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务结果，code=0成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ConvSummary"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录"
+          },
+          "403": {
+            "description": "无权限或CSRF无效"
+          },
+          "503": {
+            "description": "目录或原生存储暂不可用"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "convId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9-]{1,64}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConvRename"
+              }
+            }
+          }
+        },
+        "description": "按版本修改当前用户的对话标题。标题无效返回业务 400，不可访问返回业务 404，版本冲突返回业务 409。"
+      },
+      "delete": {
+        "description": "删除当前用户对话",
+        "parameters": [
+          {
+            "name": "convId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ApiResult 业务结果"
+          }
+        }
       }
     },
     "/api/v2/chat/sessions/{sessionId}": {
@@ -7516,85 +7657,7 @@
             }
           }
         },
-        "description": "当前返回后端mock演示数据 会话存储方案待确认 不读取历史文件"
-      },
-      "patch": {
-        "summary": "修改会话名称",
-        "tags": [
-          "会话接口"
-        ],
-        "security": [
-          {
-            "V2Session": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "业务结果，code=0成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/SessionSummary"
-                    },
-                    "msg": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "data",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未登录"
-          },
-          "403": {
-            "description": "无权限或CSRF无效"
-          },
-          "503": {
-            "description": "目录或原生存储暂不可用"
-          }
-        },
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "sessionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-zA-Z0-9-]{1,64}$"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SessionRename"
-              }
-            }
-          }
-        },
-        "description": "当前返回后端mock演示数据 会话存储方案待确认 不读取历史文件"
+        "description": "按 sessionId 校验归属并读取原生公开历史。"
       }
     },
     "/api/v2/chat/sessions/{sessionId}/events": {
@@ -7611,17 +7674,41 @@
             }
           }
         ],
-        "description": "当前返回后端mock演示数据 会话存储方案待确认 不读取历史文件",
+        "description": "订阅当前用户的对话快照。建立事件流前完成归属校验，不可访问时返回 JSON 业务 404。",
         "responses": {
           "200": {
-            "description": "公开快照事件流",
+            "description": "公开快照事件流或 JSON 业务拒绝",
             "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "nullable": true
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
               "text/event-stream": {
                 "schema": {
                   "$ref": "#/components/schemas/ChatSessionVO"
                 }
               }
             }
+          },
+          "503": {
+            "description": "目录或原生存储暂不可用"
           }
         }
       }
@@ -7954,77 +8041,9 @@
         ]
       }
     },
-    "/api/v2/chat/sessions": {
+    "/api/v2/chat/convs": {},
+    "/api/v2/chat/convs/page": {
       "post": {
-        "summary": "创建会话",
-        "tags": [
-          "会话接口"
-        ],
-        "security": [
-          {
-            "V2Session": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "业务结果，code=0成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/SessionSummary"
-                    },
-                    "msg": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "data",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未登录"
-          },
-          "403": {
-            "description": "无权限或CSRF无效"
-          },
-          "503": {
-            "description": "目录或原生存储暂不可用"
-          }
-        },
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SessionCreate"
-              }
-            }
-          }
-        },
-        "description": "当前返回后端mock演示数据 会话存储方案待确认 不读取历史文件"
-      },
-      "get": {
         "summary": "获取会话列表",
         "tags": [
           "会话接口"
@@ -8046,7 +8065,7 @@
                       "type": "integer"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/SessionPage"
+                      "$ref": "#/components/schemas/ConvPage"
                     },
                     "msg": {
                       "type": "string"
@@ -8071,27 +8090,53 @@
             "description": "目录或原生存储暂不可用"
           }
         },
+        "parameters": [],
+        "description": "按当前用户、页码和每页条数加载对话列表",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PageDTO"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/chat/convs/{convId}/archive": {
+      "patch": {
+        "description": "设置当前用户对话归档状态",
         "parameters": [
           {
-            "name": "limit",
-            "in": "query",
+            "name": "convId",
+            "in": "path",
+            "required": true,
             "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 50,
-              "default": 30
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "maxLength": 512
+              "type": "string"
             }
           }
         ],
-        "description": "当前返回后端mock演示数据 会话存储方案待确认 不读取历史文件"
+        "responses": {
+          "200": {
+            "description": "ApiResult 业务结果"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "archived": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -13565,10 +13610,13 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 20000
+          },
+          "convId": {
+            "type": "string",
+            "description": "已有对话ID，首次发送省略"
           }
         },
         "required": [
-          "sessionId",
           "interactionId",
           "message"
         ]
@@ -13659,6 +13707,9 @@
               "NEW_TURN",
               "STEERING"
             ]
+          },
+          "convId": {
+            "type": "string"
           }
         },
         "required": [
@@ -13832,7 +13883,7 @@
             }
           },
           "summary": {
-            "$ref": "#/components/schemas/SessionSummary"
+            "$ref": "#/components/schemas/ConvSummary"
           },
           "acceptedInputIds": {
             "type": "array",
@@ -14014,19 +14065,19 @@
           "paletteKey"
         ]
       },
-      "SessionCreate": {
+      "ConvCreate": {
         "type": "object",
         "properties": {
-          "sessionId": {
+          "convId": {
             "type": "string",
             "pattern": "^[a-zA-Z0-9-]{1,64}$"
           }
         },
         "required": [
-          "sessionId"
+          "convId"
         ]
       },
-      "SessionRename": {
+      "ConvRename": {
         "type": "object",
         "properties": {
           "title": {
@@ -14045,12 +14096,16 @@
           "version"
         ]
       },
-      "SessionSummary": {
+      "ConvSummary": {
         "type": "object",
         "properties": {
-          "sessionId": {
+          "convId": {
             "type": "string",
             "pattern": "^[a-zA-Z0-9-]{1,64}$"
+          },
+          "sessionId": {
+            "type": "string",
+            "description": "关联的 AgentScope 原生会话标识"
           },
           "title": {
             "type": "string"
@@ -14063,62 +14118,60 @@
             ]
           },
           "version": {
+            "description": "标题编辑版本",
             "type": "integer",
             "format": "int64",
             "minimum": 0
-          },
-          "hasMessages": {
-            "type": "boolean"
           },
           "createdAt": {
             "type": "string",
             "format": "date-time"
           },
-          "lastActivityAt": {
+          "remark": {
             "type": "string",
-            "format": "date-time"
+            "nullable": true
           },
-          "execution": {
-            "$ref": "#/components/schemas/SessionExecution"
+          "archived": {
+            "type": "boolean"
           }
         },
         "required": [
+          "convId",
           "sessionId",
           "title",
           "titleSource",
           "version",
-          "hasMessages",
-          "createdAt",
-          "lastActivityAt",
-          "execution"
+          "createdAt"
         ]
       },
-      "SessionPage": {
+      "ConvPage": {
         "type": "object",
+        "required": [
+          "records",
+          "total",
+          "current",
+          "size"
+        ],
         "properties": {
-          "items": {
+          "records": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/SessionSummary"
+              "$ref": "#/components/schemas/ConvSummary"
             }
           },
-          "nextCursor": {
-            "type": "string",
-            "nullable": true
+          "total": {
+            "type": "integer",
+            "format": "int64"
           },
-          "hasMore": {
-            "type": "boolean"
+          "current": {
+            "type": "integer",
+            "format": "int64"
           },
-          "serverTime": {
-            "type": "string",
-            "format": "date-time"
+          "size": {
+            "type": "integer",
+            "format": "int64"
           }
-        },
-        "required": [
-          "items",
-          "hasMore",
-          "serverTime"
-        ]
+        }
       },
       "SessionExecution": {
         "type": "object",
@@ -14149,6 +14202,24 @@
           "status",
           "stale"
         ]
+      },
+      "PageDTO": {
+        "type": "object",
+        "properties": {
+          "current": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "default": 1
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 30
+          }
+        }
       }
     }
   }

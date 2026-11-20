@@ -1,8 +1,8 @@
 package com.agentsquad.squad.gateway.filter;
 
 import com.agentsquad.squad.common.utils.IdentityAssertion;
-import org.springframework.stereotype.Component;
 import org.springframework.http.HttpHeaders;
+import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;

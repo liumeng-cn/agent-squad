@@ -40,8 +40,8 @@ public class Main {
 
             Mono<String> b = source.flatMap(value -> Mono.just("Hello"));
 
-                    a.subscribe();
-                    b.subscribe();
+            a.subscribe();
+            b.subscribe();
         }
     }
 }

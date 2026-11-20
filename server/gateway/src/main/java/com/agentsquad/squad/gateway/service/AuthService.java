@@ -13,13 +13,7 @@ import com.agentsquad.squad.gateway.vo.LoginVO;
 import com.agentsquad.squad.user.api.vo.UserAccountVO;
 import jakarta.annotation.Resource;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtClaimsSet;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
-import org.springframework.security.oauth2.jwt.JwtException;
-import org.springframework.security.oauth2.jwt.JwsHeader;
+import org.springframework.security.oauth2.jwt.*;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 

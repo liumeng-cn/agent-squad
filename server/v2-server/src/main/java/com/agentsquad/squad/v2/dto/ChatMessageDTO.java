@@ -15,9 +15,14 @@ public class ChatMessageDTO {
     /**
      * 当前页面会话标识。
      */
-    @NotBlank
     @Pattern(regexp = "[a-zA-Z0-9-]{1,64}")
     private String sessionId;
+
+    /**
+     * 已建档的对话ID，首次发送时为空
+     */
+    @Pattern(regexp = "[a-zA-Z0-9-]{1,64}")
+    private String convId;
 
     /**
      * 本次用户交互标识；新任务重试保持一致，插话暂不承诺网络重试幂等。

@@ -5,7 +5,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * 网关装配验证
- *
+ * <p>
  * 加载真实客户端与认证过滤器，验证禁止循环依赖时上下文能够启动。
  */
 @SpringBootTest(properties = {

@@ -11,6 +11,10 @@ import lombok.Data;
 @Data
 public class ChatReceiptVO {
     /**
+     * 业务对话ID
+     */
+    private String convId;
+    /**
      * 持续对话标识。
      */
     private String sessionId;
