@@ -12,6 +12,6 @@ const routes: RouteRecordRaw[] = [
 export const router = createRouter({ history: createWebHistory(), routes })
 router.beforeEach(async (to) => {
   if (to.meta.public) { document.title = `${to.name === 'register' ? '注册' : '登录'} · Squad`; return true }
-  if (!await useAuthStore().ensureSession()) return { name: 'login' }
+  if (!useAuthStore().user && !await useAuthStore().ensureSession()) return { name: 'login' }
   return true
 })

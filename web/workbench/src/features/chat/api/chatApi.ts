@@ -41,15 +41,15 @@ export async function consumeChatStream<T = AguiEvent>(
 export function submitChat(input: SubmitChatInput): Promise<ChatReceipt> {
   return apiPost('/api/v2/chat/messages', input)
 }
-export function readSession(sessionId: string): Promise<ChatSession> {
-  return apiGet(`/api/v2/chat/sessions/${encodeURIComponent(sessionId)}`)
+export function readSession(convId: string): Promise<ChatSession> {
+  return apiGet(`/api/v2/chat/convs/${encodeURIComponent(convId)}/session`)
 }
-export function interruptChat(sessionId: string, runId: string): Promise<boolean> {
-  return apiPost('/api/v2/chat/interruptions', { sessionId, runId })
+export function interruptChat(convId: string, runId: string): Promise<boolean> {
+  return apiPost('/api/v2/chat/interruptions', { convId, runId })
 }
-export async function subscribeSession(sessionId: string, signal: AbortSignal, receive: (state: ChatSession) => void) {
+export async function subscribeSession(convId: string, signal: AbortSignal, receive: (state: ChatSession) => void) {
   const base = import.meta.env.VITE_API_BASE_URL || ''
-  const response = await fetch(`${base}/api/v2/chat/sessions/${encodeURIComponent(sessionId)}/events`, {
+  const response = await fetch(`${base}/api/v2/chat/convs/${encodeURIComponent(convId)}/events`, {
     credentials: base ? 'include' : 'same-origin', signal, headers: { Accept: 'text/event-stream' },
   })
   const contentType = response.headers.get('content-type') ?? ''
@@ -63,6 +63,6 @@ export async function subscribeSession(sessionId: string, signal: AbortSignal, r
   await consumeChatStream<ChatSession>(response.body, receive)
 }
 
-export function resumeChat(sessionId: string, turnId: string): Promise<string> {
-  return apiPost('/api/v2/chat/resumptions', { sessionId, turnId })
+export function resumeChat(convId: string, turnId: string): Promise<string> {
+  return apiPost('/api/v2/chat/resumptions', { convId, turnId })
 }

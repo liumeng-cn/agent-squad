@@ -1,22 +1,19 @@
 package com.agentsquad.squad.v2.config;
 
-import com.agentsquad.squad.v2.agent.observer.AgentTracingMiddleware;
-import com.agentsquad.squad.v2.agent.subagent.TestSubagentDefinitions;
+import com.agentsquad.squad.v2.agent.middleware.LangfuseEnrichmentMiddleware;
 import com.agentsquad.squad.v2.agent.tool.EventTestTool;
 import com.agentsquad.squad.v2.config.properties.ChatAgentProperties;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.tool.Toolkit;
+import io.agentscope.core.tracing.OtelTracingMiddleware;
 import io.agentscope.extensions.jdbc.JdbcDistributedStore;
 import io.agentscope.extensions.jdbc.dialect.AbstractJdbcDialect;
 import io.agentscope.extensions.model.openai.OpenAIChatModel;
 import io.agentscope.harness.agent.HarnessAgent;
 import io.agentscope.harness.agent.bus.WorkspaceMessageBus;
 import io.agentscope.harness.agent.filesystem.remote.RemoteFilesystem;
-import io.agentscope.harness.agent.middleware.SubagentsMiddleware;
 import io.agentscope.harness.agent.session.WorkspaceSessionLogStore;
-import io.agentscope.harness.agent.subagent.task.WorkspaceTaskRepository;
-import io.agentscope.harness.agent.workspace.WorkspaceManager;
-import jakarta.annotation.PreDestroy;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
 import jakarta.annotation.Resource;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -41,22 +38,18 @@ public class ChatAgentConfiguration {
     private ChatAgentProperties properties;
 
     @Resource
-    private AgentTracingMiddleware tracingMiddleware;
+    private LangfuseEnrichmentMiddleware tracingMiddleware;
 
     @Resource
     private DataSource dataSource;
-
-    private WorkspaceTaskRepository subagentTasks;
 
     /**
      * 创建框架 Agent；应用关闭时由框架释放会话与运行资源。
      */
     @Bean(destroyMethod = "close")
     @ConditionalOnProperty(prefix = "agentsquad.v2.agent", name = "enabled", havingValue = "true")
-    public HarnessAgent chatAgent() {
-        if (properties.getApiKey().isBlank()) {
-            throw new IllegalStateException("请配置聊天模型 api-key");
-        }
+    public HarnessAgent chatAgent(OpenTelemetrySdk observationSdk) {
+
         var options = GenerateOptions.builder();
         if (properties.getSparkThinkingMode() != null) {
             options.additionalBodyParam("thinking",
@@ -83,15 +76,7 @@ public class ChatAgentConfiguration {
                 properties.getAgentId(), Objects.requireNonNullElse(context.getSessionId(), "")));
 
         Path workspacePath = Path.of(properties.getWorkspace());
-        var entries = TestSubagentDefinitions.entries(model, toolkit.copy(), workspacePath, store.baseStore());
-        var workspaceManager = new WorkspaceManager(workspacePath, workspace);
         var bus = new WorkspaceMessageBus(workspace, "bus");
-        subagentTasks = new WorkspaceTaskRepository(workspaceManager, properties.getAgentId());
-        var subagents = new SubagentsMiddleware(entries, subagentTasks, workspaceManager);
-        subagents.wireMessageBus(bus, properties.getAgentId());
-        for (var tool : subagents.getTools()) {
-            toolkit.registerTool(tool);
-        }
 
         var agent = HarnessAgent.builder()
                 .agentId(properties.getAgentId())
@@ -103,19 +88,12 @@ public class ChatAgentConfiguration {
                 .abstractFilesystem(workspace)
                 .sessionLogStore(new WorkspaceSessionLogStore(journal))
                 .messageBus(bus)
-                .disableSubagents()
-                .middleware(subagents);
-        agent.middleware(tracingMiddleware);
+                .disableFilesystemTools()
+                .disableShellTool()
+                .enableAgentTracingLog(true)
+                .middleware(new OtelTracingMiddleware(observationSdk))
+                .middleware(tracingMiddleware);
         return agent.build();
     }
 
-    /**
-     * 关闭子任务资源
-     */
-    @PreDestroy
-    public void closeSubagentTasks() {
-        if (subagentTasks != null) {
-            subagentTasks.shutdown();
-        }
-    }
 }

@@ -7,10 +7,13 @@ import org.apache.ibatis.annotations.Mapper;
 /**
  * 对话目录访问
  * <p>
- * 按用户归属读写对话，建档和改名使用原子 SQL。
+ * 简单单表操作使用 MyBatis-Plus 自带方法；标题改名按版本条件更新，使用原子 SQL。
  */
 @Mapper
 public interface ChatConvMapper extends BaseMapper<ChatConvPO> {
 
+    /**
+     * 按版本更新对话标题
+     */
     int updateTitle(ChatConvPO conv);
 }

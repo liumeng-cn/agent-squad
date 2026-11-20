@@ -1,7 +1,6 @@
 package com.agentsquad.squad.v2.config;
 
-import com.agentsquad.squad.v2.agent.observer.AgentTracingMiddleware;
-import com.agentsquad.squad.v2.agent.observer.TraceContextSpanProcessor;
+import com.agentsquad.squad.v2.agent.middleware.LangfuseEnrichmentMiddleware;
 import com.agentsquad.squad.v2.config.properties.ObservationProperties;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
@@ -9,7 +8,7 @@ import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
-import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
+import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -22,7 +21,7 @@ import java.util.Base64;
 /**
  * OTLP 观测装配
  * <p>
- * 应用独立持有 OTel SDK，不替换进程全局实例；导出故障不参与聊天事务或执行结果判定。
+ * 初始化全局 OTel SDK 并导出到 Langfuse；导出故障不参与聊天事务或执行结果判定。
  */
 @Configuration
 @EnableConfigurationProperties(ObservationProperties.class)
@@ -32,7 +31,7 @@ public class ObservationConfiguration {
     private ObservationProperties properties;
 
     /**
-     * 初始化有界异步导出队列；应用关闭时由 SDK 刷新并关闭导出器。
+     * 初始化 Langfuse 同步导出；应用关闭时由 SDK 刷新并关闭导出器。
      */
     @Bean(destroyMethod = "close")
     public OpenTelemetrySdk observationSdk() {
@@ -45,22 +44,20 @@ public class ObservationConfiguration {
             builder.addHeader("Authorization", "Basic " + Base64.getEncoder()
                     .encodeToString(credentials.getBytes(StandardCharsets.UTF_8)));
         }
+        builder.addHeader("x-langfuse-ingestion-version", "4");
         var exporter = builder.build();
-        var processor = BatchSpanProcessor.builder(exporter)
-                .setMaxQueueSize(2048).setMaxExportBatchSize(512)
-                .setScheduleDelay(Duration.ofSeconds(1)).build();
+        var processor = SimpleSpanProcessor.create(exporter);
         var provider = SdkTracerProvider.builder()
                 .setResource(Resource.create(Attributes.of(AttributeKey.stringKey("service.name"), "agent-squad-v2")))
-                .addSpanProcessor(new TraceContextSpanProcessor())
                 .addSpanProcessor(processor).build();
-        return OpenTelemetrySdk.builder().setTracerProvider(provider).build();
+        return OpenTelemetrySdk.builder().setTracerProvider(provider).buildAndRegisterGlobal();
     }
 
     /**
-     * 复用原生生命周期埋点，并补充 Langfuse 与 AgentScope 官方字段。
+     * 补充 Langfuse 属性，不负责创建或结束 Span。
      */
     @Bean
-    public AgentTracingMiddleware agentTracingMiddleware(OpenTelemetrySdk observationSdk) {
-        return new AgentTracingMiddleware(observationSdk, properties.getEnvironment());
+    public LangfuseEnrichmentMiddleware langfuseEnrichmentMiddleware() {
+        return new LangfuseEnrichmentMiddleware();
     }
 }

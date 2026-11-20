@@ -7597,7 +7597,7 @@
         "description": "按版本修改当前用户的对话标题。标题无效返回业务 400，不可访问返回业务 404，版本冲突返回业务 409。"
       },
       "delete": {
-        "description": "删除当前用户对话",
+        "description": "删除当前用户对话，正在执行的原生任务会先收到停止请求。",
         "parameters": [
           {
             "name": "convId",
@@ -7605,27 +7605,6 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "ApiResult 业务结果"
-          }
-        }
-      }
-    },
-    "/api/v2/chat/sessions/{sessionId}": {
-      "get": {
-        "operationId": "readV2ChatSession",
-        "parameters": [
-          {
-            "name": "sessionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-zA-Z0-9-]{1,64}$"
             }
           }
         ],
@@ -7644,7 +7623,7 @@
                       "type": "string"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/ChatSessionVO"
+                      "nullable": true
                     }
                   },
                   "required": [
@@ -7655,60 +7634,6 @@
                 }
               }
             }
-          }
-        },
-        "description": "按 sessionId 校验归属并读取原生公开历史。"
-      }
-    },
-    "/api/v2/chat/sessions/{sessionId}/events": {
-      "get": {
-        "operationId": "observeV2ChatSession",
-        "parameters": [
-          {
-            "name": "sessionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-zA-Z0-9-]{1,64}$"
-            }
-          }
-        ],
-        "description": "订阅当前用户的对话快照。建立事件流前完成归属校验，不可访问时返回 JSON 业务 404。",
-        "responses": {
-          "200": {
-            "description": "公开快照事件流或 JSON 业务拒绝",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "code",
-                    "data",
-                    "msg"
-                  ],
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "data": {
-                      "nullable": true
-                    },
-                    "msg": {
-                      "type": "string"
-                    }
-                  }
-                }
-              },
-              "text/event-stream": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChatSessionVO"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "目录或原生存储暂不可用"
           }
         }
       }
@@ -8041,7 +7966,6 @@
         ]
       }
     },
-    "/api/v2/chat/convs": {},
     "/api/v2/chat/convs/page": {
       "post": {
         "summary": "获取会话列表",
@@ -8091,52 +8015,207 @@
           }
         },
         "parameters": [],
-        "description": "按当前用户、页码和每页条数加载对话列表",
+        "description": "按当前用户分页查询对话目录，默认查询进行中的对话，archived=true 查询已归档对话",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PageDTO"
+                "$ref": "#/components/schemas/ConvPageQuery"
               }
             }
           }
         }
       }
     },
-    "/api/v2/chat/convs/{convId}/archive": {
-      "patch": {
-        "description": "设置当前用户对话归档状态",
+    "/api/v2/chat/convs/{convId}/session": {
+      "get": {
+        "operationId": "readV2ChatSession",
+        "summary": "读取对话消息快照",
         "parameters": [
           {
             "name": "convId",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9-]{1,64}$"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "ApiResult 业务结果"
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "archived": {
-                    "type": "boolean"
-                  }
+            "description": "业务响应，成功 code=0",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ChatSessionVO"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
                 }
               }
             }
           }
+        },
+        "description": "按 convId 校验归属并读取原生公开历史。"
+      }
+    },
+    "/api/v2/chat/convs/{convId}/events": {
+      "get": {
+        "operationId": "observeV2ChatSession",
+        "summary": "订阅对话快照事件流",
+        "parameters": [
+          {
+            "name": "convId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9-]{1,64}$"
+            }
+          }
+        ],
+        "description": "订阅当前用户的对话快照。建立事件流前完成归属校验，不可访问时返回 JSON 业务 404。",
+        "responses": {
+          "200": {
+            "description": "公开快照事件流或 JSON 业务拒绝",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "nullable": true
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatSessionVO"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "目录或原生存储暂不可用"
+          }
         }
+      }
+    },
+    "/api/v2/chat/convs/{convId}/archive": {
+      "post": {
+        "summary": "归档对话",
+        "parameters": [
+          {
+            "name": "convId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9-]{1,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务响应，成功 code=0",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "归档后从主列表移除，可通过归档列表找回。"
+      }
+    },
+    "/api/v2/chat/convs/{convId}/unarchive": {
+      "post": {
+        "summary": "恢复已归档对话",
+        "parameters": [
+          {
+            "name": "convId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9-]{1,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务响应，成功 code=0",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "恢复后重新出现在主列表。"
       }
     }
   },
@@ -13592,9 +13671,10 @@
       "ChatMessageDTO": {
         "type": "object",
         "properties": {
-          "sessionId": {
+          "convId": {
             "type": "string",
-            "pattern": "^[a-zA-Z0-9-]{1,64}$"
+            "pattern": "^[a-zA-Z0-9-]{1,64}$",
+            "description": "对话标识；首次发送时作为建档幂等键，网络重试沿用同一标识"
           },
           "interactionId": {
             "type": "string",
@@ -13610,13 +13690,10 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 20000
-          },
-          "convId": {
-            "type": "string",
-            "description": "已有对话ID，首次发送省略"
           }
         },
         "required": [
+          "convId",
           "interactionId",
           "message"
         ]
@@ -13713,6 +13790,7 @@
           }
         },
         "required": [
+          "convId",
           "sessionId",
           "interactionId",
           "turnId",
@@ -13897,7 +13975,7 @@
       "ChatInterruptDTO": {
         "type": "object",
         "properties": {
-          "sessionId": {
+          "convId": {
             "type": "string",
             "pattern": "^[a-zA-Z0-9-]{1,64}$"
           },
@@ -13908,14 +13986,14 @@
           }
         },
         "required": [
-          "sessionId",
+          "convId",
           "runId"
         ]
       },
       "ChatResumeDTO": {
         "type": "object",
         "properties": {
-          "sessionId": {
+          "convId": {
             "type": "string",
             "pattern": "^[a-zA-Z0-9-]{1,64}$"
           },
@@ -13925,7 +14003,7 @@
           }
         },
         "required": [
-          "sessionId",
+          "convId",
           "turnId"
         ]
       },
@@ -14065,18 +14143,6 @@
           "paletteKey"
         ]
       },
-      "ConvCreate": {
-        "type": "object",
-        "properties": {
-          "convId": {
-            "type": "string",
-            "pattern": "^[a-zA-Z0-9-]{1,64}$"
-          }
-        },
-        "required": [
-          "convId"
-        ]
-      },
       "ConvRename": {
         "type": "object",
         "properties": {
@@ -14203,7 +14269,7 @@
           "stale"
         ]
       },
-      "PageDTO": {
+      "ConvPageQuery": {
         "type": "object",
         "properties": {
           "current": {
@@ -14218,6 +14284,11 @@
             "minimum": 1,
             "maximum": 100,
             "default": 30
+          },
+          "archived": {
+            "type": "boolean",
+            "default": false,
+            "description": "是否查询已归档对话"
           }
         }
       }

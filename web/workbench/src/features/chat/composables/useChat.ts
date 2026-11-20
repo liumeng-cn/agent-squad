@@ -3,41 +3,36 @@ import { interruptChat, readSession, resumeChat, submitChat, subscribeSession } 
 import { ApiError, errorMessage } from '../../../shared/http/http'
 import type { ChatMessage, ChatSession, ChatStatus, SubmitChatInput } from '../model/chatTypes'
 import { useAuthStore } from '../../auth/stores/auth'
-import { readConv } from '../api/convApi'
 import { useConvsStore } from '../stores/convs'
 import { inputStatusDescriptions } from '../model/chatTypes'
 
 const RECONNECT_DELAY_MS = 1500
-interface ChatOptions { fresh?: boolean; sessionId?: string; onCreated?: (id: string) => void }
+interface ChatOptions { onCreated?: (id: string) => void }
 const controllers = new Map<string, ReturnType<typeof createController>>()
 export function resetChatSessions() {
   for (const controller of controllers.values()) controller.detach()
   controllers.clear()
 }
 
-export function useChat(userId = 'anonymous', selectedId?: string, options: ChatOptions = {}) {
-  const key = `${userId}:${selectedId}`
-  let controller = selectedId ? controllers.get(key) : undefined
+export function useChat(userId = 'anonymous', convId?: string, options: ChatOptions = {}) {
+  const key = `${userId}:${convId}`
+  let controller = convId ? controllers.get(key) : undefined
   if (!controller) {
-    controller = createController(userId, selectedId, options)
-    if (selectedId) controllers.set(key, controller)
+    controller = createController(userId, convId, options)
+    if (convId) controllers.set(key, controller)
   }
   onMounted(controller.attach)
   onBeforeUnmount(controller.detach)
   return controller
 }
 
-/** 会话身份跨刷新保存；后台执行不依赖页面订阅，连接失败不伪装为任务失败。 */
-function createController(userId: string, selectedId?: string, options: ChatOptions = {}) {
-  const SESSION_KEY = userId === 'anonymous' ? 'squad-v2.convId' : `squad-v2.${userId}.convId`
-  let convId = selectedId || sessionStorage.getItem(SESSION_KEY) || crypto.randomUUID()
-  sessionStorage.setItem(SESSION_KEY, convId)
-  const draftKey = `squad.chat.${userId}.${convId}.draft`
-  const pendingKey = `squad.chat.${userId}.${convId}.pending`
+/** 对话标识即建档幂等键；后台执行不依赖页面订阅，连接失败不伪装为任务失败。 */
+function createController(userId: string, convId?: string, options: ChatOptions = {}) {
+  const id = convId || crypto.randomUUID().replaceAll('-', '')
+  const draftKey = `squad.chat.${userId}.${id}.draft`
+  const pendingKey = `squad.chat.${userId}.${id}.pending`
   const draft = ref(sessionStorage.getItem(draftKey) || '')
   const scrollTop = ref(0)
-  let sessionId = options.sessionId ?? (selectedId ? undefined : convId)
-  const registered = ref(Boolean(sessionId))
   const state = ref<ChatSession>()
   const messages = ref<ChatMessage[]>([])
   const error = ref('')
@@ -46,7 +41,6 @@ function createController(userId: string, selectedId?: string, options: ChatOpti
   const sending = ref(false)
   const unresolvedInput = ref(false)
   const busy = computed(() => state.value?.status === 'RUNNING' || state.value?.status === 'QUEUED')
-  const canClear = computed(() => !busy.value && !stopping.value && !sending.value && !unresolvedInput.value)
   const replacedTurnId = ref<string>()
   const canResume = computed(() => !sending.value && state.value?.turnId !== replacedTurnId.value
     && (state.value?.status === 'INTERRUPTED' || state.value?.status === 'FAILED'))
@@ -56,6 +50,7 @@ function createController(userId: string, selectedId?: string, options: ChatOpti
   let controller: AbortController | undefined
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined
   let disposed = false
+  let registered = Boolean(convId)
   let pending: SubmitChatInput | undefined
   try {
     pending = JSON.parse(sessionStorage.getItem(pendingKey) || 'null') ?? undefined
@@ -69,10 +64,11 @@ function createController(userId: string, selectedId?: string, options: ChatOpti
   }
 
   function apply(snapshot: ChatSession) {
-    if (snapshot.sessionId !== sessionId) return
+    if (snapshot.summary && snapshot.summary.convId !== id) return
     const current = state.value
     if (current && (snapshot.cursor < current.cursor || snapshot.inputCursor < current.inputCursor)) return
     state.value = snapshot
+    if (snapshot.summary && !disposed) useConvsStore().upsert(snapshot.summary)
     if (pending && snapshot.acceptedInputIds?.includes(pending.interactionId)) {
       if (draft.value.trim() === pending.message) saveDraft('')
       savePending(); unresolvedInput.value = false; error.value = ''
@@ -105,12 +101,13 @@ function createController(userId: string, selectedId?: string, options: ChatOpti
   }
 
   async function connect() {
-    if (disposed || !sessionId) return
+    if (disposed || controller) return
     const current = new AbortController()
     controller = current
     let retry = true
     try {
-      await subscribeSession(sessionId, current.signal, snapshot => {
+      await subscribeSession(id, current.signal, snapshot => {
+        if (disposed || current.signal.aborted || controller !== current) return
         connected.value = true
         apply(snapshot)
       })
@@ -122,6 +119,7 @@ function createController(userId: string, selectedId?: string, options: ChatOpti
       // 观察失败不改变原生执行状态，不重发消息。
     } finally {
       if (controller === current) {
+        controller = undefined
         connected.value = false
         if (!disposed && retry) reconnectTimer = setTimeout(connect, RECONNECT_DELAY_MS)
       }
@@ -130,40 +128,38 @@ function createController(userId: string, selectedId?: string, options: ChatOpti
 
   async function send(input: string): Promise<boolean> {
     const message = input.trim()
-    if (!message || sending.value || unresolvedInput.value || stopping.value) return false
+    if (!message || sending.value || stopping.value) return false
+    // 未确认的输入只允许同内容重试，防止误发新消息
+    if (unresolvedInput.value && pending?.message !== message) return false
     error.value = ''
     sending.value = true
     const previousTurnId = state.value?.turnId
     let submitted = false
     try {
-      const request = pending?.message === message ? pending : {
-        convId: registered.value ? convId : undefined,
-        sessionId, interactionId: crypto.randomUUID(),
+      const request: SubmitChatInput = pending?.message === message ? pending : {
+        convId: id, interactionId: crypto.randomUUID(),
         observedTurnId: busy.value ? state.value?.turnId : undefined, message,
       }
       savePending(request)
       submitted = true
       const receipt = await submitChat(request)
       if (userId !== 'anonymous' && useAuthStore().user?.userId !== userId) return false
-      if (!registered.value) {
-        convId = receipt.convId
-        sessionId = receipt.sessionId
-        registered.value = true
-        controllers.delete(`${userId}:${selectedId}`)
-        controllers.set(`${userId}:${convId}`, api)
-        options.onCreated?.(convId)
-        if (!disposed) void connect()
-      }
-      if (receipt.convId) {
-        const summary = await readConv(receipt.convId).catch(() => undefined)
-        if (summary && !disposed) useConvsStore().upsert(summary)
+      const firstSend = !registered
+      if (firstSend) {
+        registered = true
+        controllers.set(`${userId}:${id}`, api)
+        if (options.onCreated) options.onCreated(id)
+        else if (!disposed) void connect()
       }
       if (receipt?.disposition === 'NEW_TURN') replacedTurnId.value = previousTurnId
       savePending()
       unresolvedInput.value = false
       if (draft.value.trim() === message) saveDraft('')
       // 发送后立即读一次快照；随后由共享 SSE 接管，快照失败不否认已经接收的输入。
-      try { if (sessionId) apply(await readSession(sessionId)) } catch { /* 已接收的输入由后续订阅核对，不重新提交。 */ }
+      if (!firstSend || !options.onCreated) {
+        try { apply(await readSession(id)) }
+        catch { /* 已接收的输入由后续订阅核对，不重新提交。 */ }
+      }
       return true
     } catch (cause) {
       error.value = errorMessage(cause)
@@ -180,12 +176,12 @@ function createController(userId: string, selectedId?: string, options: ChatOpti
 
   async function stop() {
     const runId = state.value?.runId
-    if (!sessionId || !runId || stopping.value) return
+    if (!runId || stopping.value) return
     stopping.value = true
     error.value = ''
     try {
-      await interruptChat(sessionId, runId)
-      apply(await readSession(sessionId))
+      await interruptChat(id, runId)
+      apply(await readSession(id))
     } catch (cause) {
       stopping.value = false
       error.value = errorMessage(cause)
@@ -194,37 +190,27 @@ function createController(userId: string, selectedId?: string, options: ChatOpti
 
   async function resume() {
     const turnId = state.value?.turnId
-    if (!sessionId || !turnId || sending.value) return
+    if (!turnId || sending.value) return
     sending.value = true
     try {
-      await resumeChat(sessionId, turnId)
-      apply(await readSession(sessionId))
+      await resumeChat(id, turnId)
+      apply(await readSession(id))
     } catch (cause) { error.value = errorMessage(cause) }
     finally { sending.value = false }
   }
 
-  function clear() {
-    if (!canClear.value) return
-    controller?.abort()
-    if (reconnectTimer) clearTimeout(reconnectTimer)
-    convId = crypto.randomUUID()
-    sessionId = selectedId ? undefined : convId
-    registered.value = Boolean(sessionId)
-    sessionStorage.setItem(SESSION_KEY, convId)
-    state.value = undefined
-    messages.value = []
-    pending = undefined
-    error.value = ''
-    connected.value = false
-    void connect()
+  function attach() {
+    disposed = false
+    // 已有消息的对话才立即建立订阅；新对话首次发送后再连接，不监听不存在的会话
+    if (registered) void connect()
   }
-
-  function attach() { disposed = false; void connect() }
   function detach() {
     disposed = true
     if (reconnectTimer) clearTimeout(reconnectTimer)
     controller?.abort()
+    controller = undefined
   }
-  const api = { attach, detach, apply, state, draft, saveDraft, scrollTop, registered, messages, busy, inputs, error, connected, stopping, unresolvedInput, canResume, waiting, canClear, clear, send, stop, resume }
+  const api = { attach, detach, apply, state, draft, saveDraft, scrollTop, messages, busy, inputs, error, connected,
+    stopping, unresolvedInput, canResume, waiting, send, stop, resume }
   return api
 }

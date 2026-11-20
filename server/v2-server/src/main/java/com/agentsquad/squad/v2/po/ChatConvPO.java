@@ -1,6 +1,6 @@
 package com.agentsquad.squad.v2.po;
 
-import com.agentsquad.squad.v2.enums.SessionTitleSource;
+import com.agentsquad.squad.v2.enums.ConvTitleSource;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -9,28 +9,33 @@ import lombok.Data;
 import java.time.Instant;
 
 /**
- * 聊天会话目录
+ * 对话目录持久化模型
  * <p>
- * 保存用户归属、固定 Agent 和标题，原生消息由 SDK 持久化。
+ * 保存用户归属和标题等目录字段；消息与执行事实由 SDK 原生持久化，本表不重复保存。
  */
-@TableName(value = "sq_chat_conv", schema = "squad_chat")
 @Data
+@TableName(value = "sq_chat_conv", schema = "squad_chat")
 public class ChatConvPO {
     /**
-     * 内部存储主键
+     * 内部存储主键，不对外暴露
      */
     @TableId(type = IdType.AUTO)
     private Long id;
 
     /**
-     * 业务对话ID
+     * 业务对话ID，客户端生成的幂等建档标识
      */
     private String convId;
 
     /**
-     * 原生会话ID
+     * 关联的原生会话ID，建档时生成后不变
      */
     private String sessionId;
+
+    /**
+     * 绑定的逻辑 Agent 标识，跨进程重启保持不变
+     */
+    private String agentDefinitionId;
 
     /**
      * 归属用户业务ID
@@ -38,39 +43,34 @@ public class ChatConvPO {
     private Long userId;
 
     /**
-     * 固定Agent标识
-     */
-    private String agentId;
-
-    /**
      * 展示标题
      */
     private String title;
 
     /**
-     * 自动或手动标题
+     * 标题来源
      */
-    private SessionTitleSource titleSource;
+    private ConvTitleSource titleSource;
 
     /**
-     * 标题编辑版本
+     * 标题编辑版本，改名按版本条件更新
      */
     private Long version;
 
     /**
-     * 对话备注
+     * 对话备注，暂不由页面编辑
      */
     private String remark;
 
     /**
-     * 是否归档
+     * 归档时间；未归档为 null，归档后从主列表移除
      */
-    private Boolean archived;
+    private Instant archivedAt;
 
     /**
-     * 是否删除
+     * 删除时间；未删除为 null，删除后所有入口按不存在处理
      */
-    private Boolean deleted;
+    private Instant deletedAt;
 
     /**
      * 创建人ID

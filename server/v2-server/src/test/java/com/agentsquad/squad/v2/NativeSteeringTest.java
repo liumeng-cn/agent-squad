@@ -62,28 +62,42 @@ class NativeSteeringTest {
         });
         try (var agent = HarnessAgent.builder().agentId("steering-test").name("test")
                 .model(model).disableMemoryHooks().workspace(workspace).build()) {
-            var sessions = AguiSessionTest.sessions(agent);
+            var sessions = AguiSessionTest.runtime(agent);
             var service = AguiSessionTest.service(sessions);
-            var receipt = service.send(AguiSessionTest.input("initial", "整理报告"), "1");
+            var receipt = service.send(AguiSessionTest.input("initial", "整理报告"));
             assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
             var stream = new ChatEventStreamService();
             ReflectionTestUtils.setField(stream, "sessionService", sessions);
-            assertThat(stream.subscribe("conversation", "1").next().block(Duration.ofSeconds(5))).isNotNull();
+            var directory = (com.agentsquad.squad.v2.service.ChatConvService)
+                    ReflectionTestUtils.getField(sessions, "convs");
+            var authorized = directory.require("conversation");
+            org.mockito.Mockito.doReturn(authorized).when(directory).requireOwned("conversation", 1L);
+            org.mockito.Mockito.clearInvocations(directory);
+
+            // 入口校验一次，后续快照复用句柄，不再查询目录或读取请求身份。
+            var subscription = stream.subscribe("conversation");
+            org.mockito.Mockito.when(directory.require("conversation"))
+                    .thenThrow(new IllegalStateException("后台线程不能读取请求身份"));
+            assertThat(subscription.next().block(Duration.ofSeconds(5))).isNotNull();
+            org.mockito.Mockito.verify(directory, org.mockito.Mockito.never())
+                    .requireOwned(anyString(), org.mockito.ArgumentMatchers.anyLong());
+            org.mockito.Mockito.verify(directory, org.mockito.Mockito.times(1)).require("conversation");
+            org.mockito.Mockito.doReturn(authorized).when(directory).require("conversation");
 
             var supplement = AguiSessionTest.input("supplement", "只统计华东地区");
             supplement.setObservedTurnId(receipt.getTurnId());
-            var accepted = service.send(supplement, "1");
+            var accepted = service.send(supplement);
             assertThat(accepted.getDisposition()).isEqualTo(ChatDisposition.STEERING);
             assertThat(accepted.getTurnId()).isEqualTo(receipt.getTurnId());
-            assertThat(sessions.read("native-conversation", "1").getInputs().getFirst().getStatus())
+            assertThat(sessions.read("conversation").getInputs().getFirst().getStatus())
                     .isEqualTo(ChatInputStatus.ACCEPTED);
             gate.tryEmitValue(text("旧条件生成的初稿"));
-            var nativeSession = sessions.open("native-conversation", "1");
+            var nativeSession = sessions.open("conversation");
             assertThat(nativeSession.await(nativeSession.task(receipt.getInputId()))
                     .block(Duration.ofSeconds(20)).status()).isEqualTo("completed");
             assertThat(calls).hasValue(2);
             assertThat(observed.getLast()).anyMatch(message -> message.getTextContent().contains("只统计华东地区"));
-            var result = sessions.read("native-conversation", "1");
+            var result = sessions.read("conversation");
             assertThat(result.getInputs().getFirst().getStatus()).isEqualTo(ChatInputStatus.APPLIED);
             assertThat(result.getMessages().getLast().getContent()).isEqualTo("已采用补充要求");
             assertThat(result.getMessages()).extracting(message -> message.getContent())
@@ -105,16 +119,16 @@ class NativeSteeringTest {
         });
         try (var agent = HarnessAgent.builder().agentId("interrupt-test").name("test")
                 .model(model).disableMemoryHooks().workspace(workspace).build()) {
-            var sessions = AguiSessionTest.sessions(agent);
+            var sessions = AguiSessionTest.runtime(agent);
             var service = AguiSessionTest.service(sessions);
-            var receipt = service.send(AguiSessionTest.input("initial", "执行任务"), "1");
+            var receipt = service.send(AguiSessionTest.input("initial", "执行任务"));
             assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
             var request = new ChatInterruptDTO();
-            request.setSessionId("native-conversation");
-            request.setRunId(sessions.open("native-conversation", "1").log().head().owner());
-            assertThat(service.interrupt(request, "1")).isTrue();
+            request.setConvId("conversation");
+            request.setRunId(sessions.open("conversation").log().head().owner());
+            assertThat(service.interrupt(request)).isTrue();
             // 等分发器实际处理停止命令，再释放模型，固定原生协作中断边界。
-            var inbox = new io.agentscope.core.session.SessionInbox(sessions.open("native-conversation", "1").log());
+            var inbox = new io.agentscope.core.session.SessionInbox(sessions.open("conversation").log());
             Flux.interval(Duration.ofMillis(10))
                     .filter(tick -> {
                         var view = inbox.snapshot();
@@ -122,24 +136,24 @@ class NativeSteeringTest {
                                 && view.handled().contains(command.id()));
                     }).next().block(Duration.ofSeconds(5));
             finish.tryEmitValue(text("中断边界返回"));
-            var session = sessions.open("native-conversation", "1");
+            var session = sessions.open("conversation");
             assertThat(session.await(session.task(receipt.getInputId())).block(Duration.ofSeconds(20))).isNotNull();
             // 原生中断可能需要模型到达协作边界；收据不能被当成已停止的断言。
-            assertThat(sessions.open("native-conversation", "1").tasks()).hasSize(1);
+            assertThat(sessions.open("conversation").tasks()).hasSize(1);
             assertThat(io.agentscope.core.session.SessionTurns.read(session.log()).latest().status())
                     .isEqualTo("interrupted");
             // 重试旧请求不能取消可继续的轮次。
-            service.send(AguiSessionTest.input("initial", "执行任务"), "1");
+            service.send(AguiSessionTest.input("initial", "执行任务"));
             assertThat(io.agentscope.core.session.SessionTurns.read(session.log()).latest().status())
                     .isEqualTo("interrupted");
             when(model.stream(any(), any(), any())).thenReturn(Flux.just(text("新问题的回答")));
-            var next = service.send(AguiSessionTest.input("next", "你好"), "1");
+            var next = service.send(AguiSessionTest.input("next", "你好"));
             assertThat(next.getTurnId()).isNotEqualTo(receipt.getTurnId());
             assertThat(session.await(session.task(next.getInputId())).block(Duration.ofSeconds(20)).status())
                     .isEqualTo("completed");
             assertThat(io.agentscope.core.session.SessionTurns.read(session.log()).turns().getFirst().status())
                     .isEqualTo("cancelled");
-            assertThat(sessions.read("native-conversation", "1").getMessages())
+            assertThat(sessions.read("conversation").getMessages())
                     .anyMatch(message -> message.getContent().equals("执行任务"))
                     .anyMatch(message -> message.getContent().equals("新问题的回答"));
             assertThat(receipt.getDisposition()).isEqualTo(ChatDisposition.NEW_TURN);
@@ -177,27 +191,27 @@ class NativeSteeringTest {
                 .model(model).disableMemoryHooks().disableDynamicSubagents().workspace(workspace)
                 .subagent(SubagentDeclaration.builder().name("gated-child").description("受控子助手")
                         .inlineAgentsBody("child-only-marker，你是受控子助手").steps(4).build()).build()) {
-            var sessions = AguiSessionTest.sessions(agent);
+            var sessions = AguiSessionTest.runtime(agent);
             var service = AguiSessionTest.service(sessions);
-            var initial = service.send(AguiSessionTest.input("parent", "启动子任务"), "1");
+            var initial = service.send(AguiSessionTest.input("parent", "启动子任务"));
             boolean enteredChild = childEntered.await(10, TimeUnit.SECONDS);
             assertThat(enteredChild).withFailMessage("child entry absent: parentCalls=%s, state=%s, toolResults=%s",
-                    parentInputs.size(), sessions.read("native-conversation", "1").getStatus(),
+                    parentInputs.size(), sessions.read("conversation").getStatus(),
                     parentInputs.stream().flatMap(java.util.Collection::stream)
                             .flatMap(message -> message.getContentBlocks(io.agentscope.core.message.ToolResultBlock.class).stream())
                             .flatMap(result -> result.getOutput().stream()).filter(TextBlock.class::isInstance)
                             .map(TextBlock.class::cast).map(TextBlock::getText).toList()).isTrue();
             var extra = AguiSessionTest.input("parent-extra", "主任务只统计本月");
             extra.setObservedTurnId(initial.getTurnId());
-            assertThat(service.send(extra, "1").getDisposition()).isEqualTo(ChatDisposition.STEERING);
+            assertThat(service.send(extra).getDisposition()).isEqualTo(ChatDisposition.STEERING);
             childGate.tryEmitValue(text("子任务完成"));
-            var session = sessions.open("native-conversation", "1");
+            var session = sessions.open("conversation");
             assertThat(session.await(session.task(initial.getInputId())).block(Duration.ofSeconds(20)).status())
                     .isEqualTo("completed");
             assertThat(childInputs).allSatisfy(messages -> assertThat(messages)
                     .noneMatch(message -> message.getTextContent().contains("主任务只统计本月")));
             assertThat(parentInputs.getLast()).anyMatch(message -> message.getTextContent().contains("主任务只统计本月"));
-            assertThat(sessions.read("native-conversation", "1").getInputs().getFirst().getStatus())
+            assertThat(sessions.read("conversation").getInputs().getFirst().getStatus())
                     .isEqualTo(ChatInputStatus.APPLIED);
         }
     }
@@ -206,12 +220,12 @@ class NativeSteeringTest {
     void uncertainSteeringFailureNeverFallsBackToNewSubmission() {
         var sessions = mock(ChatRuntimeService.class);
         var session = mock(AgentSession.class);
-        when(sessions.open("native-conversation", "1")).thenReturn(session);
+        when(sessions.open("conversation")).thenReturn(session);
         when(session.steer(any(AgentSession.Task.class), anyString()))
                 .thenThrow(new IllegalStateException("storage result unknown"));
         var request = AguiSessionTest.input("extra", "补充要求");
         request.setObservedTurnId("observed-turn");
-        assertThatThrownBy(() -> AguiSessionTest.service(sessions).send(request, "1"))
+        assertThatThrownBy(() -> AguiSessionTest.service(sessions).send(request))
                 .isInstanceOf(IllegalStateException.class);
         verify(session, never()).submit(anyString(), anyString());
     }

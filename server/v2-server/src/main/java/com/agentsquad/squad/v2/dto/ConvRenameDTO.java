@@ -7,20 +7,21 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
- * 会话标题编辑请求
+ * 对话改名请求
  * <p>
- * 标题更新使用版本避免并发覆盖
+ * 按读取时的标题版本条件更新，版本不一致说明他人已修改，返回业务冲突。
  */
 @Data
 public class ConvRenameDTO {
     /**
-     * 单行会话名称
+     * 单行对话标题，保存前去除首尾空白
      */
     @NotBlank
     @Size(max = 120)
     private String title;
+
     /**
-     * 当前读取的元数据版本
+     * 读取到的标题版本
      */
     @NotNull
     @PositiveOrZero

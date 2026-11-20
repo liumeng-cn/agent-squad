@@ -1,7 +1,6 @@
 package com.agentsquad.squad.v2;
 
-import com.agentsquad.squad.v2.agent.observer.AgentTracingMiddleware;
-import com.agentsquad.squad.v2.agent.observer.TraceContextSpanProcessor;
+import com.agentsquad.squad.v2.agent.middleware.LangfuseEnrichmentMiddleware;
 import com.agentsquad.squad.v2.agent.tool.EventTestTool;
 import com.agentsquad.squad.v2.config.ObservationConfiguration;
 import com.agentsquad.squad.v2.config.properties.ObservationProperties;
@@ -38,9 +37,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Studio 原生观测验收
+ * Langfuse 追踪验收
  * <p>
- * 在真实后台 Session 中检查异步父子关系、每个 Span 的会话归属以及 OTLP 鉴权导出。
+ * 在真实后台 Session 中检查异步父子关系、根 Span 的会话归属以及 OTLP 鉴权导出。
  */
 class ObservationTracingTest {
     @TempDir
@@ -49,10 +48,10 @@ class ObservationTracingTest {
     @Test
     void keepsAgentModelAndToolInOneTraceWithSessionOnEverySpan() {
         var exporter = InMemorySpanExporter.create();
-        var provider = SdkTracerProvider.builder().addSpanProcessor(new TraceContextSpanProcessor())
+        var provider = SdkTracerProvider.builder()
                 .addSpanProcessor(SimpleSpanProcessor.create(exporter)).build();
         try (var sdk = OpenTelemetrySdk.builder().setTracerProvider(provider).build()) {
-            var middleware = new AgentTracingMiddleware(sdk, "test");
+            var middleware = new LangfuseEnrichmentMiddleware();
             Model model = mock(Model.class);
             when(model.getModelName()).thenReturn("trace-test");
             AtomicBoolean first = new AtomicBoolean(true);
@@ -68,17 +67,17 @@ class ObservationTracingTest {
             var toolkit = new Toolkit();
             toolkit.registerTool(new EventTestTool());
             try (var agent = HarnessAgent.builder().agentId("trace-test").name("trace-test")
-                    .model(model).toolkit(toolkit).middleware(middleware).workspace(workspace).build()) {
+                    .model(model).toolkit(toolkit).middleware(new io.agentscope.core.tracing.OtelTracingMiddleware(sdk)).middleware(middleware).workspace(workspace).build()) {
                 var session = agent.session(RuntimeContext.builder().userId("user-1").sessionId("session-1").build());
                 var task = session.submit("request-1", "调用测试工具");
                 assertThat(session.await(task).block(Duration.ofSeconds(20)).status()).isEqualTo("completed");
             }
             var spans = exporter.getFinishedSpanItems();
             assertThat(spans).hasSizeGreaterThanOrEqualTo(4);
-            assertThat(spans).allSatisfy(span -> {
-                assertThat(span.getAttributes().get(AttributeKey.stringKey("user.id"))).isEqualTo("user-1");
-                assertThat(span.getAttributes().get(AttributeKey.stringKey("gen_ai.conversation.id")))
-                        .isEqualTo("user-1:session-1");
+            assertThat(spans.stream().filter(span -> span.getName().startsWith("invoke_agent"))).isNotEmpty().allSatisfy(span -> {
+                assertThat(span.getAttributes().get(AttributeKey.stringKey("langfuse.user.id"))).isEqualTo("user-1");
+                assertThat(span.getAttributes().get(AttributeKey.stringKey("langfuse.session.id")))
+                        .isEqualTo("session-1");
             });
             assertThat(spans.stream().map(span -> span.getTraceId()).distinct()).hasSize(1);
             assertThat(spans).anyMatch(span -> "execute_tool".equals(span.getAttributes()
@@ -90,9 +89,75 @@ class ObservationTracingTest {
             assertThat(spans).anyMatch(span -> "generation".equals(span.getAttributes()
                     .get(AttributeKey.stringKey("langfuse.observation.type")))
                     && span.getAttributes().get(AttributeKey.stringKey("langfuse.observation.output")) != null);
-            assertThat(spans).anyMatch(span -> "tool".equals(span.getAttributes()
+            assertThat(spans).anyMatch(span -> "span".equals(span.getAttributes()
                     .get(AttributeKey.stringKey("langfuse.observation.type")))
                     && span.getAttributes().get(AttributeKey.stringKey("langfuse.observation.output")) != null);
+        }
+    }
+
+    @Test
+    void enrichesThinkingReturnedByModelAcrossAsyncThread() {
+        var exporter = InMemorySpanExporter.create();
+        var provider = SdkTracerProvider.builder()
+                .addSpanProcessor(SimpleSpanProcessor.create(exporter)).build();
+        try (var sdk = OpenTelemetrySdk.builder().setTracerProvider(provider).build()) {
+            var model = mock(Model.class);
+            when(model.getModelName()).thenReturn("thinking-test");
+            var input = mock(io.agentscope.core.middleware.ModelCallInput.class);
+            when(input.model()).thenReturn(model);
+            when(input.messages()).thenReturn(List.of());
+            when(input.tools()).thenReturn(List.of());
+            var tracing = new io.agentscope.core.tracing.OtelTracingMiddleware(sdk);
+            var enrichment = new LangfuseEnrichmentMiddleware();
+            var context = RuntimeContext.builder().sessionId("thinking-session").build();
+            Flux<io.agentscope.core.event.AgentEvent> events = Flux.just(
+                    new io.agentscope.core.event.ThinkingBlockDeltaEvent("reply", "thinking", "先分析"),
+                    new io.agentscope.core.event.ThinkingBlockDeltaEvent("reply", "thinking", "再核对"));
+            tracing.onModelCall(mock(io.agentscope.core.agent.Agent.class), context, input,
+                    value -> enrichment.onModelCall(null, context, value,
+                            ignored -> events.publishOn(reactor.core.scheduler.Schedulers.boundedElastic())))
+                    .blockLast(Duration.ofSeconds(2));
+
+            assertThat(exporter.getFinishedSpanItems()).singleElement().satisfies(span -> {
+                assertThat(span.getAttributes().get(AttributeKey.stringKey("langfuse.observation.metadata.thinking")))
+                        .isEqualTo("先分析再核对");
+                assertThat(span.getEvents()).extracting(event -> event.getName())
+                        .containsExactly("thinking.started", "thinking.ended");
+            });
+        }
+    }
+
+    @Test
+    void officialMiddlewareEndsModelSpanOnFailureAndCancellation() {
+        var exporter = InMemorySpanExporter.create();
+        var provider = SdkTracerProvider.builder()
+                .addSpanProcessor(SimpleSpanProcessor.create(exporter)).build();
+        try (var sdk = OpenTelemetrySdk.builder().setTracerProvider(provider).build()) {
+            var tracing = new io.agentscope.core.tracing.OtelTracingMiddleware(sdk);
+            var enrichment = new LangfuseEnrichmentMiddleware();
+            var agent = mock(io.agentscope.core.agent.Agent.class);
+            var model = mock(Model.class);
+            when(model.getModelName()).thenReturn("lifecycle-test");
+            var input = mock(io.agentscope.core.middleware.ModelCallInput.class);
+            when(input.model()).thenReturn(model);
+            when(input.messages()).thenReturn(List.of());
+            when(input.tools()).thenReturn(List.of());
+            var context = RuntimeContext.builder().userId("1").sessionId("lifecycle").build();
+
+            tracing.onModelCall(agent, context, input,
+                    value -> enrichment.onModelCall(agent, context, value, ignored -> Flux.never()))
+                    .take(Duration.ofMillis(50)).blockLast(Duration.ofSeconds(2));
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> tracing.onModelCall(agent, context, input,
+                    value -> enrichment.onModelCall(agent, context, value,
+                            ignored -> Flux.error(new IllegalStateException("合成模型故障"))))
+                    .blockLast(Duration.ofSeconds(2))).isInstanceOf(IllegalStateException.class);
+
+            assertThat(exporter.getFinishedSpanItems()).hasSize(2).allSatisfy(span -> {
+                assertThat(span.getStatus().getStatusCode()).isEqualTo(io.opentelemetry.api.trace.StatusCode.ERROR);
+                assertThat(span.getAttributes().get(AttributeKey.stringKey("langfuse.observation.type")))
+                        .isEqualTo("generation");
+                assertThat(span.getAttributes().get(AttributeKey.stringKey("gen_ai.response.reasoning"))).isNull();
+            });
         }
     }
 
@@ -110,12 +175,14 @@ class ObservationTracingTest {
         try {
             var properties = new ObservationProperties();
             properties.setEndpoint("http://127.0.0.1:" + server.getAddress().getPort() + "/v1/traces");
+            io.opentelemetry.api.GlobalOpenTelemetry.resetForTest();
             var configuration = new ObservationConfiguration();
             ReflectionTestUtils.setField(configuration, "properties", properties);
             try (var sdk = configuration.observationSdk();
                  var agent = HarnessAgent.builder().agentId("export-failure").name("export-failure")
                          .model(new ScriptedChatModel()).workspace(workspace)
-                         .middleware(new AgentTracingMiddleware(sdk, "test")).build()) {
+                         .middleware(new io.agentscope.core.tracing.OtelTracingMiddleware(sdk))
+                         .middleware(new LangfuseEnrichmentMiddleware()).build()) {
                 var session = agent.session(RuntimeContext.builder().userId("1").sessionId("failure").build());
                 var task = session.submit("request", "测试输入");
                 assertThat(session.await(task).block(Duration.ofSeconds(20)).status()).isEqualTo("completed");
@@ -129,7 +196,7 @@ class ObservationTracingTest {
     }
 
     @Test
-    void exportsProtobufToOtlpHttpWithoutBackendSpecificHeaders() throws Exception {
+    void exportsProtobufWithLangfuseIngestionHeader() throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         AtomicReference<String> authorization = new AtomicReference<>();
         AtomicReference<String> version = new AtomicReference<>();
@@ -146,6 +213,7 @@ class ObservationTracingTest {
         try {
             var properties = new ObservationProperties();
             properties.setEndpoint("http://127.0.0.1:" + server.getAddress().getPort() + "/v1/traces");
+            io.opentelemetry.api.GlobalOpenTelemetry.resetForTest();
             var configuration = new ObservationConfiguration();
             ReflectionTestUtils.setField(configuration, "properties", properties);
             try (var sdk = configuration.observationSdk()) {
@@ -153,7 +221,7 @@ class ObservationTracingTest {
                 assertThat(sdk.getSdkTracerProvider().forceFlush().join(5, TimeUnit.SECONDS).isSuccess()).isTrue();
             }
             assertThat(authorization.get()).isNull();
-            assertThat(version.get()).isNull();
+            assertThat(version.get()).isEqualTo("4");
             assertThat(bytes.get()).isPositive();
         } finally {
             server.stop(0);

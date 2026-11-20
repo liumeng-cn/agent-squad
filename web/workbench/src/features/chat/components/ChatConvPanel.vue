@@ -5,11 +5,11 @@ import { useChat } from '../composables/useChat'
 import { useAuthStore } from '../../auth/stores/auth'
 import ChatComposer from './ChatComposer.vue'
 import ChatMessageList from './ChatMessageList.vue'
-const props = defineProps<{ convId: string; fresh: boolean; initialSnapshot?: ChatSession }>()
+const props = defineProps<{ convId?: string; initialSnapshot?: ChatSession }>()
 const emit = defineEmits<{ created: [convId: string] }>()
 const auth = useAuthStore()
-const chat = useChat(auth.user!.userId, props.convId, { fresh: props.fresh, sessionId: props.initialSnapshot?.sessionId, onCreated: id => emit('created', id) })
-const { messages, busy, inputs, error, connected, stopping, unresolvedInput, canResume, waiting, send, stop, resume, draft, scrollTop, registered } = chat
+const chat = useChat(auth.user!.userId, props.convId, { onCreated: id => emit('created', id) })
+const { messages, busy, inputs, error, connected, stopping, unresolvedInput, canResume, waiting, send, stop, resume, draft, scrollTop } = chat
 watch(() => props.initialSnapshot, snapshot => { if (snapshot) chat.apply(snapshot) }, { immediate: true })
 const empty = computed(() => !messages.value.length)
 </script>
@@ -18,7 +18,7 @@ const empty = computed(() => !messages.value.length)
     <ChatMessageList v-if="!empty" :messages="messages" :initial-scroll-top="scrollTop" @scroll-position="scrollTop = $event" />
     <div v-if="empty" class="welcome"><picture><source media="(prefers-reduced-motion: reduce)" srcset="/brand/squad-icon-2d-motion-preview.png" /><img src="/brand/squad-icon-2d-motion.gif" width="112" height="112" alt="" /></picture><h1>你好，{{ auth.user?.effectiveDisplayName }}</h1><p>从一个问题开始，一起把事情做好</p></div>
     <footer class="composer-area">
-      <p v-if="registered && !connected" class="connection" role="status">正在连接会话，恢复执行状态…</p>
+      <p v-if="convId && !connected" class="connection" role="status">正在连接会话，恢复执行状态…</p>
       <p v-for="input in inputs" :key="input.id" class="input-status">补充：{{ input.content }} · {{ input.label }}</p>
       <p v-if="canResume" class="connection">本轮已停止，可直接发送新消息 <button class="resume-turn" type="button" @click="resume">继续本轮</button></p>
       <p v-if="waiting" class="connection">执行正在等待交互，补充消息不会代替确认操作。</p>

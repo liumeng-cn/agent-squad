@@ -1,6 +1,6 @@
 package com.agentsquad.squad.v2;
 
-import com.agentsquad.squad.v2.agent.observer.AgentTracingMiddleware;
+import com.agentsquad.squad.v2.agent.middleware.LangfuseEnrichmentMiddleware;
 import com.agentsquad.squad.v2.agent.tool.EventTestTool;
 import com.agentsquad.squad.v2.config.properties.ObservationProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,7 +47,7 @@ import static org.mockito.Mockito.when;
 @EnabledIfEnvironmentVariable(named = "SQUAD_STUDIO_LOCAL_PROBE", matches = "true")
 class StudioLocalProbeTest {
     @Resource
-    private AgentTracingMiddleware middleware;
+    private LangfuseEnrichmentMiddleware middleware;
 
     @Resource
     private OpenTelemetrySdk observationSdk;
@@ -76,7 +76,8 @@ class StudioLocalProbeTest {
         var toolkit = new Toolkit();
         toolkit.registerTool(new EventTestTool());
         try (var agent = HarnessAgent.builder().agentId("local-probe").name("本地接入验收")
-                .model(model).toolkit(toolkit).middleware(middleware).workspace(workspace).build()) {
+                .model(model).toolkit(toolkit).middleware(new io.agentscope.core.tracing.OtelTracingMiddleware(observationSdk))
+                .middleware(middleware).workspace(workspace).build()) {
             var session = agent.session(RuntimeContext.builder().userId("local-probe").sessionId(convId).build());
             for (int i = 0; i < 2; i++) {
                 var task = session.submit("probe-" + i, "本地合成验证输入");

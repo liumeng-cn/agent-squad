@@ -6,13 +6,13 @@ CREATE TABLE squad_chat.sq_chat_conv
     conv_id           VARCHAR(64)    NOT NULL CHECK (conv_id ~ '^[a-zA-Z0-9-]{1,64}$'),
     session_id        VARCHAR(64)    NOT NULL,
     user_id           BIGINT         NOT NULL,
-    agent_id          VARCHAR(80)    NOT NULL,
+    agent_definition_id VARCHAR(80) NOT NULL,
     title             VARCHAR(120)   NOT NULL DEFAULT '新对话',
     title_source      VARCHAR(16)    NOT NULL DEFAULT 'AUTO',
     version           BIGINT         NOT NULL DEFAULT 0 CHECK (version >= 0),
     remark            TEXT,
-    archived          BOOLEAN        NOT NULL DEFAULT FALSE,
-    deleted           BOOLEAN        NOT NULL DEFAULT FALSE,
+    archived_at       TIMESTAMPTZ(3),
+    deleted_at        TIMESTAMPTZ(3),
     creator_id        BIGINT         NOT NULL DEFAULT 0,
     creator_name      VARCHAR(50)    NOT NULL DEFAULT '',
     create_time       TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -20,7 +20,7 @@ CREATE TABLE squad_chat.sq_chat_conv
     last_updater_name VARCHAR(50)    NOT NULL DEFAULT '',
     last_update_time  TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uk_chat_conv_user_conversation UNIQUE (user_id, conv_id),
-    CONSTRAINT uk_chat_conv_native_session UNIQUE (user_id, agent_id, session_id)
+    CONSTRAINT uk_chat_conv_native_session UNIQUE (user_id, agent_definition_id, session_id)
 );
 
 CREATE INDEX idx_chat_conv_user_created
@@ -31,11 +31,12 @@ COMMENT ON COLUMN squad_chat.sq_chat_conv.id IS '内部存储主键';
 COMMENT ON COLUMN squad_chat.sq_chat_conv.conv_id IS '业务对话ID';
 COMMENT ON COLUMN squad_chat.sq_chat_conv.session_id IS '原生会话ID';
 COMMENT ON COLUMN squad_chat.sq_chat_conv.user_id IS '归属用户ID';
-COMMENT ON COLUMN squad_chat.sq_chat_conv.agent_id IS '固定Agent标识';
 COMMENT ON COLUMN squad_chat.sq_chat_conv.title IS '展示标题';
-COMMENT ON COLUMN squad_chat.sq_chat_conv.title_source IS '标题来源 AUTO默认 MANUAL手动';
+COMMENT ON COLUMN squad_chat.sq_chat_conv.title_source IS '标题来源 AUTO自动生成 MANUAL用户命名';
 COMMENT ON COLUMN squad_chat.sq_chat_conv.version IS '标题编辑版本';
 COMMENT ON COLUMN squad_chat.sq_chat_conv.remark IS '对话备注';
+COMMENT ON COLUMN squad_chat.sq_chat_conv.archived_at IS '归档时间，未归档为空';
+COMMENT ON COLUMN squad_chat.sq_chat_conv.deleted_at IS '删除时间，未删除为空';
 COMMENT ON COLUMN squad_chat.sq_chat_conv.creator_id IS '创建人ID';
 COMMENT ON COLUMN squad_chat.sq_chat_conv.creator_name IS '创建人姓名';
 COMMENT ON COLUMN squad_chat.sq_chat_conv.create_time IS '创建时间';
@@ -100,5 +101,5 @@ COMMENT ON COLUMN squad_chat.agentscope_snapshots.snapshot_id IS '快照标识';
 COMMENT ON COLUMN squad_chat.agentscope_snapshots.data IS '快照二进制数据';
 COMMENT ON COLUMN squad_chat.agentscope_snapshots.created_at IS '创建时间';
 
-COMMENT ON COLUMN squad_chat.sq_chat_conv.archived IS '是否归档';
-COMMENT ON COLUMN squad_chat.sq_chat_conv.deleted IS '是否删除';
+
+COMMENT ON COLUMN squad_chat.sq_chat_conv.agent_definition_id IS '绑定的逻辑Agent标识';

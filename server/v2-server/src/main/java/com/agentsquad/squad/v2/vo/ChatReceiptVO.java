@@ -11,25 +11,30 @@ import lombok.Data;
 @Data
 public class ChatReceiptVO {
     /**
-     * 业务对话ID
+     * 业务对话ID。
      */
     private String convId;
+
     /**
-     * 持续对话标识。
+     * 对话关联的原生会话ID。
      */
     private String sessionId;
+
     /**
      * 本次用户交互标识。
      */
     private String interactionId;
+
     /**
      * 实际归属的原生任务轮次。
      */
     private String turnId;
+
     /**
      * 原生提交命令或插话输入标识。
      */
     private String inputId;
+
     /**
      * 输入开启新轮次还是补充已有轮次。
      */

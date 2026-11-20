@@ -38,7 +38,7 @@ spring:
               uri: ${services.v2-server.url}
               predicates:
                 - Path=/api/v2/chat/**
-                - Method=GET,POST,PATCH
+                - Method=GET,POST,PATCH,DELETE
               metadata:
                 audience: v2-server
           httpclient:

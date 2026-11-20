@@ -14,22 +14,22 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties("agentsquad.v2.observation")
 public class ObservationProperties {
     /**
-     * 是否向 Studio 导出原生调用链。
+     * 是否向 Langfuse 导出原生调用链。
      */
     private boolean enabled;
 
     /**
      * 完整的 OTLP HTTP Trace 接收地址。
      */
-    private String endpoint = "http://127.0.0.1:13001/v1/traces";
+    private String endpoint = "http://127.0.0.1:13000/api/public/otel/v1/traces";
 
     /**
-     * Langfuse 项目公钥，Studio 模式为空。
+     * Langfuse 项目公钥。
      */
     private String publicKey;
 
     /**
-     * Langfuse 项目密钥，Studio 模式为空。
+     * Langfuse 项目密钥。
      */
     private String secretKey;
 

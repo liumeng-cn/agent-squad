@@ -14,5 +14,6 @@ import org.mapstruct.Mapping;
 public interface ChatConvConverter {
 
     @Mapping(target = "createdAt", source = "createTime")
+    @Mapping(target = "archived", expression = "java(conv.getArchivedAt() != null)")
     ConvSummaryVO toSummary(ChatConvPO conv);
 }

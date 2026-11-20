@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useConvsStore } from '../stores/convs'
 import { groupSessions } from '../model/sessionGroups'
 import type { ConvSummary } from '../model/conv'
-import { errorMessage } from '../../../shared/http/http'
+import { ApiError, errorMessage } from '../../../shared/http/http'
+import { readConv } from '../api/convApi'
 import ChatIcon from './ChatIcon.vue'
 import UserProfile from '../../user/components/UserProfile.vue'
 defineProps<{ selectedId?: string; collapsed: boolean }>()
@@ -17,14 +18,44 @@ const actionError = ref('')
 const editing = ref<ConvSummary>()
 const title = ref('')
 const error = ref('')
+const conflict = ref(false)
 const saving = ref(false)
 const field = ref<HTMLInputElement>()
-async function rename(row: ConvSummary) { menu.value = undefined; editing.value = { ...row }; title.value = row.title; error.value = ''; await nextTick(); field.value?.focus(); field.value?.select() }
+function dismissMenu(event: MouseEvent) {
+  if (!(event.target instanceof Element) || !event.target.closest('.row-actions')) {
+    menu.value = undefined
+  }
+}
+function dismissMenuOnEscape(event: KeyboardEvent) {
+  if (event.key === 'Escape') menu.value = undefined
+}
+onMounted(() => {
+  document.addEventListener('click', dismissMenu, true)
+  document.addEventListener('keydown', dismissMenuOnEscape)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('click', dismissMenu, true)
+  document.removeEventListener('keydown', dismissMenuOnEscape)
+})
+async function rename(row: ConvSummary) { menu.value = undefined; editing.value = { ...row }; title.value = row.title; error.value = ''; conflict.value = false; await nextTick(); field.value?.focus(); field.value?.select() }
 async function save() {
   if (!editing.value || saving.value) return
-  saving.value = true; error.value = ''
+  saving.value = true; error.value = ''; conflict.value = false
   try { await sessions.rename(editing.value.convId, title.value.trim(), editing.value.version); editing.value = undefined }
-  catch (reason) { error.value = errorMessage(reason) }
+  catch (reason) {
+    error.value = errorMessage(reason)
+    conflict.value = reason instanceof ApiError && reason.code === 409
+  }
+  finally { saving.value = false }
+}
+async function refreshTitle() {
+  if (!editing.value) return
+  saving.value = true; error.value = ''
+  try {
+    const latest = await readConv(editing.value.convId)
+    editing.value.version = latest.version
+    conflict.value = false
+  } catch (reason) { error.value = errorMessage(reason) }
   finally { saving.value = false }
 }
 async function archive(row: ConvSummary) {
@@ -100,7 +131,7 @@ async function remove() {
     </div>
   </Teleport>
   <Teleport to="body"><div v-if="editing" class="rename-backdrop" @click.self="!saving && (editing = undefined)"><form role="dialog" aria-modal="true" aria-labelledby="rename-title" class="rename-panel" @submit.prevent="save" @keydown.esc="!saving && (editing = undefined)">
-    <h2 id="rename-title">重命名会话</h2><label>会话名称<input ref="field" v-model="title" maxlength="120" required /></label><p v-if="error" role="alert">{{ error }}</p>
+    <h2 id="rename-title">重命名会话</h2><label>会话名称<input ref="field" v-model="title" maxlength="120" required /></label><p v-if="error" role="alert">{{ error }}</p><button v-if="conflict" type="button" :disabled="saving" class="primary" @click="refreshTitle">刷新标题版本，保留输入</button>
     <div><button type="button" :disabled="saving" @click="editing = undefined">取消</button><button class="primary" :disabled="saving || !title.trim()">{{ saving ? '保存中…' : '保存' }}</button></div>
   </form></div></Teleport>
 </template>

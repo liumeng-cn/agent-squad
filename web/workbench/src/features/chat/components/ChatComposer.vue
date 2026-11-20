@@ -47,13 +47,13 @@ function keydown(event: KeyboardEvent) {
 </template>
 
 <style scoped>
-.composer { padding: 20px 22px 14px; min-height: 144px; border: 1px solid #b8c2cf; border-radius: 24px; background: #fff; box-shadow: 0 8px 32px #22222208; }
+.composer { display: flex; flex-direction: column; padding: 20px 22px 14px; min-height: 144px; border: 1px solid #b8c2cf; border-radius: 24px; background: #fff; box-shadow: 0 8px 32px #22222208; }
 .composer:focus-within { border-color: #315efb; box-shadow: 0 0 0 2px #315efb24, 0 8px 32px #22222208; }
-textarea { display: block; width: 100%; resize: none; border: 0; outline: 0; background: transparent; font: inherit; line-height: 1.6; max-height: 180px; color: #202630; }
+textarea { display: block; width: 100%; flex: 1; resize: none; border: 0; outline: 0; background: transparent; font: inherit; line-height: 1.6; max-height: 180px; color: #202630; }
 textarea::placeholder { color: #687587; }
-.composer-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; }
+.composer-footer { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-top: 14px; }
 .composer-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
-.composer-footer span { font-size: 12px; color: #687587; }
+.composer-footer span { font-size: 12px; color: #687587; line-height: 1.4; padding-bottom: 8px; }
 button { display: inline-flex; align-items: center; justify-content: center; padding: 0; width: 36px; height: 36px; flex-shrink: 0; border: 0; border-radius: 50%; background: #315efb; color: white; cursor: pointer; }
 button svg { display: block; width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 button:disabled { background: #d4d5d0; cursor: default; }

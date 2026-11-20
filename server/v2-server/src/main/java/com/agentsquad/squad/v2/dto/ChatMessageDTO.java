@@ -8,19 +8,15 @@ import lombok.Data;
 /**
  * 聊天输入
  * <p>
- * 会话标识跨轮次复用，交互标识只标识本次发送；目标轮次用于插话准入。
+ * 对话标识由客户端生成并跨轮次复用，首次发送时服务端按该标识幂等建档；
+ * 交互标识只标识本次发送，目标轮次用于插话准入。
  */
 @Data
 public class ChatMessageDTO {
     /**
-     * 当前页面会话标识。
+     * 当前页面对话标识；首次发送时作为建档幂等键，网络重试沿用同一标识。
      */
-    @Pattern(regexp = "[a-zA-Z0-9-]{1,64}")
-    private String sessionId;
-
-    /**
-     * 已建档的对话ID，首次发送时为空
-     */
+    @NotBlank
     @Pattern(regexp = "[a-zA-Z0-9-]{1,64}")
     private String convId;
 

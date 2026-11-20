@@ -1,13 +1,25 @@
 import { defineStore } from 'pinia'
-import { archiveConv, deleteConv, listConvs, readConv, renameConv } from '../api/convApi'
+import { archiveConv, deleteConv, listConvs, readConv, renameConv, unarchiveConv } from '../api/convApi'
 import type { ConvSummary } from '../model/conv'
 import { ApiError, errorMessage } from '../../../shared/http/http'
+
 export const useConvsStore = defineStore('chat-convs', {
-  state: () => ({ items: [] as ConvSummary[], current: 0, hasMore: false, loading: false, error: '', generation: 0 }),
+  state: () => ({
+    items: [] as ConvSummary[],
+    current: 0,
+    hasMore: false,
+    loading: false,
+    error: '',
+    generation: 0,
+  }),
   actions: {
     upsert(summary: ConvSummary) {
       const old = this.items.find(item => item.convId === summary.convId)
       if (old && old.version > summary.version) return
+      if (summary.archived) {
+        this.items = this.items.filter(item => item.convId !== summary.convId)
+        return
+      }
       if (old) Object.assign(old, summary)
       else this.items.unshift(summary)
     },
@@ -53,9 +65,17 @@ export const useConvsStore = defineStore('chat-convs', {
     },
     async archive(convId: string) {
       const generation = this.generation
-      await archiveConv(convId, true)
+      await archiveConv(convId)
       if (generation === this.generation) {
         this.items = this.items.filter(item => item.convId !== convId)
+      }
+    },
+    async unarchive(convId: string) {
+      const generation = this.generation
+      await unarchiveConv(convId)
+      if (generation === this.generation) {
+        const summary = await readConv(convId).catch(() => undefined)
+        if (summary) this.upsert(summary)
       }
     },
     reset() { this.generation++; this.items = []; this.current = 0; this.hasMore = false; this.loading = false; this.error = '' },

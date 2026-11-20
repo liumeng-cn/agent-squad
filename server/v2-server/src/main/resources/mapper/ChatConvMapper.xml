@@ -2,14 +2,14 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.v2.mapper.ChatConvMapper">
     <update id="updateTitle">
-        UPDATE squad_chat.sq_chat_conv
+        UPDATE sq_chat_conv
         SET title = #{title},
-        title_source = #{titleSource},
-        version = version + 1,
-        last_updater_id = #{lastUpdaterId},
-        last_update_time = CURRENT_TIMESTAMP
+            title_source = #{titleSource},
+            version = version + 1,
+            last_updater_id = #{lastUpdaterId},
+            last_update_time = CURRENT_TIMESTAMP
         WHERE user_id = #{userId}
-        AND conv_id = #{convId}
-        AND version = #{version}
+          AND conv_id = #{convId}
+          AND version = #{version}
     </update>
 </mapper>

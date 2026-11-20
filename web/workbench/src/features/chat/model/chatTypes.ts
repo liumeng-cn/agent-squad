@@ -84,8 +84,7 @@ export interface ChatSession {
   inputs: ConversationInput[]
 }
 export interface SubmitChatInput {
-  sessionId?: string
-  convId?: string
+  convId: string
   interactionId: string
   observedTurnId?: string
   message: string

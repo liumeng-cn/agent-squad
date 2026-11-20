@@ -13,11 +13,12 @@ import lombok.Data;
 @Data
 public class ChatInterruptDTO {
     /**
-     * 会话标识。
+     * 对话标识。
      */
     @NotBlank
     @Pattern(regexp = "[a-zA-Z0-9-]{1,64}")
-    private String sessionId;
+    private String convId;
+
     /**
      * 当前执行标识，防止停止后来的执行。
      */

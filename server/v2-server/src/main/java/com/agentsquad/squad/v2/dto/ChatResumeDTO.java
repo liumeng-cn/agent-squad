@@ -12,11 +12,11 @@ import lombok.Data;
 @Data
 public class ChatResumeDTO {
     /**
-     * 会话标识。
+     * 对话标识。
      */
     @NotBlank
     @Pattern(regexp = "[a-zA-Z0-9-]{1,64}")
-    private String sessionId;
+    private String convId;
 
     /**
      * 需要继续的原生轮次。
