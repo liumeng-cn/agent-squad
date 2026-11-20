@@ -2,7 +2,6 @@ package com.agentsquad.squad.v2;
 
 import com.agentsquad.squad.common.bo.CurrentUserBO;
 import com.agentsquad.squad.common.utils.IdentityAssertion;
-import com.agentsquad.squad.v2.agent.middleware.LangfuseEnrichmentMiddleware;
 import com.agentsquad.squad.v2.mapper.ChatConvMapper;
 import io.agentscope.harness.agent.HarnessAgent;
 import jakarta.annotation.Resource;
@@ -32,9 +31,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ChatHttpTest {
     @MockitoBean
     private HarnessAgent agent;
-
-    @MockitoBean
-    private LangfuseEnrichmentMiddleware tracingMiddleware;
 
     @MockitoBean
     private ChatConvMapper convMapper;

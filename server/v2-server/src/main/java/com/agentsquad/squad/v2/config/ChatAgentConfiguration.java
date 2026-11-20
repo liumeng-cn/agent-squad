@@ -1,6 +1,9 @@
 package com.agentsquad.squad.v2.config;
 
-import com.agentsquad.squad.v2.agent.middleware.LangfuseEnrichmentMiddleware;
+import com.agentsquad.squad.v2.agent.tracing.FrameworkTracingMiddleware;
+import com.agentsquad.squad.v2.agent.tracing.ModelIoTracingMiddleware;
+import com.agentsquad.squad.v2.agent.tracing.ReasoningTracingMiddleware;
+import com.agentsquad.squad.v2.agent.tracing.ToolCallTracingMiddleware;
 import com.agentsquad.squad.v2.agent.tool.AskUserTool;
 import com.agentsquad.squad.v2.agent.tool.EventTestTool;
 import com.agentsquad.squad.v2.config.properties.ChatAgentProperties;
@@ -16,6 +19,7 @@ import io.agentscope.harness.agent.filesystem.remote.RemoteFilesystem;
 import io.agentscope.harness.agent.session.WorkspaceSessionLogStore;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import jakarta.annotation.Resource;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -39,17 +43,26 @@ public class ChatAgentConfiguration {
     private ChatAgentProperties properties;
 
     @Resource
-    private LangfuseEnrichmentMiddleware tracingMiddleware;
+    private DataSource dataSource;
 
     @Resource
-    private DataSource dataSource;
+    private ObjectProvider<ModelIoTracingMiddleware> modelTracing;
+
+    @Resource
+    private ObjectProvider<ToolCallTracingMiddleware> toolTracing;
+
+    @Resource
+    private ObjectProvider<FrameworkTracingMiddleware> frameworkTracing;
+
+    @Resource
+    private ObjectProvider<ReasoningTracingMiddleware> reasoningTracing;
 
     /**
      * 创建框架 Agent；应用关闭时由框架释放会话与运行资源。
      */
     @Bean(destroyMethod = "close")
     @ConditionalOnProperty(prefix = "agentsquad.v2.agent", name = "enabled", havingValue = "true")
-    public HarnessAgent chatAgent(OpenTelemetrySdk observationSdk) {
+    public HarnessAgent chatAgent(ObjectProvider<OpenTelemetrySdk> observationSdkProvider) {
 
         var options = GenerateOptions.builder();
         if (properties.getSparkThinkingMode() != null) {
@@ -94,10 +107,18 @@ public class ChatAgentConfiguration {
                 .messageBus(bus)
                 .disableFilesystemTools()
                 .disableShellTool()
-                .enableAgentTracingLog(true)
-                .middleware(new OtelTracingMiddleware(observationSdk))
-                .middleware(tracingMiddleware);
+                .enableAgentTracingLog(false);
+
+        // 观测是可选能力：未开启时不创建追踪中间件，也不要求 Langfuse 服务可用。
+        OpenTelemetrySdk observationSdk = observationSdkProvider.getIfAvailable();
+        if (observationSdk != null) {
+            agent.middleware(new OtelTracingMiddleware(observationSdk));
+            // 同级按注册顺序形成洋葱链；官方 Span 在外层，业务中间件才取得其上下文。
+            agent.middleware(modelTracing.getObject());
+            agent.middleware(toolTracing.getObject());
+            agent.middleware(frameworkTracing.getObject());
+            agent.middleware(reasoningTracing.getObject());
+        }
         return agent.build();
     }
-
 }
