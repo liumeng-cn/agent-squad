@@ -8217,6 +8217,51 @@
         },
         "description": "恢复后重新出现在主列表。"
       }
+    },
+    "/api/v2/chat/answers": {
+      "post": {
+        "operationId": "answerV2ChatQuestion",
+        "summary": "回答待答问题并继续原轮次",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatAnswerDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "业务响应，成功 code=0",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "先核对当前用户对话归属，只允许回答原生日志中的 ask_user 问题。同一问题相同答案重试返回原命令，不同答案返回业务409。返回值表示SDK受理，不代表执行完成。"
+      }
     }
   },
   "components": {
@@ -13968,6 +14013,20 @@
             "items": {
               "type": "string"
             }
+          },
+          "interactions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatInteractionVO"
+            },
+            "description": "未回答的原生用户问题；只公开 ask_user 的问题和选项"
+          },
+          "answeredRequestIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "已受理答案的待答标识，供断线核对"
           }
         },
         "required": []
@@ -14291,6 +14350,66 @@
             "description": "是否查询已归档对话"
           }
         }
+      },
+      "ChatAnswerDTO": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "convId": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9-]{1,64}$"
+          },
+          "turnId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "requestId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "answer": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "convId",
+          "turnId",
+          "requestId",
+          "answer"
+        ]
+      },
+      "ChatInteractionVO": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string"
+          },
+          "turnId": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "options": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        },
+        "required": [
+          "requestId",
+          "turnId",
+          "question",
+          "options"
+        ]
       }
     }
   }

@@ -1,10 +1,27 @@
 package com.agentsquad.squad.v2.converter;
 
+import com.agentsquad.squad.v2.agent.tool.AskUserTool;
 import com.agentsquad.squad.v2.bo.ChatProjectionBO;
-import com.agentsquad.squad.v2.enums.*;
-import com.agentsquad.squad.v2.vo.*;
+import com.agentsquad.squad.v2.enums.ChatExecutionStatus;
+import com.agentsquad.squad.v2.enums.ChatInputStatus;
+import com.agentsquad.squad.v2.enums.ChatMessageRole;
+import com.agentsquad.squad.v2.enums.NativeChatCommandType;
+import com.agentsquad.squad.v2.enums.NativeChatContentType;
+import com.agentsquad.squad.v2.enums.NativeChatEventType;
+import com.agentsquad.squad.v2.enums.NativeChatInteractionKind;
+import com.agentsquad.squad.v2.enums.NativeChatModelPurpose;
+import com.agentsquad.squad.v2.enums.NativeChatStatus;
+import com.agentsquad.squad.v2.vo.ChatActivityVO;
+import com.agentsquad.squad.v2.vo.ChatHistoryMessageVO;
+import com.agentsquad.squad.v2.vo.ChatInputVO;
+import com.agentsquad.squad.v2.vo.ChatInteractionVO;
+import com.agentsquad.squad.v2.vo.ChatSessionVO;
+import com.agentsquad.squad.v2.vo.ChatThinkingVO;
 import io.agentscope.core.message.Msg;
+import io.agentscope.core.message.TextBlock;
+import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.message.ToolResultState;
+import io.agentscope.core.message.ToolUseBlock;
 import io.agentscope.core.observation.ActionObservation;
 import io.agentscope.core.session.SessionEvent;
 import io.agentscope.core.session.SessionInbox;
@@ -45,6 +62,15 @@ public class ChatSessionConverter {
         var inbox = new SessionInbox(log).snapshot();
         for (var command : inbox.commands()) {
             result.getAcceptedInputIds().add(command.id());
+            if (NativeChatCommandType.fromValue(command.kind()) == NativeChatCommandType.RESPOND
+                    && !inbox.rejected().containsKey(command.id())) {
+                result.getAnsweredRequestIds().addAll(command.requestIds());
+                result.getInteractions().removeIf(item -> command.requestIds().contains(item.getRequestId()));
+                if (!projection.getStartedCommands().contains(command.id())
+                        && result.getStatus() == ChatExecutionStatus.WAITING) {
+                    result.setStatus(ChatExecutionStatus.QUEUED);
+                }
+            }
             if (NativeChatCommandType.fromValue(command.kind()) == NativeChatCommandType.SUBMIT) {
                 addUserMessages(command.messages(), command.turnId(), messages);
                 if (!projection.getStartedCommands().contains(command.id())
@@ -116,6 +142,8 @@ public class ChatSessionConverter {
             projection.getActiveReplies().remove(event.turnId());
         }
         switch (NativeChatEventType.fromValue(event.type())) {
+            case INTERACTION_REQUESTED -> addQuestion(event, session);
+            case INTERACTION_RESOLVED -> resolveQuestion(event, session, projection);
             case MODEL_PREPARED -> {
                 if (NativeChatModelPurpose.fromValue(data.get("purpose")) == NativeChatModelPurpose.REASONING) {
                     startModelReply(event, projection, String.valueOf(data.get("modelCallId")));
@@ -151,7 +179,8 @@ public class ChatSessionConverter {
                 reply(event, projection).setFinishedAt(event.occurredAt());
                 for (var activity : reply(event, projection).getActivities()) {
                     if (activity.getStatus() == ChatExecutionStatus.RUNNING) {
-                        activity.setStatus(ChatExecutionStatus.INTERRUPTED);
+                        activity.setStatus(status == ChatExecutionStatus.WAITING
+                                ? ChatExecutionStatus.WAITING : ChatExecutionStatus.INTERRUPTED);
                         activity.setFinishedAt(event.occurredAt());
                     }
                 }
@@ -163,6 +192,59 @@ public class ChatSessionConverter {
             default -> {
             }
         }
+    }
+
+    private void addQuestion(SessionEvent event, ChatSessionVO session) {
+        var data = event.data();
+        if (data.containsKey("protocol") || data.get("call") == null
+                || NativeChatInteractionKind.fromValue(data.get("kind")) != NativeChatInteractionKind.EXTERNAL_EXECUTION) {
+            return;
+        }
+        var call = JsonUtils.getJsonCodec().convertValue(data.get("call"), ToolUseBlock.class);
+        if (!AskUserTool.NAME.equals(call.getName()) || call.getInput() == null
+                || !(call.getInput().get("question") instanceof String question)) {
+            return;
+        }
+        var interaction = new ChatInteractionVO();
+        interaction.setRequestId(String.valueOf(data.get("requestId")));
+        interaction.setTurnId(event.turnId());
+        interaction.setQuestion(question);
+        if (call.getInput().get("options") instanceof Iterable<?> options) {
+            for (var option : options) {
+                if (option instanceof String text) {
+                    interaction.getOptions().add(text);
+                }
+            }
+        }
+        // 多问题分次回答时，SDK 可能再次发出尚未回答的问题，按原生标识保持唯一。
+        session.getInteractions().removeIf(item -> item.getRequestId().equals(interaction.getRequestId()));
+        session.getInteractions().add(interaction);
+    }
+
+    private void resolveQuestion(SessionEvent event, ChatSessionVO session, ChatProjectionBO projection) {
+        String requestId = String.valueOf(event.data().get("requestId"));
+        var interaction = session.getInteractions().stream()
+                .filter(item -> item.getRequestId().equals(requestId)).findFirst().orElse(null);
+        if (interaction == null) {
+            return;
+        }
+        session.getInteractions().remove(interaction);
+        var result = JsonUtils.getJsonCodec().convertValue(event.data().get("result"), ToolResultBlock.class);
+        StringBuilder answer = new StringBuilder();
+        for (var block : result.getOutput()) {
+            if (block instanceof TextBlock text) {
+                answer.append(text.getText());
+            }
+        }
+        var message = new ChatHistoryMessageVO();
+        message.setId("answer:" + requestId);
+        message.setTurnId(event.turnId());
+        message.setRole(ChatMessageRole.USER);
+        message.setContent("问题：" + interaction.getQuestion() + "\n回答：" + answer);
+        message.setStatus(ChatExecutionStatus.COMPLETED);
+        message.setStartedAt(event.occurredAt());
+        message.setFinishedAt(event.occurredAt());
+        projection.getMessages().put(message.getId(), message);
     }
 
     private void appendChunk(SessionEvent event, ChatProjectionBO projection) {

@@ -2,6 +2,8 @@ package com.agentsquad.squad.v2.controller;
 
 import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.v2.dto.ChatInterruptDTO;
+import com.agentsquad.squad.v2.dto.ChatAnswerDTO;
+import com.agentsquad.squad.v2.service.ChatInteractionService;
 import com.agentsquad.squad.v2.dto.ChatMessageDTO;
 import com.agentsquad.squad.v2.dto.ChatResumeDTO;
 import com.agentsquad.squad.v2.service.ChatEventStreamService;
@@ -31,6 +33,9 @@ import reactor.core.publisher.Flux;
 public class ChatController {
     @Resource
     private ChatService chatService;
+
+    @Resource
+    private ChatInteractionService interactions;
 
     @Resource
     private ChatRuntimeService sessionService;
@@ -76,5 +81,13 @@ public class ChatController {
     @PostMapping("/resumptions")
     public ApiResult<String> resume(@Valid @RequestBody ChatResumeDTO request) {
         return ApiResult.success(chatService.resume(request));
+    }
+
+    /**
+     * 回答待答问题
+     */
+    @PostMapping("/answers")
+    public ApiResult<String> answer(@Valid @RequestBody ChatAnswerDTO request) {
+        return ApiResult.success(interactions.answer(request));
     }
 }

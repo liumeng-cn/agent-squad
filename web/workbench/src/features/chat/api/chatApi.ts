@@ -1,5 +1,5 @@
 import type { AguiEvent } from '../model/agui'
-import type { ChatReceipt, ChatSession, SubmitChatInput } from '../model/chatTypes'
+import type { ChatAnswer, ChatReceipt, ChatSession, SubmitChatInput } from '../model/chatTypes'
 import { ApiError, apiGet, apiPost } from '../../../shared/http/http'
 
 /** 按 SSE 行协议解析，兼容跨块 CRLF、中文字符及多行 data。 */
@@ -65,4 +65,8 @@ export async function subscribeSession(convId: string, signal: AbortSignal, rece
 
 export function resumeChat(convId: string, turnId: string): Promise<string> {
   return apiPost('/api/v2/chat/resumptions', { convId, turnId })
+}
+
+export function answerChat(input: ChatAnswer): Promise<string> {
+  return apiPost('/api/v2/chat/answers', input)
 }

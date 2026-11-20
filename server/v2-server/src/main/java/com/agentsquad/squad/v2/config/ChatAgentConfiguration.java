@@ -1,6 +1,7 @@
 package com.agentsquad.squad.v2.config;
 
 import com.agentsquad.squad.v2.agent.middleware.LangfuseEnrichmentMiddleware;
+import com.agentsquad.squad.v2.agent.tool.AskUserTool;
 import com.agentsquad.squad.v2.agent.tool.EventTestTool;
 import com.agentsquad.squad.v2.config.properties.ChatAgentProperties;
 import io.agentscope.core.model.GenerateOptions;
@@ -64,6 +65,7 @@ public class ChatAgentConfiguration {
                 .build();
         var toolkit = new Toolkit();
         toolkit.registerTool(new EventTestTool());
+        toolkit.registerTool(new AskUserTool());
 
         var dialect = AbstractJdbcDialect.from(dataSource).autoCreateTable(false).build();
         var store = JdbcDistributedStore.create(dataSource, dialect);
@@ -81,7 +83,9 @@ public class ChatAgentConfiguration {
         var agent = HarnessAgent.builder()
                 .agentId(properties.getAgentId())
                 .name(properties.getAgentName())
-                .sysPrompt(properties.getSystemPrompt())
+                .sysPrompt(properties.getSystemPrompt() + "\n需要用户补充必要信息、选择或确认时，必须调用 ask_user，"
+                        + "不要仅用普通回复提问或代替用户回答。每次只询问一个明确问题，收到真实答案后继续；"
+                        + "用户拒绝时遵守其选择。普通解释和无需用户决策的任务直接完成。")
                 .model(model)
                 .toolkit(toolkit)
                 .workspace(workspacePath)

@@ -19,6 +19,8 @@ public enum NativeChatEventType {
     TURN_OUTPUT("turn/output", "轮次输出"),
     TOOL_REQUESTED("tool/requested", "工具请求"),
     ACTION_END("action/end", "工具动作结束"),
+    INTERACTION_REQUESTED("interaction/requested", "用户交互已请求"),
+    INTERACTION_RESOLVED("interaction/resolved", "用户交互已回答"),
     TURN_CANCELLED("turn/cancelled", "轮次已取消"),
     UNKNOWN("", "未公开事件");
     /**

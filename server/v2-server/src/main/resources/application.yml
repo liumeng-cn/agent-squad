@@ -1,10 +1,14 @@
 spring:
   application:
     name: agent-squad-v2
-  profiles:
-    default: local
   main:
     web-application-type: servlet
+  datasource:
+    url: 'jdbc:postgresql://127.0.0.1:15432/agent_squad?currentSchema=squad_chat'
+    username: 'squad'
+    password: '4e59485ceda19845fac6833a19bdd53953f8756f1dd5a934'
+  config:
+    import: optional:file:/Users/liumeng/work/pWork/agent-squad/.local/langfuse/.env[.properties]
 
 server:
   address: 127.0.0.1
@@ -25,3 +29,20 @@ logging:
 agentsquad:
   identity:
     identity-key: '05584e456dbd98d1fdbeed4972133d1d12b7d5576cfef4a4e595fad2d03b0e6f'
+  v2:
+    observation:
+      enabled: true
+      endpoint: http://127.0.0.1:13000/api/public/otel/v1/traces
+      environment: local
+      public-key: ${LANGFUSE_INIT_PROJECT_PUBLIC_KEY:}
+      secret-key: ${LANGFUSE_INIT_PROJECT_SECRET_KEY:}
+    agent:
+      enabled: true
+      api-key: lm-studio
+      base-url: http://127.0.0.1:1234/v1
+      model-name: qwen/qwen3.6-35b-a3b
+      spark-thinking-mode: DISABLED
+      agent-id: squad-master
+      agent-name: Squad
+      system-prompt: 你是 Agent Squad 的主协调员。直接完成用户请求；执行过程通过原生事件实时输出。
+      workspace: /Users/liumeng/work/pWork/workspace

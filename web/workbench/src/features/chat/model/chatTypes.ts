@@ -72,6 +72,8 @@ export interface SessionMessage {
   thinkingBlocks: { modelCallId: string; content: string }[]
 }
 export interface ChatSession {
+  interactions?: ChatInteraction[]
+  answeredRequestIds?: string[]
   acceptedInputIds?: string[]
   summary?: import('./conv').ConvSummary
   sessionId: string
@@ -82,6 +84,18 @@ export interface ChatSession {
   status: ExecutionStatus
   messages: SessionMessage[]
   inputs: ConversationInput[]
+}
+export interface ChatInteraction {
+  requestId: string
+  turnId: string
+  question: string
+  options: string[]
+}
+export interface ChatAnswer {
+  convId: string
+  turnId: string
+  requestId: string
+  answer: string
 }
 export interface SubmitChatInput {
   convId: string

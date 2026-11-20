@@ -50,11 +50,17 @@ public class LangfuseEnrichmentMiddleware implements MiddlewareBase {
             Span span = Span.fromContext(parent);
             enrichAssociation(span, linked);
             attribute(span, "langfuse.observation.metadata.native_session_id", context.getSessionId());
-            attribute(span, "langfuse.trace.name", agent.getName());
-            attribute(span, "langfuse.trace.input", messages(input.msgs()));
+            boolean root = Baggage.fromContext(parent).getEntryValue("langfuse.session.id") == null;
+            span.setAttribute("langfuse.internal.is_app_root", root);
+            attribute(span, "langfuse.observation.type", "agent");
+            String inputJson = messages(input.msgs());
+            attribute(span, "langfuse.observation.input", inputJson);
+            if (root) {
+                attribute(span, "langfuse.trace.name", agent.getName());
+            }
             return next.apply(input).doOnNext(event -> {
                 if (event instanceof AgentResultEvent result) {
-                    attribute(span, "langfuse.trace.output", messages(List.of(result.getResult())));
+                    attribute(span, "langfuse.observation.output", messages(List.of(result.getResult())));
                 }
             }).contextWrite(reactor -> ContextPropagationOperator.storeOpenTelemetryContext(reactor, linked));
         });

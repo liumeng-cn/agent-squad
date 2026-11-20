@@ -80,6 +80,15 @@ class ObservationTracingTest {
                         .isEqualTo("session-1");
             });
             assertThat(spans.stream().map(span -> span.getTraceId()).distinct()).hasSize(1);
+            assertThat(spans.stream().filter(span -> Boolean.TRUE.equals(span.getAttributes()
+                    .get(AttributeKey.booleanKey("langfuse.internal.is_app_root"))))).hasSize(1);
+            assertThat(spans.stream().filter(span -> span.getName().startsWith("invoke_agent")))
+                    .allSatisfy(span -> {
+                        assertThat(span.getAttributes().get(AttributeKey.stringKey("langfuse.observation.input")))
+                                .isNotBlank();
+                        assertThat(span.getAttributes().get(AttributeKey.stringKey("langfuse.observation.output")))
+                                .isNotBlank();
+                    });
             assertThat(spans).anyMatch(span -> "execute_tool".equals(span.getAttributes()
                     .get(AttributeKey.stringKey("gen_ai.operation.name"))));
             assertThat(spans).anyMatch(span -> "chat".equals(span.getAttributes()
@@ -116,7 +125,10 @@ class ObservationTracingTest {
                     parentInput -> enrichment.onAgent(parent, parentContext, parentInput,
                             ignored -> Flux.defer(() -> tracing.onAgent(child, childContext, input,
                                     childInput -> enrichment.onAgent(child, childContext, childInput,
-                                            empty -> Flux.empty())))
+                                            empty -> Flux.just(new io.agentscope.core.event.AgentResultEvent(
+                                                    io.agentscope.core.message.Msg.builder()
+                                                            .role(io.agentscope.core.message.MsgRole.ASSISTANT)
+                                                            .textContent("合成回复").build())))))
                                     .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic())))
                     .blockLast(Duration.ofSeconds(2));
 
@@ -128,6 +140,15 @@ class ObservationTracingTest {
                         .isEqualTo("owner");
             });
             assertThat(spans.stream().map(span -> span.getTraceId()).distinct()).hasSize(1);
+            assertThat(spans.stream().filter(span -> Boolean.TRUE.equals(span.getAttributes()
+                    .get(AttributeKey.booleanKey("langfuse.internal.is_app_root"))))).hasSize(1);
+            assertThat(spans.stream().filter(span -> span.getName().startsWith("invoke_agent")))
+                    .allSatisfy(span -> {
+                        assertThat(span.getAttributes().get(AttributeKey.stringKey("langfuse.observation.input")))
+                                .isNotBlank();
+                        assertThat(span.getAttributes().get(AttributeKey.stringKey("langfuse.observation.output")))
+                                .isNotBlank();
+                    });
             assertThat(spans).filteredOn(span -> span.getName().equals("invoke_agent child"))
                     .singleElement().satisfies(span -> assertThat(span.getAttributes()
                             .get(AttributeKey.stringKey("langfuse.observation.metadata.native_session_id")))

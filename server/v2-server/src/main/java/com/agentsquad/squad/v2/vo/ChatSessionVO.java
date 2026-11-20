@@ -53,4 +53,14 @@ public class ChatSessionVO {
      * 原生插话收据及应用状态。
      */
     private List<ChatInputVO> inputs = new ArrayList<>();
+
+    /**
+     * 原生待答用户问题，刷新后仍可读取。
+     */
+    private List<ChatInteractionVO> interactions = new ArrayList<>();
+
+    /**
+     * 已受理答案的待答标识，用于断线后核对提交结果。
+     */
+    private List<String> answeredRequestIds = new ArrayList<>();
 }

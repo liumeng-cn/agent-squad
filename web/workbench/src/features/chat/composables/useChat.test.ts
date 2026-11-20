@@ -6,7 +6,7 @@ import type { ChatSession } from '../model/chatTypes'
 import { resetChatSessions, useChat } from './useChat'
 
 const api = vi.hoisted(() => ({ submitChat: vi.fn(), subscribeSession: vi.fn(), readSession: vi.fn(),
-  interruptChat: vi.fn(), resumeChat: vi.fn() }))
+  interruptChat: vi.fn(), resumeChat: vi.fn(), answerChat: vi.fn() }))
 vi.mock('../api/chatApi', () => api)
 const convApi = vi.hoisted(() => ({ readConv: vi.fn() }))
 vi.mock('../api/convApi', () => ({ readConv: convApi.readConv }))
@@ -42,6 +42,69 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 describe('会话执行与观察分离', () => {
+  it('待答问题走独立答复接口并继续原轮次，普通消息不能代替答案', async () => {
+    const wrapper = mountChat('conversation')
+    await flushPromises()
+    const question = { requestId: 'question-1', turnId: 'turn-one', question: '采用哪个方案？', options: ['方案一', '取消'] }
+    receive({ ...snapshot, status: 'WAITING', interactions: [question] })
+    expect(chat.waiting.value).toBe(true)
+    expect(await chat.send('方案一')).toBe(false)
+    expect(api.submitChat).not.toHaveBeenCalled()
+    chat.saveAnswerDraft('question-1', '取消')
+    api.answerChat.mockResolvedValue('answer-command')
+    api.readSession.mockResolvedValue({ ...snapshot, cursor: 3, inputCursor: 2,
+      answeredRequestIds: ['question-1'], interactions: [] })
+    expect(await chat.answer('question-1', '取消')).toBe(true)
+    expect(api.answerChat).toHaveBeenCalledWith({ convId: 'conversation', turnId: 'turn-one', requestId: 'question-1', answer: '取消' })
+    expect(chat.interactions.value).toEqual([])
+    expect(chat.answerDrafts.value['question-1']).toBe('')
+    expect(chat.state.value?.turnId).toBe('turn-one')
+    wrapper.unmount()
+  })
+
+  it('答案响应丢失时保留并锁定原答案，刷新后只能重试相同答案', async () => {
+    const waiting: ChatSession = { ...snapshot, status: 'WAITING', interactions: [
+      { requestId: 'question-1', turnId: 'turn-one', question: '继续吗？', options: [] },
+    ] }
+    const wrapper = mountChat('conversation')
+    await flushPromises()
+    receive(waiting)
+    api.readSession.mockResolvedValue(waiting)
+    api.answerChat.mockRejectedValue(new TypeError('断线'))
+    expect(await chat.answer('question-1', '确认')).toBe(false)
+    expect(chat.pendingAnswer.value?.answer).toBe('确认')
+    expect(await chat.answer('question-1', '取消')).toBe(false)
+    expect(api.answerChat).toHaveBeenCalledTimes(1)
+    wrapper.unmount()
+    resetChatSessions()
+    const restored = mountChat('conversation')
+    await flushPromises()
+    receive(waiting)
+    expect(chat.pendingAnswer.value?.answer).toBe('确认')
+    api.answerChat.mockResolvedValue('answer-command')
+    api.readSession.mockResolvedValue({ ...snapshot, cursor: 3, inputCursor: 2, answeredRequestIds: ['question-1'] })
+    expect(await chat.answer('question-1', '确认')).toBe(true)
+    expect(api.answerChat.mock.calls[0]![0]).toEqual(api.answerChat.mock.calls[1]![0])
+    expect(chat.pendingAnswer.value).toBeUndefined()
+    restored.unmount()
+  })
+
+  it('答案已受理但响应丢失时，由订阅快照解除锁定', async () => {
+    const wrapper = mountChat('conversation')
+    await flushPromises()
+    const waiting: ChatSession = { ...snapshot, status: 'WAITING', interactions: [
+      { requestId: 'question-1', turnId: 'turn-one', question: '继续吗？', options: [] },
+    ] }
+    receive(waiting)
+    api.readSession.mockResolvedValue(waiting)
+    api.answerChat.mockRejectedValue(new TypeError('断线'))
+    await chat.answer('question-1', '确认')
+    receive({ ...snapshot, cursor: 3, inputCursor: 2, answeredRequestIds: ['question-1'], interactions: [] })
+    expect(chat.pendingAnswer.value).toBeUndefined()
+    expect(chat.error.value).toBe('')
+    wrapper.unmount()
+  })
+
   it('停止后允许发送新问题，接收后旧继续按钮不被迟到快照恢复', async () => {
     const wrapper = mountChat('conversation')
     await flushPromises()

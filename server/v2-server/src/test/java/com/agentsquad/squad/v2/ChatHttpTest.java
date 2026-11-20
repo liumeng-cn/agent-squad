@@ -101,6 +101,10 @@ class ChatHttpTest {
                 """
                         {"convId":"unknown","turnId":"turn"}
                         """);
+        assertUnownedPost("/api/v2/chat/answers",
+                """
+                        {"convId":"unknown","turnId":"turn","requestId":"question","answer":"确认"}
+                        """);
         assertUnownedDelete("/api/v2/chat/convs/unknown");
         assertUnownedPost("/api/v2/chat/convs/unknown/archive", "{}");
         assertUnownedPost("/api/v2/chat/convs/unknown/unarchive", null);
@@ -112,6 +116,11 @@ class ChatHttpTest {
         String path = "/api/v2/chat/messages";
         mvc.perform(post(path).header(IdentityAssertion.HEADER, identity("POST", path)).contentType("application/json")
                         .content("{\"convId\":\"conv\",\"interactionId\":\"request\",\"message\":\" \"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(400));
+
+        path = "/api/v2/chat/answers";
+        mvc.perform(post(path).header(IdentityAssertion.HEADER, identity("POST", path)).contentType("application/json")
+                        .content("{\"convId\":\"conv\",\"turnId\":\"turn\",\"requestId\":\"question\",\"answer\":\" \"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(400));
     }
 
