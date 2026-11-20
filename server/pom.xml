@@ -23,6 +23,7 @@
         <module>gateway</module>
         <module>user</module>
         <module>v2-server</module>
+        <module>reactor-practice</module>
     </modules>
 
     <properties>
