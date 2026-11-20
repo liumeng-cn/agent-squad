@@ -74,7 +74,7 @@ class ObservationTracingTest {
             }
             var spans = exporter.getFinishedSpanItems();
             assertThat(spans).hasSizeGreaterThanOrEqualTo(4);
-            assertThat(spans.stream().filter(span -> span.getName().startsWith("invoke_agent"))).isNotEmpty().allSatisfy(span -> {
+            assertThat(spans).allSatisfy(span -> {
                 assertThat(span.getAttributes().get(AttributeKey.stringKey("langfuse.user.id"))).isEqualTo("user-1");
                 assertThat(span.getAttributes().get(AttributeKey.stringKey("langfuse.session.id")))
                         .isEqualTo("session-1");
@@ -92,6 +92,46 @@ class ObservationTracingTest {
             assertThat(spans).anyMatch(span -> "span".equals(span.getAttributes()
                     .get(AttributeKey.stringKey("langfuse.observation.type")))
                     && span.getAttributes().get(AttributeKey.stringKey("langfuse.observation.output")) != null);
+        }
+    }
+
+    @Test
+    void childAgentKeepsRootSessionAssociationAcrossAsyncExecution() {
+        var exporter = InMemorySpanExporter.create();
+        var provider = SdkTracerProvider.builder()
+                .addSpanProcessor(SimpleSpanProcessor.create(exporter)).build();
+        try (var sdk = OpenTelemetrySdk.builder().setTracerProvider(provider).build()) {
+            var tracing = new io.agentscope.core.tracing.OtelTracingMiddleware(sdk);
+            var enrichment = new LangfuseEnrichmentMiddleware();
+            var parent = mock(io.agentscope.core.agent.Agent.class);
+            var child = mock(io.agentscope.core.agent.Agent.class);
+            when(parent.getName()).thenReturn("parent");
+            when(child.getName()).thenReturn("child");
+            var input = mock(io.agentscope.core.middleware.AgentInput.class);
+            when(input.msgs()).thenReturn(List.of());
+            var parentContext = RuntimeContext.builder().userId("owner").sessionId("parent-session").build();
+            var childContext = RuntimeContext.builder().userId("owner").sessionId("child-session").build();
+
+            tracing.onAgent(parent, parentContext, input,
+                    parentInput -> enrichment.onAgent(parent, parentContext, parentInput,
+                            ignored -> Flux.defer(() -> tracing.onAgent(child, childContext, input,
+                                    childInput -> enrichment.onAgent(child, childContext, childInput,
+                                            empty -> Flux.empty())))
+                                    .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic())))
+                    .blockLast(Duration.ofSeconds(2));
+
+            var spans = exporter.getFinishedSpanItems();
+            assertThat(spans).hasSize(2).allSatisfy(span -> {
+                assertThat(span.getAttributes().get(AttributeKey.stringKey("langfuse.session.id")))
+                        .isEqualTo("parent-session");
+                assertThat(span.getAttributes().get(AttributeKey.stringKey("langfuse.user.id")))
+                        .isEqualTo("owner");
+            });
+            assertThat(spans.stream().map(span -> span.getTraceId()).distinct()).hasSize(1);
+            assertThat(spans).filteredOn(span -> span.getName().equals("invoke_agent child"))
+                    .singleElement().satisfies(span -> assertThat(span.getAttributes()
+                            .get(AttributeKey.stringKey("langfuse.observation.metadata.native_session_id")))
+                            .isEqualTo("child-session"));
         }
     }
 

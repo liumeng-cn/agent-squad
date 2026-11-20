@@ -18,6 +18,7 @@ import io.agentscope.core.middleware.AgentInput;
 import io.agentscope.core.middleware.MiddlewareBase;
 import io.agentscope.core.middleware.ModelCallInput;
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.baggage.Baggage;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.instrumentation.reactor.v3_1.ContextPropagationOperator;
 import reactor.core.publisher.Flux;
@@ -44,16 +45,18 @@ public class LangfuseEnrichmentMiddleware implements MiddlewareBase {
     public Flux<AgentEvent> onAgent(Agent agent, RuntimeContext context, AgentInput input,
                                    Function<AgentInput, Flux<AgentEvent>> next) {
         return Flux.deferContextual(view -> {
-            Span span = currentSpan(view);
-            attribute(span, "langfuse.session.id", context.getSessionId());
-            attribute(span, "langfuse.user.id", context.getUserId());
+            Context parent = currentContext(view);
+            Context linked = associationContext(parent, context);
+            Span span = Span.fromContext(parent);
+            enrichAssociation(span, linked);
+            attribute(span, "langfuse.observation.metadata.native_session_id", context.getSessionId());
             attribute(span, "langfuse.trace.name", agent.getName());
             attribute(span, "langfuse.trace.input", messages(input.msgs()));
             return next.apply(input).doOnNext(event -> {
                 if (event instanceof AgentResultEvent result) {
                     attribute(span, "langfuse.trace.output", messages(List.of(result.getResult())));
                 }
-            });
+            }).contextWrite(reactor -> ContextPropagationOperator.storeOpenTelemetryContext(reactor, linked));
         });
     }
 
@@ -62,6 +65,7 @@ public class LangfuseEnrichmentMiddleware implements MiddlewareBase {
                                        Function<ModelCallInput, Flux<AgentEvent>> next) {
         return Flux.deferContextual(view -> {
             Span span = currentSpan(view);
+            enrichAssociation(span, currentContext(view));
             attribute(span, "langfuse.observation.type", "generation");
             attribute(span, "langfuse.observation.model.name", input.model().getModelName());
             attribute(span, "langfuse.observation.input", messages(input.messages()));
@@ -85,6 +89,7 @@ public class LangfuseEnrichmentMiddleware implements MiddlewareBase {
                                     Function<ActingInput, Flux<AgentEvent>> next) {
         return Flux.deferContextual(view -> {
             Span span = currentSpan(view);
+            enrichAssociation(span, currentContext(view));
             attribute(span, "langfuse.observation.type", "span");
             attribute(span, "langfuse.observation.input", json(input.toolCalls()));
             StringBuilder output = new StringBuilder();
@@ -123,9 +128,44 @@ public class LangfuseEnrichmentMiddleware implements MiddlewareBase {
         }
     }
 
+    /**
+     * 首次调用确定根会话，子 Agent 继承既有归属而不覆盖为自身的原生会话。
+     */
+    private Context associationContext(Context parent, RuntimeContext context) {
+        Baggage inherited = Baggage.fromContext(parent);
+        String sessionId = inherited.getEntryValue("langfuse.session.id");
+        if (sessionId == null) {
+            sessionId = context.getSessionId();
+        }
+        String userId = inherited.getEntryValue("langfuse.user.id");
+        if (userId == null) {
+            userId = context.getUserId();
+        }
+        var baggage = inherited.toBuilder();
+        if (sessionId != null) {
+            baggage.put("langfuse.session.id", sessionId);
+        }
+        if (userId != null) {
+            baggage.put("langfuse.user.id", userId);
+        }
+        return baggage.build().storeInContext(parent);
+    }
+
+    /**
+     * 整条调用链沿用主 Agent 的会话归属，子 Agent 原生会话单独保留为元数据。
+     */
+    private void enrichAssociation(Span span, Context context) {
+        Baggage baggage = Baggage.fromContext(context);
+        attribute(span, "langfuse.session.id", baggage.getEntryValue("langfuse.session.id"));
+        attribute(span, "langfuse.user.id", baggage.getEntryValue("langfuse.user.id"));
+    }
+
+    private Context currentContext(ContextView view) {
+        return ContextPropagationOperator.getOpenTelemetryContextFromContextView(view, Context.current());
+    }
+
     private Span currentSpan(ContextView view) {
-        Context context = ContextPropagationOperator.getOpenTelemetryContextFromContextView(view, Context.current());
-        return Span.fromContext(context);
+        return Span.fromContext(currentContext(view));
     }
 
     /**
