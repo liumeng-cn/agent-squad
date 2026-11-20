@@ -3,7 +3,6 @@ package com.agentsquad.squad.v2;
 import com.agentsquad.squad.common.enums.ApiCode;
 import com.agentsquad.squad.common.exceptions.BusinessException;
 import com.agentsquad.squad.common.vo.PageVO;
-import com.agentsquad.squad.v2.agent.middleware.LangfuseEnrichmentMiddleware;
 import com.agentsquad.squad.v2.converter.ChatConvConverter;
 import com.agentsquad.squad.v2.converter.ChatSessionConverter;
 import com.agentsquad.squad.v2.dto.ChatMessageDTO;
@@ -267,11 +266,9 @@ class AguiSessionTest {
     @EnabledIfSystemProperty(named = "agentsquad.test.postgres", matches = "true")
     void persistsConvDirectoryAndChecksOwnership() throws Exception {
         var agent = mock(HarnessAgent.class);
-        var tracing = mock(LangfuseEnrichmentMiddleware.class);
         var application = new SpringApplicationBuilder(AgentSquadV2Application.class);
         application.initializers(context -> {
             context.getBeanFactory().registerSingleton("testChatAgent", agent);
-            context.getBeanFactory().registerSingleton("testTracing", tracing);
         });
 
         try (var context = application.run(
