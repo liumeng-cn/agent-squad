@@ -8348,7 +8348,7 @@
             }
           }
         },
-        "x-required-permission": "management:user:read",
+        "x-required-permission": "management:user:query",
         "security": [
           {
             "V2Session": []
@@ -8390,7 +8390,7 @@
             }
           }
         },
-        "x-required-permission": "management:user:manage",
+        "x-required-permission": "management:user:assign-role",
         "parameters": [
           {
             "name": "phone",
@@ -8453,69 +8453,7 @@
             }
           }
         },
-        "x-required-permission": "management:user:manage",
-        "parameters": [
-          {
-            "name": "userId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "security": [
-          {
-            "V2Session": []
-          }
-        ]
-      }
-    },
-    "/user-server/api/v2/users/management/users/{userId}/status": {
-      "patch": {
-        "tags": [
-          "管理平台"
-        ],
-        "summary": "切换管理状态",
-        "responses": {
-          "200": {
-            "description": "成功或业务拒绝，按 code 判断",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "code",
-                    "data",
-                    "msg"
-                  ],
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/ManagementUser"
-                    },
-                    "msg": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RbacStatus"
-              }
-            }
-          }
-        },
-        "x-required-permission": "management:user:manage",
+        "x-required-permission": "management:user:assign-role",
         "parameters": [
           {
             "name": "userId",
@@ -8577,7 +8515,7 @@
             }
           }
         },
-        "x-required-permission": "management:role:read",
+        "x-required-permission": "management:role:query",
         "security": [
           {
             "V2Session": []
@@ -8619,7 +8557,7 @@
             }
           }
         },
-        "x-required-permission": "management:role:read",
+        "x-required-permission": "management:role:query",
         "parameters": [
           {
             "name": "roleId",
@@ -8679,7 +8617,7 @@
             }
           }
         },
-        "x-required-permission": "management:role:manage",
+        "x-required-permission": "management:role:update",
         "parameters": [
           {
             "name": "roleId",
@@ -8741,7 +8679,7 @@
             }
           }
         },
-        "x-required-permission": "management:role:manage",
+        "x-required-permission": "management:role:create",
         "security": [
           {
             "V2Session": []
@@ -8793,69 +8731,7 @@
             }
           }
         },
-        "x-required-permission": "management:role:manage",
-        "parameters": [
-          {
-            "name": "roleId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "security": [
-          {
-            "V2Session": []
-          }
-        ]
-      }
-    },
-    "/user-server/api/v2/users/management/roles/{roleId}/status": {
-      "patch": {
-        "tags": [
-          "管理平台"
-        ],
-        "summary": "切换角色状态",
-        "responses": {
-          "200": {
-            "description": "成功或业务拒绝，按 code 判断",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "code",
-                    "data",
-                    "msg"
-                  ],
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/Role"
-                    },
-                    "msg": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RbacStatus"
-              }
-            }
-          }
-        },
-        "x-required-permission": "management:role:manage",
+        "x-required-permission": "management:role:apply",
         "parameters": [
           {
             "name": "roleId",
@@ -8917,49 +8793,7 @@
             }
           }
         },
-        "x-required-permission": "management:permission:read",
-        "security": [
-          {
-            "V2Session": []
-          }
-        ]
-      }
-    },
-    "/user-server/api/v2/users/management/roles/permission-options": {
-      "get": {
-        "tags": [
-          "管理平台"
-        ],
-        "summary": "查询可选权限",
-        "responses": {
-          "200": {
-            "description": "成功或业务拒绝，按 code 判断",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "code",
-                    "data",
-                    "msg"
-                  ],
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/PermissionPage"
-                    },
-                    "msg": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-required-permission": "management:role:manage",
+        "x-required-permission": "management:permission:query",
         "security": [
           {
             "V2Session": []
@@ -9004,12 +8838,426 @@
             }
           }
         },
-        "x-required-permission": "management:user:manage",
+        "x-required-permission": "management:user:assign-role",
         "security": [
           {
             "V2Session": []
           }
         ]
+      }
+    },
+    "/user-server/api/v2/users/management/authorization-tree": {
+      "get": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "查询菜单功能树",
+        "security": [
+          {
+            "V2Session": []
+          }
+        ],
+        "x-required-permission": "management:role:query",
+        "responses": {
+          "200": {
+            "description": "按 code 判断业务结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Menu"
+                      }
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user-server/api/v2/users/management/roles/{roleId}/authorization": {
+      "get": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "查询角色授权",
+        "security": [
+          {
+            "V2Session": []
+          }
+        ],
+        "x-required-permission": "management:role:query",
+        "responses": {
+          "200": {
+            "description": "按 code 判断业务结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Role"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "保存授权草稿",
+        "security": [
+          {
+            "V2Session": []
+          }
+        ],
+        "x-required-permission": "management:role:update",
+        "responses": {
+          "200": {
+            "description": "按 code 判断业务结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Role"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleAuthorization"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/user-server/api/v2/users/management/roles/{roleId}/enable": {
+      "post": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "启用",
+        "security": [
+          {
+            "V2Session": []
+          }
+        ],
+        "x-required-permission": "management:role:enable",
+        "responses": {
+          "200": {
+            "description": "按 code 判断业务结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Role"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RbacVersion"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/user-server/api/v2/users/management/roles/{roleId}/disable": {
+      "post": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "禁用",
+        "security": [
+          {
+            "V2Session": []
+          }
+        ],
+        "x-required-permission": "management:role:disable",
+        "responses": {
+          "200": {
+            "description": "按 code 判断业务结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Role"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RbacVersion"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/user-server/api/v2/users/management/users/{userId}/enable": {
+      "post": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "启用",
+        "security": [
+          {
+            "V2Session": []
+          }
+        ],
+        "x-required-permission": "management:user:enable",
+        "responses": {
+          "200": {
+            "description": "按 code 判断业务结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ManagementUser"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RbacVersion"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/user-server/api/v2/users/management/users/{userId}/disable": {
+      "post": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "禁用",
+        "security": [
+          {
+            "V2Session": []
+          }
+        ],
+        "x-required-permission": "management:user:disable",
+        "responses": {
+          "200": {
+            "description": "按 code 判断业务结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ManagementUser"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RbacVersion"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/user-server/internal/users/permission-check": {
+      "post": {
+        "tags": [
+          "内部鉴权"
+        ],
+        "summary": "验证用户功能权限",
+        "description": "依赖用户服务网络隔离，仅供可信内部调用。Gateway 不公开此路由。",
+        "x-internal": true,
+        "x-exposed-by-gateway": false,
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PermissionCheck"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "仅 code=0 且 data=true 时允许访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -15171,13 +15419,24 @@
             "items": {
               "type": "string",
               "enum": [
-                "management:access",
-                "management:user:read",
-                "management:user:manage",
-                "management:role:read",
-                "management:role:manage",
-                "management:permission:read"
+                "management:user:query",
+                "management:user:assign-role",
+                "management:user:enable",
+                "management:user:disable",
+                "management:role:query",
+                "management:role:create",
+                "management:role:update",
+                "management:role:apply",
+                "management:role:enable",
+                "management:role:disable",
+                "management:permission:query"
               ]
+            }
+          },
+          "menus": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Menu"
             }
           }
         },
@@ -15263,12 +15522,17 @@
             "items": {
               "type": "string",
               "enum": [
-                "management:access",
-                "management:user:read",
-                "management:user:manage",
-                "management:role:read",
-                "management:role:manage",
-                "management:permission:read"
+                "management:user:query",
+                "management:user:assign-role",
+                "management:user:enable",
+                "management:user:disable",
+                "management:role:query",
+                "management:role:create",
+                "management:role:update",
+                "management:role:apply",
+                "management:role:enable",
+                "management:role:disable",
+                "management:permission:query"
               ]
             },
             "nullable": true
@@ -15278,15 +15542,32 @@
             "items": {
               "type": "string",
               "enum": [
-                "management:access",
-                "management:user:read",
-                "management:user:manage",
-                "management:role:read",
-                "management:role:manage",
-                "management:permission:read"
+                "management:user:query",
+                "management:user:assign-role",
+                "management:user:enable",
+                "management:user:disable",
+                "management:role:query",
+                "management:role:create",
+                "management:role:update",
+                "management:role:apply",
+                "management:role:enable",
+                "management:role:disable",
+                "management:permission:query"
               ]
             },
             "nullable": true
+          },
+          "draftMenuIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "appliedMenuIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -15339,12 +15620,17 @@
           "code": {
             "type": "string",
             "enum": [
-              "management:access",
-              "management:user:read",
-              "management:user:manage",
-              "management:role:read",
-              "management:role:manage",
-              "management:permission:read"
+              "management:user:query",
+              "management:user:assign-role",
+              "management:user:enable",
+              "management:user:disable",
+              "management:role:query",
+              "management:role:create",
+              "management:role:update",
+              "management:role:apply",
+              "management:role:enable",
+              "management:role:disable",
+              "management:permission:query"
             ]
           },
           "name": {
@@ -15373,27 +15659,11 @@
           "description": {
             "type": "string",
             "maxLength": 500
-          },
-          "permissionCodes": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "management:access",
-                "management:user:read",
-                "management:user:manage",
-                "management:role:read",
-                "management:role:manage",
-                "management:permission:read"
-              ]
-            },
-            "maxItems": 100
           }
         },
         "required": [
           "code",
           "name",
-          "permissionCodes",
           "description"
         ]
       },
@@ -15409,21 +15679,6 @@
             "type": "string",
             "maxLength": 500
           },
-          "permissionCodes": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "management:access",
-                "management:user:read",
-                "management:user:manage",
-                "management:role:read",
-                "management:role:manage",
-                "management:permission:read"
-              ]
-            },
-            "maxItems": 100
-          },
           "version": {
             "type": "integer",
             "format": "int64",
@@ -15432,7 +15687,6 @@
         },
         "required": [
           "name",
-          "permissionCodes",
           "version",
           "description"
         ]
@@ -15552,6 +15806,187 @@
           },
           "size": {
             "type": "integer"
+          }
+        }
+      },
+      "MenuFunction": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "management:user:query",
+              "management:user:assign-role",
+              "management:user:enable",
+              "management:user:disable",
+              "management:role:query",
+              "management:role:create",
+              "management:role:update",
+              "management:role:apply",
+              "management:role:enable",
+              "management:role:disable",
+              "management:permission:query"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "menuId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "DISABLED"
+            ]
+          },
+          "selectable": {
+            "type": "boolean"
+          },
+          "disabledReason": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "Menu": {
+        "type": "object",
+        "properties": {
+          "menuId": {
+            "type": "string"
+          },
+          "parentMenuId": {
+            "type": "string",
+            "nullable": true
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "DIRECTORY",
+              "PAGE"
+            ]
+          },
+          "routeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "routePath": {
+            "type": "string",
+            "nullable": true
+          },
+          "icon": {
+            "type": "string",
+            "nullable": true
+          },
+          "sortOrder": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "DISABLED"
+            ]
+          },
+          "selectable": {
+            "type": "boolean"
+          },
+          "disabledReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Menu"
+            }
+          },
+          "functions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MenuFunction"
+            }
+          }
+        }
+      },
+      "RoleAuthorization": {
+        "type": "object",
+        "required": [
+          "menuIds",
+          "permissionCodes",
+          "version"
+        ],
+        "properties": {
+          "menuIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100
+          },
+          "permissionCodes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "management:user:query",
+                "management:user:assign-role",
+                "management:user:enable",
+                "management:user:disable",
+                "management:role:query",
+                "management:role:create",
+                "management:role:update",
+                "management:role:apply",
+                "management:role:enable",
+                "management:role:disable",
+                "management:permission:query"
+              ]
+            },
+            "maxItems": 100
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "PermissionCheck": {
+        "type": "object",
+        "required": [
+          "userId",
+          "method",
+          "path"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,17}$",
+            "description": "可信 Gateway 登录会话中的用户编号"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "GET",
+              "POST",
+              "PUT",
+              "PATCH",
+              "DELETE",
+              "HEAD",
+              "OPTIONS"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "maxLength": 2048,
+            "description": "包含工程前缀的完整目标路径"
           }
         }
       }

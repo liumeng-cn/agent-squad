@@ -59,7 +59,7 @@
         JOIN sq_conversation c ON c.user_id = t.user_id AND c.conversation_id = t.conversation_id
         WHERE b.user_id = #{userId} AND b.framework_session_id = #{sessionId}
         AND b.role = 'MASTER' AND c.active_task_id = t.task_id
-        FOR UPDATE
+
     </select>
 
     <select id="findByLogicalKey" resultMap="findByLogicalKeyResult">

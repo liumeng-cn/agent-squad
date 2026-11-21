@@ -32,7 +32,7 @@
         ON m.user_id = r.user_id AND m.message_id = r.source_message_id
         AND m.conversation_id = r.conversation_id
         WHERE r.user_id = #{userId} AND r.binding_id = #{bindingId} AND r.del_flag = '0'
-        AND m.del_flag = '0' AND m.role = 'USER' AND m.completed = TRUE FOR UPDATE
+        AND m.del_flag = '0' AND m.role = 'USER' AND m.completed = TRUE
     </select>
 
     <select id="characterCount" resultType="_long">
@@ -50,7 +50,7 @@
         revision
         FROM sq_message WHERE user_id = #{userId} AND conversation_id = #{conversationId}
         AND message_seq &lt;= #{through} AND completed = TRUE AND del_flag = '0'
-        ORDER BY message_seq FOR UPDATE
+        ORDER BY message_seq
     </select>
 
     <select id="artifactIds" resultType="java.lang.Long">

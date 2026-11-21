@@ -136,7 +136,7 @@
         native_status
         FROM sq_command
         WHERE user_id = #{userId} AND scope_key = #{scopeKey}
-        AND idempotency_key = #{idempotencyKey} FOR UPDATE
+        AND idempotency_key = #{idempotencyKey}
     </select>
 
     <select id="findOwned" resultMap="findOwnedResult">

@@ -13,6 +13,12 @@ import java.util.List;
  */
 @Data
 public class RoleBO {
+    /** 草稿菜单业务标识 */
+    private List<String> draftMenuIds;
+
+    /** 已应用菜单业务标识 */
+    private List<String> appliedMenuIds;
+
     /**
      * 角色业务ID
      */

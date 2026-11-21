@@ -82,7 +82,7 @@
 
     <select id="lockCursor" resultType="java.lang.Long">
         SELECT native_event_cursor FROM sq_runtime_binding
-        WHERE user_id = #{userId} AND binding_id = #{bindingId} FOR UPDATE
+        WHERE user_id = #{userId} AND binding_id = #{bindingId}
     </select>
 
     <update id="advanceCursor">

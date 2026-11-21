@@ -11,6 +11,7 @@ import com.agentsquad.squad.user.server.dto.RbacStatusDTO;
 import com.agentsquad.squad.user.server.dto.RbacVersionDTO;
 import com.agentsquad.squad.user.server.dto.RoleCreateDTO;
 import com.agentsquad.squad.user.server.dto.RoleUpdateDTO;
+import com.agentsquad.squad.user.server.dto.RoleAuthorizationDTO;
 import com.agentsquad.squad.user.server.dto.UserRolesDTO;
 import com.agentsquad.squad.user.server.service.ManagementQueryService;
 import com.agentsquad.squad.user.server.service.PermissionService;
@@ -19,6 +20,7 @@ import com.agentsquad.squad.user.server.service.UserRoleService;
 import com.agentsquad.squad.user.server.vo.ManagementUserVO;
 import com.agentsquad.squad.user.server.vo.RoleVO;
 import jakarta.annotation.Resource;
+import com.agentsquad.squad.user.server.mapper.RbacMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
@@ -30,6 +32,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.List;
+import com.agentsquad.squad.user.api.dto.PermissionCheckDTO;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -48,6 +51,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class RbacIntegrationTest {
     @Resource
     private JdbcTemplate jdbc;
+
+    @Resource
+    private RbacMapper rbac;
+
+    @Resource
+    private org.mybatis.spring.SqlSessionTemplate sqlSession;
 
     @Resource
     private RoleService roles;
@@ -79,27 +88,30 @@ class RbacIntegrationTest {
         create.setCode("test-" + UUID.randomUUID());
         create.setName("集成验证角色");
         create.setDescription("事务回滚夹具");
-        create.setPermissionCodes(List.of(PermissionCode.ACCESS.getCode(), PermissionCode.ROLE_READ.getCode()));
         RoleVO role = roles.create(create);
         assertEquals(RbacStatus.DISABLED, role.getStatus());
         assertTrue(role.getAppliedPermissionCodes().isEmpty());
-        assertEquals(2, role.getDraftPermissionCodes().size());
+        assertEquals(0, role.getDraftPermissionCodes().size());
+        RoleAuthorizationDTO authorization = new RoleAuthorizationDTO();
+        authorization.setMenuIds(List.of("menu-roles"));
+        authorization.setPermissionCodes(List.of(PermissionCode.ROLE_QUERY.getCode()));
+        authorization.setVersion(role.getVersion());
+        role = roles.authorization(role.getRoleId(), authorization);
 
         RbacVersionDTO apply = new RbacVersionDTO();
         apply.setVersion(role.getVersion());
         role = roles.apply(role.getRoleId(), apply);
         assertEquals(RbacStatus.ACTIVE, role.getStatus());
         assertEquals(role.getVersion(), role.getAppliedVersion());
-        assertEquals(2, role.getAppliedPermissionCodes().size());
+        assertEquals(1, role.getAppliedPermissionCodes().size());
 
         RoleUpdateDTO edit = new RoleUpdateDTO();
         edit.setVersion(role.getVersion());
         edit.setName(role.getName());
         edit.setDescription(role.getDescription());
-        edit.setPermissionCodes(List.of(PermissionCode.ACCESS.getCode()));
         role = roles.update(role.getRoleId(), edit);
         assertEquals(1, role.getDraftPermissionCodes().size());
-        assertEquals(2, role.getAppliedPermissionCodes().size());
+        assertEquals(1, role.getAppliedPermissionCodes().size());
 
         UserRolesDTO grant = new UserRolesDTO();
         grant.setRoleIds(List.of(role.getRoleId()));
@@ -107,8 +119,17 @@ class RbacIntegrationTest {
         ManagementUserVO member = members.roles(Long.toString(target), grant);
         bind(target);
         assertTrue(access.current().isCanAccess());
-        assertTrue(access.current().getPermissionCodes().contains(PermissionCode.ROLE_READ.getCode()));
-        assertFalse(access.current().getPermissionCodes().contains(PermissionCode.USER_MANAGE.getCode()));
+        assertTrue(access.current().getPermissionCodes().contains(PermissionCode.ROLE_QUERY.getCode()));
+        PermissionCheckDTO check = new PermissionCheckDTO();
+        check.setUserId(Long.toString(target));
+        check.setMethod("POST");
+        check.setPath("/user-server/api/v2/users/management/roles/page");
+        assertTrue(access.checkPermission(check));
+        check.setPath("/user-server/api/v2/users/management/roles");
+        assertFalse(access.checkPermission(check));
+        check.setPath("/user-server/api/v2/users/management/unknown");
+        assertFalse(access.checkPermission(check));
+        assertFalse(access.current().getPermissionCodes().contains(PermissionCode.USER_ASSIGN_ROLE.getCode()));
 
         bind(actor);
         RbacStatusDTO disable = new RbacStatusDTO();
@@ -125,8 +146,37 @@ class RbacIntegrationTest {
         query.setStatus(ManagementUserStatus.DISABLED);
         assertTrue(queries.members(query).getTotal() >= 1);
         assertTrue(queries.roles(new ManagementPageDTO()).getTotal() >= 2);
-        assertEquals(6L, queries.permissions(new ManagementPageDTO()).getTotal());
+        assertEquals(11L, queries.permissions(new ManagementPageDTO()).getTotal());
         assertThrows(BusinessException.class, () -> members.status(Long.toString(target), disable));
+    }
+
+    @Test
+    void menuOnlyAccessDoesNotCombineFunctionsAcrossRoles() {
+        long target = createAccount();
+        String functionRole = "test-function-" + UUID.randomUUID();
+        String menuRole = "test-menu-" + UUID.randomUUID();
+        for (String roleId : List.of(functionRole, menuRole)) {
+            jdbc.update("INSERT INTO squad_user.sq_role(role_id,code,name,status,applied_version) VALUES (?,?,?,'ACTIVE',0)", roleId, roleId, "事务角色");
+            jdbc.update("INSERT INTO squad_user.sq_user_role(user_id,role_id,status) VALUES (?,?,'ACTIVE')", target, roleId);
+        }
+        jdbc.update("INSERT INTO squad_user.sq_role_permission(role_id,permission_code,stage) VALUES (?,'management:role:query','APPLIED')", functionRole);
+        for (String menu : List.of("menu-management", "menu-roles")) {
+            jdbc.update("INSERT INTO squad_user.sq_role_menu(role_id,menu_id,stage) VALUES (?,?,'APPLIED')", menuRole, menu);
+        }
+        bind(target);
+        assertTrue(access.current().isCanAccess());
+        assertTrue(access.current().getPermissionCodes().isEmpty());
+        jdbc.update("UPDATE squad_user.sq_menu SET status='DISABLED' WHERE menu_id='menu-management'");
+        sqlSession.clearCache();
+        assertFalse(access.current().isCanAccess());
+        assertTrue(access.current().getPermissionCodes().isEmpty());
+    }
+
+    @Test
+    void rejectsStaleAuthorizationRevision() {
+        Long version = rbac.authorizationVersion();
+        assertEquals(1, rbac.advanceAuthorizationVersion(version, 0L));
+        assertEquals(0, rbac.advanceAuthorizationVersion(version, 0L));
     }
 
     private long createAccount() {

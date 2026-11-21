@@ -16,6 +16,9 @@ public class ManagementAccessVO {
      */
     private boolean canAccess;
 
+    /** 当前生效的菜单树 */
+    private List<MenuVO> menus;
+
     /**
      * 当前有效权限编码
      */

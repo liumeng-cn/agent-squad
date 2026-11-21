@@ -30,12 +30,7 @@ public class RoleUpdateDTO {
     @Size(max = 500)
     private String description;
 
-    /**
-     * 草稿权限编码
-     */
-    @NotNull
-    @Size(max = 100)
-    private List<String> permissionCodes;
+
 
     /**
      * 编辑版本

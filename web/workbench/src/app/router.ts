@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useManagementStore } from '../features/management/stores/management'
-import type { PermissionCode } from '../features/management/model/management'
 import { useAuthStore } from '../features/auth/stores/auth'
 
 const routes: RouteRecordRaw[] = [
@@ -10,9 +9,9 @@ const routes: RouteRecordRaw[] = [
   { path: '/chat/:convId', name: 'chat-session', component: () => import('../features/chat/views/ChatView.vue') },
   { path: '/chat', alias: '/app/squad-v2', name: 'chat', component: () => import('../features/chat/views/ChatView.vue') },
   { path: '/management', redirect: '/management/roles' },
-  { path: '/management/users', component: () => import('../features/management/views/ManagementView.vue'), meta: { managementSection: 'users', permission: 'management:user:read' } },
-  { path: '/management/roles', component: () => import('../features/management/views/ManagementView.vue'), meta: { managementSection: 'roles', permission: 'management:role:read' } },
-  { path: '/management/permissions', component: () => import('../features/management/views/ManagementView.vue'), meta: { managementSection: 'permissions', permission: 'management:permission:read' } },
+  { path: '/management/users', component: () => import('../features/management/views/ManagementView.vue'), meta: { managementSection: 'users', permission: 'management:user:query' } },
+  { path: '/management/roles', component: () => import('../features/management/views/ManagementView.vue'), meta: { managementSection: 'roles', permission: 'management:role:query' } },
+  { path: '/management/permissions', component: () => import('../features/management/views/ManagementView.vue'), meta: { managementSection: 'permissions', permission: 'management:permission:query' } },
   { path: '/:pathMatch(.*)*', redirect: { name: 'chat' } },
 ]
 export const router = createRouter({ history: createWebHistory(), routes })
@@ -23,10 +22,9 @@ router.beforeEach(async (to) => {
     const access = useManagementStore()
     try { if (!await access.refresh()) return { name: 'chat' } }
     catch { return { name: 'chat' } }
-    if (!access.can(to.meta.permission as PermissionCode)) {
-      const options = [['users', 'management:user:read'], ['roles', 'management:role:read'], ['permissions', 'management:permission:read']] as const
-      const first = options.find(([, permission]) => access.can(permission))
-      return first ? `/management/${first[0]}` : { name: 'chat' }
+    if (!access.hasMenu(to.path)) {
+      const first = access.pages()[0]
+      return first?.routePath || { name: 'chat' }
     }
     document.title = '管理平台 · Squad'
   }

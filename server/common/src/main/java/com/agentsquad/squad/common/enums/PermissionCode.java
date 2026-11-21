@@ -1,24 +1,25 @@
 package com.agentsquad.squad.common.enums;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-
 /**
- * 管理权限目录
- * <p>
- * 表达管理授权有限值，与普通账号登录状态分开维护。
+ * 功能权限目录
+ *
+ * 菜单控制页面可见性，功能编码控制实际接口操作，与前端和版本化目录保持一致。
  */
 @Getter
 @RequiredArgsConstructor
 public enum PermissionCode {
-    ACCESS("management:access", "进入管理平台"),
-    USER_READ("management:user:read", "查看管理用户"),
-    USER_MANAGE("management:user:manage", "管理用户授权"),
-    ROLE_READ("management:role:read", "查看管理角色"),
-    ROLE_MANAGE("management:role:manage", "维护角色权限"),
-    PERMISSION_READ("management:permission:read", "查看权限目录");
-
+    USER_QUERY("management:user:query", "查询用户"),
+    USER_ASSIGN_ROLE("management:user:assign-role", "分配角色"),
+    USER_ENABLE("management:user:enable", "启用管理资格"),
+    USER_DISABLE("management:user:disable", "禁用管理资格"),
+    ROLE_QUERY("management:role:query", "查询角色"),
+    ROLE_CREATE("management:role:create", "新增角色"),
+    ROLE_UPDATE("management:role:update", "修改角色"),
+    ROLE_APPLY("management:role:apply", "应用权限"),
+    ROLE_ENABLE("management:role:enable", "启用角色"),
+    ROLE_DISABLE("management:role:disable", "禁用角色"),
+    PERMISSION_QUERY("management:permission:query", "查询权限");
     private final String code;
-
     private final String desc;
 }

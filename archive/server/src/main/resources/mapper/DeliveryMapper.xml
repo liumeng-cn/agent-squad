@@ -194,7 +194,7 @@
         'RECOVERING',
         'RECONCILING',
         'CANCELLING')
-        FOR UPDATE
+
     </select>
 
     <select id="findClaimed" resultMap="findClaimedResult">
@@ -269,7 +269,7 @@
             'TASK_DIRECTIVE', 'STOP', 'RESUME', 'RESPOND', 'DELETE_CONVERSATION')
             ORDER BY id
             LIMIT 100
-            FOR UPDATE SKIP LOCKED
+
         )
     </update>
 

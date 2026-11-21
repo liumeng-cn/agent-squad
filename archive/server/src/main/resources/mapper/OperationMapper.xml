@@ -253,7 +253,7 @@
         budget_usage_key
         FROM sq_operation
         WHERE user_id = #{userId} AND binding_id = #{bindingId}
-        AND framework_turn_id = #{frameworkTurnId} AND tool_call_id = #{toolCallId} FOR UPDATE
+        AND framework_turn_id = #{frameworkTurnId} AND tool_call_id = #{toolCallId}
     </select>
 
     <select id="findByBusinessIntent" resultMap="findByBusinessIntentResult">
@@ -283,7 +283,7 @@
         budget_usage_key
         FROM sq_operation
         WHERE user_id = #{userId} AND scope_id = #{scopeId} AND tool_key = #{toolKey}
-        AND business_intent_key = #{businessIntentKey} FOR UPDATE
+        AND business_intent_key = #{businessIntentKey}
     </select>
 
     <select id="findOwned" resultMap="findOwnedResult">
@@ -482,7 +482,7 @@
         'RECONCILING') AND o.del_flag = '0'
         AND s.conversation_id = (SELECT conversation_id FROM sq_execution_scope
         WHERE user_id = #{userId} AND scope_id = #{scopeId})
-        FOR UPDATE
+
     </select>
     <update id="cancelUnstartedByScope">
         UPDATE sq_operation
@@ -522,6 +522,6 @@
         WHERE user_id = #{userId} AND scope_id = #{scopeId}
         AND status IN ('PREPARED', 'WAITING_APPROVAL')
         AND del_flag = '0'
-        FOR UPDATE
+
     </select>
 </mapper>

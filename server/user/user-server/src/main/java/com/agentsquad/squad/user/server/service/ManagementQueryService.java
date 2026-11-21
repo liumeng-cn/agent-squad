@@ -8,13 +8,13 @@ import com.agentsquad.squad.user.server.bo.ManagementUserBO;
 import com.agentsquad.squad.user.server.bo.RoleBO;
 import com.agentsquad.squad.user.server.converter.RbacConverter;
 import com.agentsquad.squad.user.server.dto.ManagementPageDTO;
+import com.agentsquad.squad.user.server.mapper.MenuMapper;
 import com.agentsquad.squad.user.server.mapper.RbacMapper;
 import com.agentsquad.squad.user.server.vo.ManagementUserVO;
 import com.agentsquad.squad.user.server.vo.PermissionVO;
 import com.agentsquad.squad.user.server.vo.RoleVO;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 
 /**
@@ -30,6 +30,9 @@ public class ManagementQueryService {
     @Resource
     private RbacConverter converter;
 
+    @Resource
+    private MenuMapper menus;
+
     public PageVO<RoleVO> roles(ManagementPageDTO query) {
         var records = mapper.rolePage(query, offset(query));
         return page(converter.roles(records), mapper.roleCount(query), query);
@@ -42,6 +45,8 @@ public class ManagementQueryService {
         }
         role.setDraftPermissionCodes(mapper.rolePermissions(roleId, PermissionStage.DRAFT));
         role.setAppliedPermissionCodes(mapper.rolePermissions(roleId, PermissionStage.APPLIED));
+        role.setDraftMenuIds(menus.roleMenus(roleId, PermissionStage.DRAFT));
+        role.setAppliedMenuIds(menus.roleMenus(roleId, PermissionStage.APPLIED));
         return converter.role(role);
     }
 

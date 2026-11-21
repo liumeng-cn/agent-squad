@@ -133,7 +133,7 @@
         FROM sq_task_directive
         WHERE user_id = #{userId}
         AND directive_id = #{directiveId}
-        AND del_flag = '0' FOR UPDATE
+        AND del_flag = '0'
     </select>
 
     <select id="findByKey" resultMap="findByKeyResult">
@@ -161,7 +161,7 @@
         FROM sq_task_directive
         WHERE user_id = #{userId}
         AND source_scope_id = #{scopeId}
-        AND logical_key = #{key} FOR UPDATE
+        AND logical_key = #{key}
     </select>
 
     <select id="applied" resultMap="appliedResult">
@@ -192,7 +192,7 @@
         AND status = 'APPLIED'
         AND applied_goal_revision &gt;= #{revision}
         AND del_flag = '0'
-        ORDER BY applied_goal_revision FOR UPDATE
+        ORDER BY applied_goal_revision
     </select>
 
     <insert id="insert">
@@ -245,7 +245,7 @@
         FROM sq_goal_task
         WHERE user_id = #{userId}
         AND task_id = #{taskId}
-        FOR UPDATE
+
     </select>
 
     <select id="pending" resultType="java.lang.Long">
@@ -256,7 +256,7 @@
         AND status = 'ACCEPTED'
         AND del_flag = '0'
         ORDER BY id
-        FOR UPDATE
+
     </select>
 
     <select id="due" resultMap="dueResult">
@@ -389,7 +389,7 @@
         'UNKNOWN',
         'RECONCILING')
         AND del_flag = '0'
-        FOR UPDATE
+
     </select>
 
     <select id="openInteractions" resultType="java.lang.Long">
@@ -399,7 +399,7 @@
         AND scope_id = #{scopeId}
         AND status = 'OPEN'
         AND del_flag = '0'
-        FOR UPDATE
+
     </select>
 
     <select id="latestFacts" resultMap="latestFactsResult">
@@ -417,7 +417,7 @@
         AND del_flag = '0'
         ORDER BY id DESC
         LIMIT 20
-        FOR UPDATE
+
     </select>
 
     <select id="lastReplacement" resultType="java.lang.Long">
@@ -429,7 +429,7 @@
         AND status = 'APPLIED'
         AND del_flag = '0'
         ORDER BY applied_goal_revision DESC
-        LIMIT 1 FOR UPDATE
+        LIMIT 1
     </select>
 
     <select id="pendingControlIds" resultType="java.lang.Long">
@@ -444,6 +444,6 @@
         'RESPOND')
         AND c.status IN ('PENDING',
         'DELIVERING')
-        FOR UPDATE
+
     </select>
 </mapper>

@@ -19,6 +19,9 @@ spring:
     gateway:
       server:
         webflux:
+          # 路由由本地配置维护，避免 Feign 子上下文刷新事件触发认证链提前初始化。
+          route-refresh-listener:
+            enabled: false
           routes:
             - id: user-register
               uri: ${services.user-server.url}
@@ -27,16 +30,24 @@ spring:
                 - Method=POST
               metadata:
                 anonymous: true
+            - id: user-management
+              uri: ${services.user-server.url}
+              predicates:
+                - Path=${services.user-server.path}/api/v2/users/management/**
+              filters:
+                - Permission
+              metadata:
+                audience: user-server
             - id: user-server
               uri: ${services.user-server.url}
               predicates:
-                - Path=${services.user-server.path}/**
+                - Path=${services.user-server.path}/api/**
               metadata:
                 audience: user-server
             - id: v2-server
               uri: ${services.v2-server.url}
               predicates:
-                - Path=${services.v2-server.path}/**
+                - Path=${services.v2-server.path}/api/**
               metadata:
                 audience: v2-server
           httpclient:

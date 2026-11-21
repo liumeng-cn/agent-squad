@@ -62,7 +62,7 @@
         generation,
         version
         FROM sq_conversation WHERE user_id = #{userId} AND conversation_id = #{conversationId}
-        FOR UPDATE
+
     </select>
 
     <select id="listByOwner" resultMap="listByOwnerResult">

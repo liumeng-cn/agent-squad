@@ -13,6 +13,9 @@ import java.time.Duration;
 @Data
 @ConfigurationProperties("agentsquad.auth")
 public class AuthProperties {
+    /** Feign 鉴权结果缓存有效期，授权事务提交后通过共享版本失效 */
+    private Duration permissionCacheTtl = Duration.ofSeconds(10);
+
     /**
      * JWT私钥PEM内容
      */

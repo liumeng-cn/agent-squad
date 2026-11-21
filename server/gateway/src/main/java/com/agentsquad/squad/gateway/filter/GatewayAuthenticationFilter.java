@@ -8,7 +8,6 @@ import com.agentsquad.squad.gateway.bo.AuthUserBO;
 import com.agentsquad.squad.gateway.config.properties.AuthProperties;
 import com.agentsquad.squad.gateway.controller.AuthController;
 import com.agentsquad.squad.gateway.service.AuthService;
-import com.agentsquad.squad.gateway.service.PermissionAuthorizationService;
 import jakarta.annotation.Resource;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -35,11 +34,15 @@ public class GatewayAuthenticationFilter implements GlobalFilter, Ordered {
     @Resource
     private AuthProperties properties;
 
-    @Resource
-    private PermissionAuthorizationService permissionAuthorization;
-
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        // 在所有转发路由拒绝歧义路径，避免浏览器路径与下游容器规范化结果不一致。
+        String rawPath = exchange.getRequest().getURI().getRawPath();
+        for (String marker : Set.of("%", ";", "\\", "//", "/./", "/../")) {
+            if (rawPath.contains(marker)) {
+                return Mono.error(new BusinessException(ApiCode.BAD_REQUEST, "请求路径格式无效"));
+            }
+        }
         Route route = exchange.getAttribute(ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR);
         if (Boolean.TRUE.equals(route.getMetadata().get("anonymous"))) {
             return chain.filter(exchange);
@@ -64,9 +67,9 @@ public class GatewayAuthenticationFilter implements GlobalFilter, Ordered {
         user.setSessionId(actor.getSession().getSessionId());
         String assertion = IdentityAssertion.sign(user, audience, method,
                 exchange.getRequest().getURI().getRawPath(), properties.getIdentityKey());
-        return permissionAuthorization.authorize(user, method, exchange.getRequest().getURI().getRawPath())
-                .then(Mono.defer(() -> chain.filter(exchange.mutate().request(exchange.getRequest().mutate()
-                        .headers(headers -> setIdentityHeaders(headers, assertion)).build()).build())));
+        exchange.getAttributes().put(IdentityAssertion.ATTRIBUTE, user);
+        return chain.filter(exchange.mutate().request(exchange.getRequest().mutate()
+                .headers(headers -> setIdentityHeaders(headers, assertion)).build()).build());
     }
 
     private void setIdentityHeaders(HttpHeaders headers, String assertion) {

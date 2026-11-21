@@ -112,7 +112,7 @@ AgentScope 运行层
 
 ### 4.3 执行资格与业务数据分离
 
-AgentScope Session 的 Writer、Lease、Epoch 和 CAS 用于管理执行资格及防止旧执行者继续提交。它们不意味着业务数据不需要事务，也不意味着所有 `SELECT FOR UPDATE` 都可以删除。
+AgentScope Session 的 Writer、Lease、Epoch 和 CAS 用于管理执行资格及防止旧执行者继续提交。业务数据仍需事务与并发校验，项目统一采用版本条件更新，不使用悲观查询锁。
 
 当前 JDBC Store 的版本条件更新属于 CAS 思路。仍需关注 Session 心跳和续租可能带来的数据库写入压力；不能在没有故障演练的情况下随意延长 Lease 或降低续租频率。
 

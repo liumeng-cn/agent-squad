@@ -91,7 +91,7 @@
     </insert>
 
     <select id="lockRevision" resultType="_long">
-        SELECT revision FROM sq_memory_revision WHERE user_id = #{user} FOR UPDATE
+        SELECT revision FROM sq_memory_revision WHERE user_id = #{user}
     </select>
 
     <select id="revision" resultType="_long">
@@ -113,7 +113,7 @@
         expires_at,
         source_message_id,
         source_quote,
-        id FROM sq_memory WHERE user_id = #{user} AND memory_id = #{id} FOR UPDATE
+        id FROM sq_memory WHERE user_id = #{user} AND memory_id = #{id}
     </select>
 
     <select id="findActiveKey" resultMap="findActiveKeyResult">
@@ -126,7 +126,7 @@
         expires_at,
         source_message_id,
         source_quote,
-        id FROM sq_memory WHERE user_id = #{user} AND memory_key = #{key} AND status = 'ACTIVE' FOR UPDATE
+        id FROM sq_memory WHERE user_id = #{user} AND memory_key = #{key} AND status = 'ACTIVE'
     </select>
 
     <select id="list" resultMap="listResult">
@@ -154,7 +154,7 @@
         source_message_id,
         source_quote,
         id FROM sq_memory WHERE user_id = #{user} AND status = 'ACTIVE' AND (expires_at IS NULL OR expires_at &gt;
-        #{now}) ORDER BY id LIMIT #{limit} FOR UPDATE
+        #{now}) ORDER BY id LIMIT #{limit}
     </select>
 
     <select id="recall" resultType="java.lang.Long">
@@ -216,7 +216,7 @@
     <select id="pin" resultMap="pinResult">
         SELECT scope_id,
         memory_revision,
-        barrier_status FROM sq_memory_scope WHERE user_id = #{user} AND scope_id = #{scope} FOR UPDATE
+        barrier_status FROM sq_memory_scope WHERE user_id = #{user} AND scope_id = #{scope}
     </select>
 
     <insert id="pinScope">
@@ -238,13 +238,12 @@
     </insert>
 
     <select id="pinnedIds" resultType="java.lang.Long">
-        SELECT memory_id FROM sq_memory_scope_item WHERE user_id = #{user} AND scope_id = #{scope} ORDER BY id FOR
-        UPDATE
+        SELECT memory_id FROM sq_memory_scope_item WHERE user_id = #{user} AND scope_id = #{scope} ORDER BY id
     </select>
 
     <select id="pinnedVersion" resultType="java.lang.Long">
         SELECT memory_version FROM sq_memory_scope_item WHERE user_id = #{user} AND scope_id = #{scope} AND memory_id =
-        #{id} FOR UPDATE
+        #{id}
     </select>
 
     <select id="source" resultMap="sourceResult">
@@ -257,7 +256,7 @@
     <select id="receipt" resultMap="receiptResult">
         SELECT payload_hash,
         result_json FROM sq_memory_write_receipt WHERE user_id = #{user} AND scope_id = #{scope} AND logical_key =
-        #{key} FOR UPDATE
+        #{key}
     </select>
 
     <insert id="insertReceipt">
@@ -296,13 +295,13 @@
         WHERE s.user_id = #{user}
         AND (s.status = 'INVALIDATED' OR m.status &lt;&gt; 'ACTIVE'
         OR (m.expires_at IS NOT NULL AND m.expires_at &lt;= #{now}))
-        FOR UPDATE
+
     </select>
 
     <select id="blockedScopeIds" resultType="java.lang.Long">
         SELECT scope_id FROM sq_memory_scope
         WHERE user_id = #{user} AND (barrier_status = 'BLOCKED' OR memory_revision &lt;&gt; #{revision})
-        FOR UPDATE
+
     </select>
 
     <select id="staleScopeIds" resultType="java.lang.Long">
@@ -310,7 +309,7 @@
         JOIN sq_memory m ON m.user_id = i.user_id AND m.memory_id = i.memory_id
         WHERE i.user_id = #{user} AND (m.status &lt;&gt; 'ACTIVE' OR m.version &lt;&gt; i.memory_version
         OR (m.expires_at IS NOT NULL AND m.expires_at &lt;= #{now}))
-        FOR UPDATE
+
     </select>
 
     <select id="sourceMessages" resultType="java.lang.Long">

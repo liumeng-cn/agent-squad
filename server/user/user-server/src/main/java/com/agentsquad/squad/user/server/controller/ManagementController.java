@@ -1,16 +1,20 @@
 package com.agentsquad.squad.user.server.controller;
 
+import com.agentsquad.squad.common.enums.RbacStatus;
 import com.agentsquad.squad.common.model.ApiResult;
 import com.agentsquad.squad.common.vo.PageVO;
-import com.agentsquad.squad.user.server.dto.UserRolesDTO;
+import com.agentsquad.squad.user.api.vo.MenuVO;
 import com.agentsquad.squad.user.server.dto.ManagementPageDTO;
-import com.agentsquad.squad.user.server.dto.RoleCreateDTO;
-import com.agentsquad.squad.user.server.dto.RoleUpdateDTO;
 import com.agentsquad.squad.user.server.dto.RbacStatusDTO;
 import com.agentsquad.squad.user.server.dto.RbacVersionDTO;
-import com.agentsquad.squad.user.server.service.UserRoleService;
+import com.agentsquad.squad.user.server.dto.RoleAuthorizationDTO;
+import com.agentsquad.squad.user.server.dto.RoleCreateDTO;
+import com.agentsquad.squad.user.server.dto.RoleUpdateDTO;
+import com.agentsquad.squad.user.server.dto.UserRolesDTO;
 import com.agentsquad.squad.user.server.service.ManagementQueryService;
+import com.agentsquad.squad.user.server.service.MenuAuthorizationService;
 import com.agentsquad.squad.user.server.service.RoleService;
+import com.agentsquad.squad.user.server.service.UserRoleService;
 import com.agentsquad.squad.user.server.vo.ManagementUserVO;
 import com.agentsquad.squad.user.server.vo.PermissionVO;
 import com.agentsquad.squad.user.server.vo.RoleVO;
@@ -25,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
 
 /**
  * 用户平台管理接口
@@ -42,6 +47,9 @@ public class ManagementController {
 
     @Resource
     private UserRoleService members;
+
+    @Resource
+    private MenuAuthorizationService authorization;
 
     /**
      * 分页查询用户
@@ -67,12 +75,21 @@ public class ManagementController {
         return ApiResult.success(members.roles(userId, request));
     }
 
-    /**
-     * 切换管理状态
-     */
-    @PatchMapping("/users/{userId}/status")
-    public ApiResult<ManagementUserVO> memberStatus(@PathVariable String userId, @Valid @RequestBody RbacStatusDTO request) {
-        return ApiResult.success(members.status(userId, request));
+    /** 启用管理资格 */
+    @PostMapping("/users/{userId}/enable")
+    public ApiResult<ManagementUserVO> usersenable(@PathVariable String userId, @Valid @RequestBody RbacVersionDTO request) {
+        RbacStatusDTO status = new RbacStatusDTO();
+        status.setVersion(request.getVersion());
+        status.setStatus(RbacStatus.ACTIVE);
+        return ApiResult.success(members.status(userId, status));
+    }
+    /** 禁用管理资格 */
+    @PostMapping("/users/{userId}/disable")
+    public ApiResult<ManagementUserVO> usersdisable(@PathVariable String userId, @Valid @RequestBody RbacVersionDTO request) {
+        RbacStatusDTO status = new RbacStatusDTO();
+        status.setVersion(request.getVersion());
+        status.setStatus(RbacStatus.DISABLED);
+        return ApiResult.success(members.status(userId, status));
     }
 
     /**
@@ -115,30 +132,47 @@ public class ManagementController {
         return ApiResult.success(roles.apply(roleId, request));
     }
 
-    /**
-     * 切换角色状态
-     */
-    @PatchMapping("/roles/{roleId}/status")
-    public ApiResult<RoleVO> roleStatus(@PathVariable String roleId, @Valid @RequestBody RbacStatusDTO request) {
-        return ApiResult.success(roles.status(roleId, request));
+    /** 启用角色 */
+    @PostMapping("/roles/{roleId}/enable")
+    public ApiResult<RoleVO> rolesenable(@PathVariable String roleId, @Valid @RequestBody RbacVersionDTO request) {
+        RbacStatusDTO status = new RbacStatusDTO();
+        status.setVersion(request.getVersion());
+        status.setStatus(RbacStatus.ACTIVE);
+        return ApiResult.success(roles.status(roleId, status));
+    }
+    /** 禁用角色 */
+    @PostMapping("/roles/{roleId}/disable")
+    public ApiResult<RoleVO> rolesdisable(@PathVariable String roleId, @Valid @RequestBody RbacVersionDTO request) {
+        RbacStatusDTO status = new RbacStatusDTO();
+        status.setVersion(request.getVersion());
+        status.setStatus(RbacStatus.DISABLED);
+        return ApiResult.success(roles.status(roleId, status));
     }
 
     /**
      * 查询可授角色
      */
     @GetMapping("/users/role-options")
-    public ApiResult<java.util.List<RoleVO>> roleOptions() {
+    public ApiResult<List<RoleVO>> roleOptions() {
         return ApiResult.success(queries.roleOptions());
     }
 
-    /**
-     * 查询可选权限
-     */
-    @GetMapping("/roles/permission-options")
-    public ApiResult<PageVO<PermissionVO>> permissionOptions() {
-        ManagementPageDTO query = new ManagementPageDTO();
-        query.setSize(100);
-        return ApiResult.success(queries.permissions(query));
+    /** 查询授权树 */
+    @GetMapping("/authorization-tree")
+    public ApiResult<List<MenuVO>> tree() {
+        return ApiResult.success(authorization.catalogTree());
+    }
+
+    /** 查询角色授权 */
+    @GetMapping("/roles/{roleId}/authorization")
+    public ApiResult<RoleVO> authorization(@PathVariable String roleId) {
+        return ApiResult.success(queries.role(roleId));
+    }
+
+    /** 保存角色授权 */
+    @PutMapping("/roles/{roleId}/authorization")
+    public ApiResult<RoleVO> saveAuthorization(@PathVariable String roleId, @Valid @RequestBody RoleAuthorizationDTO request) {
+        return ApiResult.success(roles.authorization(roleId, request));
     }
 
     /**

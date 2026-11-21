@@ -1,22 +1,24 @@
 package com.agentsquad.squad.user.server.service;
 
-import com.agentsquad.squad.common.enums.ManagementUserStatus;
-import com.agentsquad.squad.common.enums.RbacOperation;
-import com.agentsquad.squad.common.enums.PermissionCode;
-import com.agentsquad.squad.common.enums.RbacStatus;
 import com.agentsquad.squad.common.enums.ApiCode;
+import com.agentsquad.squad.common.enums.ManagementUserStatus;
+import com.agentsquad.squad.common.enums.PermissionCode;
+import com.agentsquad.squad.common.enums.PermissionStage;
+import com.agentsquad.squad.common.enums.RbacOperation;
+import com.agentsquad.squad.common.enums.RbacStatus;
 import com.agentsquad.squad.common.exceptions.BusinessException;
 import com.agentsquad.squad.user.server.bo.ManagementUserBO;
-import com.agentsquad.squad.user.server.dto.UserRolesDTO;
 import com.agentsquad.squad.user.server.dto.RbacStatusDTO;
+import com.agentsquad.squad.user.server.dto.UserRolesDTO;
 import com.agentsquad.squad.user.server.mapper.RbacMapper;
 import com.agentsquad.squad.user.server.po.RolePO;
 import com.agentsquad.squad.user.server.vo.ManagementUserVO;
 import jakarta.annotation.Resource;
+import org.springframework.context.ApplicationEventPublisher;
+import com.agentsquad.squad.user.server.observer.AuthorizationChangedEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -34,20 +36,26 @@ public class UserRoleService {
     private RbacMapper mapper;
 
     @Resource
+    private ApplicationEventPublisher events;
+
+    @Resource
     private PermissionService access;
 
     @Resource
     private ManagementQueryService queries;
 
+    @Resource
+    private MenuAuthorizationService authorization;
+
     /**
      * 应用成员角色
      * <p>
-     * 全局授权锁防止并发撤销最后管理员，删除与新增关系失败时整体恢复旧授权。
+     * 全局授权版本校验防止并发撤销最后管理员，删除与新增关系失败时整体恢复旧授权。
      */
     @Transactional
     public ManagementUserVO roles(String userId, UserRolesDTO request) {
         Long id = access.userId(userId);
-        ManagementUserBO member = lockMember(id, request.getVersion());
+        ManagementUserBO member = findMember(id, request.getVersion(), PermissionCode.USER_ASSIGN_ROLE);
         List<String> roleIds = validatedRoles(request.getRoleIds());
         RbacStatus status = member.getStatus() == ManagementUserStatus.DISABLED ? RbacStatus.DISABLED : RbacStatus.ACTIVE;
         mapper.deleteMemberRoles(id);
@@ -64,7 +72,7 @@ public class UserRoleService {
     @Transactional
     public ManagementUserVO status(String userId, RbacStatusDTO request) {
         Long id = access.userId(userId);
-        lockMember(id, request.getVersion());
+        findMember(id, request.getVersion(), request.getStatus() == RbacStatus.ACTIVE ? PermissionCode.USER_ENABLE : PermissionCode.USER_DISABLE);
         List<String> roleIds = mapper.memberRoles(id);
         if (roleIds.isEmpty()) {
             throw new BusinessException(ApiCode.BAD_REQUEST, "请先为用户分配管理角色");
@@ -77,9 +85,9 @@ public class UserRoleService {
         return queries.member(id);
     }
 
-    private ManagementUserBO lockMember(Long userId, Long version) {
-        access.lockFor(PermissionCode.USER_MANAGE);
-        ManagementUserBO member = mapper.lockMember(userId);
+    private ManagementUserBO findMember(Long userId, Long version, PermissionCode permission) {
+        access.beginAuthorizationChange(permission);
+        ManagementUserBO member = mapper.findMember(userId);
         if (member == null) {
             throw new BusinessException(ApiCode.NOT_FOUND, "正常账号不存在");
         }
@@ -96,11 +104,13 @@ public class UserRoleService {
         List<String> roleIds = new ArrayList<>(new HashSet<>(requested));
         roleIds.sort(String::compareTo);
         for (String roleId : roleIds) {
-            RolePO role = mapper.lockRole(roleId);
+            RolePO role = mapper.findRole(roleId);
             if (role == null || role.getAppliedVersion() == null) {
                 throw new BusinessException(ApiCode.BAD_REQUEST, "所选角色不存在或尚未应用");
             }
-            List<String> permissions = mapper.rolePermissions(roleId, com.agentsquad.squad.common.enums.PermissionStage.APPLIED);
+            List<String> menus = authorization.roleMenus(roleId, PermissionStage.APPLIED);
+            List<String> permissions = mapper.rolePermissions(roleId, PermissionStage.APPLIED);
+            authorization.validate(menus, permissions);
             if (!access.current().getPermissionCodes().containsAll(permissions)) {
                 throw new BusinessException(ApiCode.FORBIDDEN, "不能授予高于自己权限范围的角色");
             }
@@ -115,7 +125,8 @@ public class UserRoleService {
         if (mapper.bumpMemberVersion(userId, version, access.actor()) != 1) {
             throw new BusinessException(ApiCode.CONFLICT, "管理授权已变更，请刷新");
         }
-        mapper.audit(operation, String.valueOf(userId), summary, access.actor());
+        mapper.insertOperationLog(operation, String.valueOf(userId), summary, access.actor());
+        events.publishEvent(new AuthorizationChangedEvent());
         log.info("平台成员授权变更，operation={}，userId={}", operation, userId);
     }
 }

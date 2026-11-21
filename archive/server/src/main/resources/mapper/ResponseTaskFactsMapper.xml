@@ -42,7 +42,7 @@
         AND t.task_id = #{taskId}
         AND t.del_flag = '0'
         AND s.del_flag = '0'
-        FOR UPDATE
+
     </select>
 
     <select id="jobs" resultMap="jobsResult">
@@ -54,7 +54,7 @@
         AND plan_version = #{planVersion}
         AND del_flag = '0'
         ORDER BY id
-        FOR UPDATE
+
     </select>
 
     <select id="recentTasks" resultMap="recentTasksResult">
@@ -74,7 +74,7 @@
         AND m.message_seq &lt;= #{through}
         AND t.del_flag = '0'
         ORDER BY t.id DESC
-        LIMIT 5 FOR UPDATE
+        LIMIT 5
     </select>
 
     <select id="recentFailures" resultMap="recentFailuresResult">
@@ -100,6 +100,6 @@
         AND f.status &lt;&gt; 'RESOLVED'
         AND f.del_flag = '0'
         ORDER BY f.id DESC
-        LIMIT 10 FOR UPDATE OF f, s, m
+        LIMIT 10
     </select>
 </mapper>

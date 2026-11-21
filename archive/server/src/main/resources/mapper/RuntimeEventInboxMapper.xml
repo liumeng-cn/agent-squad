@@ -8,7 +8,7 @@
         AND binding_id = #{source.bindingId}
         AND framework_session_id = #{source.sessionId}
         AND del_flag = '0'
-        FOR UPDATE
+
     </select>
 
     <select id="findBoundSession" resultType="java.lang.String">
@@ -101,7 +101,7 @@
         AND binding_id = #{event.bindingId}
         AND (native_seq = #{event.nativeSeq} OR native_event_id = #{event.nativeEventId})
         ORDER BY native_seq
-        FOR UPDATE
+
     </select>
 
     <sql id="receiptColumns">
@@ -144,7 +144,7 @@
         FROM sq_runtime_event_inbox
         WHERE
         <include refid="sequencePredicate"/>
-        FOR UPDATE
+
     </select>
 
     <update id="markApplied">

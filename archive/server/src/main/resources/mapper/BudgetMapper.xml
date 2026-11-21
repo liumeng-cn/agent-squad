@@ -32,7 +32,7 @@
         SELECT a.profile_key AS budget_profile_key,
         a.limit_microunits AS budget_limit_microunits
         FROM sq_budget_account a JOIN sq_execution_scope s ON s.user_id = a.user_id AND s.account_id = a.account_id
-        WHERE s.user_id = #{userId} AND s.scope_id = #{scopeId} AND a.status = 'OPEN' FOR UPDATE
+        WHERE s.user_id = #{userId} AND s.scope_id = #{scopeId} AND a.status = 'OPEN'
     </select>
 
     <insert id="ensureUser">
@@ -40,12 +40,12 @@
     </insert>
 
     <select id="lockUser" resultType="java.lang.String">
-        SELECT user_id FROM sq_user_budget WHERE user_id = #{userId} FOR UPDATE
+        SELECT user_id FROM sq_user_budget WHERE user_id = #{userId}
     </select>
 
     <select id="listUserConsumed" resultType="java.lang.Long">
         SELECT CASE WHEN status = 'SETTLED' THEN settled_units ELSE reserved_units END
-        FROM sq_budget_reservation WHERE user_id = #{userId} AND del_flag = '0' FOR UPDATE
+        FROM sq_budget_reservation WHERE user_id = #{userId} AND del_flag = '0'
     </select>
 
     <insert id="insert">
@@ -129,24 +129,24 @@
         input_tokens,
         output_tokens
         FROM sq_budget_reservation
-        WHERE user_id = #{userId} AND scope_id = #{scopeId} AND usage_key = #{usageKey} FOR UPDATE
+        WHERE user_id = #{userId} AND scope_id = #{scopeId} AND usage_key = #{usageKey}
     </select>
 
     <select id="findStatus" resultType="java.lang.String">
         SELECT status FROM sq_budget_reservation
-        WHERE user_id = #{userId} AND scope_id = #{scopeId} AND usage_key = #{usageKey} FOR UPDATE
+        WHERE user_id = #{userId} AND scope_id = #{scopeId} AND usage_key = #{usageKey}
     </select>
 
     <select id="findReservedUnits" resultType="java.lang.Long">
         SELECT reserved_units FROM sq_budget_reservation
-        WHERE user_id = #{userId} AND scope_id = #{scopeId} AND usage_key = #{usageKey} FOR UPDATE
+        WHERE user_id = #{userId} AND scope_id = #{scopeId} AND usage_key = #{usageKey}
     </select>
 
     <select id="listAccountConsumed" resultType="java.lang.Long">
         SELECT CASE WHEN r.status = 'SETTLED' THEN r.settled_units ELSE r.reserved_units END
         FROM sq_budget_reservation r JOIN sq_execution_scope s
         ON s.user_id = r.user_id AND s.account_id = r.account_id
-        WHERE s.user_id = #{userId} AND s.scope_id = #{scopeId} AND r.del_flag = '0' FOR UPDATE
+        WHERE s.user_id = #{userId} AND s.scope_id = #{scopeId} AND r.del_flag = '0'
     </select>
 
     <update id="settle">

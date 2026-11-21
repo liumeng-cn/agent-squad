@@ -57,7 +57,7 @@ final class MySqlProbeStore implements SessionExportSink {
                 insert.setString(3, digest);
                 insert.executeUpdate();
             }
-            try (var read = connection.prepareStatement("SELECT event_id,digest FROM probe_inbox WHERE native_seq=? FOR UPDATE")) {
+            try (var read = connection.prepareStatement("SELECT event_id,digest FROM probe_inbox WHERE native_seq=? ")) {
                 read.setLong(1, event.seq());
                 try (var rows = read.executeQuery()) {
                     if (!rows.next() || !event.eventId().equals(rows.getString(1)) || !digest.equals(rows.getString(2))) {

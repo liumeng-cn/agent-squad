@@ -43,7 +43,7 @@ class RbacServiceTest {
         RolePO role = new RolePO();
         role.setVersion(2L);
         role.setBuiltIn(false);
-        when(mapper.lockRole("test")).thenReturn(role);
+        when(mapper.findRole("test")).thenReturn(role);
         RoleUpdateDTO request = new RoleUpdateDTO();
         request.setVersion(1L);
         assertThrows(BusinessException.class, () -> service.update("test", request));
@@ -58,17 +58,21 @@ class RbacServiceTest {
         RbacMapper mapper = mock(RbacMapper.class);
         PermissionService access = mock(PermissionService.class);
         RoleService service = new RoleService();
+        var authorization = mock(com.agentsquad.squad.user.server.service.MenuAuthorizationService.class);
+        org.mockito.Mockito.doThrow(new BusinessException(com.agentsquad.squad.common.enums.ApiCode.FORBIDDEN, "不能越权"))
+                .when(authorization).validate(any(), any());
+        ReflectionTestUtils.setField(service, "authorization", authorization);
         ReflectionTestUtils.setField(service, "mapper", mapper);
         ReflectionTestUtils.setField(service, "access", access);
         RolePO role = new RolePO();
         role.setVersion(0L);
         role.setAppliedVersion(0L);
         role.setBuiltIn(false);
-        when(mapper.lockRole("test")).thenReturn(role);
-        when(mapper.knownPermissions()).thenReturn(List.of(PermissionCode.USER_MANAGE.getCode()));
-        when(mapper.rolePermissions("test", PermissionStage.APPLIED)).thenReturn(List.of(PermissionCode.USER_MANAGE.getCode()));
+        when(mapper.findRole("test")).thenReturn(role);
+        when(mapper.knownPermissions()).thenReturn(List.of(PermissionCode.USER_ASSIGN_ROLE.getCode()));
+        when(mapper.rolePermissions("test", PermissionStage.APPLIED)).thenReturn(List.of(PermissionCode.USER_ASSIGN_ROLE.getCode()));
         ManagementAccessVO current = new ManagementAccessVO();
-        current.setPermissionCodes(List.of(PermissionCode.ROLE_MANAGE.getCode()));
+        current.setPermissionCodes(List.of(PermissionCode.ROLE_UPDATE.getCode()));
         when(access.current()).thenReturn(current);
         RbacStatusDTO request = new RbacStatusDTO();
         request.setVersion(0L);
@@ -88,7 +92,7 @@ class RbacServiceTest {
         ManagementUserBO member = new ManagementUserBO();
         member.setVersion(0L);
         member.setStatus(ManagementUserStatus.ACTIVE);
-        when(mapper.lockMember(123L)).thenReturn(member);
+        when(mapper.findMember(123L)).thenReturn(member);
         when(mapper.memberRoles(123L)).thenReturn(List.of("role-platform-admin"));
         when(mapper.activeAdministrators()).thenReturn(0L);
         RbacStatusDTO request = new RbacStatusDTO();
@@ -96,6 +100,6 @@ class RbacServiceTest {
         request.setStatus(RbacStatus.DISABLED);
         assertThrows(BusinessException.class, () -> service.status("123", request));
         verify(mapper, never()).bumpMemberVersion(anyLong(), anyLong(), any());
-        verify(mapper, never()).audit(any(), anyString(), anyString(), any());
+        verify(mapper, never()).insertOperationLog(any(), anyString(), anyString(), any());
     }
 }

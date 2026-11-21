@@ -1,6 +1,12 @@
 spring:
   application:
     name: user-server
+  data:
+    redis:
+      host: '127.0.0.1'
+      port: 16379
+      password: ${SQUAD_REDIS_PASSWORD:}
+      timeout: 2s
   datasource:
     url: 'jdbc:postgresql://127.0.0.1:15432/agent_squad'
     username: 'squad'

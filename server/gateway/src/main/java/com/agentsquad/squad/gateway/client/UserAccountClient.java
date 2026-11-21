@@ -3,30 +3,23 @@ package com.agentsquad.squad.gateway.client;
 import com.agentsquad.squad.common.enums.ApiCode;
 import com.agentsquad.squad.common.exceptions.BusinessException;
 import com.agentsquad.squad.common.model.ApiResult;
+import com.agentsquad.squad.user.api.client.UserClient;
 import com.agentsquad.squad.user.api.dto.AccountQueryDTO;
 import com.agentsquad.squad.user.api.vo.UserAccountVO;
 import jakarta.annotation.Resource;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * 用户事实远程查询适配
  * <p>
- * 所属网关认证模块，登录身份及请求准入统一在网关裁决。
+ * 所属网关认证模块，Feign 同步调用包装为弹性线程上的 Mono，登录身份及请求准入统一在网关裁决。
  */
 @Component
 public class UserAccountClient {
     @Resource
-    private WebClient.Builder webClientBuilder;
-
-    @Value("${services.user-server.url:http://127.0.0.1:18083}")
-    private String userServerUrl;
-
-    @Value("${services.user-server.path:/user-server}")
-    private String userServerPath;
+    private UserClient users;
 
     /**
      * 查询手机账号
@@ -34,28 +27,16 @@ public class UserAccountClient {
     public Mono<UserAccountVO> byPhone(String phone) {
         AccountQueryDTO request = new AccountQueryDTO();
         request.setPhone(phone);
-        return webClientBuilder.build().post()
-                .uri(userServerUrl + userServerPath + "/internal/users/account-query")
-                .bodyValue(request)
-                .retrieve()
-                .bodyToMono(accountResponseType())
-                .map(this::unwrap);
+        return Mono.fromCallable(() -> unwrap(users.query(request)))
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     /**
      * 查询认证账号
      */
     public Mono<UserAccountVO> byId(String userId) {
-        return webClientBuilder.build().get()
-                .uri(userServerUrl + userServerPath + "/internal/users/{userId}/auth", userId)
-                .retrieve()
-                .bodyToMono(accountResponseType())
-                .map(this::unwrap);
-    }
-
-    private ParameterizedTypeReference<ApiResult<UserAccountVO>> accountResponseType() {
-        return ParameterizedTypeReference.forType(org.springframework.core.ResolvableType
-                .forClassWithGenerics(ApiResult.class, UserAccountVO.class).getType());
+        return Mono.fromCallable(() -> unwrap(users.auth(userId)))
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     private UserAccountVO unwrap(ApiResult<UserAccountVO> response) {

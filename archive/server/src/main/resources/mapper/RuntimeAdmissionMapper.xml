@@ -31,7 +31,7 @@
         SELECT active_count
         FROM sq_runtime_admission_counter
         WHERE pool_key = #{poolKey}
-        FOR UPDATE
+
     </select>
 
     <select id="lockBindingCursor" resultType="java.lang.Long">
@@ -39,7 +39,7 @@
         FROM sq_runtime_binding
         WHERE user_id = #{userId}
         AND binding_id = #{bindingId}
-        FOR UPDATE
+
     </select>
 
     <select id="lockSlot" resultMap="slotResult">
@@ -54,7 +54,7 @@
         status
         FROM sq_runtime_admission_slot
         WHERE binding_id = #{bindingId}
-        FOR UPDATE
+
     </select>
 
     <insert id="createSlot">

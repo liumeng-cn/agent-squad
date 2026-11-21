@@ -193,15 +193,14 @@
         SELECT status,
         (cancel_requested_at IS NOT NULL) AS cancellation_requested,
         del_flag
-        FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{ownerId} AND scope_id = #{scopeId} FOR UPDATE
+        FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{ownerId} AND scope_id = #{scopeId}
     </select>
 
     <select id="lockResponseOwner" resultMap="lockResponseOwnerResult">
         SELECT status,
         (cancel_requested_at IS NOT NULL) AS cancellation_requested,
         del_flag
-        FROM sq_response_execution WHERE user_id = #{userId} AND execution_id = #{ownerId} AND scope_id = #{scopeId} FOR
-        UPDATE
+        FROM sq_response_execution WHERE user_id = #{userId} AND execution_id = #{ownerId} AND scope_id = #{scopeId}
     </select>
 
     <update id="queueTaskAfterInteraction">

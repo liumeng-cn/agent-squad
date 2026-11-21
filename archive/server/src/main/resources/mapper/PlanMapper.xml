@@ -113,7 +113,7 @@
         JOIN sq_conversation c ON c.user_id = t.user_id AND c.conversation_id = t.conversation_id
         WHERE b.user_id = #{userId} AND b.framework_session_id = #{sessionId}
         AND b.role = 'MASTER' AND c.active_task_id = t.task_id
-        FOR UPDATE
+
     </select>
 
     <select id="findLatestByLogicalKey" resultMap="findLatestByLogicalKeyResult">
@@ -132,7 +132,7 @@
     </select>
 
     <select id="lockTaskPlanVersion" resultType="java.lang.Long">
-        SELECT plan_version FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId} FOR UPDATE
+        SELECT plan_version FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}
     </select>
 
     <select id="countSignalEligibleTask" resultType="_int">
@@ -154,7 +154,7 @@
         signal_version,
         version,
         goal_revision FROM sq_plan WHERE user_id = #{userId} AND task_id = #{taskId} AND plan_version = #{planVersion}
-        FOR UPDATE
+
     </select>
 
     <select id="countUnfinishedJobs" resultType="_int">
@@ -226,7 +226,7 @@
         binding_id,
         reused_from_job_id,
         cancel_requested_at,
-        version FROM sq_worker_job WHERE task_id = #{taskId} AND plan_version = #{planVersion} ORDER BY id FOR UPDATE
+        version FROM sq_worker_job WHERE task_id = #{taskId} AND plan_version = #{planVersion} ORDER BY id
     </select>
 
     <insert id="insertPlan">

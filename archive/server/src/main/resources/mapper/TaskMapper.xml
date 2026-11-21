@@ -88,7 +88,7 @@
         create_time,
         last_update_time
         FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}
-        FOR UPDATE
+
     </select>
 
     <select id="conversationIdOf" resultType="java.lang.Long">
@@ -97,7 +97,7 @@
 
     <select id="lockConversation" resultType="java.lang.Long">
         SELECT conversation_id FROM sq_conversation WHERE user_id = #{userId} AND conversation_id = #{conversationId}
-        FOR UPDATE
+
     </select>
 
     <select id="findOwned" resultMap="findOwnedResult">

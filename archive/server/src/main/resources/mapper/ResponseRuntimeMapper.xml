@@ -40,7 +40,7 @@
         recovery_attempts,
         answer_message_id,
         completion_protocol
-        FROM sq_response_execution WHERE user_id=#{userId} AND binding_id=#{bindingId} FOR UPDATE
+        FROM sq_response_execution WHERE user_id=#{userId} AND binding_id=#{bindingId}
     </select>
 
     <select id="bindingForExecution" resultType="java.lang.Long">
@@ -123,18 +123,18 @@
         SELECT id FROM sq_operation WHERE user_id=#{userId} AND scope_id=#{scopeId}
         AND status IN ('UNKNOWN',
         'RECONCILING',
-        'IN_FLIGHT') AND del_flag='0' FOR UPDATE
+        'IN_FLIGHT') AND del_flag='0'
     </select>
 
     <select id="uncertainSandboxIds" resultType="java.lang.Long">
         SELECT id FROM sq_sandbox_execution WHERE user_id=#{userId} AND scope_id=#{scopeId}
         AND status IN ('IN_FLIGHT',
-        'UNKNOWN') AND del_flag='0' FOR UPDATE
+        'UNKNOWN') AND del_flag='0'
     </select>
 
     <select id="openKinds" resultType="java.lang.String">
         SELECT kind FROM sq_interaction WHERE user_id=#{userId} AND scope_id=#{scopeId}
-        AND status='OPEN' AND del_flag='0' FOR UPDATE
+        AND status='OPEN' AND del_flag='0'
     </select>
 
     <insert id="answer">

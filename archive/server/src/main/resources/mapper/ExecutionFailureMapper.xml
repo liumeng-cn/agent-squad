@@ -49,7 +49,7 @@
         AND binding_id = #{bindingId}
         AND status &lt;&gt; 'RESOLVED'
         ORDER BY id DESC
-        LIMIT 1 FOR UPDATE
+        LIMIT 1
     </select>
 
     <select id="activeInConversation" resultMap="activeInConversationResult">
@@ -99,7 +99,7 @@
         WHERE user_id = #{userId}
         AND scope_id = #{scopeId}
         AND failure_key = #{key}
-        FOR UPDATE
+
     </select>
 
     <select id="countActiveByCode" resultType="java.lang.Integer">
@@ -162,7 +162,7 @@
         FROM sq_execution_scope
         WHERE user_id = #{userId}
         AND scope_id = #{scopeId}
-        FOR UPDATE
+
     </select>
 
     <select id="planAttempts" resultType="_int">
@@ -170,7 +170,7 @@
         FROM sq_execution_scope
         WHERE user_id = #{userId}
         AND scope_id = #{scopeId}
-        FOR UPDATE
+
     </select>
 
     <update id="reserveServiceRetry">

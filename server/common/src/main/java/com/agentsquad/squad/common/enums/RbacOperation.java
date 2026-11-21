@@ -4,9 +4,9 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 管理状态定义
+ * 授权操作类型
  * <p>
- * 表达管理授权有限值，与普通账号登录状态分开维护。
+ * 标识授权变更日志的操作类别，仅用于操作留痕，不参与鉴权判断。
  */
 @Getter
 @RequiredArgsConstructor

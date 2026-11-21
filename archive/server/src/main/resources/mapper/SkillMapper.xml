@@ -55,7 +55,7 @@
         WHERE user_id = #{userId}
         AND skill_version_id = #{versionId}
         AND del_flag = '0'
-        FOR UPDATE
+
     </select>
     <select id="findNamedVersion" resultMap="SkillVersionRow">
         SELECT id,
@@ -90,7 +90,7 @@
         AND skill_name = #{name}
         AND skill_version = #{version}
         AND del_flag = '0'
-        FOR UPDATE
+
     </select>
     <select id="list" resultMap="SkillVersionRow">
         SELECT id,
@@ -209,7 +209,7 @@
         WHERE user_id = #{userId}
         AND skill_version_id = #{versionId}
         AND del_flag = '0'
-        FOR UPDATE
+
     </select>
     <update id="changeGrant">
         UPDATE sq_skill_grant
@@ -237,7 +237,7 @@
         WHERE user_id = #{userId}
         AND scope_id = #{scopeId}
         AND del_flag = '0'
-        FOR UPDATE
+
     </select>
     <insert id="insertCatalog">
         INSERT INTO sq_scope_skill_catalog (
@@ -290,7 +290,7 @@
         WHERE r.user_id = #{userId}
         AND r.scope_id = #{scopeId}
         AND r.del_flag = '0'
-        ORDER BY v.skill_name FOR UPDATE
+        ORDER BY v.skill_name
     </select>
     <select id="lockVersions" resultMap="SkillVersionRow">
         SELECT id,
@@ -306,6 +306,6 @@
         FROM sq_skill_version
         WHERE user_id = #{userId}
         AND del_flag = '0'
-        ORDER BY id FOR UPDATE
+        ORDER BY id
     </select>
 </mapper>

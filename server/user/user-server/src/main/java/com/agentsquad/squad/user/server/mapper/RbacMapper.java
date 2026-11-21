@@ -1,5 +1,7 @@
 package com.agentsquad.squad.user.server.mapper;
 
+import com.agentsquad.squad.user.server.bo.PermissionRouteBO;
+
 import com.agentsquad.squad.common.enums.RbacOperation;
 import com.agentsquad.squad.common.enums.RbacStatus;
 import com.agentsquad.squad.common.enums.PermissionStage;
@@ -16,19 +18,23 @@ import java.util.List;
 /**
  * 管理授权数据访问
  * <p>
- * 负责联表分页、权限快照与加锁状态迁移；SQL 集中在对应 XML。
+ * 负责联表分页、权限快照与条件状态迁移；SQL 集中在对应 XML。
  */
 @Mapper
 public interface RbacMapper {
+    List<PermissionRouteBO> permissionRoutes();
+
     List<RoleBO> roleOptions();
 
     List<String> effectivePermissions(@Param("userId") Long userId);
 
-    String lockAuthorization();
+    Long authorizationVersion();
 
-    RolePO lockRole(@Param("roleId") String roleId);
+    int advanceAuthorizationVersion(@Param("version") Long version, @Param("actor") Long actor);
 
-    ManagementUserBO lockMember(@Param("userId") Long userId);
+    RolePO findRole(@Param("roleId") String roleId);
+
+    ManagementUserBO findMember(@Param("userId") Long userId);
 
     RoleBO roleDetail(@Param("roleId") String roleId);
 
@@ -74,6 +80,5 @@ public interface RbacMapper {
 
     long activeAdministrators();
 
-    int audit(@Param("operation") RbacOperation operation, @Param("targetId") String targetId, @Param("summary") String summary, @Param("actor") Long actor);
-
+    int insertOperationLog(@Param("operation") RbacOperation operation, @Param("targetId") String targetId, @Param("summary") String summary, @Param("actor") Long actor);
 }

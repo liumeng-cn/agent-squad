@@ -10,13 +10,13 @@
 
 ## 表结构
 
-用户库 squad_user 新增 sq_role、sq_permission、sq_user_role、sq_role_permission、sq_rbac_audit。sq_user 新增 rbac_version（管理授权乐观锁版本，与 auth_version 分离）。角色以独立 role_id 为业务标识，角色编码唯一；关联表使用业务 ID。所有新增表有审计字段，角色和权限有中文名称说明。
+用户库 squad_user 新增 sq_role、sq_permission、sq_user_role、sq_role_permission、sq_rbac_log。sq_user 新增 rbac_version（管理授权乐观锁版本，与 auth_version 分离）。角色以独立 role_id 为业务标识，角色编码唯一；关联表使用业务 ID。所有新增表有审计字段，角色和权限有中文名称说明。
 
-sq_role 保存角色名称、编码、说明、状态、编辑版本、应用版本及内置标志。sq_role_permission 通过 stage=DRAFT/APPLIED 区分保存草稿和应用权限，唯一键为 role_id+permission_code+stage。sq_user_role 的状态表示该用户的管理关联是否启用，唯一键为 user_id+role_id。sq_rbac_audit 与授权修改同事务提交，记录操作者、目标、操作及关系摘要，不记录手机号、令牌或密码。
+sq_role 保存角色名称、编码、说明、状态、编辑版本、应用版本及内置标志。sq_role_permission 通过 stage=DRAFT/APPLIED 区分保存草稿和应用权限，唯一键为 role_id+permission_code+stage。sq_user_role 的状态表示该用户的管理关联是否启用，唯一键为 user_id+role_id。sq_rbac_log 与授权修改同事务追加，记录操作者、目标、操作及关系摘要，只增不改，不记录手机号、令牌或密码。
 
 新增角色默认禁用且未应用。保存修改只更新角色草稿及 DRAFT 权限；应用时在事务内复制 DRAFT 为 APPLIED 并启用角色。禁用即时撤销角色授权；重新启用要求已有应用版本，不自动应用未保存或未应用的权限。内置平台管理员角色的定义和权限不可通过页面修改或禁用。
 
-角色权限和用户角色修改都先锁定内置平台管理员角色行，统一串行化授权变更；再锁目标角色或用户，核对 version。最后一个启用且账号正常的平台管理员不得被撤权或管理禁用，违反约束整笔事务回滚。用户关联修改更新 rbac_version，角色修改更新 version；接口冲突返回 ApiCode.CONFLICT。
+角色权限和用户角色修改先条件推进全局授权版本，并发失败返回冲突；再读取目标角色或用户，核对 version。最后一个启用且账号正常的平台管理员不得被撤权或管理禁用，违反约束整笔事务回滚。用户关联修改更新 rbac_version，角色修改更新 version；接口冲突返回 ApiCode.CONFLICT。
 
 ## 接口
 
@@ -37,7 +37,7 @@ sq_role 保存角色名称、编码、说明、状态、编辑版本、应用版
 
 用户服务和运行服务直接配置 server.servlet.context-path，网关本地认证接口使用 /gateway 前缀。Gateway 为 WebFlux 路由入口，不配置 Servlet context-path。网关按工程路径前缀路由：/user-server/** 归属 user-server，/v2-server/** 归属 v2-server；注册接口为显式匿名特例，网关本身处理登录接口。管理接口集中在用户服务路径下的 /management/**。
 
-权限验证由 Gateway 在登录认证及 CSRF 校验之后完成，按请求方法和路径匹配权限码，未知管理接口默认拒绝。网关使用绑定路径和目标服务的签名查询当前用户生效权限，三秒超时或查询失败不放行。用户服务继续验证网关签名；授权事务在全局锁内重查操作者权限，保留并发撤权、越权授予和最后管理员等业务保护。普通账号、启用关联、启用角色与 APPLIED 权限实时查询，不将权限固化进 JWT，不引入缓存。
+Gateway 在登录认证和 CSRF 校验之后，仅对管理路由挂载 Permission 过滤器。过滤器通过 Feign 调用用户服务内部鉴权接口，用户服务按请求方法和路径匹配功能权限。内部鉴权依赖网络隔离，不额外签名。Gateway 的 OpenFeign 原生 Spring Cache 缓存鉴权结果，授权事务提交后更新共享版本失效；未知接口或查询失败不放行。授权事务使用全局版本条件更新裁决并发，保留越权授予和最后管理员保护，不使用悲观查询锁。
 
 ## 页面交互
 
@@ -64,7 +64,7 @@ sq_role 保存角色名称、编码、说明、状态、编辑版本、应用版
 - 页面入口为 /management，沿用现有普通账号登录，只有获得管理权限的账号显示入口。
 - 直接配置 server.servlet.context-path：user-server 为 /user-server，v2-server 为 /v2-server；Gateway 本地认证接口使用 /gateway 前缀。下游请求保留工程前缀，不裁剪路径；签名、前端请求、SSE 和跨服务用户查询使用相同路径。调整后需要一起重启三个应用和前端。
 - Gateway 只转发服务前缀下的公开 /api/**，内部账号查询与健康检查不向浏览器开放；注册为匿名 POST 特例，登录接口由网关本地处理。
-- 事务内重新检查操作者权限，创建、应用、分配和重新启用均不能授予自身不具备的权限；草稿保存不改变生效快照。
+- 事务内校验授权版本和操作者权限，创建、应用、分配和重新启用均不能授予自身不具备的权限；草稿保存不改变生效快照。
 - V2__rbac.sql 已在本地增量执行，指定现有账号已完成显式初始化授权。没有清空或重建已有库。
 - Java 检查命令：JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home mvn -f server/pom.xml -o -Daether.syncContext.named.factory=rwlock-local -Drbac.integration=true -pl user/user-server,gateway,v2-server -am test。集成测试仅在显式参数启用时连接已迁移的本地库，测试记录和业务变更回滚。
 - 前端验证：npm --prefix web/workbench test；npm --prefix web/workbench run build。

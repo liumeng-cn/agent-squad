@@ -62,7 +62,7 @@
         status,
         artifact_id
         FROM sq_artifact_stage WHERE user_id = #{userId} AND stage_id = #{stageId}
-        AND expires_at &gt; CURRENT_TIMESTAMP AND del_flag = '0' FOR UPDATE
+        AND expires_at &gt; CURRENT_TIMESTAMP AND del_flag = '0'
     </select>
 
     <select id="findPath" resultType="com.agentsquad.squad.model.po.ArtifactStagePO">

@@ -1,13 +1,15 @@
 package com.agentsquad.squad.user.api.client;
 
 import com.agentsquad.squad.common.model.ApiResult;
+import com.agentsquad.squad.common.utils.IdentityAssertion;
 import com.agentsquad.squad.user.api.dto.AccountQueryDTO;
+import com.agentsquad.squad.user.api.dto.PermissionCheckDTO;
+import com.agentsquad.squad.user.api.vo.ManagementAccessVO;
 import com.agentsquad.squad.user.api.vo.UserAccountVO;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.web.bind.annotation.*;
+
 
 /**
  * 用户服务跨服务调用契约
@@ -27,4 +29,19 @@ public interface UserClient {
      */
     @GetMapping("/internal/users/{userId}/auth")
     ApiResult<UserAccountVO> auth(@PathVariable("userId") String userId);
+
+    /**
+     * 查询管理准入
+     */
+    @GetMapping("/api/v2/users/me/management-access")
+    ApiResult<ManagementAccessVO> managementAccess(@RequestHeader(IdentityAssertion.HEADER) String assertion);
+
+    /**
+     * 验证当前用户权限
+     */
+    @Cacheable(cacheNames = "permissionChecks", keyGenerator = "permissionCacheKeyGenerator",
+            unless = "#result == null || #result.code != 0")
+    @PostMapping("/internal/users/permission-check")
+    ApiResult<Boolean> checkPermission(@RequestBody PermissionCheckDTO request);
+
 }

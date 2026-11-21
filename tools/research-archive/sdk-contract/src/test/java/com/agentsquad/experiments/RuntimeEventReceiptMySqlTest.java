@@ -229,7 +229,7 @@ class RuntimeEventReceiptMySqlTest {
     private RuntimeEventBusinessWriter projectionWriter(long failAt) {
         // 夹具只提供事务内的效果与游标写入，生产业务规则仍由NativeProjectionService负责。
         return (target, event) -> {
-            long cursor = jdbc.queryForObject("SELECT native_event_cursor FROM sq_runtime_binding WHERE user_id=? AND binding_id=? FOR UPDATE",
+            long cursor = jdbc.queryForObject("SELECT native_event_cursor FROM sq_runtime_binding WHERE user_id=? AND binding_id=? ",
                     Long.class, target.userId(), target.bindingId());
             if (event.seq() <= cursor) {
                 return;
@@ -238,8 +238,11 @@ class RuntimeEventReceiptMySqlTest {
                 throw new IllegalStateException("投影序号缺失");
             }
             jdbc.update("INSERT INTO probe_projection_effect(binding_id,native_seq) VALUES(?,?)", target.bindingId(), event.seq());
-            jdbc.update("UPDATE sq_runtime_binding SET native_event_cursor=? WHERE binding_id=? AND user_id=?",
-                    event.seq(), target.bindingId(), target.userId());
+            int changed = jdbc.update("UPDATE sq_runtime_binding SET native_event_cursor=? WHERE binding_id=? AND user_id=? AND native_event_cursor=?",
+                    event.seq(), target.bindingId(), target.userId(), cursor);
+            if (changed != 1) {
+                throw new IllegalStateException("投影游标已变更");
+            }
             if (event.seq() == failAt) {
                 throw new IllegalStateException("投影故障注入");
             }

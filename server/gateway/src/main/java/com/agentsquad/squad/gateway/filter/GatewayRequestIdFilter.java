@@ -5,6 +5,7 @@ import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
+import reactor.util.context.Context;
 
 import java.util.UUID;
 
@@ -24,8 +25,14 @@ public class GatewayRequestIdFilter implements WebFilter {
         String requestId = supplied != null && supplied.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
                 ? supplied : UUID.randomUUID().toString();
         exchange.getResponse().getHeaders().set(REQUEST_ID_HEADER, requestId);
-        return chain.filter(exchange.mutate().request(exchange.getRequest().mutate()
-                        .header(REQUEST_ID_HEADER, requestId).build()).build())
-                .contextWrite(reactor.util.context.Context.of(REQUEST_ID_CONTEXT_KEY, requestId));
+        return chain.filter(exchange
+                        .mutate()
+                        .request(exchange.
+                                getRequest()
+                                .mutate()
+                                .header(REQUEST_ID_HEADER, requestId)
+                                .build()
+                        ).build()
+                ).contextWrite(Context.of(REQUEST_ID_CONTEXT_KEY, requestId));
     }
 }

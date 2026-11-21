@@ -31,7 +31,7 @@
         FROM sq_sandbox_execution
         WHERE user_id = #{userId} AND binding_id = #{bindingId}
         AND (logical_key = #{logicalKey} OR (turn_id = #{turnId} AND tool_call_id = #{toolCallId}))
-        FOR UPDATE
+
     </select>
 
     <select id="find" resultType="com.agentsquad.squad.model.po.SandboxRunPO">
@@ -42,7 +42,7 @@
         request_hash,
         status,
         result_json
-        FROM sq_sandbox_execution WHERE user_id = #{userId} AND execution_id = #{executionId} FOR UPDATE
+        FROM sq_sandbox_execution WHERE user_id = #{userId} AND execution_id = #{executionId}
     </select>
 
     <insert id="insert">

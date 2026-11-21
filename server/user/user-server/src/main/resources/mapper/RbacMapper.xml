@@ -62,31 +62,53 @@
         </if></where>
     </sql>
     <select id="effectivePermissions" resultType="java.lang.String">
+        WITH RECURSIVE valid_menu AS (
+            SELECT rm.role_id, m.menu_id
+            FROM squad_user.sq_role_menu rm
+            JOIN squad_user.sq_menu m ON m.menu_id = rm.menu_id
+            WHERE rm.stage = 'APPLIED' AND m.parent_menu_id IS NULL AND m.status = 'ACTIVE'
+            UNION ALL
+            SELECT rm.role_id, m.menu_id
+            FROM squad_user.sq_role_menu rm
+            JOIN squad_user.sq_menu m ON m.menu_id = rm.menu_id AND m.status = 'ACTIVE'
+            JOIN valid_menu parent ON parent.role_id = rm.role_id AND parent.menu_id = m.parent_menu_id
+            WHERE rm.stage = 'APPLIED'
+        )
         SELECT DISTINCT p.permission_code
         FROM squad_user.sq_user u
         JOIN squad_user.sq_user_role a ON a.user_id = u.user_id AND a.status = 'ACTIVE'
         JOIN squad_user.sq_role r ON r.role_id = a.role_id AND r.status = 'ACTIVE' AND r.applied_version IS NOT NULL
         JOIN squad_user.sq_role_permission p ON p.role_id = r.role_id AND p.stage = 'APPLIED'
-        WHERE u.user_id = #{userId}
-          AND u.status = 'ACTIVE'
-          AND u.del_flag = '0'
+        JOIN squad_user.sq_permission f ON f.code = p.permission_code AND f.status = 'ACTIVE'
+        JOIN valid_menu m ON m.role_id = r.role_id AND m.menu_id = f.menu_id
+        WHERE u.user_id = #{userId} AND u.status = 'ACTIVE' AND u.del_flag = '0'
         ORDER BY p.permission_code
     </select>
-    <select id="lockAuthorization" resultType="java.lang.String">
-        SELECT role_id FROM squad_user.sq_role WHERE role_id = 'role-platform-admin' FOR UPDATE
+    <select id="authorizationVersion" resultType="java.lang.Long">
+        SELECT version
+        FROM squad_user.sq_rbac_revision
+        WHERE code = 'authorization'
     </select>
-    <select id="lockRole" resultType="com.agentsquad.squad.user.server.po.RolePO">
+    <update id="advanceAuthorizationVersion">
+        UPDATE squad_user.sq_rbac_revision
+        SET version          = version + 1,
+            last_updater_id  = #{actor},
+            last_update_time = CURRENT_TIMESTAMP
+        WHERE code = 'authorization'
+          AND version = #{version}
+    </update>
+    <select id="findRole" resultType="com.agentsquad.squad.user.server.po.RolePO">
         SELECT <include refid="roleProjection"/>
         FROM squad_user.sq_role r
         WHERE r.role_id = #{roleId}
-        FOR UPDATE
+
     </select>
-    <select id="lockMember" resultType="com.agentsquad.squad.user.server.bo.ManagementUserBO">
+    <select id="findMember" resultType="com.agentsquad.squad.user.server.bo.ManagementUserBO">
         <include refid="memberProjection"/>
         WHERE u.user_id = #{userId}
           AND u.status = 'ACTIVE'
           AND u.del_flag = '0'
-        FOR UPDATE OF u
+
     </select>
     <select id="roleOptions" resultType="com.agentsquad.squad.user.server.bo.RoleBO">
         SELECT <include refid="roleProjection"/>
@@ -216,8 +238,16 @@
         JOIN squad_user.sq_user u ON u.user_id = a.user_id AND u.status = 'ACTIVE' AND u.del_flag = '0'
         WHERE a.role_id = 'role-platform-admin' AND a.status = 'ACTIVE'
     </select>
-    <insert id="audit">
-        INSERT INTO squad_user.sq_rbac_audit (operation, target_id, summary, creator_id, last_updater_id)
-        VALUES (#{operation}, #{targetId}, #{summary}, #{actor}, #{actor})
+    <insert id="insertOperationLog">
+        INSERT INTO squad_user.sq_rbac_log (operation, target_id, summary, creator_id)
+        VALUES (#{operation}, #{targetId}, #{summary}, #{actor})
     </insert>
+    <select id="permissionRoutes" resultType="com.agentsquad.squad.user.server.bo.PermissionRouteBO">
+        SELECT permission_code,
+               http_method,
+               path_pattern,
+               sort_order
+        FROM squad_user.sq_permission_route
+        ORDER BY sort_order, id
+    </select>
 </mapper>

@@ -22,7 +22,15 @@ def run(args, **kwargs):
 def config():
     # 应用参数统一由各服务 application.yml 提供，此处只准备运行日志目录。
     STATE.mkdir(parents=True, exist_ok=True)
-    return dict(os.environ)
+    env = dict(os.environ)
+    # 复用现有网关本地 Redis 凭据，只传给子进程，不在新增配置中重复提交凭据。
+    gateway_config = ROOT / 'server/gateway/src/main/resources/application.yml'
+    text = gateway_config.read_text()
+    redis_block = text.split('  data:', 1)[1].split('  cloud:', 1)[0]
+    match = re.search(r"password:\s*['\"]?([^'\"\n]+)", redis_block)
+    if match and 'SQUAD_REDIS_PASSWORD' not in env:
+        env['SQUAD_REDIS_PASSWORD'] = match.group(1).strip()
+    return env
 
 def health_path(module):
     """Servlet 应用的健康检查跟随工程路径，网关健康检查仍由根路径暴露。"""

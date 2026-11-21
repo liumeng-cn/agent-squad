@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.user.server.mapper.MenuMapper">
+    <select id="catalog" resultType="com.agentsquad.squad.user.server.bo.MenuBO">
+        SELECT menu_id,
+               parent_menu_id,
+               code,
+               name,
+               type,
+               route_name,
+               route_path,
+               icon,
+               sort_order,
+               status
+        FROM squad_user.sq_menu
+        ORDER BY sort_order, menu_id
+    </select>
+    <select id="functions" resultType="com.agentsquad.squad.user.server.bo.MenuFunctionBO">
+        SELECT code,
+               name,
+               menu_id,
+               status,
+               sort_order
+        FROM squad_user.sq_permission
+        ORDER BY sort_order, code
+    </select>
+    <select id="roleMenus" resultType="java.lang.String">
+        SELECT menu_id
+        FROM squad_user.sq_role_menu
+        WHERE role_id = #{roleId}
+          AND stage = #{stage}
+        ORDER BY menu_id
+    </select>
+    <select id="effectiveMenus" resultType="java.lang.String">
+        WITH RECURSIVE active_tree AS (
+            SELECT menu_id FROM squad_user.sq_menu
+            WHERE parent_menu_id IS NULL AND status = 'ACTIVE'
+            UNION ALL
+            SELECT child.menu_id
+            FROM squad_user.sq_menu child
+            JOIN active_tree parent ON child.parent_menu_id = parent.menu_id
+            WHERE child.status = 'ACTIVE'
+        ), granted AS (
+            SELECT DISTINCT rm.role_id,
+               rm.menu_id
+            FROM squad_user.sq_user u
+            JOIN squad_user.sq_user_role ur ON ur.user_id = u.user_id AND ur.status = 'ACTIVE'
+            JOIN squad_user.sq_role r ON r.role_id = ur.role_id AND r.status = 'ACTIVE' AND r.applied_version IS NOT NULL
+            JOIN squad_user.sq_role_menu rm ON rm.role_id = r.role_id AND rm.stage = 'APPLIED'
+            WHERE u.user_id = #{userId} AND u.status = 'ACTIVE' AND u.del_flag = '0'
+        ), valid_tree AS (
+            SELECT g.role_id,
+               m.menu_id
+            FROM granted g JOIN squad_user.sq_menu m ON m.menu_id = g.menu_id
+            WHERE m.parent_menu_id IS NULL
+            UNION ALL
+            SELECT g.role_id,
+               m.menu_id
+            FROM granted g
+            JOIN squad_user.sq_menu m ON m.menu_id = g.menu_id
+            JOIN valid_tree p ON p.role_id = g.role_id AND p.menu_id = m.parent_menu_id
+        )
+        SELECT DISTINCT v.menu_id
+        FROM valid_tree v JOIN active_tree a ON a.menu_id = v.menu_id
+    </select>
+    <delete id="deleteRoleMenus">
+        DELETE FROM squad_user.sq_role_menu WHERE role_id = #{roleId}
+          AND stage = #{stage}
+    </delete>
+    <insert id="insertRoleMenus">
+        INSERT INTO squad_user.sq_role_menu (role_id, menu_id, stage, creator_id, last_updater_id)
+        VALUES
+        <foreach collection="menuIds" item="id" separator=",">
+            (#{roleId}, #{id}, #{stage}, #{actor}, #{actor})
+        </foreach>
+    </insert>
+    <update id="touchRole">
+        UPDATE squad_user.sq_role
+        SET version          = version + 1,
+            last_updater_id  = #{actor},
+            last_update_time = CURRENT_TIMESTAMP
+        WHERE role_id = #{roleId}
+          AND version = #{version}
+    </update>
+</mapper>

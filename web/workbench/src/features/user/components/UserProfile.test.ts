@@ -21,7 +21,7 @@ async function profile() {
   return view
 }
 it('shows the management link for an authorized role', async () => {
-  vi.mocked(managementAccess).mockResolvedValue({ canAccess: true, permissionCodes: ['management:access'] })
+  vi.mocked(managementAccess).mockResolvedValue({ canAccess: true, menus: [], permissionCodes: ['management:role:query'] })
   const view = await profile()
   expect(view.find('a[href="/management"]').text()).toBe('管理平台')
   await view.find('a[href="/management"]').trigger('click')
@@ -29,17 +29,17 @@ it('shows the management link for an authorized role', async () => {
   view.unmount()
 })
 it('hides the management link for ordinary users and after switching accounts', async () => {
-  vi.mocked(managementAccess).mockResolvedValue({ canAccess: true, permissionCodes: ['management:access'] })
+  vi.mocked(managementAccess).mockResolvedValue({ canAccess: true, menus: [], permissionCodes: ['management:role:query'] })
   const view = await profile()
   expect(view.find('a[href="/management"]').exists()).toBe(true)
-  vi.mocked(managementAccess).mockResolvedValue({ canAccess: false, permissionCodes: [] })
+  vi.mocked(managementAccess).mockResolvedValue({ canAccess: false, menus: [], permissionCodes: [] })
   state.auth.user = { ...state.auth.user, userId: '456' }
   await flushPromises()
   expect(view.find('a[href="/management"]').exists()).toBe(false)
   view.unmount()
 })
 it('hides a previously visible entry when permission refresh fails', async () => {
-  vi.mocked(managementAccess).mockResolvedValue({ canAccess: true, permissionCodes: ['management:access'] })
+  vi.mocked(managementAccess).mockResolvedValue({ canAccess: true, menus: [], permissionCodes: ['management:role:query'] })
   const view = await profile()
   await view.find('.profile-button').trigger('click')
   vi.mocked(managementAccess).mockRejectedValue(new Error('unavailable'))

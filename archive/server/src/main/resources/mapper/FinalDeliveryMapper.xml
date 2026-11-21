@@ -24,7 +24,7 @@
         AND source_message_id = #{messageId}
         ORDER BY delivery_generation DESC
         LIMIT 1
-        FOR UPDATE
+
     </select>
 
     <insert id="insert">

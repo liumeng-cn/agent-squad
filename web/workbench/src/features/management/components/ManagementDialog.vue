@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { confirmManagement } from './confirmManagement'
 import { nextTick, onMounted, onBeforeUnmount, ref } from 'vue'
-const props = defineProps<{ title: string; busy: boolean; dirty: boolean }>()
+const props = defineProps<{ title: string; busy: boolean; dirty: boolean; wide?: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 const panel = ref<HTMLElement>()
 let previous: HTMLElement | null = null
@@ -21,7 +21,7 @@ onMounted(async () => { previous = document.activeElement as HTMLElement; docume
 onBeforeUnmount(() => { document.removeEventListener('keydown', keyboard); previous?.focus() })
 </script>
 <template>
-  <div class="management-overlay" @click.self="close"><section ref="panel" class="management-dialog" role="dialog" aria-modal="true" :aria-label="title" :aria-busy="busy">
+  <div class="management-overlay" @click.self="close"><section ref="panel" class="management-dialog" :class="{ 'management-dialog-wide': wide }" role="dialog" aria-modal="true" :aria-label="title" :aria-busy="busy">
     <header><h2>{{ title }}</h2><button aria-label="关闭" :disabled="busy" @click="close">×</button></header>
     <div class="management-dialog-content"><slot /></div>
     <footer><button :disabled="busy" @click="close">取消</button><slot name="actions" /></footer>

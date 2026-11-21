@@ -66,7 +66,7 @@
         JOIN sq_goal_task t ON t.user_id = b.user_id AND t.task_id = b.task_id
         WHERE b.user_id = #{userId} AND b.framework_session_id = #{sessionId}
         AND b.role = 'MASTER'
-        FOR UPDATE
+
     </select>
 
     <update id="saveProposal">
@@ -96,7 +96,7 @@
         completion_correction_count,
         (cancel_requested_at IS NOT NULL) AS cancellation_requested
         FROM sq_goal_task WHERE user_id = #{userId} AND task_id = #{taskId}
-        FOR UPDATE
+
     </select>
 
     <update id="completeTask">
@@ -164,7 +164,7 @@
         WHERE user_id = #{userId}
         AND task_id = #{taskId}
         AND status IN ('PREPARED', 'WAITING_APPROVAL', 'IN_FLIGHT', 'UNKNOWN', 'RECONCILING')
-        FOR UPDATE
+
     </select>
 
     <select id="lockCancellationSandboxes" resultType="java.lang.Long">
@@ -175,7 +175,7 @@
         AND s.kind = 'TASK'
         AND s.owner_id = #{taskId}
         AND x.status IN ('IN_FLIGHT', 'UNKNOWN')
-        FOR UPDATE
+
     </select>
 
     <select id="lockCancellationInteractions" resultType="java.lang.Long">
@@ -184,7 +184,7 @@
         WHERE user_id = #{userId}
         AND task_id = #{taskId}
         AND status = 'OPEN'
-        FOR UPDATE
+
     </select>
 
     <update id="cancelJobs">
