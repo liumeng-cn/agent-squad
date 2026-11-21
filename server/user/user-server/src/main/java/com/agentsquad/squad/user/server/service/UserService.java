@@ -47,7 +47,7 @@ public class UserService {
         // 初始化账号资料和版本
         UserPO user = new UserPO();
         user.setUserId(userMapper.nextUserId());
-        user.setUsername("user_" + user.getUserId());
+        user.setUsername("USER-" + user.getUserId());
         user.setPhone(request.getPhone());
         user.setDisplayName("");
         user.setStatus(UserStatus.ACTIVE);
