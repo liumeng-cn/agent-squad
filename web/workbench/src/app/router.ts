@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { useManagementStore } from '../features/management/stores/management'
+import type { PermissionCode } from '../features/management/model/management'
 import { useAuthStore } from '../features/auth/stores/auth'
 
 const routes: RouteRecordRaw[] = [
@@ -7,11 +9,26 @@ const routes: RouteRecordRaw[] = [
   { path: '/register', alias: '/v2/register', name: 'register', component: () => import('../features/auth/views/AuthView.vue'), meta: { public: true } },
   { path: '/chat/:convId', name: 'chat-session', component: () => import('../features/chat/views/ChatView.vue') },
   { path: '/chat', alias: '/app/squad-v2', name: 'chat', component: () => import('../features/chat/views/ChatView.vue') },
+  { path: '/management', redirect: '/management/roles' },
+  { path: '/management/users', component: () => import('../features/management/views/ManagementView.vue'), meta: { managementSection: 'users', permission: 'management:user:read' } },
+  { path: '/management/roles', component: () => import('../features/management/views/ManagementView.vue'), meta: { managementSection: 'roles', permission: 'management:role:read' } },
+  { path: '/management/permissions', component: () => import('../features/management/views/ManagementView.vue'), meta: { managementSection: 'permissions', permission: 'management:permission:read' } },
   { path: '/:pathMatch(.*)*', redirect: { name: 'chat' } },
 ]
 export const router = createRouter({ history: createWebHistory(), routes })
 router.beforeEach(async (to) => {
   if (to.meta.public) { document.title = `${to.name === 'register' ? '注册' : '登录'} · Squad`; return true }
   if (!useAuthStore().user && !await useAuthStore().ensureSession()) return { name: 'login' }
+  if (to.meta.managementSection) {
+    const access = useManagementStore()
+    try { if (!await access.refresh()) return { name: 'chat' } }
+    catch { return { name: 'chat' } }
+    if (!access.can(to.meta.permission as PermissionCode)) {
+      const options = [['users', 'management:user:read'], ['roles', 'management:role:read'], ['permissions', 'management:permission:read']] as const
+      const first = options.find(([, permission]) => access.can(permission))
+      return first ? `/management/${first[0]}` : { name: 'chat' }
+    }
+    document.title = '管理平台 · Squad'
+  }
   return true
 })

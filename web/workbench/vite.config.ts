@@ -10,17 +10,9 @@ export default defineConfig(({ mode }) => {
     host: '127.0.0.1',
     port: 5173,
     proxy: {
-      '/api/v2': {
-        target: gateway,
-        changeOrigin: true,
-        secure: false,
-      },
-      '/api': {
-        target: gateway,
-        changeOrigin: true,
-        secure: false,
-        ws: true,
-      },
+      '/user-server': { target: gateway, changeOrigin: true, secure: false },
+      '/v2-server': { target: gateway, changeOrigin: true, secure: false },
+      '/gateway': { target: gateway, changeOrigin: true, secure: false },
     },
   },
   }

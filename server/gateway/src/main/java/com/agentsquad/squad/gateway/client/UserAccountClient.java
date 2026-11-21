@@ -25,6 +25,9 @@ public class UserAccountClient {
     @Value("${services.user-server.url:http://127.0.0.1:18083}")
     private String userServerUrl;
 
+    @Value("${services.user-server.path:/user-server}")
+    private String userServerPath;
+
     /**
      * 查询手机账号
      */
@@ -32,7 +35,7 @@ public class UserAccountClient {
         AccountQueryDTO request = new AccountQueryDTO();
         request.setPhone(phone);
         return webClientBuilder.build().post()
-                .uri(userServerUrl + "/internal/users/account-query")
+                .uri(userServerUrl + userServerPath + "/internal/users/account-query")
                 .bodyValue(request)
                 .retrieve()
                 .bodyToMono(accountResponseType())
@@ -44,7 +47,7 @@ public class UserAccountClient {
      */
     public Mono<UserAccountVO> byId(String userId) {
         return webClientBuilder.build().get()
-                .uri(userServerUrl + "/internal/users/{userId}/auth", userId)
+                .uri(userServerUrl + userServerPath + "/internal/users/{userId}/auth", userId)
                 .retrieve()
                 .bodyToMono(accountResponseType())
                 .map(this::unwrap);

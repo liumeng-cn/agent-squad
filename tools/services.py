@@ -2,6 +2,7 @@
 """管理本地服务，支持显式重建开发库聊天表。"""
 import argparse
 import os
+import re
 from pathlib import Path
 import shlex
 import signal
@@ -22,6 +23,17 @@ def config():
     # 应用参数统一由各服务 application.yml 提供，此处只准备运行日志目录。
     STATE.mkdir(parents=True, exist_ok=True)
     return dict(os.environ)
+
+def health_path(module):
+    """Servlet 应用的健康检查跟随工程路径，网关健康检查仍由根路径暴露。"""
+    if module not in ['user/user-server', 'v2-server']:
+        return '/actuator/health'
+    source = ROOT / 'server' / module / 'src/main/resources/application.yml'
+    match = re.search(r'^    context-path:\s*([^#\n]+)', source.read_text(), re.MULTILINE)
+    if not match:
+        raise RuntimeError(f'{module} 缺少 server.servlet.context-path 配置')
+    prefix = match.group(1).strip().strip("\"'").rstrip('/')
+    return prefix + '/actuator/health'
 
 def listening(port):
     with socket.socket() as sock:
@@ -109,7 +121,8 @@ def start(skip_build):
             with open(STATE / f'{name}.log', 'ab') as log:
                 proc = subprocess.Popen(args, cwd=cwd, env=env, stdout=log, stderr=log, start_new_session=True)
             (STATE / f'{name}.pid').write_text(str(proc.pid)); started.append((name, proc))
-            url = f'http://127.0.0.1:{port}/' + ('' if name == 'web' else 'actuator/health')
+            path = '/' if name == 'web' else health_path(module)
+            url = f'http://127.0.0.1:{port}' + path
             for _ in range(120):
                 if proc.poll() is not None: raise RuntimeError(f'{name} 启动失败，日志：{STATE / (name + ".log")}')
                 try:

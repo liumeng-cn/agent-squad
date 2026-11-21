@@ -7339,7 +7339,7 @@
         }
       }
     },
-    "/api/v2/chat/messages": {
+    "/v2-server/api/v2/chat/messages": {
       "post": {
         "operationId": "submitV2Chat",
         "summary": "使用原生 submit 或 steer 接收输入，不等待模型完成",
@@ -7384,7 +7384,7 @@
         "description": "提交消息前校验当前用户的对话归属。未建档或不可访问返回业务 404。"
       }
     },
-    "/api/v2/chat/interruptions": {
+    "/v2-server/api/v2/chat/interruptions": {
       "post": {
         "operationId": "interruptV2Chat",
         "summary": "请求停止指定执行，接收不等于已停止",
@@ -7429,7 +7429,7 @@
         "description": "停止前校验当前用户的对话归属。未建档或不可访问返回业务 404。"
       }
     },
-    "/api/v2/chat/resumptions": {
+    "/v2-server/api/v2/chat/resumptions": {
       "post": {
         "operationId": "resumeV2Chat",
         "summary": "显式继续未完成轮次，返回原生继续命令标识",
@@ -7474,7 +7474,7 @@
         "description": "继续前校验当前用户的对话归属。未建档或不可访问返回业务 404，并遵循原生恢复准入。"
       }
     },
-    "/api/v2/chat/convs/{convId}": {
+    "/v2-server/api/v2/chat/convs/{convId}": {
       "get": {
         "operationId": "readV2ChatConv",
         "parameters": [
@@ -7638,7 +7638,7 @@
         }
       }
     },
-    "/api/v2/users/register": {
+    "/user-server/api/v2/users/register": {
       "post": {
         "summary": "手机号注册，成功后单独登录",
         "tags": [
@@ -7688,7 +7688,7 @@
         }
       }
     },
-    "/api/v2/auth/login": {
+    "/gateway/api/v2/auth/login": {
       "post": {
         "summary": "验证码登录，签发JWT Cookie",
         "tags": [
@@ -7738,7 +7738,7 @@
         }
       }
     },
-    "/api/v2/auth/me": {
+    "/gateway/api/v2/auth/me": {
       "get": {
         "summary": "查询当前登录态",
         "tags": [
@@ -7788,7 +7788,7 @@
         }
       }
     },
-    "/api/v2/auth/logout": {
+    "/gateway/api/v2/auth/logout": {
       "post": {
         "summary": "退出当前登录会话",
         "tags": [
@@ -7848,7 +7848,7 @@
         ]
       }
     },
-    "/api/v2/users/me": {
+    "/user-server/api/v2/users/me": {
       "get": {
         "summary": "获取本人资料",
         "tags": [
@@ -7966,7 +7966,7 @@
         ]
       }
     },
-    "/api/v2/chat/convs/page": {
+    "/v2-server/api/v2/chat/convs/page": {
       "post": {
         "summary": "获取会话列表",
         "tags": [
@@ -8028,7 +8028,7 @@
         }
       }
     },
-    "/api/v2/chat/convs/{convId}/session": {
+    "/v2-server/api/v2/chat/convs/{convId}/session": {
       "get": {
         "operationId": "readV2ChatSession",
         "summary": "读取对话消息快照",
@@ -8074,7 +8074,7 @@
         "description": "按 convId 校验归属并读取原生公开历史。"
       }
     },
-    "/api/v2/chat/convs/{convId}/events": {
+    "/v2-server/api/v2/chat/convs/{convId}/events": {
       "get": {
         "operationId": "observeV2ChatSession",
         "summary": "订阅对话快照事件流",
@@ -8128,7 +8128,7 @@
         }
       }
     },
-    "/api/v2/chat/convs/{convId}/archive": {
+    "/v2-server/api/v2/chat/convs/{convId}/archive": {
       "post": {
         "summary": "归档对话",
         "parameters": [
@@ -8173,7 +8173,7 @@
         "description": "归档后从主列表移除，可通过归档列表找回。"
       }
     },
-    "/api/v2/chat/convs/{convId}/unarchive": {
+    "/v2-server/api/v2/chat/convs/{convId}/unarchive": {
       "post": {
         "summary": "恢复已归档对话",
         "parameters": [
@@ -8218,7 +8218,7 @@
         "description": "恢复后重新出现在主列表。"
       }
     },
-    "/api/v2/chat/answers": {
+    "/v2-server/api/v2/chat/answers": {
       "post": {
         "operationId": "answerV2ChatQuestion",
         "summary": "回答待答问题并继续原轮次",
@@ -8261,6 +8261,755 @@
           }
         },
         "description": "先核对当前用户对话归属，只允许回答原生日志中的 ask_user 问题。同一问题相同答案重试返回原命令，不同答案返回业务409。返回值表示SDK受理，不代表执行完成。"
+      }
+    },
+    "/user-server/api/v2/users/me/management-access": {
+      "get": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "查询管理准入",
+        "responses": {
+          "200": {
+            "description": "成功或业务拒绝，按 code 判断",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ManagementAccess"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "V2Session": []
+          }
+        ]
+      }
+    },
+    "/user-server/api/v2/users/management/users/page": {
+      "post": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "分页查询用户",
+        "responses": {
+          "200": {
+            "description": "成功或业务拒绝，按 code 判断",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ManagementUserPage"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagementQuery"
+              }
+            }
+          }
+        },
+        "x-required-permission": "management:user:read",
+        "security": [
+          {
+            "V2Session": []
+          }
+        ]
+      }
+    },
+    "/user-server/api/v2/users/management/users/by-phone": {
+      "get": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "查找已有账号",
+        "responses": {
+          "200": {
+            "description": "成功或业务拒绝，按 code 判断",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ManagementUser"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-required-permission": "management:user:manage",
+        "parameters": [
+          {
+            "name": "phone",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^1[0-9]{10}$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "V2Session": []
+          }
+        ]
+      }
+    },
+    "/user-server/api/v2/users/management/users/{userId}/roles": {
+      "put": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "应用用户角色",
+        "responses": {
+          "200": {
+            "description": "成功或业务拒绝，按 code 判断",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ManagementUser"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserRoles"
+              }
+            }
+          }
+        },
+        "x-required-permission": "management:user:manage",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "V2Session": []
+          }
+        ]
+      }
+    },
+    "/user-server/api/v2/users/management/users/{userId}/status": {
+      "patch": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "切换管理状态",
+        "responses": {
+          "200": {
+            "description": "成功或业务拒绝，按 code 判断",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ManagementUser"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RbacStatus"
+              }
+            }
+          }
+        },
+        "x-required-permission": "management:user:manage",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "V2Session": []
+          }
+        ]
+      }
+    },
+    "/user-server/api/v2/users/management/roles/page": {
+      "post": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "分页查询角色",
+        "responses": {
+          "200": {
+            "description": "成功或业务拒绝，按 code 判断",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/RolePage"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagementQuery"
+              }
+            }
+          }
+        },
+        "x-required-permission": "management:role:read",
+        "security": [
+          {
+            "V2Session": []
+          }
+        ]
+      }
+    },
+    "/user-server/api/v2/users/management/roles/{roleId}": {
+      "get": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "查看角色详情",
+        "responses": {
+          "200": {
+            "description": "成功或业务拒绝，按 code 判断",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Role"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-required-permission": "management:role:read",
+        "parameters": [
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "V2Session": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "保存角色草稿",
+        "responses": {
+          "200": {
+            "description": "成功或业务拒绝，按 code 判断",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Role"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleUpdate"
+              }
+            }
+          }
+        },
+        "x-required-permission": "management:role:manage",
+        "parameters": [
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "V2Session": []
+          }
+        ]
+      }
+    },
+    "/user-server/api/v2/users/management/roles": {
+      "post": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "新增角色草稿",
+        "responses": {
+          "200": {
+            "description": "成功或业务拒绝，按 code 判断",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Role"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleCreate"
+              }
+            }
+          }
+        },
+        "x-required-permission": "management:role:manage",
+        "security": [
+          {
+            "V2Session": []
+          }
+        ]
+      }
+    },
+    "/user-server/api/v2/users/management/roles/{roleId}/apply": {
+      "post": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "应用角色权限",
+        "responses": {
+          "200": {
+            "description": "成功或业务拒绝，按 code 判断",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Role"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RbacVersion"
+              }
+            }
+          }
+        },
+        "x-required-permission": "management:role:manage",
+        "parameters": [
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "V2Session": []
+          }
+        ]
+      }
+    },
+    "/user-server/api/v2/users/management/roles/{roleId}/status": {
+      "patch": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "切换角色状态",
+        "responses": {
+          "200": {
+            "description": "成功或业务拒绝，按 code 判断",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Role"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RbacStatus"
+              }
+            }
+          }
+        },
+        "x-required-permission": "management:role:manage",
+        "parameters": [
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "V2Session": []
+          }
+        ]
+      }
+    },
+    "/user-server/api/v2/users/management/permissions/page": {
+      "post": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "分页查询权限",
+        "responses": {
+          "200": {
+            "description": "成功或业务拒绝，按 code 判断",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PermissionPage"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagementQuery"
+              }
+            }
+          }
+        },
+        "x-required-permission": "management:permission:read",
+        "security": [
+          {
+            "V2Session": []
+          }
+        ]
+      }
+    },
+    "/user-server/api/v2/users/management/roles/permission-options": {
+      "get": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "查询可选权限",
+        "responses": {
+          "200": {
+            "description": "成功或业务拒绝，按 code 判断",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PermissionPage"
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-required-permission": "management:role:manage",
+        "security": [
+          {
+            "V2Session": []
+          }
+        ]
+      }
+    },
+    "/user-server/api/v2/users/management/users/role-options": {
+      "get": {
+        "tags": [
+          "管理平台"
+        ],
+        "summary": "查询可授角色",
+        "responses": {
+          "200": {
+            "description": "成功或业务拒绝，按 code 判断",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Role"
+                      }
+                    },
+                    "msg": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-required-permission": "management:user:manage",
+        "security": [
+          {
+            "V2Session": []
+          }
+        ]
       }
     }
   },
@@ -14410,6 +15159,401 @@
           "question",
           "options"
         ]
+      },
+      "ManagementAccess": {
+        "type": "object",
+        "properties": {
+          "canAccess": {
+            "type": "boolean"
+          },
+          "permissionCodes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "management:access",
+                "management:user:read",
+                "management:user:manage",
+                "management:role:read",
+                "management:role:manage",
+                "management:permission:read"
+              ]
+            }
+          }
+        },
+        "required": [
+          "canAccess",
+          "permissionCodes"
+        ]
+      },
+      "ManagementQuery": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "DISABLED",
+              "UNASSIGNED",
+              null
+            ],
+            "nullable": true
+          },
+          "current": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 10
+          }
+        }
+      },
+      "Role": {
+        "type": "object",
+        "properties": {
+          "roleId": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "DISABLED"
+            ]
+          },
+          "builtIn": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "appliedVersion": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "memberCount": {
+            "type": "integer"
+          },
+          "lastUpdateTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "draftPermissionCodes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "management:access",
+                "management:user:read",
+                "management:user:manage",
+                "management:role:read",
+                "management:role:manage",
+                "management:permission:read"
+              ]
+            },
+            "nullable": true
+          },
+          "appliedPermissionCodes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "management:access",
+                "management:user:read",
+                "management:user:manage",
+                "management:role:read",
+                "management:role:manage",
+                "management:permission:read"
+              ]
+            },
+            "nullable": true
+          }
+        }
+      },
+      "ManagementUser": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "UNASSIGNED",
+              "ACTIVE",
+              "DISABLED"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "roleNames": {
+            "type": "string"
+          },
+          "roleIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "lastUpdateTime": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Permission": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "management:access",
+              "management:user:read",
+              "management:user:manage",
+              "management:role:read",
+              "management:role:manage",
+              "management:permission:read"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "module": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "RoleCreate": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{1,63}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "permissionCodes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "management:access",
+                "management:user:read",
+                "management:user:manage",
+                "management:role:read",
+                "management:role:manage",
+                "management:permission:read"
+              ]
+            },
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "permissionCodes",
+          "description"
+        ]
+      },
+      "RoleUpdate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "permissionCodes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "management:access",
+                "management:user:read",
+                "management:user:manage",
+                "management:role:read",
+                "management:role:manage",
+                "management:permission:read"
+              ]
+            },
+            "maxItems": 100
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "name",
+          "permissionCodes",
+          "version",
+          "description"
+        ]
+      },
+      "RbacVersion": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "version"
+        ]
+      },
+      "RbacStatus": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "DISABLED"
+            ]
+          }
+        },
+        "required": [
+          "version",
+          "status"
+        ]
+      },
+      "UserRoles": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "roleIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50
+          }
+        },
+        "required": [
+          "version",
+          "roleIds"
+        ]
+      },
+      "RolePage": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Role"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "current": {
+            "type": "integer"
+          },
+          "size": {
+            "type": "integer"
+          }
+        }
+      },
+      "ManagementUserPage": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManagementUser"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "current": {
+            "type": "integer"
+          },
+          "size": {
+            "type": "integer"
+          }
+        }
+      },
+      "PermissionPage": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Permission"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "current": {
+            "type": "integer"
+          },
+          "size": {
+            "type": "integer"
+          }
+        }
       }
     }
   }

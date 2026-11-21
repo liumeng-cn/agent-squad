@@ -29,8 +29,12 @@ public class TrustedIdentityFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String path = request.getRequestURI();
+        String applicationPath = request.getServletPath();
+        if (applicationPath.isEmpty()) {
+            applicationPath = path.substring(request.getContextPath().length());
+        }
         try {
-            if (path.startsWith("/api/") && !(path.equals("/api/v2/users/register") && request.getMethod().equals("POST"))) {
+            if (applicationPath.startsWith("/api/") && !(applicationPath.equals("/api/v2/users/register") && request.getMethod().equals("POST"))) {
                 request.setAttribute(IdentityAssertion.ATTRIBUTE, IdentityAssertion.verify(
                         request.getHeader(IdentityAssertion.HEADER), "user-server", request.getMethod(), path,
                         environment.getRequiredProperty("agentsquad.user.identity-key")));

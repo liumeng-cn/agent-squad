@@ -1,16 +1,36 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
+import { watch, computed, nextTick, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserProfile } from '../composables/useUserProfile'
 import { useAuthStore } from '../../auth/stores/auth'
 import { ApiError, errorMessage } from '../../../shared/http/http'
+import { managementAccess } from '../../management/api/managementApi'
 import UserAvatar from './UserAvatar.vue'
 defineProps<{ compact?: boolean }>()
 const auth = useAuthStore()
+const canManage = ref(false)
 const profile = useUserProfile()
 const router = useRouter()
 const observationUrl = import.meta.env.VITE_OBSERVATION_URL || 'http://127.0.0.1:13000'
 const menu = ref(false)
+let permissionRequest = 0
+watch(() => auth.user?.userId, () => {
+  canManage.value = false
+  void refreshManagementAccess()
+}, { immediate: true })
+watch(menu, value => { if (value) void refreshManagementAccess() })
+
+async function refreshManagementAccess() {
+  const request = ++permissionRequest
+  const userId = auth.user?.userId
+  if (!userId) { canManage.value = false; return }
+  try {
+    const access = await managementAccess()
+    if (request === permissionRequest && auth.user?.userId === userId) canManage.value = access.canAccess
+  } catch {
+    if (request === permissionRequest) canManage.value = false
+  }
+}
 const open = ref(false)
 const displayName = ref('')
 const originalName = ref('')
@@ -76,6 +96,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', keyboard))
     </button>
     <template v-if="menu"><button class="menu-dismiss" aria-label="关闭用户菜单" @click="menu = false" /><div class="user-menu">
       <button type="button" @click="edit">个人信息</button>
+      <RouterLink v-if="canManage" to="/management" @click="menu = false">管理平台</RouterLink>
       <a :href="observationUrl" target="_blank" rel="noopener noreferrer" @click="menu = false">Langfuse 观测</a>
       <button type="button" :disabled="busy" @click="logout">退出登录</button>
       <p v-if="error" role="alert" class="profile-error">{{ error }}</p>

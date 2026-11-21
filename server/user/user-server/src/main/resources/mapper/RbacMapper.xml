@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.user.server.mapper.RbacMapper">
+    <sql id="roleProjection">
+        r.id,
+        r.role_id,
+        r.code,
+        r.name,
+        r.description,
+        r.status,
+        r.built_in,
+        r.version,
+        r.applied_version,
+        r.create_time,
+        r.last_update_time
+    </sql>
+
+    <sql id="roleFilter">
+        <where>
+            <if test="query.keyword != null and query.keyword != ''">
+                AND (r.name ILIKE CONCAT('%', #{query.keyword}, '%') OR r.code ILIKE CONCAT('%', #{query.keyword}, '%'))
+            </if>
+            <if test="query.status != null">AND r.status = #{query.status}</if>
+        </where>
+    </sql>
+    <sql id="memberProjection">
+        SELECT u.user_id::text AS user_id,
+               u.username,
+               u.display_name,
+               u.phone,
+               u.rbac_version AS version,
+               u.last_update_time,
+               CASE WHEN NOT EXISTS (SELECT 1 FROM squad_user.sq_user_role a WHERE a.user_id = u.user_id) THEN 'UNASSIGNED'
+                    WHEN EXISTS (SELECT 1 FROM squad_user.sq_user_role a WHERE a.user_id = u.user_id AND a.status = 'ACTIVE') THEN 'ACTIVE'
+                    ELSE 'DISABLED' END AS status,
+               COALESCE((SELECT string_agg(r.name, '、' ORDER BY r.code)
+                         FROM squad_user.sq_user_role a JOIN squad_user.sq_role r ON r.role_id = a.role_id
+                         WHERE a.user_id = u.user_id), '') AS role_names
+        FROM squad_user.sq_user u
+    </sql>
+    <sql id="memberFilter">
+        WHERE u.del_flag = '0' AND u.status = 'ACTIVE'
+        <if test="query.keyword != null and query.keyword != ''">
+            AND (u.username ILIKE CONCAT('%', #{query.keyword}, '%')
+                 OR u.display_name ILIKE CONCAT('%', #{query.keyword}, '%')
+                 OR u.phone ILIKE CONCAT('%', #{query.keyword}, '%'))
+        </if>
+        <if test="query.status != null and query.status.name() == 'UNASSIGNED'">
+            AND NOT EXISTS (SELECT 1 FROM squad_user.sq_user_role a WHERE a.user_id = u.user_id)
+        </if>
+        <if test="query.status != null and query.status.name() == 'ACTIVE'">
+            AND EXISTS (SELECT 1 FROM squad_user.sq_user_role a WHERE a.user_id = u.user_id AND a.status = 'ACTIVE')
+        </if>
+        <if test="query.status != null and query.status.name() == 'DISABLED'">
+            AND EXISTS (SELECT 1 FROM squad_user.sq_user_role a WHERE a.user_id = u.user_id)
+            AND NOT EXISTS (SELECT 1 FROM squad_user.sq_user_role a WHERE a.user_id = u.user_id AND a.status = 'ACTIVE')
+        </if>
+    </sql>
+    <sql id="permissionFilter">
+        <where><if test="query.keyword != null and query.keyword != ''">
+            AND (code ILIKE CONCAT('%', #{query.keyword}, '%') OR name ILIKE CONCAT('%', #{query.keyword}, '%'))
+        </if></where>
+    </sql>
+    <select id="effectivePermissions" resultType="java.lang.String">
+        SELECT DISTINCT p.permission_code
+        FROM squad_user.sq_user u
+        JOIN squad_user.sq_user_role a ON a.user_id = u.user_id AND a.status = 'ACTIVE'
+        JOIN squad_user.sq_role r ON r.role_id = a.role_id AND r.status = 'ACTIVE' AND r.applied_version IS NOT NULL
+        JOIN squad_user.sq_role_permission p ON p.role_id = r.role_id AND p.stage = 'APPLIED'
+        WHERE u.user_id = #{userId}
+          AND u.status = 'ACTIVE'
+          AND u.del_flag = '0'
+        ORDER BY p.permission_code
+    </select>
+    <select id="lockAuthorization" resultType="java.lang.String">
+        SELECT role_id FROM squad_user.sq_role WHERE role_id = 'role-platform-admin' FOR UPDATE
+    </select>
+    <select id="lockRole" resultType="com.agentsquad.squad.user.server.po.RolePO">
+        SELECT <include refid="roleProjection"/>
+        FROM squad_user.sq_role r
+        WHERE r.role_id = #{roleId}
+        FOR UPDATE
+    </select>
+    <select id="lockMember" resultType="com.agentsquad.squad.user.server.bo.ManagementUserBO">
+        <include refid="memberProjection"/>
+        WHERE u.user_id = #{userId}
+          AND u.status = 'ACTIVE'
+          AND u.del_flag = '0'
+        FOR UPDATE OF u
+    </select>
+    <select id="roleOptions" resultType="com.agentsquad.squad.user.server.bo.RoleBO">
+        SELECT <include refid="roleProjection"/>
+        FROM squad_user.sq_role r
+        WHERE r.applied_version IS NOT NULL
+        ORDER BY r.code
+    </select>
+    <select id="roleDetail" resultType="com.agentsquad.squad.user.server.bo.RoleBO">
+        SELECT <include refid="roleProjection"/>,
+               (SELECT COUNT(*)
+                FROM squad_user.sq_user_role a
+                WHERE a.role_id = r.role_id) AS member_count
+        FROM squad_user.sq_role r WHERE r.role_id = #{roleId}
+    </select>
+    <select id="rolePage" resultType="com.agentsquad.squad.user.server.bo.RoleBO">
+        SELECT <include refid="roleProjection"/>,
+               (SELECT COUNT(*)
+                FROM squad_user.sq_user_role a
+                WHERE a.role_id = r.role_id) AS member_count
+        FROM squad_user.sq_role r
+        <include refid="roleFilter"/>
+        ORDER BY r.built_in DESC, r.create_time DESC, r.role_id
+        LIMIT #{query.size} OFFSET #{offset}
+    </select>
+    <select id="roleCount" resultType="long">
+        SELECT COUNT(*) FROM squad_user.sq_role r <include refid="roleFilter"/>
+    </select>
+    <select id="permissionPage" resultType="com.agentsquad.squad.user.server.bo.PermissionBO">
+        SELECT code,
+               name,
+               module,
+               description
+        FROM squad_user.sq_permission
+        <include refid="permissionFilter"/> ORDER BY code LIMIT #{query.size} OFFSET #{offset}
+    </select>
+    <select id="permissionCount" resultType="long">
+        SELECT COUNT(*) FROM squad_user.sq_permission <include refid="permissionFilter"/>
+    </select>
+    <select id="memberPage" resultType="com.agentsquad.squad.user.server.bo.ManagementUserBO">
+        <include refid="memberProjection"/> <include refid="memberFilter"/>
+        ORDER BY u.user_id DESC LIMIT #{query.size} OFFSET #{offset}
+    </select>
+    <select id="memberCount" resultType="long">
+        SELECT COUNT(*) FROM squad_user.sq_user u <include refid="memberFilter"/>
+    </select>
+    <select id="memberByPhone" resultType="com.agentsquad.squad.user.server.bo.ManagementUserBO">
+        <include refid="memberProjection"/> WHERE u.phone = #{phone} AND u.del_flag = '0' AND u.status = 'ACTIVE'
+    </select>
+    <select id="memberDetail" resultType="com.agentsquad.squad.user.server.bo.ManagementUserBO">
+        <include refid="memberProjection"/> WHERE u.user_id = #{userId} AND u.del_flag = '0' AND u.status = 'ACTIVE'
+    </select>
+    <select id="memberRoles" resultType="java.lang.String">
+        SELECT role_id FROM squad_user.sq_user_role WHERE user_id = #{userId} ORDER BY role_id
+    </select>
+    <select id="rolePermissions" resultType="java.lang.String">
+        SELECT permission_code FROM squad_user.sq_role_permission
+        WHERE role_id = #{roleId}
+          AND stage = #{stage} ORDER BY permission_code
+    </select>
+    <select id="knownPermissions" resultType="java.lang.String">
+        SELECT code FROM squad_user.sq_permission ORDER BY code
+    </select>
+    <delete id="deleteRolePermissions">
+        DELETE FROM squad_user.sq_role_permission WHERE role_id = #{roleId}
+          AND stage = #{stage}
+    </delete>
+    <insert id="insertRolePermissions">
+        INSERT INTO squad_user.sq_role_permission (role_id, permission_code, stage, creator_id, last_updater_id)
+        VALUES <foreach collection="codes" item="code" separator=",">
+            (#{roleId}, #{code}, #{stage}, #{actor}, #{actor})
+        </foreach>
+    </insert>
+    <update id="updateRoleDraft">
+        UPDATE squad_user.sq_role
+        SET name             = #{role.name},
+            description      = #{role.description},
+            version          = version + 1,
+            last_updater_id  = #{actor},
+            last_update_time = CURRENT_TIMESTAMP
+        WHERE role_id = #{role.roleId} AND version = #{role.version}
+    </update>
+    <update id="applyRole">
+        UPDATE squad_user.sq_role
+        SET applied_version  = version + 1,
+            version          = version + 1,
+            status           = 'ACTIVE',
+            last_updater_id  = #{actor},
+            last_update_time = CURRENT_TIMESTAMP
+        WHERE role_id = #{roleId}
+    </update>
+    <update id="updateRoleStatus">
+        UPDATE squad_user.sq_role
+        SET applied_version = CASE WHEN applied_version = version THEN version + 1 ELSE applied_version END,
+            status           = #{status},
+            version          = version + 1,
+            last_updater_id  = #{actor},
+            last_update_time = CURRENT_TIMESTAMP
+        WHERE role_id = #{roleId}
+    </update>
+    <delete id="deleteMemberRoles">
+        DELETE FROM squad_user.sq_user_role
+        WHERE user_id = #{userId}
+    </delete>
+    <insert id="insertMemberRoles">
+        INSERT INTO squad_user.sq_user_role (user_id, role_id, status, creator_id, last_updater_id)
+        VALUES <foreach collection="roleIds" item="roleId" separator=",">
+            (#{userId}, #{roleId}, #{status}, #{actor}, #{actor})
+        </foreach>
+    </insert>
+    <update id="updateMemberStatus">
+        UPDATE squad_user.sq_user_role
+        SET status           = #{status},
+            last_updater_id  = #{actor},
+            last_update_time = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+    <update id="bumpMemberVersion">
+        UPDATE squad_user.sq_user
+        SET rbac_version     = rbac_version + 1,
+            last_updater_id  = #{actor},
+            last_update_time = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+          AND rbac_version = #{version}
+    </update>
+    <select id="activeAdministrators" resultType="long">
+        SELECT COUNT(*) FROM squad_user.sq_user_role a
+        JOIN squad_user.sq_user u ON u.user_id = a.user_id AND u.status = 'ACTIVE' AND u.del_flag = '0'
+        WHERE a.role_id = 'role-platform-admin' AND a.status = 'ACTIVE'
+    </select>
+    <insert id="audit">
+        INSERT INTO squad_user.sq_rbac_audit (operation, target_id, summary, creator_id, last_updater_id)
+        VALUES (#{operation}, #{targetId}, #{summary}, #{actor}, #{actor})
+    </insert>
+</mapper>

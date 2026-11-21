@@ -39,17 +39,17 @@ export async function consumeChatStream<T = AguiEvent>(
 
 /** 提交与观察分离，订阅重连不会重新执行用户输入。 */
 export function submitChat(input: SubmitChatInput): Promise<ChatReceipt> {
-  return apiPost('/api/v2/chat/messages', input)
+  return apiPost('/v2-server/api/v2/chat/messages', input)
 }
 export function readSession(convId: string): Promise<ChatSession> {
-  return apiGet(`/api/v2/chat/convs/${encodeURIComponent(convId)}/session`)
+  return apiGet(`/v2-server/api/v2/chat/convs/${encodeURIComponent(convId)}/session`)
 }
 export function interruptChat(convId: string, runId: string): Promise<boolean> {
-  return apiPost('/api/v2/chat/interruptions', { convId, runId })
+  return apiPost('/v2-server/api/v2/chat/interruptions', { convId, runId })
 }
 export async function subscribeSession(convId: string, signal: AbortSignal, receive: (state: ChatSession) => void) {
   const base = import.meta.env.VITE_API_BASE_URL || ''
-  const response = await fetch(`${base}/api/v2/chat/convs/${encodeURIComponent(convId)}/events`, {
+  const response = await fetch(`${base}/v2-server/api/v2/chat/convs/${encodeURIComponent(convId)}/events`, {
     credentials: base ? 'include' : 'same-origin', signal, headers: { Accept: 'text/event-stream' },
   })
   const contentType = response.headers.get('content-type') ?? ''
@@ -64,9 +64,9 @@ export async function subscribeSession(convId: string, signal: AbortSignal, rece
 }
 
 export function resumeChat(convId: string, turnId: string): Promise<string> {
-  return apiPost('/api/v2/chat/resumptions', { convId, turnId })
+  return apiPost('/v2-server/api/v2/chat/resumptions', { convId, turnId })
 }
 
 export function answerChat(input: ChatAnswer): Promise<string> {
-  return apiPost('/api/v2/chat/answers', input)
+  return apiPost('/v2-server/api/v2/chat/answers', input)
 }

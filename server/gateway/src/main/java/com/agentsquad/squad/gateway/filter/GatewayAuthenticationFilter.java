@@ -8,6 +8,7 @@ import com.agentsquad.squad.gateway.bo.AuthUserBO;
 import com.agentsquad.squad.gateway.config.properties.AuthProperties;
 import com.agentsquad.squad.gateway.controller.AuthController;
 import com.agentsquad.squad.gateway.service.AuthService;
+import com.agentsquad.squad.gateway.service.PermissionAuthorizationService;
 import jakarta.annotation.Resource;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -33,6 +34,9 @@ public class GatewayAuthenticationFilter implements GlobalFilter, Ordered {
 
     @Resource
     private AuthProperties properties;
+
+    @Resource
+    private PermissionAuthorizationService permissionAuthorization;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -60,7 +64,9 @@ public class GatewayAuthenticationFilter implements GlobalFilter, Ordered {
         user.setSessionId(actor.getSession().getSessionId());
         String assertion = IdentityAssertion.sign(user, audience, method,
                 exchange.getRequest().getURI().getRawPath(), properties.getIdentityKey());
-        return chain.filter(exchange.mutate().request(exchange.getRequest().mutate().headers(headers -> setIdentityHeaders(headers, assertion)).build()).build());
+        return permissionAuthorization.authorize(user, method, exchange.getRequest().getURI().getRawPath())
+                .then(Mono.defer(() -> chain.filter(exchange.mutate().request(exchange.getRequest().mutate()
+                        .headers(headers -> setIdentityHeaders(headers, assertion)).build()).build())));
     }
 
     private void setIdentityHeaders(HttpHeaders headers, String assertion) {

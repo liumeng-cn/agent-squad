@@ -11,6 +11,8 @@ spring:
     import: optional:file:/Users/liumeng/work/pWork/agent-squad/.local/langfuse/.env[.properties]
 
 server:
+  servlet:
+    context-path: /v2-server
   address: 127.0.0.1
   port: 18082
 

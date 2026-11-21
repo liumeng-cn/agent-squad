@@ -23,30 +23,30 @@ spring:
             - id: user-register
               uri: ${services.user-server.url}
               predicates:
-                - Path=/api/v2/users/register
+                - Path=${services.user-server.path}/api/v2/users/register
                 - Method=POST
               metadata:
                 anonymous: true
-            - id: user-profile
+            - id: user-server
               uri: ${services.user-server.url}
               predicates:
-                - Path=/api/v2/users/me
-                - Method=GET,PATCH
+                - Path=${services.user-server.path}/**
               metadata:
                 audience: user-server
-            - id: chat
+            - id: v2-server
               uri: ${services.v2-server.url}
               predicates:
-                - Path=/api/v2/chat/**
-                - Method=GET,POST,PATCH,DELETE
+                - Path=${services.v2-server.path}/**
               metadata:
                 audience: v2-server
           httpclient:
             connect-timeout: 2000
 services:
   user-server:
+    path: /user-server
     url: 'http://127.0.0.1:18083'
   v2-server:
+    path: /v2-server
     url: 'http://127.0.0.1:18082'
 server:
   address: 127.0.0.1

@@ -37,7 +37,7 @@ public class HttpTracingFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !"POST".equals(request.getMethod()) || !"/api/v2/chat/messages".equals(request.getRequestURI());
+        return !"POST".equals(request.getMethod()) || !"/api/v2/chat/messages".equals(request.getRequestURI().substring(request.getContextPath().length()));
     }
 
     @Override

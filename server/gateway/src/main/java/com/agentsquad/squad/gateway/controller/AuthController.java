@@ -21,7 +21,7 @@ import reactor.core.publisher.Mono;
  * 所属网关认证模块，登录身份及请求准入统一在网关裁决。
  */
 @RestController
-@RequestMapping("/api/v2/auth")
+@RequestMapping("/gateway/api/v2/auth")
 public class AuthController {
     public static final String COOKIE = "SQUAD_SESSION";
     @Resource
