@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.v2.mapper.AgentMapper">
+    <update id="switchVersion">
+        UPDATE squad_chat.sq_agent
+        SET current_version_id = #{currentVersionId},
+            revision           = revision + 1,
+            last_updater_id    = #{lastUpdaterId},
+            last_update_time   = CURRENT_TIMESTAMP
+        WHERE agent_id = #{agentId}
+          AND status = 'ENABLED'
+          AND revision = #{revision}
+    </update>
+</mapper>

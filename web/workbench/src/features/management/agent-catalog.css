@@ -1,0 +1,30 @@
+.catalog-main{padding:24px;max-width:1480px;width:100%;margin-inline:auto}
+.catalog-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}
+.catalog-heading h2{font-size:23px;margin:0;font-weight:650}
+.catalog-filter{padding:16px;gap:12px 18px}
+.catalog-table-panel{padding:0;overflow:hidden}
+.catalog-table-panel .management-table{margin:0}
+.catalog-table-panel .management-table :is(th,td){padding:14px 16px}
+.catalog-table-panel tbody tr:hover{background:#f8fbff}
+.catalog-pagination{padding:10px 16px 14px;flex-wrap:wrap;margin:0}
+.catalog-total{margin-right:auto;color:#737a84}
+.catalog-section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.catalog-section-title h3{margin:0;font-size:16px}
+.catalog-form{display:grid;gap:18px}
+.catalog-form label{display:grid;gap:6px;min-width:0}
+.catalog-form .management-form-row{margin:0}
+.catalog-form .catalog-bindings{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;border-color:#ebeef5;margin:0}
+.catalog-form select{min-height:34px;width:100%}
+.catalog-prompt{display:grid;gap:8px}
+.catalog-prompt-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.catalog-prompt textarea{min-height:200px;resize:vertical;line-height:1.65}
+.catalog-child-row{display:grid;grid-template-columns:1.25fr 1fr 1.3fr auto;align-items:end;gap:10px}
+@media(max-width:700px){.catalog-main{padding:14px}.catalog-child-row{grid-template-columns:1fr}.catalog-table-panel .management-table :is(th,td){padding:10px}}
+.catalog-tool-select{display:grid;gap:6px;min-width:0}
+.catalog-multiselect{border:1px solid var(--mp-line);border-radius:4px;background:var(--mp-bg)}
+.catalog-multiselect summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 10px;cursor:pointer}
+.catalog-multiselect summary::after{content:'▾';color:var(--mp-muted)}
+.catalog-multiselect[open] summary::after{content:'▴'}
+.catalog-multiselect summary span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.catalog-multiselect-options{border-top:1px solid var(--mp-line);padding:8px 10px;max-height:180px;overflow:auto}
+.catalog-form .catalog-multiselect-options label{display:flex;align-items:center;gap:8px;padding:5px 0}

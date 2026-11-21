@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.v2.mapper.McpServerVersionMapper">
+    <select id="nextVersionNo" resultType="int">
+        SELECT COALESCE(MAX(version_no), 0) + 1
+        FROM squad_chat.sq_mcp_server_version
+        WHERE mcp_server_id = #{mcpServerId}
+    </select>
+
+    <update id="updateDraft">
+        UPDATE squad_chat.sq_mcp_server_version
+        SET transport_type         = #{transportType},
+            endpoint               = #{endpoint},
+            credential_ref         = #{credentialRef},
+            revision               = revision + 1,
+            last_updater_id        = #{lastUpdaterId},
+            last_update_time       = CURRENT_TIMESTAMP
+        WHERE mcp_server_id = #{mcpServerId}
+          AND mcp_server_version_id = #{mcpServerVersionId}
+          AND status = 'DRAFT'
+          AND revision = #{revision}
+    </update>
+
+    <update id="publish">
+        UPDATE squad_chat.sq_mcp_server_version
+        SET status           = 'PUBLISHED',
+            revision         = revision + 1,
+            published_at     = CURRENT_TIMESTAMP,
+            last_updater_id  = #{lastUpdaterId},
+            last_update_time = CURRENT_TIMESTAMP
+        WHERE mcp_server_id = #{mcpServerId}
+          AND mcp_server_version_id = #{mcpServerVersionId}
+          AND status = 'DRAFT'
+          AND revision = #{revision}
+    </update>
+    <select id="usableOptions" resultType="com.agentsquad.squad.v2.vo.McpServerVersionOptionVO">
+        SELECT CAST(v.mcp_server_version_id AS varchar) AS mcp_server_version_id,
+               s.server_name,
+               v.version_no
+        FROM squad_chat.sq_mcp_server_version v
+        JOIN squad_chat.sq_mcp_server s
+          ON s.mcp_server_id = v.mcp_server_id
+        WHERE v.status = 'PUBLISHED'
+          AND s.status = 'ENABLED'
+        ORDER BY s.server_code, v.version_no DESC
+    </select>
+</mapper>

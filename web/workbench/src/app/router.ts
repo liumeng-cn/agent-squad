@@ -12,6 +12,9 @@ const routes: RouteRecordRaw[] = [
   { path: '/management/users', component: () => import('../features/management/views/ManagementView.vue'), meta: { managementSection: 'users', permission: 'management:user:query' } },
   { path: '/management/roles', component: () => import('../features/management/views/ManagementView.vue'), meta: { managementSection: 'roles', permission: 'management:role:query' } },
   { path: '/management/permissions', component: () => import('../features/management/views/ManagementView.vue'), meta: { managementSection: 'permissions', permission: 'management:permission:query' } },
+  { path: '/management/agents', name: 'management-agents', component: () => import('../features/management/views/AgentConfigView.vue'), meta: { managementSection: 'agents', permission: 'management:agent:query' } },
+  { path: '/management/tools', name: 'management-tools', component: () => import('../features/management/views/AgentCatalogView.vue'), meta: { managementSection: 'tools', permission: 'management:tool:query' } },
+  { path: '/management/mcp-servers', name: 'management-mcp-servers', component: () => import('../features/management/views/AgentCatalogView.vue'), meta: { managementSection: 'mcp-servers', permission: 'management:mcp:query' } },
   { path: '/:pathMatch(.*)*', redirect: { name: 'chat' } },
 ]
 export const router = createRouter({ history: createWebHistory(), routes })

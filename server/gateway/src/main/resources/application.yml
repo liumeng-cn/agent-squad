@@ -44,6 +44,14 @@ spring:
                 - Path=${services.user-server.path}/api/**
               metadata:
                 audience: user-server
+            - id: v2-agent-management
+              uri: ${services.v2-server.url}
+              predicates:
+                - Path=${services.v2-server.path}/api/v2/agents/management/**
+              filters:
+                - Permission
+              metadata:
+                audience: v2-server
             - id: v2-server
               uri: ${services.v2-server.url}
               predicates:

@@ -31,6 +31,9 @@ public class PermissionService {
     @Value("${server.servlet.context-path:/user-server}")
     private String contextPath;
 
+    @Value("${management.v2-context-path:/v2-server}")
+    private String v2ContextPath = "/v2-server";
+
     /**
      * 验证当前用户权限
      *
@@ -38,10 +41,19 @@ public class PermissionService {
      */
     public boolean checkPermission(PermissionCheckDTO request) {
         String prefix = contextPath + "/api/v2/users/management";
-        if (!request.getPath().startsWith(prefix + "/")) {
-            return false;
+        boolean v2 = !request.getPath().startsWith(prefix + "/");
+        if (v2) {
+            prefix = v2ContextPath + "/api/v2/agents/management";
+            if (!request.getPath().startsWith(prefix + "/")) {
+                return false;
+            }
         }
         String resource = request.getPath().substring(prefix.length());
+        int nextSeparator = resource.indexOf('/', 1);
+        String group = nextSeparator < 0 ? resource : resource.substring(0, nextSeparator);
+        if (v2 != List.of("/agents", "/tools", "/mcp-servers").contains(group)) {
+            return false;
+        }
         List<PermissionRouteBO> rules = mapper.permissionRoutes();
         for (PermissionRouteBO rule : rules) {
             if (!rule.getHttpMethod().equals(request.getMethod())) {

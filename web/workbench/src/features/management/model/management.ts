@@ -1,6 +1,6 @@
 export type RbacStatus = 'ACTIVE' | 'DISABLED'
 export type MemberStatus = RbacStatus | 'UNASSIGNED'
-export type PermissionCode = 'management:user:query' | 'management:user:assign-role' | 'management:user:enable' | 'management:user:disable' | 'management:role:query' | 'management:role:create' | 'management:role:update' | 'management:role:apply' | 'management:role:enable' | 'management:role:disable' | 'management:permission:query'
+export type PermissionCode = 'management:user:query' | 'management:user:assign-role' | 'management:user:enable' | 'management:user:disable' | 'management:role:query' | 'management:role:create' | 'management:role:update' | 'management:role:apply' | 'management:role:enable' | 'management:role:disable' | 'management:permission:query' | 'management:agent:query' | 'management:agent:edit' | 'management:agent:publish' | 'management:tool:query' | 'management:tool:edit' | 'management:tool:publish' | 'management:mcp:query' | 'management:mcp:edit' | 'management:mcp:publish'
 export interface Access { canAccess: boolean; permissionCodes: PermissionCode[]; menus: Menu[] }
 export interface Query { keyword: string; status: MemberStatus | null; current: number; size: number }
 export interface Role {

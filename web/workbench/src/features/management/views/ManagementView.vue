@@ -19,7 +19,7 @@ const menus: { key: string; label: string; permission: PermissionCode }[] = [
   { key: 'roles', label: '角色管理', permission: 'management:role:query' },
   { key: 'permissions', label: '权限管理', permission: 'management:permission:query' },
 ]
-const visibleMenus = computed(() => access.pages().map(menu => ({ key: menu.code, label: menu.name })))
+const visibleMenus = computed(() => access.pages().map(menu => ({ key: menu.code, label: menu.name, path: menu.routePath })))
 const canQuery = computed(() => access.can(menus.find(item => item.key === section.value)!.permission))
 const authorizationRole = ref<Role | null>(null)
 const title = computed(() => menus.find(item => item.key === section.value)?.label || '管理平台')
@@ -102,7 +102,7 @@ const statusName = (value: string) => ({ ACTIVE: '启用', DISABLED: '禁用', U
 <template>
   <div class="management-platform">
     <header class="management-top"><h1>Agent Squad 管理平台</h1><div><span>{{ auth.user?.effectiveDisplayName }}</span><RouterLink to="/chat">返回聊天</RouterLink></div></header>
-    <div class="management-layout"><aside class="management-sidebar"><nav aria-label="管理菜单"><RouterLink v-for="menu in visibleMenus" :key="menu.key" :to="`/management/${menu.key}`" :aria-current="section === menu.key ? 'page' : undefined">{{ menu.label }}</RouterLink></nav></aside>
+    <div class="management-layout"><aside class="management-sidebar"><nav aria-label="管理菜单"><RouterLink v-for="menu in visibleMenus" :key="menu.key" :to="menu.path || `/management/${menu.key}`" :aria-current="section === menu.key ? 'page' : undefined">{{ menu.label }}</RouterLink></nav></aside>
       <main class="management-main"><div class="management-breadcrumb">管理平台 / {{ title }}</div>
         <p v-if="!canQuery" class="management-panel management-empty">当前角色仅有菜单访问权限，尚未授予查询功能。</p>
         <form v-if="canQuery" class="management-panel management-search" @submit.prevent="search"><label>关键字<input v-model="query.keyword" maxlength="100" :placeholder="section === 'users' ? '用户名、昵称或手机号' : '名称或编码'" /></label>
