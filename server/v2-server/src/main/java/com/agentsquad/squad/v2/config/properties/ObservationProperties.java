@@ -23,7 +23,7 @@ public class ObservationProperties {
     private boolean enabled;
 
     /**
-     * 是否采集用户和模型的公开正文；默认关闭，不采集完整 Prompt、推理或工具数据。
+     * 是否采集用户和模型公开正文及脱敏工具预览；默认关闭，系统提示仅保留标识。
      */
     private boolean captureContent;
 
@@ -38,6 +38,13 @@ public class ObservationProperties {
     @Min(256)
     @Max(100000)
     private int maxContentChars = 4096;
+
+    /**
+     * 工具与 MCP 单次调用的输入输出展示上限；超长保留前缀并标识截断。
+     */
+    @Min(256)
+    @Max(100000)
+    private int maxToolContentChars = 2048;
 
     /**
      * 完整的 OTLP HTTP Trace 接收地址。

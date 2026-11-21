@@ -111,13 +111,14 @@ public class ChatAgentConfiguration {
 
         // 观测是可选能力：未开启时不创建追踪中间件，也不要求 Langfuse 服务可用。
         OpenTelemetrySdk observationSdk = observationSdkProvider.getIfAvailable();
-        if (observationSdk != null) {
+        ModelIoTracingMiddleware modelTracingMiddleware = modelTracing.getIfAvailable();
+        if (observationSdk != null && modelTracingMiddleware != null) {
             agent.middleware(new OtelTracingMiddleware(observationSdk));
             // 同级按注册顺序形成洋葱链；官方 Span 在外层，业务中间件才取得其上下文。
-            agent.middleware(modelTracing.getObject());
-            agent.middleware(toolTracing.getObject());
-            agent.middleware(frameworkTracing.getObject());
-            agent.middleware(reasoningTracing.getObject());
+            agent.middleware(modelTracingMiddleware);
+            agent.middleware(toolTracing.getIfAvailable());
+            agent.middleware(frameworkTracing.getIfAvailable());
+            agent.middleware(reasoningTracing.getIfAvailable());
         }
         return agent.build();
     }

@@ -26,15 +26,23 @@ import java.util.function.Function;
  * 工具调用追踪
  * <p>
  * 复用官方 execute_tool 批次 Span；按调用 ID 记录名称、审批与执行状态及结果大小。
- * 工具参数与原始执行结果不进入追踪系统。
+ * 开启正文采集后展示脱敏且限长的参数与结果，关闭时只保留结构和计量。
  */
 public class ToolCallTracingMiddleware implements MiddlewareBase {
     private static final int MAX_TOOLS = 20;
 
     private final LangfuseTraceSerializer serializer;
+    private final boolean captureContent;
+    private final int maxToolContentChars;
 
     public ToolCallTracingMiddleware(boolean captureContent, int maxContentChars) {
-        this.serializer = new LangfuseTraceSerializer(captureContent, maxContentChars);
+        this(captureContent, maxContentChars, Math.min(maxContentChars, 2048));
+    }
+
+    public ToolCallTracingMiddleware(boolean captureContent, int maxContentChars, int maxToolContentChars) {
+        this.serializer = new LangfuseTraceSerializer(captureContent, maxContentChars, maxToolContentChars);
+        this.captureContent = captureContent;
+        this.maxToolContentChars = Math.min(maxContentChars, maxToolContentChars);
     }
 
     @Override
@@ -57,19 +65,21 @@ public class ToolCallTracingMiddleware implements MiddlewareBase {
             span.setAttribute("langfuse.observation.input", arguments);
 
             Map<String, Map<String, Object>> results = new LinkedHashMap<>();
+            Map<String, StringBuilder> outputBuffers = new LinkedHashMap<>();
             if (input.toolCalls() != null) {
-                input.toolCalls().stream().limit(MAX_TOOLS).forEach(call -> {
+                for (int index = 0; index < Math.min(input.toolCalls().size(), MAX_TOOLS); index++) {
+                    var call = input.toolCalls().get(index);
                     Map<String, Object> item = new LinkedHashMap<>();
                     item.put("id", call.getId());
                     item.put("name", call.getName());
                     item.put("status", "pending");
                     results.put(call.getId(), item);
-                });
+                }
             }
 
             Runnable finish = () -> {
                 List<Map<String, Object>> summary = new ArrayList<>(results.values());
-                String output = serializer.json(summary);
+                String output = serializer.toolResults(summary);
                 if (output != null) {
                     span.setAttribute("gen_ai.tool.call.result", output);
                     span.setAttribute("langfuse.observation.output", output);
@@ -78,7 +88,7 @@ public class ToolCallTracingMiddleware implements MiddlewareBase {
             finish.run();
 
             return next.apply(input)
-                    .doOnNext(event -> recordEvent(event, results, finish))
+                    .doOnNext(event -> recordEvent(event, results, outputBuffers, finish))
                     .doOnComplete(finish)
                     .doOnError(error -> finish.run())
                     .doOnCancel(() -> finishQuietly(results, finish));
@@ -88,7 +98,8 @@ public class ToolCallTracingMiddleware implements MiddlewareBase {
     /**
      * 变更时立即写入工具状态；异常或中断时仍保留最后已知状态。
      */
-    private void recordEvent(AgentEvent event, Map<String, Map<String, Object>> results, Runnable finish) {
+    private void recordEvent(AgentEvent event, Map<String, Map<String, Object>> results,
+                             Map<String, StringBuilder> outputBuffers, Runnable finish) {
         if (event instanceof ToolResultStartEvent start) {
             setStatus(results, start.getToolCallId(), "running");
         } else if (event instanceof ToolResultEndEvent end) {
@@ -104,6 +115,15 @@ public class ToolCallTracingMiddleware implements MiddlewareBase {
             if (result != null && delta.getDelta() != null) {
                 long count = (long) result.getOrDefault("output_chars", 0L);
                 result.put("output_chars", count + delta.getDelta().length());
+                if (captureContent) {
+                    StringBuilder buffer = outputBuffers.computeIfAbsent(delta.getToolCallId(), key -> new StringBuilder());
+                    int remaining = maxToolContentChars - buffer.length();
+                    if (remaining > 0) {
+                        buffer.append(delta.getDelta(), 0, Math.min(remaining, delta.getDelta().length()));
+                    }
+                    result.put("text", serializer.toolResultPreview(buffer));
+                    result.put("truncated", count + delta.getDelta().length() > maxToolContentChars / 2);
+                }
             }
             return;
         } else {

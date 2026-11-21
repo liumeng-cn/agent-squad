@@ -33,7 +33,11 @@ public class ModelIoTracingMiddleware implements MiddlewareBase {
     private final int maxContentChars;
 
     public ModelIoTracingMiddleware(boolean captureContent, int maxContentChars) {
-        this.serializer = new LangfuseTraceSerializer(captureContent, maxContentChars);
+        this(captureContent, maxContentChars, Math.min(maxContentChars, 2048));
+    }
+
+    public ModelIoTracingMiddleware(boolean captureContent, int maxContentChars, int maxToolContentChars) {
+        this.serializer = new LangfuseTraceSerializer(captureContent, maxContentChars, maxToolContentChars);
         this.maxContentChars = maxContentChars;
     }
 
@@ -57,7 +61,8 @@ public class ModelIoTracingMiddleware implements MiddlewareBase {
             write(span, "langfuse.observation.model.parameters", serializer.modelParameters(input.options()));
             String messages = serializer.messages(input.messages());
             write(span, "gen_ai.input.messages", messages);
-            write(span, "langfuse.observation.input", messages);
+            write(span, "langfuse.observation.input", serializer.modelInput(input.messages(), input.tools()));
+            write(span, "langfuse.observation.metadata.tools", serializer.toolDefinitions(input.tools()));
             if (input.tools() != null) {
                 String toolNames = String.join(",", input.tools().stream().limit(MAX_TOOL_CALLS)
                         .map(tool -> tool.getName()).toList());

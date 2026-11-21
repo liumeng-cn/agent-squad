@@ -31,16 +31,17 @@ agentsquad:
     identity-key: '05584e456dbd98d1fdbeed4972133d1d12b7d5576cfef4a4e595fad2d03b0e6f'
   v2:
     observation:
-      enabled: ${AGENTSQUAD_V2_OBSERVATION_ENABLED:false}
-      http-enabled: ${AGENTSQUAD_V2_OBSERVATION_HTTP_ENABLED:false}
-      capture-content: ${AGENTSQUAD_V2_OBSERVATION_CAPTURE_CONTENT:false}
-      max-content-chars: ${AGENTSQUAD_V2_OBSERVATION_MAX_CONTENT_CHARS:4096}
-      endpoint: ${LANGFUSE_OTLP_ENDPOINT:http://127.0.0.1:13000/api/public/otel/v1/traces}
+      enabled: true
+      http-enabled: true
+      capture-content: true
+      max-content-chars: 32768
+      max-tool-content-chars: 2048
+      endpoint: 'http://127.0.0.1:13000/api/public/otel/v1/traces'
       public-key: ${LANGFUSE_PUBLIC_KEY:}
       secret-key: ${LANGFUSE_SECRET_KEY:}
-      ingestion-version: ${LANGFUSE_INGESTION_VERSION:4}
-      environment: ${APP_ENV:local}
-      service-version: ${APP_VERSION:}
+      ingestion-version: '4'
+      environment: local
+      service-version: ''
 
     agent:
       enabled: true

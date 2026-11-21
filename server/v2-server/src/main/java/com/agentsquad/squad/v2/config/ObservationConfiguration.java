@@ -2,6 +2,7 @@ package com.agentsquad.squad.v2.config;
 
 import com.agentsquad.squad.v2.agent.tracing.FrameworkTracingMiddleware;
 import com.agentsquad.squad.v2.agent.tracing.HttpTracingFilter;
+import com.agentsquad.squad.v2.agent.tracing.LangfuseTraceSerializer;
 import com.agentsquad.squad.v2.agent.tracing.ModelIoTracingMiddleware;
 import com.agentsquad.squad.v2.agent.tracing.ReasoningTracingMiddleware;
 import com.agentsquad.squad.v2.agent.tracing.ToolCallTracingMiddleware;
@@ -10,7 +11,6 @@ import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
-import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.SpanLimits;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
@@ -69,7 +69,7 @@ public class ObservationConfiguration {
                 .setMaxExportBatchSize(256)
                 .setScheduleDelay(Duration.ofSeconds(1))
                 .build();
-        var resource = Resource.getDefault().toBuilder()
+        var resource = io.opentelemetry.sdk.resources.Resource.getDefault().toBuilder()
                 .put(AttributeKey.stringKey("service.name"), "agent-squad-v2");
         if (properties.getEnvironment() != null && !properties.getEnvironment().isBlank()) {
             resource.put(AttributeKey.stringKey("deployment.environment.name"), properties.getEnvironment());
@@ -94,23 +94,25 @@ public class ObservationConfiguration {
     @Bean
     public ModelIoTracingMiddleware modelIoTracingMiddleware() {
         return new ModelIoTracingMiddleware(properties.isCaptureContent(),
-                properties.getMaxContentChars());
+                properties.getMaxContentChars(), properties.getMaxToolContentChars());
     }
 
     @Bean
     public ToolCallTracingMiddleware toolCallTracingMiddleware() {
         return new ToolCallTracingMiddleware(properties.isCaptureContent(),
-                properties.getMaxContentChars());
+                properties.getMaxContentChars(), properties.getMaxToolContentChars());
     }
 
     @Bean
     public FrameworkTracingMiddleware frameworkTracingMiddleware() {
-        return new FrameworkTracingMiddleware();
+        return new FrameworkTracingMiddleware(properties.isCaptureContent(), properties.getMaxContentChars(),
+                properties.getMaxToolContentChars());
     }
 
     @Bean
     public ReasoningTracingMiddleware reasoningTracingMiddleware(OpenTelemetrySdk sdk) {
-        return new ReasoningTracingMiddleware(sdk.getTracer("com.agentsquad.squad.v2.agent"));
+        return new ReasoningTracingMiddleware(sdk.getTracer("com.agentsquad.squad.v2.agent"),
+                properties.isCaptureContent(), properties.getMaxContentChars(), properties.getMaxToolContentChars());
     }
 
     /**
@@ -120,5 +122,12 @@ public class ObservationConfiguration {
     @ConditionalOnProperty(prefix = "agentsquad.v2.observation", name = "http-enabled", havingValue = "true")
     public HttpTracingFilter httpTracingFilter() {
         return new HttpTracingFilter();
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix = "agentsquad.v2.observation", name = "http-enabled", havingValue = "true")
+    public LangfuseTraceSerializer httpTraceSerializer() {
+        return new LangfuseTraceSerializer(properties.isCaptureContent(), properties.getMaxContentChars(),
+                properties.getMaxContentChars());
     }
 }

@@ -18,7 +18,7 @@
 | 官方 `OtelTracingMiddleware` | `onAgent` / `onModelCall` / `onActing` | 生成 `invoke_agent`、`chat`、`execute_tool` Span |
 | `FrameworkTracingMiddleware` | 同上 | 为各级 Span 关联用户、原生 Session、Run ID |
 | `ModelIoTracingMiddleware` | `onModelCall` | 模型真实输入/输出、工具选择与 token 用量 |
-| `ToolCallTracingMiddleware` | `onActing` | 工具批次名册、审批/执行状态与结果大小 |
+| `ToolCallTracingMiddleware` | `onActing` | 工具名册、执行状态及脱敏限长的参数和结果 |
 | `ReasoningTracingMiddleware` | `onAgent` / `onReasoning` | 创建每轮 `reasoning` Span，并使模型调用成为其子节点 |
 | `HttpTracingFilter` | Servlet Filter | 可选的 HTTP 接收 Span，独立于后台运行 |
 
@@ -53,8 +53,9 @@ export AGENTSQUAD_V2_OBSERVATION_CAPTURE_CONTENT=true
 export AGENTSQUAD_V2_OBSERVATION_MAX_CONTENT_CHARS=4096
 ```
 
-即便开启，工具参数和结果也只记录名称、状态、字段数量或长度；不会导出模型内部推理、
-完整 Prompt、GenerateOptions 扩展参数、密钥或工具原始结果。正文按上限截断；
+开启后，工具参数和结果按 `max-tool-content-chars` 展示脱敏预览，默认上限 2048 字符，
+超限保留前缀和截断标记；关闭时只保留名称、结构、状态和大小。
+系统提示与工具定义正文用占位替换，不导出模型内部推理、GenerateOptions 扩展参数或密钥。正文按上限截断；
 仍须自行确认采集行为符合用户授权、数据保护和保留策略。
 
 HTTP 追踪默认关闭。如尚未通过 OTel Java Agent 自动埋点，且需要看请求处理时间，可开启：
@@ -63,22 +64,38 @@ HTTP 追踪默认关闭。如尚未通过 OTel Java Agent 自动埋点，且需�
 export AGENTSQUAD_V2_OBSERVATION_HTTP_ENABLED=true
 ```
 
-`HttpTracingFilter` 从 `traceparent` 提取 W3C 父上下文，记录请求方法、路由模板、状态码，
-不采集请求正文或 Cookie。SSE / `AgentSession.submit()` 已进入异步运行阶段，HTTP Span
+`HttpTracingFilter` 仅追踪 `POST /api/v2/chat/messages`，会话目录、查询、SSE 及其他接口均不记录 HTTP Span。
+从 `traceparent` 提取 W3C 父上下文，记录请求方法、路由模板、状态码，
+开启正文采集时，在 MVC 解析入参和组装返回值后，记录脱敏、限长的 JSON 出入参；
+不采集 Cookie 和请求头，不重复读取或缓存 Servlet 数据流，不改变原有 `ApiResult` 响应。
+HTTP 的输出是提交受理回执，最终模型回复查看同一 trace 下的 Agent 节点。
+`AgentSession.submit()` 已进入异步运行阶段，HTTP Span
 不应覆盖整个后台 Agent 生命周期；后续跨请求和后台运行的关联应使用业务 commandId/turnId
 以及持久化 Trace Link，不伪造一个长时间 HTTP 父 Span。
 
 ## Langfuse 内的调用树
 
 - `invoke_agent`：一次 Agent 调用，带 `langfuse.trace.name`、用户与原生 Session ID。
+  开启正文采集后展示本轮用户输入与最终公开回复；子 Agent 继承主会话展示归属，
+  自身会话另存为 `langfuse.observation.metadata.native_session_id`。
 - `reasoning`：每轮 ReAct 推理有独立 Span，携带 `agentsquad.reasoning.round`，
-  它下方是该轮模型 `chat` Span。
+  它下方是该轮模型 `chat` Span。Preview 展示本轮消息、工具结构与公开输出或工具选择，
+  不将模型内部思考文本作为输入输出展示。
 - `chat`：模型名、允许的生成参数、首字时间、工具名、模型工具调用名册和 token 用量。
   思考过程只保留开始/结束与字符数量，不记录文本。
-- `execute_tool`：官方工具批次 Span。输入仅列工具名称和 ID；输出展示每个工具的
-  `pending`、`running`、`denied`、`awaiting_confirmation` 或 SDK 返回的结束状态及输出字符数。
+- 模型和 reasoning 的 Input 分为 `messages`、`tools`、`tool_count`。
+  System Prompt 保留角色、原长度和 `system:<指纹>`，正文替换为占位；
+  普通工具与 MCP 工具统一保留模型可见名称、`tool:<指纹>`、参数类型和必填字段，
+  描述、默认值和枚举正文省略。指纹用于识别定义是否变化，不用于还原内容。
+  工具调用参数保留结构与类型，开启正文采集后附加脱敏值和结果文本预览。
+  参数与结果采用独立的 2048 字符上限；敏感字段替换为占位，超长保留可读前缀。
+  最近 12 条交互保留用户和助手公开文本。超限时保留可读预览及原长度，
+  不再将整份输入替换为只有字符数的摘要。本地配置的属性上限为 32768 字符。
+- `execute_tool`：官方工具批次 Span。输入列工具名称、ID、参数结构与脱敏值；输出展示每个工具的
+  `pending`、`running`、`denied`、`awaiting_confirmation` 或 SDK 返回的结束状态、输出字符数及限长文本。
 - 上述 Span 全部携带 `langfuse.user.id` 和 `langfuse.session.id`，
-  可与 V2 产品对话目录中的用户和原生 Session 对照。
+  以及统一的 `langfuse.trace.name`，可与 V2 产品对话目录中的用户和主 Session 对照。
+  HTTP 节点记录提交消息的 JSON 入参和受理回执，Preview 不代表后台 Agent 的最终回复；查看最终结果应选择 Agent 节点。
 
 SDK 原生生成的 `gen_ai.usage.*` 仍保留；额外补充 Langfuse 的
 `langfuse.observation.usage_details`，缓存 token 不重复叠加到输入 token 总数。

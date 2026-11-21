@@ -16,6 +16,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerMapping;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Squad V2 Servlet HTTP 入口追踪
@@ -24,13 +26,18 @@ import java.io.IOException;
  * 已使用 OTel Java Agent 的环境应关闭本过滤器，避免重复 HTTP Span。
  */
 public class HttpTracingFilter extends OncePerRequestFilter {
+    public static final String SPAN_ATTRIBUTE = HttpTracingFilter.class.getName() + ".span";
+    public static final String OUTPUT_CAPTURED_ATTRIBUTE = HttpTracingFilter.class.getName() + ".outputCaptured";
 
     @Resource
     private OpenTelemetrySdk observationSdk;
 
+    @Resource
+    private LangfuseTraceSerializer httpTraceSerializer;
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !request.getRequestURI().startsWith("/api/v2/");
+        return !"POST".equals(request.getMethod()) || !"/api/v2/chat/messages".equals(request.getRequestURI());
     }
 
     @Override
@@ -45,6 +52,8 @@ public class HttpTracingFilter extends OncePerRequestFilter {
                 .setAttribute("http.request.method", request.getMethod())
                 .startSpan();
 
+        request.setAttribute(SPAN_ATTRIBUTE, span);
+        recordInput(request, span);
         try (Scope ignored = span.makeCurrent()) {
             filterChain.doFilter(request, response);
             Object route = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
@@ -60,7 +69,35 @@ public class HttpTracingFilter extends OncePerRequestFilter {
             span.setStatus(StatusCode.ERROR);
             throw error;
         } finally {
+            recordResponseSummary(request, response, span);
             span.end();
+        }
+    }
+
+    private void recordInput(HttpServletRequest request, Span span) {
+        Map<String, Object> input = new LinkedHashMap<>();
+        input.put("method", request.getMethod());
+        input.put("path", request.getRequestURI());
+        input.put("query", request.getParameterMap());
+        String payload = httpTraceSerializer.httpPayload(input);
+        if (payload != null) {
+            span.setAttribute("langfuse.observation.input", payload);
+        }
+    }
+
+    /**
+     * JSON 正文由 MVC 采集器记录；未生成正文时保留状态摘要，不虚构响应内容。
+     */
+    private void recordResponseSummary(HttpServletRequest request, HttpServletResponse response, Span span) {
+        if (Boolean.TRUE.equals(request.getAttribute(OUTPUT_CAPTURED_ATTRIBUTE))) {
+            return;
+        }
+        Map<String, Object> output = new LinkedHashMap<>();
+        output.put("status", response.getStatus());
+        output.put("bodyCaptured", false);
+        String payload = httpTraceSerializer.httpPayload(output);
+        if (payload != null) {
+            span.setAttribute("langfuse.observation.output", payload);
         }
     }
 }

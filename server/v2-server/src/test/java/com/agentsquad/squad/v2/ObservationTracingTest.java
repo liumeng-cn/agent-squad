@@ -1,7 +1,9 @@
 package com.agentsquad.squad.v2;
 
+import com.agentsquad.squad.v2.agent.middleware.LangfuseEnrichmentMiddleware;
 import com.agentsquad.squad.v2.agent.tracing.FrameworkTracingMiddleware;
 import com.agentsquad.squad.v2.agent.tracing.HttpTracingFilter;
+import com.agentsquad.squad.v2.agent.tracing.HttpTracingBodyAdvice;
 import com.agentsquad.squad.v2.agent.tracing.LangfuseTraceSerializer;
 import com.agentsquad.squad.v2.agent.tracing.ModelIoTracingMiddleware;
 import com.agentsquad.squad.v2.agent.tracing.ReasoningTracingMiddleware;
@@ -9,6 +11,12 @@ import com.agentsquad.squad.v2.agent.tracing.ToolCallTracingMiddleware;
 import com.agentsquad.squad.v2.agent.tool.EventTestTool;
 import com.agentsquad.squad.v2.config.ObservationConfiguration;
 import com.agentsquad.squad.v2.config.properties.ObservationProperties;
+import com.agentsquad.squad.v2.controller.ChatController;
+import com.agentsquad.squad.v2.service.ChatEventStreamService;
+import com.agentsquad.squad.v2.service.ChatService;
+import com.agentsquad.squad.v2.vo.ChatReceiptVO;
+import com.agentsquad.squad.v2.vo.ChatSessionVO;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.message.Msg;
@@ -19,6 +27,7 @@ import io.agentscope.core.model.ChatResponse;
 import io.agentscope.core.model.ChatUsage;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.model.Model;
+import io.agentscope.core.model.ToolSchema;
 import io.agentscope.core.tool.Toolkit;
 import io.agentscope.harness.agent.HarnessAgent;
 import io.opentelemetry.api.common.AttributeKey;
@@ -31,6 +40,10 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.test.util.ReflectionTestUtils;
 import reactor.core.publisher.Flux;
 
@@ -50,6 +63,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * Langfuse 追踪验收
@@ -87,8 +106,8 @@ class ObservationTracingTest {
                     .middleware(new io.agentscope.core.tracing.OtelTracingMiddleware(sdk))
                     .middleware(new ModelIoTracingMiddleware(true, 4096))
                     .middleware(new ToolCallTracingMiddleware(true, 4096))
-                    .middleware(new FrameworkTracingMiddleware())
-                    .middleware(new ReasoningTracingMiddleware(sdk.getTracer("trace-test")))
+                    .middleware(new FrameworkTracingMiddleware(true, 4096))
+                    .middleware(new ReasoningTracingMiddleware(sdk.getTracer("trace-test"), true, 4096))
                     .workspace(workspace).build()) {
                 var session = agent.session(RuntimeContext.builder().userId("user-1").sessionId("session-1").build());
                 var task = session.submit("request-1", "调用测试工具");
@@ -97,6 +116,8 @@ class ObservationTracingTest {
             var spans = exporter.getFinishedSpanItems();
             assertThat(spans).hasSizeGreaterThanOrEqualTo(6);
             assertThat(spans).allSatisfy(span -> {
+                assertThat(span.getAttributes().get(AttributeKey.stringKey("langfuse.trace.name")))
+                        .isEqualTo("trace-test");
                 assertThat(span.getAttributes().get(AttributeKey.stringKey("langfuse.user.id"))).isEqualTo("user-1");
                 assertThat(span.getAttributes().get(AttributeKey.stringKey("langfuse.session.id")))
                         .isEqualTo("session-1");
@@ -116,7 +137,13 @@ class ObservationTracingTest {
             assertThat(spans).anyMatch(span -> "chat".equals(span.getAttributes()
                     .get(AttributeKey.stringKey("gen_ai.operation.name"))));
             assertThat(spans).filteredOn(span -> "reasoning".equals(span.getAttributes()
-                    .get(AttributeKey.stringKey("gen_ai.operation.name")))).hasSizeGreaterThanOrEqualTo(2);
+                    .get(AttributeKey.stringKey("gen_ai.operation.name")))).hasSizeGreaterThanOrEqualTo(2)
+                    .allSatisfy(span -> {
+                        assertThat(span.getAttributes().get(AttributeKey.stringKey("langfuse.observation.input")))
+                                .contains("调用测试工具");
+                        assertThat(span.getAttributes().get(AttributeKey.stringKey("langfuse.observation.output")))
+                                .isNotBlank();
+                    });
             assertThat(spans).filteredOn(span -> "chat".equals(span.getAttributes()
                     .get(AttributeKey.stringKey("gen_ai.operation.name")))).allSatisfy(span ->
                     assertThat(spans).anyMatch(parent -> parent.getSpanId().equals(span.getParentSpanId())
@@ -401,6 +428,194 @@ class ObservationTracingTest {
     }
 
     @Test
+    void keepsSystemAndMcpStructuresWithoutRepeatedContent() throws Exception {
+        var serializer = new LangfuseTraceSerializer(true, 4096);
+        var mapper = new ObjectMapper();
+        Msg system = Msg.builder().role(MsgRole.SYSTEM).textContent("重复的系统正文".repeat(1000)).build();
+        Msg user = Msg.builder().role(MsgRole.USER).textContent("请查询库存").build();
+        String messages = serializer.messages(List.of(system, user));
+        var parsed = mapper.readTree(messages);
+        assertThat(parsed.size()).isEqualTo(2);
+        assertThat(parsed.get(0).path("reference").asText()).startsWith("system:");
+        assertThat(parsed.get(0).path("characters").asInt()).isEqualTo(7000);
+        assertThat(messages).contains("请查询库存", "system prompt omitted").doesNotContain("重复的系统正文");
+        assertThat(serializer.messages(List.of(system, user))).isEqualTo(messages);
+        Msg changed = Msg.builder().role(MsgRole.SYSTEM).textContent("另一版本系统正文").build();
+        assertThat(mapper.readTree(serializer.messages(List.of(changed, user))).get(0).path("reference"))
+                .isNotEqualTo(parsed.get(0).path("reference"));
+
+        var tool = ToolSchema.builder().name("mcp_inventory_search")
+                .description("重复的工具说明".repeat(1000))
+                .parameters(Map.of("type", "object", "properties", Map.of("vin", Map.of(
+                        "type", "string", "description", "字段说明正文", "default", "不应输出的默认值")),
+                        "required", List.of("vin")))
+                .build();
+        String definitions = serializer.toolDefinitions(List.of(tool));
+        assertThat(definitions).contains("mcp_inventory_search", "tool:", "properties", "vin", "string", "required")
+                .doesNotContain("重复的工具说明", "字段说明正文", "不应输出的默认值");
+        var call = ToolUseBlock.builder().id("mcp-call").name(tool.getName())
+                .input(Map.of("vin", "实际车辆编号", "apiKey", "绝不能输出的密钥")).build();
+        assertThat(serializer.toolCalls(List.of(call))).contains("vin", "string", "实际车辆编号")
+                .doesNotContain("绝不能输出的密钥", "apiKey");
+    }
+
+    @Test
+    void toolPreviewsRedactSecretsAndRespectIndependentLimit() throws Exception {
+        var serializer = new LangfuseTraceSerializer(true, 32768, 256);
+        String result = serializer.toolResultPreview("password=synthetic-secret, Authorization: Bearer synthetic-token, "
+                + "工具正常返回".repeat(1000));
+        assertThat(result).contains("<redacted>").doesNotContain("synthetic-secret", "synthetic-token");
+        assertThat(result.length()).isLessThanOrEqualTo(129);
+
+        String output = serializer.toolResults(List.of(Map.of("name", "mcp_inventory_search", "status", "completed",
+                "text", result, "output_chars", 6000)));
+        assertThat(output.length()).isLessThanOrEqualTo(256);
+        new ObjectMapper().readTree(output);
+        var call = ToolUseBlock.builder().id("tool-call").name("mcp_inventory_search")
+                .input(Map.of("query", "查询库存".repeat(1000), "nested", Map.of("password", "nested-secret"))).build();
+        String input = serializer.toolCalls(List.of(call));
+        assertThat(input.length()).isLessThanOrEqualTo(256);
+        assertThat(input).doesNotContain("nested-secret");
+        new ObjectMapper().readTree(input);
+    }
+
+    @Test
+    void httpFilterSkipsRequestsOutsideChat() throws Exception {
+        var exporter = InMemorySpanExporter.create();
+        var provider = SdkTracerProvider.builder()
+                .addSpanProcessor(SimpleSpanProcessor.create(exporter)).build();
+        try (var sdk = OpenTelemetrySdk.builder().setTracerProvider(provider).build()) {
+            var filter = new HttpTracingFilter();
+            ReflectionTestUtils.setField(filter, "observationSdk", sdk);
+            ReflectionTestUtils.setField(filter, "httpTraceSerializer", new LangfuseTraceSerializer(false, 4096));
+            for (String path : List.of("/api/v2/agents", "/api/v2/auth/login", "/actuator/health", "/api/v2/chatty")) {
+                filter.doFilter(new MockHttpServletRequest("GET", path), new MockHttpServletResponse(), new MockFilterChain());
+            }
+            assertThat(exporter.getFinishedSpanItems()).isEmpty();
+            filter.doFilter(new MockHttpServletRequest("GET", "/api/v2/chat/convs/one/session"),
+                    new MockHttpServletResponse(), new MockFilterChain());
+            assertThat(exporter.getFinishedSpanItems()).isEmpty();
+            filter.doFilter(new MockHttpServletRequest("POST", "/api/v2/chat/messages"),
+                    new MockHttpServletResponse(), new MockFilterChain());
+            assertThat(exporter.getFinishedSpanItems()).hasSize(1);
+        }
+    }
+
+    @Test
+    void oversizedContentKeepsReadablePreviewWithinJsonLimit() throws Exception {
+        var serializer = new LangfuseTraceSerializer(true, 256);
+        String encoded = serializer.json(Map.of("text", "可读内容\"\\😀".repeat(1000)));
+        assertThat(encoded.length()).isLessThanOrEqualTo(256);
+        var value = new ObjectMapper().readTree(encoded);
+        assertThat(value.path("truncated").asBoolean()).isTrue();
+        assertThat(value.path("characters").asInt()).isGreaterThan(256);
+        assertThat(value.path("preview").asText()).contains("可读内容");
+    }
+
+    @Test
+    void httpJsonBodiesAreCapturedWithoutChangingTheWireResponse() throws Exception {
+        var exporter = InMemorySpanExporter.create();
+        var provider = SdkTracerProvider.builder()
+                .addSpanProcessor(SimpleSpanProcessor.create(exporter)).build();
+        try (var sdk = OpenTelemetrySdk.builder().setTracerProvider(provider).build()) {
+            var mvc = httpMvc(sdk, new LangfuseTraceSerializer(true, 4096, 4096));
+            mvc.perform(post("/api/v2/chat/messages").contentType(MediaType.APPLICATION_JSON)
+                            .param("token", "query-secret").header("Cookie", "session=private-cookie")
+                            .content("{\"convId\":\"http-test\",\"interactionId\":\"request-1\",\"message\":\"验证 password=body-secret\"}"))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.inputId").value("trace-command"));
+
+            assertThat(exporter.getFinishedSpanItems()).singleElement().satisfies(span -> {
+                String input = span.getAttributes().get(AttributeKey.stringKey("langfuse.observation.input"));
+                String output = span.getAttributes().get(AttributeKey.stringKey("langfuse.observation.output"));
+                assertThat(input).contains("http-test", "request-1", "<redacted>")
+                        .doesNotContain("query-secret", "body-secret", "private-cookie");
+                assertThat(output).contains("trace-command", "code", "status");
+            });
+        }
+    }
+
+    @Test
+    void httpValidationErrorBodyIsCaptured() throws Exception {
+        var exporter = InMemorySpanExporter.create();
+        var provider = SdkTracerProvider.builder()
+                .addSpanProcessor(SimpleSpanProcessor.create(exporter)).build();
+        try (var sdk = OpenTelemetrySdk.builder().setTracerProvider(provider).build()) {
+            httpMvc(sdk, new LangfuseTraceSerializer(true, 4096, 4096))
+                    .perform(post("/api/v2/chat/messages").contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"convId\":\"\",\"interactionId\":\"request-1\",\"message\":\"验证\"}"))
+                    .andExpect(jsonPath("$.code").value(400));
+            assertThat(exporter.getFinishedSpanItems()).singleElement().satisfies(span -> {
+                String output = span.getAttributes().get(AttributeKey.stringKey("langfuse.observation.output"));
+                assertThat(output).contains("\"code\":400", "\"msg\"");
+            });
+        }
+    }
+
+    @Test
+    void httpContentCanBeDisabledAndOversizedBodiesKeepPreview() throws Exception {
+        var limited = new LangfuseTraceSerializer(true, 256, 256);
+        String preview = limited.httpPayload(Map.of("first", "正文".repeat(500), "second", "正文".repeat(500),
+                "third", "正文".repeat(500), "thinking", "内部推理不能采集"));
+        assertThat(preview.length()).isLessThanOrEqualTo(256);
+        assertThat(preview).contains("truncated", "preview", "正文").doesNotContain("内部推理不能采集");
+        new ObjectMapper().readTree(preview);
+
+        var exporter = InMemorySpanExporter.create();
+        var provider = SdkTracerProvider.builder()
+                .addSpanProcessor(SimpleSpanProcessor.create(exporter)).build();
+        try (var sdk = OpenTelemetrySdk.builder().setTracerProvider(provider).build()) {
+            httpMvc(sdk, new LangfuseTraceSerializer(false, 4096))
+                    .perform(post("/api/v2/chat/messages").contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"convId\":\"http-test\",\"interactionId\":\"request-1\",\"message\":\"验证\"}"))
+                    .andExpect(status().isOk());
+            assertThat(exporter.getFinishedSpanItems()).singleElement().satisfies(span -> {
+                assertThat(span.getAttributes().get(AttributeKey.stringKey("langfuse.observation.input"))).isNull();
+                assertThat(span.getAttributes().get(AttributeKey.stringKey("langfuse.observation.output"))).isNull();
+            });
+        }
+    }
+
+    @Test
+    void httpCaptureDoesNotBufferSseEvents() throws Exception {
+        var exporter = InMemorySpanExporter.create();
+        var provider = SdkTracerProvider.builder()
+                .addSpanProcessor(SimpleSpanProcessor.create(exporter)).build();
+        try (var sdk = OpenTelemetrySdk.builder().setTracerProvider(provider).build()) {
+            var mvc = httpMvc(sdk, new LangfuseTraceSerializer(true, 4096, 4096));
+            var response = mvc.perform(get("/api/v2/chat/convs/http-test/events").accept(MediaType.TEXT_EVENT_STREAM))
+                    .andExpect(request().asyncStarted()).andReturn();
+            response.getAsyncResult(2000);
+            var completed = mvc.perform(asyncDispatch(response)).andExpect(status().isOk()).andReturn();
+            assertThat(completed.getResponse().getContentAsString()).contains("event:session", "data:");
+            assertThat(exporter.getFinishedSpanItems()).isEmpty();
+        }
+    }
+
+    private MockMvc httpMvc(OpenTelemetrySdk sdk, LangfuseTraceSerializer serializer) {
+        var controller = new ChatController();
+        var service = mock(ChatService.class);
+        var receipt = new ChatReceiptVO();
+        receipt.setConvId("http-test");
+        receipt.setInputId("trace-command");
+        when(service.send(any())).thenReturn(receipt);
+        ReflectionTestUtils.setField(controller, "chatService", service);
+
+        var events = mock(ChatEventStreamService.class);
+        when(events.subscribe(any())).thenReturn(Flux.just(ServerSentEvent.<ChatSessionVO>builder()
+                .event("session").data(new ChatSessionVO()).build()));
+        ReflectionTestUtils.setField(controller, "eventService", events);
+        var advice = new HttpTracingBodyAdvice();
+        ReflectionTestUtils.setField(advice, "httpTraceSerializer", serializer);
+        var filter = new HttpTracingFilter();
+        ReflectionTestUtils.setField(filter, "observationSdk", sdk);
+        ReflectionTestUtils.setField(filter, "httpTraceSerializer", serializer);
+        return MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(advice, new com.agentsquad.squad.common.web.GlobalExceptionHandler())
+                .addFilters(filter).build();
+    }
+
+    @Test
     void httpFilterAcceptsW3cParentWithoutExtendingIntoAgentExecution() throws Exception {
         var exporter = InMemorySpanExporter.create();
         var provider = SdkTracerProvider.builder()
@@ -408,6 +623,7 @@ class ObservationTracingTest {
         try (var sdk = OpenTelemetrySdk.builder().setTracerProvider(provider).build()) {
             var filter = new HttpTracingFilter();
             ReflectionTestUtils.setField(filter, "observationSdk", sdk);
+            ReflectionTestUtils.setField(filter, "httpTraceSerializer", new LangfuseTraceSerializer(false, 4096));
             var request = new MockHttpServletRequest("POST", "/api/v2/chat/messages");
             request.addHeader("traceparent",
                     "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01");
