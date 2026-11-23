@@ -1,6 +1,8 @@
 package com.agentsquad.squad.v2.po;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -54,6 +56,7 @@ public class AgentVersionSubagentPO {
     /**
      * 更新时间
      */
+    @TableField(insertStrategy = FieldStrategy.NEVER)
     private Instant lastUpdateTime;
 
 }

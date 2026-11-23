@@ -1,21 +1,26 @@
 package com.agentsquad.squad.v2.po;
 
-import com.agentsquad.squad.v2.enums.AgentVersionStatus;
+import com.agentsquad.squad.v2.bo.KeyValueBO;
+import com.agentsquad.squad.v2.config.JsonbTypeHandler;
 import com.agentsquad.squad.v2.enums.McpTransport;
+import com.agentsquad.squad.v2.enums.VersionStatus;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.time.Instant;
+import java.util.List;
 
 /**
- * MCP连接版本
+ * MCP 连接版本
  * <p>
- * 保存可独立发布的工具或连接配置。
+ * 映射 sq_mcp_server_version，保存一个可独立发布的连接配置；凭据只保存引用名。
  */
 @Data
-@TableName(value = "sq_mcp_server_version", schema = "squad_chat")
+@TableName(value = "sq_mcp_server_version", schema = "squad_chat", autoResultMap = true)
 public class McpServerVersionPO {
     /**
      * 存储主键
@@ -29,19 +34,19 @@ public class McpServerVersionPO {
     private Long mcpServerVersionId;
 
     /**
-     * 资源业务ID
+     * 服务业务ID
      */
     private Long mcpServerId;
 
     /**
-     * 顺序版本号
+     * 版本号
      */
     private Integer versionNo;
 
     /**
      * 发布状态
      */
-    private AgentVersionStatus status;
+    private VersionStatus status;
 
     /**
      * 版本修订号
@@ -54,7 +59,7 @@ public class McpServerVersionPO {
     private Instant publishedAt;
 
     /**
-     * 连接传输方式
+     * 传输方式
      */
     private McpTransport transportType;
 
@@ -64,9 +69,20 @@ public class McpServerVersionPO {
     private String endpoint;
 
     /**
-     * 连接凭据引用
+     * 凭据引用名
      */
     private String credentialRef;
+
+    /**
+     * 附加请求头
+     */
+    @TableField(typeHandler = JsonbTypeHandler.class)
+    private List<KeyValueBO> requestHeaders;
+
+    /**
+     * 连接与调用超时毫秒数
+     */
+    private Integer timeoutMs;
 
     /**
      * 创建人ID
@@ -74,7 +90,13 @@ public class McpServerVersionPO {
     private Long creatorId;
 
     /**
-     * 更新人ID
+     * 最后更新人ID
      */
     private Long lastUpdaterId;
+
+    /**
+     * 最后更新时间，由数据库维护
+     */
+    @TableField(insertStrategy = FieldStrategy.NEVER)
+    private Instant lastUpdateTime;
 }

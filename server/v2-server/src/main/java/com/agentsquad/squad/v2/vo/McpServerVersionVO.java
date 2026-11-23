@@ -1,15 +1,16 @@
 package com.agentsquad.squad.v2.vo;
 
-import com.agentsquad.squad.v2.enums.AgentVersionStatus;
 import com.agentsquad.squad.v2.enums.McpTransport;
+import com.agentsquad.squad.v2.enums.VersionStatus;
 import lombok.Data;
 
 import java.time.Instant;
+import java.util.List;
 
 /**
- * MCP连接版本视图
+ * MCP 服务版本视图
  * <p>
- * 用于管理端查看版本配置和发布状态。
+ * 返回一个连接版本的完整配置，请求头保留占位符，不包含凭据值。
  */
 @Data
 public class McpServerVersionVO {
@@ -19,19 +20,19 @@ public class McpServerVersionVO {
     private String mcpServerVersionId;
 
     /**
-     * 资源业务ID
+     * 服务业务ID
      */
     private String mcpServerId;
 
     /**
-     * 顺序版本号
+     * 版本号
      */
     private Integer versionNo;
 
     /**
      * 发布状态
      */
-    private AgentVersionStatus status;
+    private VersionStatus status;
 
     /**
      * 版本修订号
@@ -44,7 +45,12 @@ public class McpServerVersionVO {
     private Instant publishedAt;
 
     /**
-     * 连接传输方式
+     * 最后更新时间
+     */
+    private Instant lastUpdateTime;
+
+    /**
+     * 传输方式
      */
     private McpTransport transportType;
 
@@ -54,7 +60,17 @@ public class McpServerVersionVO {
     private String endpoint;
 
     /**
-     * 连接凭据引用
+     * 凭据引用名
      */
     private String credentialRef;
+
+    /**
+     * 附加请求头
+     */
+    private List<KeyValueVO> headers;
+
+    /**
+     * 连接与调用超时毫秒数
+     */
+    private Integer timeoutMs;
 }

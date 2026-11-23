@@ -1,6 +1,76 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.v2.mapper.AgentMapper">
+    <!-- Agent 摘要：职责描述与绑定数量取当前版本，未发布时取草稿；生效引用为启用主 Agent 的当前版本委派 -->
+    <select id="selectSummaries" resultType="com.agentsquad.squad.v2.bo.AgentSummaryBO">
+        SELECT a.agent_id,
+               a.agent_code,
+               a.agent_name,
+               a.agent_type,
+               a.status,
+               a.revision,
+               COALESCE(shown.description, '')  AS description,
+               a.current_version_id,
+               current_version.version_no       AS current_version_no,
+               draft.agent_version_id           AS draft_version_id,
+               (
+                   SELECT COUNT(*)
+                   FROM squad_chat.sq_agent_version_tool binding
+                   WHERE binding.agent_version_id = shown.agent_version_id
+               )                                AS tool_count,
+               (
+                   SELECT COUNT(*)
+                   FROM squad_chat.sq_agent_version_subagent delegation
+                   WHERE delegation.master_version_id = shown.agent_version_id
+               )                                AS subagent_count,
+               (
+                   SELECT COUNT(DISTINCT master.agent_id)
+                   FROM squad_chat.sq_agent_version child
+                   JOIN squad_chat.sq_agent_version_subagent delegation
+                     ON delegation.subagent_version_id = child.agent_version_id
+                   JOIN squad_chat.sq_agent master
+                     ON master.current_version_id = delegation.master_version_id
+                   WHERE child.agent_id = a.agent_id
+                     AND master.status = 'ENABLED'
+               )                                AS usage_count,
+               a.last_update_time
+        FROM squad_chat.sq_agent a
+        LEFT JOIN squad_chat.sq_agent_version current_version
+          ON current_version.agent_version_id = a.current_version_id
+        LEFT JOIN squad_chat.sq_agent_version draft
+          ON draft.agent_id = a.agent_id
+         AND draft.status = 'DRAFT'
+        LEFT JOIN squad_chat.sq_agent_version shown
+          ON shown.agent_version_id = COALESCE(current_version.agent_version_id, draft.agent_version_id)
+        <where>
+            <if test="agentId != null">
+                a.agent_id = #{agentId}
+            </if>
+        </where>
+        ORDER BY a.last_update_time DESC, a.id DESC
+    </select>
+
+    <!-- 委派该子 Agent 任一版本的主 Agent 版本；启用主 Agent 的当前版本为生效引用 -->
+    <select id="selectUsages" resultType="com.agentsquad.squad.v2.bo.ConfigUsageBO">
+        SELECT master.agent_id    AS owner_id,
+               master.agent_code  AS owner_code,
+               master.agent_name  AS owner_name,
+               master.status      AS owner_status,
+               mv.version_no,
+               mv.status          AS version_status,
+               child.version_no   AS referenced_version_no,
+               (master.current_version_id = mv.agent_version_id AND master.status = 'ENABLED') AS active
+        FROM squad_chat.sq_agent_version child
+        JOIN squad_chat.sq_agent_version_subagent delegation
+          ON delegation.subagent_version_id = child.agent_version_id
+        JOIN squad_chat.sq_agent_version mv
+          ON mv.agent_version_id = delegation.master_version_id
+        JOIN squad_chat.sq_agent master
+          ON master.agent_id = mv.agent_id
+        WHERE child.agent_id = #{agentId}
+        ORDER BY active DESC, master.agent_code, mv.version_no DESC
+    </select>
+
     <update id="switchVersion">
         UPDATE squad_chat.sq_agent
         SET current_version_id = #{currentVersionId},
@@ -8,7 +78,46 @@
             last_updater_id    = #{lastUpdaterId},
             last_update_time   = CURRENT_TIMESTAMP
         WHERE agent_id = #{agentId}
-          AND status = 'ENABLED'
           AND revision = #{revision}
+    </update>
+
+    <update id="updateProfile">
+        UPDATE squad_chat.sq_agent
+        SET agent_name       = #{agentName},
+            revision         = revision + 1,
+            last_updater_id  = #{lastUpdaterId},
+            last_update_time = CURRENT_TIMESTAMP
+        WHERE agent_id = #{agentId}
+          AND revision = #{revision}
+    </update>
+
+    <!-- 停用时在同一语句复核没有启用主 Agent 的当前版本委派它 -->
+    <update id="updateStatus">
+        UPDATE squad_chat.sq_agent a
+        SET status           = #{status},
+            revision         = a.revision + 1,
+            last_updater_id  = #{lastUpdaterId},
+            last_update_time = CURRENT_TIMESTAMP
+        WHERE a.agent_id = #{agentId}
+          AND a.revision = #{revision}
+          <if test="status.name() == 'DISABLED'">
+          AND NOT EXISTS (
+              SELECT 1
+              FROM squad_chat.sq_agent_version child
+              JOIN squad_chat.sq_agent_version_subagent delegation
+                ON delegation.subagent_version_id = child.agent_version_id
+              JOIN squad_chat.sq_agent master
+                ON master.current_version_id = delegation.master_version_id
+              WHERE child.agent_id = a.agent_id
+                AND master.status = 'ENABLED'
+          )
+          </if>
+    </update>
+
+    <update id="confirmEnabled">
+        UPDATE squad_chat.sq_agent
+        SET status = status
+        WHERE agent_id = #{agentId}
+          AND status = 'ENABLED'
     </update>
 </mapper>

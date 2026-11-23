@@ -7,10 +7,141 @@
         WHERE agent_id = #{agentId}
     </select>
 
+    <!-- 版本记录；当前生效版本标记为 current -->
+    <select id="selectSummaries" resultType="com.agentsquad.squad.v2.bo.VersionSummaryBO">
+        SELECT v.agent_version_id                          AS version_id,
+               v.version_no,
+               v.status,
+               v.revision,
+               v.published_at,
+               v.last_update_time,
+               (a.current_version_id = v.agent_version_id) AS current
+        FROM squad_chat.sq_agent_version v
+        JOIN squad_chat.sq_agent a
+          ON a.agent_id = v.agent_id
+        WHERE v.agent_id = #{agentId}
+        ORDER BY v.version_no DESC
+    </select>
+
+    <!-- 工具版本及可用状态的公共列，供版本绑定与候选校验共用 -->
+    <sql id="toolBindingColumns">
+        SELECT tv.tool_version_id,
+               t.tool_id,
+               t.tool_code,
+               t.tool_name,
+               t.tool_type,
+               t.status          AS tool_status,
+               tv.exposed_name,
+               tv.description,
+               tv.version_no,
+               tv.status         AS version_status,
+               (
+                   SELECT MAX(latest.version_no)
+                   FROM squad_chat.sq_tool_version latest
+                   WHERE latest.tool_id = t.tool_id
+                     AND latest.status = 'PUBLISHED'
+               )                 AS latest_version_no,
+               mv.mcp_server_id,
+               (
+                   tv.status = 'PUBLISHED'
+                   AND t.status = 'ENABLED'
+                   AND (
+                       tv.mcp_server_version_id IS NULL
+                       OR (mv.status = 'PUBLISHED' AND m.status = 'ENABLED')
+                   )
+               )                 AS usable
+        FROM squad_chat.sq_tool_version tv
+        JOIN squad_chat.sq_tool t
+          ON t.tool_id = tv.tool_id
+        LEFT JOIN squad_chat.sq_mcp_server_version mv
+          ON mv.mcp_server_version_id = tv.mcp_server_version_id
+        LEFT JOIN squad_chat.sq_mcp_server m
+          ON m.mcp_server_id = mv.mcp_server_id
+    </sql>
+
+    <select id="selectToolBindings" resultType="com.agentsquad.squad.v2.bo.AgentToolBindingBO">
+        <include refid="toolBindingColumns"/>
+        JOIN squad_chat.sq_agent_version_tool binding
+          ON binding.tool_version_id = tv.tool_version_id
+        WHERE binding.agent_version_id = #{agentVersionId}
+        ORDER BY binding.id
+    </select>
+
+    <select id="selectToolCandidates" resultType="com.agentsquad.squad.v2.bo.AgentToolBindingBO">
+        <include refid="toolBindingColumns"/>
+        WHERE tv.tool_version_id IN
+        <foreach collection="toolVersionIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <!-- 委派目标版本及可用状态的公共列，供版本委派与候选校验共用 -->
+    <sql id="delegationColumns">
+        SELECT child.agent_version_id  AS subagent_version_id,
+               a.agent_id              AS subagent_id,
+               a.agent_code            AS subagent_code,
+               a.agent_name            AS subagent_name,
+               a.agent_type            AS subagent_type,
+               a.status                AS subagent_status,
+               child.description,
+               child.version_no,
+               child.status            AS version_status,
+               current_version.version_no AS current_version_no,
+               (
+                   child.status = 'PUBLISHED'
+                   AND a.status = 'ENABLED'
+                   AND a.agent_type = 'SUB_AGENT'
+               )                       AS usable
+        FROM squad_chat.sq_agent_version child
+        JOIN squad_chat.sq_agent a
+          ON a.agent_id = child.agent_id
+        LEFT JOIN squad_chat.sq_agent_version current_version
+          ON current_version.agent_version_id = a.current_version_id
+    </sql>
+
+    <select id="selectDelegations" resultType="com.agentsquad.squad.v2.bo.AgentDelegationBO">
+        SELECT candidate.*,
+               delegation.delegation_name,
+               delegation.delegation_description
+        FROM squad_chat.sq_agent_version_subagent delegation
+        JOIN (
+            <include refid="delegationColumns"/>
+        ) candidate
+          ON candidate.subagent_version_id = delegation.subagent_version_id
+        WHERE delegation.master_version_id = #{agentVersionId}
+        ORDER BY delegation.id
+    </select>
+
+    <select id="selectDelegationCandidates" resultType="com.agentsquad.squad.v2.bo.AgentDelegationBO">
+        <include refid="delegationColumns"/>
+        WHERE child.agent_version_id IN
+        <foreach collection="subagentVersionIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <!-- 启用子 Agent 的已发布版本 -->
+    <select id="selectSubagentOptions" resultType="com.agentsquad.squad.v2.bo.SubagentOptionBO">
+        SELECT v.agent_version_id                          AS subagent_version_id,
+               a.agent_id,
+               a.agent_code,
+               a.agent_name,
+               v.description,
+               v.version_no,
+               (a.current_version_id = v.agent_version_id) AS current
+        FROM squad_chat.sq_agent_version v
+        JOIN squad_chat.sq_agent a
+          ON a.agent_id = v.agent_id
+        WHERE v.status = 'PUBLISHED'
+          AND a.status = 'ENABLED'
+          AND a.agent_type = 'SUB_AGENT'
+        ORDER BY a.agent_code, v.version_no DESC
+    </select>
+
     <update id="updateDraft">
         UPDATE squad_chat.sq_agent_version
-        SET system_prompt    = #{systemPrompt},
-            description      = #{description},
+        SET description      = #{description},
+            system_prompt    = #{systemPrompt},
             max_iters        = #{maxIters},
             revision         = revision + 1,
             last_updater_id  = #{lastUpdaterId},
@@ -33,22 +164,4 @@
           AND status = 'DRAFT'
           AND revision = #{revision}
     </update>
-
-    <select id="enabledToolNames" resultType="string">
-        SELECT v.exposed_name
-        FROM squad_chat.sq_tool_version v
-        JOIN squad_chat.sq_tool t
-          ON t.tool_id = v.tool_id
-        LEFT JOIN squad_chat.sq_mcp_server_version mv
-          ON mv.mcp_server_version_id = v.mcp_server_version_id
-        LEFT JOIN squad_chat.sq_mcp_server m
-          ON m.mcp_server_id = mv.mcp_server_id
-        WHERE v.status = 'PUBLISHED'
-          AND t.status = 'ENABLED'
-          AND (v.mcp_server_version_id IS NULL OR (mv.status = 'PUBLISHED' AND m.status = 'ENABLED'))
-          AND v.tool_version_id IN
-          <foreach collection="versionIds" item="id" open="(" separator="," close=")">
-              #{id}
-          </foreach>
-    </select>
 </mapper>

@@ -692,87 +692,76 @@ INSERT INTO squad_user.sq_rbac_revision (code)
 VALUES ('authorization')
 ON CONFLICT (code) DO NOTHING;
 
--- Agent 配置管理菜单及角色权限
+-- 智能体配置菜单：按 MCP 服务 → 工具 → Agent 的依赖顺序排列。
 INSERT INTO squad_user.sq_menu (menu_id, parent_menu_id, code, name, type, route_name, route_path, sort_order)
-VALUES ('menu-agent-management', NULL, 'agent-management', 'Agent 管理', 'DIRECTORY', NULL, NULL, 40),
-       ('menu-agent-config', 'menu-agent-management', 'agent-config', 'Agent 配置', 'PAGE',
-        'management-agents', '/management/agents', 41)
+VALUES ('menu-agent-management', NULL, 'agent-management', '智能体配置', 'DIRECTORY', NULL, NULL, 40),
+       ('menu-agent-mcp', 'menu-agent-management', 'agent-mcp', 'MCP 服务', 'PAGE',
+        'management-mcp-servers', '/management/mcp-servers', 41),
+       ('menu-agent-tool', 'menu-agent-management', 'agent-tool', '工具', 'PAGE',
+        'management-tools', '/management/tools', 42),
+       ('menu-agent-config', 'menu-agent-management', 'agent-config', 'Agent', 'PAGE',
+        'management-agents', '/management/agents', 43)
 ON CONFLICT (menu_id) DO NOTHING;
 
 INSERT INTO squad_user.sq_permission (code, name, module, description, menu_id, sort_order)
-VALUES ('management:agent:query', '查询 Agent', 'agents', '浏览配置和版本', 'menu-agent-config', 1),
-       ('management:agent:edit', '编辑 Agent', 'agents', '建档及维护草稿', 'menu-agent-config', 2),
-       ('management:agent:publish', '发布 Agent', 'agents', '发布及切换生效版本', 'menu-agent-config', 3)
+VALUES ('management:mcp:query', '查询 MCP 服务', 'agents', '查看 MCP 服务、版本、引用关系与凭据引用名', 'menu-agent-mcp', 1),
+       ('management:mcp:edit', '编辑 MCP 服务', 'agents', '新增服务、维护草稿与测试连接', 'menu-agent-mcp', 2),
+       ('management:mcp:publish', '发布 MCP 服务', 'agents', '发布版本及启用、停用服务', 'menu-agent-mcp', 3),
+       ('management:tool:query', '查询工具', 'agents', '查看工具、版本、引用关系与可选实现', 'menu-agent-tool', 1),
+       ('management:tool:edit', '编辑工具', 'agents', '新增工具、维护草稿与试运行', 'menu-agent-tool', 2),
+       ('management:tool:publish', '发布工具', 'agents', '发布版本及启用、停用工具', 'menu-agent-tool', 3),
+       ('management:agent:query', '查询 Agent', 'agents', '查看 Agent、版本、引用关系与可绑定能力', 'menu-agent-config', 1),
+       ('management:agent:edit', '编辑 Agent', 'agents', '新增 Agent 与维护草稿', 'menu-agent-config', 2),
+       ('management:agent:publish', '发布 Agent', 'agents', '发布、切换生效版本及启用、停用 Agent', 'menu-agent-config', 3)
 ON CONFLICT (code) DO NOTHING;
 
 INSERT INTO squad_user.sq_role_menu (role_id, menu_id, stage)
 SELECT 'role-platform-admin', m.menu_id, s.stage
 FROM squad_user.sq_menu m
 CROSS JOIN (VALUES ('DRAFT'), ('APPLIED')) AS s(stage)
-WHERE m.menu_id IN ('menu-agent-management', 'menu-agent-config')
+WHERE m.menu_id IN ('menu-agent-management', 'menu-agent-mcp', 'menu-agent-tool', 'menu-agent-config')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO squad_user.sq_role_permission (role_id, permission_code, stage)
 SELECT 'role-platform-admin', p.code, s.stage
 FROM squad_user.sq_permission p
 CROSS JOIN (VALUES ('DRAFT'), ('APPLIED')) AS s(stage)
-WHERE p.code IN ('management:agent:query', 'management:agent:edit', 'management:agent:publish')
+WHERE p.menu_id IN ('menu-agent-mcp', 'menu-agent-tool', 'menu-agent-config')
 ON CONFLICT DO NOTHING;
 
+-- 智能体配置接口权限：路径为管理前缀之后的部分，按排序号依次匹配。
 INSERT INTO squad_user.sq_permission_route (permission_code, http_method, path_pattern, sort_order)
-VALUES
-    ('management:agent:query', 'GET', '/agents', 30),
-    ('management:agent:edit', 'POST', '/agents', 31),
-    ('management:agent:query', 'GET', '/agents/[1-9][0-9]{0,18}/versions', 32),
-    ('management:agent:query', 'GET', '/agents/[1-9][0-9]{0,18}/versions/[1-9][0-9]{0,18}', 33),
-    ('management:agent:edit', 'POST', '/agents/[1-9][0-9]{0,18}/versions', 34),
-    ('management:agent:edit', 'PUT', '/agents/[1-9][0-9]{0,18}/versions/[1-9][0-9]{0,18}', 35),
-    ('management:agent:publish', 'POST', '/agents/[1-9][0-9]{0,18}/versions/[1-9][0-9]{0,18}/publish', 36),
-    ('management:agent:publish', 'POST', '/agents/[1-9][0-9]{0,18}/versions/[1-9][0-9]{0,18}/activate', 37)
-ON CONFLICT (http_method, path_pattern) DO NOTHING;
-
--- 工具目录与 MCP 服务的管理授权
-INSERT INTO squad_user.sq_menu (menu_id, parent_menu_id, code, name, type, route_name, route_path, sort_order)
-VALUES ('menu-agent-tool', 'menu-agent-management', 'agent-tool', '工具目录', 'PAGE', 'management-tools', '/management/tools', 42),
-       ('menu-agent-mcp', 'menu-agent-management', 'agent-mcp', 'MCP 服务', 'PAGE', 'management-mcp-servers', '/management/mcp-servers', 43)
-ON CONFLICT (menu_id) DO NOTHING;
-
-INSERT INTO squad_user.sq_permission (code, name, module, description, menu_id, sort_order)
-VALUES ('management:tool:query', '查询 工具', 'agents', '查询工具目录配置', 'menu-agent-tool', 1),
-       ('management:tool:edit', '编辑 工具', 'agents', '编辑工具目录配置', 'menu-agent-tool', 2),
-       ('management:tool:publish', '发布 工具', 'agents', '发布工具目录配置', 'menu-agent-tool', 3),
-       ('management:mcp:query', '查询 MCP', 'agents', '查询MCP 服务配置', 'menu-agent-mcp', 1),
-       ('management:mcp:edit', '编辑 MCP', 'agents', '编辑MCP 服务配置', 'menu-agent-mcp', 2),
-       ('management:mcp:publish', '发布 MCP', 'agents', '发布MCP 服务配置', 'menu-agent-mcp', 3)
-ON CONFLICT (code) DO NOTHING;
-
-INSERT INTO squad_user.sq_role_menu (role_id, menu_id, stage)
-SELECT 'role-platform-admin', m.menu_id, s.stage
-FROM squad_user.sq_menu m
-CROSS JOIN (VALUES ('DRAFT'), ('APPLIED')) AS s(stage)
-WHERE m.menu_id IN ('menu-agent-tool', 'menu-agent-mcp')
-ON CONFLICT DO NOTHING;
-
-INSERT INTO squad_user.sq_role_permission (role_id, permission_code, stage)
-SELECT 'role-platform-admin', p.code, s.stage
-FROM squad_user.sq_permission p
-CROSS JOIN (VALUES ('DRAFT'), ('APPLIED')) AS s(stage)
-WHERE p.code IN ('management:tool:query', 'management:tool:edit', 'management:tool:publish', 'management:mcp:query', 'management:mcp:edit', 'management:mcp:publish')
-ON CONFLICT DO NOTHING;
-
-INSERT INTO squad_user.sq_permission_route (permission_code, http_method, path_pattern, sort_order)
-VALUES ('management:agent:query', 'GET', '/agents/tool-options', 40),
-       ('management:tool:query', 'GET', '/tools', 41),
-       ('management:tool:edit', 'POST', '/tools', 42),
-       ('management:tool:query', 'GET', '/tools/[1-9][0-9]{0,18}/versions', 43),
-       ('management:tool:edit', 'POST', '/tools/[1-9][0-9]{0,18}/versions', 44),
-       ('management:tool:edit', 'PUT', '/tools/[1-9][0-9]{0,18}/versions/[1-9][0-9]{0,18}', 45),
-       ('management:tool:publish', 'POST', '/tools/[1-9][0-9]{0,18}/versions/[1-9][0-9]{0,18}/publish', 46),
-       ('management:mcp:query', 'GET', '/mcp-servers', 47),
-       ('management:mcp:edit', 'POST', '/mcp-servers', 48),
-       ('management:mcp:query', 'GET', '/mcp-servers/[1-9][0-9]{0,18}/versions', 49),
-       ('management:mcp:edit', 'POST', '/mcp-servers/[1-9][0-9]{0,18}/versions', 50),
-       ('management:mcp:edit', 'PUT', '/mcp-servers/[1-9][0-9]{0,18}/versions/[1-9][0-9]{0,18}', 51),
-       ('management:mcp:publish', 'POST', '/mcp-servers/[1-9][0-9]{0,18}/versions/[1-9][0-9]{0,18}/publish', 52),
-       ('management:tool:query', 'GET', '/tools/mcp-options', 53)
+VALUES ('management:mcp:query',    'GET',  '/mcp-servers',                                                          30),
+       ('management:mcp:edit',     'POST', '/mcp-servers',                                                          31),
+       ('management:mcp:edit',     'POST', '/mcp-servers/probe',                                                    32),
+       ('management:mcp:query',    'GET',  '/mcp-servers/credential-options',                                       33),
+       ('management:mcp:query',    'GET',  '/mcp-servers/[1-9][0-9]{0,18}',                                         34),
+       ('management:mcp:edit',     'PUT',  '/mcp-servers/[1-9][0-9]{0,18}',                                         35),
+       ('management:mcp:publish',  'POST', '/mcp-servers/[1-9][0-9]{0,18}/(enable|disable)',                        36),
+       ('management:mcp:query',    'GET',  '/mcp-servers/[1-9][0-9]{0,18}/versions/[1-9][0-9]{0,18}',               37),
+       ('management:mcp:edit',     'POST', '/mcp-servers/[1-9][0-9]{0,18}/versions',                                38),
+       ('management:mcp:edit',     'PUT',  '/mcp-servers/[1-9][0-9]{0,18}/versions/[1-9][0-9]{0,18}',               39),
+       ('management:mcp:publish',  'POST', '/mcp-servers/[1-9][0-9]{0,18}/versions/[1-9][0-9]{0,18}/publish',       40),
+       ('management:tool:query',   'GET',  '/tools',                                                                41),
+       ('management:tool:edit',    'POST', '/tools',                                                                42),
+       ('management:tool:edit',    'POST', '/tools/test-run',                                                       43),
+       ('management:tool:query',   'GET',  '/tools/(builtin-options|mcp-options|credential-options)',               44),
+       ('management:tool:query',   'GET',  '/tools/mcp-options/[1-9][0-9]{0,18}/remote-tools',                      45),
+       ('management:tool:query',   'GET',  '/tools/[1-9][0-9]{0,18}',                                               46),
+       ('management:tool:edit',    'PUT',  '/tools/[1-9][0-9]{0,18}',                                               47),
+       ('management:tool:publish', 'POST', '/tools/[1-9][0-9]{0,18}/(enable|disable)',                              48),
+       ('management:tool:query',   'GET',  '/tools/[1-9][0-9]{0,18}/versions/[1-9][0-9]{0,18}',                     49),
+       ('management:tool:edit',    'POST', '/tools/[1-9][0-9]{0,18}/versions',                                      50),
+       ('management:tool:edit',    'PUT',  '/tools/[1-9][0-9]{0,18}/versions/[1-9][0-9]{0,18}',                     51),
+       ('management:tool:publish', 'POST', '/tools/[1-9][0-9]{0,18}/versions/[1-9][0-9]{0,18}/publish',             52),
+       ('management:agent:query',  'GET',  '/agents',                                                               53),
+       ('management:agent:edit',   'POST', '/agents',                                                               54),
+       ('management:agent:query',  'GET',  '/agents/(tool-options|subagent-options)',                               55),
+       ('management:agent:query',  'GET',  '/agents/[1-9][0-9]{0,18}',                                              56),
+       ('management:agent:edit',   'PUT',  '/agents/[1-9][0-9]{0,18}',                                              57),
+       ('management:agent:publish','POST', '/agents/[1-9][0-9]{0,18}/(enable|disable)',                             58),
+       ('management:agent:query',  'GET',  '/agents/[1-9][0-9]{0,18}/versions/[1-9][0-9]{0,18}',                    59),
+       ('management:agent:edit',   'POST', '/agents/[1-9][0-9]{0,18}/versions',                                     60),
+       ('management:agent:edit',   'PUT',  '/agents/[1-9][0-9]{0,18}/versions/[1-9][0-9]{0,18}',                    61),
+       ('management:agent:publish','POST', '/agents/[1-9][0-9]{0,18}/versions/[1-9][0-9]{0,18}/(publish|activate)', 62)
 ON CONFLICT (http_method, path_pattern) DO NOTHING;

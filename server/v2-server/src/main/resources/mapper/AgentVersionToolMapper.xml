@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.v2.mapper.AgentVersionToolMapper">
+    <insert id="insertBatch">
+        INSERT INTO squad_chat.sq_agent_version_tool (
+            agent_version_id,
+            tool_version_id,
+            creator_id,
+            last_updater_id
+        )
+        VALUES
+        <foreach collection="bindings" item="binding" separator=",">
+            (
+                #{binding.agentVersionId},
+                #{binding.toolVersionId},
+                #{binding.creatorId},
+                #{binding.lastUpdaterId}
+            )
+        </foreach>
+    </insert>
+</mapper>

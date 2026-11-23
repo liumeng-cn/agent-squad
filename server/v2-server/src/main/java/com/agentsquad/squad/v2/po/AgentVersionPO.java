@@ -1,7 +1,9 @@
 package com.agentsquad.squad.v2.po;
 
-import com.agentsquad.squad.v2.enums.AgentVersionStatus;
+import com.agentsquad.squad.v2.enums.VersionStatus;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -40,7 +42,7 @@ public class AgentVersionPO {
     /**
      * 发布状态
      */
-    private AgentVersionStatus status;
+    private VersionStatus status;
 
     /**
      * 业务提示词
@@ -80,6 +82,7 @@ public class AgentVersionPO {
     /**
      * 更新时间
      */
+    @TableField(insertStrategy = FieldStrategy.NEVER)
     private Instant lastUpdateTime;
 
 }

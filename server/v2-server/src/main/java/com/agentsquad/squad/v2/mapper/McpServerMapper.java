@@ -1,14 +1,31 @@
 package com.agentsquad.squad.v2.mapper;
 
+import com.agentsquad.squad.v2.bo.ConfigUsageBO;
+import com.agentsquad.squad.v2.bo.McpServerSummaryBO;
 import com.agentsquad.squad.v2.po.McpServerPO;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 /**
- * MCP连接目录访问
+ * MCP 服务目录访问
  * <p>
- * 使用 Mapper 维护目录和配置版本。
+ * 简单读写使用 BaseMapper；摘要联查、引用查询和带修订号的条件更新写在 Mapper XML。
  */
 @Mapper
 public interface McpServerMapper extends BaseMapper<McpServerPO> {
+    List<McpServerSummaryBO> selectSummaries(@Param("mcpServerId") Long mcpServerId);
+
+    List<ConfigUsageBO> selectUsages(@Param("mcpServerId") long mcpServerId);
+
+    int updateProfile(McpServerPO server);
+
+    int updateStatus(McpServerPO server);
+
+    /**
+     * 以条件更新确认服务仍启用，并持有行锁到事务结束，使引用登记与停用操作串行
+     */
+    int confirmEnabled(@Param("mcpServerId") long mcpServerId);
 }

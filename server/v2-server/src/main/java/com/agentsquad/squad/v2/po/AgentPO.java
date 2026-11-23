@@ -1,8 +1,10 @@
 package com.agentsquad.squad.v2.po;
 
 import com.agentsquad.squad.v2.enums.AgentType;
-import com.agentsquad.squad.v2.enums.AgentConfigStatus;
+import com.agentsquad.squad.v2.enums.ConfigStatus;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -46,7 +48,7 @@ public class AgentPO {
     /**
      * 启停状态
      */
-    private AgentConfigStatus status;
+    private ConfigStatus status;
 
     /**
      * 当前版本ID
@@ -71,6 +73,7 @@ public class AgentPO {
     /**
      * 更新时间
      */
+    @TableField(insertStrategy = FieldStrategy.NEVER)
     private Instant lastUpdateTime;
 
 }

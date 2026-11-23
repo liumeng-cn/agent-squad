@@ -191,7 +191,9 @@ CREATE TABLE squad_chat.sq_mcp_server
     mcp_server_id     BIGINT NOT NULL UNIQUE CHECK (mcp_server_id > 0),
     server_code       VARCHAR(80) NOT NULL UNIQUE CHECK (server_code ~ '^[a-zA-Z0-9_-]+$'),
     server_name       VARCHAR(120) NOT NULL,
+    description       VARCHAR(500) NOT NULL DEFAULT '',
     status            VARCHAR(16) NOT NULL DEFAULT 'ENABLED' CHECK (status IN ('ENABLED', 'DISABLED')),
+    revision          BIGINT NOT NULL DEFAULT 0 CHECK (revision >= 0),
     creator_id        BIGINT NOT NULL DEFAULT 0,
     creator_name      VARCHAR(50) NOT NULL DEFAULT '',
     create_time       TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -205,7 +207,9 @@ COMMENT ON COLUMN squad_chat.sq_mcp_server.id IS '内部存储主键';
 COMMENT ON COLUMN squad_chat.sq_mcp_server.mcp_server_id IS 'MCP 服务业务ID';
 COMMENT ON COLUMN squad_chat.sq_mcp_server.server_code IS 'MCP 服务编码';
 COMMENT ON COLUMN squad_chat.sq_mcp_server.server_name IS '展示名称';
+COMMENT ON COLUMN squad_chat.sq_mcp_server.description IS '服务用途说明';
 COMMENT ON COLUMN squad_chat.sq_mcp_server.status IS '启停状态';
+COMMENT ON COLUMN squad_chat.sq_mcp_server.revision IS '目录并发修订号';
 COMMENT ON COLUMN squad_chat.sq_mcp_server.creator_id IS '创建人ID';
 COMMENT ON COLUMN squad_chat.sq_mcp_server.creator_name IS '创建人姓名';
 COMMENT ON COLUMN squad_chat.sq_mcp_server.create_time IS '创建时间';
@@ -225,6 +229,8 @@ CREATE TABLE squad_chat.sq_mcp_server_version
     transport_type        VARCHAR(24) NOT NULL CHECK (transport_type IN ('STREAMABLE_HTTP', 'SSE')),
     endpoint              VARCHAR(2048) NOT NULL,
     credential_ref        VARCHAR(255),
+    request_headers       JSONB NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(request_headers) = 'array'),
+    timeout_ms            INTEGER NOT NULL DEFAULT 30000 CHECK (timeout_ms BETWEEN 1000 AND 120000),
     creator_id            BIGINT NOT NULL DEFAULT 0,
     creator_name          VARCHAR(50) NOT NULL DEFAULT '',
     create_time           TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -245,7 +251,9 @@ COMMENT ON COLUMN squad_chat.sq_mcp_server_version.revision IS '并发编辑版�
 COMMENT ON COLUMN squad_chat.sq_mcp_server_version.published_at IS '发布时间';
 COMMENT ON COLUMN squad_chat.sq_mcp_server_version.transport_type IS '远程 MCP 传输方式';
 COMMENT ON COLUMN squad_chat.sq_mcp_server_version.endpoint IS '远程连接地址';
-COMMENT ON COLUMN squad_chat.sq_mcp_server_version.credential_ref IS '连接凭据引用';
+COMMENT ON COLUMN squad_chat.sq_mcp_server_version.credential_ref IS '连接凭据引用名，密钥值不入库';
+COMMENT ON COLUMN squad_chat.sq_mcp_server_version.request_headers IS '附加请求头列表，值可引用凭据占位符';
+COMMENT ON COLUMN squad_chat.sq_mcp_server_version.timeout_ms IS '连接与调用超时毫秒数';
 COMMENT ON COLUMN squad_chat.sq_mcp_server_version.creator_id IS '创建人ID';
 COMMENT ON COLUMN squad_chat.sq_mcp_server_version.creator_name IS '创建人姓名';
 COMMENT ON COLUMN squad_chat.sq_mcp_server_version.create_time IS '创建时间';
@@ -259,8 +267,9 @@ CREATE TABLE squad_chat.sq_tool
     tool_id           BIGINT NOT NULL UNIQUE CHECK (tool_id > 0),
     tool_code         VARCHAR(80) NOT NULL UNIQUE CHECK (tool_code ~ '^[a-zA-Z0-9_-]+$'),
     tool_name         VARCHAR(120) NOT NULL,
-    tool_type         VARCHAR(16) NOT NULL CHECK (tool_type IN ('NATIVE', 'JAVA', 'MCP')),
+    tool_type         VARCHAR(16) NOT NULL CHECK (tool_type IN ('BUILTIN', 'HTTP', 'MCP')),
     status            VARCHAR(16) NOT NULL DEFAULT 'ENABLED' CHECK (status IN ('ENABLED', 'DISABLED')),
+    revision          BIGINT NOT NULL DEFAULT 0 CHECK (revision >= 0),
     creator_id        BIGINT NOT NULL DEFAULT 0,
     creator_name      VARCHAR(50) NOT NULL DEFAULT '',
     create_time       TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -275,8 +284,9 @@ COMMENT ON COLUMN squad_chat.sq_tool.id IS '内部存储主键';
 COMMENT ON COLUMN squad_chat.sq_tool.tool_id IS '工具业务ID';
 COMMENT ON COLUMN squad_chat.sq_tool.tool_code IS '工具稳定编码';
 COMMENT ON COLUMN squad_chat.sq_tool.tool_name IS '后台展示名称';
-COMMENT ON COLUMN squad_chat.sq_tool.tool_type IS '工具实现来源';
+COMMENT ON COLUMN squad_chat.sq_tool.tool_type IS '工具类型：内置实现、HTTP 接口或远程 MCP';
 COMMENT ON COLUMN squad_chat.sq_tool.status IS '启停状态';
+COMMENT ON COLUMN squad_chat.sq_tool.revision IS '目录并发修订号';
 COMMENT ON COLUMN squad_chat.sq_tool.creator_id IS '创建人ID';
 COMMENT ON COLUMN squad_chat.sq_tool.creator_name IS '创建人姓名';
 COMMENT ON COLUMN squad_chat.sq_tool.create_time IS '创建时间';
@@ -295,9 +305,14 @@ CREATE TABLE squad_chat.sq_tool_version
     revision              BIGINT NOT NULL DEFAULT 0 CHECK (revision >= 0),
     published_at          TIMESTAMPTZ(3),
     exposed_name          VARCHAR(64) NOT NULL CHECK (exposed_name ~ '^[a-zA-Z0-9_-]+$'),
+    description           TEXT NOT NULL DEFAULT '',
+    input_schema          JSONB NOT NULL DEFAULT '{"type": "object", "properties": {}}'::jsonb
+        CHECK (jsonb_typeof(input_schema) = 'object'),
+    read_only             BOOLEAN NOT NULL DEFAULT TRUE,
     implementation_key    VARCHAR(160),
     mcp_server_version_id BIGINT REFERENCES squad_chat.sq_mcp_server_version (mcp_server_version_id),
     remote_tool_name      VARCHAR(255),
+    http_spec             JSONB CHECK (http_spec IS NULL OR jsonb_typeof(http_spec) = 'object'),
     creator_id            BIGINT NOT NULL DEFAULT 0,
     creator_name          VARCHAR(50) NOT NULL DEFAULT '',
     create_time           TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -308,10 +323,12 @@ CREATE TABLE squad_chat.sq_tool_version
     CONSTRAINT ck_tool_version_published_at CHECK ((status = 'PUBLISHED') = (published_at IS NOT NULL)),
     CONSTRAINT fk_tool_version_type FOREIGN KEY (tool_id, tool_type) REFERENCES squad_chat.sq_tool (tool_id, tool_type),
     CONSTRAINT ck_tool_version_implementation CHECK (
-        (tool_type IN ('NATIVE', 'JAVA') AND implementation_key IS NOT NULL
-            AND mcp_server_version_id IS NULL AND remote_tool_name IS NULL)
-        OR (tool_type = 'MCP' AND implementation_key IS NULL
-            AND mcp_server_version_id IS NOT NULL AND remote_tool_name IS NOT NULL)
+        (tool_type = 'BUILTIN' AND implementation_key IS NOT NULL
+            AND mcp_server_version_id IS NULL AND remote_tool_name IS NULL AND http_spec IS NULL)
+        OR (tool_type = 'HTTP' AND http_spec IS NOT NULL
+            AND implementation_key IS NULL AND mcp_server_version_id IS NULL AND remote_tool_name IS NULL)
+        OR (tool_type = 'MCP' AND mcp_server_version_id IS NOT NULL AND remote_tool_name IS NOT NULL
+            AND implementation_key IS NULL AND http_spec IS NULL)
     )
 );
 
@@ -325,9 +342,13 @@ COMMENT ON COLUMN squad_chat.sq_tool_version.status IS '版本发布状态';
 COMMENT ON COLUMN squad_chat.sq_tool_version.revision IS '并发编辑版本';
 COMMENT ON COLUMN squad_chat.sq_tool_version.published_at IS '发布时间';
 COMMENT ON COLUMN squad_chat.sq_tool_version.exposed_name IS '暴露给模型的工具名称';
-COMMENT ON COLUMN squad_chat.sq_tool_version.implementation_key IS '原生或 Java 工具的实现版本标识';
+COMMENT ON COLUMN squad_chat.sq_tool_version.description IS '模型可见的工具用途说明';
+COMMENT ON COLUMN squad_chat.sq_tool_version.input_schema IS '模型调用参数的 JSON Schema';
+COMMENT ON COLUMN squad_chat.sq_tool_version.read_only IS '是否只读取信息、不产生外部副作用';
+COMMENT ON COLUMN squad_chat.sq_tool_version.implementation_key IS '内置工具的实现标识';
 COMMENT ON COLUMN squad_chat.sq_tool_version.mcp_server_version_id IS '远程工具使用的 MCP 连接版本';
 COMMENT ON COLUMN squad_chat.sq_tool_version.remote_tool_name IS 'MCP 服务返回的工具名';
+COMMENT ON COLUMN squad_chat.sq_tool_version.http_spec IS 'HTTP 工具的请求模板、凭据引用、超时与结果提取配置';
 COMMENT ON COLUMN squad_chat.sq_tool_version.creator_id IS '创建人ID';
 COMMENT ON COLUMN squad_chat.sq_tool_version.creator_name IS '创建人姓名';
 COMMENT ON COLUMN squad_chat.sq_tool_version.create_time IS '创建时间';
@@ -399,3 +420,16 @@ CREATE INDEX idx_agent_version_tool_reverse
 
 CREATE INDEX idx_agent_version_subagent_reverse
     ON squad_chat.sq_agent_version_subagent (subagent_version_id);
+
+-- 每个资源最多保留一个未发布草稿，并发新建草稿由唯一约束拒绝。
+CREATE UNIQUE INDEX uk_agent_version_draft
+    ON squad_chat.sq_agent_version (agent_id)
+    WHERE status = 'DRAFT';
+
+CREATE UNIQUE INDEX uk_mcp_server_version_draft
+    ON squad_chat.sq_mcp_server_version (mcp_server_id)
+    WHERE status = 'DRAFT';
+
+CREATE UNIQUE INDEX uk_tool_version_draft
+    ON squad_chat.sq_tool_version (tool_id)
+    WHERE status = 'DRAFT';

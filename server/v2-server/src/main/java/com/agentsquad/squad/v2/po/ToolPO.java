@@ -1,16 +1,20 @@
 package com.agentsquad.squad.v2.po;
 
-import com.agentsquad.squad.v2.enums.AgentConfigStatus;
-import com.agentsquad.squad.v2.enums.ToolSource;
+import com.agentsquad.squad.v2.enums.ConfigStatus;
+import com.agentsquad.squad.v2.enums.ToolType;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.time.Instant;
+
 /**
  * 工具目录
  * <p>
- * 保存稳定身份与管理状态。
+ * 映射 sq_tool，保存工具的稳定身份、类型和启停状态；模型可见定义与实现配置保存在版本表。
  */
 @Data
 @TableName(value = "sq_tool", schema = "squad_chat")
@@ -22,7 +26,7 @@ public class ToolPO {
     private Long id;
 
     /**
-     * 资源业务ID
+     * 工具业务ID
      */
     private Long toolId;
 
@@ -37,14 +41,19 @@ public class ToolPO {
     private String toolName;
 
     /**
-     * 工具来源
+     * 工具类型
      */
-    private ToolSource toolType;
+    private ToolType toolType;
 
     /**
      * 启停状态
      */
-    private AgentConfigStatus status;
+    private ConfigStatus status;
+
+    /**
+     * 目录修订号
+     */
+    private Long revision;
 
     /**
      * 创建人ID
@@ -52,7 +61,13 @@ public class ToolPO {
     private Long creatorId;
 
     /**
-     * 更新人ID
+     * 最后更新人ID
      */
     private Long lastUpdaterId;
+
+    /**
+     * 最后更新时间，由数据库维护
+     */
+    @TableField(insertStrategy = FieldStrategy.NEVER)
+    private Instant lastUpdateTime;
 }

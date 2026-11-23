@@ -6,9 +6,9 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
- * 子Agent委派请求
+ * 子 Agent 委派请求
  * <p>
- * 描述管理端提交的配置或操作条件。
+ * 主 Agent 版本中的一项委派，绑定子 Agent 的固定已发布版本。
  */
 @Data
 public class AgentDelegationDTO {
@@ -20,14 +20,14 @@ public class AgentDelegationDTO {
     private String subagentVersionId;
 
     /**
-     * 委派名称
+     * 主 Agent 内唯一的委派名称
      */
     @NotBlank
     @Pattern(regexp = "[a-zA-Z0-9_-]{1,80}")
     private String delegationName;
 
     /**
-     * 委派描述
+     * 在当前主 Agent 下的委派说明
      */
     @Size(max = 500)
     private String delegationDescription;

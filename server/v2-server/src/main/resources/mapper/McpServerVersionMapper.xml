@@ -7,14 +7,49 @@
         WHERE mcp_server_id = #{mcpServerId}
     </select>
 
+    <!-- 版本记录；最新发布版本标记为 current -->
+    <select id="selectSummaries" resultType="com.agentsquad.squad.v2.bo.VersionSummaryBO">
+        SELECT v.mcp_server_version_id AS version_id,
+               v.version_no,
+               v.status,
+               v.revision,
+               v.published_at,
+               v.last_update_time,
+               (
+                   v.status = 'PUBLISHED'
+                   AND v.version_no = MAX(v.version_no) FILTER (WHERE v.status = 'PUBLISHED') OVER ()
+               )                       AS current
+        FROM squad_chat.sq_mcp_server_version v
+        WHERE v.mcp_server_id = #{mcpServerId}
+        ORDER BY v.version_no DESC
+    </select>
+
+    <!-- 启用服务的已发布版本 -->
+    <select id="selectUsableOptions" resultType="com.agentsquad.squad.v2.bo.McpServerOptionBO">
+        SELECT v.mcp_server_version_id,
+               s.mcp_server_id,
+               s.server_code,
+               s.server_name,
+               v.version_no,
+               (v.version_no = MAX(v.version_no) OVER (PARTITION BY v.mcp_server_id)) AS latest
+        FROM squad_chat.sq_mcp_server_version v
+        JOIN squad_chat.sq_mcp_server s
+          ON s.mcp_server_id = v.mcp_server_id
+        WHERE v.status = 'PUBLISHED'
+          AND s.status = 'ENABLED'
+        ORDER BY s.server_code, v.version_no DESC
+    </select>
+
     <update id="updateDraft">
         UPDATE squad_chat.sq_mcp_server_version
-        SET transport_type         = #{transportType},
-            endpoint               = #{endpoint},
-            credential_ref         = #{credentialRef},
-            revision               = revision + 1,
-            last_updater_id        = #{lastUpdaterId},
-            last_update_time       = CURRENT_TIMESTAMP
+        SET transport_type   = #{transportType},
+            endpoint         = #{endpoint},
+            credential_ref   = #{credentialRef},
+            request_headers  = #{requestHeaders, typeHandler=com.agentsquad.squad.v2.config.JsonbTypeHandler},
+            timeout_ms       = #{timeoutMs},
+            revision         = revision + 1,
+            last_updater_id  = #{lastUpdaterId},
+            last_update_time = CURRENT_TIMESTAMP
         WHERE mcp_server_id = #{mcpServerId}
           AND mcp_server_version_id = #{mcpServerVersionId}
           AND status = 'DRAFT'
@@ -33,15 +68,4 @@
           AND status = 'DRAFT'
           AND revision = #{revision}
     </update>
-    <select id="usableOptions" resultType="com.agentsquad.squad.v2.vo.McpServerVersionOptionVO">
-        SELECT CAST(v.mcp_server_version_id AS varchar) AS mcp_server_version_id,
-               s.server_name,
-               v.version_no
-        FROM squad_chat.sq_mcp_server_version v
-        JOIN squad_chat.sq_mcp_server s
-          ON s.mcp_server_id = v.mcp_server_id
-        WHERE v.status = 'PUBLISHED'
-          AND s.status = 'ENABLED'
-        ORDER BY s.server_code, v.version_no DESC
-    </select>
 </mapper>

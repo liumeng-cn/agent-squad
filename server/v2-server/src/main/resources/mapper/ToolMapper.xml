@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.v2.mapper.ToolMapper">
+    <!-- 工具摘要：名称与说明取最新发布版本，未发布时取草稿；生效引用为启用 Agent 的当前版本绑定 -->
+    <select id="selectSummaries" resultType="com.agentsquad.squad.v2.bo.ToolSummaryBO">
+        SELECT t.tool_id,
+               t.tool_code,
+               t.tool_name,
+               t.tool_type,
+               t.status,
+               t.revision,
+               COALESCE(published.exposed_name, draft.exposed_name)   AS exposed_name,
+               COALESCE(published.description, draft.description, '') AS description,
+               published.tool_version_id                              AS published_version_id,
+               published.version_no                                   AS published_version_no,
+               draft.tool_version_id                                  AS draft_version_id,
+               (
+                   SELECT COUNT(DISTINCT a.agent_id)
+                   FROM squad_chat.sq_tool_version tv
+                   JOIN squad_chat.sq_agent_version_tool binding
+                     ON binding.tool_version_id = tv.tool_version_id
+                   JOIN squad_chat.sq_agent a
+                     ON a.current_version_id = binding.agent_version_id
+                   WHERE tv.tool_id = t.tool_id
+                     AND a.status = 'ENABLED'
+               )                                                      AS usage_count,
+               t.last_update_time
+        FROM squad_chat.sq_tool t
+        LEFT JOIN LATERAL (
+            SELECT v.tool_version_id,
+                   v.version_no,
+                   v.exposed_name,
+                   v.description
+            FROM squad_chat.sq_tool_version v
+            WHERE v.tool_id = t.tool_id
+              AND v.status = 'PUBLISHED'
+            ORDER BY v.version_no DESC
+            LIMIT 1
+        ) published ON TRUE
+        LEFT JOIN squad_chat.sq_tool_version draft
+          ON draft.tool_id = t.tool_id
+         AND draft.status = 'DRAFT'
+        <where>
+            <if test="toolId != null">
+                t.tool_id = #{toolId}
+            </if>
+        </where>
+        ORDER BY t.last_update_time DESC, t.id DESC
+    </select>
+
+    <!-- 绑定该工具任一版本的 Agent 版本；启用 Agent 的当前版本为生效引用 -->
+    <select id="selectUsages" resultType="com.agentsquad.squad.v2.bo.ConfigUsageBO">
+        SELECT a.agent_id      AS owner_id,
+               a.agent_code    AS owner_code,
+               a.agent_name    AS owner_name,
+               a.status        AS owner_status,
+               av.version_no,
+               av.status       AS version_status,
+               tv.version_no   AS referenced_version_no,
+               (a.current_version_id = av.agent_version_id AND a.status = 'ENABLED') AS active
+        FROM squad_chat.sq_tool_version tv
+        JOIN squad_chat.sq_agent_version_tool binding
+          ON binding.tool_version_id = tv.tool_version_id
+        JOIN squad_chat.sq_agent_version av
+          ON av.agent_version_id = binding.agent_version_id
+        JOIN squad_chat.sq_agent a
+          ON a.agent_id = av.agent_id
+        WHERE tv.tool_id = #{toolId}
+        ORDER BY active DESC, a.agent_code, av.version_no DESC
+    </select>
+
+    <update id="updateProfile">
+        UPDATE squad_chat.sq_tool
+        SET tool_name        = #{toolName},
+            revision         = revision + 1,
+            last_updater_id  = #{lastUpdaterId},
+            last_update_time = CURRENT_TIMESTAMP
+        WHERE tool_id = #{toolId}
+          AND revision = #{revision}
+    </update>
+
+    <!-- 停用时在同一语句复核没有生效引用 -->
+    <update id="updateStatus">
+        UPDATE squad_chat.sq_tool t
+        SET status           = #{status},
+            revision         = t.revision + 1,
+            last_updater_id  = #{lastUpdaterId},
+            last_update_time = CURRENT_TIMESTAMP
+        WHERE t.tool_id = #{toolId}
+          AND t.revision = #{revision}
+          <if test="status.name() == 'DISABLED'">
+          AND NOT EXISTS (
+              SELECT 1
+              FROM squad_chat.sq_tool_version tv
+              JOIN squad_chat.sq_agent_version_tool binding
+                ON binding.tool_version_id = tv.tool_version_id
+              JOIN squad_chat.sq_agent a
+                ON a.current_version_id = binding.agent_version_id
+              WHERE tv.tool_id = t.tool_id
+                AND a.status = 'ENABLED'
+          )
+          </if>
+    </update>
+
+    <update id="confirmEnabled">
+        UPDATE squad_chat.sq_tool
+        SET status = status
+        WHERE tool_id = #{toolId}
+          AND status = 'ENABLED'
+    </update>
+</mapper>

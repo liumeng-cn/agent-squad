@@ -1,15 +1,19 @@
 package com.agentsquad.squad.v2.po;
 
-import com.agentsquad.squad.v2.enums.AgentConfigStatus;
+import com.agentsquad.squad.v2.enums.ConfigStatus;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.time.Instant;
+
 /**
- * MCP连接目录
+ * MCP 服务目录
  * <p>
- * 保存稳定身份与管理状态。
+ * 映射 sq_mcp_server，保存服务的稳定身份、说明和启停状态；连接参数保存在版本表。
  */
 @Data
 @TableName(value = "sq_mcp_server", schema = "squad_chat")
@@ -21,12 +25,12 @@ public class McpServerPO {
     private Long id;
 
     /**
-     * 资源业务ID
+     * 服务业务ID
      */
     private Long mcpServerId;
 
     /**
-     * 连接编码
+     * 服务编码
      */
     private String serverCode;
 
@@ -36,9 +40,19 @@ public class McpServerPO {
     private String serverName;
 
     /**
+     * 服务用途说明
+     */
+    private String description;
+
+    /**
      * 启停状态
      */
-    private AgentConfigStatus status;
+    private ConfigStatus status;
+
+    /**
+     * 目录修订号
+     */
+    private Long revision;
 
     /**
      * 创建人ID
@@ -46,7 +60,13 @@ public class McpServerPO {
     private Long creatorId;
 
     /**
-     * 更新人ID
+     * 最后更新人ID
      */
     private Long lastUpdaterId;
+
+    /**
+     * 最后更新时间，由数据库维护
+     */
+    @TableField(insertStrategy = FieldStrategy.NEVER)
+    private Instant lastUpdateTime;
 }

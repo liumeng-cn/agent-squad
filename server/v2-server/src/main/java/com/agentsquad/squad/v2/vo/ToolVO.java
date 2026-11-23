@@ -1,18 +1,20 @@
 package com.agentsquad.squad.v2.vo;
 
-import com.agentsquad.squad.v2.enums.AgentConfigStatus;
-import com.agentsquad.squad.v2.enums.ToolSource;
+import com.agentsquad.squad.v2.enums.ConfigStatus;
+import com.agentsquad.squad.v2.enums.ToolType;
 import lombok.Data;
+
+import java.time.Instant;
 
 /**
  * 工具目录视图
  * <p>
- * 用于管理端查看资源目录。
+ * 列表与编辑页使用的工具摘要；工具名称和说明取最新发布版本，尚未发布时取草稿。
  */
 @Data
 public class ToolVO {
     /**
-     * 资源业务ID
+     * 工具业务ID
      */
     private String toolId;
 
@@ -27,12 +29,52 @@ public class ToolVO {
     private String toolName;
 
     /**
-     * 工具来源
+     * 工具类型
      */
-    private ToolSource toolType;
+    private ToolType toolType;
 
     /**
      * 启停状态
      */
-    private AgentConfigStatus status;
+    private ConfigStatus status;
+
+    /**
+     * 目录修订号
+     */
+    private Long revision;
+
+    /**
+     * 模型工具名称
+     */
+    private String exposedName;
+
+    /**
+     * 用途说明
+     */
+    private String description;
+
+    /**
+     * 最新发布版本ID
+     */
+    private String publishedVersionId;
+
+    /**
+     * 最新发布版本号
+     */
+    private Integer publishedVersionNo;
+
+    /**
+     * 草稿版本ID
+     */
+    private String draftVersionId;
+
+    /**
+     * 生效引用的 Agent 数量
+     */
+    private Integer usageCount;
+
+    /**
+     * 最后更新时间
+     */
+    private Instant lastUpdateTime;
 }

@@ -7,15 +7,63 @@
         WHERE tool_id = #{toolId}
     </select>
 
+    <!-- 版本记录；最新发布版本标记为 current -->
+    <select id="selectSummaries" resultType="com.agentsquad.squad.v2.bo.VersionSummaryBO">
+        SELECT v.tool_version_id AS version_id,
+               v.version_no,
+               v.status,
+               v.revision,
+               v.published_at,
+               v.last_update_time,
+               (
+                   v.status = 'PUBLISHED'
+                   AND v.version_no = MAX(v.version_no) FILTER (WHERE v.status = 'PUBLISHED') OVER ()
+               )                 AS current
+        FROM squad_chat.sq_tool_version v
+        WHERE v.tool_id = #{toolId}
+        ORDER BY v.version_no DESC
+    </select>
+
+    <!-- 可被 Agent 绑定的工具版本：工具启用、版本已发布，MCP 工具的服务版本已发布且服务启用 -->
+    <select id="selectUsableOptions" resultType="com.agentsquad.squad.v2.bo.ToolOptionBO">
+        SELECT v.tool_version_id,
+               t.tool_id,
+               t.tool_code,
+               t.tool_name,
+               t.tool_type,
+               v.exposed_name,
+               v.description,
+               v.version_no,
+               (v.version_no = MAX(v.version_no) OVER (PARTITION BY v.tool_id)) AS latest
+        FROM squad_chat.sq_tool_version v
+        JOIN squad_chat.sq_tool t
+          ON t.tool_id = v.tool_id
+        LEFT JOIN squad_chat.sq_mcp_server_version mv
+          ON mv.mcp_server_version_id = v.mcp_server_version_id
+        LEFT JOIN squad_chat.sq_mcp_server m
+          ON m.mcp_server_id = mv.mcp_server_id
+        WHERE v.status = 'PUBLISHED'
+          AND t.status = 'ENABLED'
+          AND (
+              v.mcp_server_version_id IS NULL
+              OR (mv.status = 'PUBLISHED' AND m.status = 'ENABLED')
+          )
+        ORDER BY t.tool_code, v.version_no DESC
+    </select>
+
     <update id="updateDraft">
         UPDATE squad_chat.sq_tool_version
-        SET exposed_name           = #{exposedName},
-            implementation_key     = #{implementationKey},
-            mcp_server_version_id  = #{mcpServerVersionId},
-            remote_tool_name       = #{remoteToolName},
-            revision               = revision + 1,
-            last_updater_id        = #{lastUpdaterId},
-            last_update_time       = CURRENT_TIMESTAMP
+        SET exposed_name          = #{exposedName},
+            description           = #{description},
+            input_schema          = #{inputSchema, typeHandler=com.agentsquad.squad.v2.config.JsonbTypeHandler},
+            read_only             = #{readOnly},
+            implementation_key    = #{implementationKey},
+            mcp_server_version_id = #{mcpServerVersionId},
+            remote_tool_name      = #{remoteToolName},
+            http_spec             = #{httpSpec, typeHandler=com.agentsquad.squad.v2.config.JsonbTypeHandler},
+            revision              = revision + 1,
+            last_updater_id       = #{lastUpdaterId},
+            last_update_time      = CURRENT_TIMESTAMP
         WHERE tool_id = #{toolId}
           AND tool_version_id = #{toolVersionId}
           AND status = 'DRAFT'
@@ -34,27 +82,4 @@
           AND status = 'DRAFT'
           AND revision = #{revision}
     </update>
-    <select id="usableVersions" resultType="com.agentsquad.squad.v2.po.ToolVersionPO">
-        SELECT v.tool_version_id,
-               v.tool_id,
-               v.version_no,
-               v.status,
-               v.revision,
-               v.published_at,
-               v.exposed_name,
-               v.implementation_key,
-               v.mcp_server_version_id,
-               v.remote_tool_name
-        FROM squad_chat.sq_tool_version v
-        JOIN squad_chat.sq_tool t
-          ON t.tool_id = v.tool_id
-        LEFT JOIN squad_chat.sq_mcp_server_version mv
-          ON mv.mcp_server_version_id = v.mcp_server_version_id
-        LEFT JOIN squad_chat.sq_mcp_server m
-          ON m.mcp_server_id = mv.mcp_server_id
-        WHERE v.status = 'PUBLISHED'
-          AND t.status = 'ENABLED'
-          AND (v.mcp_server_version_id IS NULL OR (mv.status = 'PUBLISHED' AND m.status = 'ENABLED'))
-        ORDER BY v.exposed_name, v.version_no DESC, v.tool_version_id
-    </select>
 </mapper>

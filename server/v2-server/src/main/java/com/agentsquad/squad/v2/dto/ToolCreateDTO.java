@@ -1,21 +1,22 @@
 package com.agentsquad.squad.v2.dto;
 
-import com.agentsquad.squad.v2.enums.ToolSource;
-import lombok.Data;
+import com.agentsquad.squad.v2.enums.ToolType;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import lombok.Data;
 
 /**
- * 工具建档
+ * 工具建档请求
  * <p>
- * 提交稳定编码及展示信息。
+ * 同一事务创建工具目录与第一个版本草稿，类型创建后不可修改。
  */
 @Data
 public class ToolCreateDTO {
     /**
-     * 工具编码
+     * 工具编码，创建后不可修改
      */
     @NotBlank
     @Pattern(regexp = "[a-zA-Z0-9_-]{1,80}")
@@ -29,8 +30,15 @@ public class ToolCreateDTO {
     private String toolName;
 
     /**
-     * 工具来源
+     * 工具类型
      */
     @NotNull
-    private ToolSource toolType;
+    private ToolType toolType;
+
+    /**
+     * 第一个版本草稿
+     */
+    @NotNull
+    @Valid
+    private ToolDraftDTO draft;
 }
