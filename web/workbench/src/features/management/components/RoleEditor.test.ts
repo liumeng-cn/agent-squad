@@ -9,11 +9,11 @@ vi.mock('../api/managementApi', () => ({ permissionOptions: vi.fn(), createRole:
 beforeEach(() => vi.resetAllMocks())
 it('retains the draft and reports a failed save', async () => {
   vi.mocked(createRole).mockRejectedValue(new Error('版本冲突'))
-  const view = mount(RoleEditor, { props: { role: null } })
+  const view = mount(RoleEditor, { props: { role: null }, global: { stubs: { teleport: true } } })
   await flushPromises()
   await view.findAll('input')[0]!.setValue('查看角色')
   await view.findAll('input')[1]!.setValue('reader')
-  await view.find('footer .management-primary').trigger('click')
+  await view.find('.el-dialog__footer .management-primary').trigger('click')
   await flushPromises()
   expect(view.findAll('input')[0]!.element.value).toBe('查看角色')
   expect(view.find('[role=alert]').text()).toContain('版本冲突')
@@ -22,9 +22,9 @@ it('retains the draft and reports a failed save', async () => {
 })
 it('shows built-in roles as read-only without fetching editor-only options', async () => {
   const role = { builtIn: true, code: 'platform-admin', name: '平台管理员', description: '', draftPermissionCodes: ['management:role:query'] } as Role
-  const view = mount(RoleEditor, { props: { role } })
+  const view = mount(RoleEditor, { props: { role }, global: { stubs: { teleport: true } } })
   await flushPromises()
   expect(view.find('input').attributes('disabled')).toBeDefined()
-  expect(view.find('footer .management-primary').exists()).toBe(false)
+  expect(view.find('.el-dialog__footer .management-primary').exists()).toBe(false)
   view.unmount()
 })

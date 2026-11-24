@@ -1,4 +1,4 @@
-import { onBeforeUnmount, ref, watch, type Ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch, type Ref } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
 import { errorMessage } from '../../../shared/http/http'
 import { confirmManagement } from '../components/confirmManagement'
@@ -76,4 +76,21 @@ export function useSnapshot<T>(source: Ref<T>) {
   }
 
   return { baseline, markClean, changed }
+}
+
+/** 组合表单脏状态跟踪与路由离开保护。 */
+export function useEditorState(snapshot: () => string) {
+  const baseline = ref('')
+  const dirty = computed(() => baseline.value !== '' && snapshot() !== baseline.value)
+  useUnsavedGuard(dirty)
+
+  function markClean() {
+    baseline.value = snapshot()
+  }
+
+  function resetDirty() {
+    baseline.value = snapshot()
+  }
+
+  return { dirty, markClean, resetDirty }
 }

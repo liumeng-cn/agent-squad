@@ -1,17 +1,36 @@
 <script setup lang="ts">
+import {
+  vLoading,
+  ElAlert,
+  ElButton,
+  ElForm,
+  ElFormItem,
+  ElInput,
+  ElOption,
+  ElSelect,
+  ElTable,
+  ElTableColumn,
+} from 'element-plus'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useManagementStore } from '../stores/management'
 import * as api from '../api/managementApi'
 import { ApiError, errorMessage } from '../../../shared/http/http'
-import type { Member, MemberStatus, Permission, PermissionCode, Query, Role } from '../model/management'
+import type {
+  Member,
+  MemberStatus,
+  Permission,
+  PermissionCode,
+  Query,
+  Role,
+} from '../model/management'
 import { confirmManagement } from '../components/confirmManagement'
 import AuthorizationEditor from '../components/AuthorizationEditor.vue'
 import RoleEditor from '../components/RoleEditor.vue'
 import MemberEditor from '../components/MemberEditor.vue'
 import ManagementDialog from '../components/ManagementDialog.vue'
 import ManagementShell from '../components/ManagementShell.vue'
-import ManagementPageHeader from '../components/ManagementPageHeader.vue'
+import ManagementTableToolbar from '../components/ManagementTableToolbar.vue'
 import CatalogPagination from '../components/CatalogPagination.vue'
 
 /**
@@ -29,13 +48,15 @@ interface SectionConfig {
 const sections: Record<Section, SectionConfig> = {
   users: {
     title: '用户管理',
-    description: '复用已有登录账号，为其分配管理角色；只影响管理资格，不影响登录与聊天。',
+    description:
+      '复用已有登录账号，为其分配管理角色；只影响管理资格，不影响登录与聊天。',
     permission: 'management:user:query',
     placeholder: '用户名、昵称或手机号',
   },
   roles: {
     title: '角色管理',
-    description: '角色组合菜单与功能权限。保存草稿后点击“应用”生效，禁用即时撤销角色授权。',
+    description:
+      '角色组合菜单与功能权限。保存草稿后点击“应用”生效，禁用即时撤销角色授权。',
     permission: 'management:role:query',
     placeholder: '名称或编码',
   },
@@ -47,8 +68,11 @@ const sections: Record<Section, SectionConfig> = {
   },
 }
 
-const statusNames: Record<MemberStatus, string> = { ACTIVE: '启用', DISABLED: '禁用', UNASSIGNED: '未授权' }
-const statusTones: Record<MemberStatus, string> = { ACTIVE: 'is-success', DISABLED: 'is-muted', UNASSIGNED: 'is-warning' }
+const statusNames: Record<MemberStatus, string> = {
+  ACTIVE: '启用',
+  DISABLED: '禁用',
+  UNASSIGNED: '未授权',
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -78,23 +102,22 @@ const memberEditor = ref(false)
 const editingMember = ref<Member | null>(null)
 const permissionDetail = ref<Permission | null>(null)
 
-const pageCount = computed(() => Math.max(1, Math.ceil(total.value / query.value.size)))
-const columnCount = computed(() => ({ users: 6, roles: 7, permissions: 4 })[section.value])
-const rowCount = computed(() => {
-  if (section.value === 'users') {
-    return users.value.length
-  }
-  return section.value === 'roles' ? roles.value.length : permissions.value.length
-})
+const pageCount = computed(() =>
+  Math.max(1, Math.ceil(total.value / query.value.size)),
+)
 let sequence = 0
 
-watch(section, () => {
-  query.value = { keyword: '', status: null, current: 1, size: 10 }
-  roleEditor.value = false
-  memberEditor.value = false
-  notice.value = ''
-  void load()
-}, { immediate: true })
+watch(
+  section,
+  () => {
+    query.value = { keyword: '', status: null, current: 1, size: 10 }
+    roleEditor.value = false
+    memberEditor.value = false
+    notice.value = ''
+    void load()
+  },
+  { immediate: true },
+)
 
 /** 查询当前页面数据；并发请求只采用最后一次结果，避免切换页面后旧结果覆盖新结果。 */
 async function load() {
@@ -148,7 +171,7 @@ async function handleDenied(reason: unknown) {
     return
   }
   try {
-    if (!await access.refresh()) {
+    if (!(await access.refresh())) {
       await router.replace('/chat')
     }
   } catch {
@@ -158,7 +181,7 @@ async function handleDenied(reason: unknown) {
 
 /** 授权变化后刷新当前用户权限并重新查询；失去管理资格时离开管理平台。 */
 async function refreshAccessAndReload() {
-  if (!await access.refresh()) {
+  if (!(await access.refresh())) {
     await router.replace('/chat')
     return
   }
@@ -209,7 +232,10 @@ async function saved() {
   authorizationRole.value = null
   roleEditor.value = false
   memberEditor.value = false
-  notice.value = section.value === 'roles' ? '角色草稿已保存，点击“应用”后权限生效。' : '用户角色已应用。'
+  notice.value =
+    section.value === 'roles'
+      ? '角色草稿已保存，点击“应用”后权限生效。'
+      : '用户角色已应用。'
   try {
     await refreshAccessAndReload()
   } catch (reason) {
@@ -236,7 +262,11 @@ function roleChangeMessage(role: Role, apply: boolean): string {
 
 async function changeRole(role: Role, apply = false) {
   const disabling = !apply && role.status === 'ACTIVE'
-  if (!await confirmManagement(roleChangeMessage(role, apply), { danger: disabling })) {
+  if (
+    !(await confirmManagement(roleChangeMessage(role, apply), {
+      danger: disabling,
+    }))
+  ) {
     return
   }
 
@@ -261,7 +291,7 @@ async function changeRole(role: Role, apply = false) {
 async function changeMember(member: Member) {
   const disabling = member.status === 'ACTIVE'
   const message = `${disabling ? '禁用' : '启用'}该用户的管理资格？普通登录与聊天不受影响。`
-  if (!await confirmManagement(message, { danger: disabling })) {
+  if (!(await confirmManagement(message, { danger: disabling }))) {
     return
   }
 
@@ -280,215 +310,393 @@ async function changeMember(member: Member) {
 }
 
 function date(value: string) {
-  return value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '—'
+  return value
+    ? new Date(value).toLocaleString('zh-CN', { hour12: false })
+    : '—'
 }
 </script>
 
 <template>
   <ManagementShell>
-    <ManagementPageHeader :title="config.title" :description="config.description">
-      <template #actions>
-        <button
+
+
+    <section v-if="!canQuery" class="management-card">
+      <div class="management-empty">
+        <p class="management-empty-title">暂无查询权限</p>
+        <p class="management-empty-desc">
+          当前角色仅有菜单访问权限，尚未授予查询功能。
+        </p>
+      </div>
+    </section>
+
+    <template v-else>
+      <ElForm
+        label-position="right"
+        label-width="64px"
+        class="management-card management-filter"
+        @submit.prevent="search"
+      >
+        <ElFormItem class="management-filter-field is-wide" label="关键字"
+          ><ElInput
+            v-model="query.keyword"
+            maxlength="100"
+            :placeholder="config.placeholder"
+          />
+        </ElFormItem>
+        <ElFormItem
+          v-if="section !== 'permissions'"
+          class="management-filter-field"
+          label="状态"
+          ><ElSelect
+            :empty-values="[null, undefined]"
+            :model-value="query.status ?? ''"
+            @change="query.status = $event || null"
+          >
+            <ElOption value="" label="全部" />
+            <ElOption value="ACTIVE" label="启用" />
+            <ElOption value="DISABLED" label="禁用" />
+            <ElOption
+              v-if="section === 'users'"
+              value="UNASSIGNED"
+              label="未授权"
+            />
+          </ElSelect>
+        </ElFormItem>
+        <div class="management-filter-actions">
+          <ElButton
+            type="primary"
+            native-type="submit"
+            class="management-primary"
+            :disabled="loading || busy"
+            >查询</ElButton
+          >
+          <ElButton
+            native-type="button"
+            :disabled="loading || busy"
+            @click="reset"
+            >重置</ElButton
+          >
+        </div>
+      </ElForm>
+
+      <section
+        class="management-card management-table-card"
+        :aria-busy="loading || busy"
+      >
+        <ManagementTableToolbar>
+        <ElButton
+          type="primary"
           v-if="section === 'roles' && access.can('management:role:create')"
-          type="button"
+          native-type="button"
           class="management-primary"
           :disabled="busy || loading"
           @click="add"
         >
           新增角色
-        </button>
-        <button
-          v-if="section === 'users' && access.can('management:user:assign-role')"
-          type="button"
+        </ElButton>
+        <ElButton
+          type="primary"
+          v-if="
+            section === 'users' && access.can('management:user:assign-role')
+          "
+          native-type="button"
           class="management-primary"
           :disabled="busy || loading"
           @click="add"
         >
           添加管理用户
-        </button>
-      </template>
-    </ManagementPageHeader>
+        </ElButton>
 
-    <section v-if="!canQuery" class="management-card">
-      <div class="management-empty">
-        <p class="management-empty-title">暂无查询权限</p>
-        <p class="management-empty-desc">当前角色仅有菜单访问权限，尚未授予查询功能。</p>
-      </div>
-    </section>
+        </ManagementTableToolbar>
 
-    <template v-else>
-      <form class="management-card management-filter" @submit.prevent="search">
-        <label class="management-filter-field is-wide">
-          关键字
-          <input v-model="query.keyword" maxlength="100" :placeholder="config.placeholder" />
-        </label>
-        <label v-if="section !== 'permissions'" class="management-filter-field">
-          状态
-          <select v-model="query.status">
-            <option :value="null">全部</option>
-            <option value="ACTIVE">启用</option>
-            <option value="DISABLED">禁用</option>
-            <option v-if="section === 'users'" value="UNASSIGNED">未授权</option>
-          </select>
-        </label>
-        <div class="management-filter-actions">
-          <button type="submit" class="management-primary" :disabled="loading || busy">查询</button>
-          <button type="button" :disabled="loading || busy" @click="reset">重置</button>
-        </div>
-      </form>
-
-      <section class="management-card management-table-card" :aria-busy="loading || busy">
-        <p v-if="error" class="management-error" role="alert">
+        <ElAlert
+          v-if="error"
+          class="management-error"
+          role="alert"
+          type="error"
+          :closable="false"
+          show-icon
+        >
           {{ error }}
-          <button type="button" class="management-link" :disabled="busy" @click="load">重新查询</button>
-        </p>
-        <p v-if="notice" class="management-notice" role="status">{{ notice }}</p>
+          <ElButton
+            link
+            native-type="button"
+            class="management-link"
+            :disabled="busy"
+            @click="load"
+            >重新查询</ElButton
+          >
+        </ElAlert>
+        <ElAlert
+          v-if="notice"
+          class="management-notice"
+          role="status"
+          type="success"
+          :closable="false"
+          show-icon
+          >{{ notice }}</ElAlert
+        >
 
         <div class="management-table-wrap">
-          <table class="management-table">
-            <thead v-if="section === 'roles'">
-              <tr>
-                <th>角色</th>
-                <th>状态</th>
-                <th>成员</th>
-                <th>应用情况</th>
-                <th>说明</th>
-                <th>更新时间</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <thead v-else-if="section === 'users'">
-              <tr>
-                <th>用户</th>
-                <th>手机号</th>
-                <th>角色</th>
-                <th>管理状态</th>
-                <th>更新时间</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <thead v-else>
-              <tr>
-                <th>权限</th>
-                <th>所属模块</th>
-                <th>说明</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-
-            <tbody v-if="section === 'roles'">
-              <tr v-for="row in roles" :key="row.roleId">
-                <td>
+          <ElTable
+            v-loading="loading || busy"
+            v-if="section === 'roles'"
+            :data="roles" border :stripe="false" class="management-business-table" size="small"
+            style="width: 100%"
+            empty-text="暂无数据"
+          >
+<ElTableColumn type="index" label="序号" width="72" align="center" :index="(index: number) => (query.current - 1) * query.size + index + 1" />
+            <!-- @vue-generic {Role} -->
+            <ElTableColumn label="角色" min-width="180">
+              <template #default="{ row }: { row: Role }"
+                ><div>
                   <div class="management-cell-main">
                     <span class="management-cell-title">
                       {{ row.name }}
-                      <span v-if="row.builtIn" class="management-tag is-primary">内置</span>
+                      <span v-if="row.builtIn">内置</span>
                     </span>
-                    <span class="management-cell-sub">{{ row.code }}</span>
+
                   </div>
-                </td>
-                <td>
-                  <span class="management-tag is-dot" :class="statusTones[row.status]">{{ statusNames[row.status] }}</span>
-                </td>
-                <td>{{ row.memberCount }}</td>
-                <td>
-                  <span class="management-tag" :class="roleApplyState(row) === '已应用' ? 'is-success' : 'is-warning'">
+                </div></template
+              >
+            </ElTableColumn>
+<ElTableColumn prop="code" label="编码" min-width="200" show-overflow-tooltip />
+            <!-- @vue-generic {Role} -->
+            <ElTableColumn label="状态" min-width="100">
+              <template #default="{ row }: { row: Role }"
+                ><div>
+                  <span >{{ statusNames[row.status] }}</span>
+                </div></template
+              >
+            </ElTableColumn>
+            <!-- @vue-generic {Role} -->
+            <ElTableColumn label="成员" min-width="150">
+              <template #default="{ row }: { row: Role }"
+                ><div>{{ row.memberCount }}</div></template
+              >
+            </ElTableColumn>
+            <!-- @vue-generic {Role} -->
+            <ElTableColumn label="应用情况" min-width="150">
+              <template #default="{ row }: { row: Role }"
+                ><div>
+                  <span >
                     {{ roleApplyState(row) }}
                   </span>
-                </td>
-                <td><div class="management-cell-ellipsis" :title="row.description">{{ row.description || '—' }}</div></td>
-                <td class="management-cell-nowrap">{{ date(row.lastUpdateTime) }}</td>
-                <td class="management-actions">
-                  <button type="button" :disabled="busy" @click="editRole(row)">
-                    {{ row.builtIn || !access.can('management:role:update') ? '查看' : '修改' }}
-                  </button>
-                  <button
+                </div></template
+              >
+            </ElTableColumn>
+            <!-- @vue-generic {Role} -->
+            <ElTableColumn label="说明" min-width="150">
+              <template #default="{ row }: { row: Role }"
+                ><div>
+                  <div
+                    class="management-cell-ellipsis"
+                    :title="row.description"
+                  >
+                    {{ row.description || '—' }}
+                  </div>
+                </div></template
+              >
+            </ElTableColumn>
+            <!-- @vue-generic {Role} -->
+            <ElTableColumn label="更新时间" min-width="175">
+              <template #default="{ row }: { row: Role }"
+                ><div class="management-cell-nowrap">
+                  {{ date(row.lastUpdateTime) }}
+                </div></template
+              >
+            </ElTableColumn>
+            <!-- @vue-generic {Role} -->
+            <ElTableColumn label="操作" min-width="180" fixed="right">
+              <template #default="{ row }: { row: Role }"
+                ><div class="management-actions">
+                  <ElButton link type="primary"
+                    native-type="button"
+                    :disabled="busy"
+                    @click="editRole(row)"
+                  >
+                    {{
+                      row.builtIn || !access.can('management:role:update')
+                        ? '查看'
+                        : '修改'
+                    }}
+                  </ElButton>
+                  <ElButton link type="primary"
                     v-if="access.can('management:role:update') || row.builtIn"
-                    type="button"
+                    native-type="button"
                     :disabled="busy"
                     @click="authorizationRole = row"
                   >
                     {{ row.builtIn ? '查看授权' : '分配权限' }}
-                  </button>
+                  </ElButton>
                   <template v-if="!row.builtIn">
-                    <button
+                    <ElButton link type="primary"
                       v-if="access.can('management:role:apply')"
-                      type="button"
+                      native-type="button"
                       :disabled="busy || row.version === row.appliedVersion"
                       @click="changeRole(row, true)"
                     >
                       应用
-                    </button>
-                    <button
-                      v-if="access.can(row.status === 'ACTIVE' ? 'management:role:disable' : 'management:role:enable')"
-                      type="button"
-                      :class="{ 'management-danger': row.status === 'ACTIVE' }"
-                      :disabled="busy || (row.status === 'DISABLED' && row.appliedVersion == null)"
+                    </ElButton>
+                    <ElButton link type="primary"
+                      v-if="
+                        access.can(
+                          row.status === 'ACTIVE'
+                            ? 'management:role:disable'
+                            : 'management:role:enable',
+                        )
+                      "
+                      native-type="button"
+                      :disabled="
+                        busy ||
+                        (row.status === 'DISABLED' &&
+                          row.appliedVersion == null)
+                      "
                       @click="changeRole(row)"
                     >
                       {{ row.status === 'ACTIVE' ? '禁用' : '启用' }}
-                    </button>
+                    </ElButton>
                   </template>
-                </td>
-              </tr>
-            </tbody>
-
-            <tbody v-else-if="section === 'users'">
-              <tr v-for="row in users" :key="row.userId">
-                <td>
+                </div></template
+              >
+            </ElTableColumn>
+          </ElTable>
+          <ElTable
+            v-loading="loading || busy"
+            v-else-if="section === 'users'"
+            :data="users" border :stripe="false" class="management-business-table" size="small"
+            style="width: 100%"
+            empty-text="暂无数据"
+          >
+<ElTableColumn type="index" label="序号" width="72" align="center" :index="(index: number) => (query.current - 1) * query.size + index + 1" />
+            <!-- @vue-generic {Member} -->
+            <ElTableColumn label="用户" min-width="180">
+              <template #default="{ row }: { row: Member }"
+                ><div>
                   <div class="management-cell-main">
-                    <span class="management-cell-title">{{ row.displayName || row.username }}</span>
-                    <span class="management-cell-sub">{{ row.userId }}</span>
+                    <span class="management-cell-title">{{
+                      row.displayName || row.username
+                    }}</span>
+
                   </div>
-                </td>
-                <td class="management-cell-nowrap">{{ row.phone }}</td>
-                <td><div class="management-cell-ellipsis" :title="row.roleNames">{{ row.roleNames || '—' }}</div></td>
-                <td>
-                  <span class="management-tag is-dot" :class="statusTones[row.status]">{{ statusNames[row.status] }}</span>
-                </td>
-                <td class="management-cell-nowrap">{{ date(row.lastUpdateTime) }}</td>
-                <td class="management-actions">
-                  <button v-if="access.can('management:user:assign-role')" type="button" :disabled="busy" @click="editMember(row)">
+                </div></template
+              >
+            </ElTableColumn>
+<ElTableColumn prop="userId" label="用户编号" min-width="200" show-overflow-tooltip />
+            <!-- @vue-generic {Member} -->
+            <ElTableColumn label="手机号" min-width="150">
+              <template #default="{ row }: { row: Member }"
+                ><div class="management-cell-nowrap">
+                  {{ row.phone }}
+                </div></template
+              >
+            </ElTableColumn>
+            <!-- @vue-generic {Member} -->
+            <ElTableColumn label="角色" min-width="150">
+              <template #default="{ row }: { row: Member }"
+                ><div>
+                  <div class="management-cell-ellipsis" :title="row.roleNames">
+                    {{ row.roleNames || '—' }}
+                  </div>
+                </div></template
+              >
+            </ElTableColumn>
+            <!-- @vue-generic {Member} -->
+            <ElTableColumn label="管理状态" min-width="150">
+              <template #default="{ row }: { row: Member }"
+                ><div>
+                  <span >{{ statusNames[row.status] }}</span>
+                </div></template
+              >
+            </ElTableColumn>
+            <!-- @vue-generic {Member} -->
+            <ElTableColumn label="更新时间" min-width="175">
+              <template #default="{ row }: { row: Member }"
+                ><div class="management-cell-nowrap">
+                  {{ date(row.lastUpdateTime) }}
+                </div></template
+              >
+            </ElTableColumn>
+            <!-- @vue-generic {Member} -->
+            <ElTableColumn label="操作" min-width="180" fixed="right">
+              <template #default="{ row }: { row: Member }"
+                ><div class="management-actions">
+                  <ElButton link type="primary"
+                    v-if="access.can('management:user:assign-role')"
+                    native-type="button"
+                    :disabled="busy"
+                    @click="editMember(row)"
+                  >
                     分配角色
-                  </button>
-                  <button
-                    v-if="access.can(row.status === 'ACTIVE' ? 'management:user:disable' : 'management:user:enable')"
-                    type="button"
-                    :class="{ 'management-danger': row.status === 'ACTIVE' }"
+                  </ElButton>
+                  <ElButton link type="primary"
+                    v-if="
+                      access.can(
+                        row.status === 'ACTIVE'
+                          ? 'management:user:disable'
+                          : 'management:user:enable',
+                      )
+                    "
+                    native-type="button"
                     :disabled="busy || row.status === 'UNASSIGNED'"
                     @click="changeMember(row)"
                   >
                     {{ row.status === 'ACTIVE' ? '禁用' : '启用' }}
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-
-            <tbody v-else>
-              <tr v-for="row in permissions" :key="row.code">
-                <td>
+                  </ElButton>
+                </div></template
+              >
+            </ElTableColumn>
+          </ElTable>
+          <ElTable
+            v-loading="loading || busy"
+            v-else
+            :data="permissions" border :stripe="false" class="management-business-table" size="small"
+            style="width: 100%"
+            empty-text="暂无数据"
+          >
+<ElTableColumn type="index" label="序号" width="72" align="center" :index="(index: number) => (query.current - 1) * query.size + index + 1" />
+            <!-- @vue-generic {Permission} -->
+            <ElTableColumn label="权限" min-width="180">
+              <template #default="{ row }: { row: Permission }"
+                ><div>
                   <div class="management-cell-main">
                     <span class="management-cell-title">{{ row.name }}</span>
-                    <span class="management-cell-sub">{{ row.code }}</span>
-                  </div>
-                </td>
-                <td>{{ row.module }}</td>
-                <td><div class="management-cell-ellipsis" :title="row.description">{{ row.description }}</div></td>
-                <td class="management-actions">
-                  <button type="button" @click="permissionDetail = row">查看</button>
-                </td>
-              </tr>
-            </tbody>
 
-            <tbody v-if="loading || (!error && !rowCount)">
-              <tr>
-                <td :colspan="columnCount">
-                  <div v-if="loading" class="management-loading" role="status">正在查询…</div>
-                  <div v-else class="management-empty is-compact">暂无符合条件的数据</div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                  </div>
+                </div></template
+              >
+            </ElTableColumn>
+<ElTableColumn prop="code" label="编码" min-width="200" show-overflow-tooltip />
+            <!-- @vue-generic {Permission} -->
+            <ElTableColumn label="所属模块" min-width="150">
+              <template #default="{ row }: { row: Permission }"
+                ><div>{{ row.module }}</div></template
+              >
+            </ElTableColumn>
+            <!-- @vue-generic {Permission} -->
+            <ElTableColumn label="说明" min-width="150">
+              <template #default="{ row }: { row: Permission }"
+                ><div>
+                  <div
+                    class="management-cell-ellipsis"
+                    :title="row.description"
+                  >
+                    {{ row.description }}
+                  </div>
+                </div></template
+              >
+            </ElTableColumn>
+            <!-- @vue-generic {Permission} -->
+            <ElTableColumn label="操作" min-width="180" fixed="right">
+              <template #default="{ row }: { row: Permission }"
+                ><div class="management-actions">
+                  <ElButton link type="primary" native-type="button" @click="permissionDetail = row"
+                    >查看</ElButton
+                  >
+                </div></template
+              >
+            </ElTableColumn>
+          </ElTable>
         </div>
 
         <CatalogPagination
@@ -502,15 +710,38 @@ function date(value: string) {
       </section>
     </template>
 
-    <AuthorizationEditor v-if="authorizationRole" :role="authorizationRole" @close="authorizationRole = null" @saved="saved" />
-    <RoleEditor v-if="roleEditor" :role="editingRole" @close="roleEditor = false" @saved="saved" />
-    <MemberEditor v-if="memberEditor" :member="editingMember" @close="memberEditor = false" @saved="saved" />
-    <ManagementDialog v-if="permissionDetail" title="权限详情" :busy="false" :dirty="false" @close="permissionDetail = null">
+    <AuthorizationEditor
+      v-if="authorizationRole"
+      :role="authorizationRole"
+      @close="authorizationRole = null"
+      @saved="saved"
+    />
+    <RoleEditor
+      v-if="roleEditor"
+      :role="editingRole"
+      @close="roleEditor = false"
+      @saved="saved"
+    />
+    <MemberEditor
+      v-if="memberEditor"
+      :member="editingMember"
+      @close="memberEditor = false"
+      @saved="saved"
+    />
+    <ManagementDialog
+      v-if="permissionDetail"
+      title="权限详情"
+      :busy="false"
+      :dirty="false"
+      @close="permissionDetail = null"
+    >
       <dl class="management-permission-detail">
         <dt>权限名称</dt>
         <dd>{{ permissionDetail.name }}</dd>
         <dt>权限编码</dt>
-        <dd><span class="management-code">{{ permissionDetail.code }}</span></dd>
+        <dd>
+          <span class="management-code">{{ permissionDetail.code }}</span>
+        </dd>
         <dt>所属模块</dt>
         <dd>{{ permissionDetail.module }}</dd>
         <dt>说明</dt>

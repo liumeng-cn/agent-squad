@@ -1,9 +1,33 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import {
+  ElAlert,
+  ElButton,
+  ElCollapse,
+  ElCollapseItem,
+  ElInput,
+  ElInputNumber,
+  ElOption,
+  ElRadioButton,
+  ElRadioGroup,
+  ElSelect,
+  ElSwitch,
+  ElTag,
+} from 'element-plus'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { errorMessage } from '../../../shared/http/http'
 import { useManagementStore } from '../stores/management'
-import * as api from '../api/agentConfigApi'
+import {
+  createTool,
+  getTool,
+  getToolVersion,
+  listBuiltinToolOptions,
+  listMcpServerOptions,
+  listRemoteTools,
+  listToolCredentialOptions,
+  saveTool,
+  testRunTool,
+} from '../api/agentConfigApi'
 import type {
   BuiltinToolOption,
   HttpMethod,
@@ -12,412 +36,153 @@ import type {
   McpRemoteTool,
   McpServerOption,
   ToolDetail,
-  ToolDraft,
+  ToolSave,
+  ToolTestRun,
   ToolType,
   ToolVersion,
 } from '../model/agentConfig'
 import {
-  CODE_PATTERN,
-  EXPOSED_NAME_PATTERN,
-  TOOL_DESCRIPTION_LIMIT,
   bodyMethods,
   configStatusLabels,
   configStatusTones,
   formatTime,
   httpMethods,
-  toolTypeDescriptions,
+  readinessLabels,
+  readinessTones,
+  TOOL_DESCRIPTION_LIMIT,
   toolTypeLabels,
   toolTypes,
   versionLabel,
-  type ChoiceOption,
-  type EditorMode,
-  type EditorTab,
 } from '../model/agentConfigLabels'
-import {
-  CREDENTIAL_PLACEHOLDER,
-  emptyObjectSchema,
-  fieldsFromSchema,
-  isValidBodyTemplate,
-  placeholdersIn,
-  schemaFromFields,
-  validateFields,
-  type ParamField,
-} from '../model/toolSchema'
-import { blockingChecks, type CheckItem } from '../model/publishCheck'
-import { useAsyncAction, useSnapshot, useUnsavedGuard } from '../composables/useEditorState'
-import { confirmManagement } from '../components/confirmManagement'
+import { tagType } from '../model/elementTheme'
+import { fieldsFromSchema, schemaFromFields, type ParamField } from '../model/toolSchema'
+import { useEditorState } from '../composables/useEditorState'
 import ManagementShell from '../components/ManagementShell.vue'
-import ManagementCard from '../components/ManagementCard.vue'
-import ConfigEditorLayout from '../components/agent-config/ConfigEditorLayout.vue'
-import ChoiceCards from '../components/agent-config/ChoiceCards.vue'
+import ManagementDialog from '../components/ManagementDialog.vue'
+import SteppedEditorLayout, { type EditorStepItem } from '../components/agent-config/SteppedEditorLayout.vue'
 import KeyValueEditor from '../components/agent-config/KeyValueEditor.vue'
 import ParameterTable from '../components/agent-config/ParameterTable.vue'
-import PublishChecklist from '../components/agent-config/PublishChecklist.vue'
-import RemoteToolList from '../components/agent-config/RemoteToolList.vue'
 import TestRunPanel from '../components/agent-config/TestRunPanel.vue'
 import UsageTable from '../components/agent-config/UsageTable.vue'
 import VersionHistoryTable from '../components/agent-config/VersionHistoryTable.vue'
 
 /**
- * 工具编辑页：按类型配置工具实现，并由配置生成模型可调用的工具。
- * 内置工具选择代码登记的实现；HTTP 工具用参数表格和请求模板生成接口调用；MCP 工具从已发布服务发现远程工具。
+ * 工具分步聚焦编辑页（方案 3）：1. 基础信息 → 2. 实现与定义 → 3. 在线试运行 → 4. 引用与历史。
  */
-interface ToolForm {
-  exposedName: string
-  description: string
-  readOnly: boolean
-  implementationKey: string | null
-  mcpServerVersionId: string | null
-  remoteToolName: string | null
-  /** 内置与 MCP 工具的参数来自实现，原样保存 */
-  inputSchema: JsonSchema
-  /** HTTP 工具的参数表格 */
-  fields: ParamField[]
-  http: HttpToolSpec
-}
-
 const route = useRoute()
 const router = useRouter()
 const access = useManagementStore()
 
 const canEdit = computed(() => access.can('management:tool:edit'))
-const canPublish = computed(() => access.can('management:tool:publish'))
+const toolId = computed(() => {
+  const raw = route.params.id ? String(route.params.id) : ''
+  return raw && raw !== 'new' ? raw : null
+})
+const isCreate = computed(() => !toolId.value)
 
-const routeId = computed(() => String(route.params.id ?? ''))
-const creating = computed(() => routeId.value === 'new')
-
+const step = ref('basic')
 const detail = ref<ToolDetail | null>(null)
-const version = ref<ToolVersion | null>(null)
-const mode = ref<EditorMode>('create')
-const tab = ref<EditorTab>('config')
-const loading = ref(false)
-const loadError = ref('')
-
-const entry = ref({ toolCode: '', toolName: '', toolType: 'HTTP' as ToolType })
-const form = ref<ToolForm>(emptyForm())
-const profileEditing = ref(false)
-const profileName = ref('')
-
-const builtinOptions = ref<BuiltinToolOption[]>([])
+const builtins = ref<BuiltinToolOption[]>([])
 const mcpOptions = ref<McpServerOption[]>([])
 const credentials = ref<string[]>([])
-const optionsError = ref('')
 const remoteTools = ref<McpRemoteTool[]>([])
 const discovering = ref(false)
 const discoverError = ref('')
+const loading = ref(false)
+const busy = ref(false)
+const error = ref('')
+const notice = ref('')
+const advancedOpen = ref<string[]>([])
+const inspectedVersion = ref<ToolVersion | null>(null)
 
-const { busy, error, notice, run } = useAsyncAction()
-const draftState = computed(() => ({ entry: entry.value, form: form.value }))
-const { markClean, changed } = useSnapshot(draftState)
-
-function emptyHttpSpec(): HttpToolSpec {
+function defaultHttpSpec(): HttpToolSpec {
   return { method: 'GET', url: '', headers: [], bodyTemplate: null, credentialRef: null, timeoutMs: 15000, resultPointer: null }
 }
 
-function emptyForm(): ToolForm {
-  return {
-    exposedName: '',
-    description: '',
-    readOnly: true,
-    implementationKey: null,
-    mcpServerVersionId: null,
-    remoteToolName: null,
-    inputSchema: emptyObjectSchema(),
-    fields: [],
-    http: emptyHttpSpec(),
-  }
-}
-
-function formFromVersion(source: ToolVersion): ToolForm {
-  return {
-    exposedName: source.exposedName,
-    description: source.description,
-    readOnly: source.readOnly,
-    implementationKey: source.implementationKey,
-    mcpServerVersionId: source.mcpServerVersionId,
-    remoteToolName: source.remoteToolName,
-    inputSchema: source.inputSchema ?? emptyObjectSchema(),
-    fields: fieldsFromSchema(source.inputSchema),
-    http: source.httpSpec
-      ? { ...source.httpSpec, headers: source.httpSpec.headers.map(header => ({ ...header })) }
-      : emptyHttpSpec(),
-  }
-}
-
-const tool = computed(() => detail.value?.tool ?? null)
-const toolType = computed<ToolType>(() => tool.value?.toolType ?? entry.value.toolType)
-const editable = computed(() => canEdit.value && mode.value !== 'published')
-const dirty = computed(() => editable.value && changed())
-const profileDirty = computed(() => profileEditing.value && profileName.value !== tool.value?.toolName)
-useUnsavedGuard(computed(() => dirty.value || profileDirty.value))
-
-const typeOptions = computed<ChoiceOption<ToolType>[]>(() => toolTypes.map(value => ({
-  value,
-  title: toolTypeLabels[value],
-  description: toolTypeDescriptions[value],
-})))
-
-/** 当前生效的参数 Schema：HTTP 由表格生成，其余取实现带出的 Schema。 */
-const effectiveSchema = computed<JsonSchema>(() => (
-  toolType.value === 'HTTP' ? schemaFromFields(form.value.fields) : form.value.inputSchema
-))
-const displayFields = computed(() => (
-  toolType.value === 'HTTP' ? form.value.fields.filter(field => field.name.trim()) : fieldsFromSchema(form.value.inputSchema)
-))
-const fieldErrors = computed(() => (toolType.value === 'HTTP' ? validateFields(form.value.fields) : []))
-
-const selectedBuiltin = computed(() => builtinOptions.value.find(option => option.implementationKey === form.value.implementationKey))
-const selectedMcp = computed(() => mcpOptions.value.find(option => option.mcpServerVersionId === form.value.mcpServerVersionId))
-const mcpServerLabel = computed(() => {
-  if (selectedMcp.value) {
-    return `${selectedMcp.value.serverName} · ${versionLabel(selectedMcp.value.versionNo)}`
-  }
-  if (version.value?.mcpServerName) {
-    return `${version.value.mcpServerName} · ${versionLabel(version.value.mcpServerVersionNo)}`
-  }
-  return form.value.mcpServerVersionId ? '原绑定的服务版本已不可用' : '—'
+const form = ref({
+  toolName: '',
+  displayAlias: '',
+  toolType: 'HTTP' as ToolType,
+  exposedName: '',
+  description: '',
+  readOnly: true,
+  implementationKey: null as string | null,
+  mcpServerId: null as string | null,
+  remoteToolName: null as string | null,
+  httpSpec: defaultHttpSpec(),
+  inputSchema: { type: 'object', properties: {} } as JsonSchema,
+  parameters: [] as ParamField[],
 })
 
-// HTTP 请求模板相关的校验
-const bodyAllowed = computed(() => bodyMethods.includes(form.value.http.method))
-const urlValid = computed(() => {
-  const url = form.value.http.url.trim()
-  const match = /^(https?):\/\/([^/?#]+)/i.exec(url)
-  return Boolean(match) && !match![2]!.includes('{{') && !url.includes('#')
-})
-const httpPlaceholders = computed(() => placeholdersIn(
-  form.value.http.url,
-  ...form.value.http.headers.map(header => header.value),
-  bodyAllowed.value ? form.value.http.bodyTemplate : null,
-))
-const paramNames = computed(() => form.value.fields.map(field => field.name.trim()).filter(Boolean))
-const undefinedPlaceholders = computed(() => httpPlaceholders.value
-  .filter(name => name !== CREDENTIAL_PLACEHOLDER && !paramNames.value.includes(name)))
-const usesCredential = computed(() => httpPlaceholders.value.includes(CREDENTIAL_PLACEHOLDER))
-const bodyValid = computed(() => !bodyAllowed.value || !form.value.http.bodyTemplate?.trim() || isValidBodyTemplate(form.value.http.bodyTemplate))
-const pointerValid = computed(() => !form.value.http.resultPointer || form.value.http.resultPointer.startsWith('/'))
-const timeoutValid = computed(() => {
-  const value = form.value.http.timeoutMs
-  return Number.isInteger(value) && value >= 1000 && value <= 60000
-})
-const forbiddenHeaders = ['host', 'content-length', 'connection', 'transfer-encoding']
-const headersValid = computed(() => form.value.http.headers.every(header => (
-  header.name.trim() !== '' && !forbiddenHeaders.includes(header.name.trim().toLowerCase())
-)))
+const { dirty, markClean, resetDirty } = useEditorState(() => JSON.stringify(form.value))
+const title = computed(() => (isCreate.value ? '新增工具' : detail.value?.tool.toolName || '工具'))
+const currentSchema = computed<JsonSchema>(() =>
+  form.value.toolType === 'HTTP' ? schemaFromFields(form.value.parameters) : form.value.inputSchema,
+)
+const showsBody = computed(() => bodyMethods.includes(form.value.httpSpec.method))
 
-const implementationReady = computed(() => {
-  if (toolType.value === 'BUILTIN') {
-    return Boolean(form.value.implementationKey)
-  }
-  if (toolType.value === 'MCP') {
-    return Boolean(form.value.mcpServerVersionId && form.value.remoteToolName)
-  }
-  return urlValid.value && headersValid.value && bodyValid.value && pointerValid.value && timeoutValid.value
-    && (!usesCredential.value || Boolean(form.value.http.credentialRef))
+const steps = computed<EditorStepItem[]>(() => [
+  { key: 'basic', no: 1, label: '基础信息' },
+  { key: 'impl', no: 2, label: '实现与定义' },
+  { key: 'test', no: 3, label: '在线试运行' },
+  { key: 'history', no: 4, label: '引用与历史', badge: detail.value?.versions.length, hidden: isCreate.value },
+])
+
+const stepTitle = computed(() => {
+  if (step.value === 'basic') return '1. 基础信息'
+  if (step.value === 'impl') return `2. 实现与模型定义（${toolTypeLabels[form.value.toolType]}）`
+  if (step.value === 'test') return '3. 在线试运行'
+  return '4. 引用关系与配置历史'
 })
 
-const checks = computed<CheckItem[]>(() => {
-  const items: CheckItem[] = []
-  if (creating.value) {
-    items.push({ label: '填写工具编码和名称', passed: CODE_PATTERN.test(entry.value.toolCode) && entry.value.toolName.trim() !== '' })
+function applyDetail(data: ToolDetail) {
+  detail.value = data
+  const latest = data.latestVersion
+  const schema = latest?.inputSchema ?? { type: 'object', properties: {} }
+  form.value = {
+    toolName: data.tool.toolName,
+    displayAlias: data.tool.displayAlias || '',
+    toolType: data.tool.toolType,
+    exposedName: latest?.exposedName ?? '',
+    description: latest?.description ?? '',
+    readOnly: latest?.readOnly ?? true,
+    implementationKey: latest?.implementationKey ?? null,
+    mcpServerId: latest?.mcpServerId ?? null,
+    remoteToolName: latest?.remoteToolName ?? null,
+    httpSpec: latest?.httpSpec ? { ...latest.httpSpec, headers: [...(latest.httpSpec.headers ?? [])] } : defaultHttpSpec(),
+    inputSchema: schema,
+    parameters: fieldsFromSchema(schema),
   }
-  items.push({ label: '模型工具名格式正确', passed: EXPOSED_NAME_PATTERN.test(form.value.exposedName), hint: '字母、数字、下划线或连字符，最多 64 位' })
-  if (toolType.value === 'BUILTIN') {
-    items.push({ label: '已选择内置实现', passed: Boolean(form.value.implementationKey) })
-  } else if (toolType.value === 'MCP') {
-    items.push(
-      { label: '已选择 MCP 服务版本', passed: Boolean(form.value.mcpServerVersionId) },
-      { label: '已选择远程工具', passed: Boolean(form.value.remoteToolName), hint: '点击“发现工具”后选择一个远程工具' },
-    )
-  } else {
-    items.push(
-      { label: '请求地址为 http/https 且主机不含占位符', passed: urlValid.value },
-      { label: '参数定义有效', passed: fieldErrors.value.length === 0 },
-      { label: '模板占位符均已定义为参数', passed: undefinedPlaceholders.value.length === 0, hint: `未定义：${undefinedPlaceholders.value.join('、')}` },
-      { label: '使用 {{credential}} 时已选择凭据', passed: !usesCredential.value || Boolean(form.value.http.credentialRef) },
-      { label: '请求头与请求体模板有效', passed: headersValid.value && bodyValid.value, hint: '请求头名称不能为空或使用受限名称；请求体替换占位符后须为合法 JSON' },
-      { label: '超时与结果路径有效', passed: timeoutValid.value && pointerValid.value, hint: '超时 1000～60000 毫秒；结果路径以 / 开头' },
-    )
-  }
-  items.push({ label: '描述已填写', passed: form.value.description.trim() !== '', hint: '发布前必须填写，模型根据描述判断何时调用', level: 'publish' })
-  return items
-})
-
-/** 保存草稿允许描述为空，发布时必须填写；其余检查项同时约束保存与发布。 */
-const canSave = computed(() => editable.value && !busy.value && blockingChecks(checks.value, 'save').length === 0)
-const canPublishDraft = computed(() => (
-  canPublish.value && mode.value === 'draft' && !dirty.value && !busy.value
-  && blockingChecks(checks.value, 'publish').length === 0 && tool.value?.status === 'ENABLED'
-))
-
-const testDisabledReason = computed(() => {
-  if (!canEdit.value) {
-    return '试运行需要工具编辑权限。'
-  }
-  if (!implementationReady.value) {
-    return '请先完成实现配置。'
-  }
-  if (fieldErrors.value.length) {
-    return '请先修正参数定义。'
-  }
-  return null
-})
-
-const title = computed(() => (creating.value ? '新增工具' : tool.value?.toolName ?? '工具'))
-const modeTag = computed(() => {
-  if (mode.value === 'create' || mode.value === 'newDraft') {
-    return { text: '新草稿', tone: 'is-warning' }
-  }
-  const label = versionLabel(version.value?.versionNo)
-  return mode.value === 'draft' ? { text: `${label} 草稿`, tone: 'is-warning' } : { text: `${label} 已发布`, tone: 'is-success' }
-})
-
-/** 按工具类型组装草稿：只填写当前类型的实现字段，其余置空。 */
-function toDraft(): ToolDraft {
-  const type = toolType.value
-  const http = form.value.http
-  return {
-    revision: mode.value === 'draft' ? version.value?.revision : undefined,
-    exposedName: form.value.exposedName.trim(),
-    description: form.value.description.trim(),
-    inputSchema: effectiveSchema.value,
-    readOnly: form.value.readOnly,
-    implementationKey: type === 'BUILTIN' ? form.value.implementationKey : null,
-    mcpServerVersionId: type === 'MCP' ? form.value.mcpServerVersionId : null,
-    remoteToolName: type === 'MCP' ? form.value.remoteToolName : null,
-    httpSpec: type === 'HTTP'
-      ? {
-          method: http.method,
-          url: http.url.trim(),
-          headers: http.headers.map(header => ({ name: header.name.trim(), value: header.value })),
-          bodyTemplate: bodyAllowed.value && http.bodyTemplate?.trim() ? http.bodyTemplate : null,
-          credentialRef: http.credentialRef || null,
-          timeoutMs: http.timeoutMs,
-          resultPointer: http.resultPointer?.trim() || null,
-        }
-      : null,
-  }
-}
-
-async function loadOptions() {
-  optionsError.value = ''
-  const [builtin, mcp, credential] = await Promise.allSettled([
-    api.listBuiltinToolOptions(),
-    api.listMcpServerOptions(),
-    api.listToolCredentialOptions(),
-  ])
-  builtinOptions.value = builtin.status === 'fulfilled' ? builtin.value : []
-  mcpOptions.value = mcp.status === 'fulfilled' ? mcp.value : []
-  credentials.value = credential.status === 'fulfilled' ? credential.value : []
-  if ([builtin, mcp, credential].some(result => result.status === 'rejected')) {
-    optionsError.value = '部分选项加载失败，可刷新页面重试。'
-  }
-}
-
-/** 读取工具详情并选择默认版本：有草稿进入草稿，否则查看最新发布版本，都没有时准备新草稿。 */
-async function load(preferredVersionId?: string) {
-  loading.value = true
-  loadError.value = ''
-  try {
-    detail.value = await api.getTool(routeId.value)
-    const target = preferredVersionId ?? detail.value.tool.draftVersionId ?? detail.value.tool.publishedVersionId
-    if (target) {
-      await openVersion(target)
-    } else {
-      startDraft(null)
-    }
-  } catch (reason) {
-    loadError.value = errorMessage(reason)
-  } finally {
-    loading.value = false
-  }
-}
-
-async function openVersion(versionId: string) {
-  const loaded = await api.getToolVersion(routeId.value, versionId)
-  version.value = loaded
-  form.value = formFromVersion(loaded)
-  mode.value = loaded.status === 'DRAFT' ? 'draft' : 'published'
-  remoteTools.value = []
-  discoverError.value = ''
   markClean()
 }
 
-async function selectVersion(versionId: string) {
-  if (dirty.value && !await confirmManagement('当前草稿有未保存的修改，切换版本后将丢失。确认切换？', { danger: true })) {
-    return
-  }
-  await run(async () => {
-    await openVersion(versionId)
-    tab.value = 'config'
-  })
-}
-
-function startDraft(source: ToolVersion | null) {
-  form.value = source ? formFromVersion(source) : emptyForm()
-  version.value = null
-  mode.value = 'newDraft'
-  remoteTools.value = []
-  markClean()
-}
-
-/** 放弃尚未保存的新草稿，回到默认版本。 */
-async function discardDraft() {
-  if (dirty.value && !await confirmManagement('放弃新草稿中尚未保存的修改？', { danger: true, confirmText: '放弃' })) {
-    return
-  }
-  await load()
-}
-
-async function editDraft() {
-  const draftId = tool.value?.draftVersionId
-  if (draftId) {
-    await selectVersion(draftId)
-  }
-}
-
-/** 切换工具类型时清空上一种类型的实现配置，避免混入无效字段。 */
-watch(() => entry.value.toolType, () => {
-  if (!creating.value) {
-    return
-  }
-  const name = form.value.exposedName
-  const description = form.value.description
-  form.value = { ...emptyForm(), exposedName: name, description }
-  remoteTools.value = []
-})
-
-function applyBuiltin(implementationKey: string) {
-  const option = builtinOptions.value.find(item => item.implementationKey === implementationKey)
-  form.value.implementationKey = implementationKey
-  if (!option) {
-    return
-  }
+function selectBuiltin(key: string) {
+  form.value.implementationKey = key
+  const option = builtins.value.find(item => item.implementationKey === key)
+  if (!option) return
   form.value.exposedName = option.exposedName
   form.value.description = option.description
-  form.value.inputSchema = option.inputSchema ?? emptyObjectSchema()
+  form.value.inputSchema = option.inputSchema
+  form.value.parameters = fieldsFromSchema(option.inputSchema)
   form.value.readOnly = option.readOnly
 }
 
-function changeMcpServer(versionId: string) {
-  form.value.mcpServerVersionId = versionId || null
+function selectMcpServer(serverId: string | null) {
+  form.value.mcpServerId = serverId
   form.value.remoteToolName = null
   remoteTools.value = []
   discoverError.value = ''
 }
 
-async function discover() {
-  const versionId = form.value.mcpServerVersionId
-  if (!versionId) {
+async function discoverRemote() {
+  if (!form.value.mcpServerId) {
+    discoverError.value = '请先选择已就绪的 MCP 服务'
     return
   }
   discovering.value = true
   discoverError.value = ''
   try {
-    remoteTools.value = await api.listRemoteTools(versionId)
-    if (!remoteTools.value.length) {
-      discoverError.value = '该服务版本没有返回任何工具。'
-    }
+    remoteTools.value = await listRemoteTools(form.value.mcpServerId)
   } catch (reason) {
     discoverError.value = errorMessage(reason)
   } finally {
@@ -425,519 +190,323 @@ async function discover() {
   }
 }
 
-/** 选择远程工具后带出远程定义；模型工具名默认取远程工具名并转换为合法格式。 */
-function applyRemoteTool(remote: McpRemoteTool) {
-  form.value.remoteToolName = remote.name
-  form.value.exposedName = remote.name.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 64)
-  form.value.description = remote.description ?? ''
-  form.value.inputSchema = remote.inputSchema ?? emptyObjectSchema()
-  form.value.readOnly = remote.readOnly
+function selectRemoteTool(name: string) {
+  form.value.remoteToolName = name
+  const picked = remoteTools.value.find(item => item.name === name)
+  if (!picked) return
+  if (!form.value.exposedName.trim()) form.value.exposedName = picked.name
+  if (!form.value.description.trim()) form.value.description = picked.description || ''
+  form.value.inputSchema = picked.inputSchema ?? { type: 'object', properties: {} }
+  form.value.parameters = fieldsFromSchema(form.value.inputSchema)
+  form.value.readOnly = picked.readOnly
+}
+
+function changeHttpMethod(method: HttpMethod) {
+  form.value.httpSpec.method = method
+  if (!bodyMethods.includes(method)) form.value.httpSpec.bodyTemplate = null
+}
+
+function buildSavePayload(): ToolSave {
+  return {
+    revision: detail.value?.tool.revision,
+    toolName: form.value.toolName.trim(),
+    displayAlias: form.value.displayAlias.trim(),
+    toolType: form.value.toolType,
+    exposedName: form.value.exposedName.trim(),
+    description: form.value.description.trim(),
+    inputSchema: currentSchema.value,
+    readOnly: form.value.readOnly,
+    implementationKey: form.value.toolType === 'BUILTIN' ? form.value.implementationKey : null,
+    mcpServerId: form.value.toolType === 'MCP' ? form.value.mcpServerId : null,
+    remoteToolName: form.value.toolType === 'MCP' ? form.value.remoteToolName : null,
+    httpSpec:
+      form.value.toolType === 'HTTP'
+        ? { ...form.value.httpSpec, url: form.value.httpSpec.url.trim(), headers: form.value.httpSpec.headers.filter(h => h.name.trim()) }
+        : null,
+  }
 }
 
 async function save() {
-  if (!canSave.value) {
+  if (!form.value.toolName.trim()) {
+    step.value = 'basic'
+    error.value = '请先填写工具名称'
     return
   }
-  if (creating.value) {
-    const created = await run(() => api.createTool({
-      toolCode: entry.value.toolCode.trim(),
-      toolName: entry.value.toolName.trim(),
-      toolType: entry.value.toolType,
-      draft: toDraft(),
-    }))
-    if (created) {
-      markClean()
-      await router.replace(`/management/tools/${created.tool.toolId}`)
-      notice.value = '工具已创建，草稿 v1 已保存。试运行无误后即可发布。'
-    }
-    return
-  }
-
-  const saved = await run(async () => {
-    const result = mode.value === 'draft' && version.value
-      ? await api.saveToolVersion(routeId.value, version.value.toolVersionId, toDraft())
-      : await api.createToolVersion(routeId.value, toDraft())
-    detail.value = await api.getTool(routeId.value)
-    return result
-  }, '草稿已保存。')
-  if (saved) {
-    version.value = saved
-    form.value = formFromVersion(saved)
-    mode.value = 'draft'
-    markClean()
-  }
-}
-
-async function publish() {
-  const target = version.value
-  if (!target || !canPublishDraft.value) {
-    return
-  }
-  const message = `发布 ${versionLabel(target.versionNo)}？发布后该版本冻结不可修改，Agent 即可绑定。已绑定旧版本的 Agent 需要手动升级。`
-  if (!await confirmManagement(message, { confirmText: '发布' })) {
-    return
-  }
-  await run(async () => {
-    await api.publishToolVersion(routeId.value, target.toolVersionId, target.revision)
-    await load(target.toolVersionId)
-  }, `${versionLabel(target.versionNo)} 已发布。`)
-}
-
-function executeTest(args: Record<string, unknown>) {
-  return api.testRunTool({ toolType: toolType.value, draft: toDraft(), arguments: args })
-}
-
-function startProfileEdit() {
-  profileName.value = tool.value?.toolName ?? ''
-  profileEditing.value = true
-}
-
-async function saveProfile() {
-  const current = tool.value
-  if (!current || !profileName.value.trim()) {
-    return
-  }
-  const updated = await run(() => api.updateTool(current.toolId, { toolName: profileName.value.trim(), revision: current.revision }), '工具名称已更新。')
-  if (updated && detail.value) {
-    detail.value = { ...detail.value, tool: updated }
-    profileEditing.value = false
-  }
-}
-
-async function toggleStatus() {
-  const current = tool.value
-  if (!current) {
-    return
-  }
-  const disabling = current.status === 'ENABLED'
-  const message = disabling
-    ? `停用“${current.toolName}”？被启用 Agent 的生效版本绑定时无法停用。`
-    : `启用“${current.toolName}”？`
-  if (!await confirmManagement(message, { danger: disabling, confirmText: disabling ? '停用' : '启用' })) {
-    return
-  }
-  const updated = await run(() => (disabling
-    ? api.disableTool(current.toolId, current.revision)
-    : api.enableTool(current.toolId, current.revision)), `工具已${disabling ? '停用' : '启用'}。`)
-  if (updated && detail.value) {
-    detail.value = { ...detail.value, tool: updated }
-  }
-}
-
-function setMethod(method: HttpMethod) {
-  form.value.http.method = method
-}
-
-async function init() {
-  detail.value = null
-  version.value = null
-  tab.value = 'config'
-  profileEditing.value = false
-  remoteTools.value = []
+  busy.value = true
   error.value = ''
-  if (creating.value) {
-    entry.value = { toolCode: '', toolName: '', toolType: 'HTTP' }
-    form.value = emptyForm()
-    mode.value = 'create'
-    markClean()
-    return
+  notice.value = ''
+  try {
+    const payload = buildSavePayload()
+    if (isCreate.value) {
+      const created = await createTool(payload)
+      applyDetail(created)
+      notice.value = `工具已创建（编码 ${created.tool.toolCode}，配置版本 v${created.tool.latestVersionNo}）。`
+      await router.replace(`/management/tools/${created.tool.toolId}`)
+    } else {
+      const saved = await saveTool(toolId.value!, payload)
+      applyDetail(saved)
+      notice.value = `已保存为新配置版本 v${saved.tool.latestVersionNo}（${readinessLabels[saved.tool.latestReadiness]}）。`
+    }
+  } catch (reason) {
+    error.value = errorMessage(reason)
+  } finally {
+    busy.value = false
   }
-  await load()
 }
 
-watch(routeId, () => {
-  void init()
-})
+async function runTest(args: Record<string, unknown>): Promise<ToolTestRun> {
+  return testRunTool({
+    toolType: form.value.toolType,
+    definition: buildSavePayload(),
+    arguments: args,
+  })
+}
+
+async function inspectVersion(versionId: string) {
+  if (!toolId.value) return
+  busy.value = true
+  try {
+    inspectedVersion.value = await getToolVersion(toolId.value, versionId)
+  } catch (reason) {
+    error.value = errorMessage(reason)
+  } finally {
+    busy.value = false
+  }
+}
+
+async function load() {
+  loading.value = true
+  error.value = ''
+  try {
+    const [builtinList, mcpList, credList] = await Promise.all([
+      listBuiltinToolOptions(),
+      listMcpServerOptions(),
+      listToolCredentialOptions(),
+    ])
+    builtins.value = builtinList
+    mcpOptions.value = mcpList
+    credentials.value = credList
+    if (toolId.value) {
+      applyDetail(await getTool(toolId.value))
+    } else {
+      resetDirty()
+    }
+  } catch (reason) {
+    error.value = errorMessage(reason)
+  } finally {
+    loading.value = false
+  }
+}
 
 onMounted(() => {
-  void loadOptions()
-  void init()
+  void load()
 })
 </script>
 
 <template>
-  <ManagementShell :current="creating ? '新增' : tool?.toolName">
-    <div v-if="loading && !detail" class="management-card management-loading" role="status">正在加载…</div>
-    <div v-else-if="loadError" class="management-card">
-      <div class="management-empty">
-        <p class="management-empty-title">加载失败</p>
-        <p class="management-empty-desc">{{ loadError }}</p>
-        <div class="management-empty-actions">
-          <button type="button" @click="load()">重新加载</button>
-          <RouterLink to="/management/tools">返回列表</RouterLink>
-        </div>
-      </div>
-    </div>
-
-    <ConfigEditorLayout
-      v-else
-      v-model:tab="tab"
+  <ManagementShell>
+    <SteppedEditorLayout
+      v-model:step="step"
       back-path="/management/tools"
-      back-label="工具目录"
+      back-label="工具列表"
       :title="title"
-      :show-tabs="!creating"
-      :version-count="detail?.versions.length ?? 0"
-      :usage-count="detail?.usages.length ?? 0"
-      usage-label="引用 Agent"
+      :code="detail?.tool.toolCode"
+      :subtitle="detail ? `最近更新：${formatTime(detail.tool.lastUpdateTime)}` : '编码格式：TOOL-H-yyyyMMdd-001'"
+      :steps="steps"
+      :can-save="canEdit"
+      :saving="busy || loading"
+      :save-label="dirty ? '保存新版本' : '保存'"
+      @save="save"
     >
-      <template #tags>
-        <span class="management-tag">{{ toolTypeLabels[toolType] }}</span>
-        <span v-if="tool" class="management-tag is-dot" :class="configStatusTones[tool.status]">
-          {{ configStatusLabels[tool.status] }}
-        </span>
-        <span class="management-tag" :class="modeTag.tone">{{ modeTag.text }}</span>
+      <template #status>
+        <ElTag class="management-tag" type="info">{{ toolTypeLabels[form.toolType] }}</ElTag>
+        <ElTag v-if="detail" class="management-tag" :class="configStatusTones[detail.tool.status]" :type="tagType(configStatusTones[detail.tool.status])">
+          {{ configStatusLabels[detail.tool.status] }}
+        </ElTag>
+        <ElTag v-if="detail" class="management-tag" :class="readinessTones[detail.tool.latestReadiness]" :type="tagType(readinessTones[detail.tool.latestReadiness])">
+          {{ versionLabel(detail.tool.latestVersionNo) }} · {{ readinessLabels[detail.tool.latestReadiness] }}
+        </ElTag>
       </template>
 
-      <template #actions>
-        <button v-if="tool && canPublish" type="button" :class="{ 'management-danger': tool.status === 'ENABLED' }" :disabled="busy" @click="toggleStatus">
-          {{ tool.status === 'ENABLED' ? '停用' : '启用' }}
-        </button>
-        <template v-if="mode === 'published' && canEdit">
-          <button v-if="tool?.draftVersionId" type="button" :disabled="busy" @click="editDraft">编辑草稿</button>
-          <button v-else type="button" :disabled="busy" @click="startDraft(version)">基于此版本修改</button>
-        </template>
-        <button v-if="mode === 'newDraft' && detail?.versions.length" type="button" :disabled="busy" @click="discardDraft">放弃新草稿</button>
-        <button v-if="editable" type="button" :class="{ 'management-primary': !canPublishDraft }" :disabled="!canSave" @click="save">
-          {{ creating ? '创建并保存草稿' : '保存草稿' }}
-        </button>
-        <button
-          v-if="canPublish && mode === 'draft'"
-          type="button"
-          :class="{ 'management-primary': canPublishDraft }"
-          :disabled="!canPublishDraft"
-          @click="publish"
-        >
-          发布
-        </button>
-      </template>
-
-      <template v-if="tool" #meta>
-        <span>编码 <span class="management-code">{{ tool.toolCode }}</span></span>
-        <span>最新发布 {{ versionLabel(tool.publishedVersionNo) }}</span>
-        <span>更新于 {{ formatTime(tool.lastUpdateTime) }}</span>
-      </template>
+      <template #step-title>{{ stepTitle }}</template>
 
       <template #messages>
-        <p v-if="error" class="management-error" role="alert">{{ error }}</p>
-        <p v-if="notice" class="management-notice" role="status">{{ notice }}</p>
-        <p v-if="optionsError" class="management-warning">{{ optionsError }}</p>
-        <p v-if="mode === 'published'" class="management-info">
-          正在查看已发布的 {{ versionLabel(version?.versionNo) }}，已发布版本不可修改。{{ canEdit ? '如需调整，请基于此版本创建新草稿。' : '' }}
-        </p>
-        <p v-if="tool?.status === 'DISABLED'" class="management-warning">工具已停用：Agent 无法绑定，草稿也不能发布。</p>
+        <ElAlert v-if="error" type="error" :title="error" show-icon :closable="false" />
+        <ElAlert v-if="notice" type="success" :title="notice" show-icon :closable="false" />
       </template>
 
-      <template #main>
-        <ManagementCard v-if="creating" title="工具类型" description="类型决定工具的生成方式，创建后不可修改。">
-          <ChoiceCards v-model="entry.toolType" :options="typeOptions" name="tool-type" label="工具类型" />
-        </ManagementCard>
+      <!-- 步骤 1：基础信息 -->
+      <div v-if="step === 'basic'" class="management-form-grid">
+        <label class="management-field">
+          <span class="management-field-label">工具名称 <span class="management-required" /></span>
+          <ElInput v-model="form.toolName" :disabled="!canEdit" maxlength="120" placeholder="后台管理识别名，如：订单查询接口-生产" />
+        </label>
+        <label class="management-field">
+          <span class="management-field-label">前端展示别称</span>
+          <ElInput v-model="form.displayAlias" :disabled="!canEdit" maxlength="60" placeholder="聊天事件卡片展示，留空使用工具名称" />
+        </label>
+        <label class="management-field">
+          <span class="management-field-label">工具类型</span>
+          <ElRadioGroup v-model="form.toolType" :disabled="!isCreate || !canEdit">
+            <ElRadioButton v-for="item in toolTypes" :key="item" :value="item">
+              {{ toolTypeLabels[item] }}
+            </ElRadioButton>
+          </ElRadioGroup>
+        </label>
+        <label class="management-field">
+          <span class="management-field-label">组件编码（自动生成）</span>
+          <ElInput :model-value="detail?.tool.toolCode || '保存后自动生成（TOOL-*-yyyyMMdd-001）'" disabled />
+        </label>
+      </div>
 
-        <ManagementCard title="基本信息" description="编码与类型创建后不可修改，名称用于管理端展示。">
-          <template v-if="tool && canEdit && !profileEditing" #actions>
-            <button type="button" class="management-btn-sm" :disabled="busy" @click="startProfileEdit">编辑</button>
-          </template>
-          <div v-if="creating" class="management-form-grid">
+      <!-- 步骤 2：实现与定义 -->
+      <div v-else-if="step === 'impl'" class="studio-canvas-body">
+        <div v-if="form.toolType === 'BUILTIN'" class="management-form-grid">
+          <label class="management-field">
+            <span class="management-field-label">内置实现</span>
+            <ElSelect :model-value="form.implementationKey" :disabled="!canEdit" filterable placeholder="选择内置实现" @update:model-value="selectBuiltin(String($event))">
+              <ElOption v-for="item in builtins" :key="item.implementationKey" :value="item.implementationKey" :label="`${item.exposedName}（${item.implementationKey}）`" />
+            </ElSelect>
+          </label>
+          <label class="management-field">
+            <span class="management-field-label">只读属性</span>
+            <ElInput :model-value="form.readOnly ? '只读（由内置实现决定）' : '包含写操作（由内置实现决定）'" disabled />
+          </label>
+        </div>
+
+        <div v-else-if="form.toolType === 'MCP'" class="management-form-grid">
+          <label class="management-field">
+            <span class="management-field-label">关联 MCP 服务（仅启用且就绪）</span>
+            <ElSelect :model-value="form.mcpServerId" :disabled="!canEdit" clearable filterable placeholder="选择 MCP 服务" @update:model-value="selectMcpServer($event ? String($event) : null)">
+              <ElOption v-for="item in mcpOptions" :key="item.mcpServerId" :value="item.mcpServerId" :label="`${item.serverName}（${item.serverCode}）`" />
+            </ElSelect>
+          </label>
+          <div class="management-field">
+            <span class="management-field-label">远程工具</span>
+            <div class="management-actions">
+              <ElSelect :model-value="form.remoteToolName" :disabled="!canEdit || !form.mcpServerId" filterable placeholder="先发现远程工具" style="flex: 1" @update:model-value="selectRemoteTool(String($event))">
+                <ElOption v-for="item in remoteTools" :key="item.name" :value="item.name" :label="item.name" />
+              </ElSelect>
+              <ElButton native-type="button" :loading="discovering" :disabled="!form.mcpServerId" @click="discoverRemote">发现工具</ElButton>
+            </div>
+            <span v-if="discoverError" class="management-field-error">{{ discoverError }}</span>
+          </div>
+        </div>
+
+        <div v-else class="management-form-grid">
+          <label class="management-field">
+            <span class="management-field-label">请求方法</span>
+            <ElSelect :model-value="form.httpSpec.method" :disabled="!canEdit" @update:model-value="changeHttpMethod($event as HttpMethod)">
+              <ElOption v-for="m in httpMethods" :key="m" :value="m" :label="m" />
+            </ElSelect>
+          </label>
+          <label class="management-field">
+            <span class="management-field-label">凭据引用</span>
+            <ElSelect v-model="form.httpSpec.credentialRef" :disabled="!canEdit" clearable filterable placeholder="不使用凭据">
+              <ElOption v-for="item in credentials" :key="item" :value="item" :label="item" />
+            </ElSelect>
+          </label>
+          <label class="management-field is-full">
+            <span class="management-field-label">请求地址模板（支持 &#123;&#123;参数名&#125;&#125;）</span>
+            <ElInput v-model="form.httpSpec.url" :disabled="!canEdit" maxlength="2048" placeholder="https://api.example.com/orders/{{order_id}}" />
+          </label>
+          <div class="management-field is-full">
+            <span class="management-field-label">请求参数（自动生成 JSON Schema）</span>
+            <ParameterTable v-model="form.parameters" :read-only="!canEdit" :schema="currentSchema" />
+          </div>
+          <div class="management-field is-full">
+            <span class="management-field-label">请求头</span>
+            <KeyValueEditor v-model="form.httpSpec.headers" :read-only="!canEdit" />
+          </div>
+          <label v-if="showsBody" class="management-field is-full">
+            <span class="management-field-label">请求体模板（JSON，选填）</span>
+            <ElInput v-model="form.httpSpec.bodyTemplate" :disabled="!canEdit" type="textarea" :rows="3" placeholder='{"orderId": "{{order_id}}"}' />
+          </label>
+        </div>
+
+        <div class="studio-subblock">
+          <span class="studio-subblock-title">模型可见定义</span>
+          <div class="management-form-grid">
             <label class="management-field">
-              <span class="management-field-label management-required">工具编码</span>
-              <input
-                v-model.trim="entry.toolCode"
-                maxlength="80"
-                placeholder="例如 order_query"
-                :aria-invalid="entry.toolCode !== '' && !CODE_PATTERN.test(entry.toolCode)"
-              />
-              <span class="management-field-hint">字母、数字、下划线或连字符，创建后不可修改。</span>
+              <span class="management-field-label">模型工具名（1～64 位字母数字下划线）</span>
+              <ElInput v-model="form.exposedName" :disabled="!canEdit" maxlength="64" placeholder="如 query_order_detail（禁止 ask_user）" />
             </label>
-            <label class="management-field">
-              <span class="management-field-label management-required">工具名称</span>
-              <input v-model="entry.toolName" maxlength="120" placeholder="例如 订单查询" />
+            <label v-if="form.toolType === 'HTTP'" class="management-field">
+              <span class="management-field-label">只读属性</span>
+              <ElSwitch v-model="form.readOnly" :disabled="!canEdit" active-text="只读工具" inactive-text="存在写操作" />
+            </label>
+            <label class="management-field is-full">
+              <span class="management-field-label">模型调用说明</span>
+              <ElInput v-model="form.description" :disabled="!canEdit" type="textarea" :rows="3" :maxlength="TOOL_DESCRIPTION_LIMIT" placeholder="向模型清晰描述该工具的用途与适用时机" />
             </label>
           </div>
-          <div v-else-if="profileEditing" class="management-form-grid">
-            <label class="management-field">
-              <span class="management-field-label management-required">工具名称</span>
-              <input v-model="profileName" maxlength="120" />
-            </label>
-            <div class="management-field">
-              <span class="management-field-label">工具编码</span>
-              <div class="management-field-value"><span class="management-code">{{ tool?.toolCode }}</span></div>
-            </div>
-            <div class="management-inline is-full">
-              <button type="button" class="management-primary management-btn-sm" :disabled="busy || !profileName.trim()" @click="saveProfile">保存名称</button>
-              <button type="button" class="management-btn-sm" :disabled="busy" @click="profileEditing = false">取消</button>
-            </div>
+          <div v-if="form.toolType !== 'HTTP'" class="management-field is-full">
+            <span class="management-field-label">参数定义（只读，来自真实实现）</span>
+            <ParameterTable v-model="form.parameters" :read-only="true" :schema="currentSchema" />
           </div>
-          <dl v-else class="management-form-grid">
-            <div class="management-field">
-              <dt class="management-field-label">工具名称</dt>
-              <dd class="management-field-value">{{ tool?.toolName }}</dd>
-            </div>
-            <div class="management-field">
-              <dt class="management-field-label">工具编码</dt>
-              <dd class="management-field-value"><span class="management-code">{{ tool?.toolCode }}</span></dd>
-            </div>
-          </dl>
-        </ManagementCard>
+        </div>
 
-        <fieldset class="config-fieldset" :disabled="!editable || busy">
-          <ManagementCard title="实现配置" :description="toolTypeDescriptions[toolType]">
-            <template v-if="toolType === 'BUILTIN'">
-              <label class="management-field">
-                <span class="management-field-label management-required">内置实现</span>
-                <select :value="form.implementationKey ?? ''" @change="applyBuiltin(($event.target as HTMLSelectElement).value)">
-                  <option value="" disabled>选择平台登记的实现</option>
-                  <option
-                    v-if="form.implementationKey && !selectedBuiltin"
-                    :value="form.implementationKey"
-                  >
-                    {{ form.implementationKey }}（实现已下线）
-                  </option>
-                  <option v-for="option in builtinOptions" :key="option.implementationKey" :value="option.implementationKey">
-                    {{ option.exposedName }} · {{ option.implementationKey }}
-                  </option>
-                </select>
-                <span class="management-field-hint">选择后带出名称、描述和参数；参数与只读标记由实现决定。</span>
-              </label>
-              <p v-if="!builtinOptions.length" class="management-muted">暂无可用的内置实现。</p>
-            </template>
-
-            <template v-else-if="toolType === 'MCP'">
-              <p v-if="!mcpOptions.length && !form.mcpServerVersionId" class="management-warning">
-                暂无可用的 MCP 服务版本。请先
-                <RouterLink to="/management/mcp-servers">配置并发布 MCP 服务</RouterLink>
-                ，再回来发现远程工具。
-              </p>
-              <div class="management-form-grid">
-                <label class="management-field">
-                  <span class="management-field-label management-required">MCP 服务版本</span>
-                  <select :value="form.mcpServerVersionId ?? ''" @change="changeMcpServer(($event.target as HTMLSelectElement).value)">
-                    <option value="" disabled>选择已发布的服务版本</option>
-                    <option v-if="form.mcpServerVersionId && !selectedMcp" :value="form.mcpServerVersionId">{{ mcpServerLabel }}</option>
-                    <option v-for="option in mcpOptions" :key="option.mcpServerVersionId" :value="option.mcpServerVersionId">
-                      {{ option.serverName }} · {{ versionLabel(option.versionNo) }}{{ option.latest ? '（最新）' : '' }}
-                    </option>
-                  </select>
-                </label>
-                <div class="management-field">
-                  <span class="management-field-label management-required">远程工具</span>
-                  <div class="management-input-group">
-                    <input :value="form.remoteToolName ?? ''" readonly placeholder="发现后选择" aria-label="远程工具名" />
-                    <button type="button" :disabled="!form.mcpServerVersionId || discovering || !editable" @click="discover">
-                      {{ discovering ? '发现中…' : '发现工具' }}
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <p v-if="discoverError" class="management-error" role="alert">{{ discoverError }}</p>
-              <RemoteToolList
-                v-if="remoteTools.length"
-                :tools="remoteTools"
-                selectable
-                :selected="form.remoteToolName"
-                :disabled="!editable"
-                @select="applyRemoteTool"
-              />
-            </template>
-
-            <template v-else>
-              <div class="management-field">
-                <span class="management-field-label management-required">请求</span>
-                <div class="management-input-group">
-                  <select :value="form.http.method" aria-label="请求方法" @change="setMethod(($event.target as HTMLSelectElement).value as HttpMethod)">
-                    <option v-for="method in httpMethods" :key="method" :value="method">{{ method }}</option>
-                  </select>
-                  <input
-                    v-model.trim="form.http.url"
-                    maxlength="2048"
-                    placeholder="https://api.example.com/orders/{{orderId}}"
-                    aria-label="请求地址"
-                    :aria-invalid="form.http.url !== '' && !urlValid"
-                  />
-                </div>
-                <span class="management-field-hint">
-                  路径和查询中可用 <code v-pre>{{参数名}}</code> 引用参数（自动 URL 编码），<code v-pre>{{credential}}</code> 引用凭据；主机部分不能使用占位符。
-                  未在地址中使用的参数：GET/DELETE 追加为查询参数，POST/PUT/PATCH 组成 JSON 请求体。
-                </span>
-              </div>
-
-              <div class="management-field">
-                <span class="management-field-label">请求头</span>
-                <KeyValueEditor
-                  v-model="form.http.headers"
-                  :read-only="!editable"
-                  name-placeholder="Authorization"
-                  value-placeholder="Bearer {{credential}}"
-                  add-label="添加请求头"
-                  empty-text="未配置请求头，默认发送 Accept: application/json"
-                />
-              </div>
-
-              <label v-if="bodyAllowed" class="management-field">
-                <span class="management-field-label">请求体模板</span>
-                <textarea
-                  :value="form.http.bodyTemplate ?? ''"
-                  rows="5"
-                  class="config-code-input"
-                  placeholder='{"q": {{keyword}}, "size": {{size}}}'
-                  :aria-invalid="!bodyValid"
-                  @input="form.http.bodyTemplate = ($event.target as HTMLTextAreaElement).value"
-                />
-                <span class="management-field-hint">
-                  可留空（留空时由参数组成 JSON 请求体）。<code v-pre>{{参数名}}</code> 替换为参数的 JSON 值，字符串会自动加引号，因此写 <code v-pre>{"q": {{keyword}}}</code> 而不是 <code v-pre>{"q": "{{keyword}}"}</code>。
-                </span>
-                <span v-if="!bodyValid" class="management-field-error">占位符替换为 null 后不是合法 JSON。</span>
-              </label>
-
-              <div class="management-form-grid">
-                <label class="management-field">
-                  <span class="management-field-label" :class="{ 'management-required': usesCredential }">凭据</span>
-                  <select v-model="form.http.credentialRef">
-                    <option :value="null">不使用凭据</option>
-                    <option
-                      v-if="form.http.credentialRef && !credentials.includes(form.http.credentialRef)"
-                      :value="form.http.credentialRef"
-                    >
-                      {{ form.http.credentialRef }}（未配置）
-                    </option>
-                    <option v-for="item in credentials" :key="item" :value="item">{{ item }}</option>
-                  </select>
-                  <span class="management-field-hint">替换模板中的 <code v-pre>{{credential}}</code>，凭据值不会回显。</span>
-                </label>
-                <label class="management-field">
-                  <span class="management-field-label management-required">超时（毫秒）</span>
-                  <input v-model.number="form.http.timeoutMs" type="number" min="1000" max="60000" step="1000" :aria-invalid="!timeoutValid" />
-                  <span class="management-field-hint">1000～60000，默认 15000。</span>
-                </label>
-                <label class="management-field is-full">
-                  <span class="management-field-label">结果路径</span>
-                  <input
-                    :value="form.http.resultPointer ?? ''"
-                    maxlength="255"
-                    placeholder="/data/items"
-                    :aria-invalid="!pointerValid"
-                    @input="form.http.resultPointer = ($event.target as HTMLInputElement).value"
-                  />
-                  <span class="management-field-hint">JSON Pointer，从 JSON 响应中提取返回给模型的部分；留空返回完整响应。</span>
-                </label>
-              </div>
-
-              <p v-if="undefinedPlaceholders.length" class="management-warning">
-                模板引用了未定义的参数：{{ undefinedPlaceholders.join('、') }}。请在下方参数中添加，或修改模板。
-              </p>
-              <p v-if="usesCredential && !form.http.credentialRef" class="management-warning">
-                模板使用了 <code v-pre>{{credential}}</code>，请选择凭据。
-              </p>
-            </template>
-          </ManagementCard>
-
-          <ManagementCard title="模型可见定义" description="模型根据名称、描述和参数决定何时调用以及如何传参。">
+        <ElCollapse v-if="form.toolType === 'HTTP'" v-model="advancedOpen">
+          <ElCollapseItem title="高级设置（超时与结果提取）" name="advanced">
             <div class="management-form-grid">
               <label class="management-field">
-                <span class="management-field-label management-required">模型工具名</span>
-                <input
-                  v-model.trim="form.exposedName"
-                  maxlength="64"
-                  placeholder="例如 query_order"
-                  :aria-invalid="form.exposedName !== '' && !EXPOSED_NAME_PATTERN.test(form.exposedName)"
-                />
-                <span class="management-field-hint">字母、数字、下划线或连字符；同一 Agent 内不能重复。</span>
+                <span class="management-field-label">超时（毫秒，1000～60000）</span>
+                <ElInputNumber v-model="form.httpSpec.timeoutMs" :disabled="!canEdit" :min="1000" :max="60000" :step="1000" />
               </label>
-              <div class="management-field">
-                <span class="management-field-label">只读</span>
-                <label class="management-switch">
-                  <input v-model="form.readOnly" type="checkbox" :disabled="toolType !== 'HTTP' || !editable" />
-                  <span>{{ form.readOnly ? '只读，不修改外部数据' : '会修改外部数据' }}</span>
-                </label>
-                <span class="management-field-hint">{{ toolType === 'HTTP' ? '有写操作的接口请关闭。' : '由实现决定。' }}</span>
-              </div>
-              <label class="management-field is-full">
-                <span class="management-field-label management-required">描述</span>
-                <textarea
-                  v-model="form.description"
-                  rows="4"
-                  :maxlength="TOOL_DESCRIPTION_LIMIT"
-                  placeholder="模型据此判断何时调用：说明工具能做什么、适用场景和返回内容"
-                />
-                <span class="management-field-hint">模型据此判断何时调用。保存草稿时可暂不填写，发布前必须填写。</span>
+              <label class="management-field">
+                <span class="management-field-label">结果提取路径（JSON Pointer）</span>
+                <ElInput v-model="form.httpSpec.resultPointer" :disabled="!canEdit" maxlength="500" placeholder="/data/items" />
               </label>
             </div>
-          </ManagementCard>
+          </ElCollapseItem>
+        </ElCollapse>
+      </div>
 
-          <ManagementCard
-            title="参数"
-            :description="toolType === 'HTTP' ? '定义模型调用时需要传入的参数，保存时生成 JSON Schema。' : '参数来自实现或远程服务，只读展示。'"
-          >
-            <ParameterTable
-              v-if="toolType === 'HTTP'"
-              v-model="form.fields"
-              :read-only="!editable"
-              :schema="effectiveSchema"
-              empty-text="暂无参数，点击“添加参数”定义模型可传入的值"
-            />
-            <ParameterTable
-              v-else
-              :model-value="displayFields"
-              read-only
-              :schema="effectiveSchema"
-              :empty-text="toolType === 'MCP' ? '选择远程工具后带出参数' : '选择内置实现后带出参数'"
-            />
-          </ManagementCard>
-        </fieldset>
+      <!-- 步骤 3：在线试运行 -->
+      <div v-else-if="step === 'test'">
+        <TestRunPanel :fields="form.parameters" :disabled-reason="null" :execute="runTest" />
+      </div>
 
-        <ManagementCard title="试运行" description="用当前填写的定义调用一次工具，结果不写库，也不进入 Agent 会话。">
-          <TestRunPanel :fields="displayFields" :disabled-reason="testDisabledReason" :execute="executeTest" />
-        </ManagementCard>
-      </template>
+      <!-- 步骤 4：引用与历史 -->
+      <div v-else class="studio-canvas-body">
+        <div class="studio-subblock">
+          <span class="studio-subblock-title">配置历史（{{ detail?.versions.length ?? 0 }}）</span>
+          <VersionHistoryTable
+            :versions="detail?.versions ?? []"
+            :latest-version-id="detail?.tool.latestVersionId ?? null"
+            :busy="busy"
+            @inspect="inspectVersion"
+          />
+        </div>
+        <div class="studio-subblock">
+          <span class="studio-subblock-title">下游引用关系（{{ detail?.usages.length ?? 0 }}）</span>
+          <UsageTable
+            :usages="detail?.usages ?? []"
+            owner-label="引用方 Agent"
+            :owner-path="usage => `/management/agents/${usage.ownerId}`"
+            description="展示最新配置或 Master 生效发布引用该工具的 Agent。"
+          />
+        </div>
+      </div>
+    </SteppedEditorLayout>
 
-      <template #aside>
-        <ManagementCard title="版本信息">
-          <dl class="config-meta">
-            <dt>当前查看</dt>
-            <dd>{{ modeTag.text }}</dd>
-            <template v-if="version">
-              <dt>修订号</dt>
-              <dd>{{ version.revision }}</dd>
-              <dt>发布时间</dt>
-              <dd>{{ formatTime(version.publishedAt) }}</dd>
-              <dt>更新时间</dt>
-              <dd>{{ formatTime(version.lastUpdateTime) }}</dd>
-            </template>
-            <template v-if="toolType === 'MCP'">
-              <dt>MCP 服务</dt>
-              <dd>{{ mcpServerLabel }}</dd>
-            </template>
-            <template v-if="tool">
-              <dt>最新发布</dt>
-              <dd>{{ versionLabel(tool.publishedVersionNo) }}</dd>
-              <dt>引用 Agent</dt>
-              <dd>{{ tool.usageCount }}</dd>
-            </template>
-          </dl>
-        </ManagementCard>
-        <ManagementCard v-if="editable" title="发布检查">
-          <PublishChecklist :items="checks" />
-          <p v-if="mode === 'draft' && dirty" class="config-note">有未保存的修改，保存草稿后才能发布。</p>
-          <p v-else-if="mode !== 'draft'" class="config-note">保存草稿后可发布。</p>
-        </ManagementCard>
-      </template>
-
-      <template #versions>
-        <VersionHistoryTable
-          :versions="detail?.versions ?? []"
-          :selected-id="version?.toolVersionId ?? null"
-          current-label="最新发布"
-          :busy="busy"
-          @select="selectVersion"
-        />
-      </template>
-
-      <template #usages>
-        <UsageTable
-          :usages="detail?.usages ?? []"
-          owner-label="Agent"
-          :owner-path="usage => `/management/agents/${usage.ownerId}`"
-          description="列出绑定该工具版本的 Agent 版本。被启用 Agent 的当前生效版本绑定时为生效引用，此时工具不能停用。"
-        />
-      </template>
-    </ConfigEditorLayout>
+    <ManagementDialog
+      v-if="inspectedVersion"
+      :title="`只读查看配置版本 ${versionLabel(inspectedVersion.versionNo)}`"
+      wide
+      :busy="false"
+      :dirty="false"
+      @close="inspectedVersion = null"
+    >
+      <div class="management-form-grid">
+        <div class="management-field"><span class="management-field-label">就绪状态</span><span>{{ readinessLabels[inspectedVersion.readiness] }}</span></div>
+        <div class="management-field"><span class="management-field-label">模型工具名</span><span class="management-code">{{ inspectedVersion.exposedName || '—' }}</span></div>
+        <div class="management-field is-full"><span class="management-field-label">调用说明</span><span>{{ inspectedVersion.description || '—' }}</span></div>
+        <div v-if="inspectedVersion.mcpServerName" class="management-field is-full">
+          <span class="management-field-label">关联 MCP</span>
+          <span>{{ inspectedVersion.mcpServerName }} / {{ inspectedVersion.remoteToolName || '—' }}</span>
+        </div>
+      </div>
+    </ManagementDialog>
   </ManagementShell>
 </template>

@@ -23,14 +23,13 @@ import org.mapstruct.Mapping;
 /**
  * 工具配置转换
  * <p>
- * 把工具目录、版本、引用关系、可选实现和试运行结果投影为管理接口模型；MCP 服务名称由服务层补充。
+ * 把工具目录、配置版本、引用关系、可选实现和试运行结果投影为管理接口模型；MCP 服务名称由服务层补充。
  */
 @Mapper(componentModel = "spring", uses = McpServerConfigConverter.class)
 public interface ToolConfigConverter {
     ToolVO toView(ToolSummaryBO summary);
 
     @Mapping(target = "mcpServerName", ignore = true)
-    @Mapping(target = "mcpServerVersionNo", ignore = true)
     ToolVersionVO toView(ToolVersionPO version);
 
     HttpToolSpecVO toView(HttpToolSpecBO spec);

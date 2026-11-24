@@ -1,6 +1,7 @@
 package com.agentsquad.squad.v2.po;
 
 import com.agentsquad.squad.v2.enums.AgentType;
+import com.agentsquad.squad.v2.enums.ConfigReadiness;
 import com.agentsquad.squad.v2.enums.ConfigStatus;
 import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
@@ -12,9 +13,9 @@ import lombok.Data;
 import java.time.Instant;
 
 /**
- * Agent目录
+ * Agent 目录
  * <p>
- * 映射管理模块的 sq_agent 表。
+ * 映射 sq_agent，维护稳定身份、展示别称、最新配置版本指针及 Master 唯一生效发布指针。
  */
 @Data
 @TableName(value = "sq_agent", schema = "squad_chat")
@@ -26,19 +27,24 @@ public class AgentPO {
     private Long id;
 
     /**
-     * Agent业务ID
+     * Agent 业务ID
      */
     private Long agentId;
 
     /**
-     * 能力编码
+     * 系统自动生成的编码
      */
     private String agentCode;
 
     /**
-     * 展示名称
+     * 后台展示名称
      */
     private String agentName;
+
+    /**
+     * 聊天前端事件展示别称，留空回退 Agent 名称
+     */
+    private String displayAlias;
 
     /**
      * 主子类型
@@ -51,9 +57,24 @@ public class AgentPO {
     private ConfigStatus status;
 
     /**
-     * 当前版本ID
+     * 最新配置版本ID
      */
-    private Long currentVersionId;
+    private Long latestVersionId;
+
+    /**
+     * 最新配置版本号
+     */
+    private Integer latestVersionNo;
+
+    /**
+     * 最新配置版本就绪状态
+     */
+    private ConfigReadiness latestReadiness;
+
+    /**
+     * 当前生效的 Master 发布定格快照ID，子 Agent 恒为空
+     */
+    private Long currentReleaseId;
 
     /**
      * 编辑修订号
@@ -61,12 +82,17 @@ public class AgentPO {
     private Long revision;
 
     /**
-     * 创建人
+     * 逻辑删除时间，未删除为空
+     */
+    private Instant deletedAt;
+
+    /**
+     * 创建人ID
      */
     private Long creatorId;
 
     /**
-     * 更新人
+     * 更新人ID
      */
     private Long lastUpdaterId;
 
@@ -75,5 +101,4 @@ public class AgentPO {
      */
     @TableField(insertStrategy = FieldStrategy.NEVER)
     private Instant lastUpdateTime;
-
 }

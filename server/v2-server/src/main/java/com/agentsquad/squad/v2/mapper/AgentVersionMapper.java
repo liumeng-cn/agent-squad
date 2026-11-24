@@ -13,9 +13,9 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Agent 版本访问
+ * Agent 配置版本访问
  * <p>
- * 草稿编辑与发布按“草稿状态 + 修订号”条件更新；绑定查询联表返回工具和子 Agent 的可用状态。
+ * 每次保存插入新配置版本；绑定查询联表返回上游工具与子 Agent 的最新配置版本及可用状态。
  */
 @Mapper
 public interface AgentVersionMapper extends BaseMapper<AgentVersionPO> {
@@ -25,15 +25,11 @@ public interface AgentVersionMapper extends BaseMapper<AgentVersionPO> {
 
     List<AgentToolBindingBO> selectToolBindings(@Param("agentVersionId") long agentVersionId);
 
-    List<AgentToolBindingBO> selectToolCandidates(@Param("toolVersionIds") Collection<Long> toolVersionIds);
+    List<AgentToolBindingBO> selectToolCandidates(@Param("toolIds") Collection<Long> toolIds);
 
     List<AgentDelegationBO> selectDelegations(@Param("agentVersionId") long agentVersionId);
 
-    List<AgentDelegationBO> selectDelegationCandidates(@Param("subagentVersionIds") Collection<Long> subagentVersionIds);
+    List<AgentDelegationBO> selectDelegationCandidates(@Param("subagentIds") Collection<Long> subagentIds);
 
     List<SubagentOptionBO> selectSubagentOptions();
-
-    int updateDraft(AgentVersionPO version);
-
-    int publish(AgentVersionPO version);
 }

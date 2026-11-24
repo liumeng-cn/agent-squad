@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agentsquad.squad.v2.mapper.AgentReleaseMapper">
+
+    <select id="nextReleaseNo" resultType="int">
+        SELECT COALESCE(MAX(release_no), 0) + 1
+        FROM squad_chat.sq_agent_release
+        WHERE master_agent_id = #{masterAgentId}
+    </select>
+
+    <select id="selectSummaries" resultType="com.agentsquad.squad.v2.bo.AgentReleaseSummaryBO">
+        SELECT r.release_id,
+               r.release_no,
+               r.master_version_id,
+               v.version_no AS master_version_no,
+               r.master_name,
+               r.master_display_alias,
+               r.dependency_digest,
+               r.published_at,
+               (a.current_release_id = r.release_id) AS current
+        FROM squad_chat.sq_agent_release r
+        JOIN squad_chat.sq_agent a ON a.agent_id = r.master_agent_id
+        JOIN squad_chat.sq_agent_version v ON v.agent_version_id = r.master_version_id
+        WHERE r.master_agent_id = #{masterAgentId}
+        ORDER BY r.release_no DESC
+    </select>
+
+    <select id="selectReleaseTools" resultType="com.agentsquad.squad.v2.bo.AgentToolBindingBO">
+        SELECT rt.tool_id,
+               t.tool_code,
+               rt.tool_name,
+               rt.tool_display_alias AS display_alias,
+               tv.tool_type,
+               t.status AS tool_status,
+               rt.tool_version_id,
+               tv.version_no,
+               tv.readiness,
+               tv.exposed_name,
+               tv.description,
+               tv.read_only,
+               rt.mcp_server_id,
+               rt.mcp_server_version_id,
+               rt.mcp_server_name,
+               TRUE AS usable
+        FROM squad_chat.sq_agent_release_tool rt
+        JOIN squad_chat.sq_tool t ON t.tool_id = rt.tool_id
+        JOIN squad_chat.sq_tool_version tv ON tv.tool_version_id = rt.tool_version_id
+        WHERE rt.release_id = #{releaseId}
+          AND rt.owner_agent_id = #{ownerAgentId}
+        ORDER BY rt.sort_no ASC, rt.id ASC
+    </select>
+
+    <select id="selectReleaseSubagents" resultType="com.agentsquad.squad.v2.bo.AgentDelegationBO">
+        SELECT rs.subagent_id,
+               sub.agent_code AS subagent_code,
+               rs.subagent_name,
+               rs.display_alias AS subagent_display_alias,
+               sub.agent_type AS subagent_type,
+               sub.status AS subagent_status,
+               rs.subagent_version_id,
+               sv.version_no,
+               sv.readiness,
+               rs.delegation_name,
+               rs.delegation_description,
+               rs.display_alias,
+               sv.description AS subagent_description,
+               (
+                   SELECT count(*)
+                   FROM squad_chat.sq_agent_release_tool rt
+                   WHERE rt.release_id = rs.release_id
+                     AND rt.owner_agent_id = rs.subagent_id
+               ) AS tool_count,
+               TRUE AS usable
+        FROM squad_chat.sq_agent_release_subagent rs
+        JOIN squad_chat.sq_agent sub ON sub.agent_id = rs.subagent_id
+        JOIN squad_chat.sq_agent_version sv ON sv.agent_version_id = rs.subagent_version_id
+        WHERE rs.release_id = #{releaseId}
+        ORDER BY rs.sort_no ASC, rs.id ASC
+    </select>
+</mapper>

@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { ElTable, ElTableColumn, ElTag } from 'element-plus'
+import { tagType } from '../../model/elementTheme'
 import type { ConfigUsage } from '../../model/agentConfig'
-import { configStatusLabels, versionLabel, versionStatusLabels } from '../../model/agentConfigLabels'
+import { configStatusLabels, versionLabel } from '../../model/agentConfigLabels'
 
 /**
- * 引用关系：哪些下游资源的哪个版本引用了当前资源。生效引用存在时当前资源不能停用。
+ * 引用关系：展示引用当前资源的下游最新配置与 Master 生效发布快照。
  */
 defineProps<{
   usages: ConfigUsage[]
@@ -17,48 +19,40 @@ defineProps<{
   <div class="management-card-body">
     <p class="config-note">{{ description }}</p>
     <div class="management-table-wrap">
-      <table class="management-table">
-        <thead>
-          <tr>
-            <th>{{ ownerLabel }}</th>
-            <th>引用方版本</th>
-            <th>引用的版本</th>
-            <th>是否生效</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="usage in usages" :key="`${usage.ownerId}-${usage.versionNo}`">
-            <td>
-              <div class="management-cell-main">
-                <RouterLink class="management-cell-title" :to="ownerPath(usage)">{{ usage.ownerName }}</RouterLink>
-                <span class="management-cell-sub">{{ usage.ownerCode }}</span>
-              </div>
-            </td>
-            <td>
-              <span class="management-tags">
-                {{ versionLabel(usage.versionNo) }}
-                <span class="management-tag" :class="usage.versionStatus === 'DRAFT' ? 'is-warning' : 'is-success'">
-                  {{ versionStatusLabels[usage.versionStatus] }}
-                </span>
-                <span v-if="usage.ownerStatus === 'DISABLED'" class="management-tag is-muted">
-                  引用方{{ configStatusLabels[usage.ownerStatus] }}
-                </span>
-              </span>
-            </td>
-            <td>{{ versionLabel(usage.referencedVersionNo) }}</td>
-            <td>
-              <span class="management-tag is-dot" :class="usage.active ? 'is-success' : 'is-muted'">
-                {{ usage.active ? '生效中' : '未生效' }}
-              </span>
-            </td>
-          </tr>
-          <tr v-if="!usages.length">
-            <td colspan="4">
-              <div class="management-empty is-compact">暂无引用</div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <ElTable :data="usages" stripe style="width: 100%" empty-text="暂无引用关系">
+        <!-- @vue-generic {ConfigUsage} -->
+        <ElTableColumn :label="ownerLabel" min-width="180">
+          <template #default="{ row: usage }: { row: ConfigUsage }">
+            <div class="management-cell-main">
+              <RouterLink class="management-cell-title" :to="ownerPath(usage)">
+                {{ usage.ownerName }}
+              </RouterLink>
+              <span class="management-cell-sub">{{ usage.ownerCode }}</span>
+            </div>
+          </template>
+        </ElTableColumn>
+        <!-- @vue-generic {ConfigUsage} -->
+        <ElTableColumn label="引用来源" min-width="180">
+          <template #default="{ row: usage }: { row: ConfigUsage }">
+            <span class="management-tags">
+              <ElTag class="management-tag" :type="usage.released ? 'success' : 'info'">
+                {{ usage.released ? `生效发布 #${usage.versionNo}` : `最新配置 ${versionLabel(usage.versionNo)}` }}
+              </ElTag>
+              <ElTag v-if="usage.ownerStatus === 'DISABLED'" class="management-tag is-muted" type="info">
+                引用方{{ configStatusLabels[usage.ownerStatus] }}
+              </ElTag>
+            </span>
+          </template>
+        </ElTableColumn>
+        <!-- @vue-generic {ConfigUsage} -->
+        <ElTableColumn label="保护状态" min-width="130">
+          <template #default="{ row: usage }: { row: ConfigUsage }">
+            <ElTag class="management-tag is-dot" :type="tagType(usage.active ? 'is-success' : 'is-muted')">
+              {{ usage.active ? '生效引用中' : '非启用引用' }}
+            </ElTag>
+          </template>
+        </ElTableColumn>
+      </ElTable>
     </div>
   </div>
 </template>

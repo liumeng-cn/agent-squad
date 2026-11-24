@@ -1,123 +1,171 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.v2.mapper.AgentMapper">
-    <!-- Agent 摘要：职责描述与绑定数量取当前版本，未发布时取草稿；生效引用为启用主 Agent 的当前版本委派 -->
+
     <select id="selectSummaries" resultType="com.agentsquad.squad.v2.bo.AgentSummaryBO">
         SELECT a.agent_id,
                a.agent_code,
                a.agent_name,
+               a.display_alias,
                a.agent_type,
                a.status,
                a.revision,
-               COALESCE(shown.description, '')  AS description,
-               a.current_version_id,
-               current_version.version_no       AS current_version_no,
-               draft.agent_version_id           AS draft_version_id,
+               a.latest_version_id,
+               a.latest_version_no,
+               a.latest_readiness,
+               COALESCE(lv.description, '') AS description,
+               a.current_release_id,
+               r.release_no AS current_release_no,
+               r.published_at AS current_release_at,
+               CASE
+                   WHEN a.agent_type != 'MASTER' THEN NULL
+                   WHEN a.current_release_id IS NULL THEN 'UNPUBLISHED'
+                   WHEN r.master_version_id != a.latest_version_id THEN 'MODIFIED'
+                   WHEN EXISTS (
+                       SELECT 1
+                       FROM squad_chat.sq_agent_release_subagent rs
+                       JOIN squad_chat.sq_agent sub ON sub.agent_id = rs.subagent_id
+                       WHERE rs.release_id = r.release_id
+                         AND (sub.deleted_at IS NOT NULL OR sub.latest_version_id != rs.subagent_version_id)
+                   ) THEN 'MODIFIED'
+                   WHEN EXISTS (
+                       SELECT 1
+                       FROM squad_chat.sq_agent_release_tool rt
+                       JOIN squad_chat.sq_tool t ON t.tool_id = rt.tool_id
+                       LEFT JOIN squad_chat.sq_mcp_server ms ON ms.mcp_server_id = rt.mcp_server_id
+                       WHERE rt.release_id = r.release_id
+                         AND (
+                             t.deleted_at IS NOT NULL
+                             OR t.latest_version_id != rt.tool_version_id
+                             OR (rt.mcp_server_id IS NOT NULL AND (ms.deleted_at IS NOT NULL OR ms.latest_version_id != rt.mcp_server_version_id))
+                         )
+                   ) THEN 'MODIFIED'
+                   ELSE 'PUBLISHED'
+               END AS publish_state,
                (
-                   SELECT COUNT(*)
-                   FROM squad_chat.sq_agent_version_tool binding
-                   WHERE binding.agent_version_id = shown.agent_version_id
-               )                                AS tool_count,
+                   SELECT count(*)
+                   FROM squad_chat.sq_agent_version_tool b
+                   WHERE b.agent_version_id = a.latest_version_id
+               ) AS tool_count,
                (
-                   SELECT COUNT(*)
-                   FROM squad_chat.sq_agent_version_subagent delegation
-                   WHERE delegation.master_version_id = shown.agent_version_id
-               )                                AS subagent_count,
+                   SELECT count(*)
+                   FROM squad_chat.sq_agent_version_subagent d
+                   WHERE d.master_version_id = a.latest_version_id
+               ) AS subagent_count,
                (
-                   SELECT COUNT(DISTINCT master.agent_id)
-                   FROM squad_chat.sq_agent_version child
-                   JOIN squad_chat.sq_agent_version_subagent delegation
-                     ON delegation.subagent_version_id = child.agent_version_id
-                   JOIN squad_chat.sq_agent master
-                     ON master.current_version_id = delegation.master_version_id
-                   WHERE child.agent_id = a.agent_id
-                     AND master.status = 'ENABLED'
-               )                                AS usage_count,
+                   SELECT count(DISTINCT m.agent_id)
+                   FROM squad_chat.sq_agent m
+                   JOIN squad_chat.sq_agent_version_subagent d ON d.master_version_id = m.latest_version_id
+                   WHERE m.deleted_at IS NULL
+                     AND d.subagent_id = a.agent_id
+               ) AS usage_count,
                a.last_update_time
         FROM squad_chat.sq_agent a
-        LEFT JOIN squad_chat.sq_agent_version current_version
-          ON current_version.agent_version_id = a.current_version_id
-        LEFT JOIN squad_chat.sq_agent_version draft
-          ON draft.agent_id = a.agent_id
-         AND draft.status = 'DRAFT'
-        LEFT JOIN squad_chat.sq_agent_version shown
-          ON shown.agent_version_id = COALESCE(current_version.agent_version_id, draft.agent_version_id)
-        <where>
-            <if test="agentId != null">
-                a.agent_id = #{agentId}
-            </if>
-        </where>
+        LEFT JOIN squad_chat.sq_agent_version lv ON lv.agent_version_id = a.latest_version_id
+        LEFT JOIN squad_chat.sq_agent_release r ON r.release_id = a.current_release_id
+        WHERE a.deleted_at IS NULL
+        <if test="agentId != null">
+            AND a.agent_id = #{agentId}
+        </if>
         ORDER BY a.last_update_time DESC, a.id DESC
     </select>
 
-    <!-- 委派该子 Agent 任一版本的主 Agent 版本；启用主 Agent 的当前版本为生效引用 -->
     <select id="selectUsages" resultType="com.agentsquad.squad.v2.bo.ConfigUsageBO">
-        SELECT master.agent_id    AS owner_id,
-               master.agent_code  AS owner_code,
-               master.agent_name  AS owner_name,
-               master.status      AS owner_status,
-               mv.version_no,
-               mv.status          AS version_status,
-               child.version_no   AS referenced_version_no,
-               (master.current_version_id = mv.agent_version_id AND master.status = 'ENABLED') AS active
-        FROM squad_chat.sq_agent_version child
-        JOIN squad_chat.sq_agent_version_subagent delegation
-          ON delegation.subagent_version_id = child.agent_version_id
-        JOIN squad_chat.sq_agent_version mv
-          ON mv.agent_version_id = delegation.master_version_id
-        JOIN squad_chat.sq_agent master
-          ON master.agent_id = mv.agent_id
-        WHERE child.agent_id = #{agentId}
-        ORDER BY active DESC, master.agent_code, mv.version_no DESC
+        SELECT m.agent_id AS owner_id,
+               m.agent_code AS owner_code,
+               m.agent_name AS owner_name,
+               m.status AS owner_status,
+               m.latest_version_no AS version_no,
+               FALSE AS released,
+               (m.status = 'ENABLED') AS active
+        FROM squad_chat.sq_agent m
+        JOIN squad_chat.sq_agent_version_subagent d ON d.master_version_id = m.latest_version_id
+        WHERE m.deleted_at IS NULL
+          AND d.subagent_id = #{agentId}
+        UNION ALL
+        SELECT m.agent_id AS owner_id,
+               m.agent_code AS owner_code,
+               m.agent_name AS owner_name,
+               m.status AS owner_status,
+               r.release_no AS version_no,
+               TRUE AS released,
+               (m.status = 'ENABLED') AS active
+        FROM squad_chat.sq_agent m
+        JOIN squad_chat.sq_agent_release r ON r.release_id = m.current_release_id
+        WHERE m.deleted_at IS NULL
+          AND EXISTS (
+              SELECT 1
+              FROM squad_chat.sq_agent_release_subagent rs
+              WHERE rs.release_id = r.release_id
+                AND rs.subagent_id = #{agentId}
+          )
+        ORDER BY released DESC, active DESC, owner_code ASC
     </select>
 
-    <update id="switchVersion">
+    <update id="updateLatest">
         UPDATE squad_chat.sq_agent
-        SET current_version_id = #{currentVersionId},
+        SET agent_name        = #{agentName},
+            display_alias     = #{displayAlias},
+            latest_version_id = #{latestVersionId},
+            latest_version_no = #{latestVersionNo},
+            latest_readiness  = #{latestReadiness},
+            revision          = revision + 1,
+            last_updater_id   = #{lastUpdaterId},
+            last_update_time  = CURRENT_TIMESTAMP
+        WHERE agent_id = #{agentId}
+          AND deleted_at IS NULL
+          AND revision = #{revision}
+    </update>
+
+    <update id="switchRelease">
+        UPDATE squad_chat.sq_agent
+        SET current_release_id = #{currentReleaseId},
             revision           = revision + 1,
             last_updater_id    = #{lastUpdaterId},
             last_update_time   = CURRENT_TIMESTAMP
         WHERE agent_id = #{agentId}
+          AND agent_type = 'MASTER'
+          AND status = 'ENABLED'
+          AND deleted_at IS NULL
           AND revision = #{revision}
     </update>
 
-    <update id="updateProfile">
+    <update id="updateStatus">
         UPDATE squad_chat.sq_agent
-        SET agent_name       = #{agentName},
+        SET status           = #{status},
             revision         = revision + 1,
             last_updater_id  = #{lastUpdaterId},
             last_update_time = CURRENT_TIMESTAMP
         WHERE agent_id = #{agentId}
+          AND deleted_at IS NULL
           AND revision = #{revision}
     </update>
 
-    <!-- 停用时在同一语句复核没有启用主 Agent 的当前版本委派它 -->
-    <update id="updateStatus">
-        UPDATE squad_chat.sq_agent a
-        SET status           = #{status},
-            revision         = a.revision + 1,
+    <update id="softDelete">
+        UPDATE squad_chat.sq_agent
+        SET deleted_at       = CURRENT_TIMESTAMP,
+            status           = 'DISABLED',
+            revision         = revision + 1,
             last_updater_id  = #{lastUpdaterId},
             last_update_time = CURRENT_TIMESTAMP
-        WHERE a.agent_id = #{agentId}
-          AND a.revision = #{revision}
-          <if test="status.name() == 'DISABLED'">
-          AND NOT EXISTS (
-              SELECT 1
-              FROM squad_chat.sq_agent_version child
-              JOIN squad_chat.sq_agent_version_subagent delegation
-                ON delegation.subagent_version_id = child.agent_version_id
-              JOIN squad_chat.sq_agent master
-                ON master.current_version_id = delegation.master_version_id
-              WHERE child.agent_id = a.agent_id
-                AND master.status = 'ENABLED'
-          )
-          </if>
+        WHERE agent_id = #{agentId}
+          AND deleted_at IS NULL
+          AND revision = #{revision}
     </update>
 
-    <update id="confirmEnabled">
+    <update id="confirmEnabledReady">
         UPDATE squad_chat.sq_agent
-        SET status = status
+        SET revision = revision
         WHERE agent_id = #{agentId}
+          AND deleted_at IS NULL
           AND status = 'ENABLED'
+          AND latest_readiness = 'READY'
     </update>
+
+    <select id="selectMaxCodeByPrefix" resultType="string">
+        SELECT MAX(agent_code)
+        FROM squad_chat.sq_agent
+        WHERE agent_code LIKE CONCAT(#{prefix}, '%')
+    </select>
 </mapper>

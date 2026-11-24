@@ -1,6 +1,8 @@
 package com.agentsquad.squad.v2.po;
 
-import com.agentsquad.squad.v2.enums.VersionStatus;
+import com.agentsquad.squad.v2.bo.PromptSectionsBO;
+import com.agentsquad.squad.v2.config.JsonbTypeHandler;
+import com.agentsquad.squad.v2.enums.ConfigReadiness;
 import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -11,12 +13,12 @@ import lombok.Data;
 import java.time.Instant;
 
 /**
- * Agent版本
+ * Agent 配置版本历史
  * <p>
- * 映射管理模块的 sq_agent_version 表。
+ * 映射 sq_agent_version，每次保存新增一条不可变配置版本，同时保存结构化提示词分块与拼装后的完整系统提示词。
  */
 @Data
-@TableName(value = "sq_agent_version", schema = "squad_chat")
+@TableName(value = "sq_agent_version", schema = "squad_chat", autoResultMap = true)
 public class AgentVersionPO {
     /**
      * 内部主键
@@ -30,24 +32,19 @@ public class AgentVersionPO {
     private Long agentVersionId;
 
     /**
-     * 所属Agent
+     * 所属 Agent 业务ID
      */
     private Long agentId;
 
     /**
-     * 版本号
+     * 配置版本号
      */
     private Integer versionNo;
 
     /**
-     * 发布状态
+     * 版本就绪状态
      */
-    private VersionStatus status;
-
-    /**
-     * 业务提示词
-     */
-    private String systemPrompt;
+    private ConfigReadiness readiness;
 
     /**
      * 职责描述
@@ -55,34 +52,40 @@ public class AgentVersionPO {
     private String description;
 
     /**
-     * 最大步数
+     * 结构化提示词分块
+     */
+    @TableField(typeHandler = JsonbTypeHandler.class)
+    private PromptSectionsBO promptSections;
+
+    /**
+     * 拼装后的完整系统提示词
+     */
+    private String systemPrompt;
+
+    /**
+     * 最大执行步数，空值使用平台默认值
      */
     private Integer maxIters;
 
     /**
-     * 编辑修订号
-     */
-    private Long revision;
-
-    /**
-     * 发布时间
-     */
-    private Instant publishedAt;
-
-    /**
-     * 创建人
+     * 创建人ID
      */
     private Long creatorId;
 
     /**
-     * 更新人
+     * 更新人ID
      */
     private Long lastUpdaterId;
+
+    /**
+     * 创建时间
+     */
+    @TableField(insertStrategy = FieldStrategy.NEVER)
+    private Instant createTime;
 
     /**
      * 更新时间
      */
     @TableField(insertStrategy = FieldStrategy.NEVER)
     private Instant lastUpdateTime;
-
 }

@@ -2,8 +2,8 @@ package com.agentsquad.squad.v2.po;
 
 import com.agentsquad.squad.v2.bo.KeyValueBO;
 import com.agentsquad.squad.v2.config.JsonbTypeHandler;
+import com.agentsquad.squad.v2.enums.ConfigReadiness;
 import com.agentsquad.squad.v2.enums.McpTransport;
-import com.agentsquad.squad.v2.enums.VersionStatus;
 import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -15,9 +15,9 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * MCP 连接版本
+ * MCP 配置版本历史
  * <p>
- * 映射 sq_mcp_server_version，保存一个可独立发布的连接配置；凭据只保存引用名。
+ * 映射 sq_mcp_server_version，每次保存新增一条不可变配置版本；凭据只保存引用名。
  */
 @Data
 @TableName(value = "sq_mcp_server_version", schema = "squad_chat", autoResultMap = true)
@@ -39,24 +39,14 @@ public class McpServerVersionPO {
     private Long mcpServerId;
 
     /**
-     * 版本号
+     * 配置版本号
      */
     private Integer versionNo;
 
     /**
-     * 发布状态
+     * 版本就绪状态
      */
-    private VersionStatus status;
-
-    /**
-     * 版本修订号
-     */
-    private Long revision;
-
-    /**
-     * 发布时间
-     */
-    private Instant publishedAt;
+    private ConfigReadiness readiness;
 
     /**
      * 传输方式
@@ -95,7 +85,13 @@ public class McpServerVersionPO {
     private Long lastUpdaterId;
 
     /**
-     * 最后更新时间，由数据库维护
+     * 创建时间
+     */
+    @TableField(insertStrategy = FieldStrategy.NEVER)
+    private Instant createTime;
+
+    /**
+     * 最后更新时间
      */
     @TableField(insertStrategy = FieldStrategy.NEVER)
     private Instant lastUpdateTime;

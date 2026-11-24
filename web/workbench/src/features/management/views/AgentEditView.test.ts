@@ -4,17 +4,21 @@ import { beforeEach, expect, it, vi } from 'vitest'
 import { reactive } from 'vue'
 import AgentEditView from './AgentEditView.vue'
 import {
-  createAgentVersion,
   getAgent,
-  getAgentVersion,
   listAgentToolOptions,
   listSubagentOptions,
-  publishAgentVersion,
-  saveAgentVersion,
+  saveAgent,
 } from '../api/agentConfigApi'
-import type { AgentDetail, AgentVersion, ToolOption } from '../model/agentConfig'
+import type { AgentDetail, ToolOption } from '../model/agentConfig'
 
-const route = vi.hoisted(() => ({ value: null as unknown as { params: Record<string, string>; query: Record<string, string>; path: string; meta: Record<string, string> } }))
+const route = vi.hoisted(() => ({
+  value: null as unknown as {
+    params: Record<string, string>
+    query: Record<string, string>
+    path: string
+    meta: Record<string, string>
+  },
+}))
 
 vi.mock('vue-router', () => ({
   useRoute: () => route.value,
@@ -28,55 +32,97 @@ vi.mock('../components/confirmManagement', () => ({ confirmManagement: vi.fn(() 
 vi.mock('../api/agentConfigApi', () => ({
   getAgent: vi.fn(),
   getAgentVersion: vi.fn(),
+  getAgentRelease: vi.fn(),
+  getAgentReleaseSubagent: vi.fn(),
+  getAgentReleaseTool: vi.fn(),
   listAgentToolOptions: vi.fn(),
   listSubagentOptions: vi.fn(),
-  saveAgentVersion: vi.fn(),
-  createAgentVersion: vi.fn(),
-  publishAgentVersion: vi.fn(),
-  activateAgentVersion: vi.fn(),
   createAgent: vi.fn(),
-  updateAgent: vi.fn(),
-  enableAgent: vi.fn(),
-  disableAgent: vi.fn(),
+  saveAgent: vi.fn(),
 }))
 
 const RouterLink = { props: ['to'], template: '<a :href="String(to)"><slot /></a>' }
 
 const toolOptions: ToolOption[] = [
-  { toolVersionId: '201', toolId: '20', toolCode: 'order_query', toolName: '订单查询', toolType: 'HTTP', exposedName: 'query_order', description: '查询订单', versionNo: 1, latest: false },
-  { toolVersionId: '202', toolId: '20', toolCode: 'order_query', toolName: '订单查询', toolType: 'HTTP', exposedName: 'query_order', description: '查询订单', versionNo: 2, latest: true },
+  {
+    toolId: '20',
+    toolCode: 'TOOL-H-20261124-001',
+    toolName: '订单查询',
+    displayAlias: '查订单',
+    toolType: 'HTTP',
+    latestVersionId: '202',
+    latestVersionNo: 2,
+    exposedName: 'query_order',
+    description: '查询订单',
+    readOnly: true,
+  },
 ]
 
-function draftVersion(overrides: Partial<AgentVersion> = {}): AgentVersion {
-  return {
-    agentVersionId: '101',
-    agentId: '10',
-    versionNo: 1,
-    status: 'DRAFT',
-    revision: 4,
-    publishedAt: null,
-    lastUpdateTime: '2026-11-21T08:00:00Z',
-    description: '订单相关问题',
-    systemPrompt: '你是订单助手。',
-    maxIters: null,
-    tools: [{
-      toolVersionId: '201', toolId: '20', toolCode: 'order_query', toolName: '订单查询', toolType: 'HTTP',
-      exposedName: 'query_order', description: '查询订单', versionNo: 1, latestVersionNo: 2, usable: true,
-    }],
-    subagents: [],
-    ...overrides,
-  }
-}
-
-function detail(): AgentDetail {
+function detail(overrides: Partial<AgentDetail> = {}): AgentDetail {
   return {
     agent: {
-      agentId: '10', agentCode: 'order_assistant', agentName: '订单助手', agentType: 'MASTER', status: 'ENABLED', revision: 7,
-      description: '订单相关问题', currentVersionId: null, currentVersionNo: null, draftVersionId: '101',
-      toolCount: 1, subagentCount: 0, usageCount: 0, lastUpdateTime: '2026-11-21T08:00:00Z',
+      agentId: '10',
+      agentCode: 'AGT-M-20261124-001',
+      agentName: '订单助手',
+      displayAlias: '订单专员',
+      agentType: 'MASTER',
+      status: 'ENABLED',
+      revision: 7,
+      latestVersionId: '101',
+      latestVersionNo: 1,
+      latestReadiness: 'READY',
+      description: '订单相关问题',
+      currentReleaseId: null,
+      currentReleaseNo: null,
+      currentReleaseAt: null,
+      publishState: 'UNPUBLISHED',
+      toolCount: 1,
+      subagentCount: 0,
+      usageCount: 0,
+      lastUpdateTime: '2026-11-24T08:00:00Z',
     },
-    versions: [{ versionId: '101', versionNo: 1, status: 'DRAFT', revision: 4, publishedAt: null, lastUpdateTime: '2026-11-21T08:00:00Z', current: false }],
+    latestVersion: {
+      agentVersionId: '101',
+      agentId: '10',
+      versionNo: 1,
+      readiness: 'READY',
+      description: '订单相关问题',
+      promptSections: {
+        role: '你是订单助手',
+        goal: '解答订单状态',
+        workflow: '',
+        constraints: '',
+        outputFormat: '',
+      },
+      systemPrompt: '## 角色与定位\n你是订单助手\n\n## 核心目标\n解答订单状态',
+      maxIters: null,
+      lastUpdateTime: '2026-11-24T08:00:00Z',
+      tools: [
+        {
+          toolId: '20',
+          toolCode: 'TOOL-H-20261124-001',
+          toolName: '订单查询',
+          displayAlias: '查订单',
+          toolType: 'HTTP',
+          toolStatus: 'ENABLED',
+          toolVersionId: '202',
+          versionNo: 2,
+          readiness: 'READY',
+          exposedName: 'query_order',
+          description: '查询订单',
+          readOnly: true,
+          mcpServerId: null,
+          mcpServerName: null,
+          usable: true,
+          unusableReason: null,
+        },
+      ],
+      subagents: [],
+    },
+    versions: [{ versionId: '101', versionNo: 1, readiness: 'READY', lastUpdateTime: '2026-11-24T08:00:00Z' }],
+    releases: [],
     usages: [],
+    ...overrides,
   }
 }
 
@@ -85,64 +131,78 @@ function mountView() {
 }
 
 function button(view: ReturnType<typeof mountView>, text: string) {
-  return view.findAll('button').find(item => item.text() === text)!
+  return view.findAll('button').find(item => item.text().trim() === text)!
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
   route.value = reactive({ params: { id: '10' }, query: {}, path: '/management/agents/10', meta: { menuPath: '/management/agents' } })
   vi.mocked(getAgent).mockResolvedValue(detail())
-  vi.mocked(getAgentVersion).mockResolvedValue(draftVersion())
   vi.mocked(listAgentToolOptions).mockResolvedValue(toolOptions)
   vi.mocked(listSubagentOptions).mockResolvedValue([])
 })
 
-it('opens the draft, suggests upgrading a bound tool and saves the upgraded version with the draft revision', async () => {
-  vi.mocked(saveAgentVersion).mockImplementation(async (_agentId, _versionId, body) => draftVersion({
-    revision: 5,
-    tools: [{ ...draftVersion().tools[0]!, toolVersionId: body.toolVersionIds[0]!, versionNo: 2 }],
-  }))
+it('renders stepped editor with uppercase dated code and saves a new config version', async () => {
+  const saved = detail()
+  saved.agent.latestVersionNo = 2
+  saved.agent.revision = 8
+  vi.mocked(saveAgent).mockResolvedValue(saved)
+
   const view = mountView()
   await flushPromises()
 
-  expect(getAgentVersion).toHaveBeenCalledWith('10', '101')
-  expect(view.text()).toContain('可升级到 v2')
+  expect(view.text()).toContain('AGT-M-20261124-001')
+  expect(view.text()).toContain('1. 基础信息')
 
-  await button(view, '升级').trigger('click')
-  await button(view, '保存草稿').trigger('click')
+  const promptStep = view.findAll('.studio-step-btn').find(btn => btn.text().includes('系统提示词'))!
+  await promptStep.trigger('click')
+  expect(view.text()).toContain('2. 结构化系统提示词')
+
+  await button(view, '保存').trigger('click')
   await flushPromises()
 
-  expect(createAgentVersion).not.toHaveBeenCalled()
-  expect(saveAgentVersion).toHaveBeenCalledWith('10', '101', expect.objectContaining({
-    revision: 4,
-    toolVersionIds: ['202'],
-    systemPrompt: '你是订单助手。',
-  }))
-  expect(view.text()).toContain('草稿已保存')
+  expect(saveAgent).toHaveBeenCalledWith(
+    '10',
+    expect.objectContaining({
+      revision: 7,
+      agentName: '订单助手',
+      displayAlias: '订单专员',
+      toolIds: ['20'],
+    }),
+  )
+  expect(view.text()).toContain('已保存为新配置版本 v2')
   view.unmount()
 })
 
-it('requires saving before publishing and publishes with the version revision', async () => {
-  vi.mocked(publishAgentVersion).mockResolvedValue(detail().agent)
+it.each(['query_order', 'ask_user'])('blocks saving when delegation name %s conflicts with tool or reserved name', async (delegationName) => {
+  const d = detail()
+  d.latestVersion!.subagents = [
+    {
+      subagentId: '30',
+      subagentCode: 'AGT-S-20261124-001',
+      subagentName: '订单子助手',
+      subagentDisplayAlias: '订单专员',
+      subagentStatus: 'ENABLED',
+      subagentVersionId: '301',
+      versionNo: 1,
+      readiness: 'READY',
+      delegationName,
+      delegationDescription: '',
+      displayAlias: '',
+      subagentDescription: '订单查询',
+      toolCount: 1,
+      usable: true,
+      unusableReason: null,
+    },
+  ]
+  vi.mocked(getAgent).mockResolvedValue(d)
+
   const view = mountView()
   await flushPromises()
-
-  const publish = () => button(view, '发布并生效')
-  expect(publish().attributes('disabled')).toBeUndefined()
-
-  await view.find('textarea.config-prompt').setValue('你是订单助手，回答前先确认订单号。')
-  expect(publish().attributes('disabled')).toBeDefined()
-  expect(view.text()).toContain('有未保存的修改')
-  view.unmount()
-})
-
-it('blocks publishing when the system prompt is empty', async () => {
-  vi.mocked(getAgentVersion).mockResolvedValue(draftVersion({ systemPrompt: '' }))
-  const view = mountView()
+  await button(view, '保存').trigger('click')
   await flushPromises()
 
-  expect(button(view, '发布并生效').attributes('disabled')).toBeDefined()
-  expect(button(view, '保存草稿').attributes('disabled')).toBeUndefined()
-  expect(view.find('.config-check.is-fail').text()).toContain('系统提示词已填写')
+  expect(saveAgent).not.toHaveBeenCalled()
+  expect(view.text()).toContain('Sub 委派')
   view.unmount()
 })

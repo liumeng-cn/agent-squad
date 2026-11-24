@@ -1,9 +1,25 @@
 <script setup lang="ts">
+import {
+  ElAside,
+  ElBreadcrumb,
+  ElBreadcrumbItem,
+  ElConfigProvider,
+  ElContainer,
+  ElHeader,
+  ElMain,
+  ElMenu,
+  ElMenuItem,
+  ElSubMenu,
+  ElTabs,
+  ElTabPane,
+} from 'element-plus'
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../auth/stores/auth'
 import { useManagementStore } from '../stores/management'
 import type { Menu } from '../model/management'
+import 'element-plus/dist/index.css'
 import '../management.css'
 
 /**
@@ -12,10 +28,19 @@ import '../management.css'
  */
 const props = defineProps<{ current?: string }>()
 
-interface NavLink { menuId: string; name: string; path: string }
-interface NavGroup { key: string; title: string; links: NavLink[] }
+interface NavLink {
+  menuId: string
+  name: string
+  path: string
+}
+interface NavGroup {
+  key: string
+  title: string
+  links: NavLink[]
+}
 
 const route = useRoute()
+const router = useRouter()
 const access = useManagementStore()
 const auth = useAuthStore()
 
@@ -25,7 +50,11 @@ function collectPages(nodes: Menu[]): NavLink[] {
   const links: NavLink[] = []
   for (const node of nodes) {
     if (node.type === 'PAGE' && node.routePath) {
-      links.push({ menuId: node.menuId, name: node.name, path: node.routePath })
+      links.push({
+        menuId: node.menuId,
+        name: node.name,
+        path: node.routePath,
+      })
     }
     links.push(...collectPages(node.children))
   }
@@ -42,11 +71,15 @@ const groups = computed<NavGroup[]>(() => {
       loose.push(...collectPages([node]))
       continue
     }
-    const directPages = collectPages(node.children.filter(child => child.type === 'PAGE'))
+    const directPages = collectPages(
+      node.children.filter((child) => child.type === 'PAGE'),
+    )
     if (directPages.length) {
       result.push({ key: node.menuId, title: node.name, links: directPages })
     }
-    for (const child of node.children.filter(item => item.type === 'DIRECTORY')) {
+    for (const child of node.children.filter(
+      (item) => item.type === 'DIRECTORY',
+    )) {
       const links = collectPages(child.children)
       if (links.length) {
         result.push({ key: child.menuId, title: child.name, links })
@@ -60,8 +93,21 @@ const groups = computed<NavGroup[]>(() => {
   return result
 })
 
-const activeGroup = computed(() => groups.value.find(group => group.links.some(link => link.path === activePath.value)))
-const activeLink = computed(() => activeGroup.value?.links.find(link => link.path === activePath.value))
+const pageTabs = computed(() => groups.value.flatMap(group => group.links))
+
+function switchPage(path: string | number) {
+  if (path !== activePath.value) void router.push(String(path))
+  return false
+}
+
+const activeGroup = computed(() =>
+  groups.value.find((group) =>
+    group.links.some((link) => link.path === activePath.value),
+  ),
+)
+const activeLink = computed(() =>
+  activeGroup.value?.links.find((link) => link.path === activePath.value),
+)
 
 const crumbs = computed(() => {
   const items: { label: string; path?: string }[] = []
@@ -69,7 +115,10 @@ const crumbs = computed(() => {
     items.push({ label: activeGroup.value.title })
   }
   if (activeLink.value) {
-    items.push({ label: activeLink.value.name, path: props.current ? activeLink.value.path : undefined })
+    items.push({
+      label: activeLink.value.name,
+      path: props.current ? activeLink.value.path : undefined,
+    })
   }
   if (props.current) {
     items.push({ label: props.current })
@@ -79,50 +128,63 @@ const crumbs = computed(() => {
 </script>
 
 <template>
-  <div class="management-platform">
-    <header class="management-top">
-      <RouterLink class="management-brand" :to="groups[0]?.links[0]?.path ?? '/management'">
-        <img src="/brand/squad-icon.svg" alt="" width="26" height="26" />
-        <span class="management-brand-name">Agent Squad</span>
-        <span class="management-brand-sub">管理平台</span>
-      </RouterLink>
-      <div class="management-top-user">
-        <span class="management-top-name">{{ auth.user?.effectiveDisplayName }}</span>
-        <RouterLink to="/chat">返回聊天</RouterLink>
-      </div>
-    </header>
-
-    <div class="management-layout">
-      <aside class="management-sidebar">
-        <nav class="management-nav" aria-label="管理菜单">
-          <div v-for="group in groups" :key="group.key" class="management-nav-group">
-            <div class="management-nav-title">{{ group.title }}</div>
-            <RouterLink
-              v-for="link in group.links"
-              :key="link.menuId"
-              class="management-nav-link"
-              :to="link.path"
-              :aria-current="link.path === activePath ? 'page' : undefined"
-            >
-              {{ link.name }}
-            </RouterLink>
-          </div>
-        </nav>
-      </aside>
-
-      <main class="management-main">
-        <div class="management-content">
-          <nav v-if="crumbs.length" class="management-breadcrumb" aria-label="当前位置">
-            <ol>
-              <li v-for="(crumb, index) in crumbs" :key="index">
-                <RouterLink v-if="crumb.path" :to="crumb.path">{{ crumb.label }}</RouterLink>
-                <span v-else>{{ crumb.label }}</span>
-              </li>
-            </ol>
-          </nav>
-          <slot />
+  <ElConfigProvider :locale="zhCn" size="small">
+    <ElContainer class="management-platform" direction="vertical">
+      <ElHeader class="management-top" height="48px">
+        <RouterLink
+          class="management-brand"
+          :to="groups[0]?.links[0]?.path ?? '/management'"
+        >
+          <img src="/brand/squad-icon.svg" alt="" width="26" height="26" />
+          <span class="management-brand-name">Agent Squad</span
+          ><span class="management-brand-sub">管理平台</span>
+        </RouterLink>
+        <ElTabs class="management-workspace-tabs" :model-value="activePath" :before-leave="switchPage">
+          <ElTabPane v-for="page in pageTabs" :key="page.path" :name="page.path" :label="page.name" />
+        </ElTabs>
+        <div class="management-top-user">
+          <span>{{ auth.user?.effectiveDisplayName }}</span><RouterLink
+            to="/chat"
+            >返回聊天</RouterLink
+          >
         </div>
-      </main>
-    </div>
-  </div>
+      </ElHeader>
+      <ElContainer class="management-layout">
+        <ElAside class="management-sidebar" width="216px">
+          <ElMenu :default-active="activePath" :default-openeds="groups.map(group => group.key)" router aria-label="管理菜单">
+            <ElSubMenu
+              v-for="group in groups"
+              :key="group.key"
+              :index="group.key"
+            >
+              <template #title>{{ group.title }}</template>
+              <ElMenuItem
+                v-for="link in group.links"
+                :key="link.menuId"
+                :index="link.path"
+                >{{ link.name }}</ElMenuItem
+              >
+            </ElSubMenu>
+          </ElMenu>
+        </ElAside>
+        <ElMain class="management-main"
+          ><div class="management-content">
+            <ElBreadcrumb
+              v-if="crumbs.length"
+              class="management-breadcrumb"
+              separator="/"
+              aria-label="当前位置"
+            >
+              <ElBreadcrumbItem
+                v-for="(crumb, index) in crumbs"
+                :key="index"
+                :to="crumb.path"
+                >{{ crumb.label }}</ElBreadcrumbItem
+              >
+            </ElBreadcrumb>
+            <slot /></div
+        ></ElMain>
+      </ElContainer>
+    </ElContainer>
+  </ElConfigProvider>
 </template>

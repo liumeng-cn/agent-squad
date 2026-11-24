@@ -1,4 +1,15 @@
 <script setup lang="ts">
+import {
+  ElAlert,
+  ElButton,
+  ElCheckbox,
+  ElFormItem,
+  ElInput,
+  ElOption,
+  ElSelect,
+  ElTag,
+} from 'element-plus'
+import { tagType } from '../../model/elementTheme'
 import { computed, ref, watch } from 'vue'
 import { errorMessage } from '../../../../shared/http/http'
 import type { ToolTestRun } from '../../model/agentConfig'
@@ -36,12 +47,18 @@ const result = ref<ToolTestRun | null>(null)
 const failure = ref('')
 const running = ref(false)
 
-const fieldKey = computed(() => props.fields.map(field => `${field.name}:${field.type}`).join('|'))
+const fieldKey = computed(() =>
+  props.fields.map((field) => `${field.name}:${field.type}`).join('|'),
+)
 
-watch(fieldKey, () => {
-  values.value = initialTestValues(props.fields)
-  inputErrors.value = []
-}, { immediate: true })
+watch(
+  fieldKey,
+  () => {
+    values.value = initialTestValues(props.fields)
+    inputErrors.value = []
+  },
+  { immediate: true },
+)
 
 function enumOptions(field: ParamField): (string | number)[] {
   return parseEnumValues(field)
@@ -76,52 +93,67 @@ async function runTest() {
     <p v-if="disabledReason" class="management-muted">{{ disabledReason }}</p>
 
     <div v-if="fields.length" class="management-form-grid">
-      <label
+      <ElFormItem
         v-for="field in fields"
         :key="field.name"
         class="management-field"
         :class="{ 'is-full': isJsonField(field) }"
+        required
       >
-        <span class="management-field-label" :class="{ 'management-required': field.required }">
+        <template #label>
           <span class="management-code">{{ field.name }}</span>
-          <span class="management-muted">{{ paramTypeLabels[field.type] }}</span>
-        </span>
+          <span class="management-muted">{{
+            paramTypeLabels[field.type]
+          }}</span>
+        </template>
 
-        <select
+        <ElSelect
+          :empty-values="[null, undefined]"
           v-if="enumOptions(field).length"
-          :value="textValue(field.name)"
+          :model-value="textValue(field.name)"
           :disabled="running"
-          @change="setValue(field.name, ($event.target as HTMLSelectElement).value)"
+          @change="setValue(field.name, $event)"
         >
-          <option value="">{{ field.required ? '请选择' : '不传' }}</option>
-          <option v-for="option in enumOptions(field)" :key="String(option)" :value="String(option)">{{ option }}</option>
-        </select>
+          <ElOption value="" :label="field.required ? '请选择' : '不传'" />
+          <ElOption
+            v-for="option in enumOptions(field)"
+            :key="String(option)"
+            :value="String(option)"
+            :label="option"
+          />
+        </ElSelect>
         <span v-else-if="field.type === 'boolean'" class="management-switch">
-          <input
-            type="checkbox"
-            :checked="values[field.name] === true"
+          <ElCheckbox
+            :model-value="values[field.name] === true"
             :disabled="running"
-            @change="setValue(field.name, ($event.target as HTMLInputElement).checked)"
+            @change="setValue(field.name, Boolean($event))"
           />
           <span>{{ values[field.name] ? 'true' : 'false' }}</span>
         </span>
-        <textarea
+        <ElInput
           v-else-if="isJsonField(field)"
-          :value="textValue(field.name)"
-          rows="3"
+          :model-value="textValue(field.name)"
+          :rows="3"
           :disabled="running"
-          :placeholder="field.type === 'array' ? '[&quot;a&quot;, &quot;b&quot;]' : '{&quot;key&quot;: &quot;value&quot;}'"
-          @input="setValue(field.name, ($event.target as HTMLTextAreaElement).value)"
+          :placeholder="
+            field.type === 'array'
+              ? '[&quot;a&quot;, &quot;b&quot;]'
+              : '{&quot;key&quot;: &quot;value&quot;}'
+          "
+          @input="setValue(field.name, $event)"
+          type="textarea"
         />
-        <input
+        <ElInput
           v-else
-          :value="textValue(field.name)"
+          :model-value="textValue(field.name)"
           :inputmode="field.type === 'string' ? 'text' : 'decimal'"
           :disabled="running"
-          @input="setValue(field.name, ($event.target as HTMLInputElement).value)"
+          @input="setValue(field.name, $event)"
         />
-        <span v-if="field.description" class="management-field-hint">{{ field.description }}</span>
-      </label>
+        <span v-if="field.description" class="management-field-hint">{{
+          field.description
+        }}</span>
+      </ElFormItem>
     </div>
     <p v-else class="management-muted">该工具没有参数，可直接运行。</p>
 
@@ -132,21 +164,45 @@ async function runTest() {
     </div>
 
     <div class="management-inline">
-      <button type="button" class="management-primary" :disabled="running || Boolean(disabledReason)" @click="runTest">
+      <ElButton
+        type="primary"
+        native-type="button"
+        class="management-primary"
+        :disabled="running || Boolean(disabledReason)"
+        @click="runTest"
+      >
         {{ running ? '运行中…' : '运行' }}
-      </button>
+      </ElButton>
       <span class="management-muted">使用当前填写的定义运行，无需先保存。</span>
     </div>
 
-    <p v-if="failure" class="management-error" role="alert">{{ failure }}</p>
+    <ElAlert
+      v-if="failure"
+      class="management-error"
+      role="alert"
+      type="error"
+      :closable="false"
+      show-icon
+      >{{ failure }}</ElAlert
+    >
 
-    <div v-if="result" class="config-test-result" :class="result.success ? 'is-success' : 'is-fail'" role="status">
+    <div
+      v-if="result"
+      class="config-test-result"
+      :class="result.success ? 'is-success' : 'is-fail'"
+      role="status"
+    >
       <div class="config-test-head">
-        <span class="management-tag" :class="result.success ? 'is-success' : 'is-danger'">
+        <ElTag
+          class="management-tag"
+          :type="tagType(result.success ? 'is-success' : 'is-danger')"
+        >
           {{ result.success ? '运行成功' : '运行失败' }}
-        </span>
+        </ElTag>
         <span>耗时 {{ result.durationMs }} ms</span>
-        <span v-if="result.request">请求 <span class="management-code">{{ result.request }}</span></span>
+        <span v-if="result.request"
+          >请求 <span class="management-code">{{ result.request }}</span></span
+        >
       </div>
       <pre class="management-pre">{{ result.output || '（无输出）' }}</pre>
     </div>

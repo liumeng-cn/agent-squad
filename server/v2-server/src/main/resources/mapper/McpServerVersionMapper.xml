@@ -1,71 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.v2.mapper.McpServerVersionMapper">
+
     <select id="nextVersionNo" resultType="int">
         SELECT COALESCE(MAX(version_no), 0) + 1
         FROM squad_chat.sq_mcp_server_version
         WHERE mcp_server_id = #{mcpServerId}
     </select>
 
-    <!-- 版本记录；最新发布版本标记为 current -->
     <select id="selectSummaries" resultType="com.agentsquad.squad.v2.bo.VersionSummaryBO">
-        SELECT v.mcp_server_version_id AS version_id,
-               v.version_no,
-               v.status,
-               v.revision,
-               v.published_at,
-               v.last_update_time,
-               (
-                   v.status = 'PUBLISHED'
-                   AND v.version_no = MAX(v.version_no) FILTER (WHERE v.status = 'PUBLISHED') OVER ()
-               )                       AS current
-        FROM squad_chat.sq_mcp_server_version v
-        WHERE v.mcp_server_id = #{mcpServerId}
-        ORDER BY v.version_no DESC
+        SELECT mcp_server_version_id AS version_id,
+               version_no,
+               readiness,
+               last_update_time
+        FROM squad_chat.sq_mcp_server_version
+        WHERE mcp_server_id = #{mcpServerId}
+        ORDER BY version_no DESC
     </select>
 
-    <!-- 启用服务的已发布版本 -->
     <select id="selectUsableOptions" resultType="com.agentsquad.squad.v2.bo.McpServerOptionBO">
-        SELECT v.mcp_server_version_id,
-               s.mcp_server_id,
+        SELECT s.mcp_server_id,
                s.server_code,
                s.server_name,
-               v.version_no,
-               (v.version_no = MAX(v.version_no) OVER (PARTITION BY v.mcp_server_id)) AS latest
-        FROM squad_chat.sq_mcp_server_version v
-        JOIN squad_chat.sq_mcp_server s
-          ON s.mcp_server_id = v.mcp_server_id
-        WHERE v.status = 'PUBLISHED'
+               s.description,
+               s.latest_version_id,
+               s.latest_version_no,
+               v.transport_type,
+               v.endpoint
+        FROM squad_chat.sq_mcp_server s
+        JOIN squad_chat.sq_mcp_server_version v
+          ON v.mcp_server_version_id = s.latest_version_id
+        WHERE s.deleted_at IS NULL
           AND s.status = 'ENABLED'
-        ORDER BY s.server_code, v.version_no DESC
+          AND s.latest_readiness = 'READY'
+        ORDER BY s.server_name ASC, s.id ASC
     </select>
-
-    <update id="updateDraft">
-        UPDATE squad_chat.sq_mcp_server_version
-        SET transport_type   = #{transportType},
-            endpoint         = #{endpoint},
-            credential_ref   = #{credentialRef},
-            request_headers  = #{requestHeaders, typeHandler=com.agentsquad.squad.v2.config.JsonbTypeHandler},
-            timeout_ms       = #{timeoutMs},
-            revision         = revision + 1,
-            last_updater_id  = #{lastUpdaterId},
-            last_update_time = CURRENT_TIMESTAMP
-        WHERE mcp_server_id = #{mcpServerId}
-          AND mcp_server_version_id = #{mcpServerVersionId}
-          AND status = 'DRAFT'
-          AND revision = #{revision}
-    </update>
-
-    <update id="publish">
-        UPDATE squad_chat.sq_mcp_server_version
-        SET status           = 'PUBLISHED',
-            revision         = revision + 1,
-            published_at     = CURRENT_TIMESTAMP,
-            last_updater_id  = #{lastUpdaterId},
-            last_update_time = CURRENT_TIMESTAMP
-        WHERE mcp_server_id = #{mcpServerId}
-          AND mcp_server_version_id = #{mcpServerVersionId}
-          AND status = 'DRAFT'
-          AND revision = #{revision}
-    </update>
 </mapper>

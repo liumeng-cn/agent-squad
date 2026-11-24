@@ -1,92 +1,75 @@
 <script setup lang="ts">
-import type { AgentDelegationDraft } from '../../model/agentConfig'
-import { DELEGATION_NAME_PATTERN, DESCRIPTION_LIMIT, versionLabel } from '../../model/agentConfigLabels'
+import { ElButton, ElInput, ElTag } from 'element-plus'
 import type { DelegationCardInfo } from '../../model/agentBindings'
+import type { AgentDelegationDraft } from '../../model/agentConfig'
+import { DESCRIPTION_LIMIT, versionLabel } from '../../model/agentConfigLabels'
 
 /**
- * 子 Agent 委派卡片：选择委派版本，填写主 Agent 内唯一的委派名称和委派描述。
- * 委派描述决定主 Agent 何时把任务交给该子 Agent，默认取子 Agent 的职责描述。
+ * Master 委派卡片：可维护委派名称、前端展示别称覆盖与委派说明覆盖。
  */
-const delegation = defineModel<AgentDelegationDraft>({ required: true })
-const props = defineProps<{ info: DelegationCardInfo; readOnly: boolean; duplicated: boolean }>()
-const emit = defineEmits<{ remove: [] }>()
-
-function useCurrent() {
-  const current = props.info.versions.find(option => option.current)
-  if (current) {
-    delegation.value = { ...delegation.value, subagentVersionId: current.subagentVersionId }
-  }
-}
-
-function update(patch: Partial<AgentDelegationDraft>) {
-  delegation.value = { ...delegation.value, ...patch }
-}
+defineProps<{
+  delegation: AgentDelegationDraft
+  info: DelegationCardInfo
+  nameError: string
+  readonly: boolean
+}>()
+const emit = defineEmits<{
+  update: [next: AgentDelegationDraft]
+  remove: []
+}>()
 </script>
 
 <template>
-  <li class="config-binding" :class="{ 'is-unusable': !info.usable }">
+  <article class="config-binding" :class="{ 'is-invalid': !info.usable || Boolean(nameError) }">
     <div class="config-binding-head">
       <div class="config-binding-title">
-        <RouterLink v-if="info.agentId" :to="`/management/agents/${info.agentId}`">{{ info.agentName }}</RouterLink>
-        <span v-else>{{ info.agentName }}</span>
+        <strong>{{ info.agentName }}</strong>
         <span class="management-code">{{ info.agentCode }}</span>
+        <ElTag class="management-tag is-success" type="success">最新 {{ versionLabel(info.versionNo) }}</ElTag>
+        <span class="management-muted">{{ info.toolCount }} 个工具</span>
+        <ElTag v-if="!info.usable" class="management-tag is-danger" type="danger">
+          {{ info.unusableReason || '不可用' }}
+        </ElTag>
       </div>
-      <button v-if="!readOnly" type="button" class="management-link management-danger" @click="emit('remove')">移除</button>
+      <div class="config-binding-controls">
+        <ElButton v-if="!readonly" type="danger" link native-type="button" @click="emit('remove')">移除</ElButton>
+      </div>
     </div>
-    <p v-if="info.description" class="config-binding-desc">职责：{{ info.description }}</p>
 
-    <div class="config-binding-fields is-delegation">
+    <div class="management-form-grid" style="margin-top: 8px">
       <label class="management-field">
-        <span class="management-field-label">委派版本</span>
-        <select
-          :value="delegation.subagentVersionId"
-          :disabled="readOnly"
-          @change="update({ subagentVersionId: ($event.target as HTMLSelectElement).value })"
-        >
-          <option
-            v-if="!info.versions.some(option => option.subagentVersionId === delegation.subagentVersionId)"
-            :value="delegation.subagentVersionId"
-          >
-            {{ versionLabel(info.versionNo) }}（不可用）
-          </option>
-          <option v-for="option in info.versions" :key="option.subagentVersionId" :value="option.subagentVersionId">
-            {{ versionLabel(option.versionNo) }}{{ option.current ? '（当前生效）' : '' }}
-          </option>
-        </select>
-      </label>
-      <label class="management-field">
-        <span class="management-field-label management-required">委派名称</span>
-        <input
-          :value="delegation.delegationName"
+        <span class="management-field-label">委派名称 <span class="management-required" /></span>
+        <ElInput
+          :model-value="delegation.delegationName"
+          :disabled="readonly"
           maxlength="80"
-          :readonly="readOnly"
-          :aria-invalid="!DELEGATION_NAME_PATTERN.test(delegation.delegationName) || duplicated"
-          @input="update({ delegationName: ($event.target as HTMLInputElement).value.trim() })"
+          placeholder="如 order_specialist"
+          @update:model-value="emit('update', { ...delegation, delegationName: String($event) })"
+        />
+        <span v-if="nameError" class="management-field-error">{{ nameError }}</span>
+      </label>
+
+      <label class="management-field">
+        <span class="management-field-label">前端展示别称</span>
+        <ElInput
+          :model-value="delegation.displayAlias"
+          :disabled="readonly"
+          maxlength="60"
+          :placeholder="info.agentDisplayAlias || info.agentName"
+          @update:model-value="emit('update', { ...delegation, displayAlias: String($event) })"
         />
       </label>
-      <label class="management-field">
-        <span class="management-field-label">委派描述</span>
-        <input
-          :value="delegation.delegationDescription"
+
+      <label class="management-field is-full">
+        <span class="management-field-label">委派说明（留空沿用 Sub 职责描述）</span>
+        <ElInput
+          :model-value="delegation.delegationDescription"
+          :disabled="readonly"
           :maxlength="DESCRIPTION_LIMIT"
-          :readonly="readOnly"
-          placeholder="何时把任务交给该子 Agent"
-          @input="update({ delegationDescription: ($event.target as HTMLInputElement).value })"
+          :placeholder="info.description || '描述何时委派给该 Sub'"
+          @update:model-value="emit('update', { ...delegation, delegationDescription: String($event) })"
         />
       </label>
     </div>
-
-    <p v-if="!info.usable" class="config-binding-note is-danger">该版本已不可用（子 Agent 停用或版本失效），请切换版本或移除，否则无法发布。</p>
-    <p v-else-if="duplicated" class="config-binding-note is-danger">委派名称在当前主 Agent 内重复。</p>
-    <p v-else-if="!DELEGATION_NAME_PATTERN.test(delegation.delegationName)" class="config-binding-note is-danger">
-      委派名称只能包含字母、数字、下划线和连字符。
-    </p>
-    <p
-      v-else-if="info.currentVersionNo != null && info.versionNo != null && info.currentVersionNo !== info.versionNo"
-      class="config-binding-note is-warning"
-    >
-      子 Agent 当前生效版本为 {{ versionLabel(info.currentVersionNo) }}
-      <button v-if="!readOnly" type="button" class="management-link" @click="useCurrent">切换到生效版本</button>
-    </p>
-  </li>
+  </article>
 </template>

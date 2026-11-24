@@ -9,13 +9,13 @@ const page: Menu = { menuId: 'roles', parentMenuId: null, code: 'roles', name: '
 ] }
 it('selects assignable descendants without granting disabled functions', async () => {
   const view = mount(AuthorizationTree, { props: { nodes: [page], modelValue: [], keyword: '', expanded: true, readonly: false } })
-  await view.find('summary input').setValue(true)
+  await view.find('[aria-label=角色管理] input').setValue(true)
   expect(view.emitted('update:modelValue')?.[0]?.[0]).toEqual(['m:roles', 'f:management:role:query'])
   view.unmount()
 })
 it('selecting one assigned function for removal does not select its menu', async () => {
   const view = mount(AuthorizationTree, { props: { nodes: [page], modelValue: [], keyword: '', expanded: true, readonly: false, assignedMenus: ['roles'], assignedCodes: ['management:role:query'] } })
-  await view.find('label input').setValue(true)
+  await view.find('[aria-label=查询角色] input').setValue(true)
   expect(view.emitted('update:modelValue')?.[0]?.[0]).toEqual(['f:management:role:query'])
   view.unmount()
 })

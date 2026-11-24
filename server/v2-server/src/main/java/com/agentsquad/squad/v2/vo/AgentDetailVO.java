@@ -6,23 +6,31 @@ import java.util.List;
 
 /**
  * Agent 详情视图
- * <p>
- * 编辑页一次加载 Agent 摘要、版本记录和委派它的主 Agent。
  */
 @Data
 public class AgentDetailVO {
     /**
-     * Agent 摘要
+     * Agent 目录摘要
      */
     private AgentConfigVO agent;
 
     /**
-     * 版本记录，版本号倒序
+     * 最新配置版本内容
      */
-    private List<VersionSummaryVO> versions;
+    private AgentConfigVersionVO latestVersion;
 
     /**
-     * 委派该 Agent 的主 Agent 版本
+     * 历史配置版本列表
      */
-    private List<ConfigUsageVO> usages;
+    private List<VersionSummaryVO> versions = List.of();
+
+    /**
+     * Master 发布快照历史列表（Sub 为空）
+     */
+    private List<AgentReleaseSummaryVO> releases = List.of();
+
+    /**
+     * 引用该 Sub 的下游 Master（Master 为空）
+     */
+    private List<ConfigUsageVO> usages = List.of();
 }

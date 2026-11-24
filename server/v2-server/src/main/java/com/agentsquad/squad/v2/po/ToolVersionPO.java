@@ -2,8 +2,8 @@ package com.agentsquad.squad.v2.po;
 
 import com.agentsquad.squad.v2.bo.HttpToolSpecBO;
 import com.agentsquad.squad.v2.config.JsonbTypeHandler;
+import com.agentsquad.squad.v2.enums.ConfigReadiness;
 import com.agentsquad.squad.v2.enums.ToolType;
-import com.agentsquad.squad.v2.enums.VersionStatus;
 import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -15,9 +15,9 @@ import java.time.Instant;
 import java.util.Map;
 
 /**
- * 工具版本
+ * 工具配置版本历史
  * <p>
- * 映射 sq_tool_version，保存模型可见定义和按类型的实现配置；发布后冻结，Agent 按版本ID固定绑定。
+ * 映射 sq_tool_version，每次保存新增一条不可变配置版本；MCP 工具按 MCP 业务 ID 关联。
  */
 @Data
 @TableName(value = "sq_tool_version", schema = "squad_chat", autoResultMap = true)
@@ -44,24 +44,14 @@ public class ToolVersionPO {
     private ToolType toolType;
 
     /**
-     * 版本号
+     * 配置版本号
      */
     private Integer versionNo;
 
     /**
-     * 发布状态
+     * 版本就绪状态
      */
-    private VersionStatus status;
-
-    /**
-     * 版本修订号
-     */
-    private Long revision;
-
-    /**
-     * 发布时间
-     */
-    private Instant publishedAt;
+    private ConfigReadiness readiness;
 
     /**
      * 模型工具名称
@@ -90,9 +80,9 @@ public class ToolVersionPO {
     private String implementationKey;
 
     /**
-     * MCP 服务版本ID
+     * 关联的 MCP 服务业务ID
      */
-    private Long mcpServerVersionId;
+    private Long mcpServerId;
 
     /**
      * MCP 服务中的工具名称
@@ -116,7 +106,13 @@ public class ToolVersionPO {
     private Long lastUpdaterId;
 
     /**
-     * 最后更新时间，由数据库维护
+     * 创建时间
+     */
+    @TableField(insertStrategy = FieldStrategy.NEVER)
+    private Instant createTime;
+
+    /**
+     * 最后更新时间
      */
     @TableField(insertStrategy = FieldStrategy.NEVER)
     private Instant lastUpdateTime;

@@ -1,32 +1,40 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import {
+  vLoading,
+  ElAlert,
+  ElButton,
+  ElDropdown,
+  ElDropdownItem,
+  ElDropdownMenu,
+  ElEmpty,
+  ElInput,
+} from 'element-plus'
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { errorMessage } from '../../../shared/http/http'
 import { useManagementStore } from '../stores/management'
-import { disableAgent, enableAgent, listAgents } from '../api/agentConfigApi'
-import type { Agent, AgentType } from '../model/agentConfig'
+import {
+  deleteAgent,
+  disableAgent,
+  enableAgent,
+  listAgents,
+  previewPublishAgent,
+  publishAgent,
+} from '../api/agentConfigApi'
+import type { Agent, AgentPublishPreview, AgentType } from '../model/agentConfig'
 import {
   agentTypeLabels,
-  configStatusLabels,
-  configStatusTones,
-  formatTime,
+  publishStateLabels,
+  readinessLabels,
   versionLabel,
-  type FlowStep,
 } from '../model/agentConfigLabels'
-import { useCatalogPage } from '../composables/useCatalogPage'
 import { confirmManagement } from '../components/confirmManagement'
 import ManagementShell from '../components/ManagementShell.vue'
-import ManagementPageHeader from '../components/ManagementPageHeader.vue'
-import ConfigFlow from '../components/ConfigFlow.vue'
-import CatalogPagination from '../components/CatalogPagination.vue'
+import PublishConfirmDialog from '../components/agent-config/PublishConfirmDialog.vue'
 
 /**
- * Agent 列表：配置流程的第三、四环。子 Agent 专注单一职责并由主 Agent 委派，主 Agent 面向用户。
- * 类型页签与地址参数 ?type= 同步，便于从配置流程条直接跳到对应类型。
+ * Agent 画廊列表（方案 3）：胶囊按 Master/Sub 切换 + 3 列清爽卡片；仅 Master 卡片显示“发布”按钮。
  */
-type TypeTab = '' | AgentType
-
-const route = useRoute()
 const router = useRouter()
 const access = useManagementStore()
 
@@ -39,48 +47,37 @@ const loading = ref(false)
 const busy = ref(false)
 const error = ref('')
 const notice = ref('')
+const keyword = ref('')
+const typeFilter = ref<'' | AgentType>('')
+const publishPreview = ref<AgentPublishPreview | null>(null)
+const publishTargetId = ref<string | null>(null)
+const publishOpId = ref('')
 
-const { criteria, applied, rows, total, page, size, pageCount, search, reset, applyType } = useCatalogPage(
-  agents,
-  agent => ({
-    texts: [agent.agentName, agent.agentCode, agent.description],
-    type: agent.agentType,
-    status: agent.status,
-  }),
-)
-
-const typeTabs: { value: TypeTab; label: string }[] = [
-  { value: '', label: '全部' },
-  { value: 'MASTER', label: agentTypeLabels.MASTER },
-  { value: 'SUB_AGENT', label: agentTypeLabels.SUB_AGENT },
-]
-
-const routeType = computed<TypeTab>(() => {
-  const value = route.query.type
-  return value === 'MASTER' || value === 'SUB_AGENT' ? value : ''
+const filtered = computed(() => {
+  const q = keyword.value.trim().toLowerCase()
+  return agents.value.filter(item => {
+    const matchType = !typeFilter.value || item.agentType === typeFilter.value
+    const matchText =
+      !q ||
+      [item.agentName, item.displayAlias, item.agentCode, item.description].some(v =>
+        (v || '').toLowerCase().includes(q),
+      )
+    return matchType && matchText
+  })
 })
 
-const flowSteps = computed<FlowStep[]>(() => {
-  if (routeType.value === 'MASTER') {
-    return ['masters']
+function dotClass(agent: Agent) {
+  if (agent.status !== 'ENABLED') return 'is-disabled'
+  return agent.latestReadiness === 'READY' ? 'is-ready' : 'is-incomplete'
+}
+
+function dotTitle(agent: Agent) {
+  if (agent.status !== 'ENABLED') return '已停用'
+  if (agent.agentType === 'MASTER' && agent.publishState) {
+    return `${readinessLabels[agent.latestReadiness]} · ${publishStateLabels[agent.publishState]}`
   }
-  return routeType.value === 'SUB_AGENT' ? ['subagents'] : ['subagents', 'masters']
-})
-
-const tabCount = (type: TypeTab) => (type ? agents.value.filter(agent => agent.agentType === type).length : agents.value.length)
-
-watch(routeType, type => applyType(type), { immediate: true })
-
-function selectTab(type: TypeTab) {
-  void router.replace({ query: type ? { ...route.query, type } : {} })
+  return readinessLabels[agent.latestReadiness]
 }
-
-function resetFilters() {
-  reset()
-  applyType(routeType.value)
-}
-
-const createPath = computed(() => `/management/agents/new?type=${routeType.value || 'MASTER'}`)
 
 async function load() {
   loading.value = true
@@ -94,17 +91,56 @@ async function load() {
   }
 }
 
-/** 启用或停用 Agent；子 Agent 被启用主 Agent 的生效版本委派时，服务端拒绝停用并说明引用方。 */
+async function openPublish(agent: Agent) {
+  busy.value = true
+  error.value = ''
+  notice.value = ''
+  try {
+    publishPreview.value = await previewPublishAgent(agent.agentId)
+    publishTargetId.value = agent.agentId
+    publishOpId.value =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `pub_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+  } catch (reason) {
+    error.value = errorMessage(reason)
+  } finally {
+    busy.value = false
+  }
+}
+
+async function confirmPublish() {
+  if (!publishPreview.value || !publishTargetId.value) return
+  busy.value = true
+  error.value = ''
+  notice.value = ''
+  try {
+    const updated = await publishAgent(publishTargetId.value, {
+      revision: publishPreview.value.revision,
+      dependencyDigest: publishPreview.value.dependencyDigest,
+      publishOperationId: publishOpId.value,
+    })
+    publishPreview.value = null
+    publishTargetId.value = null
+    notice.value = `“${updated.agentName}”已发布定格为 Release #${updated.currentReleaseNo}。`
+    await load()
+  } catch (reason) {
+    error.value = errorMessage(reason)
+  } finally {
+    busy.value = false
+  }
+}
+
 async function toggleStatus(agent: Agent) {
   const disabling = agent.status === 'ENABLED'
-  const impact = agent.agentType === 'SUB_AGENT'
-    ? '停用后主 Agent 无法再委派它；被启用主 Agent 的生效版本委派时无法停用。'
-    : '停用后该 Agent 不再对用户提供服务。'
+  const impact =
+    agent.agentType === 'SUB_AGENT'
+      ? '停用后 Master 无法再委派它；被启用 Master 或生效发布引用时无法停用。'
+      : '停用后该 Master 无法发布新快照。'
   const message = disabling ? `停用“${agent.agentName}”？${impact}` : `启用“${agent.agentName}”？`
-  if (!await confirmManagement(message, { danger: disabling, confirmText: disabling ? '停用' : '启用' })) {
+  if (!(await confirmManagement(message, { danger: disabling, confirmText: disabling ? '停用' : '启用' }))) {
     return
   }
-
   busy.value = true
   error.value = ''
   notice.value = ''
@@ -115,6 +151,25 @@ async function toggleStatus(agent: Agent) {
       await enableAgent(agent.agentId, agent.revision)
     }
     notice.value = `“${agent.agentName}”已${disabling ? '停用' : '启用'}。`
+    await load()
+  } catch (reason) {
+    error.value = errorMessage(reason)
+  } finally {
+    busy.value = false
+  }
+}
+
+async function removeAgent(agent: Agent) {
+  const message = `删除“${agent.agentName}”？删除后将从列表隐藏，历史配置与已定格快照不受影响；仍被引用时无法删除。`
+  if (!(await confirmManagement(message, { danger: true, confirmText: '删除' }))) {
+    return
+  }
+  busy.value = true
+  error.value = ''
+  notice.value = ''
+  try {
+    await deleteAgent(agent.agentId, agent.revision)
+    notice.value = `“${agent.agentName}”已删除。`
     await load()
   } catch (reason) {
     error.value = errorMessage(reason)
@@ -136,22 +191,6 @@ onMounted(() => {
 
 <template>
   <ManagementShell>
-    <ManagementPageHeader
-      title="Agent 配置"
-      description="先配置子 Agent，再由主 Agent 绑定工具并委派子 Agent。发布即生效，可随时切换回历史版本。"
-    >
-      <template #actions>
-        <RouterLink v-if="canEdit" to="/management/agents/new?type=SUB_AGENT" custom v-slot="{ navigate }">
-          <button type="button" @click="navigate">新增子 Agent</button>
-        </RouterLink>
-        <RouterLink v-if="canEdit" to="/management/agents/new?type=MASTER" custom v-slot="{ navigate }">
-          <button type="button" class="management-primary" @click="navigate">新增主 Agent</button>
-        </RouterLink>
-      </template>
-    </ManagementPageHeader>
-
-    <ConfigFlow :current="flowSteps" />
-
     <section v-if="!canQuery" class="management-card">
       <div class="management-empty">
         <p class="management-empty-title">暂无查询权限</p>
@@ -160,143 +199,130 @@ onMounted(() => {
     </section>
 
     <template v-else>
-      <div class="management-segmented" role="group" aria-label="Agent 类型">
-        <button
-          v-for="tab in typeTabs"
-          :key="tab.value || 'all'"
-          type="button"
-          :aria-pressed="routeType === tab.value"
-          @click="selectTab(tab.value)"
-        >
-          {{ tab.label }}
-          <span class="management-tab-count">{{ tabCount(tab.value) }}</span>
-        </button>
+      <div class="studio-toolbar">
+        <div class="studio-pills" role="group" aria-label="Agent 类型筛选">
+          <button type="button" class="studio-pill" :class="{ 'is-active': typeFilter === '' }" @click="typeFilter = ''">
+            全部 {{ agents.length }}
+          </button>
+          <button type="button" class="studio-pill" :class="{ 'is-active': typeFilter === 'MASTER' }" @click="typeFilter = 'MASTER'">
+            Master
+          </button>
+          <button type="button" class="studio-pill" :class="{ 'is-active': typeFilter === 'SUB_AGENT' }" @click="typeFilter = 'SUB_AGENT'">
+            Sub
+          </button>
+        </div>
+
+        <div class="studio-toolbar-right">
+          <ElInput v-model="keyword" clearable class="studio-search" placeholder="搜索 Agent 名称、别称或编码" />
+          <ElButton
+            v-if="canEdit"
+            type="primary"
+            native-type="button"
+            class="management-primary"
+            @click="router.push('/management/agents/new')"
+          >
+            + 创建 Agent
+          </ElButton>
+        </div>
       </div>
 
-      <form class="management-card management-filter" @submit.prevent="search">
-        <label class="management-filter-field is-wide">
-          关键字
-          <input v-model="criteria.keyword" maxlength="120" placeholder="名称、编码或职责描述" />
-        </label>
-        <label class="management-filter-field">
-          状态
-          <select v-model="criteria.status">
-            <option value="">全部</option>
-            <option value="ENABLED">启用</option>
-            <option value="DISABLED">停用</option>
-          </select>
-        </label>
-        <div class="management-filter-actions">
-          <button type="submit" class="management-primary" :disabled="loading">查询</button>
-          <button type="button" :disabled="loading" @click="resetFilters">重置</button>
+      <ElAlert v-if="error" class="management-error" role="alert" type="error" :title="error" show-icon :closable="false" />
+      <ElAlert v-if="notice" class="management-notice" role="status" type="success" :title="notice" show-icon :closable="false" />
+
+      <div v-loading="loading">
+        <div v-if="!filtered.length" class="management-card">
+          <ElEmpty description="暂无符合条件的 Agent" :image-size="68" />
         </div>
-      </form>
 
-      <section class="management-card management-table-card" :aria-busy="loading || busy">
-        <p v-if="error" class="management-error" role="alert">
-          {{ error }}
-          <button type="button" class="management-link" :disabled="loading" @click="load">重新加载</button>
-        </p>
-        <p v-if="notice" class="management-notice" role="status">{{ notice }}</p>
-
-        <div class="management-table-wrap">
-          <table class="management-table">
-            <thead>
-              <tr>
-                <th>Agent</th>
-                <th>类型</th>
-                <th>职责描述</th>
-                <th>生效版本</th>
-                <th>能力</th>
-                <th>被委派</th>
-                <th>状态</th>
-                <th>更新时间</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="agent in rows" :key="agent.agentId">
-                <td>
-                  <div class="management-cell-main">
-                    <RouterLink class="management-cell-title" :to="`/management/agents/${agent.agentId}`">
+        <div v-else class="studio-gallery">
+          <article v-for="agent in filtered" :key="agent.agentId" class="studio-card" @click="open(agent)">
+            <div>
+              <div class="studio-card-top">
+                <div class="studio-card-identity">
+                  <span class="studio-avatar" :class="{ 'is-master': agent.agentType === 'MASTER' }">
+                    {{ agent.agentType === 'MASTER' ? 'M' : 'S' }}
+                  </span>
+                  <div class="studio-card-titles">
+                    <div class="studio-card-name" :title="agent.agentName">
                       {{ agent.agentName }}
-                    </RouterLink>
-                    <span class="management-cell-sub">{{ agent.agentCode }}</span>
-                  </div>
-                </td>
-                <td>
-                  <span class="management-tag" :class="{ 'is-primary': agent.agentType === 'MASTER' }">
-                    {{ agentTypeLabels[agent.agentType] }}
-                  </span>
-                </td>
-                <td>
-                  <div class="management-cell-ellipsis" :title="agent.description">{{ agent.description || '—' }}</div>
-                </td>
-                <td>
-                  <span class="management-tags">
-                    <span v-if="agent.currentVersionNo" class="management-tag is-success">
-                      {{ versionLabel(agent.currentVersionNo) }}
-                    </span>
-                    <span v-else class="management-tag is-muted">未发布</span>
-                    <span v-if="agent.draftVersionId" class="management-tag is-warning">有草稿</span>
-                  </span>
-                </td>
-                <td class="management-cell-nowrap">
-                  {{ agent.toolCount }} 个工具
-                  <template v-if="agent.agentType === 'MASTER'"> · {{ agent.subagentCount }} 个子 Agent</template>
-                </td>
-                <td>{{ agent.agentType === 'SUB_AGENT' ? agent.usageCount : '—' }}</td>
-                <td>
-                  <span class="management-tag is-dot" :class="configStatusTones[agent.status]">
-                    {{ configStatusLabels[agent.status] }}
-                  </span>
-                </td>
-                <td class="management-cell-nowrap">{{ formatTime(agent.lastUpdateTime) }}</td>
-                <td class="management-actions">
-                  <button type="button" :disabled="busy" @click="open(agent)">{{ canEdit ? '编辑' : '查看' }}</button>
-                  <button
-                    v-if="canPublish"
-                    type="button"
-                    :class="{ 'management-danger': agent.status === 'ENABLED' }"
-                    :disabled="busy"
-                    @click="toggleStatus(agent)"
-                  >
-                    {{ agent.status === 'ENABLED' ? '停用' : '启用' }}
-                  </button>
-                </td>
-              </tr>
-              <tr v-if="loading && !rows.length">
-                <td colspan="9"><div class="management-loading" role="status">正在加载…</div></td>
-              </tr>
-              <tr v-else-if="!rows.length && !error">
-                <td colspan="9">
-                  <div v-if="applied.keyword || applied.status" class="management-empty is-compact">没有符合条件的 Agent</div>
-                  <div v-else class="management-empty">
-                    <p class="management-empty-title">
-                      还没有{{ routeType ? agentTypeLabels[routeType] : ' Agent' }}
-                    </p>
-                    <p class="management-empty-desc">
-                      Agent 只能绑定已发布的工具、委派已发布的子 Agent。建议先发布需要的工具和子 Agent，再配置主 Agent。
-                    </p>
-                    <div class="management-empty-actions">
-                      <RouterLink v-if="canEdit" :to="createPath" custom v-slot="{ navigate }">
-                        <button type="button" class="management-primary" @click="navigate">
-                          新增{{ agentTypeLabels[routeType || 'MASTER'] }}
-                        </button>
-                      </RouterLink>
-                      <RouterLink to="/management/tools" custom v-slot="{ navigate }">
-                        <button type="button" @click="navigate">前往工具</button>
-                      </RouterLink>
+                      <span v-if="agent.displayAlias" class="studio-card-alias">· {{ agent.displayAlias }}</span>
+                    </div>
+                    <div class="studio-card-meta">
+                      <span>{{ agentTypeLabels[agent.agentType] }}</span>
+                      <span>·</span>
+                      <span>{{ versionLabel(agent.latestVersionNo) }}</span>
+                      <template v-if="agent.agentType === 'MASTER' && agent.currentReleaseNo != null">
+                        <span>·</span>
+                        <span>#{{ agent.currentReleaseNo }}</span>
+                      </template>
                     </div>
                   </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                </div>
+                <span class="studio-dot" :class="dotClass(agent)" :title="dotTitle(agent)" />
+              </div>
 
-        <CatalogPagination v-model:page="page" v-model:size="size" :total="total" :page-count="pageCount" :busy="loading" />
-      </section>
+              <p class="studio-card-desc" style="margin-top: 12px">
+                {{ agent.description || '尚未填写职责描述' }}
+              </p>
+              <div class="studio-card-code" style="margin-top: 6px">{{ agent.agentCode }}</div>
+            </div>
+
+            <footer class="studio-card-foot" @click.stop>
+              <span class="studio-card-stats">
+                <span>{{ agent.toolCount }} 工具</span>
+                <template v-if="agent.agentType === 'MASTER'">
+                  <span>·</span>
+                  <span>{{ agent.subagentCount }} Sub</span>
+                  <template v-if="agent.publishState === 'MODIFIED'">
+                    <span>·</span>
+                    <span style="color: #b45309">待更新</span>
+                  </template>
+                </template>
+                <template v-else>
+                  <span>·</span>
+                  <span>被委派 {{ agent.usageCount }}</span>
+                </template>
+              </span>
+
+              <div class="studio-card-actions">
+                <button
+                  v-if="canPublish && agent.agentType === 'MASTER'"
+                  type="button"
+                  class="studio-pub-chip"
+                  :disabled="busy || agent.status !== 'ENABLED'"
+                  @click="openPublish(agent)"
+                >
+                  发布
+                </button>
+                <ElButton link type="primary" native-type="button" @click="open(agent)">
+                  {{ canEdit ? '配置 →' : '查看 →' }}
+                </ElButton>
+                <ElDropdown v-if="canPublish" trigger="click">
+                  <button type="button" class="studio-more-btn" :disabled="busy" aria-label="更多操作">···</button>
+                  <template #dropdown>
+                    <ElDropdownMenu>
+                      <ElDropdownItem @click="toggleStatus(agent)">
+                        {{ agent.status === 'ENABLED' ? '停用 Agent' : '启用 Agent' }}
+                      </ElDropdownItem>
+                      <ElDropdownItem divided @click="removeAgent(agent)">
+                        <span style="color: #dc2626">删除 Agent</span>
+                      </ElDropdownItem>
+                    </ElDropdownMenu>
+                  </template>
+                </ElDropdown>
+              </div>
+            </footer>
+          </article>
+        </div>
+      </div>
+
+      <PublishConfirmDialog
+        v-if="publishPreview"
+        :preview="publishPreview"
+        :busy="busy"
+        @close="publishPreview = null"
+        @confirm="confirmPublish"
+      />
     </template>
   </ManagementShell>
 </template>

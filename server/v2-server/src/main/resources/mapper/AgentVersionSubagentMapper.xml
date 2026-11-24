@@ -1,25 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.v2.mapper.AgentVersionSubagentMapper">
+
     <insert id="insertBatch">
         INSERT INTO squad_chat.sq_agent_version_subagent (
-            master_version_id,
-            subagent_version_id,
-            delegation_name,
-            delegation_description,
-            creator_id,
-            last_updater_id
+            master_version_id, subagent_id, delegation_name, delegation_description, display_alias, sort_no,
+            creator_id, last_updater_id
         )
         VALUES
-        <foreach collection="delegations" item="delegation" separator=",">
-            (
-                #{delegation.masterVersionId},
-                #{delegation.subagentVersionId},
-                #{delegation.delegationName},
-                #{delegation.delegationDescription},
-                #{delegation.creatorId},
-                #{delegation.lastUpdaterId}
-            )
+        <foreach collection="items" item="item" separator=",">
+            (#{item.masterVersionId}, #{item.subagentId}, #{item.delegationName}, #{item.delegationDescription},
+             #{item.displayAlias}, #{item.sortNo}, #{item.creatorId}, #{item.lastUpdaterId})
         </foreach>
     </insert>
 </mapper>

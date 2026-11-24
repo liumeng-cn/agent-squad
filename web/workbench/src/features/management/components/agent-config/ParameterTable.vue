@@ -1,4 +1,13 @@
 <script setup lang="ts">
+import {
+  ElButton,
+  ElCheckbox,
+  ElInput,
+  ElOption,
+  ElSelect,
+  ElTable,
+  ElTableColumn,
+} from 'element-plus'
 import { computed } from 'vue'
 import type { JsonSchema } from '../../model/agentConfig'
 import {
@@ -16,14 +25,22 @@ import {
  * 内置与 MCP 工具的参数来自实现或远程服务，只读展示。
  */
 const fields = defineModel<ParamField[]>({ required: true })
-const props = defineProps<{ readOnly: boolean; schema: JsonSchema; emptyText?: string }>()
+const props = defineProps<{
+  readOnly: boolean
+  schema: JsonSchema
+  emptyText?: string
+}>()
 
-const errors = computed(() => (props.readOnly ? [] : validateFields(fields.value)))
+const errors = computed(() =>
+  props.readOnly ? [] : validateFields(fields.value),
+)
 const schemaText = computed(() => JSON.stringify(props.schema, null, 2))
 const enumTypes: ParamType[] = ['string', 'number', 'integer']
 
 function update(index: number, patch: Partial<ParamField>) {
-  fields.value = fields.value.map((field, position) => (position === index ? { ...field, ...patch } : field))
+  fields.value = fields.value.map((field, position) =>
+    position === index ? { ...field, ...patch } : field,
+  )
 }
 
 function changeType(index: number, type: ParamType) {
@@ -46,89 +63,165 @@ function remove(index: number) {
 <template>
   <div class="management-form">
     <div class="management-table-wrap">
-      <table class="management-table config-param-table">
-        <thead>
-          <tr>
-            <th class="is-name">参数名</th>
-            <th class="is-type">类型</th>
-            <th class="is-check">必填</th>
-            <th>说明</th>
-            <th>可选值</th>
-            <th v-if="!readOnly" class="is-action">操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(field, index) in fields" :key="index">
-            <template v-if="readOnly">
-              <td><span class="management-code">{{ field.name }}</span></td>
-              <td>{{ paramTypeLabels[field.type] }}</td>
-              <td class="is-check">{{ field.required ? '是' : '否' }}</td>
-              <td>{{ field.description || '—' }}</td>
-              <td>{{ field.enumValues || '—' }}</td>
-            </template>
-            <template v-else>
-              <td>
-                <input
-                  :value="field.name"
+      <ElTable :data="fields" stripe style="width: 100%" empty-text="暂无数据">
+        <!-- @vue-generic {ParamField} -->
+        <ElTableColumn label="参数名" min-width="150">
+          <template
+            #default="{
+              row: field,
+              $index: index,
+            }: {
+              row: ParamField
+              $index: number
+            }"
+            ><div>
+              <template v-if="readOnly"
+                ><span class="management-code">{{ field.name }}</span></template
+              ><template v-else>
+                <ElInput
+                  :model-value="field.name"
                   maxlength="64"
                   placeholder="keyword"
                   :aria-label="`第 ${index + 1} 个参数名`"
-                  @input="update(index, { name: ($event.target as HTMLInputElement).value.trim() })"
+                  @input="update(index, { name: $event.trim() })"
                 />
-              </td>
-              <td>
-                <select
-                  :value="field.type"
+              </template></div
+          ></template>
+        </ElTableColumn>
+        <!-- @vue-generic {ParamField} -->
+        <ElTableColumn label="类型" min-width="120">
+          <template
+            #default="{
+              row: field,
+              $index: index,
+            }: {
+              row: ParamField
+              $index: number
+            }"
+            ><div>
+              <template v-if="readOnly">{{
+                paramTypeLabels[field.type]
+              }}</template><template v-else>
+                <ElSelect
+                  :empty-values="[null, undefined]"
+                  :model-value="field.type"
                   :aria-label="`第 ${index + 1} 个参数类型`"
-                  @change="changeType(index, ($event.target as HTMLSelectElement).value as ParamType)"
+                  @change="changeType(index, $event as ParamType)"
                 >
-                  <option v-for="type in paramTypes" :key="type" :value="type">{{ paramTypeLabels[type] }}</option>
-                </select>
-              </td>
-              <td class="is-check">
-                <input
-                  type="checkbox"
-                  :checked="field.required"
+                  <ElOption
+                    v-for="type in paramTypes"
+                    :key="type"
+                    :value="type"
+                    :label="paramTypeLabels[type]"
+                  />
+                </ElSelect>
+              </template></div
+          ></template>
+        </ElTableColumn>
+        <!-- @vue-generic {ParamField} -->
+        <ElTableColumn label="必填" width="70">
+          <template
+            #default="{
+              row: field,
+              $index: index,
+            }: {
+              row: ParamField
+              $index: number
+            }"
+            ><div>
+              <template v-if="readOnly">{{
+                field.required ? '是' : '否'
+              }}</template><template v-else>
+                <ElCheckbox
+                  :model-value="field.required"
                   :aria-label="`第 ${index + 1} 个参数必填`"
-                  @change="update(index, { required: ($event.target as HTMLInputElement).checked })"
+                  @change="update(index, { required: Boolean($event) })"
                 />
-              </td>
-              <td>
-                <input
-                  :value="field.description"
+              </template></div
+          ></template>
+        </ElTableColumn>
+        <!-- @vue-generic {ParamField} -->
+        <ElTableColumn label="说明" min-width="150">
+          <template
+            #default="{
+              row: field,
+              $index: index,
+            }: {
+              row: ParamField
+              $index: number
+            }"
+            ><div>
+              <template v-if="readOnly">{{
+                field.description || '—'
+              }}</template><template v-else>
+                <ElInput
+                  :model-value="field.description"
                   maxlength="500"
                   placeholder="告诉模型这个参数的含义和格式"
                   :aria-label="`第 ${index + 1} 个参数说明`"
-                  @input="update(index, { description: ($event.target as HTMLInputElement).value })"
+                  @input="update(index, { description: $event })"
                 />
-              </td>
-              <td>
-                <input
-                  :value="field.enumValues"
+              </template></div
+          ></template>
+        </ElTableColumn>
+        <!-- @vue-generic {ParamField} -->
+        <ElTableColumn label="可选值" min-width="150">
+          <template
+            #default="{
+              row: field,
+              $index: index,
+            }: {
+              row: ParamField
+              $index: number
+            }"
+            ><div>
+              <template v-if="readOnly">{{
+                field.enumValues || '—'
+              }}</template><template v-else>
+                <ElInput
+                  :model-value="field.enumValues"
                   maxlength="500"
                   :disabled="!enumTypes.includes(field.type)"
                   placeholder="逗号分隔，可留空"
                   :aria-label="`第 ${index + 1} 个参数可选值`"
-                  @input="update(index, { enumValues: ($event.target as HTMLInputElement).value })"
+                  @input="update(index, { enumValues: $event })"
                 />
-              </td>
-              <td class="is-action">
-                <button type="button" class="management-link management-danger" @click="remove(index)">删除</button>
-              </td>
-            </template>
-          </tr>
-          <tr v-if="!fields.length">
-            <td :colspan="readOnly ? 5 : 6">
-              <div class="management-empty is-compact">{{ emptyText ?? '暂无参数' }}</div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              </template></div
+          ></template>
+        </ElTableColumn>
+        <!-- @vue-generic {ParamField} -->
+        <ElTableColumn label="操作" min-width="220" v-if="!readOnly">
+          <template #default="{ $index: index }"
+            ><div>
+              <template v-if="readOnly"></template
+              ><template v-else>
+                <ElButton
+                  link
+                  type="danger"
+                  plain
+                  native-type="button"
+                  class="management-link management-danger"
+                  @click="remove(index)"
+                  >删除</ElButton
+                >
+              </template>
+            </div></template
+          >
+        </ElTableColumn>
+      </ElTable>
     </div>
 
     <div v-if="!readOnly" class="management-inline">
-      <button type="button" class="management-btn-sm" :disabled="fields.length >= MAX_PARAMS" @click="add">添加参数</button>
-      <span class="management-muted">参数名以字母或下划线开头；“文本列表”的元素为文本。</span>
+      <ElButton
+        native-type="button"
+        class="management-btn-sm"
+        :disabled="fields.length >= MAX_PARAMS"
+        @click="add"
+        >添加参数</ElButton
+      >
+      <span class="management-muted"
+        >参数名以字母或下划线开头；“文本列表”的元素为文本。</span
+      >
     </div>
 
     <div v-if="errors.length" class="management-error" role="alert">

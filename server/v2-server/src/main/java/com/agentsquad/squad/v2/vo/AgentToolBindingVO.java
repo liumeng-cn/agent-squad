@@ -1,62 +1,44 @@
 package com.agentsquad.squad.v2.vo;
 
+import com.agentsquad.squad.v2.enums.ConfigReadiness;
+import com.agentsquad.squad.v2.enums.ConfigStatus;
 import com.agentsquad.squad.v2.enums.ToolType;
 import lombok.Data;
 
 /**
- * Agent 工具绑定视图
- * <p>
- * Agent 版本绑定的工具版本及其可用状态和可升级版本。
+ * Agent 关联工具视图
  */
 @Data
 public class AgentToolBindingVO {
-    /**
-     * 工具版本ID
-     */
-    private String toolVersionId;
-
-    /**
-     * 工具业务ID
-     */
     private String toolId;
 
-    /**
-     * 工具编码
-     */
     private String toolCode;
 
-    /**
-     * 展示名称
-     */
     private String toolName;
 
-    /**
-     * 工具类型
-     */
+    private String displayAlias;
+
     private ToolType toolType;
 
-    /**
-     * 模型工具名称
-     */
-    private String exposedName;
+    private ConfigStatus toolStatus;
 
-    /**
-     * 用途说明
-     */
-    private String description;
+    private String toolVersionId;
 
-    /**
-     * 绑定的版本号
-     */
     private Integer versionNo;
 
-    /**
-     * 该工具最新发布版本号
-     */
-    private Integer latestVersionNo;
+    private ConfigReadiness readiness;
 
-    /**
-     * 工具启用、版本已发布且依赖可用
-     */
+    private String exposedName;
+
+    private String description;
+
+    private Boolean readOnly;
+
+    private String mcpServerId;
+
+    private String mcpServerName;
+
     private boolean usable;
+
+    private String unusableReason;
 }

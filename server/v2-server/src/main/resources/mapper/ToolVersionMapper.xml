@@ -1,85 +1,46 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.v2.mapper.ToolVersionMapper">
+
     <select id="nextVersionNo" resultType="int">
         SELECT COALESCE(MAX(version_no), 0) + 1
         FROM squad_chat.sq_tool_version
         WHERE tool_id = #{toolId}
     </select>
 
-    <!-- 版本记录；最新发布版本标记为 current -->
     <select id="selectSummaries" resultType="com.agentsquad.squad.v2.bo.VersionSummaryBO">
-        SELECT v.tool_version_id AS version_id,
-               v.version_no,
-               v.status,
-               v.revision,
-               v.published_at,
-               v.last_update_time,
-               (
-                   v.status = 'PUBLISHED'
-                   AND v.version_no = MAX(v.version_no) FILTER (WHERE v.status = 'PUBLISHED') OVER ()
-               )                 AS current
-        FROM squad_chat.sq_tool_version v
-        WHERE v.tool_id = #{toolId}
-        ORDER BY v.version_no DESC
+        SELECT tool_version_id AS version_id,
+               version_no,
+               readiness,
+               last_update_time
+        FROM squad_chat.sq_tool_version
+        WHERE tool_id = #{toolId}
+        ORDER BY version_no DESC
     </select>
 
-    <!-- 可被 Agent 绑定的工具版本：工具启用、版本已发布，MCP 工具的服务版本已发布且服务启用 -->
     <select id="selectUsableOptions" resultType="com.agentsquad.squad.v2.bo.ToolOptionBO">
-        SELECT v.tool_version_id,
-               t.tool_id,
+        SELECT t.tool_id,
                t.tool_code,
                t.tool_name,
+               t.display_alias,
                t.tool_type,
+               t.latest_version_id,
+               t.latest_version_no,
                v.exposed_name,
                v.description,
-               v.version_no,
-               (v.version_no = MAX(v.version_no) OVER (PARTITION BY v.tool_id)) AS latest
-        FROM squad_chat.sq_tool_version v
-        JOIN squad_chat.sq_tool t
-          ON t.tool_id = v.tool_id
-        LEFT JOIN squad_chat.sq_mcp_server_version mv
-          ON mv.mcp_server_version_id = v.mcp_server_version_id
-        LEFT JOIN squad_chat.sq_mcp_server m
-          ON m.mcp_server_id = mv.mcp_server_id
-        WHERE v.status = 'PUBLISHED'
+               v.read_only
+        FROM squad_chat.sq_tool t
+        JOIN squad_chat.sq_tool_version v ON v.tool_version_id = t.latest_version_id
+        LEFT JOIN squad_chat.sq_mcp_server ms ON ms.mcp_server_id = v.mcp_server_id
+        WHERE t.deleted_at IS NULL
           AND t.status = 'ENABLED'
+          AND t.latest_readiness = 'READY'
           AND (
-              v.mcp_server_version_id IS NULL
-              OR (mv.status = 'PUBLISHED' AND m.status = 'ENABLED')
+              t.tool_type != 'MCP'
+              OR (ms.mcp_server_id IS NOT NULL AND ms.deleted_at IS NULL
+                  AND ms.status = 'ENABLED' AND ms.latest_readiness = 'READY')
           )
-        ORDER BY t.tool_code, v.version_no DESC
+        ORDER BY t.tool_name ASC, t.id ASC
     </select>
-
-    <update id="updateDraft">
-        UPDATE squad_chat.sq_tool_version
-        SET exposed_name          = #{exposedName},
-            description           = #{description},
-            input_schema          = #{inputSchema, typeHandler=com.agentsquad.squad.v2.config.JsonbTypeHandler},
-            read_only             = #{readOnly},
-            implementation_key    = #{implementationKey},
-            mcp_server_version_id = #{mcpServerVersionId},
-            remote_tool_name      = #{remoteToolName},
-            http_spec             = #{httpSpec, typeHandler=com.agentsquad.squad.v2.config.JsonbTypeHandler},
-            revision              = revision + 1,
-            last_updater_id       = #{lastUpdaterId},
-            last_update_time      = CURRENT_TIMESTAMP
-        WHERE tool_id = #{toolId}
-          AND tool_version_id = #{toolVersionId}
-          AND status = 'DRAFT'
-          AND revision = #{revision}
-    </update>
-
-    <update id="publish">
-        UPDATE squad_chat.sq_tool_version
-        SET status           = 'PUBLISHED',
-            revision         = revision + 1,
-            published_at     = CURRENT_TIMESTAMP,
-            last_updater_id  = #{lastUpdaterId},
-            last_update_time = CURRENT_TIMESTAMP
-        WHERE tool_id = #{toolId}
-          AND tool_version_id = #{toolVersionId}
-          AND status = 'DRAFT'
-          AND revision = #{revision}
-    </update>
 </mapper>

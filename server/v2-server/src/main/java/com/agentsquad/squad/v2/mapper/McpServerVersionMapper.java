@@ -10,9 +10,9 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
- * MCP 连接版本访问
+ * MCP 配置版本访问
  * <p>
- * 草稿编辑与发布按“草稿状态 + 修订号”条件更新，影响行数不为 1 时由调用方返回冲突。
+ * 每次保存插入新配置版本；候选项仅返回未删除、启用且最新配置就绪的 MCP 服务。
  */
 @Mapper
 public interface McpServerVersionMapper extends BaseMapper<McpServerVersionPO> {
@@ -21,8 +21,4 @@ public interface McpServerVersionMapper extends BaseMapper<McpServerVersionPO> {
     List<VersionSummaryBO> selectSummaries(@Param("mcpServerId") long mcpServerId);
 
     List<McpServerOptionBO> selectUsableOptions();
-
-    int updateDraft(McpServerVersionPO version);
-
-    int publish(McpServerVersionPO version);
 }

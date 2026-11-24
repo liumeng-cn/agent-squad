@@ -20,12 +20,13 @@ public interface McpServerMapper extends BaseMapper<McpServerPO> {
 
     List<ConfigUsageBO> selectUsages(@Param("mcpServerId") long mcpServerId);
 
-    int updateProfile(McpServerPO server);
+    int updateLatest(McpServerPO server);
 
     int updateStatus(McpServerPO server);
 
-    /**
-     * 以条件更新确认服务仍启用，并持有行锁到事务结束，使引用登记与停用操作串行
-     */
-    int confirmEnabled(@Param("mcpServerId") long mcpServerId);
+    int softDelete(McpServerPO server);
+
+    int confirmEnabledReady(@Param("mcpServerId") long mcpServerId);
+
+    String selectMaxCodeByPrefix(@Param("prefix") String prefix);
 }

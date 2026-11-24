@@ -6,23 +6,26 @@ import java.util.List;
 
 /**
  * 工具详情视图
- * <p>
- * 编辑页一次加载工具摘要、版本记录和绑定它的 Agent。
  */
 @Data
 public class ToolDetailVO {
     /**
-     * 工具摘要
+     * 工具目录摘要
      */
     private ToolVO tool;
 
     /**
-     * 版本记录，版本号倒序
+     * 最新配置版本内容
      */
-    private List<VersionSummaryVO> versions;
+    private ToolVersionVO latestVersion;
 
     /**
-     * 绑定该工具的 Agent 版本
+     * 历史配置版本列表
      */
-    private List<ConfigUsageVO> usages;
+    private List<VersionSummaryVO> versions = List.of();
+
+    /**
+     * 引用该工具的下游 Agent
+     */
+    private List<ConfigUsageVO> usages = List.of();
 }

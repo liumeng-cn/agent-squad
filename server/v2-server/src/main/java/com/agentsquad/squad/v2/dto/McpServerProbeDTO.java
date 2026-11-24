@@ -6,25 +6,18 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.util.List;
 
 /**
- * MCP 连接草稿
+ * MCP 连接探测请求
  * <p>
- * 新建或编辑 MCP 服务版本草稿；编辑已有草稿须携带修订号，凭据只提交引用名。
+ * 使用当前未保存表单参数在事务外实时探测远程 MCP 连通性与工具清单。
  */
 @Data
-public class McpServerDraftDTO {
-    /**
-     * 编辑已有草稿时的预期修订号
-     */
-    @PositiveOrZero
-    private Long revision;
-
+public class McpServerProbeDTO {
     /**
      * 传输方式
      */
@@ -45,7 +38,7 @@ public class McpServerDraftDTO {
     private String credentialRef;
 
     /**
-     * 附加请求头，值可写凭据占位符
+     * 附加请求头
      */
     @NotNull
     @Valid

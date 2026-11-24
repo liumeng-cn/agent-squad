@@ -1,53 +1,47 @@
 package com.agentsquad.squad.v2.bo;
 
 import com.agentsquad.squad.v2.enums.ConfigStatus;
-import com.agentsquad.squad.v2.enums.VersionStatus;
 import lombok.Data;
 
 /**
- * 引用关系投影
+ * 上游引用关系
  * <p>
- * 下游版本引用当前资源版本的查询结果；active 表示生效引用，用于停用保护。
+ * 记录引用当前资源的下游配置（最新配置版本或 Master 当前生效发布），用于停用与删除前保护。
  */
 @Data
 public class ConfigUsageBO {
     /**
-     * 引用方业务ID
+     * 下游资源业务ID
      */
     private Long ownerId;
 
     /**
-     * 引用方编码
+     * 下游资源编码
      */
     private String ownerCode;
 
     /**
-     * 引用方名称
+     * 下游资源名称
      */
     private String ownerName;
 
     /**
-     * 引用方启停状态
+     * 下游资源启停状态
      */
     private ConfigStatus ownerStatus;
 
     /**
-     * 引用方版本号
+     * 引用来源（如最新配置版本或生效发布序号）
      */
     private Integer versionNo;
 
     /**
-     * 引用方版本状态
+     * 是否来自已发布生效快照
      */
-    private VersionStatus versionStatus;
+    private boolean released;
 
     /**
-     * 被引用的版本号
-     */
-    private Integer referencedVersionNo;
-
-    /**
-     * 是否生效引用
+     * 是否阻止停用或删除
      */
     private boolean active;
 }

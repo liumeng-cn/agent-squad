@@ -2,6 +2,7 @@ package com.agentsquad.squad.v2.service;
 
 import com.agentsquad.squad.common.enums.ApiCode;
 import com.agentsquad.squad.common.exceptions.BusinessException;
+import com.agentsquad.squad.v2.agent.tool.AskUserTool;
 import com.agentsquad.squad.v2.agent.tool.ConfiguredToolRunner;
 import com.agentsquad.squad.v2.agent.tool.builtin.BuiltinToolRegistry;
 import com.agentsquad.squad.v2.agent.tool.http.HttpToolTemplate;
@@ -12,19 +13,16 @@ import com.agentsquad.squad.v2.bo.ToolDefinitionBO;
 import com.agentsquad.squad.v2.bo.ToolRunResultBO;
 import com.agentsquad.squad.v2.bo.ToolSummaryBO;
 import com.agentsquad.squad.v2.converter.ToolConfigConverter;
-import com.agentsquad.squad.v2.dto.ToolCreateDTO;
-import com.agentsquad.squad.v2.dto.ToolDraftDTO;
-import com.agentsquad.squad.v2.dto.ToolProfileDTO;
+import com.agentsquad.squad.v2.dto.ToolSaveDTO;
 import com.agentsquad.squad.v2.dto.ToolTestRunDTO;
+import com.agentsquad.squad.v2.enums.ConfigReadiness;
 import com.agentsquad.squad.v2.enums.ConfigStatus;
 import com.agentsquad.squad.v2.enums.ToolType;
-import com.agentsquad.squad.v2.enums.VersionStatus;
-import com.agentsquad.squad.v2.mapper.McpServerVersionMapper;
 import com.agentsquad.squad.v2.mapper.ToolMapper;
 import com.agentsquad.squad.v2.mapper.ToolVersionMapper;
-import com.agentsquad.squad.v2.po.McpServerVersionPO;
 import com.agentsquad.squad.v2.po.ToolPO;
 import com.agentsquad.squad.v2.po.ToolVersionPO;
+import com.agentsquad.squad.v2.utils.ConfigCodeGenerator;
 import com.agentsquad.squad.v2.utils.ConfigRules;
 import com.agentsquad.squad.v2.utils.ToolSchemaRules;
 import com.agentsquad.squad.v2.vo.BuiltinToolOptionVO;
@@ -42,27 +40,29 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
  * 工具配置管理
  * <p>
- * 维护工具目录、版本、启停和试运行。工具按类型生成：内置工具引用代码实现，HTTP 工具按请求模板调用接口，
- * MCP 工具引用已发布的 MCP 服务版本。Agent 只能绑定启用工具的已发布版本，工具存在生效引用时不能停用。
+ * 维护内置、HTTP 与 MCP 三类工具的目录、配置版本历史、启停、逻辑删除与试运行。
+ * 工具不允许单独发布，每次保存改动均生成新的不可变配置版本；仅启用且就绪的工具可被 Agent 关联。
  */
 @Slf4j
 @Service
 public class ToolConfigService {
-    private static final String CONFLICT = "工具或版本已被其他操作修改，请刷新后重试";
+    private static final String CONFLICT = "工具已被其他操作修改，请刷新后重试";
+
+    private static final int MAX_CODE_RETRIES = 5;
+
+    private static final Map<String, Object> EMPTY_SCHEMA = Map.of("type", "object", "properties", Map.of());
 
     @Resource
     private ToolMapper tools;
 
     @Resource
     private ToolVersionMapper versions;
-
-    @Resource
-    private McpServerVersionMapper mcpVersions;
 
     @Resource
     private ToolConfigConverter converter;
@@ -89,11 +89,16 @@ public class ToolConfigService {
     /**
      * 查询工具详情
      * <p>
-     * 返回工具摘要、版本记录和绑定该工具的 Agent 版本。
+     * 返回工具摘要、最新配置版本、历史配置版本清单与下游 Agent 引用关系。
      */
     public ToolDetailVO detail(long toolId) {
+        ToolVO tool = summary(toolId);
         ToolDetailVO detail = new ToolDetailVO();
-        detail.setTool(summary(toolId));
+        detail.setTool(tool);
+        if (tool.getLatestVersionId() != null) {
+            long latestVersionId = ConfigRules.parseId(tool.getLatestVersionId(), "工具版本ID");
+            detail.setLatestVersion(readVersion(toolId, latestVersionId));
+        }
         detail.setVersions(versions.selectSummaries(toolId).stream().map(converter::toView).toList());
         detail.setUsages(tools.selectUsages(toolId).stream().map(converter::toView).toList());
         return detail;
@@ -102,55 +107,94 @@ public class ToolConfigService {
     /**
      * 新增工具
      * <p>
-     * 同一事务创建工具目录和第一个版本草稿；编码重复时返回冲突，整笔回滚。
+     * 系统自动生成带日期的随机编码，同一事务写入工具目录与第 1 个配置版本。
      */
     @Transactional
-    public ToolDetailVO create(ToolCreateDTO request) {
-        ToolVersionPO draft = buildDraft(request.getToolType(), request.getDraft());
+    public ToolDetailVO create(ToolSaveDTO request) {
+        if (request.getToolType() == null) {
+            throw new BusinessException(ApiCode.BAD_REQUEST, "新增工具必须指定工具类型");
+        }
         long actorId = ConfigRules.actor();
+        ToolVersionPO version = buildVersion(request.getToolType(), request, false);
 
         ToolPO tool = new ToolPO();
         tool.setToolId(IdWorker.getId());
-        tool.setToolCode(request.getToolCode());
         tool.setToolName(request.getToolName().trim());
+        tool.setDisplayAlias(trimToEmpty(request.getDisplayAlias()));
         tool.setToolType(request.getToolType());
         tool.setStatus(ConfigStatus.ENABLED);
+        tool.setLatestVersionNo(0);
+        tool.setLatestReadiness(version.getReadiness());
         tool.setRevision(0L);
         tool.setCreatorId(actorId);
         tool.setLastUpdaterId(actorId);
-        try {
-            tools.insert(tool);
-        } catch (DuplicateKeyException duplicated) {
-            throw new BusinessException(ApiCode.CONFLICT, "工具编码 " + request.getToolCode() + " 已存在");
-        }
+        insertWithGeneratedCode(tool);
 
-        insertDraft(tool.getToolId(), draft, actorId);
-        log.info("工具已创建，toolId={}，code={}，type={}", tool.getToolId(), tool.getToolCode(), tool.getToolType());
+        version.setToolId(tool.getToolId());
+        version.setToolVersionId(IdWorker.getId());
+        version.setVersionNo(1);
+        version.setCreatorId(actorId);
+        version.setLastUpdaterId(actorId);
+        versions.insert(version);
+
+        ToolPO pointer = new ToolPO();
+        pointer.setToolId(tool.getToolId());
+        pointer.setToolName(tool.getToolName());
+        pointer.setDisplayAlias(tool.getDisplayAlias());
+        pointer.setLatestVersionId(version.getToolVersionId());
+        pointer.setLatestVersionNo(1);
+        pointer.setLatestReadiness(version.getReadiness());
+        pointer.setRevision(0L);
+        pointer.setLastUpdaterId(actorId);
+        ConfigRules.requireChanged(tools.updateLatest(pointer), CONFLICT);
+
+        log.info("工具已创建，toolId={}，code={}，type={}，readiness={}",
+                tool.getToolId(), tool.getToolCode(), tool.getToolType(), version.getReadiness());
         return detail(tool.getToolId());
     }
 
     /**
-     * 修改工具资料
+     * 保存工具改动
      * <p>
-     * 只修改展示名称，按目录修订号条件更新。
+     * 每次保存新增一条不可变配置版本并按目录修订号条件更新最新指针，不影响已发布的 Master 快照。
      */
-    public ToolVO updateProfile(long toolId, ToolProfileDTO request) {
-        requireTool(toolId);
+    @Transactional
+    public ToolDetailVO save(long toolId, ToolSaveDTO request) {
+        if (request.getRevision() == null) {
+            throw new BusinessException(ApiCode.BAD_REQUEST, "保存配置需要携带修订号");
+        }
+        ToolPO existing = requireTool(toolId);
+        long actorId = ConfigRules.actor();
+        ToolVersionPO version = buildVersion(existing.getToolType(), request, false);
 
-        ToolPO tool = new ToolPO();
-        tool.setToolId(toolId);
-        tool.setToolName(request.getToolName().trim());
-        tool.setRevision(request.getRevision());
-        tool.setLastUpdaterId(ConfigRules.actor());
-        ConfigRules.requireChanged(tools.updateProfile(tool), CONFLICT);
-        return summary(toolId);
+        int nextVersionNo = versions.nextVersionNo(toolId);
+        version.setToolId(toolId);
+        version.setToolVersionId(IdWorker.getId());
+        version.setVersionNo(nextVersionNo);
+        version.setCreatorId(actorId);
+        version.setLastUpdaterId(actorId);
+        versions.insert(version);
+
+        ToolPO update = new ToolPO();
+        update.setToolId(toolId);
+        update.setToolName(request.getToolName().trim());
+        update.setDisplayAlias(trimToEmpty(request.getDisplayAlias()));
+        update.setLatestVersionId(version.getToolVersionId());
+        update.setLatestVersionNo(nextVersionNo);
+        update.setLatestReadiness(version.getReadiness());
+        update.setRevision(request.getRevision());
+        update.setLastUpdaterId(actorId);
+        ConfigRules.requireChanged(tools.updateLatest(update), CONFLICT);
+
+        log.info("工具已保存新配置版本，toolId={}，versionNo={}，readiness={}",
+                toolId, nextVersionNo, version.getReadiness());
+        return detail(toolId);
     }
 
     /**
      * 启用或停用工具
-     * <p>
-     * 停用条件更新在同一语句复核没有启用 Agent 的当前版本绑定；失败时区分“存在引用”和“修订号变化”。
      */
+    @Transactional
     public ToolVO changeStatus(long toolId, ConfigStatus status, long revision) {
         requireTool(toolId);
 
@@ -159,11 +203,9 @@ public class ToolConfigService {
         tool.setStatus(status);
         tool.setRevision(revision);
         tool.setLastUpdaterId(ConfigRules.actor());
-        if (tools.updateStatus(tool) != 1) {
-            if (status == ConfigStatus.DISABLED) {
-                requireNoActiveUsage(toolId);
-            }
-            throw new BusinessException(ApiCode.CONFLICT, CONFLICT);
+        ConfigRules.requireChanged(tools.updateStatus(tool), CONFLICT);
+        if (status == ConfigStatus.DISABLED) {
+            requireNoActiveUsage(toolId, "停用");
         }
 
         log.info("工具状态已更新，toolId={}，status={}", toolId, status);
@@ -171,207 +213,213 @@ public class ToolConfigService {
     }
 
     /**
-     * 读取版本
-     * <p>
-     * MCP 工具补充所引用服务的名称与版本号。
+     * 逻辑删除工具
+     */
+    @Transactional
+    public void delete(long toolId, long revision) {
+        requireTool(toolId);
+        requireNoAnyUsage(toolId);
+
+        ToolPO tool = new ToolPO();
+        tool.setToolId(toolId);
+        tool.setRevision(revision);
+        tool.setLastUpdaterId(ConfigRules.actor());
+        ConfigRules.requireChanged(tools.softDelete(tool), CONFLICT);
+        log.info("工具已逻辑删除，toolId={}", toolId);
+    }
+
+    /**
+     * 只读读取指定历史配置版本
      */
     public ToolVersionVO readVersion(long toolId, long versionId) {
         ToolVersionPO version = requireVersion(toolId, versionId);
-        ToolVersionVO view = converter.toView(version);
-        if (version.getMcpServerVersionId() != null) {
-            McpServerVersionPO mcpVersion = mcpVersions.selectOne(Wrappers.<McpServerVersionPO>lambdaQuery()
-                    .eq(McpServerVersionPO::getMcpServerVersionId, version.getMcpServerVersionId()));
-            view.setMcpServerName(mcpServers.label(version.getMcpServerVersionId()));
-            view.setMcpServerVersionNo(mcpVersion == null ? null : mcpVersion.getVersionNo());
-        }
-        return view;
+        return toVersionView(version);
     }
 
     /**
-     * 新建版本草稿
-     * <p>
-     * 每个工具最多一个草稿，并发新建由唯一索引拒绝。
+     * 按版本业务ID只读读取历史版本（供发布快照穿透查看使用）
      */
-    @Transactional
-    public ToolVersionVO createDraft(long toolId, ToolDraftDTO request) {
-        ToolPO tool = requireTool(toolId);
-        ToolVersionPO draft = buildDraft(tool.getToolType(), request);
-
-        long versionId = insertDraft(toolId, draft, ConfigRules.actor());
-        return readVersion(toolId, versionId);
+    public ToolVersionVO readVersionById(long toolVersionId) {
+        ToolVersionPO version = versions.selectOne(Wrappers.<ToolVersionPO>lambdaQuery()
+                .eq(ToolVersionPO::getToolVersionId, toolVersionId));
+        if (version == null) {
+            throw new BusinessException(ApiCode.NOT_FOUND, "工具配置版本不存在");
+        }
+        return toVersionView(version);
     }
 
     /**
-     * 保存版本草稿
-     * <p>
-     * 只更新草稿状态且修订号匹配的版本，已发布版本保持不变。
-     */
-    public ToolVersionVO saveDraft(long toolId, long versionId, ToolDraftDTO request) {
-        if (request.getRevision() == null) {
-            throw new BusinessException(ApiCode.BAD_REQUEST, "编辑草稿需要修订号");
-        }
-        ToolPO tool = requireTool(toolId);
-        ToolVersionPO draft = buildDraft(tool.getToolType(), request);
-
-        draft.setToolId(toolId);
-        draft.setToolVersionId(versionId);
-        draft.setRevision(request.getRevision());
-        draft.setLastUpdaterId(ConfigRules.actor());
-        ConfigRules.requireChanged(versions.updateDraft(draft), CONFLICT);
-        return readVersion(toolId, versionId);
-    }
-
-    /**
-     * 发布版本
-     * <p>
-     * 发布前要求描述已填写、实现依赖可用；MCP 工具在同一事务锁定所引用的服务，防止发布与服务停用交错。
-     */
-    @Transactional
-    public ToolVersionVO publish(long toolId, long versionId, long revision) {
-        ToolPO tool = requireTool(toolId);
-        if (tool.getStatus() != ConfigStatus.ENABLED) {
-            throw new BusinessException(ApiCode.CONFLICT, "停用的工具不能发布，请先启用");
-        }
-
-        ToolVersionPO version = requireVersion(toolId, versionId);
-        if (version.getDescription() == null || version.getDescription().isBlank()) {
-            throw new BusinessException(ApiCode.BAD_REQUEST, "发布前请填写工具描述，模型据此判断何时调用");
-        }
-        requirePublishableImplementation(version);
-
-        version.setRevision(revision);
-        version.setLastUpdaterId(ConfigRules.actor());
-        ConfigRules.requireChanged(versions.publish(version), CONFLICT);
-        log.info("工具版本已发布，toolId={}，versionNo={}", toolId, version.getVersionNo());
-        return readVersion(toolId, versionId);
-    }
-
-    /**
-     * 试运行工具
-     * <p>
-     * 按未保存的定义生成工具并调用一次，不写库；定义不合法时返回参数错误，调用失败体现在结果中。
+     * 试运行未保存的工具定义
      */
     public ToolTestRunVO testRun(ToolTestRunDTO request) {
-        ToolVersionPO draft = buildDraft(request.getToolType(), request.getDraft());
-        ToolDefinitionBO definition = definitionOf(draft);
-
+        ToolVersionPO version = buildVersion(request.getToolType(), request.getDefinition(), true);
+        ToolDefinitionBO definition = definitionOf(version);
         ToolRunResultBO result = toolRunner.run(definition, request.getArguments());
         return converter.toView(result);
     }
 
     /**
-     * 列出内置实现
+     * 列出可选的内置工具实现
      */
     public List<BuiltinToolOptionVO> builtinOptions() {
         return builtinTools.list().stream().map(converter::toView).toList();
     }
 
     /**
-     * 列出 Agent 可绑定的工具版本
+     * 列出可关联的可用工具（启用且最新配置就绪）
      */
     public List<ToolOptionVO> usableOptions() {
         return versions.selectUsableOptions().stream().map(converter::toView).toList();
     }
 
     /**
-     * 登记引用前锁定工具
-     * <p>
-     * 以条件更新确认工具仍启用并持有行锁到事务结束，与工具停用串行；MCP 工具同时锁定所引用的服务。
+     * 发布事务内复核工具仍处于启用且就绪状态
      */
-    void lockEnabledForReference(long toolId, Long mcpServerVersionId) {
-        if (tools.confirmEnabled(toolId) != 1) {
-            throw new BusinessException(ApiCode.CONFLICT, "绑定的工具已停用，请刷新后重新选择");
+    public void lockEnabledReady(long toolId) {
+        if (tools.confirmEnabledReady(toolId) != 1) {
+            throw new BusinessException(ApiCode.CONFLICT, "依赖的工具已停用、删除或未就绪，请刷新后重试");
         }
-        if (mcpServerVersionId != null) {
-            mcpServers.lockEnabledForReference(mcpServerVersionId);
+    }
+
+    private ToolVersionVO toVersionView(ToolVersionPO version) {
+        ToolVersionVO view = converter.toView(version);
+        if (version.getMcpServerId() != null) {
+            view.setMcpServerName(mcpServers.serverName(version.getMcpServerId()));
         }
+        return view;
+    }
+
+    private void insertWithGeneratedCode(ToolPO tool) {
+        String prefix = ConfigCodeGenerator.toolPrefix(tool.getToolType());
+        for (int attempt = 0; attempt < MAX_CODE_RETRIES; attempt++) {
+            String latestCode = tools.selectMaxCodeByPrefix(prefix);
+            tool.setToolCode(ConfigCodeGenerator.nextCode(prefix, latestCode, attempt));
+            try {
+                tools.insert(tool);
+                return;
+            } catch (DuplicateKeyException duplicated) {
+                log.warn("自动生成工具编码发生并发碰撞，准备递增重试，code={}", tool.getToolCode());
+            }
+        }
+        throw new BusinessException(ApiCode.CONFLICT, "生成工具编码失败，请重试");
     }
 
     /**
-     * 组装并校验草稿
+     * 组装工具配置版本并计算就绪状态
      * <p>
-     * 校验格式、参数结构和类型对应的实现配置；内置工具的参数与只读标记以代码实现为准。
+     * 保存时（strict=false）允许必填字段为空并标记 INCOMPLETE，但所选 MCP 服务必须已启用且就绪；
+     * 试运行时（strict=true）要求实现定义完整合法。
      */
-    private ToolVersionPO buildDraft(ToolType toolType, ToolDraftDTO request) {
-        ToolVersionPO draft = new ToolVersionPO();
-        draft.setToolType(toolType);
-        draft.setExposedName(request.getExposedName());
-        draft.setDescription(request.getDescription().trim());
-        draft.setInputSchema(request.getInputSchema());
-        draft.setReadOnly(request.isReadOnly());
+    private ToolVersionPO buildVersion(ToolType toolType, ToolSaveDTO request, boolean strict) {
+        String exposedName = trimToEmpty(request.getExposedName());
+        if (AskUserTool.NAME.equals(exposedName)) {
+            throw new BusinessException(ApiCode.BAD_REQUEST, AskUserTool.NAME + " 是平台保留的工具名，请使用其他名称");
+        }
+        String description = trimToEmpty(request.getDescription());
+        Map<String, Object> schema = request.getInputSchema() == null ? EMPTY_SCHEMA : request.getInputSchema();
+        Set<String> parameterNames = ToolSchemaRules.validate(schema);
 
+        ToolVersionPO version = new ToolVersionPO();
+        version.setToolType(toolType);
+        version.setExposedName(exposedName);
+        version.setDescription(description);
+        version.setInputSchema(schema);
+        version.setReadOnly(request.isReadOnly());
+
+        boolean implReady;
         if (toolType == ToolType.BUILTIN) {
-            fillBuiltin(draft, request);
+            implReady = fillBuiltin(version, request, strict);
         } else if (toolType == ToolType.HTTP) {
-            fillHttp(draft, request);
+            implReady = fillHttp(version, request, parameterNames, strict);
         } else {
-            fillMcp(draft, request);
+            implReady = fillMcp(version, request, strict);
         }
-        ToolSchemaRules.validate(draft.getInputSchema());
-        return draft;
+
+        if (strict) {
+            if (exposedName.isBlank()) {
+                throw new BusinessException(ApiCode.BAD_REQUEST, "试运行前请填写模型工具名");
+            }
+            if (!implReady) {
+                throw new BusinessException(ApiCode.BAD_REQUEST, "工具实现配置不完整，无法试运行");
+            }
+        }
+
+        boolean ready = !exposedName.isBlank() && !description.isBlank() && implReady;
+        version.setReadiness(ready ? ConfigReadiness.READY : ConfigReadiness.INCOMPLETE);
+        return version;
     }
 
-    private void fillBuiltin(ToolVersionPO draft, ToolDraftDTO request) {
-        BuiltinToolBO builtin = builtinTools.find(request.getImplementationKey());
+    private boolean fillBuiltin(ToolVersionPO version, ToolSaveDTO request, boolean strict) {
+        String key = blankToNull(request.getImplementationKey());
+        if (key == null) {
+            if (strict) {
+                throw new BusinessException(ApiCode.BAD_REQUEST, "请选择有效的内置实现");
+            }
+            return false;
+        }
+        BuiltinToolBO builtin = builtinTools.find(key);
         if (builtin == null) {
-            throw new BusinessException(ApiCode.BAD_REQUEST, "请选择有效的内置实现");
+            throw new BusinessException(ApiCode.BAD_REQUEST, "内置实现 " + key + " 无效");
         }
-        draft.setImplementationKey(builtin.getImplementationKey());
-        draft.setInputSchema(builtin.getInputSchema());
-        draft.setReadOnly(builtin.isReadOnly());
+        version.setImplementationKey(builtin.getImplementationKey());
+        version.setInputSchema(builtin.getInputSchema());
+        version.setReadOnly(builtin.isReadOnly());
+        return true;
     }
 
-    private void fillHttp(ToolVersionPO draft, ToolDraftDTO request) {
-        if (request.getHttpSpec() == null) {
-            throw new BusinessException(ApiCode.BAD_REQUEST, "HTTP 工具须配置请求模板");
-        }
-        HttpToolSpecBO spec = converter.toSpec(request.getHttpSpec());
-        spec.setUrl(spec.getUrl().trim());
-        spec.setBodyTemplate(blankToNull(spec.getBodyTemplate()));
-        spec.setCredentialRef(blankToNull(spec.getCredentialRef()));
-        spec.setResultPointer(blankToNull(spec.getResultPointer()));
-
-        Set<String> parameterNames = ToolSchemaRules.validate(request.getInputSchema());
+    private boolean fillHttp(ToolVersionPO version, ToolSaveDTO request, Set<String> parameterNames, boolean strict) {
         if (parameterNames.contains(HttpToolTemplate.CREDENTIAL)) {
             throw new BusinessException(ApiCode.BAD_REQUEST, "参数名 credential 保留给凭据占位符，请改用其他名称");
         }
+        if (request.getHttpSpec() == null) {
+            if (strict) {
+                throw new BusinessException(ApiCode.BAD_REQUEST, "HTTP 工具须配置请求模板");
+            }
+            return false;
+        }
+
+        HttpToolSpecBO spec = converter.toSpec(request.getHttpSpec());
+        spec.setUrl(trimToEmpty(spec.getUrl()));
+        spec.setBodyTemplate(blankToNull(spec.getBodyTemplate()));
+        spec.setCredentialRef(blankToNull(spec.getCredentialRef()));
+        spec.setResultPointer(blankToNull(spec.getResultPointer()));
+        if (spec.getCredentialRef() != null) {
+            credentials.requireConfigured(spec.getCredentialRef());
+        }
+        version.setHttpSpec(spec);
+
+        if (spec.getMethod() == null || spec.getUrl().isBlank()) {
+            if (strict) {
+                throw new BusinessException(ApiCode.BAD_REQUEST, "HTTP 工具须填写请求方法和地址");
+            }
+            return false;
+        }
+
         List<String> errors = HttpToolTemplate.validate(spec, parameterNames);
         if (!errors.isEmpty()) {
             throw new BusinessException(ApiCode.BAD_REQUEST, String.join("；", errors));
         }
-        credentials.requireConfigured(spec.getCredentialRef());
-        draft.setHttpSpec(spec);
+        return true;
     }
 
-    private void fillMcp(ToolVersionPO draft, ToolDraftDTO request) {
+    private boolean fillMcp(ToolVersionPO version, ToolSaveDTO request, boolean strict) {
+        String mcpServerIdText = blankToNull(request.getMcpServerId());
         String remoteToolName = blankToNull(request.getRemoteToolName());
-        if (request.getMcpServerVersionId() == null || remoteToolName == null) {
-            throw new BusinessException(ApiCode.BAD_REQUEST, "MCP 工具须选择服务版本和远程工具");
+        if (mcpServerIdText != null) {
+            long mcpServerId = ConfigRules.parseId(mcpServerIdText, "MCP 服务ID");
+            // 正向关联规则：所选 MCP 必须处于未删除、启用且配置就绪状态
+            mcpServers.requireUsableServer(mcpServerId);
+            version.setMcpServerId(mcpServerId);
         }
-        long mcpServerVersionId = ConfigRules.parseId(request.getMcpServerVersionId(), "MCP 服务版本ID");
-        mcpServers.usableConnection(mcpServerVersionId);
+        version.setRemoteToolName(remoteToolName);
 
-        draft.setMcpServerVersionId(mcpServerVersionId);
-        draft.setRemoteToolName(remoteToolName);
+        boolean complete = version.getMcpServerId() != null && remoteToolName != null;
+        if (strict && !complete) {
+            throw new BusinessException(ApiCode.BAD_REQUEST, "MCP 工具须选择服务与远程工具");
+        }
+        return complete;
     }
 
-    private void requirePublishableImplementation(ToolVersionPO version) {
-        if (version.getToolType() == ToolType.BUILTIN && builtinTools.find(version.getImplementationKey()) == null) {
-            throw new BusinessException(ApiCode.BAD_REQUEST, "内置实现 " + version.getImplementationKey() + " 已不存在");
-        }
-        if (version.getToolType() == ToolType.HTTP) {
-            credentials.requireConfigured(version.getHttpSpec().getCredentialRef());
-        }
-        if (version.getMcpServerVersionId() != null) {
-            mcpServers.lockEnabledForReference(version.getMcpServerVersionId());
-        }
-    }
-
-    /**
-     * 生成可执行定义
-     * <p>
-     * 解析凭据与 MCP 连接，返回值含密钥，只在服务端内存中使用。
-     */
     private ToolDefinitionBO definitionOf(ToolVersionPO version) {
         ToolDefinitionBO definition = new ToolDefinitionBO();
         definition.setToolType(version.getToolType());
@@ -386,37 +434,33 @@ public class ToolConfigService {
         if (version.getHttpSpec() != null) {
             definition.setCredential(credentials.resolve(version.getHttpSpec().getCredentialRef()));
         }
-        if (version.getMcpServerVersionId() != null) {
-            definition.setMcpConnection(mcpServers.usableConnection(version.getMcpServerVersionId()));
-            definition.setMcpServerLabel(mcpServers.label(version.getMcpServerVersionId()));
+        if (version.getMcpServerId() != null) {
+            definition.setMcpConnection(mcpServers.usableConnection(version.getMcpServerId()));
+            definition.setMcpServerLabel(mcpServers.label(version.getMcpServerId()));
         }
         return definition;
     }
 
-    private long insertDraft(long toolId, ToolVersionPO draft, long actorId) {
-        draft.setToolId(toolId);
-        draft.setToolVersionId(IdWorker.getId());
-        draft.setVersionNo(versions.nextVersionNo(toolId));
-        draft.setStatus(VersionStatus.DRAFT);
-        draft.setRevision(0L);
-        draft.setCreatorId(actorId);
-        draft.setLastUpdaterId(actorId);
-        try {
-            versions.insert(draft);
-        } catch (DuplicateKeyException duplicated) {
-            throw new BusinessException(ApiCode.CONFLICT, "该工具已有未发布的草稿，请编辑现有草稿");
-        }
-        return draft.getToolVersionId();
-    }
-
-    private void requireNoActiveUsage(long toolId) {
+    private void requireNoActiveUsage(long toolId, String action) {
         List<String> owners = tools.selectUsages(toolId).stream()
                 .filter(ConfigUsageBO::isActive)
                 .map(usage -> usage.getOwnerName() + "（" + usage.getOwnerCode() + "）")
                 .distinct()
                 .toList();
         if (!owners.isEmpty()) {
-            throw new BusinessException(ApiCode.CONFLICT, "以下启用的 Agent 正在使用该工具，请先调整其当前版本：" + String.join("、", owners));
+            throw new BusinessException(ApiCode.CONFLICT,
+                    "以下启用的 Agent 正在使用该工具，无法" + action + "：" + String.join("、", owners));
+        }
+    }
+
+    private void requireNoAnyUsage(long toolId) {
+        List<String> owners = tools.selectUsages(toolId).stream()
+                .map(usage -> usage.getOwnerName() + "（" + usage.getOwnerCode() + "）")
+                .distinct()
+                .toList();
+        if (!owners.isEmpty()) {
+            throw new BusinessException(ApiCode.CONFLICT,
+                    "以下 Agent 仍引用该工具，请先调整关联并重新发布后再删除：" + String.join("、", owners));
         }
     }
 
@@ -429,7 +473,9 @@ public class ToolConfigService {
     }
 
     private ToolPO requireTool(long toolId) {
-        ToolPO tool = tools.selectOne(Wrappers.<ToolPO>lambdaQuery().eq(ToolPO::getToolId, toolId));
+        ToolPO tool = tools.selectOne(Wrappers.<ToolPO>lambdaQuery()
+                .eq(ToolPO::getToolId, toolId)
+                .isNull(ToolPO::getDeletedAt));
         if (tool == null) {
             throw new BusinessException(ApiCode.NOT_FOUND, "工具不存在");
         }
@@ -441,12 +487,16 @@ public class ToolConfigService {
                 .eq(ToolVersionPO::getToolId, toolId)
                 .eq(ToolVersionPO::getToolVersionId, versionId));
         if (version == null) {
-            throw new BusinessException(ApiCode.NOT_FOUND, "工具版本不存在");
+            throw new BusinessException(ApiCode.NOT_FOUND, "工具配置版本不存在");
         }
         return version;
     }
 
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static String trimToEmpty(String value) {
+        return value == null ? "" : value.trim();
     }
 }

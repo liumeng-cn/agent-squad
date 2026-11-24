@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.v2.mapper.McpServerMapper">
-    <!-- 服务摘要：最新发布版本、草稿和生效引用（启用工具的已发布版本）数量 -->
+
     <select id="selectSummaries" resultType="com.agentsquad.squad.v2.bo.McpServerSummaryBO">
         SELECT s.mcp_server_id,
                s.server_code,
@@ -9,100 +10,111 @@
                s.description,
                s.status,
                s.revision,
-               published.mcp_server_version_id AS published_version_id,
-               published.version_no            AS published_version_no,
-               draft.mcp_server_version_id     AS draft_version_id,
+               s.latest_version_id,
+               s.latest_version_no,
+               s.latest_readiness,
+               v.transport_type,
+               v.endpoint,
                (
-                   SELECT COUNT(DISTINCT t.tool_id)
-                   FROM squad_chat.sq_mcp_server_version mv
-                   JOIN squad_chat.sq_tool_version tv
-                     ON tv.mcp_server_version_id = mv.mcp_server_version_id
-                   JOIN squad_chat.sq_tool t
-                     ON t.tool_id = tv.tool_id
-                   WHERE mv.mcp_server_id = s.mcp_server_id
-                     AND tv.status = 'PUBLISHED'
-                     AND t.status = 'ENABLED'
-               )                               AS usage_count,
+                   SELECT count(DISTINCT t.tool_id)
+                   FROM squad_chat.sq_tool t
+                   JOIN squad_chat.sq_tool_version tv ON tv.tool_version_id = t.latest_version_id
+                   WHERE t.deleted_at IS NULL
+                     AND tv.mcp_server_id = s.mcp_server_id
+               ) AS usage_count,
                s.last_update_time
         FROM squad_chat.sq_mcp_server s
-        LEFT JOIN LATERAL (
-            SELECT v.mcp_server_version_id,
-                   v.version_no
-            FROM squad_chat.sq_mcp_server_version v
-            WHERE v.mcp_server_id = s.mcp_server_id
-              AND v.status = 'PUBLISHED'
-            ORDER BY v.version_no DESC
-            LIMIT 1
-        ) published ON TRUE
-        LEFT JOIN squad_chat.sq_mcp_server_version draft
-          ON draft.mcp_server_id = s.mcp_server_id
-         AND draft.status = 'DRAFT'
-        <where>
-            <if test="mcpServerId != null">
-                s.mcp_server_id = #{mcpServerId}
-            </if>
-        </where>
+        LEFT JOIN squad_chat.sq_mcp_server_version v
+          ON v.mcp_server_version_id = s.latest_version_id
+        WHERE s.deleted_at IS NULL
+        <if test="mcpServerId != null">
+            AND s.mcp_server_id = #{mcpServerId}
+        </if>
         ORDER BY s.last_update_time DESC, s.id DESC
     </select>
 
-    <!-- 引用该服务任一版本的工具版本；启用工具的已发布版本为生效引用 -->
     <select id="selectUsages" resultType="com.agentsquad.squad.v2.bo.ConfigUsageBO">
-        SELECT t.tool_id      AS owner_id,
-               t.tool_code    AS owner_code,
-               t.tool_name    AS owner_name,
-               t.status       AS owner_status,
-               tv.version_no,
-               tv.status      AS version_status,
-               mv.version_no  AS referenced_version_no,
-               (tv.status = 'PUBLISHED' AND t.status = 'ENABLED') AS active
-        FROM squad_chat.sq_mcp_server_version mv
-        JOIN squad_chat.sq_tool_version tv
-          ON tv.mcp_server_version_id = mv.mcp_server_version_id
-        JOIN squad_chat.sq_tool t
-          ON t.tool_id = tv.tool_id
-        WHERE mv.mcp_server_id = #{mcpServerId}
-        ORDER BY active DESC, t.tool_code, tv.version_no DESC
+        SELECT t.tool_id AS owner_id,
+               t.tool_code AS owner_code,
+               t.tool_name AS owner_name,
+               t.status AS owner_status,
+               t.latest_version_no AS version_no,
+               FALSE AS released,
+               (t.status = 'ENABLED') AS active
+        FROM squad_chat.sq_tool t
+        JOIN squad_chat.sq_tool_version tv ON tv.tool_version_id = t.latest_version_id
+        WHERE t.deleted_at IS NULL
+          AND tv.mcp_server_id = #{mcpServerId}
+        UNION ALL
+        SELECT a.agent_id AS owner_id,
+               a.agent_code AS owner_code,
+               a.agent_name AS owner_name,
+               a.status AS owner_status,
+               r.release_no AS version_no,
+               TRUE AS released,
+               (a.status = 'ENABLED') AS active
+        FROM squad_chat.sq_agent a
+        JOIN squad_chat.sq_agent_release r ON r.release_id = a.current_release_id
+        WHERE a.deleted_at IS NULL
+          AND EXISTS (
+              SELECT 1
+              FROM squad_chat.sq_agent_release_tool rt
+              WHERE rt.release_id = r.release_id
+                AND rt.mcp_server_id = #{mcpServerId}
+          )
+        ORDER BY released DESC, active DESC, owner_code ASC
     </select>
 
-    <update id="updateProfile">
+    <update id="updateLatest">
         UPDATE squad_chat.sq_mcp_server
-        SET server_name      = #{serverName},
-            description      = #{description},
+        SET server_name       = #{serverName},
+            description       = #{description},
+            latest_version_id = #{latestVersionId},
+            latest_version_no = #{latestVersionNo},
+            latest_readiness  = #{latestReadiness},
+            revision          = revision + 1,
+            last_updater_id   = #{lastUpdaterId},
+            last_update_time  = CURRENT_TIMESTAMP
+        WHERE mcp_server_id = #{mcpServerId}
+          AND deleted_at IS NULL
+          AND revision = #{revision}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE squad_chat.sq_mcp_server
+        SET status           = #{status},
             revision         = revision + 1,
             last_updater_id  = #{lastUpdaterId},
             last_update_time = CURRENT_TIMESTAMP
         WHERE mcp_server_id = #{mcpServerId}
+          AND deleted_at IS NULL
           AND revision = #{revision}
     </update>
 
-    <!-- 停用时在同一语句复核没有生效引用，避免检查与更新之间被新引用插入 -->
-    <update id="updateStatus">
-        UPDATE squad_chat.sq_mcp_server s
-        SET status           = #{status},
-            revision         = s.revision + 1,
+    <update id="softDelete">
+        UPDATE squad_chat.sq_mcp_server
+        SET deleted_at       = CURRENT_TIMESTAMP,
+            status           = 'DISABLED',
+            revision         = revision + 1,
             last_updater_id  = #{lastUpdaterId},
             last_update_time = CURRENT_TIMESTAMP
-        WHERE s.mcp_server_id = #{mcpServerId}
-          AND s.revision = #{revision}
-          <if test="status.name() == 'DISABLED'">
-          AND NOT EXISTS (
-              SELECT 1
-              FROM squad_chat.sq_mcp_server_version mv
-              JOIN squad_chat.sq_tool_version tv
-                ON tv.mcp_server_version_id = mv.mcp_server_version_id
-              JOIN squad_chat.sq_tool t
-                ON t.tool_id = tv.tool_id
-              WHERE mv.mcp_server_id = s.mcp_server_id
-                AND tv.status = 'PUBLISHED'
-                AND t.status = 'ENABLED'
-          )
-          </if>
+        WHERE mcp_server_id = #{mcpServerId}
+          AND deleted_at IS NULL
+          AND revision = #{revision}
     </update>
 
-    <update id="confirmEnabled">
+    <update id="confirmEnabledReady">
         UPDATE squad_chat.sq_mcp_server
-        SET status = status
+        SET revision = revision
         WHERE mcp_server_id = #{mcpServerId}
+          AND deleted_at IS NULL
           AND status = 'ENABLED'
+          AND latest_readiness = 'READY'
     </update>
+
+    <select id="selectMaxCodeByPrefix" resultType="string">
+        SELECT MAX(server_code)
+        FROM squad_chat.sq_mcp_server
+        WHERE server_code LIKE CONCAT(#{prefix}, '%')
+    </select>
 </mapper>

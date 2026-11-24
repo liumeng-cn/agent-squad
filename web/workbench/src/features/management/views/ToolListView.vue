@@ -1,27 +1,31 @@
 <script setup lang="ts">
+import {
+  vLoading,
+  ElAlert,
+  ElButton,
+  ElDropdown,
+  ElDropdownItem,
+  ElDropdownMenu,
+  ElEmpty,
+  ElInput,
+} from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { errorMessage } from '../../../shared/http/http'
 import { useManagementStore } from '../stores/management'
-import { disableTool, enableTool, listTools } from '../api/agentConfigApi'
-import type { Tool } from '../model/agentConfig'
+import { deleteTool, disableTool, enableTool, listTools } from '../api/agentConfigApi'
+import type { Tool, ToolType } from '../model/agentConfig'
 import {
-  configStatusLabels,
-  configStatusTones,
-  formatTime,
+  readinessLabels,
   toolTypeLabels,
   toolTypes,
   versionLabel,
 } from '../model/agentConfigLabels'
-import { useCatalogPage } from '../composables/useCatalogPage'
 import { confirmManagement } from '../components/confirmManagement'
 import ManagementShell from '../components/ManagementShell.vue'
-import ManagementPageHeader from '../components/ManagementPageHeader.vue'
-import ConfigFlow from '../components/ConfigFlow.vue'
-import CatalogPagination from '../components/CatalogPagination.vue'
 
 /**
- * 工具列表：配置流程的第二环。工具由配置生成实现，发布后的工具版本可被 Agent 绑定。
+ * 工具画廊列表（方案 3）：胶囊按类型切换 + 3 列清爽卡片 + 收敛更多菜单。
  */
 const router = useRouter()
 const access = useManagementStore()
@@ -35,12 +39,43 @@ const loading = ref(false)
 const busy = ref(false)
 const error = ref('')
 const notice = ref('')
+const keyword = ref('')
+const typeFilter = ref<'' | ToolType>('')
 
-const { criteria, rows, total, page, size, pageCount, filtering, search, reset } = useCatalogPage(tools, tool => ({
-  texts: [tool.toolName, tool.toolCode, tool.exposedName, tool.description],
-  type: tool.toolType,
-  status: tool.status,
-}))
+const filtered = computed(() => {
+  const q = keyword.value.trim().toLowerCase()
+  return tools.value.filter(item => {
+    const matchType = !typeFilter.value || item.toolType === typeFilter.value
+    const matchText =
+      !q ||
+      [item.toolName, item.displayAlias, item.toolCode, item.exposedName, item.description].some(v =>
+        (v || '').toLowerCase().includes(q),
+      )
+    return matchType && matchText
+  })
+})
+
+function avatarClass(type: ToolType) {
+  if (type === 'HTTP') return 'is-http'
+  if (type === 'MCP') return 'is-mcp'
+  return 'is-builtin'
+}
+
+function avatarText(type: ToolType) {
+  if (type === 'HTTP') return 'API'
+  if (type === 'MCP') return 'MCP'
+  return '内置'
+}
+
+function dotClass(tool: Tool) {
+  if (tool.status !== 'ENABLED') return 'is-disabled'
+  return tool.latestReadiness === 'READY' ? 'is-ready' : 'is-incomplete'
+}
+
+function dotTitle(tool: Tool) {
+  if (tool.status !== 'ENABLED') return '已停用'
+  return readinessLabels[tool.latestReadiness]
+}
 
 async function load() {
   loading.value = true
@@ -54,16 +89,14 @@ async function load() {
   }
 }
 
-/** 启用或停用工具；停用时被启用 Agent 的当前版本绑定会被服务端拒绝并说明引用方。 */
 async function toggleStatus(tool: Tool) {
   const disabling = tool.status === 'ENABLED'
   const message = disabling
-    ? `停用“${tool.toolName}”？停用后 Agent 无法再绑定该工具；被启用 Agent 的生效版本绑定时无法停用。`
-    : `启用“${tool.toolName}”？启用后其已发布版本可被 Agent 绑定。`
-  if (!await confirmManagement(message, { danger: disabling, confirmText: disabling ? '停用' : '启用' })) {
+    ? `停用“${tool.toolName}”？停用后不可再被 Agent 关联；被启用 Agent 或生效发布引用时无法停用。`
+    : `启用“${tool.toolName}”？`
+  if (!(await confirmManagement(message, { danger: disabling, confirmText: disabling ? '停用' : '启用' }))) {
     return
   }
-
   busy.value = true
   error.value = ''
   notice.value = ''
@@ -74,6 +107,25 @@ async function toggleStatus(tool: Tool) {
       await enableTool(tool.toolId, tool.revision)
     }
     notice.value = `“${tool.toolName}”已${disabling ? '停用' : '启用'}。`
+    await load()
+  } catch (reason) {
+    error.value = errorMessage(reason)
+  } finally {
+    busy.value = false
+  }
+}
+
+async function removeTool(tool: Tool) {
+  const message = `删除“${tool.toolName}”？删除后将从列表隐藏，已定格的历史快照不受影响；仍被引用时无法删除。`
+  if (!(await confirmManagement(message, { danger: true, confirmText: '删除' }))) {
+    return
+  }
+  busy.value = true
+  error.value = ''
+  notice.value = ''
+  try {
+    await deleteTool(tool.toolId, tool.revision)
+    notice.value = `“${tool.toolName}”已删除。`
     await load()
   } catch (reason) {
     error.value = errorMessage(reason)
@@ -95,19 +147,6 @@ onMounted(() => {
 
 <template>
   <ManagementShell>
-    <ManagementPageHeader
-      title="工具目录"
-      description="工具由配置自动生成：选择内置实现、按参数和请求模板生成 HTTP 接口调用，或引用 MCP 服务的远程工具。"
-    >
-      <template #actions>
-        <RouterLink v-if="canEdit" to="/management/tools/new" custom v-slot="{ navigate }">
-          <button type="button" class="management-primary" @click="navigate">新增工具</button>
-        </RouterLink>
-      </template>
-    </ManagementPageHeader>
-
-    <ConfigFlow current="tools" />
-
     <section v-if="!canQuery" class="management-card">
       <div class="management-empty">
         <p class="management-empty-title">暂无查询权限</p>
@@ -116,125 +155,100 @@ onMounted(() => {
     </section>
 
     <template v-else>
-      <form class="management-card management-filter" @submit.prevent="search">
-        <label class="management-filter-field is-wide">
-          关键字
-          <input v-model="criteria.keyword" maxlength="120" placeholder="名称、编码或模型工具名" />
-        </label>
-        <label class="management-filter-field">
-          类型
-          <select v-model="criteria.type">
-            <option value="">全部</option>
-            <option v-for="type in toolTypes" :key="type" :value="type">{{ toolTypeLabels[type] }}</option>
-          </select>
-        </label>
-        <label class="management-filter-field">
-          状态
-          <select v-model="criteria.status">
-            <option value="">全部</option>
-            <option value="ENABLED">启用</option>
-            <option value="DISABLED">停用</option>
-          </select>
-        </label>
-        <div class="management-filter-actions">
-          <button type="submit" class="management-primary" :disabled="loading">查询</button>
-          <button type="button" :disabled="loading" @click="reset">重置</button>
+      <div class="studio-toolbar">
+        <div class="studio-pills" role="group" aria-label="工具类型筛选">
+          <button type="button" class="studio-pill" :class="{ 'is-active': typeFilter === '' }" @click="typeFilter = ''">
+            全部 {{ tools.length }}
+          </button>
+          <button
+            v-for="item in toolTypes"
+            :key="item"
+            type="button"
+            class="studio-pill"
+            :class="{ 'is-active': typeFilter === item }"
+            @click="typeFilter = item"
+          >
+            {{ toolTypeLabels[item] }}
+          </button>
         </div>
-      </form>
 
-      <section class="management-card management-table-card" :aria-busy="loading || busy">
-        <p v-if="error" class="management-error" role="alert">
-          {{ error }}
-          <button type="button" class="management-link" :disabled="loading" @click="load">重新加载</button>
-        </p>
-        <p v-if="notice" class="management-notice" role="status">{{ notice }}</p>
+        <div class="studio-toolbar-right">
+          <ElInput v-model="keyword" clearable class="studio-search" placeholder="搜索工具名称、别称或编码" />
+          <ElButton
+            v-if="canEdit"
+            type="primary"
+            native-type="button"
+            class="management-primary"
+            @click="router.push('/management/tools/new')"
+          >
+            + 新增工具
+          </ElButton>
+        </div>
+      </div>
 
-        <div class="management-table-wrap">
-          <table class="management-table">
-            <thead>
-              <tr>
-                <th>工具</th>
-                <th>类型</th>
-                <th>模型工具名</th>
-                <th>最新发布</th>
-                <th>引用 Agent</th>
-                <th>状态</th>
-                <th>更新时间</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="tool in rows" :key="tool.toolId">
-                <td>
-                  <div class="management-cell-main">
-                    <RouterLink class="management-cell-title" :to="`/management/tools/${tool.toolId}`">
+      <ElAlert v-if="error" class="management-error" role="alert" type="error" :title="error" show-icon :closable="false" />
+      <ElAlert v-if="notice" class="management-notice" role="status" type="success" :title="notice" show-icon :closable="false" />
+
+      <div v-loading="loading">
+        <div v-if="!filtered.length" class="management-card">
+          <ElEmpty description="暂无符合条件的工具" :image-size="68" />
+        </div>
+
+        <div v-else class="studio-gallery">
+          <article v-for="tool in filtered" :key="tool.toolId" class="studio-card" @click="open(tool)">
+            <div>
+              <div class="studio-card-top">
+                <div class="studio-card-identity">
+                  <span class="studio-avatar" :class="avatarClass(tool.toolType)">{{ avatarText(tool.toolType) }}</span>
+                  <div class="studio-card-titles">
+                    <div class="studio-card-name" :title="tool.toolName">
                       {{ tool.toolName }}
-                    </RouterLink>
-                    <span class="management-cell-sub">{{ tool.toolCode }}</span>
-                  </div>
-                </td>
-                <td><span class="management-tag">{{ toolTypeLabels[tool.toolType] }}</span></td>
-                <td>
-                  <span v-if="tool.exposedName" class="management-code">{{ tool.exposedName }}</span>
-                  <span v-else class="management-muted">—</span>
-                </td>
-                <td>
-                  <span class="management-tags">
-                    <span v-if="tool.publishedVersionNo" class="management-tag is-success">
-                      {{ versionLabel(tool.publishedVersionNo) }}
-                    </span>
-                    <span v-else class="management-tag is-muted">未发布</span>
-                    <span v-if="tool.draftVersionId" class="management-tag is-warning">有草稿</span>
-                  </span>
-                </td>
-                <td>{{ tool.usageCount }}</td>
-                <td>
-                  <span class="management-tag is-dot" :class="configStatusTones[tool.status]">
-                    {{ configStatusLabels[tool.status] }}
-                  </span>
-                </td>
-                <td class="management-cell-nowrap">{{ formatTime(tool.lastUpdateTime) }}</td>
-                <td class="management-actions">
-                  <button type="button" :disabled="busy" @click="open(tool)">{{ canEdit ? '编辑' : '查看' }}</button>
-                  <button
-                    v-if="canPublish"
-                    type="button"
-                    :class="{ 'management-danger': tool.status === 'ENABLED' }"
-                    :disabled="busy"
-                    @click="toggleStatus(tool)"
-                  >
-                    {{ tool.status === 'ENABLED' ? '停用' : '启用' }}
-                  </button>
-                </td>
-              </tr>
-              <tr v-if="loading && !rows.length">
-                <td colspan="8"><div class="management-loading" role="status">正在加载…</div></td>
-              </tr>
-              <tr v-else-if="!rows.length && !error">
-                <td colspan="8">
-                  <div v-if="filtering" class="management-empty is-compact">没有符合条件的工具</div>
-                  <div v-else class="management-empty">
-                    <p class="management-empty-title">还没有工具</p>
-                    <p class="management-empty-desc">
-                      内置工具和 HTTP 接口工具可直接创建；MCP 工具需要先发布 MCP 服务。工具发布后才能被 Agent 绑定。
-                    </p>
-                    <div class="management-empty-actions">
-                      <RouterLink v-if="canEdit" to="/management/tools/new" custom v-slot="{ navigate }">
-                        <button type="button" class="management-primary" @click="navigate">新增工具</button>
-                      </RouterLink>
-                      <RouterLink to="/management/mcp-servers" custom v-slot="{ navigate }">
-                        <button type="button" @click="navigate">前往 MCP 服务</button>
-                      </RouterLink>
+                      <span v-if="tool.displayAlias" class="studio-card-alias">· {{ tool.displayAlias }}</span>
+                    </div>
+                    <div class="studio-card-meta">
+                      <span>{{ tool.exposedName || '未命名工具' }}</span>
+                      <span>·</span>
+                      <span>{{ versionLabel(tool.latestVersionNo) }}</span>
                     </div>
                   </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                </div>
+                <span class="studio-dot" :class="dotClass(tool)" :title="dotTitle(tool)" />
+              </div>
 
-        <CatalogPagination v-model:page="page" v-model:size="size" :total="total" :page-count="pageCount" :busy="loading" />
-      </section>
+              <p class="studio-card-desc" style="margin-top: 12px">
+                {{ tool.description || '尚未填写模型调用说明' }}
+              </p>
+              <div class="studio-card-code" style="margin-top: 6px">{{ tool.toolCode }}</div>
+            </div>
+
+            <footer class="studio-card-foot" @click.stop>
+              <span class="studio-card-stats">
+                <span>{{ dotTitle(tool) }}</span>
+                <span>·</span>
+                <span>引用 {{ tool.usageCount }}</span>
+              </span>
+              <div class="studio-card-actions">
+                <ElButton link type="primary" native-type="button" @click="open(tool)">
+                  {{ canEdit ? '配置 →' : '查看 →' }}
+                </ElButton>
+                <ElDropdown v-if="canPublish" trigger="click">
+                  <button type="button" class="studio-more-btn" :disabled="busy" aria-label="更多操作">···</button>
+                  <template #dropdown>
+                    <ElDropdownMenu>
+                      <ElDropdownItem @click="toggleStatus(tool)">
+                        {{ tool.status === 'ENABLED' ? '停用工具' : '启用工具' }}
+                      </ElDropdownItem>
+                      <ElDropdownItem divided @click="removeTool(tool)">
+                        <span style="color: #dc2626">删除工具</span>
+                      </ElDropdownItem>
+                    </ElDropdownMenu>
+                  </template>
+                </ElDropdown>
+              </div>
+            </footer>
+          </article>
+        </div>
+      </div>
     </template>
   </ManagementShell>
 </template>

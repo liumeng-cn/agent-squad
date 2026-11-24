@@ -4,7 +4,6 @@ import com.agentsquad.squad.v2.enums.HttpToolMethod;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -14,22 +13,20 @@ import java.util.List;
 /**
  * HTTP 工具请求模板
  * <p>
- * HTTP 工具草稿中的接口调用配置；占位符规则见 HttpToolTemplate，凭据只提交引用名。
+ * 保存时不强制地址必填，由服务端自动判定就绪度；试运行与发布时要求请求方法与地址完整合法。
  */
 @Data
 public class HttpToolSpecDTO {
     /**
      * 请求方法
      */
-    @NotNull
-    private HttpToolMethod method;
+    private HttpToolMethod method = HttpToolMethod.GET;
 
     /**
      * 地址模板，路径与查询可使用参数及凭据占位符
      */
-    @NotBlank
     @Size(max = 2048)
-    private String url;
+    private String url = "";
 
     /**
      * 请求头模板

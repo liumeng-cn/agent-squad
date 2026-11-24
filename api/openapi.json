@@ -12,1194 +12,6 @@
   ],
   "x-design-status": "review-draft-agentscope",
   "paths": {
-    "/api/v2/agents/management/tools": {
-      "get": {
-        "operationId": "listToolCatalog",
-        "summary": "查询工具目录",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/ToolCatalogEntry"
-                      }
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "operationId": "createToolCatalogEntry",
-        "summary": "新增工具",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ToolCreateRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/ToolCatalogEntry"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v2/agents/management/tools/{resourceId}/versions": {
-      "get": {
-        "operationId": "listToolVersions",
-        "summary": "查询版本",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [
-          {
-            "name": "resourceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/ToolCatalogVersion"
-                      }
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "operationId": "createToolDraft",
-        "summary": "创建草稿",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [
-          {
-            "name": "resourceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ToolDraftRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/ToolCatalogVersion"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v2/agents/management/tools/{resourceId}/versions/{versionId}": {
-      "put": {
-        "operationId": "editToolDraft",
-        "summary": "保存草稿",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [
-          {
-            "name": "resourceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          },
-          {
-            "name": "versionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ToolDraftRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/ToolCatalogVersion"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v2/agents/management/tools/{resourceId}/versions/{versionId}/publish": {
-      "post": {
-        "operationId": "publishToolVersion",
-        "summary": "发布版本",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [
-          {
-            "name": "resourceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          },
-          {
-            "name": "versionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AgentRevisionRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/ToolCatalogVersion"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v2/agents/management/mcp-servers": {
-      "get": {
-        "operationId": "listMcpServerCatalog",
-        "summary": "查询MCP 服务目录",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/McpServerCatalogEntry"
-                      }
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "operationId": "createMcpServerCatalogEntry",
-        "summary": "新增MCP 服务",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/McpServerCreateRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/McpServerCatalogEntry"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v2/agents/management/mcp-servers/{resourceId}/versions": {
-      "get": {
-        "operationId": "listMcpServerVersions",
-        "summary": "查询版本",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [
-          {
-            "name": "resourceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/McpServerCatalogVersion"
-                      }
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "operationId": "createMcpServerDraft",
-        "summary": "创建草稿",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [
-          {
-            "name": "resourceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/McpServerDraftRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/McpServerCatalogVersion"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v2/agents/management/mcp-servers/{resourceId}/versions/{versionId}": {
-      "put": {
-        "operationId": "editMcpServerDraft",
-        "summary": "保存草稿",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [
-          {
-            "name": "resourceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          },
-          {
-            "name": "versionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/McpServerDraftRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/McpServerCatalogVersion"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v2/agents/management/mcp-servers/{resourceId}/versions/{versionId}/publish": {
-      "post": {
-        "operationId": "publishMcpServerVersion",
-        "summary": "发布版本",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [
-          {
-            "name": "resourceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          },
-          {
-            "name": "versionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AgentRevisionRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/McpServerCatalogVersion"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v2/agents/management/tools/mcp-options": {
-      "get": {
-        "operationId": "listMcpServerVersionOptions",
-        "summary": "查询连接选项",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/McpServerVersionOption"
-                      }
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v2/agents/management/agents/tool-options": {
-      "get": {
-        "operationId": "listAgentToolOptions",
-        "summary": "查询工具选项",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/ToolCatalogVersion"
-                      }
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v2/agents/management/agents": {
-      "get": {
-        "operationId": "listAgentConfigs",
-        "summary": "查询 Agent",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/AgentConfig"
-                      }
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "operationId": "createAgentConfig",
-        "summary": "新增 Agent",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AgentCreateRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/AgentConfig"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v2/agents/management/agents/{agentId}/versions": {
-      "get": {
-        "operationId": "listAgentConfigVersions",
-        "summary": "查询版本",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [
-          {
-            "name": "agentId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/AgentConfigVersion"
-                      }
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "operationId": "createAgentConfigDraft",
-        "summary": "创建草稿",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [
-          {
-            "name": "agentId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AgentDraftRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/AgentConfigVersion"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v2/agents/management/agents/{agentId}/versions/{versionId}": {
-      "get": {
-        "operationId": "getAgentConfigVersion",
-        "summary": "读取版本",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [
-          {
-            "name": "agentId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          },
-          {
-            "name": "versionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/AgentConfigVersion"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "operationId": "editAgentConfigDraft",
-        "summary": "保存草稿",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [
-          {
-            "name": "agentId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          },
-          {
-            "name": "versionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AgentDraftRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/AgentConfigVersion"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v2/agents/management/agents/{agentId}/versions/{versionId}/publish": {
-      "post": {
-        "operationId": "publishAgentConfigVersion",
-        "summary": "发布版本",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [
-          {
-            "name": "agentId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          },
-          {
-            "name": "versionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AgentRevisionRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/AgentConfig"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v2/agents/management/agents/{agentId}/versions/{versionId}/activate": {
-      "post": {
-        "operationId": "activateAgentConfigVersion",
-        "summary": "切换版本",
-        "tags": [
-          "agent-management"
-        ],
-        "parameters": [
-          {
-            "name": "agentId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          },
-          {
-            "name": "versionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AgentRevisionRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "管理操作结果，业务错误通过 code 返回",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "msg": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/AgentConfig"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "msg"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/auth/login": {
       "post": {
         "operationId": "login",
@@ -10447,6 +9259,1936 @@
           }
         }
       }
+    },
+    "/api/v2/agents/management/mcp-servers": {
+      "get": {
+        "operationId": "listMcpServers",
+        "summary": "查询 MCP 服务列表",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/McpServer"
+                      },
+                      "description": "列表"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createMcpServer",
+        "summary": "新增 MCP 服务",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/McpServerDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/McpServerSaveRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/mcp-servers/probe": {
+      "post": {
+        "operationId": "probeMcpServer",
+        "summary": "测试 MCP 连接",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/McpProbe"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/McpServerProbeRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/mcp-servers/credential-options": {
+      "get": {
+        "operationId": "listMcpCredentialOptions",
+        "summary": "查询凭据引用名",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "凭据引用名"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/mcp-servers/{mcpServerId}": {
+      "get": {
+        "operationId": "getMcpServer",
+        "summary": "查询 MCP 服务详情",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [
+          {
+            "name": "mcpServerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/McpServerDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "AgentManagement"
+        ],
+        "summary": "保存 MCP 服务改动（生成新配置版本）",
+        "parameters": [
+          {
+            "name": "mcpServerId",
+            "in": "path",
+            "required": true,
+            "description": "MCP 服务业务ID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/McpServerSaveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/McpServerDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/mcp-servers/{mcpServerId}/enable": {
+      "post": {
+        "operationId": "enableMcpServer",
+        "summary": "启用 MCP 服务",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [
+          {
+            "name": "mcpServerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/McpServer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigRevisionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/mcp-servers/{mcpServerId}/disable": {
+      "post": {
+        "operationId": "disableMcpServer",
+        "summary": "停用 MCP 服务",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [
+          {
+            "name": "mcpServerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/McpServer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigRevisionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/mcp-servers/{mcpServerId}/versions/{versionId}": {
+      "get": {
+        "operationId": "getMcpServerVersion",
+        "summary": "读取 MCP 版本",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [
+          {
+            "name": "mcpServerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          },
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/McpServerVersion"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/tools": {
+      "get": {
+        "operationId": "listTools",
+        "summary": "查询工具列表",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tool"
+                      },
+                      "description": "列表"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createTool",
+        "summary": "新增工具",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ToolDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToolSaveRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/tools/test-run": {
+      "post": {
+        "operationId": "testRunTool",
+        "summary": "试运行工具",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ToolTestRun"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToolTestRunRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/tools/builtin-options": {
+      "get": {
+        "operationId": "listBuiltinToolOptions",
+        "summary": "查询内置实现",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BuiltinToolOption"
+                      },
+                      "description": "列表"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/tools/mcp-options": {
+      "get": {
+        "operationId": "listToolMcpOptions",
+        "summary": "查询可选 MCP 服务版本",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/McpServerOption"
+                      },
+                      "description": "列表"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/tools/credential-options": {
+      "get": {
+        "operationId": "listToolCredentialOptions",
+        "summary": "查询凭据引用名",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "凭据引用名"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/tools/{toolId}": {
+      "get": {
+        "operationId": "getTool",
+        "summary": "查询工具详情",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [
+          {
+            "name": "toolId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ToolDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "AgentManagement"
+        ],
+        "summary": "保存工具改动（生成新配置版本）",
+        "parameters": [
+          {
+            "name": "toolId",
+            "in": "path",
+            "required": true,
+            "description": "工具业务ID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToolSaveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ToolDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/tools/{toolId}/enable": {
+      "post": {
+        "operationId": "enableTool",
+        "summary": "启用工具",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [
+          {
+            "name": "toolId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Tool"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigRevisionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/tools/{toolId}/disable": {
+      "post": {
+        "operationId": "disableTool",
+        "summary": "停用工具",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [
+          {
+            "name": "toolId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Tool"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigRevisionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/tools/{toolId}/versions/{versionId}": {
+      "get": {
+        "operationId": "getToolVersion",
+        "summary": "读取工具版本",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [
+          {
+            "name": "toolId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          },
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ToolVersion"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/agents": {
+      "get": {
+        "operationId": "listAgents",
+        "summary": "查询 Agent 列表",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Agent"
+                      },
+                      "description": "列表"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createAgent",
+        "summary": "新增 Agent",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/AgentDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentSaveRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/agents/tool-options": {
+      "get": {
+        "operationId": "listAgentToolOptions",
+        "summary": "查询可绑定工具",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ToolOption"
+                      },
+                      "description": "列表"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/agents/subagent-options": {
+      "get": {
+        "operationId": "listSubagentOptions",
+        "summary": "查询可委派子 Agent",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SubagentOption"
+                      },
+                      "description": "列表"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/agents/{agentId}": {
+      "get": {
+        "operationId": "getAgent",
+        "summary": "查询 Agent 详情",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/AgentDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "AgentManagement"
+        ],
+        "summary": "保存 Agent 改动（生成新配置版本）",
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "description": "Agent 业务ID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentSaveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/AgentDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/agents/{agentId}/enable": {
+      "post": {
+        "operationId": "enableAgent",
+        "summary": "启用 Agent",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Agent"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigRevisionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/agents/{agentId}/disable": {
+      "post": {
+        "operationId": "disableAgent",
+        "summary": "停用 Agent",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Agent"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigRevisionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/agents/{agentId}/versions/{versionId}": {
+      "get": {
+        "operationId": "getAgentVersion",
+        "summary": "读取 Agent 版本",
+        "tags": [
+          "agent-management"
+        ],
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          },
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "业务结果，业务错误通过 code 返回",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/AgentVersion"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/mcp-servers/{mcpServerId}/delete": {
+      "post": {
+        "tags": [
+          "AgentManagement"
+        ],
+        "summary": "逻辑删除 MCP 服务",
+        "parameters": [
+          {
+            "name": "mcpServerId",
+            "in": "path",
+            "required": true,
+            "description": "MCP 服务业务ID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigRevisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/tools/mcp-options/{mcpServerId}/remote-tools": {
+      "get": {
+        "tags": [
+          "AgentManagement"
+        ],
+        "summary": "发现指定 MCP 服务最新配置版本的远程工具",
+        "parameters": [
+          {
+            "name": "mcpServerId",
+            "in": "path",
+            "required": true,
+            "description": "MCP 服务业务ID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/McpRemoteTool"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/tools/{toolId}/delete": {
+      "post": {
+        "tags": [
+          "AgentManagement"
+        ],
+        "summary": "逻辑删除工具",
+        "parameters": [
+          {
+            "name": "toolId",
+            "in": "path",
+            "required": true,
+            "description": "工具业务ID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigRevisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/agents/{agentId}/delete": {
+      "post": {
+        "tags": [
+          "AgentManagement"
+        ],
+        "summary": "逻辑删除 Agent",
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "description": "Agent 业务ID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigRevisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/agents/{agentId}/publish-preview": {
+      "get": {
+        "tags": [
+          "AgentManagement"
+        ],
+        "summary": "Master 发布预检",
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "description": "Master 业务ID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/AgentPublishPreview"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/agents/{agentId}/publish": {
+      "post": {
+        "tags": [
+          "AgentManagement"
+        ],
+        "summary": "Master 确认发布并定格快照",
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "description": "Master 业务ID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentPublishRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Agent"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/agents/{agentId}/releases/{releaseId}": {
+      "get": {
+        "tags": [
+          "AgentManagement"
+        ],
+        "summary": "只读查询 Master 发布快照详情",
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "description": "Master 业务ID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          },
+          {
+            "name": "releaseId",
+            "in": "path",
+            "required": true,
+            "description": "发布快照业务ID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/AgentReleaseDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/agents/{agentId}/releases/{releaseId}/subagents/{subagentId}": {
+      "get": {
+        "tags": [
+          "AgentManagement"
+        ],
+        "summary": "沿发布快照上下文只读查看定格的子 Agent 详情",
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "description": "Master 业务ID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          },
+          {
+            "name": "releaseId",
+            "in": "path",
+            "required": true,
+            "description": "发布快照业务ID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          },
+          {
+            "name": "subagentId",
+            "in": "path",
+            "required": true,
+            "description": "子 Agent 业务ID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/AgentReleaseSubagentDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/agents/management/agents/{agentId}/releases/{releaseId}/tools/{toolId}": {
+      "get": {
+        "tags": [
+          "AgentManagement"
+        ],
+        "summary": "沿发布快照上下文只读查看定格的工具与 MCP 详情",
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "description": "Master 业务ID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          },
+          {
+            "name": "releaseId",
+            "in": "path",
+            "required": true,
+            "description": "发布快照业务ID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          },
+          {
+            "name": "toolId",
+            "in": "path",
+            "required": true,
+            "description": "工具业务ID",
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "msg"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/AgentReleaseToolDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -10464,500 +11206,6 @@
       }
     },
     "schemas": {
-      "ToolCreateRequest": {
-        "type": "object",
-        "properties": {
-          "toolCode": {
-            "type": "string",
-            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
-          },
-          "toolName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 120
-          },
-          "toolType": {
-            "type": "string",
-            "enum": [
-              "NATIVE",
-              "JAVA",
-              "MCP"
-            ]
-          }
-        },
-        "required": [
-          "toolCode",
-          "toolName",
-          "toolType"
-        ]
-      },
-      "ToolDraftRequest": {
-        "type": "object",
-        "properties": {
-          "revision": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
-          },
-          "exposedName": {
-            "type": "string",
-            "pattern": "^[a-zA-Z0-9_-]{1,64}$"
-          },
-          "implementationKey": {
-            "type": "string",
-            "maxLength": 160,
-            "nullable": true
-          },
-          "mcpServerVersionId": {
-            "type": "string",
-            "pattern": "^[1-9][0-9]{0,18}$",
-            "nullable": true
-          },
-          "remoteToolName": {
-            "type": "string",
-            "maxLength": 255,
-            "nullable": true
-          }
-        },
-        "required": [
-          "exposedName"
-        ]
-      },
-      "ToolCatalogEntry": {
-        "type": "object",
-        "properties": {
-          "toolId": {
-            "type": "string",
-            "pattern": "^[1-9][0-9]{0,18}$"
-          },
-          "toolCode": {
-            "type": "string",
-            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
-          },
-          "toolName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 120
-          },
-          "toolType": {
-            "type": "string",
-            "enum": [
-              "NATIVE",
-              "JAVA",
-              "MCP"
-            ]
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "ENABLED",
-              "DISABLED"
-            ]
-          }
-        }
-      },
-      "ToolCatalogVersion": {
-        "type": "object",
-        "properties": {
-          "toolId": {
-            "type": "string",
-            "pattern": "^[1-9][0-9]{0,18}$"
-          },
-          "toolVersionId": {
-            "type": "string",
-            "pattern": "^[1-9][0-9]{0,18}$"
-          },
-          "versionNo": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "revision": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "DRAFT",
-              "PUBLISHED"
-            ]
-          },
-          "publishedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "exposedName": {
-            "type": "string",
-            "pattern": "^[a-zA-Z0-9_-]{1,64}$"
-          },
-          "implementationKey": {
-            "type": "string",
-            "maxLength": 160,
-            "nullable": true
-          },
-          "mcpServerVersionId": {
-            "type": "string",
-            "pattern": "^[1-9][0-9]{0,18}$",
-            "nullable": true
-          },
-          "remoteToolName": {
-            "type": "string",
-            "maxLength": 255,
-            "nullable": true
-          }
-        }
-      },
-      "McpServerCreateRequest": {
-        "type": "object",
-        "properties": {
-          "serverCode": {
-            "type": "string",
-            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
-          },
-          "serverName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 120
-          }
-        },
-        "required": [
-          "serverCode",
-          "serverName"
-        ]
-      },
-      "McpServerDraftRequest": {
-        "type": "object",
-        "properties": {
-          "revision": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
-          },
-          "transportType": {
-            "type": "string",
-            "enum": [
-              "STREAMABLE_HTTP",
-              "SSE"
-            ]
-          },
-          "endpoint": {
-            "type": "string",
-            "format": "uri",
-            "maxLength": 2048
-          },
-          "credentialRef": {
-            "type": "string",
-            "maxLength": 255,
-            "nullable": true
-          }
-        },
-        "required": [
-          "transportType",
-          "endpoint"
-        ]
-      },
-      "McpServerCatalogEntry": {
-        "type": "object",
-        "properties": {
-          "mcpServerId": {
-            "type": "string",
-            "pattern": "^[1-9][0-9]{0,18}$"
-          },
-          "serverCode": {
-            "type": "string",
-            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
-          },
-          "serverName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 120
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "ENABLED",
-              "DISABLED"
-            ]
-          }
-        }
-      },
-      "McpServerCatalogVersion": {
-        "type": "object",
-        "properties": {
-          "mcpServerId": {
-            "type": "string",
-            "pattern": "^[1-9][0-9]{0,18}$"
-          },
-          "mcpServerVersionId": {
-            "type": "string",
-            "pattern": "^[1-9][0-9]{0,18}$"
-          },
-          "versionNo": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "revision": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "DRAFT",
-              "PUBLISHED"
-            ]
-          },
-          "publishedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "transportType": {
-            "type": "string",
-            "enum": [
-              "STREAMABLE_HTTP",
-              "SSE"
-            ]
-          },
-          "endpoint": {
-            "type": "string",
-            "format": "uri",
-            "maxLength": 2048
-          },
-          "credentialRef": {
-            "type": "string",
-            "maxLength": 255,
-            "nullable": true
-          }
-        }
-      },
-      "McpServerVersionOption": {
-        "type": "object",
-        "properties": {
-          "mcpServerVersionId": {
-            "type": "string",
-            "pattern": "^[1-9][0-9]{0,18}$"
-          },
-          "serverName": {
-            "type": "string"
-          },
-          "versionNo": {
-            "type": "integer",
-            "minimum": 1
-          }
-        }
-      },
-      "AgentCreateRequest": {
-        "type": "object",
-        "properties": {
-          "agentCode": {
-            "type": "string",
-            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
-          },
-          "agentName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 120
-          },
-          "agentType": {
-            "type": "string",
-            "enum": [
-              "MASTER",
-              "SUB_AGENT"
-            ]
-          }
-        },
-        "required": [
-          "agentCode",
-          "agentName",
-          "agentType"
-        ]
-      },
-      "AgentDraftRequest": {
-        "type": "object",
-        "properties": {
-          "revision": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
-          },
-          "systemPrompt": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 20000
-          },
-          "description": {
-            "type": "string",
-            "maxLength": 500
-          },
-          "maxIters": {
-            "type": "integer",
-            "minimum": 1,
-            "nullable": true
-          },
-          "toolVersionIds": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^[1-9][0-9]{0,18}$"
-            },
-            "maxItems": 100
-          },
-          "subagents": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AgentDelegation"
-            },
-            "maxItems": 100
-          }
-        },
-        "required": [
-          "systemPrompt"
-        ]
-      },
-      "AgentDelegation": {
-        "type": "object",
-        "properties": {
-          "subagentVersionId": {
-            "type": "string",
-            "pattern": "^[1-9][0-9]{0,18}$"
-          },
-          "delegationName": {
-            "type": "string",
-            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
-          },
-          "delegationDescription": {
-            "type": "string",
-            "maxLength": 500,
-            "nullable": true
-          }
-        },
-        "required": [
-          "subagentVersionId",
-          "delegationName"
-        ]
-      },
-      "AgentRevisionRequest": {
-        "type": "object",
-        "properties": {
-          "revision": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
-          }
-        },
-        "required": [
-          "revision"
-        ]
-      },
-      "AgentConfig": {
-        "type": "object",
-        "properties": {
-          "agentCode": {
-            "type": "string",
-            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
-          },
-          "agentName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 120
-          },
-          "agentType": {
-            "type": "string",
-            "enum": [
-              "MASTER",
-              "SUB_AGENT"
-            ]
-          },
-          "agentId": {
-            "type": "string",
-            "pattern": "^[1-9][0-9]{0,18}$"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "ENABLED",
-              "DISABLED"
-            ]
-          },
-          "currentVersionId": {
-            "type": "string",
-            "pattern": "^[1-9][0-9]{0,18}$",
-            "nullable": true
-          },
-          "revision": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
-          }
-        }
-      },
-      "AgentConfigVersion": {
-        "type": "object",
-        "properties": {
-          "revision": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
-          },
-          "systemPrompt": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 20000
-          },
-          "description": {
-            "type": "string",
-            "maxLength": 500
-          },
-          "maxIters": {
-            "type": "integer",
-            "minimum": 1,
-            "nullable": true
-          },
-          "toolVersionIds": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^[1-9][0-9]{0,18}$"
-            },
-            "maxItems": 100
-          },
-          "subagents": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AgentDelegation"
-            },
-            "maxItems": 100
-          },
-          "agentVersionId": {
-            "type": "string",
-            "pattern": "^[1-9][0-9]{0,18}$"
-          },
-          "agentId": {
-            "type": "string",
-            "pattern": "^[1-9][0-9]{0,18}$"
-          },
-          "versionNo": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "DRAFT",
-              "PUBLISHED"
-            ]
-          },
-          "publishedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          }
-        }
-      },
       "LoginRequest": {
         "type": "object",
         "additionalProperties": false,
@@ -17669,6 +17917,1693 @@
             "type": "string",
             "maxLength": 2048,
             "description": "包含工程前缀的完整目标路径"
+          }
+        }
+      },
+      "ConfigStatus": {
+        "type": "string",
+        "enum": [
+          "ENABLED",
+          "DISABLED"
+        ],
+        "description": "配置启停状态：ENABLED 启用，DISABLED 停用"
+      },
+      "ToolType": {
+        "type": "string",
+        "enum": [
+          "BUILTIN",
+          "HTTP",
+          "MCP"
+        ],
+        "description": "工具类型：BUILTIN 内置实现，HTTP 接口调用，MCP 远程工具"
+      },
+      "AgentType": {
+        "type": "string",
+        "enum": [
+          "MASTER",
+          "SUB_AGENT"
+        ],
+        "description": "Agent 类型：MASTER 主 Agent，SUB_AGENT 子 Agent"
+      },
+      "McpTransport": {
+        "type": "string",
+        "enum": [
+          "STREAMABLE_HTTP",
+          "SSE"
+        ],
+        "description": "MCP 传输方式"
+      },
+      "HttpToolMethod": {
+        "type": "string",
+        "enum": [
+          "GET",
+          "POST",
+          "PUT",
+          "PATCH",
+          "DELETE"
+        ],
+        "description": "HTTP 工具请求方法"
+      },
+      "KeyValue": {
+        "type": "object",
+        "description": "名称与取值，值中可使用 {{参数名}} 或 {{credential}} 占位符",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "名称",
+            "maxLength": 100
+          },
+          "value": {
+            "type": "string",
+            "description": "取值",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "name",
+          "value"
+        ]
+      },
+      "ConfigRevisionRequest": {
+        "type": "object",
+        "description": "发布、启停与切换版本时的预期修订号",
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "description": "预期修订号",
+            "format": "int64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "revision"
+        ]
+      },
+      "VersionSummary": {
+        "type": "object",
+        "properties": {
+          "versionId": {
+            "type": "string"
+          },
+          "versionNo": {
+            "type": "integer"
+          },
+          "readiness": {
+            "$ref": "#/components/schemas/ConfigReadiness"
+          },
+          "lastUpdateTime": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ConfigUsage": {
+        "type": "object",
+        "properties": {
+          "ownerId": {
+            "type": "string"
+          },
+          "ownerCode": {
+            "type": "string"
+          },
+          "ownerName": {
+            "type": "string"
+          },
+          "ownerStatus": {
+            "$ref": "#/components/schemas/ConfigStatus"
+          },
+          "versionNo": {
+            "type": "integer"
+          },
+          "released": {
+            "type": "boolean"
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "McpServer": {
+        "type": "object",
+        "description": "MCP 服务摘要",
+        "properties": {
+          "mcpServerId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "serverCode": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
+          },
+          "serverName": {
+            "type": "string",
+            "description": "展示名称"
+          },
+          "description": {
+            "type": "string",
+            "description": "服务用途说明"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ConfigStatus"
+          },
+          "revision": {
+            "type": "integer",
+            "description": "目录修订号",
+            "format": "int64"
+          },
+          "publishedVersionId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "nullable": true
+          },
+          "publishedVersionNo": {
+            "type": "integer",
+            "description": "最新发布版本号",
+            "nullable": true
+          },
+          "draftVersionId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "nullable": true
+          },
+          "usageCount": {
+            "type": "integer",
+            "description": "生效引用的工具数量"
+          },
+          "lastUpdateTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "latestVersionId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "latestVersionNo": {
+            "type": "integer"
+          },
+          "latestReadiness": {
+            "$ref": "#/components/schemas/ConfigReadiness"
+          }
+        },
+        "required": [
+          "mcpServerId",
+          "serverCode",
+          "serverName",
+          "description",
+          "status",
+          "revision",
+          "usageCount",
+          "lastUpdateTime"
+        ]
+      },
+      "McpServerVersion": {
+        "type": "object",
+        "description": "MCP 连接版本，请求头保留占位符，不含凭据值",
+        "properties": {
+          "mcpServerVersionId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "mcpServerId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "versionNo": {
+            "type": "integer",
+            "description": "版本号"
+          },
+          "revision": {
+            "type": "integer",
+            "description": "版本修订号",
+            "format": "int64"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastUpdateTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "transportType": {
+            "$ref": "#/components/schemas/McpTransport"
+          },
+          "endpoint": {
+            "type": "string",
+            "description": "远程连接地址"
+          },
+          "credentialRef": {
+            "type": "string",
+            "description": "凭据引用名",
+            "nullable": true
+          },
+          "headers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KeyValue"
+            },
+            "description": "附加请求头"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "description": "超时毫秒数"
+          },
+          "readiness": {
+            "$ref": "#/components/schemas/ConfigReadiness"
+          }
+        },
+        "required": [
+          "mcpServerVersionId",
+          "mcpServerId",
+          "versionNo",
+          "status",
+          "revision",
+          "transportType",
+          "endpoint",
+          "headers",
+          "timeoutMs"
+        ]
+      },
+      "McpServerDetail": {
+        "type": "object",
+        "description": "MCP 服务详情",
+        "properties": {
+          "server": {
+            "$ref": "#/components/schemas/McpServer"
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VersionSummary"
+            },
+            "description": "版本记录，版本号倒序"
+          },
+          "usages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConfigUsage"
+            },
+            "description": "引用该服务的工具版本"
+          },
+          "latestVersion": {
+            "$ref": "#/components/schemas/McpServerVersion"
+          }
+        },
+        "required": [
+          "server",
+          "versions",
+          "usages"
+        ]
+      },
+      "McpRemoteTool": {
+        "type": "object",
+        "description": "MCP 服务提供的工具定义",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "远程工具名称"
+          },
+          "title": {
+            "type": "string",
+            "description": "远程工具标题",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "description": "用途说明"
+          },
+          "inputSchema": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "readOnly": {
+            "type": "boolean",
+            "description": "远程服务声明的只读提示"
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "inputSchema",
+          "readOnly"
+        ]
+      },
+      "McpProbe": {
+        "type": "object",
+        "description": "连接测试结果",
+        "properties": {
+          "durationMs": {
+            "type": "integer",
+            "description": "耗时毫秒数",
+            "format": "int64"
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/McpRemoteTool"
+            },
+            "description": "发现的远程工具"
+          }
+        },
+        "required": [
+          "durationMs",
+          "tools"
+        ]
+      },
+      "McpServerOption": {
+        "type": "object",
+        "description": "工具可选的 MCP 服务版本，仅启用服务的已发布版本",
+        "properties": {
+          "mcpServerVersionId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "mcpServerId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "serverCode": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
+          },
+          "serverName": {
+            "type": "string",
+            "description": "服务名称"
+          },
+          "versionNo": {
+            "type": "integer",
+            "description": "版本号"
+          },
+          "latest": {
+            "type": "boolean",
+            "description": "是否最新发布版本"
+          }
+        },
+        "required": [
+          "mcpServerVersionId",
+          "mcpServerId",
+          "serverCode",
+          "serverName",
+          "versionNo",
+          "latest"
+        ]
+      },
+      "HttpToolSpec": {
+        "type": "object",
+        "description": "HTTP 工具请求模板；主机部分不能使用占位符",
+        "properties": {
+          "method": {
+            "$ref": "#/components/schemas/HttpToolMethod"
+          },
+          "url": {
+            "type": "string",
+            "description": "地址模板",
+            "maxLength": 2048
+          },
+          "headers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KeyValue"
+            },
+            "description": "请求头模板",
+            "maxItems": 20
+          },
+          "bodyTemplate": {
+            "type": "string",
+            "description": "JSON 请求体模板，仅 POST/PUT/PATCH",
+            "maxLength": 20000,
+            "nullable": true
+          },
+          "credentialRef": {
+            "type": "string",
+            "description": "凭据引用名",
+            "maxLength": 80,
+            "nullable": true
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "description": "超时毫秒数",
+            "minimum": 1000,
+            "maximum": 60000
+          },
+          "resultPointer": {
+            "type": "string",
+            "description": "结果提取的 JSON Pointer",
+            "maxLength": 500,
+            "nullable": true
+          }
+        },
+        "required": [
+          "method",
+          "url",
+          "headers",
+          "timeoutMs"
+        ]
+      },
+      "ToolTestRunRequest": {
+        "type": "object",
+        "required": [
+          "toolType",
+          "definition",
+          "arguments"
+        ],
+        "properties": {
+          "toolType": {
+            "$ref": "#/components/schemas/ToolType"
+          },
+          "definition": {
+            "$ref": "#/components/schemas/ToolSaveRequest"
+          },
+          "arguments": {
+            "type": "object"
+          }
+        }
+      },
+      "Tool": {
+        "type": "object",
+        "description": "工具摘要；名称与说明取最新发布版本，未发布时取草稿",
+        "properties": {
+          "toolId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "toolCode": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
+          },
+          "toolName": {
+            "type": "string",
+            "description": "展示名称"
+          },
+          "toolType": {
+            "$ref": "#/components/schemas/ToolType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ConfigStatus"
+          },
+          "revision": {
+            "type": "integer",
+            "description": "目录修订号",
+            "format": "int64"
+          },
+          "exposedName": {
+            "type": "string",
+            "description": "模型工具名",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "description": "用途说明"
+          },
+          "publishedVersionId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "nullable": true
+          },
+          "publishedVersionNo": {
+            "type": "integer",
+            "description": "最新发布版本号",
+            "nullable": true
+          },
+          "draftVersionId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "nullable": true
+          },
+          "usageCount": {
+            "type": "integer",
+            "description": "生效引用的 Agent 数量"
+          },
+          "lastUpdateTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "displayAlias": {
+            "type": "string"
+          },
+          "latestVersionId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "latestVersionNo": {
+            "type": "integer"
+          },
+          "latestReadiness": {
+            "$ref": "#/components/schemas/ConfigReadiness"
+          }
+        },
+        "required": [
+          "toolId",
+          "toolCode",
+          "toolName",
+          "toolType",
+          "status",
+          "revision",
+          "description",
+          "usageCount",
+          "lastUpdateTime"
+        ]
+      },
+      "ToolVersion": {
+        "type": "object",
+        "description": "工具版本",
+        "properties": {
+          "toolVersionId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "toolId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "toolType": {
+            "$ref": "#/components/schemas/ToolType"
+          },
+          "versionNo": {
+            "type": "integer",
+            "description": "版本号"
+          },
+          "revision": {
+            "type": "integer",
+            "description": "版本修订号",
+            "format": "int64"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastUpdateTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "exposedName": {
+            "type": "string",
+            "description": "模型工具名"
+          },
+          "description": {
+            "type": "string",
+            "description": "用途说明"
+          },
+          "inputSchema": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "readOnly": {
+            "type": "boolean",
+            "description": "是否只读"
+          },
+          "implementationKey": {
+            "type": "string",
+            "description": "内置实现标识",
+            "nullable": true
+          },
+          "mcpServerVersionId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "nullable": true
+          },
+          "mcpServerName": {
+            "type": "string",
+            "description": "MCP 服务名称与版本",
+            "nullable": true
+          },
+          "mcpServerVersionNo": {
+            "type": "integer",
+            "description": "MCP 服务版本号",
+            "nullable": true
+          },
+          "remoteToolName": {
+            "type": "string",
+            "description": "远程工具名",
+            "nullable": true
+          },
+          "httpSpec": {
+            "$ref": "#/components/schemas/HttpToolSpec",
+            "nullable": true
+          },
+          "readiness": {
+            "$ref": "#/components/schemas/ConfigReadiness"
+          },
+          "mcpServerId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "toolVersionId",
+          "toolId",
+          "toolType",
+          "versionNo",
+          "status",
+          "revision",
+          "exposedName",
+          "description",
+          "inputSchema",
+          "readOnly"
+        ]
+      },
+      "ToolDetail": {
+        "type": "object",
+        "description": "工具详情",
+        "properties": {
+          "tool": {
+            "$ref": "#/components/schemas/Tool"
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VersionSummary"
+            },
+            "description": "版本记录，版本号倒序"
+          },
+          "usages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConfigUsage"
+            },
+            "description": "绑定该工具的 Agent 版本"
+          },
+          "latestVersion": {
+            "$ref": "#/components/schemas/ToolVersion"
+          }
+        },
+        "required": [
+          "tool",
+          "versions",
+          "usages"
+        ]
+      },
+      "ToolTestRun": {
+        "type": "object",
+        "description": "试运行结果，凭据已遮蔽",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "是否成功"
+          },
+          "durationMs": {
+            "type": "integer",
+            "description": "耗时毫秒数",
+            "format": "int64"
+          },
+          "request": {
+            "type": "string",
+            "description": "请求摘要"
+          },
+          "output": {
+            "type": "string",
+            "description": "工具输出或错误信息"
+          }
+        },
+        "required": [
+          "success",
+          "durationMs",
+          "request",
+          "output"
+        ]
+      },
+      "BuiltinToolOption": {
+        "type": "object",
+        "description": "可配置的内置实现",
+        "properties": {
+          "implementationKey": {
+            "type": "string",
+            "description": "实现标识"
+          },
+          "exposedName": {
+            "type": "string",
+            "description": "默认工具名"
+          },
+          "description": {
+            "type": "string",
+            "description": "默认说明"
+          },
+          "inputSchema": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "readOnly": {
+            "type": "boolean",
+            "description": "是否只读"
+          }
+        },
+        "required": [
+          "implementationKey",
+          "exposedName",
+          "description",
+          "inputSchema",
+          "readOnly"
+        ]
+      },
+      "ToolOption": {
+        "type": "object",
+        "description": "Agent 可绑定的工具版本",
+        "properties": {
+          "toolVersionId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "toolId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "toolCode": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
+          },
+          "toolName": {
+            "type": "string",
+            "description": "展示名称"
+          },
+          "toolType": {
+            "$ref": "#/components/schemas/ToolType"
+          },
+          "exposedName": {
+            "type": "string",
+            "description": "模型工具名"
+          },
+          "description": {
+            "type": "string",
+            "description": "用途说明"
+          },
+          "versionNo": {
+            "type": "integer",
+            "description": "版本号"
+          },
+          "latest": {
+            "type": "boolean",
+            "description": "是否最新可用版本"
+          }
+        },
+        "required": [
+          "toolVersionId",
+          "toolId",
+          "toolCode",
+          "toolName",
+          "toolType",
+          "exposedName",
+          "description",
+          "versionNo",
+          "latest"
+        ]
+      },
+      "AgentDelegationDraft": {
+        "type": "object",
+        "required": [
+          "subagentId",
+          "delegationName"
+        ],
+        "properties": {
+          "subagentId": {
+            "type": "string"
+          },
+          "delegationName": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "delegationDescription": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500
+          },
+          "displayAlias": {
+            "type": "string",
+            "maxLength": 60
+          }
+        }
+      },
+      "Agent": {
+        "type": "object",
+        "description": "Agent 摘要；描述与数量取当前生效版本，未发布时取草稿",
+        "properties": {
+          "agentId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "agentCode": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
+          },
+          "agentName": {
+            "type": "string",
+            "description": "展示名称"
+          },
+          "agentType": {
+            "$ref": "#/components/schemas/AgentType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ConfigStatus"
+          },
+          "revision": {
+            "type": "integer",
+            "description": "目录修订号",
+            "format": "int64"
+          },
+          "description": {
+            "type": "string",
+            "description": "职责描述"
+          },
+          "currentVersionId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "nullable": true
+          },
+          "currentVersionNo": {
+            "type": "integer",
+            "description": "当前生效版本号",
+            "nullable": true
+          },
+          "draftVersionId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "nullable": true
+          },
+          "toolCount": {
+            "type": "integer",
+            "description": "绑定工具数量"
+          },
+          "subagentCount": {
+            "type": "integer",
+            "description": "委派子 Agent 数量"
+          },
+          "usageCount": {
+            "type": "integer",
+            "description": "生效委派它的主 Agent 数量"
+          },
+          "lastUpdateTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "displayAlias": {
+            "type": "string"
+          },
+          "latestVersionId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "latestVersionNo": {
+            "type": "integer"
+          },
+          "latestReadiness": {
+            "$ref": "#/components/schemas/ConfigReadiness"
+          },
+          "currentReleaseId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "currentReleaseNo": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "publishState": {
+            "$ref": "#/components/schemas/AgentPublishState"
+          }
+        },
+        "required": [
+          "agentId",
+          "agentCode",
+          "agentName",
+          "agentType",
+          "status",
+          "revision",
+          "description",
+          "toolCount",
+          "subagentCount",
+          "usageCount",
+          "lastUpdateTime"
+        ]
+      },
+      "AgentToolBinding": {
+        "type": "object",
+        "description": "Agent 版本绑定的工具版本",
+        "properties": {
+          "toolVersionId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "toolId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "toolCode": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
+          },
+          "toolName": {
+            "type": "string",
+            "description": "展示名称"
+          },
+          "toolType": {
+            "$ref": "#/components/schemas/ToolType"
+          },
+          "exposedName": {
+            "type": "string",
+            "description": "模型工具名"
+          },
+          "description": {
+            "type": "string",
+            "description": "用途说明"
+          },
+          "versionNo": {
+            "type": "integer",
+            "description": "绑定的版本号"
+          },
+          "latestVersionNo": {
+            "type": "integer",
+            "description": "最新发布版本号",
+            "nullable": true
+          },
+          "usable": {
+            "type": "boolean",
+            "description": "工具启用、版本已发布且依赖可用"
+          }
+        },
+        "required": [
+          "toolVersionId",
+          "toolId",
+          "toolCode",
+          "toolName",
+          "toolType",
+          "exposedName",
+          "description",
+          "versionNo",
+          "usable"
+        ]
+      },
+      "AgentDelegation": {
+        "type": "object",
+        "description": "主 Agent 版本的委派",
+        "properties": {
+          "subagentVersionId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "subagentId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "subagentCode": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
+          },
+          "subagentName": {
+            "type": "string",
+            "description": "子 Agent 名称"
+          },
+          "description": {
+            "type": "string",
+            "description": "子 Agent 该版本的职责描述"
+          },
+          "versionNo": {
+            "type": "integer",
+            "description": "委派的版本号"
+          },
+          "currentVersionNo": {
+            "type": "integer",
+            "description": "子 Agent 当前生效版本号",
+            "nullable": true
+          },
+          "delegationName": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
+          },
+          "delegationDescription": {
+            "type": "string",
+            "description": "委派说明"
+          },
+          "usable": {
+            "type": "boolean",
+            "description": "子 Agent 启用且版本已发布"
+          }
+        },
+        "required": [
+          "subagentVersionId",
+          "subagentId",
+          "subagentCode",
+          "subagentName",
+          "description",
+          "versionNo",
+          "delegationName",
+          "delegationDescription",
+          "usable"
+        ]
+      },
+      "AgentVersion": {
+        "type": "object",
+        "description": "Agent 版本",
+        "properties": {
+          "agentVersionId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "agentId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "versionNo": {
+            "type": "integer",
+            "description": "版本号"
+          },
+          "revision": {
+            "type": "integer",
+            "description": "版本修订号",
+            "format": "int64"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastUpdateTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": {
+            "type": "string",
+            "description": "职责描述"
+          },
+          "systemPrompt": {
+            "type": "string",
+            "description": "系统提示词"
+          },
+          "maxIters": {
+            "type": "integer",
+            "description": "最大执行步数",
+            "nullable": true
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentToolBinding"
+            },
+            "description": "绑定的工具版本"
+          },
+          "subagents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentDelegation"
+            },
+            "description": "子 Agent 委派"
+          },
+          "readiness": {
+            "$ref": "#/components/schemas/ConfigReadiness"
+          },
+          "promptSections": {
+            "$ref": "#/components/schemas/PromptSections"
+          }
+        },
+        "required": [
+          "agentVersionId",
+          "agentId",
+          "versionNo",
+          "status",
+          "revision",
+          "description",
+          "systemPrompt",
+          "tools",
+          "subagents"
+        ]
+      },
+      "AgentDetail": {
+        "type": "object",
+        "description": "Agent 详情",
+        "properties": {
+          "agent": {
+            "$ref": "#/components/schemas/Agent"
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VersionSummary"
+            },
+            "description": "版本记录，版本号倒序"
+          },
+          "usages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConfigUsage"
+            },
+            "description": "委派该 Agent 的主 Agent 版本"
+          },
+          "latestVersion": {
+            "$ref": "#/components/schemas/AgentVersion"
+          },
+          "releases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentReleaseSummary"
+            }
+          }
+        },
+        "required": [
+          "agent",
+          "versions",
+          "usages"
+        ]
+      },
+      "SubagentOption": {
+        "type": "object",
+        "description": "可委派的子 Agent 已发布版本",
+        "properties": {
+          "subagentVersionId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "agentId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "agentCode": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
+          },
+          "agentName": {
+            "type": "string",
+            "description": "名称"
+          },
+          "description": {
+            "type": "string",
+            "description": "职责描述"
+          },
+          "versionNo": {
+            "type": "integer",
+            "description": "版本号"
+          },
+          "current": {
+            "type": "boolean",
+            "description": "是否当前生效版本"
+          }
+        },
+        "required": [
+          "subagentVersionId",
+          "agentId",
+          "agentCode",
+          "agentName",
+          "description",
+          "versionNo",
+          "current"
+        ]
+      },
+      "ConfigReadiness": {
+        "type": "string",
+        "enum": [
+          "READY",
+          "INCOMPLETE"
+        ],
+        "description": "配置版本就绪状态"
+      },
+      "AgentPublishState": {
+        "type": "string",
+        "enum": [
+          "UNPUBLISHED",
+          "PUBLISHED",
+          "MODIFIED"
+        ],
+        "description": "Master Agent 发布状态"
+      },
+      "PromptSections": {
+        "type": "object",
+        "description": "五段式结构化系统提示词",
+        "properties": {
+          "role": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "goal": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "workflow": {
+            "type": "string",
+            "maxLength": 6000
+          },
+          "constraints": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "outputFormat": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        }
+      },
+      "McpServerSaveRequest": {
+        "type": "object",
+        "required": [
+          "serverName"
+        ],
+        "properties": {
+          "revision": {
+            "type": "integer"
+          },
+          "serverName": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "transportType": {
+            "$ref": "#/components/schemas/McpTransport"
+          },
+          "endpoint": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "credentialRef": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 80
+          },
+          "headers": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 120000
+          }
+        }
+      },
+      "McpServerProbeRequest": {
+        "type": "object",
+        "required": [
+          "transportType",
+          "endpoint"
+        ],
+        "properties": {
+          "transportType": {
+            "$ref": "#/components/schemas/McpTransport"
+          },
+          "endpoint": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "credentialRef": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 80
+          },
+          "headers": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 120000
+          }
+        }
+      },
+      "ToolSaveRequest": {
+        "type": "object",
+        "required": [
+          "toolName"
+        ],
+        "properties": {
+          "revision": {
+            "type": "integer"
+          },
+          "toolName": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "displayAlias": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "toolType": {
+            "$ref": "#/components/schemas/ToolType"
+          },
+          "exposedName": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "inputSchema": {
+            "type": "object"
+          },
+          "readOnly": {
+            "type": "boolean"
+          },
+          "implementationKey": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mcpServerId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "remoteToolName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "httpSpec": {
+            "$ref": "#/components/schemas/HttpToolSpec"
+          }
+        }
+      },
+      "AgentSaveRequest": {
+        "type": "object",
+        "required": [
+          "agentName"
+        ],
+        "properties": {
+          "revision": {
+            "type": "integer"
+          },
+          "agentName": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "displayAlias": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "agentType": {
+            "$ref": "#/components/schemas/AgentType"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "promptSections": {
+            "$ref": "#/components/schemas/PromptSections"
+          },
+          "maxIters": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 200
+          },
+          "toolIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "subagents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentDelegationDraft"
+            }
+          }
+        }
+      },
+      "AgentPublishRequest": {
+        "type": "object",
+        "required": [
+          "revision",
+          "dependencyDigest",
+          "publishOperationId"
+        ],
+        "properties": {
+          "revision": {
+            "type": "integer"
+          },
+          "dependencyDigest": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "publishOperationId": {
+            "type": "string",
+            "maxLength": 64
+          }
+        }
+      },
+      "AgentPublishPreview": {
+        "type": "object",
+        "properties": {
+          "agentId": {
+            "type": "string"
+          },
+          "agentName": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "masterVersionNo": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "currentReleaseNo": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "dependencyDigest": {
+            "type": "string"
+          },
+          "publishable": {
+            "type": "boolean"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "AgentReleaseSummary": {
+        "type": "object",
+        "properties": {
+          "releaseId": {
+            "type": "string"
+          },
+          "releaseNo": {
+            "type": "integer"
+          },
+          "masterVersionId": {
+            "type": "string"
+          },
+          "masterVersionNo": {
+            "type": "integer"
+          },
+          "masterName": {
+            "type": "string"
+          },
+          "masterDisplayAlias": {
+            "type": "string"
+          },
+          "dependencyDigest": {
+            "type": "string"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "current": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AgentReleaseDetail": {
+        "type": "object",
+        "properties": {
+          "releaseId": {
+            "type": "string"
+          },
+          "releaseNo": {
+            "type": "integer"
+          },
+          "masterAgentId": {
+            "type": "string"
+          },
+          "masterName": {
+            "type": "string"
+          },
+          "masterDisplayAlias": {
+            "type": "string"
+          },
+          "masterVersionId": {
+            "type": "string"
+          },
+          "masterVersionNo": {
+            "type": "integer"
+          },
+          "description": {
+            "type": "string"
+          },
+          "promptSections": {
+            "$ref": "#/components/schemas/PromptSections"
+          },
+          "systemPrompt": {
+            "type": "string"
+          },
+          "maxIters": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "dependencyDigest": {
+            "type": "string"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "current": {
+            "type": "boolean"
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentToolBinding"
+            }
+          },
+          "subagents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentDelegation"
+            }
+          }
+        }
+      },
+      "AgentReleaseSubagentDetail": {
+        "type": "object",
+        "properties": {
+          "releaseId": {
+            "type": "string"
+          },
+          "releaseNo": {
+            "type": "integer"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "subagentId": {
+            "type": "string"
+          },
+          "subagentCode": {
+            "type": "string"
+          },
+          "subagentName": {
+            "type": "string"
+          },
+          "displayAlias": {
+            "type": "string"
+          },
+          "delegationName": {
+            "type": "string"
+          },
+          "delegationDescription": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "subagentVersionId": {
+            "type": "string"
+          },
+          "versionNo": {
+            "type": "integer"
+          },
+          "description": {
+            "type": "string"
+          },
+          "promptSections": {
+            "$ref": "#/components/schemas/PromptSections"
+          },
+          "systemPrompt": {
+            "type": "string"
+          },
+          "maxIters": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentToolBinding"
+            }
+          }
+        }
+      },
+      "AgentReleaseToolDetail": {
+        "type": "object",
+        "properties": {
+          "releaseId": {
+            "type": "string"
+          },
+          "releaseNo": {
+            "type": "integer"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "toolId": {
+            "type": "string"
+          },
+          "toolName": {
+            "type": "string"
+          },
+          "displayAlias": {
+            "type": "string"
+          },
+          "toolVersion": {
+            "$ref": "#/components/schemas/ToolVersion"
+          },
+          "mcpVersion": {
+            "$ref": "#/components/schemas/McpServerVersion"
+          },
+          "mcpServerName": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       }

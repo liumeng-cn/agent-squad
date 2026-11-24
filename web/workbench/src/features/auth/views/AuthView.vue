@@ -8,11 +8,29 @@ const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 const registering = computed(() => route.name === 'register')
-const phone = ref('')
+const rememberedPhoneKey = 'squad.auth.rememberedPhone'
+const phone = ref(readRememberedPhone())
 const verificationCode = ref('')
 const busy = ref(false)
 const error = ref('')
 const notice = ref('')
+
+function readRememberedPhone(): string {
+  try {
+    return localStorage.getItem(rememberedPhoneKey) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+function rememberPhone(value: string) {
+  try {
+    localStorage.setItem(rememberedPhoneKey, value)
+  } catch {
+    // 浏览器禁用本地存储时仍允许正常登录。
+  }
+}
+
 async function submit() {
   if (busy.value) return
   busy.value = true; error.value = ''; notice.value = ''
@@ -23,6 +41,7 @@ async function submit() {
       notice.value = '注册成功，请使用手机号登录'
     } else {
       await auth.login(phone.value.trim(), verificationCode.value.trim())
+      rememberPhone(phone.value.trim())
       await router.replace({ name: 'chat' })
     }
   } catch (reason) { error.value = errorMessage(reason) }

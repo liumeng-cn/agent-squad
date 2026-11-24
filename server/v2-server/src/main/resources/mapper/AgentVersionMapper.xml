@@ -1,167 +1,210 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agentsquad.squad.v2.mapper.AgentVersionMapper">
+
     <select id="nextVersionNo" resultType="int">
         SELECT COALESCE(MAX(version_no), 0) + 1
         FROM squad_chat.sq_agent_version
         WHERE agent_id = #{agentId}
     </select>
 
-    <!-- 版本记录；当前生效版本标记为 current -->
     <select id="selectSummaries" resultType="com.agentsquad.squad.v2.bo.VersionSummaryBO">
-        SELECT v.agent_version_id                          AS version_id,
-               v.version_no,
-               v.status,
-               v.revision,
-               v.published_at,
-               v.last_update_time,
-               (a.current_version_id = v.agent_version_id) AS current
-        FROM squad_chat.sq_agent_version v
-        JOIN squad_chat.sq_agent a
-          ON a.agent_id = v.agent_id
-        WHERE v.agent_id = #{agentId}
-        ORDER BY v.version_no DESC
+        SELECT agent_version_id AS version_id,
+               version_no,
+               readiness,
+               last_update_time
+        FROM squad_chat.sq_agent_version
+        WHERE agent_id = #{agentId}
+        ORDER BY version_no DESC
     </select>
 
-    <!-- 工具版本及可用状态的公共列，供版本绑定与候选校验共用 -->
-    <sql id="toolBindingColumns">
-        SELECT tv.tool_version_id,
-               t.tool_id,
+    <select id="selectToolBindings" resultType="com.agentsquad.squad.v2.bo.AgentToolBindingBO">
+        SELECT t.tool_id,
                t.tool_code,
                t.tool_name,
+               t.display_alias,
                t.tool_type,
-               t.status          AS tool_status,
+               t.status AS tool_status,
+               t.latest_version_id AS tool_version_id,
+               t.latest_version_no AS version_no,
+               t.latest_readiness AS readiness,
                tv.exposed_name,
                tv.description,
-               tv.version_no,
-               tv.status         AS version_status,
+               tv.read_only,
+               tv.mcp_server_id,
+               ms.latest_version_id AS mcp_server_version_id,
+               ms.server_name AS mcp_server_name,
+               ms.status AS mcp_server_status,
+               ms.latest_readiness AS mcp_server_readiness,
                (
-                   SELECT MAX(latest.version_no)
-                   FROM squad_chat.sq_tool_version latest
-                   WHERE latest.tool_id = t.tool_id
-                     AND latest.status = 'PUBLISHED'
-               )                 AS latest_version_no,
-               mv.mcp_server_id,
-               (
-                   tv.status = 'PUBLISHED'
+                   t.deleted_at IS NULL
                    AND t.status = 'ENABLED'
+                   AND t.latest_readiness = 'READY'
                    AND (
-                       tv.mcp_server_version_id IS NULL
-                       OR (mv.status = 'PUBLISHED' AND m.status = 'ENABLED')
+                       t.tool_type != 'MCP'
+                       OR (ms.mcp_server_id IS NOT NULL AND ms.deleted_at IS NULL
+                           AND ms.status = 'ENABLED' AND ms.latest_readiness = 'READY')
                    )
-               )                 AS usable
-        FROM squad_chat.sq_tool_version tv
-        JOIN squad_chat.sq_tool t
-          ON t.tool_id = tv.tool_id
-        LEFT JOIN squad_chat.sq_mcp_server_version mv
-          ON mv.mcp_server_version_id = tv.mcp_server_version_id
-        LEFT JOIN squad_chat.sq_mcp_server m
-          ON m.mcp_server_id = mv.mcp_server_id
-    </sql>
-
-    <select id="selectToolBindings" resultType="com.agentsquad.squad.v2.bo.AgentToolBindingBO">
-        <include refid="toolBindingColumns"/>
-        JOIN squad_chat.sq_agent_version_tool binding
-          ON binding.tool_version_id = tv.tool_version_id
-        WHERE binding.agent_version_id = #{agentVersionId}
-        ORDER BY binding.id
+               ) AS usable,
+               CASE
+                   WHEN t.deleted_at IS NOT NULL THEN '工具已删除'
+                   WHEN t.status != 'ENABLED' THEN '工具已停用'
+                   WHEN t.latest_readiness != 'READY' THEN '工具配置未就绪'
+                   WHEN t.tool_type = 'MCP' AND (ms.mcp_server_id IS NULL OR ms.deleted_at IS NOT NULL) THEN '关联 MCP 已删除'
+                   WHEN t.tool_type = 'MCP' AND ms.status != 'ENABLED' THEN '关联 MCP 已停用'
+                   WHEN t.tool_type = 'MCP' AND ms.latest_readiness != 'READY' THEN '关联 MCP 配置未就绪'
+                   ELSE NULL
+               END AS unusable_reason
+        FROM squad_chat.sq_agent_version_tool b
+        JOIN squad_chat.sq_tool t ON t.tool_id = b.tool_id
+        LEFT JOIN squad_chat.sq_tool_version tv ON tv.tool_version_id = t.latest_version_id
+        LEFT JOIN squad_chat.sq_mcp_server ms ON ms.mcp_server_id = tv.mcp_server_id
+        WHERE b.agent_version_id = #{agentVersionId}
+        ORDER BY b.sort_no ASC, b.id ASC
     </select>
 
     <select id="selectToolCandidates" resultType="com.agentsquad.squad.v2.bo.AgentToolBindingBO">
-        <include refid="toolBindingColumns"/>
-        WHERE tv.tool_version_id IN
-        <foreach collection="toolVersionIds" item="id" open="(" separator="," close=")">
+        SELECT t.tool_id,
+               t.tool_code,
+               t.tool_name,
+               t.display_alias,
+               t.tool_type,
+               t.status AS tool_status,
+               t.latest_version_id AS tool_version_id,
+               t.latest_version_no AS version_no,
+               t.latest_readiness AS readiness,
+               tv.exposed_name,
+               tv.description,
+               tv.read_only,
+               tv.mcp_server_id,
+               ms.latest_version_id AS mcp_server_version_id,
+               ms.server_name AS mcp_server_name,
+               ms.status AS mcp_server_status,
+               ms.latest_readiness AS mcp_server_readiness,
+               (
+                   t.deleted_at IS NULL
+                   AND t.status = 'ENABLED'
+                   AND t.latest_readiness = 'READY'
+                   AND (
+                       t.tool_type != 'MCP'
+                       OR (ms.mcp_server_id IS NOT NULL AND ms.deleted_at IS NULL
+                           AND ms.status = 'ENABLED' AND ms.latest_readiness = 'READY')
+                   )
+               ) AS usable,
+               CASE
+                   WHEN t.deleted_at IS NOT NULL THEN '工具已删除'
+                   WHEN t.status != 'ENABLED' THEN '工具已停用'
+                   WHEN t.latest_readiness != 'READY' THEN '工具配置未就绪'
+                   WHEN t.tool_type = 'MCP' AND (ms.mcp_server_id IS NULL OR ms.deleted_at IS NOT NULL) THEN '关联 MCP 已删除'
+                   WHEN t.tool_type = 'MCP' AND ms.status != 'ENABLED' THEN '关联 MCP 已停用'
+                   WHEN t.tool_type = 'MCP' AND ms.latest_readiness != 'READY' THEN '关联 MCP 配置未就绪'
+                   ELSE NULL
+               END AS unusable_reason
+        FROM squad_chat.sq_tool t
+        LEFT JOIN squad_chat.sq_tool_version tv ON tv.tool_version_id = t.latest_version_id
+        LEFT JOIN squad_chat.sq_mcp_server ms ON ms.mcp_server_id = tv.mcp_server_id
+        WHERE t.tool_id IN
+        <foreach collection="toolIds" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
     </select>
 
-    <!-- 委派目标版本及可用状态的公共列，供版本委派与候选校验共用 -->
-    <sql id="delegationColumns">
-        SELECT child.agent_version_id  AS subagent_version_id,
-               a.agent_id              AS subagent_id,
-               a.agent_code            AS subagent_code,
-               a.agent_name            AS subagent_name,
-               a.agent_type            AS subagent_type,
-               a.status                AS subagent_status,
-               child.description,
-               child.version_no,
-               child.status            AS version_status,
-               current_version.version_no AS current_version_no,
-               (
-                   child.status = 'PUBLISHED'
-                   AND a.status = 'ENABLED'
-                   AND a.agent_type = 'SUB_AGENT'
-               )                       AS usable
-        FROM squad_chat.sq_agent_version child
-        JOIN squad_chat.sq_agent a
-          ON a.agent_id = child.agent_id
-        LEFT JOIN squad_chat.sq_agent_version current_version
-          ON current_version.agent_version_id = a.current_version_id
-    </sql>
-
     <select id="selectDelegations" resultType="com.agentsquad.squad.v2.bo.AgentDelegationBO">
-        SELECT candidate.*,
-               delegation.delegation_name,
-               delegation.delegation_description
-        FROM squad_chat.sq_agent_version_subagent delegation
-        JOIN (
-            <include refid="delegationColumns"/>
-        ) candidate
-          ON candidate.subagent_version_id = delegation.subagent_version_id
-        WHERE delegation.master_version_id = #{agentVersionId}
-        ORDER BY delegation.id
+        SELECT sub.agent_id AS subagent_id,
+               sub.agent_code AS subagent_code,
+               sub.agent_name AS subagent_name,
+               sub.display_alias AS subagent_display_alias,
+               sub.agent_type AS subagent_type,
+               sub.status AS subagent_status,
+               sub.latest_version_id AS subagent_version_id,
+               sub.latest_version_no AS version_no,
+               sub.latest_readiness AS readiness,
+               d.delegation_name,
+               d.delegation_description,
+               d.display_alias,
+               COALESCE(sv.description, '') AS subagent_description,
+               (
+                   SELECT count(*)
+                   FROM squad_chat.sq_agent_version_tool b
+                   WHERE b.agent_version_id = sub.latest_version_id
+               ) AS tool_count,
+               (
+                   sub.deleted_at IS NULL
+                   AND sub.agent_type = 'SUB_AGENT'
+                   AND sub.status = 'ENABLED'
+                   AND sub.latest_readiness = 'READY'
+               ) AS usable,
+               CASE
+                   WHEN sub.deleted_at IS NOT NULL THEN '子 Agent 已删除'
+                   WHEN sub.agent_type != 'SUB_AGENT' THEN '目标不是子 Agent'
+                   WHEN sub.status != 'ENABLED' THEN '子 Agent 已停用'
+                   WHEN sub.latest_readiness != 'READY' THEN '子 Agent 配置未就绪'
+                   ELSE NULL
+               END AS unusable_reason
+        FROM squad_chat.sq_agent_version_subagent d
+        JOIN squad_chat.sq_agent sub ON sub.agent_id = d.subagent_id
+        LEFT JOIN squad_chat.sq_agent_version sv ON sv.agent_version_id = sub.latest_version_id
+        WHERE d.master_version_id = #{agentVersionId}
+        ORDER BY d.sort_no ASC, d.id ASC
     </select>
 
     <select id="selectDelegationCandidates" resultType="com.agentsquad.squad.v2.bo.AgentDelegationBO">
-        <include refid="delegationColumns"/>
-        WHERE child.agent_version_id IN
-        <foreach collection="subagentVersionIds" item="id" open="(" separator="," close=")">
+        SELECT sub.agent_id AS subagent_id,
+               sub.agent_code AS subagent_code,
+               sub.agent_name AS subagent_name,
+               sub.display_alias AS subagent_display_alias,
+               sub.agent_type AS subagent_type,
+               sub.status AS subagent_status,
+               sub.latest_version_id AS subagent_version_id,
+               sub.latest_version_no AS version_no,
+               sub.latest_readiness AS readiness,
+               COALESCE(sv.description, '') AS subagent_description,
+               (
+                   SELECT count(*)
+                   FROM squad_chat.sq_agent_version_tool b
+                   WHERE b.agent_version_id = sub.latest_version_id
+               ) AS tool_count,
+               (
+                   sub.deleted_at IS NULL
+                   AND sub.agent_type = 'SUB_AGENT'
+                   AND sub.status = 'ENABLED'
+                   AND sub.latest_readiness = 'READY'
+               ) AS usable,
+               CASE
+                   WHEN sub.deleted_at IS NOT NULL THEN '子 Agent 已删除'
+                   WHEN sub.agent_type != 'SUB_AGENT' THEN '目标不是子 Agent'
+                   WHEN sub.status != 'ENABLED' THEN '子 Agent 已停用'
+                   WHEN sub.latest_readiness != 'READY' THEN '子 Agent 配置未就绪'
+                   ELSE NULL
+               END AS unusable_reason
+        FROM squad_chat.sq_agent sub
+        LEFT JOIN squad_chat.sq_agent_version sv ON sv.agent_version_id = sub.latest_version_id
+        WHERE sub.agent_id IN
+        <foreach collection="subagentIds" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
     </select>
 
-    <!-- 启用子 Agent 的已发布版本 -->
     <select id="selectSubagentOptions" resultType="com.agentsquad.squad.v2.bo.SubagentOptionBO">
-        SELECT v.agent_version_id                          AS subagent_version_id,
-               a.agent_id,
+        SELECT a.agent_id,
                a.agent_code,
                a.agent_name,
-               v.description,
-               v.version_no,
-               (a.current_version_id = v.agent_version_id) AS current
-        FROM squad_chat.sq_agent_version v
-        JOIN squad_chat.sq_agent a
-          ON a.agent_id = v.agent_id
-        WHERE v.status = 'PUBLISHED'
-          AND a.status = 'ENABLED'
+               a.display_alias,
+               a.latest_version_id,
+               a.latest_version_no,
+               COALESCE(v.description, '') AS description,
+               (
+                   SELECT count(*)
+                   FROM squad_chat.sq_agent_version_tool b
+                   WHERE b.agent_version_id = a.latest_version_id
+               ) AS tool_count
+        FROM squad_chat.sq_agent a
+        JOIN squad_chat.sq_agent_version v ON v.agent_version_id = a.latest_version_id
+        WHERE a.deleted_at IS NULL
           AND a.agent_type = 'SUB_AGENT'
-        ORDER BY a.agent_code, v.version_no DESC
+          AND a.status = 'ENABLED'
+          AND a.latest_readiness = 'READY'
+        ORDER BY a.agent_name ASC, a.id ASC
     </select>
-
-    <update id="updateDraft">
-        UPDATE squad_chat.sq_agent_version
-        SET description      = #{description},
-            system_prompt    = #{systemPrompt},
-            max_iters        = #{maxIters},
-            revision         = revision + 1,
-            last_updater_id  = #{lastUpdaterId},
-            last_update_time = CURRENT_TIMESTAMP
-        WHERE agent_id = #{agentId}
-          AND agent_version_id = #{agentVersionId}
-          AND status = 'DRAFT'
-          AND revision = #{revision}
-    </update>
-
-    <update id="publish">
-        UPDATE squad_chat.sq_agent_version
-        SET status           = 'PUBLISHED',
-            revision         = revision + 1,
-            published_at     = CURRENT_TIMESTAMP,
-            last_updater_id  = #{lastUpdaterId},
-            last_update_time = CURRENT_TIMESTAMP
-        WHERE agent_id = #{agentId}
-          AND agent_version_id = #{agentVersionId}
-          AND status = 'DRAFT'
-          AND revision = #{revision}
-    </update>
 </mapper>

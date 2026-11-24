@@ -8,61 +8,48 @@ import type {
 } from './agentConfig'
 
 /**
- * Agent 编辑页的绑定展示：草稿只保存版本 ID 与委派名称，展示信息合并已保存的绑定详情与当前可选项。
+ * Agent 编辑页的关联展示：按资源业务 ID 合并最新可选项与已保存绑定详情。
  */
 export interface ToolCardInfo {
-  toolVersionId: string
   toolId: string
   toolName: string
+  displayAlias: string
   toolCode: string
   toolType: ToolType
   exposedName: string
   description: string
   versionNo: number | null
-  /** 同一工具可选择的已发布版本（版本号倒序） */
-  versions: ToolOption[]
-  /** 最新发布版本号，大于当前绑定版本时提示可升级 */
-  latestVersionNo: number | null
-  /** 当前绑定是否可用：版本已发布、工具启用且依赖可用 */
   usable: boolean
+  unusableReason: string | null
 }
 
 export interface DelegationCardInfo {
-  subagentVersionId: string
-  agentId: string
+  subagentId: string
   agentName: string
+  agentDisplayAlias: string
   agentCode: string
   description: string
   versionNo: number | null
-  versions: SubagentOption[]
-  currentVersionNo: number | null
+  toolCount: number
   usable: boolean
+  unusableReason: string | null
 }
 
-function byVersionDesc<T extends { versionNo: number }>(items: T[]): T[] {
-  return [...items].sort((left, right) => right.versionNo - left.versionNo)
-}
-
-/** 合并绑定版本的展示信息：优先使用可选项中的最新数据，选项中没有时回退到已保存的绑定详情。 */
-export function toolCard(toolVersionId: string, options: ToolOption[], bindings: AgentToolBinding[]): ToolCardInfo {
-  const option = options.find(item => item.toolVersionId === toolVersionId)
-  const binding = bindings.find(item => item.toolVersionId === toolVersionId)
-  const toolId = option?.toolId ?? binding?.toolId ?? ''
-  const versions = byVersionDesc(options.filter(item => item.toolId === toolId))
-  const latest = versions.find(item => item.latest) ?? versions[0]
+export function toolCard(toolId: string, options: ToolOption[], bindings: AgentToolBinding[]): ToolCardInfo {
+  const option = options.find(item => item.toolId === toolId)
+  const binding = bindings.find(item => item.toolId === toolId)
 
   return {
-    toolVersionId,
     toolId,
     toolName: option?.toolName ?? binding?.toolName ?? '未知工具',
+    displayAlias: option?.displayAlias ?? binding?.displayAlias ?? '',
     toolCode: option?.toolCode ?? binding?.toolCode ?? '',
     toolType: option?.toolType ?? binding?.toolType ?? 'HTTP',
     exposedName: option?.exposedName ?? binding?.exposedName ?? '',
     description: option?.description ?? binding?.description ?? '',
-    versionNo: option?.versionNo ?? binding?.versionNo ?? null,
-    versions,
-    latestVersionNo: latest?.versionNo ?? binding?.latestVersionNo ?? null,
+    versionNo: option?.latestVersionNo ?? binding?.versionNo ?? null,
     usable: Boolean(option) || Boolean(binding?.usable),
+    unusableReason: option ? null : (binding?.unusableReason ?? '工具当前不可用'),
   }
 }
 
@@ -71,26 +58,22 @@ export function delegationCard(
   options: SubagentOption[],
   bindings: AgentDelegation[],
 ): DelegationCardInfo {
-  const option = options.find(item => item.subagentVersionId === delegation.subagentVersionId)
-  const binding = bindings.find(item => item.subagentVersionId === delegation.subagentVersionId)
-  const agentId = option?.agentId ?? binding?.subagentId ?? ''
-  const versions = byVersionDesc(options.filter(item => item.agentId === agentId))
-  const current = versions.find(item => item.current)
+  const option = options.find(item => item.agentId === delegation.subagentId)
+  const binding = bindings.find(item => item.subagentId === delegation.subagentId)
 
   return {
-    subagentVersionId: delegation.subagentVersionId,
-    agentId,
-    agentName: option?.agentName ?? binding?.subagentName ?? '未知子 Agent',
+    subagentId: delegation.subagentId,
+    agentName: option?.agentName ?? binding?.subagentName ?? '未知 Sub',
+    agentDisplayAlias: option?.displayAlias ?? binding?.subagentDisplayAlias ?? '',
     agentCode: option?.agentCode ?? binding?.subagentCode ?? '',
-    description: option?.description ?? binding?.description ?? '',
-    versionNo: option?.versionNo ?? binding?.versionNo ?? null,
-    versions,
-    currentVersionNo: current?.versionNo ?? binding?.currentVersionNo ?? null,
+    description: option?.description ?? binding?.subagentDescription ?? '',
+    versionNo: option?.latestVersionNo ?? binding?.versionNo ?? null,
+    toolCount: option?.toolCount ?? binding?.toolCount ?? 0,
     usable: Boolean(option) || Boolean(binding?.usable),
+    unusableReason: option ? null : (binding?.unusableReason ?? '子 Agent 当前不可用'),
   }
 }
 
-/** 模型工具名在同一 Agent 内必须唯一，返回重复的名称。 */
 export function duplicatedNames(names: string[]): string[] {
   const seen = new Set<string>()
   const duplicated = new Set<string>()

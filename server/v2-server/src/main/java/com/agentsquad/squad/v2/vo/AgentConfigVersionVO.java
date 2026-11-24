@@ -1,75 +1,35 @@
 package com.agentsquad.squad.v2.vo;
 
-import com.agentsquad.squad.v2.enums.VersionStatus;
+import com.agentsquad.squad.v2.enums.ConfigReadiness;
 import lombok.Data;
 
 import java.time.Instant;
 import java.util.List;
 
 /**
- * Agent 版本视图
- * <p>
- * 返回一个 Agent 版本的提示词、运行参数、绑定工具与子 Agent 委派。
+ * Agent 配置版本详情视图
  */
 @Data
 public class AgentConfigVersionVO {
-    /**
-     * 版本业务ID
-     */
     private String agentVersionId;
 
-    /**
-     * Agent 业务ID
-     */
     private String agentId;
 
-    /**
-     * 版本号
-     */
     private Integer versionNo;
 
-    /**
-     * 发布状态
-     */
-    private VersionStatus status;
+    private ConfigReadiness readiness;
 
-    /**
-     * 版本修订号
-     */
-    private Long revision;
-
-    /**
-     * 发布时间
-     */
-    private Instant publishedAt;
-
-    /**
-     * 最后更新时间
-     */
-    private Instant lastUpdateTime;
-
-    /**
-     * 职责描述
-     */
     private String description;
 
-    /**
-     * 系统提示词
-     */
+    private PromptSectionsVO promptSections = new PromptSectionsVO();
+
     private String systemPrompt;
 
-    /**
-     * 最大执行步数
-     */
     private Integer maxIters;
 
-    /**
-     * 绑定的工具版本
-     */
-    private List<AgentToolBindingVO> tools;
+    private Instant lastUpdateTime;
 
-    /**
-     * 子 Agent 委派
-     */
-    private List<AgentDelegationVO> subagents;
+    private List<AgentToolBindingVO> tools = List.of();
+
+    private List<AgentDelegationVO> subagents = List.of();
 }

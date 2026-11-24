@@ -11,15 +11,15 @@ import com.agentsquad.squad.v2.bo.McpRemoteToolBO;
 import com.agentsquad.squad.v2.bo.McpServerSummaryBO;
 import com.agentsquad.squad.v2.converter.McpServerConfigConverter;
 import com.agentsquad.squad.v2.dto.KeyValueDTO;
-import com.agentsquad.squad.v2.dto.McpServerCreateDTO;
-import com.agentsquad.squad.v2.dto.McpServerDraftDTO;
-import com.agentsquad.squad.v2.dto.McpServerProfileDTO;
+import com.agentsquad.squad.v2.dto.McpServerProbeDTO;
+import com.agentsquad.squad.v2.dto.McpServerSaveDTO;
+import com.agentsquad.squad.v2.enums.ConfigReadiness;
 import com.agentsquad.squad.v2.enums.ConfigStatus;
-import com.agentsquad.squad.v2.enums.VersionStatus;
 import com.agentsquad.squad.v2.mapper.McpServerMapper;
 import com.agentsquad.squad.v2.mapper.McpServerVersionMapper;
 import com.agentsquad.squad.v2.po.McpServerPO;
 import com.agentsquad.squad.v2.po.McpServerVersionPO;
+import com.agentsquad.squad.v2.utils.ConfigCodeGenerator;
 import com.agentsquad.squad.v2.utils.ConfigRules;
 import com.agentsquad.squad.v2.vo.McpProbeVO;
 import com.agentsquad.squad.v2.vo.McpRemoteToolVO;
@@ -46,13 +46,15 @@ import java.util.Set;
 /**
  * MCP 服务配置管理
  * <p>
- * 维护远程 MCP 服务的目录、连接版本、启停和连接测试，是工具配置的上游。
- * 工具只能引用启用服务的已发布版本；服务存在生效引用时不能停用。凭据只保存引用名，连接时解析。
+ * 维护远程 MCP 服务的目录、配置版本历史、启停、逻辑删除与实时探测。
+ * MCP 不允许单独发布，每次保存改动均生成新的不可变配置版本；仅启用且就绪的 MCP 可被工具关联。
  */
 @Slf4j
 @Service
 public class McpServerConfigService {
-    private static final String CONFLICT = "服务或版本已被其他操作修改，请刷新后重试";
+    private static final String CONFLICT = "MCP 服务已被其他操作修改，请刷新后重试";
+
+    private static final int MAX_CODE_RETRIES = 5;
 
     private static final Set<String> FORBIDDEN_HEADERS = Set.of("host", "content-length", "connection",
             "transfer-encoding", "upgrade", "expect");
@@ -82,69 +84,110 @@ public class McpServerConfigService {
     /**
      * 查询服务详情
      * <p>
-     * 返回服务摘要、版本记录和引用该服务的工具版本。
+     * 返回服务摘要、最新配置版本、历史配置版本清单与下游引用关系。
      */
     public McpServerDetailVO detail(long mcpServerId) {
+        McpServerVO server = summary(mcpServerId);
         McpServerDetailVO detail = new McpServerDetailVO();
-        detail.setServer(summary(mcpServerId));
+        detail.setServer(server);
+        if (server.getLatestVersionId() != null) {
+            long latestVersionId = ConfigRules.parseId(server.getLatestVersionId(), "MCP 版本ID");
+            detail.setLatestVersion(readVersion(mcpServerId, latestVersionId));
+        }
         detail.setVersions(versions.selectSummaries(mcpServerId).stream().map(converter::toView).toList());
         detail.setUsages(servers.selectUsages(mcpServerId).stream().map(converter::toView).toList());
         return detail;
     }
 
     /**
-     * 新增服务
+     * 新增 MCP 服务
      * <p>
-     * 同一事务创建服务目录和第一个版本草稿；编码重复时返回冲突，整笔回滚。
+     * 系统自动生成带日期的随机编码，同一事务写入目录与第 1 个配置版本。
      */
     @Transactional
-    public McpServerDetailVO create(McpServerCreateDTO request) {
-        validateDraft(request.getDraft());
+    public McpServerDetailVO create(McpServerSaveDTO request) {
         long actorId = ConfigRules.actor();
+        McpServerVersionPO version = buildVersion(request);
 
         McpServerPO server = new McpServerPO();
         server.setMcpServerId(IdWorker.getId());
-        server.setServerCode(request.getServerCode());
         server.setServerName(request.getServerName().trim());
-        server.setDescription(request.getDescription().trim());
+        server.setDescription(trimToEmpty(request.getDescription()));
         server.setStatus(ConfigStatus.ENABLED);
+        server.setLatestVersionNo(0);
+        server.setLatestReadiness(version.getReadiness());
         server.setRevision(0L);
         server.setCreatorId(actorId);
         server.setLastUpdaterId(actorId);
-        try {
-            servers.insert(server);
-        } catch (DuplicateKeyException duplicated) {
-            throw new BusinessException(ApiCode.CONFLICT, "服务编码 " + request.getServerCode() + " 已存在");
-        }
+        insertWithGeneratedCode(server);
 
-        insertDraft(server.getMcpServerId(), request.getDraft(), actorId);
-        log.info("MCP服务已创建，mcpServerId={}，code={}", server.getMcpServerId(), server.getServerCode());
+        version.setMcpServerId(server.getMcpServerId());
+        version.setMcpServerVersionId(IdWorker.getId());
+        version.setVersionNo(1);
+        version.setCreatorId(actorId);
+        version.setLastUpdaterId(actorId);
+        versions.insert(version);
+
+        McpServerPO pointer = new McpServerPO();
+        pointer.setMcpServerId(server.getMcpServerId());
+        pointer.setServerName(server.getServerName());
+        pointer.setDescription(server.getDescription());
+        pointer.setLatestVersionId(version.getMcpServerVersionId());
+        pointer.setLatestVersionNo(version.getVersionNo());
+        pointer.setLatestReadiness(version.getReadiness());
+        pointer.setRevision(0L);
+        pointer.setLastUpdaterId(actorId);
+        ConfigRules.requireChanged(servers.updateLatest(pointer), CONFLICT);
+
+        log.info("MCP服务已创建，mcpServerId={}，code={}，readiness={}",
+                server.getMcpServerId(), server.getServerCode(), version.getReadiness());
         return detail(server.getMcpServerId());
     }
 
     /**
-     * 修改服务资料
+     * 保存 MCP 服务改动
      * <p>
-     * 只修改名称与说明，按目录修订号条件更新。
+     * 每次保存新增一条配置版本并按目录修订号条件更新最新指针，不影响已发布的 Master 快照。
      */
-    public McpServerVO updateProfile(long mcpServerId, McpServerProfileDTO request) {
-        McpServerPO server = new McpServerPO();
-        server.setMcpServerId(mcpServerId);
-        server.setServerName(request.getServerName().trim());
-        server.setDescription(request.getDescription().trim());
-        server.setRevision(request.getRevision());
-        server.setLastUpdaterId(ConfigRules.actor());
-
+    @Transactional
+    public McpServerDetailVO save(long mcpServerId, McpServerSaveDTO request) {
+        if (request.getRevision() == null) {
+            throw new BusinessException(ApiCode.BAD_REQUEST, "保存配置需要携带修订号");
+        }
         requireServer(mcpServerId);
-        ConfigRules.requireChanged(servers.updateProfile(server), CONFLICT);
-        return summary(mcpServerId);
+        long actorId = ConfigRules.actor();
+        McpServerVersionPO version = buildVersion(request);
+
+        int nextVersionNo = versions.nextVersionNo(mcpServerId);
+        version.setMcpServerId(mcpServerId);
+        version.setMcpServerVersionId(IdWorker.getId());
+        version.setVersionNo(nextVersionNo);
+        version.setCreatorId(actorId);
+        version.setLastUpdaterId(actorId);
+        versions.insert(version);
+
+        McpServerPO update = new McpServerPO();
+        update.setMcpServerId(mcpServerId);
+        update.setServerName(request.getServerName().trim());
+        update.setDescription(trimToEmpty(request.getDescription()));
+        update.setLatestVersionId(version.getMcpServerVersionId());
+        update.setLatestVersionNo(nextVersionNo);
+        update.setLatestReadiness(version.getReadiness());
+        update.setRevision(request.getRevision());
+        update.setLastUpdaterId(actorId);
+        ConfigRules.requireChanged(servers.updateLatest(update), CONFLICT);
+
+        log.info("MCP服务已保存新配置版本，mcpServerId={}，versionNo={}，readiness={}",
+                mcpServerId, nextVersionNo, version.getReadiness());
+        return detail(mcpServerId);
     }
 
     /**
      * 启用或停用服务
      * <p>
-     * 停用条件更新在同一语句复核没有生效引用；失败时区分“存在引用”和“修订号变化”给出提示。
+     * 停用前确认没有启用中的下游工具或 Master 生效快照引用该服务。
      */
+    @Transactional
     public McpServerVO changeStatus(long mcpServerId, ConfigStatus status, long revision) {
         requireServer(mcpServerId);
 
@@ -153,11 +196,9 @@ public class McpServerConfigService {
         server.setStatus(status);
         server.setRevision(revision);
         server.setLastUpdaterId(ConfigRules.actor());
-        if (servers.updateStatus(server) != 1) {
-            if (status == ConfigStatus.DISABLED) {
-                requireNoActiveUsage(mcpServerId);
-            }
-            throw new BusinessException(ApiCode.CONFLICT, CONFLICT);
+        ConfigRules.requireChanged(servers.updateStatus(server), CONFLICT);
+        if (status == ConfigStatus.DISABLED) {
+            requireNoActiveUsage(mcpServerId, "停用");
         }
 
         log.info("MCP服务状态已更新，mcpServerId={}，status={}", mcpServerId, status);
@@ -165,76 +206,58 @@ public class McpServerConfigService {
     }
 
     /**
-     * 读取版本
+     * 逻辑删除服务
+     * <p>
+     * 保留全部配置历史与已发布快照；若仍被未删除下游工具或生效发布引用，拒绝删除并提示引用方。
+     */
+    @Transactional
+    public void delete(long mcpServerId, long revision) {
+        requireServer(mcpServerId);
+        requireNoAnyUsage(mcpServerId);
+
+        McpServerPO server = new McpServerPO();
+        server.setMcpServerId(mcpServerId);
+        server.setRevision(revision);
+        server.setLastUpdaterId(ConfigRules.actor());
+        ConfigRules.requireChanged(servers.softDelete(server), CONFLICT);
+        log.info("MCP服务已逻辑删除，mcpServerId={}", mcpServerId);
+    }
+
+    /**
+     * 只读读取指定历史配置版本
      */
     public McpServerVersionVO readVersion(long mcpServerId, long versionId) {
         return converter.toView(requireVersion(mcpServerId, versionId));
     }
 
     /**
-     * 新建版本草稿
-     * <p>
-     * 每个服务最多一个草稿，并发新建由唯一索引拒绝。
+     * 按版本业务ID只读读取历史版本（供发布快照穿透查看使用）
      */
-    @Transactional
-    public McpServerVersionVO createDraft(long mcpServerId, McpServerDraftDTO request) {
-        requireServer(mcpServerId);
-        validateDraft(request);
-
-        long versionId = insertDraft(mcpServerId, request, ConfigRules.actor());
-        return readVersion(mcpServerId, versionId);
-    }
-
-    /**
-     * 保存版本草稿
-     * <p>
-     * 只更新草稿状态且修订号匹配的版本，已发布版本保持不变。
-     */
-    public McpServerVersionVO saveDraft(long mcpServerId, long versionId, McpServerDraftDTO request) {
-        if (request.getRevision() == null) {
-            throw new BusinessException(ApiCode.BAD_REQUEST, "编辑草稿需要修订号");
+    public McpServerVersionVO readVersionById(long mcpServerVersionId) {
+        McpServerVersionPO version = versions.selectOne(Wrappers.<McpServerVersionPO>lambdaQuery()
+                .eq(McpServerVersionPO::getMcpServerVersionId, mcpServerVersionId));
+        if (version == null) {
+            throw new BusinessException(ApiCode.NOT_FOUND, "MCP 配置版本不存在");
         }
-        requireServer(mcpServerId);
-        validateDraft(request);
-
-        McpServerVersionPO draft = toVersion(mcpServerId, request);
-        draft.setMcpServerVersionId(versionId);
-        draft.setRevision(request.getRevision());
-        draft.setLastUpdaterId(ConfigRules.actor());
-        ConfigRules.requireChanged(versions.updateDraft(draft), CONFLICT);
-        return readVersion(mcpServerId, versionId);
+        return converter.toView(version);
     }
 
     /**
-     * 发布版本
+     * 实时探测连接
      * <p>
-     * 重新校验凭据后把草稿冻结为已发布版本；停用的服务不能发布。
+     * 在事务外使用当前未保存表单参数建立临时连接并列出远程工具。
      */
-    @Transactional
-    public McpServerVersionVO publish(long mcpServerId, long versionId, long revision) {
-        McpServerPO server = requireServer(mcpServerId);
-        if (server.getStatus() != ConfigStatus.ENABLED) {
-            throw new BusinessException(ApiCode.CONFLICT, "停用的服务不能发布，请先启用");
-        }
-        McpServerVersionPO version = requireVersion(mcpServerId, versionId);
-        credentials.requireConfigured(version.getCredentialRef());
+    public McpProbeVO probe(McpServerProbeDTO request) {
+        validateEndpointAndHeaders(request.getEndpoint(), request.getHeaders(), request.getCredentialRef(), true);
 
-        version.setRevision(revision);
-        version.setLastUpdaterId(ConfigRules.actor());
-        ConfigRules.requireChanged(versions.publish(version), CONFLICT);
-        log.info("MCP服务版本已发布，mcpServerId={}，versionNo={}", mcpServerId, version.getVersionNo());
-        return readVersion(mcpServerId, versionId);
-    }
+        McpServerVersionPO temp = new McpServerVersionPO();
+        temp.setTransportType(request.getTransportType());
+        temp.setEndpoint(request.getEndpoint().trim());
+        temp.setCredentialRef(blankToNull(request.getCredentialRef()));
+        temp.setRequestHeaders(converter.toHeaders(request.getHeaders()));
+        temp.setTimeoutMs(request.getTimeoutMs());
 
-    /**
-     * 测试连接
-     * <p>
-     * 按未保存的连接配置建立临时连接并列出远程工具，连接随后关闭；连接失败返回服务不可用及原因。
-     */
-    public McpProbeVO probe(McpServerDraftDTO request) {
-        validateDraft(request);
-        McpConnectionBO connection = connectionOf("probe", toVersion(0L, request));
-
+        McpConnectionBO connection = connectionOf("probe", temp);
         long startedAt = System.nanoTime();
         List<McpRemoteToolBO> tools = discover(connection);
 
@@ -245,72 +268,160 @@ public class McpServerConfigService {
     }
 
     /**
-     * 列出可绑定的服务版本
-     * <p>
-     * 供工具配置选择，只包含启用服务的已发布版本。
+     * 列出可关联的 MCP 服务（启用且最新配置就绪）
      */
     public List<McpServerOptionVO> options() {
         return versions.selectUsableOptions().stream().map(converter::toView).toList();
     }
 
     /**
-     * 发现已发布版本的远程工具
-     * <p>
-     * 工具配置选择远程工具时调用，服务版本须可用。
+     * 发现指定 MCP 服务当前最新配置版本的远程工具
      */
-    public List<McpRemoteToolVO> remoteTools(long mcpServerVersionId) {
-        McpConnectionBO connection = usableConnection(mcpServerVersionId);
+    public List<McpRemoteToolVO> remoteTools(long mcpServerId) {
+        McpConnectionBO connection = usableConnection(mcpServerId);
         return discover(connection).stream().map(converter::toView).toList();
     }
 
     /**
-     * 解析可用连接
+     * 解析 MCP 服务最新配置版本的可用连接
      * <p>
-     * 校验服务版本已发布且服务启用，并以已配置的凭据替换请求头占位符；供工具保存、试运行与运行时装配使用。
+     * 校验服务未删除、已启用且最新配置就绪；供工具关联校验、远程发现和试运行使用。
      */
-    public McpConnectionBO usableConnection(long mcpServerVersionId) {
-        McpServerVersionPO version = versions.selectOne(Wrappers.<McpServerVersionPO>lambdaQuery()
-                .eq(McpServerVersionPO::getMcpServerVersionId, mcpServerVersionId));
-        McpServerPO server = version == null ? null : findServer(version.getMcpServerId());
-        boolean usable = server != null
-                && version.getStatus() == VersionStatus.PUBLISHED
-                && server.getStatus() == ConfigStatus.ENABLED;
-        if (!usable) {
-            throw new BusinessException(ApiCode.BAD_REQUEST, "MCP 服务版本未发布或服务已停用");
-        }
-
+    public McpConnectionBO usableConnection(long mcpServerId) {
+        McpServerPO server = requireUsableServer(mcpServerId);
+        McpServerVersionPO version = requireVersion(mcpServerId, server.getLatestVersionId());
         String clientName = server.getServerCode() + "-v" + version.getVersionNo();
         return connectionOf(clientName, version);
     }
 
     /**
-     * 登记引用前锁定服务
-     * <p>
-     * 以条件更新确认服务仍启用并持有行锁到事务结束，与停用操作串行，避免停用检查遗漏新引用。
+     * 校验 MCP 服务处于未删除、启用且最新配置就绪状态
      */
-    void lockEnabledForReference(long mcpServerVersionId) {
-        McpServerVersionPO version = versions.selectOne(Wrappers.<McpServerVersionPO>lambdaQuery()
-                .eq(McpServerVersionPO::getMcpServerVersionId, mcpServerVersionId));
-        boolean usable = version != null
-                && version.getStatus() == VersionStatus.PUBLISHED
-                && servers.confirmEnabled(version.getMcpServerId()) == 1;
-        if (!usable) {
-            throw new BusinessException(ApiCode.CONFLICT, "MCP 服务版本未发布或服务已停用");
+    public McpServerPO requireUsableServer(long mcpServerId) {
+        McpServerPO server = findActiveServer(mcpServerId);
+        if (server == null) {
+            throw new BusinessException(ApiCode.BAD_REQUEST, "所选 MCP 服务不存在或已删除");
+        }
+        if (server.getStatus() != ConfigStatus.ENABLED) {
+            throw new BusinessException(ApiCode.BAD_REQUEST, "MCP 服务 " + server.getServerName() + " 已停用，不可关联");
+        }
+        if (server.getLatestReadiness() != ConfigReadiness.READY || server.getLatestVersionId() == null) {
+            throw new BusinessException(ApiCode.BAD_REQUEST, "MCP 服务 " + server.getServerName() + " 配置未就绪，不可关联");
+        }
+        return server;
+    }
+
+    /**
+     * 发布事务内复核 MCP 服务仍处于启用且就绪状态
+     */
+    public void lockEnabledReady(long mcpServerId) {
+        if (servers.confirmEnabledReady(mcpServerId) != 1) {
+            McpServerPO server = findServerIncludingDeleted(mcpServerId);
+            String name = server == null ? String.valueOf(mcpServerId) : server.getServerName();
+            throw new BusinessException(ApiCode.CONFLICT, "依赖的 MCP 服务 " + name + " 已停用、删除或未就绪，请刷新后重试");
         }
     }
 
     /**
-     * 服务展示标签
+     * 查询服务展示名称（含已逻辑删除的历史服务）
      */
-    String label(long mcpServerVersionId) {
-        McpServerVersionPO version = versions.selectOne(Wrappers.<McpServerVersionPO>lambdaQuery()
-                .eq(McpServerVersionPO::getMcpServerVersionId, mcpServerVersionId));
-        if (version == null) {
+    public String serverName(long mcpServerId) {
+        McpServerPO server = findServerIncludingDeleted(mcpServerId);
+        return server == null ? "未知服务" : server.getServerName();
+    }
+
+    /**
+     * 服务标签（用于试运行摘要）
+     */
+    public String label(long mcpServerId) {
+        McpServerPO server = findServerIncludingDeleted(mcpServerId);
+        if (server == null) {
             return "未知服务";
         }
-        McpServerPO server = findServer(version.getMcpServerId());
-        String name = server == null ? "未知服务" : server.getServerName();
-        return name + " · v" + version.getVersionNo();
+        return server.getServerName() + " · v" + server.getLatestVersionNo();
+    }
+
+    private void insertWithGeneratedCode(McpServerPO server) {
+        String prefix = ConfigCodeGenerator.mcpServerPrefix();
+        for (int attempt = 0; attempt < MAX_CODE_RETRIES; attempt++) {
+            String latestCode = servers.selectMaxCodeByPrefix(prefix);
+            server.setServerCode(ConfigCodeGenerator.nextCode(prefix, latestCode, attempt));
+            try {
+                servers.insert(server);
+                return;
+            } catch (DuplicateKeyException duplicated) {
+                log.warn("自动生成MCP编码发生并发碰撞，准备递增重试，code={}", server.getServerCode());
+            }
+        }
+        throw new BusinessException(ApiCode.CONFLICT, "生成 MCP 服务编码失败，请重试");
+    }
+
+    private McpServerVersionPO buildVersion(McpServerSaveDTO request) {
+        String endpoint = trimToEmpty(request.getEndpoint());
+        String credentialRef = blankToNull(request.getCredentialRef());
+        List<KeyValueDTO> headers = request.getHeaders() == null ? List.of() : request.getHeaders();
+
+        validateEndpointAndHeaders(endpoint, headers, credentialRef, false);
+
+        boolean ready = request.getTransportType() != null
+                && !endpoint.isBlank()
+                && (!usesCredential(headers) || credentialRef != null);
+
+        McpServerVersionPO version = new McpServerVersionPO();
+        version.setTransportType(request.getTransportType());
+        version.setEndpoint(endpoint);
+        version.setCredentialRef(credentialRef);
+        version.setRequestHeaders(converter.toHeaders(headers));
+        version.setTimeoutMs(request.getTimeoutMs() == null ? 30000 : request.getTimeoutMs());
+        version.setReadiness(ready ? ConfigReadiness.READY : ConfigReadiness.INCOMPLETE);
+        return version;
+    }
+
+    private void validateEndpointAndHeaders(String rawEndpoint, List<KeyValueDTO> headers,
+                                            String rawCredentialRef, boolean strict) {
+        String endpoint = trimToEmpty(rawEndpoint);
+        if (strict && endpoint.isBlank()) {
+            throw new BusinessException(ApiCode.BAD_REQUEST, "请填写连接地址");
+        }
+        if (!endpoint.isBlank()) {
+            URI uri;
+            try {
+                uri = URI.create(endpoint);
+            } catch (IllegalArgumentException invalid) {
+                throw new BusinessException(ApiCode.BAD_REQUEST, "连接地址格式无效");
+            }
+            boolean httpScheme = "http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme());
+            if (!httpScheme || uri.getHost() == null || uri.getRawUserInfo() != null || uri.getRawFragment() != null) {
+                throw new BusinessException(ApiCode.BAD_REQUEST, "连接地址须为 http/https，且不能包含用户信息或 # 片段");
+            }
+        }
+
+        for (KeyValueDTO header : headers) {
+            if (!header.getName().matches("[A-Za-z0-9-]{1,100}")) {
+                throw new BusinessException(ApiCode.BAD_REQUEST, "请求头名称只能包含字母、数字和连字符");
+            }
+            if (FORBIDDEN_HEADERS.contains(header.getName().toLowerCase(Locale.ROOT))) {
+                throw new BusinessException(ApiCode.BAD_REQUEST, "请求头 " + header.getName() + " 由系统维护，不能配置");
+            }
+        }
+
+        String credentialRef = blankToNull(rawCredentialRef);
+        if (strict && usesCredential(headers) && credentialRef == null) {
+            throw new BusinessException(ApiCode.BAD_REQUEST, "请求头使用了 {{credential}}，请选择凭据");
+        }
+        if (credentialRef != null) {
+            credentials.requireConfigured(credentialRef);
+        }
+    }
+
+    private boolean usesCredential(List<KeyValueDTO> headers) {
+        String placeholder = "{{" + HttpToolTemplate.CREDENTIAL + "}}";
+        for (KeyValueDTO header : headers) {
+            if (header.getValue() != null && header.getValue().contains(placeholder)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private List<McpRemoteToolBO> discover(McpConnectionBO connection) {
@@ -324,18 +435,15 @@ public class McpServerConfigService {
         }
     }
 
-    /**
-     * 生成连接参数
-     * <p>
-     * 解析凭据并替换请求头中的凭据占位符；返回值含密钥，只在服务端内存中使用。
-     */
     private McpConnectionBO connectionOf(String clientName, McpServerVersionPO version) {
         String credential = credentials.resolve(version.getCredentialRef());
         Map<String, String> resolvedHeaders = new LinkedHashMap<>();
-        for (KeyValueBO header : version.getRequestHeaders()) {
-            String value = header.getValue().replace("{{" + HttpToolTemplate.CREDENTIAL + "}}",
-                    credential == null ? "" : credential);
-            resolvedHeaders.put(header.getName(), value);
+        if (version.getRequestHeaders() != null) {
+            for (KeyValueBO header : version.getRequestHeaders()) {
+                String value = header.getValue().replace("{{" + HttpToolTemplate.CREDENTIAL + "}}",
+                        credential == null ? "" : credential);
+                resolvedHeaders.put(header.getName(), value);
+            }
         }
 
         McpConnectionBO connection = new McpConnectionBO();
@@ -348,76 +456,26 @@ public class McpServerConfigService {
         return connection;
     }
 
-    private long insertDraft(long mcpServerId, McpServerDraftDTO request, long actorId) {
-        McpServerVersionPO draft = toVersion(mcpServerId, request);
-        draft.setMcpServerVersionId(IdWorker.getId());
-        draft.setVersionNo(versions.nextVersionNo(mcpServerId));
-        draft.setStatus(VersionStatus.DRAFT);
-        draft.setRevision(0L);
-        draft.setCreatorId(actorId);
-        draft.setLastUpdaterId(actorId);
-        try {
-            versions.insert(draft);
-        } catch (DuplicateKeyException duplicated) {
-            throw new BusinessException(ApiCode.CONFLICT, "该服务已有未发布的草稿，请编辑现有草稿");
-        }
-        return draft.getMcpServerVersionId();
-    }
-
-    private McpServerVersionPO toVersion(long mcpServerId, McpServerDraftDTO request) {
-        McpServerVersionPO version = new McpServerVersionPO();
-        version.setMcpServerId(mcpServerId);
-        version.setTransportType(request.getTransportType());
-        version.setEndpoint(request.getEndpoint().trim());
-        version.setCredentialRef(blankToNull(request.getCredentialRef()));
-        version.setRequestHeaders(converter.toHeaders(request.getHeaders()));
-        version.setTimeoutMs(request.getTimeoutMs());
-        return version;
-    }
-
-    /**
-     * 校验连接草稿
-     * <p>
-     * 地址只允许 http/https 且不含用户信息和片段；请求头不能使用系统维护的名称；引用凭据时必须选择已配置的凭据。
-     */
-    private void validateDraft(McpServerDraftDTO request) {
-        URI uri;
-        try {
-            uri = URI.create(request.getEndpoint().trim());
-        } catch (IllegalArgumentException invalid) {
-            throw new BusinessException(ApiCode.BAD_REQUEST, "连接地址格式无效");
-        }
-        boolean httpScheme = "http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme());
-        if (!httpScheme || uri.getHost() == null || uri.getRawUserInfo() != null || uri.getRawFragment() != null) {
-            throw new BusinessException(ApiCode.BAD_REQUEST, "连接地址须为 http/https，且不能包含用户信息或 # 片段");
-        }
-
-        boolean usesCredential = false;
-        for (KeyValueDTO header : request.getHeaders()) {
-            if (!header.getName().matches("[A-Za-z0-9-]{1,100}")) {
-                throw new BusinessException(ApiCode.BAD_REQUEST, "请求头名称只能包含字母、数字和连字符");
-            }
-            if (FORBIDDEN_HEADERS.contains(header.getName().toLowerCase(Locale.ROOT))) {
-                throw new BusinessException(ApiCode.BAD_REQUEST, "请求头 " + header.getName() + " 由系统维护，不能配置");
-            }
-            usesCredential = usesCredential || header.getValue().contains("{{" + HttpToolTemplate.CREDENTIAL + "}}");
-        }
-
-        String credentialRef = blankToNull(request.getCredentialRef());
-        if (usesCredential && credentialRef == null) {
-            throw new BusinessException(ApiCode.BAD_REQUEST, "请求头使用了 {{credential}}，请选择凭据");
-        }
-        credentials.requireConfigured(credentialRef);
-    }
-
-    private void requireNoActiveUsage(long mcpServerId) {
+    private void requireNoActiveUsage(long mcpServerId, String action) {
         List<String> owners = servers.selectUsages(mcpServerId).stream()
                 .filter(ConfigUsageBO::isActive)
                 .map(usage -> usage.getOwnerName() + "（" + usage.getOwnerCode() + "）")
                 .distinct()
                 .toList();
         if (!owners.isEmpty()) {
-            throw new BusinessException(ApiCode.CONFLICT, "以下启用的工具正在使用该服务，请先停用或改用其他服务：" + String.join("、", owners));
+            throw new BusinessException(ApiCode.CONFLICT,
+                    "以下启用的资源正在使用该 MCP 服务，无法" + action + "：" + String.join("、", owners));
+        }
+    }
+
+    private void requireNoAnyUsage(long mcpServerId) {
+        List<String> owners = servers.selectUsages(mcpServerId).stream()
+                .map(usage -> usage.getOwnerName() + "（" + usage.getOwnerCode() + "）")
+                .distinct()
+                .toList();
+        if (!owners.isEmpty()) {
+            throw new BusinessException(ApiCode.CONFLICT,
+                    "以下资源仍引用该 MCP 服务，请先调整关联并重新发布后再删除：" + String.join("、", owners));
         }
     }
 
@@ -430,15 +488,22 @@ public class McpServerConfigService {
     }
 
     private McpServerPO requireServer(long mcpServerId) {
-        McpServerPO server = findServer(mcpServerId);
+        McpServerPO server = findActiveServer(mcpServerId);
         if (server == null) {
             throw new BusinessException(ApiCode.NOT_FOUND, "MCP 服务不存在");
         }
         return server;
     }
 
-    private McpServerPO findServer(long mcpServerId) {
-        return servers.selectOne(Wrappers.<McpServerPO>lambdaQuery().eq(McpServerPO::getMcpServerId, mcpServerId));
+    private McpServerPO findActiveServer(long mcpServerId) {
+        return servers.selectOne(Wrappers.<McpServerPO>lambdaQuery()
+                .eq(McpServerPO::getMcpServerId, mcpServerId)
+                .isNull(McpServerPO::getDeletedAt));
+    }
+
+    private McpServerPO findServerIncludingDeleted(long mcpServerId) {
+        return servers.selectOne(Wrappers.<McpServerPO>lambdaQuery()
+                .eq(McpServerPO::getMcpServerId, mcpServerId));
     }
 
     private McpServerVersionPO requireVersion(long mcpServerId, long versionId) {
@@ -446,12 +511,16 @@ public class McpServerConfigService {
                 .eq(McpServerVersionPO::getMcpServerId, mcpServerId)
                 .eq(McpServerVersionPO::getMcpServerVersionId, versionId));
         if (version == null) {
-            throw new BusinessException(ApiCode.NOT_FOUND, "MCP 服务版本不存在");
+            throw new BusinessException(ApiCode.NOT_FOUND, "MCP 服务配置版本不存在");
         }
         return version;
     }
 
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static String trimToEmpty(String value) {
+        return value == null ? "" : value.trim();
     }
 }

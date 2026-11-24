@@ -25,7 +25,7 @@ public class ToolTestRunDTO {
      */
     @NotNull
     @Valid
-    private ToolDraftDTO draft;
+    private ToolSaveDTO definition;
 
     /**
      * 本次调用参数

@@ -1,25 +1,29 @@
 <script setup lang="ts">
+import { ElButton, ElInput } from 'element-plus'
 import type { KeyValue } from '../../model/agentConfig'
 
 /**
  * 键值编辑器：用于请求头等名称/值成对的配置，支持增删行和数量上限。
  */
 const rows = defineModel<KeyValue[]>({ required: true })
-const props = withDefaults(defineProps<{
-  readOnly?: boolean
-  max?: number
-  namePlaceholder?: string
-  valuePlaceholder?: string
-  addLabel?: string
-  emptyText?: string
-}>(), {
-  readOnly: false,
-  max: 20,
-  namePlaceholder: '名称',
-  valuePlaceholder: '值',
-  addLabel: '添加',
-  emptyText: '暂未配置',
-})
+const props = withDefaults(
+  defineProps<{
+    readOnly?: boolean
+    max?: number
+    namePlaceholder?: string
+    valuePlaceholder?: string
+    addLabel?: string
+    emptyText?: string
+  }>(),
+  {
+    readOnly: false,
+    max: 20,
+    namePlaceholder: '名称',
+    valuePlaceholder: '值',
+    addLabel: '添加',
+    emptyText: '暂未配置',
+  },
+)
 
 function add() {
   rows.value = [...rows.value, { name: '', value: '' }]
@@ -30,7 +34,9 @@ function remove(index: number) {
 }
 
 function update(index: number, key: keyof KeyValue, value: string) {
-  rows.value = rows.value.map((row, position) => (position === index ? { ...row, [key]: value } : row))
+  rows.value = rows.value.map((row, position) =>
+    position === index ? { ...row, [key]: value } : row,
+  )
 }
 </script>
 
@@ -38,28 +44,42 @@ function update(index: number, key: keyof KeyValue, value: string) {
   <div class="management-kv">
     <p v-if="!rows.length" class="management-kv-empty">{{ emptyText }}</p>
     <div v-for="(row, index) in rows" :key="index" class="management-kv-row">
-      <input
-        :value="row.name"
+      <ElInput
+        :model-value="row.name"
         :placeholder="namePlaceholder"
         :readonly="readOnly"
         :aria-label="`第 ${index + 1} 行名称`"
         maxlength="128"
-        @input="update(index, 'name', ($event.target as HTMLInputElement).value)"
+        @input="update(index, 'name', $event)"
       />
-      <input
-        :value="row.value"
+      <ElInput
+        :model-value="row.value"
         :placeholder="valuePlaceholder"
         :readonly="readOnly"
         :aria-label="`第 ${index + 1} 行值`"
         maxlength="2048"
-        @input="update(index, 'value', ($event.target as HTMLInputElement).value)"
+        @input="update(index, 'value', $event)"
       />
-      <button v-if="!readOnly" type="button" class="management-link management-danger" @click="remove(index)">删除</button>
+      <ElButton
+        link
+        type="danger"
+        plain
+        v-if="!readOnly"
+        native-type="button"
+        class="management-link management-danger"
+        @click="remove(index)"
+        >删除</ElButton
+      >
     </div>
     <div v-if="!readOnly">
-      <button type="button" class="management-btn-sm" :disabled="rows.length >= props.max" @click="add">
+      <ElButton
+        native-type="button"
+        class="management-btn-sm"
+        :disabled="rows.length >= props.max"
+        @click="add"
+      >
         {{ addLabel }}
-      </button>
+      </ElButton>
     </div>
   </div>
 </template>

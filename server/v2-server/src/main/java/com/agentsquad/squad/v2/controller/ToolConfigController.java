@@ -1,12 +1,18 @@
 package com.agentsquad.squad.v2.controller;
 
 import com.agentsquad.squad.common.model.ApiResult;
-import com.agentsquad.squad.v2.dto.AgentRevisionDTO;
-import com.agentsquad.squad.v2.dto.ToolCreateDTO;
-import com.agentsquad.squad.v2.dto.ToolDraftDTO;
+import com.agentsquad.squad.v2.dto.ConfigRevisionDTO;
+import com.agentsquad.squad.v2.dto.ToolSaveDTO;
+import com.agentsquad.squad.v2.dto.ToolTestRunDTO;
+import com.agentsquad.squad.v2.enums.ConfigStatus;
+import com.agentsquad.squad.v2.service.CredentialService;
 import com.agentsquad.squad.v2.service.McpServerConfigService;
 import com.agentsquad.squad.v2.service.ToolConfigService;
-import com.agentsquad.squad.v2.vo.McpServerVersionOptionVO;
+import com.agentsquad.squad.v2.vo.BuiltinToolOptionVO;
+import com.agentsquad.squad.v2.vo.McpRemoteToolVO;
+import com.agentsquad.squad.v2.vo.McpServerOptionVO;
+import com.agentsquad.squad.v2.vo.ToolDetailVO;
+import com.agentsquad.squad.v2.vo.ToolTestRunVO;
 import com.agentsquad.squad.v2.vo.ToolVO;
 import com.agentsquad.squad.v2.vo.ToolVersionVO;
 import jakarta.annotation.Resource;
@@ -22,9 +28,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 工具管理接口
+ * 工具配置接口
  * <p>
- * 提供目录查询、草稿维护和版本发布。
+ * 维护内置、HTTP 与 MCP 三类工具目录、配置版本历史、启停、逻辑删除与试运行；工具不允许单独发布。
  */
 @RestController
 @RequestMapping("/api/v2/agents/management/tools")
@@ -35,16 +41,11 @@ public class ToolConfigController {
     @Resource
     private McpServerConfigService mcpServers;
 
-    /**
-     * 查询连接选项
-     */
-    @GetMapping("/mcp-options")
-    public ApiResult<List<McpServerVersionOptionVO>> mcpOptions() {
-        return ApiResult.success(mcpServers.options());
-    }
+    @Resource
+    private CredentialService credentials;
 
     /**
-     * 查询目录
+     * 查询工具列表
      */
     @GetMapping
     public ApiResult<List<ToolVO>> list() {
@@ -52,44 +53,99 @@ public class ToolConfigController {
     }
 
     /**
-     * 新增目录
+     * 新增工具
      */
     @PostMapping
-    public ApiResult<ToolVO> create(@Valid @RequestBody ToolCreateDTO request) {
+    public ApiResult<ToolDetailVO> create(@Valid @RequestBody ToolSaveDTO request) {
         return ApiResult.success(service.create(request));
     }
 
     /**
-     * 查询版本
+     * 试运行工具
      */
-    @GetMapping("/{resourceId}/versions")
-    public ApiResult<List<ToolVersionVO>> versions(@PathVariable long resourceId) {
-        return ApiResult.success(service.listVersions(resourceId));
+    @PostMapping("/test-run")
+    public ApiResult<ToolTestRunVO> testRun(@Valid @RequestBody ToolTestRunDTO request) {
+        return ApiResult.success(service.testRun(request));
     }
 
     /**
-     * 创建草稿
+     * 查询内置实现
      */
-    @PostMapping("/{resourceId}/versions")
-    public ApiResult<ToolVersionVO> createDraft(@PathVariable long resourceId, @Valid @RequestBody ToolDraftDTO request) {
-        return ApiResult.success(service.saveDraft(resourceId, null, request));
+    @GetMapping("/builtin-options")
+    public ApiResult<List<BuiltinToolOptionVO>> builtinOptions() {
+        return ApiResult.success(service.builtinOptions());
     }
 
     /**
-     * 保存草稿
+     * 查询可选 MCP 服务（仅启用且就绪）
      */
-    @PutMapping("/{resourceId}/versions/{versionId}")
-    public ApiResult<ToolVersionVO> saveDraft(@PathVariable long resourceId, @PathVariable long versionId,
-                                              @Valid @RequestBody ToolDraftDTO request) {
-        return ApiResult.success(service.saveDraft(resourceId, versionId, request));
+    @GetMapping("/mcp-options")
+    public ApiResult<List<McpServerOptionVO>> mcpOptions() {
+        return ApiResult.success(mcpServers.options());
     }
 
     /**
-     * 发布版本
+     * 发现指定 MCP 服务当前配置版本的远程工具
      */
-    @PostMapping("/{resourceId}/versions/{versionId}/publish")
-    public ApiResult<ToolVersionVO> publish(@PathVariable long resourceId, @PathVariable long versionId,
-                                            @Valid @RequestBody AgentRevisionDTO request) {
-        return ApiResult.success(service.publish(resourceId, versionId, request.getRevision()));
+    @GetMapping("/mcp-options/{mcpServerId}/remote-tools")
+    public ApiResult<List<McpRemoteToolVO>> remoteTools(@PathVariable long mcpServerId) {
+        return ApiResult.success(mcpServers.remoteTools(mcpServerId));
+    }
+
+    /**
+     * 查询凭据引用
+     */
+    @GetMapping("/credential-options")
+    public ApiResult<List<String>> credentialOptions() {
+        return ApiResult.success(credentials.names());
+    }
+
+    /**
+     * 查询工具详情
+     */
+    @GetMapping("/{toolId}")
+    public ApiResult<ToolDetailVO> detail(@PathVariable long toolId) {
+        return ApiResult.success(service.detail(toolId));
+    }
+
+    /**
+     * 保存工具改动（自动生成新配置版本）
+     */
+    @PutMapping("/{toolId}")
+    public ApiResult<ToolDetailVO> save(@PathVariable long toolId, @Valid @RequestBody ToolSaveDTO request) {
+        return ApiResult.success(service.save(toolId, request));
+    }
+
+    /**
+     * 启用工具
+     */
+    @PostMapping("/{toolId}/enable")
+    public ApiResult<ToolVO> enable(@PathVariable long toolId, @Valid @RequestBody ConfigRevisionDTO request) {
+        return ApiResult.success(service.changeStatus(toolId, ConfigStatus.ENABLED, request.getRevision()));
+    }
+
+    /**
+     * 停用工具
+     */
+    @PostMapping("/{toolId}/disable")
+    public ApiResult<ToolVO> disable(@PathVariable long toolId, @Valid @RequestBody ConfigRevisionDTO request) {
+        return ApiResult.success(service.changeStatus(toolId, ConfigStatus.DISABLED, request.getRevision()));
+    }
+
+    /**
+     * 逻辑删除工具
+     */
+    @PostMapping("/{toolId}/delete")
+    public ApiResult<Void> delete(@PathVariable long toolId, @Valid @RequestBody ConfigRevisionDTO request) {
+        service.delete(toolId, request.getRevision());
+        return ApiResult.success(null);
+    }
+
+    /**
+     * 只读查看历史配置版本
+     */
+    @GetMapping("/{toolId}/versions/{versionId}")
+    public ApiResult<ToolVersionVO> version(@PathVariable long toolId, @PathVariable long versionId) {
+        return ApiResult.success(service.readVersion(toolId, versionId));
     }
 }
