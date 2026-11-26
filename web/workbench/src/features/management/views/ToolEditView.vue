@@ -4,6 +4,7 @@ import {
   ElButton,
   ElCollapse,
   ElCollapseItem,
+  ElDrawer,
   ElInput,
   ElInputNumber,
   ElOption,
@@ -56,10 +57,12 @@ import {
 } from '../model/agentConfigLabels'
 import { tagType } from '../model/elementTheme'
 import { fieldsFromSchema, schemaFromFields, type ParamField } from '../model/toolSchema'
+import { parseCurlCommand } from '../model/curlParser'
 import { useEditorState } from '../composables/useEditorState'
 import ManagementShell from '../components/ManagementShell.vue'
 import ManagementDialog from '../components/ManagementDialog.vue'
 import SteppedEditorLayout, { type EditorStepItem } from '../components/agent-config/SteppedEditorLayout.vue'
+import ConfigReadonlyCards from '../components/agent-config/ConfigReadonlyCards.vue'
 import KeyValueEditor from '../components/agent-config/KeyValueEditor.vue'
 import ParameterTable from '../components/agent-config/ParameterTable.vue'
 import TestRunPanel from '../components/agent-config/TestRunPanel.vue'
@@ -81,6 +84,7 @@ const toolId = computed(() => {
 const isCreate = computed(() => !toolId.value)
 
 const step = ref('basic')
+const readonlyView = ref(false)
 const detail = ref<ToolDetail | null>(null)
 const builtins = ref<BuiltinToolOption[]>([])
 const mcpOptions = ref<McpServerOption[]>([])
@@ -94,6 +98,11 @@ const error = ref('')
 const notice = ref('')
 const advancedOpen = ref<string[]>([])
 const inspectedVersion = ref<ToolVersion | null>(null)
+const showCurlDialog = ref(false)
+const curlInput = ref('')
+const curlError = ref('')
+const showLlmPreview = ref(false)
+const copiedContract = ref(false)
 
 function defaultHttpSpec(): HttpToolSpec {
   return { method: 'GET', url: '', headers: [], bodyTemplate: null, credentialRef: null, timeoutMs: 15000, resultPointer: null }
@@ -120,6 +129,54 @@ const currentSchema = computed<JsonSchema>(() =>
   form.value.toolType === 'HTTP' ? schemaFromFields(form.value.parameters) : form.value.inputSchema,
 )
 const showsBody = computed(() => bodyMethods.includes(form.value.httpSpec.method))
+
+/** AgentScope 注册到 Toolkit 后实际暴露给大模型的工具契约预览 */
+const llmContractJson = computed(() =>
+  JSON.stringify(
+    {
+      type: 'function',
+      function: {
+        name: form.value.exposedName.trim() || '<未填写模型工具名>',
+        description: form.value.description.trim() || '<未填写调用说明>',
+        parameters: currentSchema.value,
+      },
+    },
+    null,
+    2,
+  ),
+)
+
+function applyCurlImport() {
+  curlError.value = ''
+  try {
+    const parsed = parseCurlCommand(curlInput.value)
+    form.value.httpSpec.method = parsed.method
+    form.value.httpSpec.url = parsed.url
+    form.value.httpSpec.headers = parsed.headers
+    form.value.httpSpec.bodyTemplate = parsed.bodyTemplate
+    if (parsed.inferredParams.length) {
+      form.value.parameters = parsed.inferredParams
+    }
+    form.value.readOnly = parsed.method === 'GET'
+    showCurlDialog.value = false
+    curlInput.value = ''
+    notice.value = '已从 cURL 自动解析填充请求方法、地址、请求头与参数，请核对后保存。'
+  } catch (reason) {
+    curlError.value = reason instanceof Error ? reason.message : String(reason)
+  }
+}
+
+async function copyContract() {
+  try {
+    await navigator.clipboard.writeText(llmContractJson.value)
+    copiedContract.value = true
+    setTimeout(() => {
+      copiedContract.value = false
+    }, 1800)
+  } catch {
+    // 忽略无剪贴板权限环境
+  }
+}
 
 const steps = computed<EditorStepItem[]>(() => [
   { key: 'basic', no: 1, label: '基础信息' },
@@ -288,6 +345,7 @@ async function load() {
     credentials.value = credList
     if (toolId.value) {
       applyDetail(await getTool(toolId.value))
+      if (!canEdit.value) readonlyView.value = true
     } else {
       resetDirty()
     }
@@ -307,6 +365,7 @@ onMounted(() => {
   <ManagementShell>
     <SteppedEditorLayout
       v-model:step="step"
+      v-model:readonly-view="readonlyView"
       back-path="/management/tools"
       back-label="工具列表"
       :title="title"
@@ -314,10 +373,27 @@ onMounted(() => {
       :subtitle="detail ? `最近更新：${formatTime(detail.tool.lastUpdateTime)}` : '编码格式：TOOL-H-yyyyMMdd-001'"
       :steps="steps"
       :can-save="canEdit"
+      :can-toggle-readonly="!isCreate && Boolean(detail?.latestVersion)"
       :saving="busy || loading"
       :save-label="dirty ? '保存新版本' : '保存'"
       @save="save"
     >
+      <template #extra-actions>
+        <ElButton
+          v-if="canEdit && !readonlyView && step === 'impl' && form.toolType === 'HTTP'"
+          native-type="button"
+          @click="showCurlDialog = true"
+        >
+          从 cURL 导入
+        </ElButton>
+      </template>
+
+      <template #readonly>
+        <ConfigReadonlyCards
+          v-if="detail?.latestVersion"
+          :tool="{ summary: detail.tool, version: detail.latestVersion }"
+        />
+      </template>
       <template #status>
         <ElTag class="management-tag" type="info">{{ toolTypeLabels[form.toolType] }}</ElTag>
         <ElTag v-if="detail" class="management-tag" :class="configStatusTones[detail.tool.status]" :type="tagType(configStatusTones[detail.tool.status])">
@@ -425,7 +501,12 @@ onMounted(() => {
         </div>
 
         <div class="studio-subblock">
-          <span class="studio-subblock-title">模型可见定义</span>
+          <div class="studio-subblock-head">
+            <span class="studio-subblock-title">模型可见定义</span>
+            <button type="button" class="management-link-btn" @click="showLlmPreview = !showLlmPreview">
+              {{ showLlmPreview ? '收起大模型视角契约' : '预览大模型视角 JSON' }}
+            </button>
+          </div>
           <div class="management-form-grid">
             <label class="management-field">
               <span class="management-field-label">模型工具名（1～64 位字母数字下划线）</span>
@@ -443,6 +524,16 @@ onMounted(() => {
           <div v-if="form.toolType !== 'HTTP'" class="management-field is-full">
             <span class="management-field-label">参数定义（只读，来自真实实现）</span>
             <ParameterTable v-model="form.parameters" :read-only="true" :schema="currentSchema" />
+          </div>
+
+          <div v-if="showLlmPreview" class="prompt-preview-box">
+            <div class="studio-subblock-head" style="margin-bottom: 6px">
+              <span class="prompt-preview-title" style="margin: 0">AgentScope 注册给大模型的 Function Schema 契约</span>
+              <ElButton link type="primary" native-type="button" @click="copyContract">
+                {{ copiedContract ? '已复制' : '复制 JSON' }}
+              </ElButton>
+            </div>
+            <pre class="prompt-preview-content">{{ llmContractJson }}</pre>
           </div>
         </div>
 
@@ -491,22 +582,42 @@ onMounted(() => {
     </SteppedEditorLayout>
 
     <ManagementDialog
-      v-if="inspectedVersion"
-      :title="`只读查看配置版本 ${versionLabel(inspectedVersion.versionNo)}`"
+      v-if="showCurlDialog"
+      title="从 cURL 快速解析导入 HTTP 工具"
       wide
       :busy="false"
       :dirty="false"
+      @close="showCurlDialog = false"
+    >
+      <p class="management-help">
+        粘贴业务接口的 <code>curl</code> 命令（支持 <code>-X</code>、<code>-H</code>、<code>-d</code> / <code>--json</code>），系统将自动提取请求方法、URL、请求头，并将 JSON 请求体字段转为参数契约。
+      </p>
+      <ElAlert v-if="curlError" type="error" :title="curlError" show-icon :closable="false" />
+      <ElInput
+        v-model="curlInput"
+        type="textarea"
+        :rows="6"
+        placeholder="curl -X POST 'https://api.example.com/orders/query' -H 'Content-Type: application/json' -d '{&quot;order_id&quot;: &quot;ORD1001&quot;}'"
+      />
+      <template #actions>
+        <ElButton type="primary" native-type="button" class="management-primary" @click="applyCurlImport">
+          解析并填入表单
+        </ElButton>
+      </template>
+    </ManagementDialog>
+
+    <ElDrawer
+      :model-value="Boolean(inspectedVersion)"
+      :title="inspectedVersion ? `配置版本详情 · ${versionLabel(inspectedVersion.versionNo)}` : ''"
+      size="min(740px, 92vw)"
+      append-to-body
+      destroy-on-close
       @close="inspectedVersion = null"
     >
-      <div class="management-form-grid">
-        <div class="management-field"><span class="management-field-label">就绪状态</span><span>{{ readinessLabels[inspectedVersion.readiness] }}</span></div>
-        <div class="management-field"><span class="management-field-label">模型工具名</span><span class="management-code">{{ inspectedVersion.exposedName || '—' }}</span></div>
-        <div class="management-field is-full"><span class="management-field-label">调用说明</span><span>{{ inspectedVersion.description || '—' }}</span></div>
-        <div v-if="inspectedVersion.mcpServerName" class="management-field is-full">
-          <span class="management-field-label">关联 MCP</span>
-          <span>{{ inspectedVersion.mcpServerName }} / {{ inspectedVersion.remoteToolName || '—' }}</span>
-        </div>
-      </div>
-    </ManagementDialog>
+      <ConfigReadonlyCards
+        v-if="inspectedVersion"
+        :tool="{ summary: detail?.tool, version: inspectedVersion }"
+      />
+    </ElDrawer>
   </ManagementShell>
 </template>

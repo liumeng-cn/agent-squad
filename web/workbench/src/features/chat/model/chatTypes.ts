@@ -97,8 +97,18 @@ export interface ChatAnswer {
   requestId: string
   answer: string
 }
+export interface ChatAgentOption {
+  agentCode: string
+  agentName: string
+  displayName: string
+  description: string
+  releaseNo: number | null
+  standalone: boolean
+  builtIn: boolean
+}
 export interface SubmitChatInput {
   convId: string
+  agentCode?: string
   interactionId: string
   observedTurnId?: string
   message: string

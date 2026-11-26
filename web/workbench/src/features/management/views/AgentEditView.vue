@@ -4,6 +4,7 @@ import {
   ElButton,
   ElCollapse,
   ElCollapseItem,
+  ElDrawer,
   ElInput,
   ElInputNumber,
   ElRadioButton,
@@ -19,9 +20,6 @@ import { useManagementStore } from '../stores/management'
 import {
   createAgent,
   getAgent,
-  getAgentRelease,
-  getAgentReleaseSubagent,
-  getAgentReleaseTool,
   getAgentVersion,
   listAgentToolOptions,
   listSubagentOptions,
@@ -30,10 +28,7 @@ import {
 import type {
   AgentDelegationDraft,
   AgentDetail,
-  AgentReleaseDetail,
-  AgentReleaseSubagentDetail,
   AgentReleaseSummary,
-  AgentReleaseToolDetail,
   AgentType,
   AgentVersion,
   PromptSections,
@@ -63,8 +58,9 @@ import { delegationCard, duplicatedNames, toolCard } from '../model/agentBinding
 import { useEditorState } from '../composables/useEditorState'
 import { confirmManagement } from '../components/confirmManagement'
 import ManagementShell from '../components/ManagementShell.vue'
-import ManagementDialog from '../components/ManagementDialog.vue'
 import SteppedEditorLayout, { type EditorStepItem } from '../components/agent-config/SteppedEditorLayout.vue'
+import ConfigReadonlyCards from '../components/agent-config/ConfigReadonlyCards.vue'
+import ReleaseInspectorDrawer from '../components/agent-config/ReleaseInspectorDrawer.vue'
 import PromptSectionsEditor from '../components/agent-config/PromptSectionsEditor.vue'
 import ToolBindingCard from '../components/agent-config/ToolBindingCard.vue'
 import ToolPickerDialog from '../components/agent-config/ToolPickerDialog.vue'
@@ -88,6 +84,7 @@ const agentId = computed(() => {
 const isCreate = computed(() => !agentId.value)
 
 const step = ref('basic')
+const readonlyView = ref(false)
 const detail = ref<AgentDetail | null>(null)
 const toolOptions = ref<ToolOption[]>([])
 const subagentOptions = ref<SubagentOption[]>([])
@@ -100,9 +97,7 @@ const showToolPicker = ref(false)
 const showSubPicker = ref(false)
 
 const inspectedVersion = ref<AgentVersion | null>(null)
-const inspectedRelease = ref<AgentReleaseDetail | null>(null)
-const inspectedReleaseSub = ref<AgentReleaseSubagentDetail | null>(null)
-const inspectedReleaseTool = ref<AgentReleaseToolDetail | null>(null)
+const inspectingReleaseId = ref<string | null>(null)
 
 const initialType: AgentType = route.query.type === 'SUB_AGENT' ? 'SUB_AGENT' : 'MASTER'
 const form = ref({
@@ -128,7 +123,7 @@ const steps = computed<EditorStepItem[]>(() => [
     key: 'abilities',
     no: 3,
     label: isMaster.value ? '工具与 Sub' : '工具绑定',
-    badge: form.value.toolIds.length + (isMaster.value ? form.value.subagents.length : 0) || '',
+    badge: form.value.toolIds.length + (isMaster.value ? form.value.subagents.length : 0) || '选配',
   },
   {
     key: 'history',
@@ -308,40 +303,8 @@ async function inspectVersion(versionId: string) {
   }
 }
 
-async function inspectRelease(releaseId: string) {
-  if (!agentId.value) return
-  busy.value = true
-  try {
-    inspectedRelease.value = await getAgentRelease(agentId.value, releaseId)
-  } catch (reason) {
-    error.value = errorMessage(reason)
-  } finally {
-    busy.value = false
-  }
-}
-
-async function openReleaseSub(subagentId: string) {
-  if (!agentId.value || !inspectedRelease.value) return
-  busy.value = true
-  try {
-    inspectedReleaseSub.value = await getAgentReleaseSubagent(agentId.value, inspectedRelease.value.releaseId, subagentId)
-  } catch (reason) {
-    error.value = errorMessage(reason)
-  } finally {
-    busy.value = false
-  }
-}
-
-async function openReleaseTool(toolId: string) {
-  if (!agentId.value || !inspectedRelease.value) return
-  busy.value = true
-  try {
-    inspectedReleaseTool.value = await getAgentReleaseTool(agentId.value, inspectedRelease.value.releaseId, toolId)
-  } catch (reason) {
-    error.value = errorMessage(reason)
-  } finally {
-    busy.value = false
-  }
+function inspectRelease(releaseId: string) {
+  inspectingReleaseId.value = releaseId
 }
 
 async function load() {
@@ -353,6 +316,7 @@ async function load() {
     subagentOptions.value = subs
     if (agentId.value) {
       applyDetail(await getAgent(agentId.value))
+      if (!canEdit.value) readonlyView.value = true
     } else {
       resetDirty()
     }
@@ -378,6 +342,7 @@ onMounted(() => {
   <ManagementShell>
     <SteppedEditorLayout
       v-model:step="step"
+      v-model:readonly-view="readonlyView"
       back-path="/management/agents"
       back-label="Agent 列表"
       :title="title"
@@ -385,6 +350,7 @@ onMounted(() => {
       :subtitle="detail ? `最近更新：${formatTime(detail.agent.lastUpdateTime)}` : '编码格式：AGT-M-yyyyMMdd-001'"
       :steps="steps"
       :can-save="canEdit"
+      :can-toggle-readonly="!isCreate && Boolean(detail?.latestVersion)"
       :saving="busy || loading"
       :save-label="dirty ? '保存新版本' : '保存'"
       @save="save"
@@ -412,6 +378,23 @@ onMounted(() => {
       <template #step-desc>
         <span v-if="isMaster">保存仅新增配置版本，不影响线上运行；发布请在 Agent 列表卡片执行。</span>
         <span v-else>Sub 聚焦单一职责，保存后供 Master 关联，不单独发布。</span>
+      </template>
+
+      <template #extra-actions>
+        <ElButton
+          v-if="isMaster && detail?.agent.currentReleaseId"
+          native-type="button"
+          @click="inspectRelease(detail.agent.currentReleaseId)"
+        >
+          生效快照 #{{ detail.agent.currentReleaseNo }}
+        </ElButton>
+      </template>
+
+      <template #readonly>
+        <ConfigReadonlyCards
+          v-if="detail?.latestVersion"
+          :agent="{ summary: detail.agent, version: detail.latestVersion }"
+        />
       </template>
 
       <template #messages>
@@ -464,6 +447,11 @@ onMounted(() => {
 
       <!-- 步骤 3：工具与 Sub -->
       <div v-else-if="step === 'abilities'" class="studio-canvas-body">
+        <div v-if="isMaster && !form.toolIds.length && !form.subagents.length" class="ro-standalone-banner">
+          <strong>支持零组件独立对话运行</strong>
+          <span>工具与子 Agent 均为可选项。不挂载任何组件时，Master 只需完成核心提示词即可保存就绪并直接发布运行。</span>
+        </div>
+
         <div class="studio-subblock">
           <div class="studio-subblock-head">
             <span class="studio-subblock-title">工具绑定（{{ form.toolIds.length }}）</span>
@@ -586,96 +574,25 @@ onMounted(() => {
       @add="addSubagents"
     />
 
-    <ManagementDialog
-      v-if="inspectedVersion"
-      :title="`只读查看配置版本 ${versionLabel(inspectedVersion.versionNo)}`"
-      wide
-      :busy="false"
-      :dirty="false"
+    <ElDrawer
+      :model-value="Boolean(inspectedVersion)"
+      :title="inspectedVersion ? `配置版本详情 · ${versionLabel(inspectedVersion.versionNo)}` : ''"
+      size="min(780px, 92vw)"
+      append-to-body
+      destroy-on-close
       @close="inspectedVersion = null"
     >
-      <div class="management-form-grid">
-        <div class="management-field"><span class="management-field-label">就绪状态</span><span>{{ readinessLabels[inspectedVersion.readiness] }}</span></div>
-        <div class="management-field"><span class="management-field-label">保存时间</span><span>{{ formatTime(inspectedVersion.lastUpdateTime) }}</span></div>
-        <div class="management-field is-full"><span class="management-field-label">职责描述</span><span>{{ inspectedVersion.description || '—' }}</span></div>
-        <div class="management-field is-full">
-          <span class="management-field-label">拼装后的完整系统提示词</span>
-          <pre class="prompt-preview-content">{{ inspectedVersion.systemPrompt || '—' }}</pre>
-        </div>
-      </div>
-    </ManagementDialog>
+      <ConfigReadonlyCards
+        v-if="inspectedVersion"
+        :agent="{ summary: detail?.agent, version: inspectedVersion, agentType: form.agentType }"
+      />
+    </ElDrawer>
 
-    <ManagementDialog
-      v-if="inspectedRelease"
-      :title="`Release #${inspectedRelease.releaseNo}（定格配置 ${versionLabel(inspectedRelease.masterVersionNo)}）`"
-      wide
-      :busy="false"
-      :dirty="false"
-      @close="inspectedRelease = null"
-    >
-      <p class="management-help">
-        发布时间：{{ formatTime(inspectedRelease.publishedAt) }}；点击下方绑定的 Sub 或工具，将沿本次发布快照定格的版本逐层只读查看。
-      </p>
-      <div class="management-field is-full" style="margin-bottom: 12px">
-        <span class="management-field-label">定格的系统提示词</span>
-        <pre class="prompt-preview-content">{{ inspectedRelease.systemPrompt || '—' }}</pre>
-      </div>
-      <div class="management-field is-full" style="margin-bottom: 12px">
-        <span class="management-field-label">定格的直接工具（{{ inspectedRelease.tools.length }}）</span>
-        <div v-for="t in inspectedRelease.tools" :key="t.toolId" class="management-actions" style="margin-top: 6px">
-          <span>{{ t.toolName }}（{{ t.displayAlias || t.toolName }} · {{ versionLabel(t.versionNo) }}）</span>
-          <ElButton link type="primary" native-type="button" @click="openReleaseTool(t.toolId)">查看定格工具</ElButton>
-        </div>
-      </div>
-      <div class="management-field is-full">
-        <span class="management-field-label">定格的 Sub 委派（{{ inspectedRelease.subagents.length }}）</span>
-        <div v-for="s in inspectedRelease.subagents" :key="s.subagentId" class="management-actions" style="margin-top: 6px">
-          <span>{{ s.subagentName }}（委派名 {{ s.delegationName }} · {{ versionLabel(s.versionNo) }}）</span>
-          <ElButton link type="primary" native-type="button" @click="openReleaseSub(s.subagentId)">查看定格 Sub</ElButton>
-        </div>
-      </div>
-    </ManagementDialog>
-
-    <ManagementDialog
-      v-if="inspectedReleaseSub"
-      :title="`定格 Sub：${inspectedReleaseSub.subagentName}（Release #${inspectedReleaseSub.releaseNo} · ${versionLabel(inspectedReleaseSub.versionNo)}）`"
-      wide
-      :busy="false"
-      :dirty="false"
-      @close="inspectedReleaseSub = null"
-    >
-      <div class="management-field is-full" style="margin-bottom: 10px">
-        <span class="management-field-label">定格的系统提示词</span>
-        <pre class="prompt-preview-content">{{ inspectedReleaseSub.systemPrompt || '—' }}</pre>
-      </div>
-      <div class="management-field is-full">
-        <span class="management-field-label">该 Sub 定格的工具（{{ inspectedReleaseSub.tools.length }}）</span>
-        <div v-for="t in inspectedReleaseSub.tools" :key="t.toolId" class="management-actions" style="margin-top: 6px">
-          <span>{{ t.toolName }}（{{ versionLabel(t.versionNo) }}）</span>
-          <ElButton link type="primary" native-type="button" @click="openReleaseTool(t.toolId)">查看定格工具</ElButton>
-        </div>
-      </div>
-    </ManagementDialog>
-
-    <ManagementDialog
-      v-if="inspectedReleaseTool"
-      :title="`定格工具：${inspectedReleaseTool.toolName}（Release #${inspectedReleaseTool.releaseNo} · ${versionLabel(inspectedReleaseTool.toolVersion.versionNo)}）`"
-      wide
-      :busy="false"
-      :dirty="false"
-      @close="inspectedReleaseTool = null"
-    >
-      <div class="management-form-grid">
-        <div class="management-field"><span class="management-field-label">模型工具名</span><span class="management-code">{{ inspectedReleaseTool.toolVersion.exposedName }}</span></div>
-        <div class="management-field"><span class="management-field-label">前端展示别称</span><span>{{ inspectedReleaseTool.displayAlias || '—' }}</span></div>
-        <div class="management-field is-full"><span class="management-field-label">调用说明</span><span>{{ inspectedReleaseTool.toolVersion.description || '—' }}</span></div>
-        <template v-if="inspectedReleaseTool.mcpVersion">
-          <div class="management-field is-full">
-            <span class="management-field-label">定格的 MCP 服务与连接地址</span>
-            <span>{{ inspectedReleaseTool.mcpServerName }}（{{ versionLabel(inspectedReleaseTool.mcpVersion.versionNo) }}）— <span class="management-code">{{ inspectedReleaseTool.mcpVersion.endpoint }}</span></span>
-          </div>
-        </template>
-      </div>
-    </ManagementDialog>
+    <ReleaseInspectorDrawer
+      v-if="agentId && inspectingReleaseId"
+      :agent-id="agentId"
+      :release-id="inspectingReleaseId"
+      @close="inspectingReleaseId = null"
+    />
   </ManagementShell>
 </template>

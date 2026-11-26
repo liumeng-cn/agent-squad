@@ -49,6 +49,15 @@ const kindLabels: Record<AgentPublishDependency['resourceKind'], string> = {
       </ul>
     </ElAlert>
 
+    <ElAlert
+      v-if="preview.publishable && preview.dependencies.length === 1"
+      type="info"
+      :closable="false"
+      show-icon
+      title="独立对话模式：当前 Master 未挂载外部工具或子 Agent，发布后将直接基于系统提示词独立对话运行。"
+      style="margin-bottom: 12px"
+    />
+
     <div class="management-table-wrap">
       <ElTable :data="preview.dependencies" stripe style="width: 100%" empty-text="无依赖项">
         <!-- @vue-generic {AgentPublishDependency} -->

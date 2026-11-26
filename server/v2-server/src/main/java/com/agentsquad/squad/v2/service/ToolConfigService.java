@@ -273,6 +273,33 @@ public class ToolConfigService {
     }
 
     /**
+     * 按发布快照定格的工具版本与 MCP 版本组装可执行工具定义
+     * <p>
+     * 运行时仅加载定格版本，不读取目录最新指针。
+     */
+    public ToolDefinitionBO releaseDefinition(long toolId, long toolVersionId, Long mcpServerId, Long mcpServerVersionId) {
+        ToolVersionPO version = requireVersion(toolId, toolVersionId);
+        ToolDefinitionBO definition = new ToolDefinitionBO();
+        definition.setToolType(version.getToolType());
+        definition.setExposedName(version.getExposedName());
+        definition.setDescription(version.getDescription());
+        definition.setInputSchema(version.getInputSchema());
+        definition.setReadOnly(Boolean.TRUE.equals(version.getReadOnly()));
+        definition.setImplementationKey(version.getImplementationKey());
+        definition.setHttpSpec(version.getHttpSpec());
+        definition.setRemoteToolName(version.getRemoteToolName());
+
+        if (version.getHttpSpec() != null) {
+            definition.setCredential(credentials.resolve(version.getHttpSpec().getCredentialRef()));
+        }
+        if (version.getToolType() == ToolType.MCP && mcpServerId != null && mcpServerVersionId != null) {
+            definition.setMcpConnection(mcpServers.releaseConnection(mcpServerId, mcpServerVersionId));
+            definition.setMcpServerLabel(mcpServers.serverName(mcpServerId));
+        }
+        return definition;
+    }
+
+    /**
      * 发布事务内复核工具仍处于启用且就绪状态
      */
     public void lockEnabledReady(long toolId) {

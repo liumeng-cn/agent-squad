@@ -288,15 +288,40 @@ flowchart LR
 
 ---
 
-## 七、运行时衔接与验收清单
+## 七、只读体验增强、实用工具能力与 AgentScope 运行时初始化
 
-### 1. 运行时与前端聊天事件衔接
-- 聊天会话绑定 Master 的 `agent_code`（或 `agent_id`）。每次新执行（Turn / Run）启动时，读取该 Master 当前的 `current_release_id` 及其定格的 `sq_agent_release_*` 完整快照装配 `HarnessAgent`；已开始的 Turn 固定原快照直至结束。
-- 工具调用与 Sub 委派事件向前端推送时，携带定格的 `display_alias`（若为空则取定格时的组件名称），前端事件卡片直接展示该友好名称。
+### 1. 专用只读详情与树形发布快照浏览器
+- **只读查看视图（告别灰掉的表单）**：
+  - 无编辑权限用户进入 MCP / 工具 / Agent 页面，或有权限用户点击顶部 `只读总览`、查看任意历史配置版本 `vN` 时，均渲染专门设计的结构化信息面板（元信息摘要栏、连接与鉴权表、5 段式提示词与完整 Markdown 折叠区、格式化 JSON Schema 代码块），不使用 `disabled` 输入框。
+- **发布快照树形浏览器（`ReleaseInspectorDrawer`）**：
+  - 取代嵌套弹窗。左侧展示当前 `Release #M` 定格的完整树形拓扑（`Master vN` → `直接工具` / `Sub 委派` → `Sub 工具` → `依赖 MCP vK`），点击任一节点右侧即时展示该节点在发布瞬间定格的完整只读快照；
+  - 当 Master 未绑定任何工具和 Sub 时，明确标识为 **“独立对话模式（未挂载外部组件）”**。
 
-### 2. 核心验收清单
-1. **自动编码**：新建 MCP、Tool、Sub、Master 时无需手填编码，保存后自动生成 `{前缀}_{yyyyMMdd}_{随机6位}` 格式编码且只读。
-2. **展示别称**：Tool、Sub、Master 支持维护 `display_alias`，Master 委派 Sub 时可覆盖委派别称；留空自动回退组件名称。
-3. **结构化提示词**：Agent 编辑页按“角色与定位 / 核心目标 / 工作流程与策略 / 约束与边界 / 输出规范”分块编辑，自动拼装 `system_prompt` 并支持预览。
-4. **改动即新版本 & 保存不卡必填**：任意资源缺少必填项也可保存并生成新配置版本（标记为 `INCOMPLETE`），所有历史配置版本均可只读查看；`INCOMPLETE` 或 `DISABLED` 的资源不会出现在下游“添加工具 / 添加 Sub / 选择 MCP”候选项中。
-5. **仅 Master 可发布**：Sub、Tool、MCP 无发布按钮；Master 发布时校验全链路就绪并定格版本快照；发布后上游再修改产生新配置版本，不影响已发布 Master 的运行与发布快照详情弹窗。
+### 2. MCP / 工具编辑实用增效与 Master 零组件独立运行
+- **MCP 探测结果一键批量导入为工具**：
+  - 在已保存、启用且就绪的 MCP 服务第 2 步完成实时探测后，自动比对当前已关联该 MCP 的工具列表并标记 `已导入`；
+  - 支持勾选多个未导入的远程工具，一键批量调用创建工具接口生成 `TOOL-M-yyyyMMdd-NNN` 工具配置（自动填充安全暴露名、说明、JSON Schema 与只读标记）。
+- **工具“模型视角预览”与 HTTP cURL 快速解析**：
+  - 工具第 2 步实时展示将注册进 AgentScope `Toolkit` 并发送给大模型的真实 Function Schema JSON，支持一键复制；
+  - HTTP 工具支持粘贴 `curl` 命令前端即时拆解请求方法、URL、请求头与 JSON 请求体模板。
+- **Master 零组件独立运行（Standalone Master）**：
+  - **配置与就绪**：Master 不强制绑定任何 Tool 或 Sub；只要结构化提示词的“角色与定位”与“核心目标”非空即判定 `READY`。
+  - **发布定格**：`publish-preview` 与 `publish` 允许 `tools = []` 且 `subagents = []`，生成仅包含 `sq_agent_release` 主表记录的独立对话快照。
+  - **AgentScope 装配**：当 `subagents` 为空时，装配 `HarnessAgent` 显式调用 `.disableSubagents()`，不向大模型暴露 `agent_spawn / agent_send / task_*` 等子智能体调度工具，仅保留平台级 `ask_user` 交互工具，确保纯对话主智能体干净、无幻觉运行。
+
+### 3. 发布快照到 AgentScope 运行时初始化与热切换
+- **核心原则**：聊天运行时**只加载已发布定格快照（`sq_agent_release`）**，不直读草稿配置表 `sq_agent_version`；历史未归档对话或无任何已发布 Master 时，兼容回退至配置文件内置默认 `squad-master`。
+- **运行时注册表（`AgentRuntimeRegistry`）与数据结构**：
+  - 按 `(agentCode, releaseId)` 编译并缓存 `CompiledMasterRelease`（包含 `HarnessAgent` 实例、该 Release 共享的懒加载 `McpClientWrapper` 句柄集合、以及 `toolOrSubName -> displayAlias` 展示映射表）。
+  - **MCP 连接生命周期**：同一 `Release` 内引用相同 `mcp_server_version_id` 的多个 MCP 工具共享同一个懒连接代理工具（首次工具调用时通过 `McpClientFactory` 建连，避免服务启动或会话打开时因远端 MCP 不可达而阻塞失败）；当 Master 发布新 `Release` 替换旧缓存项或应用关闭时，安全关闭被淘汰句柄的连接。
+  - **Sub 委派装配**：每个 `sq_agent_release_subagent` 通过 `HarnessAgent.Builder.subagentFactory(delegationName, description, factory)` 装配独立的子 `HarnessAgent`（拥有专属 `Toolkit`、`maxIters`、按父会话隔离的 `RemoteFilesystem` 与 `.disableSubagents()`），同时调用 `.disableDynamicSubagents()` 禁止未声明的动态子智能体。
+- **前端聊天选型与事件别称展示**：
+  - 新增 `GET /api/v2/chat/agents`（登录态可访问，无需管理台权限）：返回所有 `deleted_at IS NULL AND status = 'ENABLED' AND current_release_id IS NOT NULL` 的已发布 Master 选项（`agentCode`、`agentName`、`displayAlias`、`description`、`releaseNo`、`standalone`），若为空则包含内置默认选项。
+  - `POST /api/v2/chat/messages` 的 `ChatMessageDTO` 新增可选字段 `agentCode`：首次建档（`sq_chat_conv.agent_definition_id`）时写入所选 `agentCode`（未传时优先取首个已发布启用 Master，否则回退内置 `squad-master`）；已建档会话后续轮次固定沿用建档时的 `agent_definition_id`，并自动读取该 Master 当前最新生效的 `current_release_id`。
+  - `ConvSummaryVO` 返回 `agentCode` 与 `agentDisplayName`；`ChatSessionConverter` 生成 `ChatActivityVO.title` 时，按当前 Master 生效快照的 `displayAlias` 映射表将原始 `exposedName / delegationName`（及 `agent_spawn` 目标角色）转换为友好的中文展示别称。
+
+### 4. 核心验收清单
+1. **自动编码**：新建 MCP、Tool、Sub、Master 时无需手填编码，保存后自动生成规则 A 大写横杠编码（如 `AGT-M-20261124-001`）且只读。
+2. **只读体验与树形快照**：无权限或只读查看模式不出现灰掉的表单控件；点击 `Release #M` 通过左树右详情单层抽屉穿透查看整条定格链路。
+3. **MCP 批量导入与工具预览**：MCP 探测后可勾选远程工具一键生成平台工具；工具页可实时预览大模型 Function JSON 与导入 cURL。
+4. **Master 独立运行与多组件协同**：不绑任何 Tool 和 Sub 的 Master 可正常就绪、发布并在 `/chat` 独立对话（不暴露多余 `agent_spawn` 工具）；挂载 Tool / Sub 的 Master 发布后在 `/chat` 真实执行并在活动轨迹显示 `display_alias`。

@@ -3,11 +3,7 @@ import {
   vLoading,
   ElAlert,
   ElButton,
-  ElForm,
-  ElFormItem,
   ElInput,
-  ElOption,
-  ElSelect,
   ElTable,
   ElTableColumn,
 } from 'element-plus'
@@ -30,7 +26,6 @@ import RoleEditor from '../components/RoleEditor.vue'
 import MemberEditor from '../components/MemberEditor.vue'
 import ManagementDialog from '../components/ManagementDialog.vue'
 import ManagementShell from '../components/ManagementShell.vue'
-import ManagementTableToolbar from '../components/ManagementTableToolbar.vue'
 import CatalogPagination from '../components/CatalogPagination.vue'
 
 /**
@@ -188,15 +183,14 @@ async function refreshAccessAndReload() {
   await load()
 }
 
+function selectStatus(status: MemberStatus | null) {
+  query.value.status = status
+  search()
+}
+
 function search() {
   query.value.current = 1
   void load()
-}
-
-function reset() {
-  query.value.keyword = ''
-  query.value.status = null
-  search()
 }
 
 function add() {
@@ -330,118 +324,122 @@ function date(value: string) {
     </section>
 
     <template v-else>
-      <ElForm
-        label-position="right"
-        label-width="64px"
-        class="management-card management-filter"
-        @submit.prevent="search"
-      >
-        <ElFormItem class="management-filter-field is-wide" label="关键字"
-          ><ElInput
-            v-model="query.keyword"
-            maxlength="100"
-            :placeholder="config.placeholder"
-          />
-        </ElFormItem>
-        <ElFormItem
-          v-if="section !== 'permissions'"
-          class="management-filter-field"
-          label="状态"
-          ><ElSelect
-            :empty-values="[null, undefined]"
-            :model-value="query.status ?? ''"
-            @change="query.status = $event || null"
+      <div class="studio-toolbar">
+        <div class="studio-pills" role="group" aria-label="状态筛选">
+          <button
+            type="button"
+            class="studio-pill"
+            :class="{ 'is-active': query.status === null }"
+            @click="selectStatus(null)"
           >
-            <ElOption value="" label="全部" />
-            <ElOption value="ACTIVE" label="启用" />
-            <ElOption value="DISABLED" label="禁用" />
-            <ElOption
+            全部 {{ total }}
+          </button>
+          <template v-if="section !== 'permissions'">
+            <button
+              type="button"
+              class="studio-pill"
+              :class="{ 'is-active': query.status === 'ACTIVE' }"
+              @click="selectStatus('ACTIVE')"
+            >
+              启用
+            </button>
+            <button
+              type="button"
+              class="studio-pill"
+              :class="{ 'is-active': query.status === 'DISABLED' }"
+              @click="selectStatus('DISABLED')"
+            >
+              禁用
+            </button>
+            <button
               v-if="section === 'users'"
-              value="UNASSIGNED"
-              label="未授权"
-            />
-          </ElSelect>
-        </ElFormItem>
-        <div class="management-filter-actions">
+              type="button"
+              class="studio-pill"
+              :class="{ 'is-active': query.status === 'UNASSIGNED' }"
+              @click="selectStatus('UNASSIGNED')"
+            >
+              未授权
+            </button>
+          </template>
+        </div>
+
+        <div class="studio-toolbar-right">
+          <ElInput
+            v-model="query.keyword"
+            clearable
+            maxlength="100"
+            class="studio-search"
+            :placeholder="`搜索${config.placeholder}`"
+            @keyup.enter="search"
+            @clear="search"
+          />
+          <ElButton
+            native-type="button"
+            :disabled="loading || busy"
+            @click="search"
+          >
+            查询
+          </ElButton>
           <ElButton
             type="primary"
-            native-type="submit"
-            class="management-primary"
-            :disabled="loading || busy"
-            >查询</ElButton
-          >
-          <ElButton
+            v-if="section === 'roles' && access.can('management:role:create')"
             native-type="button"
-            :disabled="loading || busy"
-            @click="reset"
-            >重置</ElButton
+            class="management-primary"
+            :disabled="busy || loading"
+            @click="add"
           >
+            + 新增角色
+          </ElButton>
+          <ElButton
+            type="primary"
+            v-if="section === 'users' && access.can('management:user:assign-role')"
+            native-type="button"
+            class="management-primary"
+            :disabled="busy || loading"
+            @click="add"
+          >
+            + 添加管理用户
+          </ElButton>
         </div>
-      </ElForm>
+      </div>
+
+      <ElAlert
+        v-if="error"
+        class="management-error"
+        role="alert"
+        type="error"
+        :closable="false"
+        show-icon
+      >
+        {{ error }}
+        <ElButton
+          link
+          native-type="button"
+          class="management-link"
+          :disabled="busy"
+          @click="load"
+          >重新查询</ElButton
+        >
+      </ElAlert>
+      <ElAlert
+        v-if="notice"
+        class="management-notice"
+        role="status"
+        type="success"
+        :closable="false"
+        show-icon
+        >{{ notice }}</ElAlert
+      >
 
       <section
-        class="management-card management-table-card"
+        class="management-card management-table-card studio-table-card"
         :aria-busy="loading || busy"
       >
-        <ManagementTableToolbar>
-        <ElButton
-          type="primary"
-          v-if="section === 'roles' && access.can('management:role:create')"
-          native-type="button"
-          class="management-primary"
-          :disabled="busy || loading"
-          @click="add"
-        >
-          新增角色
-        </ElButton>
-        <ElButton
-          type="primary"
-          v-if="
-            section === 'users' && access.can('management:user:assign-role')
-          "
-          native-type="button"
-          class="management-primary"
-          :disabled="busy || loading"
-          @click="add"
-        >
-          添加管理用户
-        </ElButton>
-
-        </ManagementTableToolbar>
-
-        <ElAlert
-          v-if="error"
-          class="management-error"
-          role="alert"
-          type="error"
-          :closable="false"
-          show-icon
-        >
-          {{ error }}
-          <ElButton
-            link
-            native-type="button"
-            class="management-link"
-            :disabled="busy"
-            @click="load"
-            >重新查询</ElButton
-          >
-        </ElAlert>
-        <ElAlert
-          v-if="notice"
-          class="management-notice"
-          role="status"
-          type="success"
-          :closable="false"
-          show-icon
-          >{{ notice }}</ElAlert
-        >
-
         <div class="management-table-wrap">
           <ElTable
             v-loading="loading || busy"
             v-if="section === 'roles'"
-            :data="roles" border :stripe="false" class="management-business-table" size="small"
+            :data="roles" :stripe="false" class="management-business-table"
             style="width: 100%"
             empty-text="暂无数据"
           >
@@ -564,7 +562,7 @@ function date(value: string) {
           <ElTable
             v-loading="loading || busy"
             v-else-if="section === 'users'"
-            :data="users" border :stripe="false" class="management-business-table" size="small"
+            :data="users" :stripe="false" class="management-business-table"
             style="width: 100%"
             empty-text="暂无数据"
           >
@@ -650,7 +648,7 @@ function date(value: string) {
           <ElTable
             v-loading="loading || busy"
             v-else
-            :data="permissions" border :stripe="false" class="management-business-table" size="small"
+            :data="permissions" :stripe="false" class="management-business-table"
             style="width: 100%"
             empty-text="暂无数据"
           >

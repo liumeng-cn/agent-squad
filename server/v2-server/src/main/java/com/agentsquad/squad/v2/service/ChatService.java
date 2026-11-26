@@ -36,7 +36,7 @@ public class ChatService {
      */
     public ChatReceiptVO send(ChatMessageDTO request) {
         // 按对话标识幂等建档，重试沿用既有目录和原生会话
-        ChatConvPO conv = convs.register(request.getConvId(), request.getMessage());
+        ChatConvPO conv = convs.register(request.getConvId(), request.getMessage(), request.getAgentCode());
         AgentSession session = sessionService.open(conv.getConvId());
 
         // 优先补充页面观察到的轮次，成功后不再提交新任务

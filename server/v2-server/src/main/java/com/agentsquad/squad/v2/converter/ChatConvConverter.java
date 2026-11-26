@@ -13,6 +13,8 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface ChatConvConverter {
 
+    @Mapping(target = "agentCode", source = "agentDefinitionId")
+    @Mapping(target = "agentDisplayName", ignore = true)
     @Mapping(target = "createdAt", source = "createTime")
     @Mapping(target = "archived", expression = "java(conv.getArchivedAt() != null)")
     ConvSummaryVO toSummary(ChatConvPO conv);

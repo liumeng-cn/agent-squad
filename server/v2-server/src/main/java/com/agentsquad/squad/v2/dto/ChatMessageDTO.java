@@ -21,6 +21,12 @@ public class ChatMessageDTO {
     private String convId;
 
     /**
+     * 首次建档时指定绑定的已发布 Master 编码；为空时自动选取默认可用 Master，已有对话忽略该字段。
+     */
+    @Size(max = 64)
+    private String agentCode;
+
+    /**
      * 本次用户交互标识；新任务重试保持一致，插话暂不承诺网络重试幂等。
      */
     @NotBlank

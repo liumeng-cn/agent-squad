@@ -7339,6 +7339,44 @@
         }
       }
     },
+    "/v2-server/api/v2/chat/agents": {
+      "get": {
+        "operationId": "listV2ChatAgents",
+        "summary": "列出可供新对话选择的已发布 Master 智能体",
+        "responses": {
+          "200": {
+            "description": "业务响应，成功 code=0",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ChatAgentOptionVO"
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "data",
+                    "msg"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "返回所有启用且存在生效发布快照的 Master 智能体选项；无已发布配置时返回默认内置智能体。"
+      }
+    },
     "/v2-server/api/v2/chat/messages": {
       "post": {
         "operationId": "submitV2Chat",
@@ -16640,6 +16678,47 @@
         ],
         "description": "Squad SSE 统一事件结构"
       },
+      "ChatAgentOptionVO": {
+        "type": "object",
+        "properties": {
+          "agentCode": {
+            "type": "string",
+            "description": "逻辑 Agent 编码（如 AGT-M-20261124-001 或内置 squad-master）"
+          },
+          "agentName": {
+            "type": "string",
+            "description": "后台组件名称"
+          },
+          "displayName": {
+            "type": "string",
+            "description": "前端展示名称（优先取 displayAlias，为空回退 agentName）"
+          },
+          "description": {
+            "type": "string",
+            "description": "智能体职责说明"
+          },
+          "releaseNo": {
+            "type": "integer",
+            "nullable": true,
+            "description": "当前生效发布序号；内置默认智能体为 null"
+          },
+          "standalone": {
+            "type": "boolean",
+            "description": "是否为未挂载外部工具与子 Agent 的独立对话模式"
+          },
+          "builtIn": {
+            "type": "boolean",
+            "description": "是否为配置文件提供的内置兜底智能体"
+          }
+        },
+        "required": [
+          "agentCode",
+          "agentName",
+          "displayName",
+          "standalone",
+          "builtIn"
+        ]
+      },
       "ChatMessageDTO": {
         "type": "object",
         "properties": {
@@ -16647,6 +16726,11 @@
             "type": "string",
             "pattern": "^[a-zA-Z0-9-]{1,64}$",
             "description": "对话标识；首次发送时作为建档幂等键，网络重试沿用同一标识"
+          },
+          "agentCode": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "首次建档时指定绑定的已发布 Master 编码；不传时自动选用默认可用 Master，已有对话忽略该字段"
           },
           "interactionId": {
             "type": "string",
@@ -17158,6 +17242,14 @@
           "sessionId": {
             "type": "string",
             "description": "关联的 AgentScope 原生会话标识"
+          },
+          "agentCode": {
+            "type": "string",
+            "description": "对话绑定的逻辑 Master 编码"
+          },
+          "agentDisplayName": {
+            "type": "string",
+            "description": "对话绑定的 Master 展示名称"
           },
           "title": {
             "type": "string"

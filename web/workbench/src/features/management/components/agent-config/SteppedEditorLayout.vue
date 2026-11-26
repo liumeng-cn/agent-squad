@@ -13,6 +13,7 @@ export interface EditorStepItem {
  * 方案 3 共用分步聚焦编辑框架：左侧简洁步骤导航 + 右侧单一居中聚焦画布，告别多层卡片套娃。
  */
 const activeStep = defineModel<string>('step', { required: true })
+const readonlyView = defineModel<boolean>('readonlyView', { default: false })
 
 defineProps<{
   backPath: string
@@ -22,6 +23,7 @@ defineProps<{
   subtitle?: string
   steps: EditorStepItem[]
   canSave?: boolean
+  canToggleReadonly?: boolean
   saving?: boolean
   saveLabel?: string
 }>()
@@ -77,7 +79,14 @@ const emit = defineEmits<{ save: [] }>()
           <div class="studio-canvas-actions">
             <slot name="extra-actions" />
             <ElButton
-              v-if="canSave"
+              v-if="canToggleReadonly && canSave"
+              native-type="button"
+              @click="readonlyView = !readonlyView"
+            >
+              {{ readonlyView ? '返回编辑' : '只读视图' }}
+            </ElButton>
+            <ElButton
+              v-if="canSave && !readonlyView"
               type="primary"
               native-type="button"
               class="management-primary"
@@ -92,7 +101,8 @@ const emit = defineEmits<{ save: [] }>()
         <slot name="messages" />
 
         <div class="studio-canvas-body">
-          <slot />
+          <slot v-if="readonlyView && $slots.readonly" name="readonly" />
+          <slot v-else />
         </div>
       </div>
     </section>

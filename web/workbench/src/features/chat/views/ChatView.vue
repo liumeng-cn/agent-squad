@@ -2,8 +2,8 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useConvsStore } from '../stores/convs'
-import type { ChatSession } from '../model/chatTypes'
-import { readSession } from '../api/chatApi'
+import type { ChatAgentOption, ChatSession } from '../model/chatTypes'
+import { listChatAgents, readSession } from '../api/chatApi'
 import { ApiError, errorMessage } from '../../../shared/http/http'
 import ChatIcon from '../components/ChatIcon.vue'
 import ChatSidebar from '../components/ChatSidebar.vue'
@@ -20,7 +20,21 @@ const toggle = ref<HTMLButtonElement>()
 const error = ref('')
 const ready = ref(!routeId.value)
 const initialSnapshot = ref<ChatSession>()
+const availableAgents = ref<ChatAgentOption[]>([])
+const selectedAgentCode = ref('')
 let selectionEpoch = 0
+
+async function loadAgents() {
+  try {
+    const list = await listChatAgents()
+    availableAgents.value = list
+    if (list.length && (!selectedAgentCode.value || !list.some(a => a.agentCode === selectedAgentCode.value))) {
+      selectedAgentCode.value = list[0]!.agentCode
+    }
+  } catch {
+    // 候选列表异常不阻断主对话界面
+  }
+}
 function resize() { narrow.value = window.innerWidth < 1024; if (!narrow.value) drawer.value = false }
 async function closeDrawer() { drawer.value = false; await nextTick(); toggle.value?.focus() }
 function toggleSidebar() {
@@ -52,7 +66,7 @@ watch(routeId, async id => {
     if (reason instanceof ApiError && reason.code === 404) await router.replace({ name: 'chat' })
   }
 }, { immediate: true })
-onMounted(() => { void sessions.load(); window.addEventListener('resize', resize); document.addEventListener('keydown', keyboard) })
+onMounted(() => { void sessions.load(); void loadAgents(); window.addEventListener('resize', resize); document.addEventListener('keydown', keyboard) })
 onBeforeUnmount(() => { selectionEpoch++; window.removeEventListener('resize', resize); document.removeEventListener('keydown', keyboard) })
 </script>
 <template>
@@ -60,9 +74,17 @@ onBeforeUnmount(() => { selectionEpoch++; window.removeEventListener('resize', r
     <button v-if="drawer" class="drawer-backdrop" aria-label="关闭会话侧栏" @click="closeDrawer" />
     <div class="sidebar-shell" :class="{ 'drawer-visible': drawer }"><ChatSidebar :selected-id="routeId" :collapsed="drawer ? false : compact" @toggle="toggleSidebar" @create="create" @select="select" @removed="removed" /></div>
     <div class="workspace-main">
-      <header class="chat-header"><div v-if="compact || narrow" class="header-navigation"><img src="/brand/squad-symbol.svg" alt="Squad" width="36" height="36" /><div class="header-tools"><button ref="toggle" type="button" class="sidebar-toggle" aria-label="展开会话侧栏" :aria-expanded="drawer" @click="toggleSidebar"><ChatIcon name="sidebar" /></button><button type="button" class="sidebar-toggle" aria-label="开启新对话" @click="create"><ChatIcon name="new" /></button></div></div><span>{{ selected?.title || '新对话' }}</span></header>
+      <header class="chat-header"><div v-if="compact || narrow" class="header-navigation"><img src="/brand/squad-symbol.svg" alt="Squad" width="36" height="36" /><div class="header-tools"><button ref="toggle" type="button" class="sidebar-toggle" aria-label="展开会话侧栏" :aria-expanded="drawer" @click="toggleSidebar"><ChatIcon name="sidebar" /></button><button type="button" class="sidebar-toggle" aria-label="开启新对话" @click="create"><ChatIcon name="new" /></button></div></div><span>{{ selected?.title || '新对话' }}</span><span v-if="selected?.agentDisplayName" class="demo-label">{{ selected.agentDisplayName }}</span></header>
       <p v-if="error" class="page-error" role="alert">{{ error }}</p>
-      <ChatConvPanel v-if="ready" :key="routeId || 'new'" :conv-id="routeId" :initial-snapshot="initialSnapshot" @created="created" />
+      <ChatConvPanel
+        v-if="ready"
+        :key="routeId || 'new'"
+        :conv-id="routeId"
+        :initial-snapshot="initialSnapshot"
+        :agents="availableAgents"
+        v-model:selected-agent-code="selectedAgentCode"
+        @created="created"
+      />
     </div>
   </main>
 </template>

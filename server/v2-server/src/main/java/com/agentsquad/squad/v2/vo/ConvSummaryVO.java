@@ -23,6 +23,16 @@ public class ConvSummaryVO {
     private String sessionId;
 
     /**
+     * 对话绑定的逻辑 Master 编码
+     */
+    private String agentCode;
+
+    /**
+     * 对话绑定的 Master 前端展示名称
+     */
+    private String agentDisplayName;
+
+    /**
      * 对话标题
      */
     private String title;

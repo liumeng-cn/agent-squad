@@ -31,6 +31,7 @@ import {
 import { confirmManagement } from '../components/confirmManagement'
 import ManagementShell from '../components/ManagementShell.vue'
 import PublishConfirmDialog from '../components/agent-config/PublishConfirmDialog.vue'
+import ReleaseInspectorDrawer from '../components/agent-config/ReleaseInspectorDrawer.vue'
 
 /**
  * Agent 画廊列表（方案 3）：胶囊按 Master/Sub 切换 + 3 列清爽卡片；仅 Master 卡片显示“发布”按钮。
@@ -52,6 +53,14 @@ const typeFilter = ref<'' | AgentType>('')
 const publishPreview = ref<AgentPublishPreview | null>(null)
 const publishTargetId = ref<string | null>(null)
 const publishOpId = ref('')
+const inspectingAgentId = ref('')
+const inspectingReleaseId = ref<string | null>(null)
+
+function openReleaseSnapshot(agent: Agent) {
+  if (!agent.currentReleaseId) return
+  inspectingAgentId.value = agent.agentId
+  inspectingReleaseId.value = agent.currentReleaseId
+}
 
 const filtered = computed(() => {
   const q = keyword.value.trim().toLowerCase()
@@ -269,22 +278,36 @@ onMounted(() => {
 
             <footer class="studio-card-foot" @click.stop>
               <span class="studio-card-stats">
-                <span>{{ agent.toolCount }} 工具</span>
-                <template v-if="agent.agentType === 'MASTER'">
-                  <span>·</span>
-                  <span>{{ agent.subagentCount }} Sub</span>
-                  <template v-if="agent.publishState === 'MODIFIED'">
-                    <span>·</span>
-                    <span style="color: #b45309">待更新</span>
-                  </template>
+                <template v-if="agent.agentType === 'MASTER' && agent.toolCount === 0 && agent.subagentCount === 0">
+                  <span>独立对话</span>
                 </template>
                 <template v-else>
+                  <span>{{ agent.toolCount }} 工具</span>
+                  <template v-if="agent.agentType === 'MASTER'">
+                    <span>·</span>
+                    <span>{{ agent.subagentCount }} Sub</span>
+                  </template>
+                  <template v-else>
+                    <span>·</span>
+                    <span>被委派 {{ agent.usageCount }}</span>
+                  </template>
+                </template>
+                <template v-if="agent.agentType === 'MASTER' && agent.publishState === 'MODIFIED'">
                   <span>·</span>
-                  <span>被委派 {{ agent.usageCount }}</span>
+                  <span style="color: #b45309">待更新</span>
                 </template>
               </span>
 
               <div class="studio-card-actions">
+                <button
+                  v-if="agent.agentType === 'MASTER' && agent.currentReleaseId"
+                  type="button"
+                  class="studio-release-link"
+                  title="查看当前生效发布快照"
+                  @click="openReleaseSnapshot(agent)"
+                >
+                  Release #{{ agent.currentReleaseNo }}
+                </button>
                 <button
                   v-if="canPublish && agent.agentType === 'MASTER'"
                   type="button"
@@ -322,6 +345,13 @@ onMounted(() => {
         :busy="busy"
         @close="publishPreview = null"
         @confirm="confirmPublish"
+      />
+
+      <ReleaseInspectorDrawer
+        v-if="inspectingReleaseId"
+        :agent-id="inspectingAgentId"
+        :release-id="inspectingReleaseId"
+        @close="inspectingReleaseId = null"
       />
     </template>
   </ManagementShell>

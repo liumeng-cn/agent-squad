@@ -4,6 +4,7 @@ import {
   ElButton,
   ElCollapse,
   ElCollapseItem,
+  ElDrawer,
   ElInput,
   ElInputNumber,
   ElOption,
@@ -18,9 +19,11 @@ import { errorMessage } from '../../../shared/http/http'
 import { useManagementStore } from '../stores/management'
 import {
   createMcpServer,
+  createTool,
   getMcpServer,
   getMcpServerVersion,
   listMcpCredentialOptions,
+  listTools,
   probeMcpServer,
   saveMcpServer,
 } from '../api/agentConfigApi'
@@ -45,8 +48,8 @@ import {
 import { tagType } from '../model/elementTheme'
 import { useEditorState } from '../composables/useEditorState'
 import ManagementShell from '../components/ManagementShell.vue'
-import ManagementDialog from '../components/ManagementDialog.vue'
 import SteppedEditorLayout, { type EditorStepItem } from '../components/agent-config/SteppedEditorLayout.vue'
+import ConfigReadonlyCards from '../components/agent-config/ConfigReadonlyCards.vue'
 import KeyValueEditor from '../components/agent-config/KeyValueEditor.vue'
 import RemoteToolList from '../components/agent-config/RemoteToolList.vue'
 import UsageTable from '../components/agent-config/UsageTable.vue'
@@ -60,6 +63,7 @@ const router = useRouter()
 const access = useManagementStore()
 
 const canEdit = computed(() => access.can('management:mcp:edit'))
+const canCreateTool = computed(() => access.can('management:tool:edit'))
 const mcpServerId = computed(() => {
   const raw = route.params.id ? String(route.params.id) : ''
   return raw && raw !== 'new' ? raw : null
@@ -67,15 +71,19 @@ const mcpServerId = computed(() => {
 const isCreate = computed(() => !mcpServerId.value)
 
 const step = ref('basic')
+const readonlyView = ref(false)
 const detail = ref<McpServerDetail | null>(null)
 const credentials = ref<string[]>([])
 const loading = ref(false)
 const busy = ref(false)
 const probing = ref(false)
+const importingTools = ref(false)
 const error = ref('')
 const notice = ref('')
 const probeResult = ref<McpProbe | null>(null)
 const probeError = ref('')
+const selectedRemoteNames = ref<string[]>([])
+const importedRemoteNames = ref<string[]>([])
 const advancedOpen = ref<string[]>([])
 const inspectedVersion = ref<McpServerVersion | null>(null)
 
@@ -90,6 +98,15 @@ const form = ref({
 })
 
 const { dirty, markClean, resetDirty } = useEditorState(() => JSON.stringify(form.value))
+
+const canBatchImport = computed(
+  () =>
+    canCreateTool.value &&
+    !isCreate.value &&
+    !dirty.value &&
+    detail.value?.server.status === 'ENABLED' &&
+    detail.value?.server.latestReadiness === 'READY',
+)
 const title = computed(() => (isCreate.value ? '新增 MCP 服务' : detail.value?.server.serverName || 'MCP 服务'))
 
 const steps = computed<EditorStepItem[]>(() => [
@@ -134,6 +151,7 @@ async function load() {
     credentials.value = await listMcpCredentialOptions()
     if (mcpServerId.value) {
       applyDetail(await getMcpServer(mcpServerId.value))
+      if (!canEdit.value) readonlyView.value = true
     } else {
       resetDirty()
     }
@@ -181,6 +199,79 @@ async function save() {
   }
 }
 
+function safeExposedName(raw: string): string {
+  const cleaned = raw.trim().replace(/[^A-Za-z0-9_]/g, '_').replace(/^[^A-Za-z_]+/, 't_').slice(0, 64)
+  const fallback = cleaned || 'mcp_tool'
+  return fallback === 'ask_user' ? 'mcp_ask_user' : fallback
+}
+
+async function refreshImportedMarkers(tools: McpProbe['tools']) {
+  if (!access.can('management:tool:query')) return
+  try {
+    const allTools = await listTools()
+    const mcpExposedSet = new Set(
+      allTools.filter(t => t.toolType === 'MCP').map(t => t.exposedName),
+    )
+    importedRemoteNames.value = tools
+      .filter(rt => mcpExposedSet.has(rt.name) || mcpExposedSet.has(safeExposedName(rt.name)))
+      .map(rt => rt.name)
+  } catch {
+    // 忽略标记辅助查询失败
+  }
+}
+
+function toggleRemoteSelection(name: string) {
+  if (selectedRemoteNames.value.includes(name)) {
+    selectedRemoteNames.value = selectedRemoteNames.value.filter(item => item !== name)
+  } else {
+    selectedRemoteNames.value = [...selectedRemoteNames.value, name]
+  }
+}
+
+function selectAllUnimported() {
+  if (!probeResult.value) return
+  selectedRemoteNames.value = probeResult.value.tools
+    .map(t => t.name)
+    .filter(name => !importedRemoteNames.value.includes(name))
+}
+
+async function batchImportRemoteTools() {
+  if (!mcpServerId.value || !probeResult.value || !selectedRemoteNames.value.length) return
+  importingTools.value = true
+  error.value = ''
+  notice.value = ''
+  const pickedTools = probeResult.value.tools.filter(t => selectedRemoteNames.value.includes(t.name))
+  let createdCount = 0
+  try {
+    for (const remote of pickedTools) {
+      const exposed = safeExposedName(remote.name)
+      const displayTitle = remote.title?.trim() || remote.name
+      await createTool({
+        toolName: `${form.value.serverName.trim() || 'MCP'} · ${displayTitle}`.slice(0, 120),
+        displayAlias: displayTitle.slice(0, 60),
+        toolType: 'MCP',
+        exposedName: exposed,
+        description: (remote.description?.trim() || `调用远程 MCP 工具 ${remote.name}`).slice(0, 2000),
+        inputSchema: remote.inputSchema ?? { type: 'object', properties: {} },
+        readOnly: remote.readOnly,
+        implementationKey: null,
+        mcpServerId: mcpServerId.value,
+        remoteToolName: remote.name,
+        httpSpec: null,
+      })
+      createdCount++
+      importedRemoteNames.value = [...importedRemoteNames.value, remote.name]
+    }
+    selectedRemoteNames.value = []
+    detail.value = await getMcpServer(mcpServerId.value)
+    notice.value = `已成功将 ${createdCount} 个远程工具批量生成为本平台 MCP 工具。`
+  } catch (reason) {
+    error.value = `已导入 ${createdCount} 个工具，后续中断：${errorMessage(reason)}`
+  } finally {
+    importingTools.value = false
+  }
+}
+
 async function runProbe() {
   if (!form.value.endpoint.trim()) {
     probeError.value = '请先填写连接地址再测试连接'
@@ -189,14 +280,17 @@ async function runProbe() {
   probing.value = true
   probeError.value = ''
   probeResult.value = null
+  selectedRemoteNames.value = []
   try {
-    probeResult.value = await probeMcpServer({
+    const probed = await probeMcpServer({
       transportType: form.value.transportType,
       endpoint: form.value.endpoint.trim(),
       credentialRef: form.value.credentialRef || null,
       headers: form.value.headers.filter(h => h.name.trim()),
       timeoutMs: form.value.timeoutMs || 30000,
     })
+    probeResult.value = probed
+    await refreshImportedMarkers(probed.tools)
   } catch (reason) {
     probeError.value = errorMessage(reason)
   } finally {
@@ -225,6 +319,7 @@ onMounted(() => {
   <ManagementShell>
     <SteppedEditorLayout
       v-model:step="step"
+      v-model:readonly-view="readonlyView"
       back-path="/management/mcp-servers"
       back-label="MCP 列表"
       :title="title"
@@ -232,10 +327,17 @@ onMounted(() => {
       :subtitle="detail ? `最近更新：${formatTime(detail.server.lastUpdateTime)}` : '编码格式：MCP-yyyyMMdd-001'"
       :steps="steps"
       :can-save="canEdit"
+      :can-toggle-readonly="!isCreate && Boolean(detail?.latestVersion)"
       :saving="busy || loading"
       :save-label="dirty ? '保存新版本' : '保存'"
       @save="save"
     >
+      <template #readonly>
+        <ConfigReadonlyCards
+          v-if="detail?.latestVersion"
+          :mcp="{ server: detail.server, version: detail.latestVersion }"
+        />
+      </template>
       <template #status>
         <ElTag v-if="detail" class="management-tag" :class="configStatusTones[detail.server.status]" :type="tagType(configStatusTones[detail.server.status])">
           {{ configStatusLabels[detail.server.status] }}
@@ -284,6 +386,9 @@ onMounted(() => {
             <ElSelect v-model="form.credentialRef" :disabled="!canEdit" clearable filterable placeholder="不使用凭据">
               <ElOption v-for="item in credentials" :key="item" :value="item" :label="item" />
             </ElSelect>
+            <span v-if="!credentials.length" class="management-field-hint">
+              密钥托管于服务端配置项 <code>agentsquad.v2.credentials</code>，前端不保存明文。
+            </span>
           </label>
           <label class="management-field is-full">
             <span class="management-field-label">连接地址（http / https）</span>
@@ -297,14 +402,44 @@ onMounted(() => {
 
         <div class="studio-subblock">
           <div class="studio-subblock-head">
-            <span class="studio-subblock-title">实时连通性探测</span>
-            <ElButton native-type="button" :loading="probing" :disabled="busy" @click="runProbe">测试连接并发现工具</ElButton>
+            <span class="studio-subblock-title">实时连通性探测与工具批量导入</span>
+            <div class="management-actions">
+              <ElButton
+                v-if="probeResult?.tools.length && canBatchImport"
+                native-type="button"
+                @click="selectAllUnimported"
+              >
+                全选未导入
+              </ElButton>
+              <ElButton
+                v-if="probeResult?.tools.length && canBatchImport"
+                type="primary"
+                native-type="button"
+                :loading="importingTools"
+                :disabled="!selectedRemoteNames.length"
+                @click="batchImportRemoteTools"
+              >
+                一键导入为工具（{{ selectedRemoteNames.length }}）
+              </ElButton>
+              <ElButton native-type="button" :loading="probing" :disabled="busy" @click="runProbe">测试连接并发现工具</ElButton>
+            </div>
           </div>
           <span v-if="probeResult" class="management-muted">
-            连接成功（{{ probeResult.durationMs }} ms），发现 {{ probeResult.tools.length }} 个远程工具
+            连接成功（{{ probeResult.durationMs }} ms），发现 {{ probeResult.tools.length }} 个远程工具。
+            <template v-if="!canBatchImport && canCreateTool">
+              请先保存当前改动并确保该 MCP 处于“启用 + 已就绪”状态，即可勾选远程工具一键批量生成平台工具。
+            </template>
           </span>
           <ElAlert v-if="probeError" type="error" :title="probeError" show-icon :closable="false" />
-          <RemoteToolList v-if="probeResult" :tools="probeResult.tools" />
+          <RemoteToolList
+            v-if="probeResult"
+            :tools="probeResult.tools"
+            :multi-selectable="canBatchImport"
+            :selected-names="selectedRemoteNames"
+            :imported-names="importedRemoteNames"
+            :disabled="importingTools"
+            @toggle="toggleRemoteSelection"
+          />
         </div>
 
         <ElCollapse v-model="advancedOpen">
@@ -340,21 +475,18 @@ onMounted(() => {
       </div>
     </SteppedEditorLayout>
 
-    <ManagementDialog
-      v-if="inspectedVersion"
-      :title="`只读查看配置版本 ${versionLabel(inspectedVersion.versionNo)}`"
-      wide
-      :busy="false"
-      :dirty="false"
+    <ElDrawer
+      :model-value="Boolean(inspectedVersion)"
+      :title="inspectedVersion ? `配置版本详情 · ${versionLabel(inspectedVersion.versionNo)}` : ''"
+      size="min(720px, 92vw)"
+      append-to-body
+      destroy-on-close
       @close="inspectedVersion = null"
     >
-      <div class="management-form-grid">
-        <div class="management-field"><span class="management-field-label">就绪状态</span><span>{{ readinessLabels[inspectedVersion.readiness] }}</span></div>
-        <div class="management-field"><span class="management-field-label">传输方式</span><span>{{ inspectedVersion.transportType ? mcpTransportLabels[inspectedVersion.transportType] : '—' }}</span></div>
-        <div class="management-field is-full"><span class="management-field-label">连接地址</span><span class="management-code">{{ inspectedVersion.endpoint || '—' }}</span></div>
-        <div class="management-field"><span class="management-field-label">凭据引用</span><span>{{ inspectedVersion.credentialRef || '无' }}</span></div>
-        <div class="management-field"><span class="management-field-label">超时（毫秒）</span><span>{{ inspectedVersion.timeoutMs }}</span></div>
-      </div>
-    </ManagementDialog>
+      <ConfigReadonlyCards
+        v-if="inspectedVersion"
+        :mcp="{ server: detail?.server, version: inspectedVersion }"
+      />
+    </ElDrawer>
   </ManagementShell>
 </template>

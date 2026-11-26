@@ -1,6 +1,5 @@
 package com.agentsquad.squad.v2.service;
 
-import com.agentsquad.squad.v2.converter.ChatConvConverter;
 import com.agentsquad.squad.v2.converter.ChatSessionConverter;
 import com.agentsquad.squad.v2.po.ChatConvPO;
 import com.agentsquad.squad.v2.vo.ChatSessionVO;
@@ -22,9 +21,6 @@ public class ChatRuntimeService {
 
     @Resource
     private ChatConvService convs;
-
-    @Resource
-    private ChatConvConverter convConverter;
 
     /**
      * 校验业务归属后打开原生句柄
@@ -60,8 +56,8 @@ public class ChatRuntimeService {
     }
 
     ChatSessionVO snapshot(ChatConvPO conv, AgentSession session) {
-        ChatSessionVO snapshot = converter.snapshot(session, conv.getSessionId());
-        snapshot.setSummary(convConverter.toSummary(conv));
+        ChatSessionVO snapshot = converter.snapshot(session, conv.getSessionId(), convs.resolveActivityAliases(conv));
+        snapshot.setSummary(convs.toSummaryView(conv));
         return snapshot;
     }
 

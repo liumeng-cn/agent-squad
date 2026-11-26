@@ -7,7 +7,10 @@ import { useConvsStore } from '../stores/convs'
 import { inputStatusDescriptions } from '../model/chatTypes'
 
 const RECONNECT_DELAY_MS = 1500
-interface ChatOptions { onCreated?: (id: string) => void }
+interface ChatOptions {
+  onCreated?: (id: string) => void
+  getAgentCode?: () => string | undefined
+}
 const controllers = new Map<string, ReturnType<typeof createController>>()
 export function resetChatSessions() {
   for (const controller of controllers.values()) controller.detach()
@@ -160,9 +163,13 @@ function createController(userId: string, convId?: string, options: ChatOptions 
     const previousTurnId = state.value?.turnId
     let submitted = false
     try {
+      const selectedAgentCode = !registered ? options.getAgentCode?.()?.trim() : undefined
       const request: SubmitChatInput = pending?.message === message ? pending : {
-        convId: id, interactionId: crypto.randomUUID(),
-        observedTurnId: busy.value ? state.value?.turnId : undefined, message,
+        convId: id,
+        ...(selectedAgentCode ? { agentCode: selectedAgentCode } : {}),
+        interactionId: crypto.randomUUID(),
+        observedTurnId: busy.value ? state.value?.turnId : undefined,
+        message,
       }
       savePending(request)
       submitted = true

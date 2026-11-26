@@ -10,12 +10,10 @@ import {
   ElMenu,
   ElMenuItem,
   ElSubMenu,
-  ElTabs,
-  ElTabPane,
 } from 'element-plus'
 import { computed } from 'vue'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '../../auth/stores/auth'
 import { useManagementStore } from '../stores/management'
 import type { Menu } from '../model/management'
@@ -40,7 +38,6 @@ interface NavGroup {
 }
 
 const route = useRoute()
-const router = useRouter()
 const access = useManagementStore()
 const auth = useAuthStore()
 
@@ -61,7 +58,10 @@ function collectPages(nodes: Menu[]): NavLink[] {
   return links
 }
 
-/** 根目录直接挂页面时归入“管理平台”分组；只有一层目录包裹时用子目录作为分组标题。 */
+/**
+ * 根节点（如“管理平台”）本身代表整个后台外壳，其直接挂靠的用户/角色/权限页归入“账号与权限”分组，
+ * 与“Agent 配置”等子目录平级展示，避免左侧出现“管理平台”和“Agent 配置”层级错位。
+ */
 const groups = computed<NavGroup[]>(() => {
   const result: NavGroup[] = []
   const loose: NavLink[] = []
@@ -75,7 +75,8 @@ const groups = computed<NavGroup[]>(() => {
       node.children.filter((child) => child.type === 'PAGE'),
     )
     if (directPages.length) {
-      result.push({ key: node.menuId, title: node.name, links: directPages })
+      const groupTitle = node.code === 'management' ? '账号与权限' : node.name
+      result.push({ key: node.menuId, title: groupTitle, links: directPages })
     }
     for (const child of node.children.filter(
       (item) => item.type === 'DIRECTORY',
@@ -88,17 +89,10 @@ const groups = computed<NavGroup[]>(() => {
   }
 
   if (loose.length) {
-    result.unshift({ key: 'loose', title: '管理平台', links: loose })
+    result.unshift({ key: 'loose', title: '账号与权限', links: loose })
   }
   return result
 })
-
-const pageTabs = computed(() => groups.value.flatMap(group => group.links))
-
-function switchPage(path: string | number) {
-  if (path !== activePath.value) void router.push(String(path))
-  return false
-}
 
 const activeGroup = computed(() =>
   groups.value.find((group) =>
@@ -128,30 +122,30 @@ const crumbs = computed(() => {
 </script>
 
 <template>
-  <ElConfigProvider :locale="zhCn" size="small">
+  <ElConfigProvider :locale="zhCn">
     <ElContainer class="management-platform" direction="vertical">
-      <ElHeader class="management-top" height="48px">
+      <ElHeader class="management-top" height="56px">
         <RouterLink
           class="management-brand"
           :to="groups[0]?.links[0]?.path ?? '/management'"
         >
           <img src="/brand/squad-icon.svg" alt="" width="26" height="26" />
-          <span class="management-brand-name">Agent Squad</span
-          ><span class="management-brand-sub">管理平台</span>
+          <span class="management-brand-name">Agent Squad</span>
+          <span class="management-brand-sub">管理平台</span>
         </RouterLink>
-        <ElTabs class="management-workspace-tabs" :model-value="activePath" :before-leave="switchPage">
-          <ElTabPane v-for="page in pageTabs" :key="page.path" :name="page.path" :label="page.name" />
-        </ElTabs>
         <div class="management-top-user">
-          <span>{{ auth.user?.effectiveDisplayName }}</span><RouterLink
-            to="/chat"
-            >返回聊天</RouterLink
-          >
+          <span class="management-top-name">{{ auth.user?.effectiveDisplayName }}</span>
+          <RouterLink class="management-top-back" to="/chat">返回聊天</RouterLink>
         </div>
       </ElHeader>
       <ElContainer class="management-layout">
         <ElAside class="management-sidebar" width="216px">
-          <ElMenu :default-active="activePath" :default-openeds="groups.map(group => group.key)" router aria-label="管理菜单">
+          <ElMenu
+            :default-active="activePath"
+            :default-openeds="groups.map(group => group.key)"
+            router
+            aria-label="管理菜单"
+          >
             <ElSubMenu
               v-for="group in groups"
               :key="group.key"
@@ -162,13 +156,14 @@ const crumbs = computed(() => {
                 v-for="link in group.links"
                 :key="link.menuId"
                 :index="link.path"
-                >{{ link.name }}</ElMenuItem
               >
+                {{ link.name }}
+              </ElMenuItem>
             </ElSubMenu>
           </ElMenu>
         </ElAside>
-        <ElMain class="management-main"
-          ><div class="management-content">
+        <ElMain class="management-main">
+          <div class="management-content">
             <ElBreadcrumb
               v-if="crumbs.length"
               class="management-breadcrumb"
@@ -182,8 +177,9 @@ const crumbs = computed(() => {
                 >{{ crumb.label }}</ElBreadcrumbItem
               >
             </ElBreadcrumb>
-            <slot /></div
-        ></ElMain>
+            <slot />
+          </div>
+        </ElMain>
       </ElContainer>
     </ElContainer>
   </ElConfigProvider>

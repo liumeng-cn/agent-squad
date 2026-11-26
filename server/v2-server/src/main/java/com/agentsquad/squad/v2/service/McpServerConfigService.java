@@ -295,6 +295,18 @@ public class McpServerConfigService {
     }
 
     /**
+     * 解析发布快照定格的指定 MCP 配置版本连接参数
+     * <p>
+     * 按定格版本号精确读取，不受后续新增配置版本或逻辑删除影响。
+     */
+    public McpConnectionBO releaseConnection(long mcpServerId, long mcpServerVersionId) {
+        McpServerPO server = findServerIncludingDeleted(mcpServerId);
+        McpServerVersionPO version = requireVersion(mcpServerId, mcpServerVersionId);
+        String code = server == null ? ("MCP-" + mcpServerId) : server.getServerCode();
+        return connectionOf(code + "-v" + version.getVersionNo(), version);
+    }
+
+    /**
      * 校验 MCP 服务处于未删除、启用且最新配置就绪状态
      */
     public McpServerPO requireUsableServer(long mcpServerId) {

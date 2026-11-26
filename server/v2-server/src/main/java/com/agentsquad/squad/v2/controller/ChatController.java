@@ -6,9 +6,11 @@ import com.agentsquad.squad.v2.dto.ChatAnswerDTO;
 import com.agentsquad.squad.v2.service.ChatInteractionService;
 import com.agentsquad.squad.v2.dto.ChatMessageDTO;
 import com.agentsquad.squad.v2.dto.ChatResumeDTO;
+import com.agentsquad.squad.v2.service.AgentRuntimeRegistry;
 import com.agentsquad.squad.v2.service.ChatEventStreamService;
 import com.agentsquad.squad.v2.service.ChatRuntimeService;
 import com.agentsquad.squad.v2.service.ChatService;
+import com.agentsquad.squad.v2.vo.ChatAgentOptionVO;
 import com.agentsquad.squad.v2.vo.ChatReceiptVO;
 import com.agentsquad.squad.v2.vo.ChatSessionVO;
 import jakarta.annotation.Resource;
@@ -22,6 +24,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
+
+import java.util.List;
 
 /**
  * 聊天接口
@@ -42,6 +46,17 @@ public class ChatController {
 
     @Resource
     private ChatEventStreamService eventService;
+
+    @Resource
+    private AgentRuntimeRegistry runtimeRegistry;
+
+    /**
+     * 列出可供新对话选择的已发布 Master 智能体
+     */
+    @GetMapping("/agents")
+    public ApiResult<List<ChatAgentOptionVO>> listAgents() {
+        return ApiResult.success(runtimeRegistry.listAvailableOptions());
+    }
 
     /**
      * 发送消息

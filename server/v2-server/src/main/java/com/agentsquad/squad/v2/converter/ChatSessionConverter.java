@@ -43,6 +43,13 @@ public class ChatSessionConverter {
      * 读取固定执行前缀并结合持久输入收据；不扫描未提交对象，不修改 SDK 状态。
      */
     public ChatSessionVO snapshot(AgentSession session, String sessionId) {
+        return snapshot(session, sessionId, Map.of());
+    }
+
+    /**
+     * 读取固定执行前缀并按发布快照定格的别称映射渲染活动卡片标题。
+     */
+    public ChatSessionVO snapshot(AgentSession session, String sessionId, Map<String, String> activityAliases) {
         var log = session.log();
         var head = log.head();
         var result = new ChatSessionVO();
@@ -54,7 +61,7 @@ public class ChatSessionConverter {
             if (NativeChatEventType.fromValue(event.type()) == NativeChatEventType.INPUT_STARTED) {
                 projection.getStartedCommands().add(String.valueOf(event.data().get("commandId")));
             }
-            apply(event, result, projection);
+            apply(event, result, projection, activityAliases == null ? Map.of() : activityAliases);
         }
 
         // 先读取输入游标再读视图；并发接受的新输入最多重复展示，不会被宣告为已消费。
@@ -115,7 +122,8 @@ public class ChatSessionConverter {
         return result;
     }
 
-    private void apply(SessionEvent event, ChatSessionVO session, ChatProjectionBO projection) {
+    private void apply(SessionEvent event, ChatSessionVO session, ChatProjectionBO projection,
+                       Map<String, String> activityAliases) {
         var eventType = NativeChatEventType.fromValue(event.type());
         if (eventType == NativeChatEventType.UNKNOWN) {
             return;
@@ -159,8 +167,7 @@ public class ChatSessionConverter {
             case TOOL_REQUESTED -> {
                 var activity = new ChatActivityVO();
                 activity.setId(String.valueOf(data.get("toolCallId")));
-                var call = data.get("call");
-                activity.setTitle(call instanceof Map<?, ?> value ? String.valueOf(value.get("name")) : "工具调用");
+                activity.setTitle(resolveActivityTitle(data.get("call"), activityAliases));
                 activity.setStartedAt(event.occurredAt());
                 reply(event, projection).getActivities().add(activity);
             }
@@ -192,6 +199,24 @@ public class ChatSessionConverter {
             default -> {
             }
         }
+    }
+
+    private String resolveActivityTitle(Object rawCall, Map<String, String> aliases) {
+        if (!(rawCall instanceof Map<?, ?> callMap)) {
+            return "工具调用";
+        }
+        String name = String.valueOf(callMap.get("name"));
+        if ("agent_spawn".equals(name) && callMap.get("input") instanceof Map<?, ?> inputMap) {
+            for (String key : java.util.List.of("subagent_type", "agent", "name", "role")) {
+                Object target = inputMap.get(key);
+                if (target != null) {
+                    String targetKey = String.valueOf(target);
+                    String alias = aliases.getOrDefault(targetKey, targetKey);
+                    return "委派：" + alias;
+                }
+            }
+        }
+        return aliases.getOrDefault(name, name);
     }
 
     private void addQuestion(SessionEvent event, ChatSessionVO session) {

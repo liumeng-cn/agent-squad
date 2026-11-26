@@ -1,5 +1,5 @@
 import type { AguiEvent } from '../model/agui'
-import type { ChatAnswer, ChatReceipt, ChatSession, SubmitChatInput } from '../model/chatTypes'
+import type { ChatAgentOption, ChatAnswer, ChatReceipt, ChatSession, SubmitChatInput } from '../model/chatTypes'
 import { ApiError, apiGet, apiPost } from '../../../shared/http/http'
 
 /** 按 SSE 行协议解析，兼容跨块 CRLF、中文字符及多行 data。 */
@@ -35,6 +35,11 @@ export async function consumeChatStream<T = AguiEvent>(
     await reader.cancel().catch(() => undefined)
     reader.releaseLock()
   }
+}
+
+/** 查询可供新对话选择的已发布 Master 智能体列表。 */
+export function listChatAgents(): Promise<ChatAgentOption[]> {
+  return apiGet('/v2-server/api/v2/chat/agents')
 }
 
 /** 提交与观察分离，订阅重连不会重新执行用户输入。 */

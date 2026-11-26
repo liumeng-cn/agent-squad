@@ -6,7 +6,6 @@ import com.agentsquad.squad.common.utils.CurrentUserContext;
 import com.agentsquad.squad.common.utils.UUIDUtils;
 import com.agentsquad.squad.common.vo.PageVO;
 import com.agentsquad.squad.v2.converter.ChatConvConverter;
-import com.agentsquad.squad.v2.config.properties.ChatAgentProperties;
 import com.agentsquad.squad.v2.dto.ConvPageQueryDTO;
 import com.agentsquad.squad.v2.enums.ConvTitleSource;
 import com.agentsquad.squad.v2.mapper.ChatConvMapper;
@@ -27,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 对话目录业务
@@ -45,30 +45,36 @@ public class ChatConvService {
     private ChatConvConverter converter;
 
     @Resource
-    private HarnessAgent chatAgent;
-
-    @Resource
-    private ChatAgentProperties properties;
+    private AgentRuntimeRegistry runtimeRegistry;
 
     /**
-     * 按对话标识幂等建档
-     * <p>
-     * 对话标识由客户端生成，重试沿用同一标识；并发或重复建档由唯一约束裁决，返回已有记录，
-     * 标题来自首次建档的用户发言，已有目录不覆盖标题，事务内不调用 SDK 或模型。
+     * 按对话标识幂等建档（使用默认可用 Master）
      */
     @Transactional
     public ChatConvPO register(String convId, String firstMessage) {
+        return register(convId, firstMessage, null);
+    }
+
+    /**
+     * 按对话标识幂等建档并绑定指定已发布 Master
+     * <p>
+     * 对话标识由客户端生成，重试沿用同一标识；并发或重复建档由唯一约束裁决，返回已有记录，
+     * 标题来自首次建档的用户发言，已有目录不覆盖标题与绑定的 Master。
+     */
+    @Transactional
+    public ChatConvPO register(String convId, String firstMessage, String requestedAgentCode) {
         ChatConvPO existing = findByConvId(convId);
         if (existing != null) {
             return existing;
         }
 
+        String resolvedAgentCode = runtimeRegistry.resolveNewConvAgentCode(requestedAgentCode);
         long userId = ownerId();
         ChatConvPO conv = new ChatConvPO();
         conv.setUserId(userId);
         conv.setConvId(convId);
         conv.setSessionId(UUIDUtils.uuid());
-        conv.setAgentDefinitionId(properties.getAgentId());
+        conv.setAgentDefinitionId(resolvedAgentCode);
         conv.setTitle(initialTitle(firstMessage));
         conv.setTitleSource(ConvTitleSource.AUTO);
         conv.setVersion(0L);
@@ -116,7 +122,7 @@ public class ChatConvService {
 
         List<ConvSummaryVO> records = new ArrayList<>();
         for (ChatConvPO conv : source.getRecords()) {
-            records.add(converter.toSummary(conv));
+            records.add(toSummaryView(conv));
         }
         PageVO<ConvSummaryVO> result = new PageVO<>();
         result.setRecords(records);
@@ -130,7 +136,7 @@ public class ChatConvService {
      * 读取当前用户的对话详情
      */
     public ConvSummaryVO read(String convId) {
-        return converter.toSummary(require(convId));
+        return toSummaryView(require(convId));
     }
 
     /**
@@ -157,7 +163,7 @@ public class ChatConvService {
             throw new BusinessException(ApiCode.CONFLICT, "对话标题已修改，请刷新后重试");
         }
         log.info("对话改名完成 convId={}", convId);
-        return converter.toSummary(require(convId));
+        return toSummaryView(require(convId));
     }
 
     /**
@@ -242,15 +248,26 @@ public class ChatConvService {
     }
 
     /**
-     * 解析绑定Agent
-     *
-     * 当前仅注册配置中的聊天 Agent；绑定不可用时拒绝操作，避免访问其他 Agent 的会话。
+     * 解析对话绑定的生效 Master 运行时实例
      */
     public HarnessAgent resolveAgent(ChatConvPO conv) {
-        if (!properties.getAgentId().equals(conv.getAgentDefinitionId())) {
-            throw new BusinessException(ApiCode.SERVICE_UNAVAILABLE, "对话绑定的 Agent 未注册");
-        }
-        return chatAgent;
+        return runtimeRegistry.resolveRuntime(conv.getAgentDefinitionId()).getAgent();
+    }
+
+    /**
+     * 解析对话绑定 Master 当前生效快照的活动卡片别称映射
+     */
+    public Map<String, String> resolveActivityAliases(ChatConvPO conv) {
+        return runtimeRegistry.resolveRuntime(conv.getAgentDefinitionId()).getActivityAliases();
+    }
+
+    /**
+     * 组装携带 Master 展示名称的公开目录摘要
+     */
+    public ConvSummaryVO toSummaryView(ChatConvPO conv) {
+        ConvSummaryVO summary = converter.toSummary(conv);
+        summary.setAgentDisplayName(runtimeRegistry.displayNameOf(conv.getAgentDefinitionId()));
+        return summary;
     }
 
     private RuntimeContext runtimeContext(ChatConvPO conv) {
