@@ -1,17 +1,8 @@
 <script setup lang="ts">
 import {
-  ElAside,
-  ElBreadcrumb,
-  ElBreadcrumbItem,
   ElConfigProvider,
-  ElContainer,
-  ElHeader,
-  ElMain,
-  ElMenu,
-  ElMenuItem,
-  ElSubMenu,
 } from 'element-plus'
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../../auth/stores/auth'
@@ -21,8 +12,7 @@ import 'element-plus/dist/index.css'
 import '../management.css'
 
 /**
- * 管理平台外壳：顶栏、按菜单目录分组的侧栏、面包屑和内容区。
- * 侧栏只展示当前用户已授权的页面；高亮依据路由 meta.menuPath，编辑页也能对应到所属菜单。
+ * 管理平台统一外壳：左侧固定导航栏（窄屏自动折叠抽屉）+ 顶部极简毛玻璃栏 + 浅灰主画布。
  */
 const props = defineProps<{ current?: string }>()
 
@@ -40,8 +30,13 @@ interface NavGroup {
 const route = useRoute()
 const access = useManagementStore()
 const auth = useAuthStore()
+const drawerOpen = ref(false)
 
 const activePath = computed(() => String(route.meta.menuPath ?? route.path))
+
+watch(activePath, () => {
+  drawerOpen.value = false
+})
 
 function collectPages(nodes: Menu[]): NavLink[] {
   const links: NavLink[] = []
@@ -60,7 +55,7 @@ function collectPages(nodes: Menu[]): NavLink[] {
 
 /**
  * 根节点（如“管理平台”）本身代表整个后台外壳，其直接挂靠的用户/角色/权限页归入“账号与权限”分组，
- * 与“Agent 配置”等子目录平级展示，避免左侧出现“管理平台”和“Agent 配置”层级错位。
+ * 与“Agent 配置”等子目录平级展示。
  */
 const groups = computed<NavGroup[]>(() => {
   const result: NavGroup[] = []
@@ -103,84 +98,84 @@ const activeLink = computed(() =>
   activeGroup.value?.links.find((link) => link.path === activePath.value),
 )
 
-const crumbs = computed(() => {
-  const items: { label: string; path?: string }[] = []
-  if (activeGroup.value) {
-    items.push({ label: activeGroup.value.title })
-  }
-  if (activeLink.value) {
-    items.push({
-      label: activeLink.value.name,
-      path: props.current ? activeLink.value.path : undefined,
-    })
-  }
-  if (props.current) {
-    items.push({ label: props.current })
-  }
-  return items
+const topTitle = computed(() => props.current || activeLink.value?.name || '管理平台')
+const userInitial = computed(() => {
+  const name = auth.user?.effectiveDisplayName?.trim() || '管'
+  return name.slice(0, 1).toUpperCase()
 })
 </script>
 
 <template>
   <ElConfigProvider :locale="zhCn">
-    <ElContainer class="management-platform" direction="vertical">
-      <ElHeader class="management-top" height="56px">
-        <RouterLink
-          class="management-brand"
-          :to="groups[0]?.links[0]?.path ?? '/management'"
-        >
-          <img src="/brand/squad-icon.svg" alt="" width="26" height="26" />
-          <span class="management-brand-name">Agent Squad</span>
-          <span class="management-brand-sub">管理平台</span>
+    <div class="management-platform mp-app">
+      <!-- 窄屏遮罩 -->
+      <div v-if="drawerOpen" class="mp-rail-backdrop" @click="drawerOpen = false" />
+
+      <!-- 左侧导航栏 -->
+      <aside class="mp-rail" :class="{ 'is-open': drawerOpen }">
+        <RouterLink class="mp-rail-brand" :to="groups[0]?.links[0]?.path ?? '/management'">
+          <span class="mp-brand-badge">
+            <img src="/brand/squad-icon.svg" alt="" width="22" height="22" />
+          </span>
+          <span class="mp-brand-text">
+            <strong class="mp-brand-title">Agent Squad</strong>
+            <span class="mp-brand-sub">管理控制台</span>
+          </span>
         </RouterLink>
-        <div class="management-top-user">
-          <span class="management-top-name">{{ auth.user?.effectiveDisplayName }}</span>
-          <RouterLink class="management-top-back" to="/chat">返回聊天</RouterLink>
-        </div>
-      </ElHeader>
-      <ElContainer class="management-layout">
-        <ElAside class="management-sidebar" width="216px">
-          <ElMenu
-            :default-active="activePath"
-            :default-openeds="groups.map(group => group.key)"
-            router
-            aria-label="管理菜单"
-          >
-            <ElSubMenu
-              v-for="group in groups"
-              :key="group.key"
-              :index="group.key"
+
+        <nav class="mp-rail-nav" aria-label="管理菜单">
+          <div v-for="group in groups" :key="group.key" class="mp-nav-group">
+            <div class="mp-nav-group-title">{{ group.title }}</div>
+            <RouterLink
+              v-for="link in group.links"
+              :key="link.menuId"
+              :to="link.path"
+              class="mp-nav-item"
+              :class="{ 'is-active': activePath === link.path }"
             >
-              <template #title>{{ group.title }}</template>
-              <ElMenuItem
-                v-for="link in group.links"
-                :key="link.menuId"
-                :index="link.path"
-              >
-                {{ link.name }}
-              </ElMenuItem>
-            </ElSubMenu>
-          </ElMenu>
-        </ElAside>
-        <ElMain class="management-main">
-          <div class="management-content">
-            <ElBreadcrumb
-              v-if="crumbs.length"
-              class="management-breadcrumb"
-              separator="/"
-              aria-label="当前位置"
-            >
-              <ElBreadcrumbItem
-                v-for="(crumb, index) in crumbs"
-                :key="index"
-                :to="crumb.path"
-                >{{ crumb.label }}</ElBreadcrumbItem
-              >
-            </ElBreadcrumb>
-            <slot />
+              <span class="mp-nav-dot" />
+              <span>{{ link.name }}</span>
+            </RouterLink>
           </div>
-        </ElMain>
-      </ElContainer>
-    </ElContainer>
+        </nav>
+
+        <footer class="mp-rail-foot">
+          <div class="mp-user-pill">
+            <span class="mp-user-avatar">{{ userInitial }}</span>
+            <div class="mp-user-meta">
+              <div class="mp-user-name">{{ auth.user?.effectiveDisplayName || '管理员' }}</div>
+              <div class="mp-user-role">{{ activeGroup?.title || '工作台' }}</div>
+            </div>
+          </div>
+          <RouterLink class="mp-back-chat" to="/chat">返回聊天 →</RouterLink>
+        </footer>
+      </aside>
+
+      <!-- 右侧主区域 -->
+      <div class="mp-shell-main">
+        <header class="mp-topbar">
+          <div class="mp-topbar-left">
+            <button
+              type="button"
+              class="mp-menu-btn"
+              aria-label="展开导航菜单"
+              @click="drawerOpen = !drawerOpen"
+            >
+              ☰
+            </button>
+            <span v-if="activeGroup" class="mp-topbar-group">{{ activeGroup.title }}</span>
+            <span v-if="activeGroup" class="mp-topbar-sep">/</span>
+            <span class="mp-topbar-title">{{ topTitle }}</span>
+          </div>
+          <div class="mp-topbar-right">
+            <RouterLink class="mp-topbar-chat" to="/chat">返回聊天</RouterLink>
+          </div>
+        </header>
+
+        <main class="mp-view">
+          <slot />
+        </main>
+      </div>
+    </div>
   </ElConfigProvider>
 </template>

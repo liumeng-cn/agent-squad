@@ -61,7 +61,7 @@ import { parseCurlCommand } from '../model/curlParser'
 import { useEditorState } from '../composables/useEditorState'
 import ManagementShell from '../components/ManagementShell.vue'
 import ManagementDialog from '../components/ManagementDialog.vue'
-import SteppedEditorLayout, { type EditorStepItem } from '../components/agent-config/SteppedEditorLayout.vue'
+import SectionedEditorLayout, { type AsideMetaItem, type EditorSectionAnchor } from '../components/agent-config/SectionedEditorLayout.vue'
 import ConfigReadonlyCards from '../components/agent-config/ConfigReadonlyCards.vue'
 import KeyValueEditor from '../components/agent-config/KeyValueEditor.vue'
 import ParameterTable from '../components/agent-config/ParameterTable.vue'
@@ -83,7 +83,6 @@ const toolId = computed(() => {
 })
 const isCreate = computed(() => !toolId.value)
 
-const step = ref('basic')
 const readonlyView = ref(false)
 const detail = ref<ToolDetail | null>(null)
 const builtins = ref<BuiltinToolOption[]>([])
@@ -178,19 +177,44 @@ async function copyContract() {
   }
 }
 
-const steps = computed<EditorStepItem[]>(() => [
-  { key: 'basic', no: 1, label: '基础信息' },
-  { key: 'impl', no: 2, label: '实现与定义' },
-  { key: 'test', no: 3, label: '在线试运行' },
-  { key: 'history', no: 4, label: '引用与历史', badge: detail.value?.versions.length, hidden: isCreate.value },
+const sections = computed<EditorSectionAnchor[]>(() => [
+  { key: 'basic', no: '01', label: '基础信息' },
+  { key: 'impl', no: '02', label: '实现与模型定义' },
+  { key: 'test', no: '03', label: '在线试运行' },
+  { key: 'history', no: '04', label: '引用关系与配置历史', hidden: isCreate.value },
 ])
 
-const stepTitle = computed(() => {
-  if (step.value === 'basic') return '1. 基础信息'
-  if (step.value === 'impl') return `2. 实现与模型定义（${toolTypeLabels[form.value.toolType]}）`
-  if (step.value === 'test') return '3. 在线试运行'
-  return '4. 引用关系与配置历史'
+const readinessChecks = computed(() => {
+  const checks = [
+    { label: '工具名称', ok: Boolean(form.value.toolName.trim()) },
+    { label: '模型工具名（exposedName）', ok: Boolean(form.value.exposedName.trim()) },
+    { label: '模型调用说明', ok: Boolean(form.value.description.trim()) },
+  ]
+  if (form.value.toolType === 'BUILTIN') {
+    checks.push({ label: '选择内置实现', ok: Boolean(form.value.implementationKey) })
+  } else if (form.value.toolType === 'MCP') {
+    checks.push({ label: '关联 MCP 服务', ok: Boolean(form.value.mcpServerId) })
+    checks.push({ label: '选择远程工具', ok: Boolean(form.value.remoteToolName) })
+  } else {
+    checks.push({ label: 'HTTP 请求地址', ok: Boolean(form.value.httpSpec.url.trim()) })
+  }
+  return checks
 })
+const readinessDone = computed(() => readinessChecks.value.filter(c => c.ok).length)
+const missingItems = computed(() => readinessChecks.value.filter(c => !c.ok).map(c => c.label))
+
+const asideMeta = computed<AsideMetaItem[]>(() => [
+  { label: '工具类型', value: toolTypeLabels[form.value.toolType] },
+  { label: '组件编码', value: detail.value?.tool.toolCode || '保存后自动生成', code: Boolean(detail.value?.tool.toolCode) },
+  { label: '当前版本', value: detail.value ? versionLabel(detail.value.tool.latestVersionNo) : 'v1（待创建）' },
+  { label: '最近更新', value: detail.value ? formatTime(detail.value.tool.lastUpdateTime) : '—' },
+])
+
+const toolTips = [
+  '前端展示别称用于聊天页活动卡片显示，留空时自动回退为工具名称。',
+  'HTTP 工具支持右上角“从 cURL 导入”，自动拆解方法、URL 与请求体参数。',
+  '保存不校验必填，仅“启用 + 已就绪”的工具才能被 Agent 绑定。',
+]
 
 function applyDetail(data: ToolDetail) {
   detail.value = data
@@ -285,8 +309,8 @@ function buildSavePayload(): ToolSave {
 
 async function save() {
   if (!form.value.toolName.trim()) {
-    step.value = 'basic'
     error.value = '请先填写工具名称'
+    document.getElementById('sec-basic')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
     return
   }
   busy.value = true
@@ -362,16 +386,21 @@ onMounted(() => {
 </script>
 
 <template>
-  <ManagementShell>
-    <SteppedEditorLayout
-      v-model:step="step"
+  <ManagementShell :current="title">
+    <SectionedEditorLayout
       v-model:readonly-view="readonlyView"
       back-path="/management/tools"
       back-label="工具列表"
+      eyebrow="Agent 配置 · 工具契约"
       :title="title"
       :code="detail?.tool.toolCode"
-      :subtitle="detail ? `最近更新：${formatTime(detail.tool.lastUpdateTime)}` : '编码格式：TOOL-H-yyyyMMdd-001'"
-      :steps="steps"
+      :sections="sections"
+      :readiness-done="readinessDone"
+      :readiness-total="readinessChecks.length"
+      :missing-items="missingItems"
+      :meta-items="asideMeta"
+      :tips="toolTips"
+      :dirty="dirty"
       :can-save="canEdit"
       :can-toggle-readonly="!isCreate && Boolean(detail?.latestVersion)"
       :saving="busy || loading"
@@ -380,7 +409,7 @@ onMounted(() => {
     >
       <template #extra-actions>
         <ElButton
-          v-if="canEdit && !readonlyView && step === 'impl' && form.toolType === 'HTTP'"
+          v-if="canEdit && !readonlyView && form.toolType === 'HTTP'"
           native-type="button"
           @click="showCurlDialog = true"
         >
@@ -404,182 +433,218 @@ onMounted(() => {
         </ElTag>
       </template>
 
-      <template #step-title>{{ stepTitle }}</template>
-
       <template #messages>
         <ElAlert v-if="error" type="error" :title="error" show-icon :closable="false" />
         <ElAlert v-if="notice" type="success" :title="notice" show-icon :closable="false" />
       </template>
 
-      <!-- 步骤 1：基础信息 -->
-      <div v-if="step === 'basic'" class="management-form-grid">
-        <label class="management-field">
-          <span class="management-field-label">工具名称 <span class="management-required" /></span>
-          <ElInput v-model="form.toolName" :disabled="!canEdit" maxlength="120" placeholder="后台管理识别名，如：订单查询接口-生产" />
-        </label>
-        <label class="management-field">
-          <span class="management-field-label">前端展示别称</span>
-          <ElInput v-model="form.displayAlias" :disabled="!canEdit" maxlength="60" placeholder="聊天事件卡片展示，留空使用工具名称" />
-        </label>
-        <label class="management-field">
-          <span class="management-field-label">工具类型</span>
-          <ElRadioGroup v-model="form.toolType" :disabled="!isCreate || !canEdit">
-            <ElRadioButton v-for="item in toolTypes" :key="item" :value="item">
-              {{ toolTypeLabels[item] }}
-            </ElRadioButton>
-          </ElRadioGroup>
-        </label>
-        <label class="management-field">
-          <span class="management-field-label">组件编码（自动生成）</span>
-          <ElInput :model-value="detail?.tool.toolCode || '保存后自动生成（TOOL-*-yyyyMMdd-001）'" disabled />
-        </label>
-      </div>
-
-      <!-- 步骤 2：实现与定义 -->
-      <div v-else-if="step === 'impl'" class="studio-canvas-body">
-        <div v-if="form.toolType === 'BUILTIN'" class="management-form-grid">
-          <label class="management-field">
-            <span class="management-field-label">内置实现</span>
-            <ElSelect :model-value="form.implementationKey" :disabled="!canEdit" filterable placeholder="选择内置实现" @update:model-value="selectBuiltin(String($event))">
-              <ElOption v-for="item in builtins" :key="item.implementationKey" :value="item.implementationKey" :label="`${item.exposedName}（${item.implementationKey}）`" />
-            </ElSelect>
-          </label>
-          <label class="management-field">
-            <span class="management-field-label">只读属性</span>
-            <ElInput :model-value="form.readOnly ? '只读（由内置实现决定）' : '包含写操作（由内置实现决定）'" disabled />
-          </label>
+      <!-- 01 基础信息 -->
+      <section id="sec-basic" class="mp-sec-card">
+        <div class="mp-sec-head">
+          <div class="mp-sec-title-wrap">
+            <span class="mp-sec-num">01</span>
+            <h2 class="mp-sec-title">基础信息</h2>
+          </div>
+          <span class="mp-sec-sub">识别名称、聊天展示别称与类型</span>
         </div>
-
-        <div v-else-if="form.toolType === 'MCP'" class="management-form-grid">
-          <label class="management-field">
-            <span class="management-field-label">关联 MCP 服务（仅启用且就绪）</span>
-            <ElSelect :model-value="form.mcpServerId" :disabled="!canEdit" clearable filterable placeholder="选择 MCP 服务" @update:model-value="selectMcpServer($event ? String($event) : null)">
-              <ElOption v-for="item in mcpOptions" :key="item.mcpServerId" :value="item.mcpServerId" :label="`${item.serverName}（${item.serverCode}）`" />
-            </ElSelect>
-          </label>
-          <div class="management-field">
-            <span class="management-field-label">远程工具</span>
-            <div class="management-actions">
-              <ElSelect :model-value="form.remoteToolName" :disabled="!canEdit || !form.mcpServerId" filterable placeholder="先发现远程工具" style="flex: 1" @update:model-value="selectRemoteTool(String($event))">
-                <ElOption v-for="item in remoteTools" :key="item.name" :value="item.name" :label="item.name" />
-              </ElSelect>
-              <ElButton native-type="button" :loading="discovering" :disabled="!form.mcpServerId" @click="discoverRemote">发现工具</ElButton>
-            </div>
-            <span v-if="discoverError" class="management-field-error">{{ discoverError }}</span>
-          </div>
-        </div>
-
-        <div v-else class="management-form-grid">
-          <label class="management-field">
-            <span class="management-field-label">请求方法</span>
-            <ElSelect :model-value="form.httpSpec.method" :disabled="!canEdit" @update:model-value="changeHttpMethod($event as HttpMethod)">
-              <ElOption v-for="m in httpMethods" :key="m" :value="m" :label="m" />
-            </ElSelect>
-          </label>
-          <label class="management-field">
-            <span class="management-field-label">凭据引用</span>
-            <ElSelect v-model="form.httpSpec.credentialRef" :disabled="!canEdit" clearable filterable placeholder="不使用凭据">
-              <ElOption v-for="item in credentials" :key="item" :value="item" :label="item" />
-            </ElSelect>
-          </label>
-          <label class="management-field is-full">
-            <span class="management-field-label">请求地址模板（支持 &#123;&#123;参数名&#125;&#125;）</span>
-            <ElInput v-model="form.httpSpec.url" :disabled="!canEdit" maxlength="2048" placeholder="https://api.example.com/orders/{{order_id}}" />
-          </label>
-          <div class="management-field is-full">
-            <span class="management-field-label">请求参数（自动生成 JSON Schema）</span>
-            <ParameterTable v-model="form.parameters" :read-only="!canEdit" :schema="currentSchema" />
-          </div>
-          <div class="management-field is-full">
-            <span class="management-field-label">请求头</span>
-            <KeyValueEditor v-model="form.httpSpec.headers" :read-only="!canEdit" />
-          </div>
-          <label v-if="showsBody" class="management-field is-full">
-            <span class="management-field-label">请求体模板（JSON，选填）</span>
-            <ElInput v-model="form.httpSpec.bodyTemplate" :disabled="!canEdit" type="textarea" :rows="3" placeholder='{"orderId": "{{order_id}}"}' />
-          </label>
-        </div>
-
-        <div class="studio-subblock">
-          <div class="studio-subblock-head">
-            <span class="studio-subblock-title">模型可见定义</span>
-            <button type="button" class="management-link-btn" @click="showLlmPreview = !showLlmPreview">
-              {{ showLlmPreview ? '收起大模型视角契约' : '预览大模型视角 JSON' }}
-            </button>
-          </div>
+        <div class="mp-sec-body">
           <div class="management-form-grid">
             <label class="management-field">
-              <span class="management-field-label">模型工具名（1～64 位字母数字下划线）</span>
-              <ElInput v-model="form.exposedName" :disabled="!canEdit" maxlength="64" placeholder="如 query_order_detail（禁止 ask_user）" />
+              <span class="management-field-label">工具名称 <span class="management-required" /></span>
+              <ElInput v-model="form.toolName" :disabled="!canEdit" maxlength="120" placeholder="后台管理识别名，如：订单查询接口-生产" />
             </label>
-            <label v-if="form.toolType === 'HTTP'" class="management-field">
+            <label class="management-field">
+              <span class="management-field-label">前端展示别称 <span class="mp-optional-tag">选填</span></span>
+              <ElInput v-model="form.displayAlias" :disabled="!canEdit" maxlength="60" placeholder="聊天事件卡片展示，留空使用工具名称" />
+            </label>
+            <label class="management-field">
+              <span class="management-field-label">工具类型</span>
+              <ElRadioGroup v-model="form.toolType" :disabled="!isCreate || !canEdit">
+                <ElRadioButton v-for="item in toolTypes" :key="item" :value="item">
+                  {{ toolTypeLabels[item] }}
+                </ElRadioButton>
+              </ElRadioGroup>
+            </label>
+            <label class="management-field">
+              <span class="management-field-label">组件编码（自动生成）</span>
+              <ElInput :model-value="detail?.tool.toolCode || '保存后自动生成（TOOL-*-yyyyMMdd-001）'" disabled />
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- 02 实现与模型定义 -->
+      <section id="sec-impl" class="mp-sec-card">
+        <div class="mp-sec-head">
+          <div class="mp-sec-title-wrap">
+            <span class="mp-sec-num">02</span>
+            <h2 class="mp-sec-title">实现与模型定义（{{ toolTypeLabels[form.toolType] }}）</h2>
+          </div>
+          <span class="mp-sec-sub">底层能力与大模型 Function 契约</span>
+        </div>
+        <div class="mp-sec-body">
+          <div v-if="form.toolType === 'BUILTIN'" class="management-form-grid">
+            <label class="management-field">
+              <span class="management-field-label">内置实现 <span class="management-required" /></span>
+              <ElSelect :model-value="form.implementationKey" :disabled="!canEdit" filterable placeholder="选择内置实现" @update:model-value="selectBuiltin(String($event))">
+                <ElOption v-for="item in builtins" :key="item.implementationKey" :value="item.implementationKey" :label="`${item.exposedName}（${item.implementationKey}）`" />
+              </ElSelect>
+            </label>
+            <label class="management-field">
               <span class="management-field-label">只读属性</span>
-              <ElSwitch v-model="form.readOnly" :disabled="!canEdit" active-text="只读工具" inactive-text="存在写操作" />
+              <ElInput :model-value="form.readOnly ? '只读（由内置实现决定）' : '包含写操作（由内置实现决定）'" disabled />
+            </label>
+          </div>
+
+          <div v-else-if="form.toolType === 'MCP'" class="management-form-grid">
+            <label class="management-field">
+              <span class="management-field-label">关联 MCP 服务（仅启用且就绪） <span class="management-required" /></span>
+              <ElSelect :model-value="form.mcpServerId" :disabled="!canEdit" clearable filterable placeholder="选择 MCP 服务" @update:model-value="selectMcpServer($event ? String($event) : null)">
+                <ElOption v-for="item in mcpOptions" :key="item.mcpServerId" :value="item.mcpServerId" :label="`${item.serverName}（${item.serverCode}）`" />
+              </ElSelect>
+            </label>
+            <div class="management-field">
+              <span class="management-field-label">远程工具 <span class="management-required" /></span>
+              <div class="management-actions">
+                <ElSelect :model-value="form.remoteToolName" :disabled="!canEdit || !form.mcpServerId" filterable placeholder="先发现远程工具" style="flex: 1" @update:model-value="selectRemoteTool(String($event))">
+                  <ElOption v-for="item in remoteTools" :key="item.name" :value="item.name" :label="item.name" />
+                </ElSelect>
+                <ElButton native-type="button" :loading="discovering" :disabled="!form.mcpServerId" @click="discoverRemote">发现工具</ElButton>
+              </div>
+              <span v-if="discoverError" class="management-field-error">{{ discoverError }}</span>
+            </div>
+          </div>
+
+          <div v-else class="management-form-grid">
+            <label class="management-field">
+              <span class="management-field-label">请求方法 <span class="management-required" /></span>
+              <ElSelect :model-value="form.httpSpec.method" :disabled="!canEdit" @update:model-value="changeHttpMethod($event as HttpMethod)">
+                <ElOption v-for="m in httpMethods" :key="m" :value="m" :label="m" />
+              </ElSelect>
+            </label>
+            <label class="management-field">
+              <span class="management-field-label">凭据引用 <span class="mp-optional-tag">选填</span></span>
+              <ElSelect v-model="form.httpSpec.credentialRef" :disabled="!canEdit" clearable filterable placeholder="不使用凭据">
+                <ElOption v-for="item in credentials" :key="item" :value="item" :label="item" />
+              </ElSelect>
             </label>
             <label class="management-field is-full">
-              <span class="management-field-label">模型调用说明</span>
-              <ElInput v-model="form.description" :disabled="!canEdit" type="textarea" :rows="3" :maxlength="TOOL_DESCRIPTION_LIMIT" placeholder="向模型清晰描述该工具的用途与适用时机" />
+              <span class="management-field-label">请求地址模板（支持 &#123;&#123;参数名&#125;&#125;） <span class="management-required" /></span>
+              <ElInput v-model="form.httpSpec.url" :disabled="!canEdit" maxlength="2048" placeholder="https://api.example.com/orders/{{order_id}}" />
+            </label>
+            <div class="management-field is-full">
+              <span class="management-field-label">请求参数（自动生成 JSON Schema） <span class="mp-optional-tag">选填</span></span>
+              <ParameterTable v-model="form.parameters" :read-only="!canEdit" :schema="currentSchema" />
+            </div>
+            <div class="management-field is-full">
+              <span class="management-field-label">请求头 <span class="mp-optional-tag">选填</span></span>
+              <KeyValueEditor v-model="form.httpSpec.headers" :read-only="!canEdit" />
+            </div>
+            <label v-if="showsBody" class="management-field is-full">
+              <span class="management-field-label">请求体模板（JSON） <span class="mp-optional-tag">选填</span></span>
+              <ElInput v-model="form.httpSpec.bodyTemplate" :disabled="!canEdit" type="textarea" :rows="3" placeholder='{"orderId": "{{order_id}}"}' />
             </label>
           </div>
-          <div v-if="form.toolType !== 'HTTP'" class="management-field is-full">
-            <span class="management-field-label">参数定义（只读，来自真实实现）</span>
-            <ParameterTable v-model="form.parameters" :read-only="true" :schema="currentSchema" />
-          </div>
 
-          <div v-if="showLlmPreview" class="prompt-preview-box">
-            <div class="studio-subblock-head" style="margin-bottom: 6px">
-              <span class="prompt-preview-title" style="margin: 0">AgentScope 注册给大模型的 Function Schema 契约</span>
-              <ElButton link type="primary" native-type="button" @click="copyContract">
-                {{ copiedContract ? '已复制' : '复制 JSON' }}
-              </ElButton>
+          <div class="studio-subblock">
+            <div class="studio-subblock-head">
+              <span class="studio-subblock-title">模型可见定义</span>
+              <button type="button" class="management-link-btn" @click="showLlmPreview = !showLlmPreview">
+                {{ showLlmPreview ? '收起大模型视角契约' : '预览大模型视角 JSON' }}
+              </button>
             </div>
-            <pre class="prompt-preview-content">{{ llmContractJson }}</pre>
-          </div>
-        </div>
-
-        <ElCollapse v-if="form.toolType === 'HTTP'" v-model="advancedOpen">
-          <ElCollapseItem title="高级设置（超时与结果提取）" name="advanced">
             <div class="management-form-grid">
               <label class="management-field">
-                <span class="management-field-label">超时（毫秒，1000～60000）</span>
-                <ElInputNumber v-model="form.httpSpec.timeoutMs" :disabled="!canEdit" :min="1000" :max="60000" :step="1000" />
+                <span class="management-field-label">模型工具名（1～64 位字母数字下划线） <span class="management-required" /></span>
+                <ElInput v-model="form.exposedName" :disabled="!canEdit" maxlength="64" placeholder="如 query_order_detail（禁止 ask_user）" />
               </label>
-              <label class="management-field">
-                <span class="management-field-label">结果提取路径（JSON Pointer）</span>
-                <ElInput v-model="form.httpSpec.resultPointer" :disabled="!canEdit" maxlength="500" placeholder="/data/items" />
+              <label v-if="form.toolType === 'HTTP'" class="management-field">
+                <span class="management-field-label">只读属性</span>
+                <ElSwitch v-model="form.readOnly" :disabled="!canEdit" active-text="只读工具" inactive-text="存在写操作" />
+              </label>
+              <label class="management-field is-full">
+                <span class="management-field-label">模型调用说明 <span class="management-required" /></span>
+                <ElInput v-model="form.description" :disabled="!canEdit" type="textarea" :rows="3" :maxlength="TOOL_DESCRIPTION_LIMIT" placeholder="向模型清晰描述该工具的用途与适用时机" />
               </label>
             </div>
-          </ElCollapseItem>
-        </ElCollapse>
-      </div>
+            <div v-if="form.toolType !== 'HTTP'" class="management-field is-full">
+              <span class="management-field-label">参数定义（只读，来自真实实现）</span>
+              <ParameterTable v-model="form.parameters" :read-only="true" :schema="currentSchema" />
+            </div>
 
-      <!-- 步骤 3：在线试运行 -->
-      <div v-else-if="step === 'test'">
-        <TestRunPanel :fields="form.parameters" :disabled-reason="null" :execute="runTest" />
-      </div>
+            <div v-if="showLlmPreview" class="prompt-preview-box">
+              <div class="studio-subblock-head" style="margin-bottom: 6px">
+                <span class="prompt-preview-title" style="margin: 0">AgentScope 注册给大模型的 Function Schema 契约</span>
+                <ElButton link type="primary" native-type="button" @click="copyContract">
+                  {{ copiedContract ? '已复制' : '复制 JSON' }}
+                </ElButton>
+              </div>
+              <pre class="prompt-preview-content">{{ llmContractJson }}</pre>
+            </div>
+          </div>
 
-      <!-- 步骤 4：引用与历史 -->
-      <div v-else class="studio-canvas-body">
-        <div class="studio-subblock">
-          <span class="studio-subblock-title">配置历史（{{ detail?.versions.length ?? 0 }}）</span>
-          <VersionHistoryTable
-            :versions="detail?.versions ?? []"
-            :latest-version-id="detail?.tool.latestVersionId ?? null"
-            :busy="busy"
-            @inspect="inspectVersion"
-          />
+          <ElCollapse v-if="form.toolType === 'HTTP'" v-model="advancedOpen">
+            <ElCollapseItem title="高级设置（超时与结果提取）" name="advanced">
+              <div class="management-form-grid">
+                <label class="management-field">
+                  <span class="management-field-label">超时（毫秒，1000～60000）</span>
+                  <ElInputNumber v-model="form.httpSpec.timeoutMs" :disabled="!canEdit" :min="1000" :max="60000" :step="1000" />
+                </label>
+                <label class="management-field">
+                  <span class="management-field-label">结果提取路径（JSON Pointer）</span>
+                  <ElInput v-model="form.httpSpec.resultPointer" :disabled="!canEdit" maxlength="500" placeholder="/data/items" />
+                </label>
+              </div>
+            </ElCollapseItem>
+          </ElCollapse>
         </div>
-        <div class="studio-subblock">
-          <span class="studio-subblock-title">下游引用关系（{{ detail?.usages.length ?? 0 }}）</span>
-          <UsageTable
-            :usages="detail?.usages ?? []"
-            owner-label="引用方 Agent"
-            :owner-path="usage => `/management/agents/${usage.ownerId}`"
-            description="展示最新配置或 Master 生效发布引用该工具的 Agent。"
-          />
+      </section>
+
+      <!-- 03 在线试运行 -->
+      <section id="sec-test" class="mp-sec-card">
+        <div class="mp-sec-head">
+          <div class="mp-sec-title-wrap">
+            <span class="mp-sec-num">03</span>
+            <h2 class="mp-sec-title">在线试运行</h2>
+          </div>
+          <span class="mp-sec-sub">使用当前表单定义直接发起验证，不写库</span>
         </div>
-      </div>
-    </SteppedEditorLayout>
+        <div class="mp-sec-body">
+          <TestRunPanel :fields="form.parameters" :disabled-reason="null" :execute="runTest" />
+        </div>
+      </section>
+
+      <!-- 04 引用与历史 -->
+      <section v-if="!isCreate" id="sec-history" class="mp-sec-card">
+        <div class="mp-sec-head">
+          <div class="mp-sec-title-wrap">
+            <span class="mp-sec-num">04</span>
+            <h2 class="mp-sec-title">引用关系与配置历史</h2>
+          </div>
+          <span class="mp-sec-sub">{{ detail?.versions.length ?? 0 }} 个历史版本 · {{ detail?.usages.length ?? 0 }} 处引用</span>
+        </div>
+        <div class="mp-sec-body">
+          <div class="studio-subblock">
+            <span class="studio-subblock-title">配置历史（{{ detail?.versions.length ?? 0 }}）</span>
+            <VersionHistoryTable
+              :versions="detail?.versions ?? []"
+              :latest-version-id="detail?.tool.latestVersionId ?? null"
+              :busy="busy"
+              @inspect="inspectVersion"
+            />
+          </div>
+          <div class="studio-subblock">
+            <span class="studio-subblock-title">下游引用关系（{{ detail?.usages.length ?? 0 }}）</span>
+            <UsageTable
+              :usages="detail?.usages ?? []"
+              owner-label="引用方 Agent"
+              :owner-path="usage => `/management/agents/${usage.ownerId}`"
+              description="展示最新配置或 Master 生效发布引用该工具的 Agent。"
+            />
+          </div>
+        </div>
+      </section>
+    </SectionedEditorLayout>
 
     <ManagementDialog
       v-if="showCurlDialog"

@@ -324,6 +324,13 @@ function date(value: string) {
     </section>
 
     <template v-else>
+      <header class="mp-ph">
+        <div>
+          <div class="mp-ph-eyebrow">账号与权限 · 访问控制</div>
+          <h1 class="mp-ph-title">{{ config.title }}</h1>
+        </div>
+      </header>
+
       <div class="studio-toolbar">
         <div class="studio-pills" role="group" aria-label="状态筛选">
           <button

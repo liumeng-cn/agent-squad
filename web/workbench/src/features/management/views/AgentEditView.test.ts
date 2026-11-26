@@ -142,7 +142,7 @@ beforeEach(() => {
   vi.mocked(listSubagentOptions).mockResolvedValue([])
 })
 
-it('renders stepped editor with uppercase dated code and saves a new config version', async () => {
+it('renders sectioned editor with uppercase dated code and saves a new config version', async () => {
   const saved = detail()
   saved.agent.latestVersionNo = 2
   saved.agent.revision = 8
@@ -152,11 +152,9 @@ it('renders stepped editor with uppercase dated code and saves a new config vers
   await flushPromises()
 
   expect(view.text()).toContain('AGT-M-20261124-001')
-  expect(view.text()).toContain('1. 基础信息')
-
-  const promptStep = view.findAll('.studio-step-btn').find(btn => btn.text().includes('系统提示词'))!
-  await promptStep.trigger('click')
-  expect(view.text()).toContain('2. 结构化系统提示词')
+  expect(view.text()).toContain('基础信息')
+  expect(view.text()).toContain('结构化系统提示词')
+  expect(view.text()).toContain('配置就绪度')
 
   await button(view, '保存').trigger('click')
   await flushPromises()

@@ -155,6 +155,13 @@ onMounted(() => {
     </section>
 
     <template v-else>
+      <header class="mp-ph">
+        <div>
+          <div class="mp-ph-eyebrow">Agent 配置 · 能力原子</div>
+          <h1 class="mp-ph-title">工具管理</h1>
+        </div>
+      </header>
+
       <div class="studio-toolbar">
         <div class="studio-pills" role="group" aria-label="工具类型筛选">
           <button type="button" class="studio-pill" :class="{ 'is-active': typeFilter === '' }" @click="typeFilter = ''">

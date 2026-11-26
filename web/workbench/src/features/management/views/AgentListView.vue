@@ -208,6 +208,13 @@ onMounted(() => {
     </section>
 
     <template v-else>
+      <header class="mp-ph">
+        <div>
+          <div class="mp-ph-eyebrow">Agent 配置 · 编排与发布</div>
+          <h1 class="mp-ph-title">智能体（Master & Sub）</h1>
+        </div>
+      </header>
+
       <div class="studio-toolbar">
         <div class="studio-pills" role="group" aria-label="Agent 类型筛选">
           <button type="button" class="studio-pill" :class="{ 'is-active': typeFilter === '' }" @click="typeFilter = ''">
